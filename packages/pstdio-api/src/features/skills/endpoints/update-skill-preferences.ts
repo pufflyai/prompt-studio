@@ -3,7 +3,13 @@ import { ExtensionCatalogAssetError } from "../../../services/extension-asset-ca
 import type { AppRouteHandler } from "../../../types";
 import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
 import type { SkillsRouteDeps } from "../deps";
-import { badRequestResponseSchema, notFoundResponseSchema, skillResponseSchema, updateSkillBodySchema } from "../dto";
+import {
+  badRequestResponseSchema,
+  notFoundResponseSchema,
+  skillResponseSchema,
+  toSkillResponse,
+  updateSkillBodySchema,
+} from "../dto";
 
 export const updateSkillPreferencesRoute = createRoute({
   method: "put",
@@ -56,6 +62,6 @@ export const updateSkillPreferencesHandler = (
 
     // Enabling/disabling a skill changes the catalog harnesses materialize, so re-sync workspaces.
     await provisionProjectWorkspaces(deps, projectId);
-    return c.json(skill, 200);
+    return c.json(toSkillResponse(skill), 200);
   };
 };

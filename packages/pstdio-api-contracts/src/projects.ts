@@ -41,7 +41,44 @@ export const updateProjectInputSchema = z
     message: "At least one field must be provided",
   });
 
+/** @deprecated Use ProjectDetails. Legacy fields stay available through 0.44. */
 export type Project = z.infer<typeof projectSchema>;
 export type ExtensionSetupWarning = z.infer<typeof extensionSetupWarningSchema>;
+/** @deprecated Use ProjectCreateRequest. Legacy fields stay available through 0.44. */
 export type CreateProjectInput = z.infer<typeof createProjectInputSchema>;
+/** @deprecated Use ProjectUpdateRequest. Legacy fields stay available through 0.44. */
 export type UpdateProjectInput = z.infer<typeof updateProjectInputSchema>;
+
+/** Canonical project JSON. Snake-case fields remain available through 0.44. */
+export const projectDetailsSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  shorthand: z.string(),
+  defaultAgentId: z.string().nullable(),
+  defaultAgentModel: z.string().nullable(),
+  startupScript: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  deletedAt: z.string().nullable(),
+  extensionWarnings: z.array(extensionSetupWarningSchema).optional(),
+});
+export type ProjectDetails = z.infer<typeof projectDetailsSchema>;
+
+export const initialWorkspaceRequestSchema = z.object({
+  providerId: z.string().min(1),
+  params: serializableJsonObjectSchema.default({}),
+});
+export const projectCreateRequestSchema = createProjectInputSchema
+  .omit({ initial_workspace: true })
+  .extend({ initialWorkspace: initialWorkspaceRequestSchema });
+export const projectUpdateRequestSchema = z
+  .object({
+    name: z.string().trim().min(1).optional(),
+    defaultAgentId: z.string().min(1).nullable().optional(),
+    defaultAgentModel: z.string().min(1).nullable().optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, { message: "At least one field must be provided" });
+export type InitialWorkspaceRequest = z.infer<typeof initialWorkspaceRequestSchema>;
+export type ProjectCreateRequest = z.input<typeof projectCreateRequestSchema>;
+export type ProjectUpdateRequest = z.infer<typeof projectUpdateRequestSchema>;

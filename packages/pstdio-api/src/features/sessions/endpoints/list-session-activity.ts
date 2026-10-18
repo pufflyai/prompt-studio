@@ -1,5 +1,9 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { listSessionActivityInputSchema, listSessionActivityResponseSchema } from "pstdio-api-contracts";
+import {
+  activityPageSchema,
+  listSessionActivityInputSchema,
+  listSessionActivityResponseSchema,
+} from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { listActivityEvents } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
@@ -16,7 +20,7 @@ export const listSessionActivityRoute = createRoute({
   responses: {
     200: {
       description: "Session activity events.",
-      content: { "application/json": { schema: listSessionActivityResponseSchema } },
+      content: { "application/json": { schema: listSessionActivityResponseSchema.extend(activityPageSchema.shape) } },
     },
     404: {
       description: "Session not found.",
@@ -38,14 +42,14 @@ export const listSessionActivityHandler = (
     }
 
     if (!session.project_id) {
-      return c.json({ events: [], next_cursor: null }, 200);
+      return c.json({ events: [], next_cursor: null, items: [], nextCursor: null }, 200);
     }
 
     const listed = await listActivityEvents(deps, {
       projectId: session.project_id,
       resourceType: "session",
       resourceId: session.id,
-      eventType: query.event_type,
+      eventType: query.eventType ?? query.event_type,
       from: query.from,
       to: query.to,
       cursor: query.cursor,

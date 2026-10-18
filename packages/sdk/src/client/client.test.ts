@@ -57,14 +57,14 @@ describe("createClient", () => {
     expect(calls[0]!.method).toBe("GET");
   });
 
-  it("client.sessions.list calls GET /v1/sessions?project_id=:id", async () => {
+  it("client.sessions.list calls GET /v1/sessions?projectId=:id", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
 
     await client.sessions.list("proj-1");
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/sessions?project_id=proj-1");
+    expect(calls[0]!.url).toBe("http://test:1234/v1/sessions?projectId=proj-1");
   });
 
   it("client.sessions.list encodes supported filters", async () => {
@@ -80,7 +80,7 @@ describe("createClient", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe(
-      "http://test:1234/v1/sessions?project_id=proj-1&status=queued&agent=opencode&workspace_id=workspace-1&archived=true",
+      "http://test:1234/v1/sessions?projectId=proj-1&status=queued&agent=opencode&workspace_id=workspace-1&archived=true",
     );
   });
 
@@ -140,14 +140,14 @@ describe("createClient", () => {
     expect(JSON.parse(calls[0]!.body!)).toEqual({ max_concurrent_sessions: 3 });
   });
 
-  it("client.workspaces.list calls GET /v1/workspaces?project_id=:id", async () => {
+  it("client.workspaces.list calls GET /v1/workspaces?projectId=:id", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
 
     await client.workspaces.list("proj-1");
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/workspaces?project_id=proj-1");
+    expect(calls[0]!.url).toBe("http://test:1234/v1/workspaces?projectId=proj-1");
   });
 
   it("client.workspaces.rename calls PATCH /v1/workspaces/:id", async () => {

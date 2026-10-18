@@ -1,6 +1,7 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, notInArray } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { skill_files, skills } from "../../db/schemas.pg";
+import { type PageQuery, pageBoundary, pageLimit } from "../query-page";
 
 type SkillRow = typeof skills.$inferSelect;
 type SkillFileRow = typeof skill_files.$inferSelect;
@@ -96,6 +97,28 @@ export const createSkillsDBService = (db: DbClient) => {
     return rows.map((row) => decorate(row, filesById.get(row.id) ?? []));
   };
 
+  const queryCandidates = async (projectId: string, input: PageQuery, excludedNames: string[]) => {
+    const boundary = pageBoundary(input.cursor, `skills:${projectId}`);
+    const rows = await db
+      .select()
+      .from(skills)
+      .where(
+        and(
+          eq(skills.project_id, projectId),
+          isNull(skills.deleted_at),
+          boundary ? gt(skills.id, boundary) : undefined,
+          excludedNames.length ? notInArray(skills.name, excludedNames) : undefined,
+        ),
+      )
+      .orderBy(asc(skills.id))
+      .limit(pageLimit(input) + 1);
+    const filesById = await loadFilesBySkillIds(
+      db,
+      rows.map((row) => row.id),
+    );
+    return rows.map((row) => decorate(row, filesById.get(row.id) ?? []));
+  };
+
   const getByName = async (projectId: string, name: string) => {
     const [row] = await db
       .select()
@@ -159,5 +182,5 @@ export const createSkillsDBService = (db: DbClient) => {
     return true;
   };
 
-  return { list, getByName, create, update, remove };
+  return { queryCandidates, list, getByName, create, update, remove };
 };

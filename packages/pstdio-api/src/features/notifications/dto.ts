@@ -130,7 +130,7 @@ export const projectParamsSchema = z.object({ projectId: z.string() }).strict();
 export const listNotificationsResponseSchema = z
   .object({
     items: z.array(notificationResponseSchema),
-    nextCursor: z.string().nullable().optional(),
+    nextCursor: z.string().nullable(),
   })
   .strict();
 

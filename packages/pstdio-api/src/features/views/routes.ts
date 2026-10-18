@@ -5,10 +5,12 @@ import {
   boardViewSchema,
   boardViewsSchema,
   boardViewUpdateSchema,
+  pageQuerySchema,
 } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../services/extension-service";
 import type { AppBindings } from "../../types";
 import { createBoardViewsService } from "./board-views-service";
+import { queryBoardViewsRoute } from "./query-board-views";
 import type { BoardViewsDeps } from "./resolve-board";
 import { BoardViewError } from "./view-rules";
 
@@ -24,6 +26,7 @@ const errors = {
 };
 const tags = ["Board views"];
 const listBoards = createRoute({
+  deprecated: true,
   method: "get",
   path: "/projects/{projectId}/boards",
   tags,
@@ -45,6 +48,7 @@ const getView = createRoute({
   responses: { 200: { description: "Saved view", content: json(boardViewSchema) }, ...errors },
 });
 const listViews = createRoute({
+  deprecated: true,
   method: "get",
   path: "/projects/{projectId}/boards/{boardId}/views",
   tags,
@@ -52,6 +56,7 @@ const listViews = createRoute({
   responses: { 200: { description: "Board views", content: json(boardViewsSchema) }, ...errors },
 });
 const listOrphans = createRoute({
+  deprecated: true,
   method: "get",
   path: "/projects/{projectId}/board-views",
   tags,
@@ -94,6 +99,33 @@ const defaultView = createRoute({
   responses: { 200: { description: "Default view", content: json(boardViewsSchema) }, ...errors },
 });
 
+const queryBoards = createRoute({
+  method: "get",
+  path: "/projects/{projectId}/boards/query",
+  tags,
+  request: { params: project, query: pageQuerySchema.strict() },
+  responses: {
+    200: {
+      description: "One board page",
+      content: json(z.object({ items: z.array(boardSummarySchema), nextCursor: z.string().nullable() })),
+    },
+    ...errors,
+  },
+});
+const queryOrphans = createRoute({
+  method: "get",
+  path: "/projects/{projectId}/board-views/query",
+  tags,
+  request: { params: project, query: pageQuerySchema.extend({ orphaned: z.literal("true") }).strict() },
+  responses: {
+    200: {
+      description: "One orphaned-view page",
+      content: json(z.object({ items: z.array(boardViewSchema), nextCursor: z.string().nullable() })),
+    },
+    ...errors,
+  },
+});
+
 export const createBoardViewsRoutes = (deps: BoardViewsDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
   const service = createBoardViewsService(deps);
@@ -102,6 +134,12 @@ export const createBoardViewsRoutes = (deps: BoardViewsDeps) => {
     if (error instanceof BoardViewError) return c.json({ error: error.message }, error.status);
     throw error;
   });
+  routes.openapi(queryBoards, async (c) =>
+    c.json(await service.queryBoards(c.req.valid("param").projectId, c.req.valid("query")), 200),
+  );
+  routes.openapi(queryOrphans, async (c) =>
+    c.json(await service.queryOrphaned(c.req.valid("param").projectId, c.req.valid("query")), 200),
+  );
   routes.openapi(listBoards, async (c) => c.json(await service.boards(c.req.valid("param").projectId), 200));
   routes.openapi(getBoard, async (c) => {
     const p = c.req.valid("param");
@@ -110,6 +148,10 @@ export const createBoardViewsRoutes = (deps: BoardViewsDeps) => {
   routes.openapi(getView, async (c) => {
     const p = c.req.valid("param");
     return c.json(await service.get(p.projectId, p.viewId), 200);
+  });
+  routes.openapi(queryBoardViewsRoute, async (c) => {
+    const p = c.req.valid("param");
+    return c.json(await service.query(p.projectId, p.boardId, c.req.valid("query")), 200);
   });
   routes.openapi(listViews, async (c) => {
     const p = c.req.valid("param");

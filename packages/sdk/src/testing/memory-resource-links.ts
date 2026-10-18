@@ -12,7 +12,7 @@ export const createMemoryResourceLinks = (input: {
   };
   const identity = (ref: ResourceRef) => JSON.stringify([ref.projectId, ref.extensionId, ref.type, ref.id]);
   const pair = (source: ResourceRef, target: ResourceRef) => JSON.stringify([identity(source), identity(target)]);
-  return {
+  const api = {
     addAnchors: async (resource, anchors) => {
       const source = canonical(resource);
       const targets = anchors.map((anchor) => ({ ...canonical(anchor), role: anchor.role ?? "context" }));
@@ -53,4 +53,11 @@ export const createMemoryResourceLinks = (input: {
         if (identity(edge.source) === ref || identity(edge.target) === ref) input.edges.delete(key);
     },
   } satisfies Pick<ExtensionResourcesApi, "addAnchors" | "removeAnchors" | "listAnchors" | "removed">;
+  return {
+    ...api,
+    queryAnchors: async (query: Parameters<typeof api.listAnchors>[0]) => {
+      const page = await api.listAnchors(query);
+      return { ...page, nextCursor: page.nextCursor ?? null };
+    },
+  };
 };

@@ -4,7 +4,7 @@ import { readSessionExit } from "../../../services/session-exit";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
-import { toExtensionSession } from "../extension-session";
+import { toSessionResponse } from "../session-response";
 
 export const getSessionRoute = createRoute({
   method: "get",
@@ -47,7 +47,7 @@ export const getSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<type
     return c.json(
       {
         ...session,
-        ...toExtensionSession(session, workspace?.project_id === session.project_id ? workspace.id : null),
+        ...toSessionResponse(session, workspace?.project_id === session.project_id ? workspace.id : null),
         lastExit,
         last_exit: lastExit,
       },

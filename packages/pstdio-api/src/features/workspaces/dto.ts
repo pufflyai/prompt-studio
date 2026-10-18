@@ -5,6 +5,7 @@ import {
   extensionWorkspaceFields,
   moveWorkspaceEntryInputSchema,
   renameWorkspaceInputSchema,
+  workspaceEntryMoveInputSchema,
   workspaceFileContentSchema,
   workspaceFileEntrySchema,
   workspaceFilesResponseSchema,
@@ -35,7 +36,10 @@ export const listWorkspaceFilesQuerySchema = z
   .strict();
 export const workspaceFilePathQuerySchema = z.object({ path: z.string().min(1) }).strict();
 export const writeWorkspaceFileBodySchema = writeWorkspaceFileInputSchema.strict();
-export const moveWorkspaceEntryBodySchema = moveWorkspaceEntryInputSchema.strict();
+export const moveWorkspaceEntryBodySchema = z.union([
+  moveWorkspaceEntryInputSchema.strict(),
+  workspaceEntryMoveInputSchema.strict().transform(({ destinationPath }) => ({ destination_path: destinationPath })),
+]);
 export { workspaceFileContentSchema, workspaceFileEntrySchema, workspaceFilesResponseSchema };
 
 export const uploadStartupLogBodySchema = z.object({ content_base64: z.string() }).strict();

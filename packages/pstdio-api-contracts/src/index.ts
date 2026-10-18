@@ -14,6 +14,7 @@ export * from "./harness";
 export * from "./harness-commands";
 export * from "./history-reconciliation";
 export * from "./notifications/types";
+export * from "./pagination";
 export * from "./projects";
 export * from "./queued-follow-ups";
 export * from "./resource-anchors";

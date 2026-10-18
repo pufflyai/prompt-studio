@@ -260,7 +260,7 @@ describe("workspace file mutations", () => {
     const moveResponse = await app.request(entryPath("workspace-1", "notes.md"), {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ destination_path: "docs/renamed.md" }),
+      body: JSON.stringify({ destinationPath: "docs/renamed.md" }),
     });
     expect(moveResponse.status).toBe(204);
     expect(existsSync(join(root, "notes.md"))).toBe(false);

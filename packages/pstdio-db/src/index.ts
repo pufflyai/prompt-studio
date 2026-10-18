@@ -29,6 +29,7 @@ export { createInstalledExtensionSourcesDBService } from "./services/installed-e
 export { legacyResourceOwner, sessionColumns, workspaceColumns } from "./services/legacy-resource-links";
 export { createNotificationsDBService } from "./services/notifications/notifications";
 export { createProjectsDBService } from "./services/projects/projects";
+export { pageBoundary, pageLimit, queryPage } from "./services/query-page";
 export { createResourceLinksDBService } from "./services/resource-links";
 export { createSessionQueueEntriesDBService } from "./services/session-queue-entries/session-queue-entries";
 export { createSessionsDBService } from "./services/sessions/sessions";

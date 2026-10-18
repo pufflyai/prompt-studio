@@ -1,28 +1,14 @@
 import { readFile } from "node:fs/promises";
-import type { Skill, SkillFile } from "pstdio-api-contracts";
+import type { PageQuery, Skill, SkillFile } from "pstdio-api-contracts";
 import type { createExtensionSkillPreferencesDBService, createSkillsDBService } from "pstdio-db";
+import { pageBoundary, pageLimit, queryPage } from "pstdio-db";
 import type { ProjectExtensionRuntimeCatalog } from "../features/extensions/project-extension-runtime-catalog";
-import {
-  type ProjectExtensionRuntimeSnapshot,
-  resolveEnabledSourceForRecord,
-} from "../features/extensions/project-extension-runtime-snapshot";
 import type { EventBus } from "../features/sync/event-bus";
-import {
-  catalogId,
-  catalogNameFromKey,
-  isPackageAssetDescriptor,
-  isRecord,
-  readSkillPackageAssetFiles,
-  sourceRootForAsset,
-} from "./extension-asset-catalog";
 import type { createFileService } from "./file-service";
+import { hydrateExtensionSkill, type InternalSkill, listExtensionSkills } from "./skill-catalog";
 
 type DbSkill = Awaited<ReturnType<ReturnType<typeof createSkillsDBService>["getByName"]>>;
 type ProjectSkill = NonNullable<DbSkill>;
-
-type InternalSkill = Skill & {
-  source_path?: string;
-};
 
 export type SkillServiceDeps = {
   eventBus: EventBus;
@@ -31,13 +17,6 @@ export type SkillServiceDeps = {
   fileService: ReturnType<typeof createFileService>;
   skillsDBService: ReturnType<typeof createSkillsDBService>;
 };
-
-type EnabledExtensionSource = ProjectExtensionRuntimeSnapshot["enabledSources"][number];
-type ExtensionSkillPreference = Awaited<
-  ReturnType<SkillServiceDeps["extensionSkillPreferencesDBService"]["list"]>
->[number];
-
-const preferenceKey = (extensionInstanceId: string, key: string) => `${extensionInstanceId}:${key}`;
 
 const toPublicSkill = (skill: InternalSkill): Skill => {
   const { source_path: _sourcePath, ...publicSkill } = skill;
@@ -90,85 +69,6 @@ const ingestSkillFiles = async (fileService: SkillServiceDeps["fileService"], pr
     }),
   );
 
-const extensionSkillTitle = (
-  contribution: Record<string, unknown>,
-  pref: ExtensionSkillPreference | undefined,
-  key: string,
-) =>
-  pref?.display_name_override ??
-  (typeof contribution.title === "string" ? contribution.title : catalogNameFromKey(key));
-
-const extensionSkillDescription = (contribution: Record<string, unknown>, pref: ExtensionSkillPreference | undefined) =>
-  pref?.description_override ?? (typeof contribution.description === "string" ? contribution.description : "");
-
-const toExtensionSkill = (input: {
-  contribution: unknown;
-  includeDisabled: boolean;
-  installedSource: EnabledExtensionSource["installedSource"];
-  instance: EnabledExtensionSource["instance"];
-  key: string;
-  pref: ExtensionSkillPreference | undefined;
-  projectId: string;
-}) => {
-  if (!isRecord(input.contribution) || !isPackageAssetDescriptor(input.contribution.source)) return null;
-
-  const enabled = input.pref?.enabled ?? true;
-  if (!enabled && !input.includeDisabled) return null;
-
-  const name = catalogNameFromKey(input.key);
-
-  return {
-    id: catalogId({ sourceKind: "skill", extensionInstanceId: input.instance.id, key: input.key }),
-    project_id: input.projectId,
-    source_kind: "extension",
-    extension_instance_id: input.instance.id,
-    extension_id: input.installedSource.extension_id,
-    installed_extension_id: input.installedSource.id,
-    install_name: input.installedSource.install_name,
-    key: input.key,
-    name,
-    title: extensionSkillTitle(input.contribution, input.pref, input.key),
-    description: extensionSkillDescription(input.contribution, input.pref),
-    files: readSkillPackageAssetFiles(sourceRootForAsset(input.installedSource.source_path), input.contribution.source),
-    source: input.contribution.source,
-    enabled,
-    editable: true,
-    created_at: input.instance.created_at,
-    updated_at: input.instance.updated_at,
-    deleted_at: null,
-    source_path: input.installedSource.source_path,
-  } satisfies InternalSkill;
-};
-
-const listExtensionSkills = async (deps: SkillServiceDeps, projectId: string, input: { includeDisabled: boolean }) => {
-  const [snapshot, preferences] = await Promise.all([
-    deps.extensionRuntimeCatalog.get(projectId),
-    deps.extensionSkillPreferencesDBService.list(projectId),
-  ]);
-  const preferenceByKey = new Map(
-    preferences.map((pref) => [preferenceKey(pref.extension_instance_id, pref.skill_key), pref]),
-  );
-  const items: InternalSkill[] = [];
-
-  for (const skill of snapshot.runtime.skills) {
-    const source = resolveEnabledSourceForRecord(skill.sourcePath, snapshot.enabledSources);
-    if (!source) continue;
-
-    const item = toExtensionSkill({
-      contribution: skill.contribution,
-      includeDisabled: input.includeDisabled,
-      installedSource: source.installedSource,
-      instance: source.instance,
-      key: skill.localId,
-      pref: preferenceByKey.get(preferenceKey(source.instance.id, skill.localId)),
-      projectId,
-    });
-    if (item) items.push(item);
-  }
-
-  return items;
-};
-
 const listInternal = async (deps: SkillServiceDeps, projectId: string, includeDisabled = false) => {
   const projectSkills = await Promise.all(
     (await deps.skillsDBService.list(projectId)).map((skill) => hydrateProjectSkill(deps.fileService, skill)),
@@ -177,7 +77,9 @@ const listInternal = async (deps: SkillServiceDeps, projectId: string, includeDi
   const extensionNames = new Set(extensionSkills.filter((skill) => skill.enabled !== false).map((skill) => skill.name));
   const visibleProjectSkills = projectSkills.filter((skill) => !extensionNames.has(skill.name));
 
-  return [...visibleProjectSkills, ...extensionSkills].sort((a, b) => a.name.localeCompare(b.name));
+  return [...visibleProjectSkills, ...extensionSkills.map(hydrateExtensionSkill)].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 };
 
 const findByNameInternal = async (deps: SkillServiceDeps, projectId: string, name: string, includeDisabled = false) => {
@@ -197,6 +99,30 @@ export const createSkillService = (deps: SkillServiceDeps) => {
     return result;
   };
   const list = async (projectId: string) => (await listInternal(deps, projectId)).map(toPublicSkill);
+
+  const query = async (projectId: string, input: PageQuery = {}) => {
+    const scope = `skills:${projectId}`;
+    const boundary = pageBoundary(input.cursor, scope);
+    const limit = pageLimit(input);
+    const extensionSkills = await listExtensionSkills(deps, projectId, { includeDisabled: false });
+    const projectSkills = await deps.skillsDBService.queryCandidates(
+      projectId,
+      input,
+      extensionSkills.map((skill) => skill.name),
+    );
+    const candidates = [...projectSkills, ...extensionSkills.filter((skill) => !boundary || skill.id > boundary)].sort(
+      (left, right) => (left.id < right.id ? -1 : Number(left.id > right.id)),
+    );
+    const page = queryPage(candidates, limit, scope);
+    const items = await Promise.all(
+      page.rows.map(async (skill) => {
+        const hydrated =
+          "source_kind" in skill ? hydrateExtensionSkill(skill) : await hydrateProjectSkill(deps.fileService, skill);
+        return toPublicSkill(hydrated);
+      }),
+    );
+    return { items, nextCursor: page.nextCursor };
+  };
 
   const getByName = async (projectId: string, name: string) => {
     const skill = await findByNameInternal(deps, projectId, name);
@@ -276,6 +202,7 @@ export const createSkillService = (deps: SkillServiceDeps) => {
 
   return {
     list,
+    query,
     getByName,
     create,
     update,

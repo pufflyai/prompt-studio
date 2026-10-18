@@ -1,3 +1,4 @@
+import type { ActivityEvent } from "pstdio-api-contracts";
 import type { RouteDeps } from "../deps";
 
 type EmitActivityEventInput = {
@@ -38,6 +39,26 @@ export const emitActivityEvent = async (
   });
 };
 
+const activityPage = (listed: { events: ActivityEvent[]; nextCursor: string | null }) => ({
+  events: listed.events,
+  next_cursor: listed.nextCursor,
+  items: listed.events.map((event) => ({
+    id: event.id,
+    projectId: event.project_id,
+    resourceType: event.resource_type,
+    resourceId: event.resource_id,
+    sourceExtensionId: event.source_extension_id,
+    eventType: event.event_type,
+    actorType: event.actor_type,
+    actorId: event.actor_id,
+    source: event.source,
+    summary: event.summary,
+    payloadJson: event.payload_json,
+    createdAt: event.created_at,
+  })),
+  nextCursor: listed.nextCursor,
+});
+
 export const listActivityEvents = async (deps: Pick<RouteDeps, "activityEventsService">, input: ListActivityInput) => {
   if (input.resourceType && input.resourceId) {
     const listed = await deps.activityEventsService.listByResource({
@@ -50,7 +71,7 @@ export const listActivityEvents = async (deps: Pick<RouteDeps, "activityEventsSe
       cursor: input.cursor,
       limit: input.limit,
     });
-    return { events: listed.events, next_cursor: listed.nextCursor };
+    return activityPage(listed);
   }
 
   const listed = await deps.activityEventsService.listByProject({
@@ -62,7 +83,7 @@ export const listActivityEvents = async (deps: Pick<RouteDeps, "activityEventsSe
     cursor: input.cursor,
     limit: input.limit,
   });
-  return { events: listed.events, next_cursor: listed.nextCursor };
+  return activityPage(listed);
 };
 
 export const buildDiff = <T>(from: T, to: T) => ({ from, to });

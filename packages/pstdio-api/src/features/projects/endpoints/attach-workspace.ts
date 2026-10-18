@@ -1,6 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { initialWorkspaceSchema, workspaceSchema } from "pstdio-api-contracts";
+import { initialWorkspaceRequestSchema, initialWorkspaceSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
+import { workspaceResponseSchema } from "../../workspaces/dto";
+import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import type { ProjectsRouteDeps } from "../deps";
 import { initializeProjectWorkspace, resolveInitialWorkspace, withFolderCreation } from "../project-folder";
 
@@ -10,10 +12,24 @@ export const attachWorkspaceRoute = createRoute({
   tags: ["Projects"],
   request: {
     params: z.object({ id: z.string() }),
-    body: { content: { "application/json": { schema: initialWorkspaceSchema } } },
+    body: {
+      content: {
+        "application/json": {
+          schema: z.union([
+            initialWorkspaceSchema.strict(),
+            initialWorkspaceRequestSchema
+              .strict()
+              .transform(({ providerId, params }) => ({ provider_id: providerId, params })),
+          ]),
+        },
+      },
+    },
   },
   responses: {
-    201: { description: "Initial workspace attached.", content: { "application/json": { schema: workspaceSchema } } },
+    201: {
+      description: "Initial workspace attached.",
+      content: { "application/json": { schema: workspaceResponseSchema } },
+    },
     400: {
       description: "Invalid folder.",
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
@@ -48,6 +64,7 @@ export const attachWorkspaceHandler =
         (initial.path && (await deps.workspaceService.findByPath(initial.path)))
       )
         return c.json({ error: "An initial workspace is already attached to this project or folder." }, 409);
-      return c.json(await initializeProjectWorkspace(deps, id, initial.initial), 201);
+      const workspace = await initializeProjectWorkspace(deps, id, initial.initial);
+      return c.json({ ...workspace, ...toExtensionWorkspace(workspace) }, 201);
     });
   };

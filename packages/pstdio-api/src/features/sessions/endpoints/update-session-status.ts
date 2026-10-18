@@ -3,6 +3,7 @@ import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
+import { toSessionResponse } from "../session-response";
 
 export const updateSessionStatusRoute = createRoute({
   method: "patch",
@@ -51,7 +52,11 @@ export const updateSessionStatusHandler = (
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
     if (existing.status === status) {
-      return c.json(existing, 200);
+      const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(existing.id);
+      return c.json(
+        toSessionResponse(existing, workspace?.project_id === existing.project_id ? workspace.id : null),
+        200,
+      );
     }
 
     const updated =
@@ -76,6 +81,7 @@ export const updateSessionStatusHandler = (
       });
     }
 
-    return c.json(updated, 200);
+    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(updated.id);
+    return c.json(toSessionResponse(updated, workspace?.project_id === updated.project_id ? workspace.id : null), 200);
   };
 };
