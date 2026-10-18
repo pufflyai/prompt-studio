@@ -296,14 +296,14 @@ describe("workspace file operations", () => {
     expect(calls).toContainEqual(
       expect.objectContaining({
         method: "PATCH",
-        body: '{"destination_path":"docs/README.md"}',
+        body: '{"destinationPath":"docs/README.md"}',
       }),
     );
     await treeView.moveNode?.(folder, archive, treeContext(workbench, workspace));
     expect(calls).toContainEqual(
       expect.objectContaining({
         method: "PATCH",
-        body: '{"destination_path":"archive/docs"}',
+        body: '{"destinationPath":"archive/docs"}',
       }),
     );
     const renameFile = file.contextMenuActions?.find((action) => action.id === "workspace-entry.rename");
@@ -316,7 +316,7 @@ describe("workspace file operations", () => {
     expect(calls).toContainEqual(
       expect.objectContaining({
         method: "PATCH",
-        body: '{"destination_path":"README-renamed.md"}',
+        body: '{"destinationPath":"README-renamed.md"}',
       }),
     );
     const renameFolder = folder.contextMenuActions?.find((action) => action.id === "workspace-entry.rename");
@@ -325,7 +325,7 @@ describe("workspace file operations", () => {
     expect(calls).toContainEqual(
       expect.objectContaining({
         method: "PATCH",
-        body: '{"destination_path":"docs-renamed"}',
+        body: '{"destinationPath":"docs-renamed"}',
       }),
     );
     const deleteAction = file?.contextMenuActions?.find((action) => action.id === "workspace-entry.delete");
