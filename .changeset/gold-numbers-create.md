@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Fix ticket column scroll height and align scrollbars with the column edge.
+Fix ticket column scroll height, align scrollbars with the column edge, and retain card content while dragging.

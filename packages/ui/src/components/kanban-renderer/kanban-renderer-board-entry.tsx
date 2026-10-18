@@ -27,6 +27,14 @@ interface BoardEntryProps {
   onDragStart: (itemId: string) => (event: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
 }
+
+// Resolve lazy properties together so the compiler caches the result by item identity.
+// Reading getters throughout JSX creates new cards and actions on every drag update.
+const resolveBoardItem = (item: KanbanRendererBoardItem) => ({
+  cardProps: item.cardProps,
+  contextMenuActions: item.contextMenuActions ?? [],
+});
+
 export const BoardEntry = (props: BoardEntryProps) => {
   const {
     entry,
@@ -87,26 +95,27 @@ export const BoardEntry = (props: BoardEntryProps) => {
       </HStack>
     );
   if (!item) return null;
+  const { cardProps, contextMenuActions } = resolveBoardItem(item);
   return (
-    <ResourceContextMenu actions={item.contextMenuActions ?? []}>
+    <ResourceContextMenu actions={contextMenuActions}>
       <Box
         data-board-key={entry.key}
         tabIndex={0}
         role="button"
-        aria-label={item.cardProps.title}
+        aria-label={cardProps.title}
         onFocusCapture={onFocus}
         onKeyDown={(event) => {
           onKeyboard(event, index);
           if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
             event.preventDefault();
-            item.cardProps.onClick?.();
+            cardProps.onClick?.();
           }
         }}
         onDragOver={canDragIn ? onDragOver : undefined}
         onDrop={canDragIn ? onDrop : undefined}
       >
         <KanbanRendererCard
-          {...item.cardProps}
+          {...cardProps}
           isSelected={item.id === selectedItemId}
           draggable={canDragOut}
           onDragStart={canDragOut ? onDragStart(item.id) : undefined}

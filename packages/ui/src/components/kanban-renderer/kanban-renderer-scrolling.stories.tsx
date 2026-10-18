@@ -67,7 +67,7 @@ export const FittingCards: StoryObj = {
     frame.style.height = `${frame.clientHeight - viewport.clientHeight + cardsHeight + 4}px`;
     await waitFor(() => expect(viewport.clientHeight).toBeLessThan(cardsHeight + 10));
     await waitFor(() => expect(viewport.scrollHeight).toBe(viewport.clientHeight));
-    await expect(scrollbar).not.toBeVisible();
+    await waitFor(() => expect(scrollbar).not.toBeVisible());
   },
 };
 
@@ -86,7 +86,7 @@ export const OverflowingCards: StoryObj = {
     );
     await userEvent.click(within(canvasElement).getByRole("button", { name: "Keep one card" }));
     await waitFor(() => expect(viewport.scrollHeight).toBe(viewport.clientHeight));
-    await expect(scrollbar).not.toBeVisible();
+    await waitFor(() => expect(scrollbar).not.toBeVisible());
   },
 };
 
@@ -97,6 +97,6 @@ export const GroupedCards: StoryObj = {
     await waitFor(() => expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight));
     await userEvent.click(within(canvasElement).getByRole("button", { name: /High priority/ }));
     await waitFor(() => expect(viewport.scrollHeight).toBe(viewport.clientHeight));
-    await expect(scrollbar).not.toBeVisible();
+    await waitFor(() => expect(scrollbar).not.toBeVisible());
   },
 };
