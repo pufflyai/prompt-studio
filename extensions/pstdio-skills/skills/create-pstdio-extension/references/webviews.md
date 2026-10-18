@@ -47,8 +47,8 @@ For copy actions, add `clipboard.write` to the view capabilities and use `CopyBu
 
 ## Saved view preferences
 
-`preferences.get` and `preferences.set` accept names without a setting declaration. Such names belong to the calling extension. Dashboard hosts persist them on the server, so all clients and agents use the same data. A write succeeds only after storage. Use `user` (default), `project`, `workspace`, or `session` scope for the intended lifetime. Workspace and session scopes require IDs. Scope `default` is read only.
+Use `client.preferences.get(name, scope)` and `client.preferences.set(name, value, scope)` for small saved view choices. Declare `preferences.get` and `preferences.set`. A name without a setting declaration belongs to your extension. The host stores values on the server, so reloads, restarts, other clients, and agents see the same data. `set` returns after the value is stored. The default scope is `user`. Use `project`, `workspace`, or `session` for shorter lifetimes; `workspace` and `session` need a scope ID.
 
-Prefer your own extension's names. Access to preferences registered by another extension remains available with a deprecation warning until a later breaking API release. `dashboard.themePreference` and `dashboard.locale` are shared host preferences and retain their existing persistence.
+Use your own extension's names. Reading or writing names registered by another extension is deprecated in 0.44 and will be removed in 0.45. `dashboard.themePreference` and `dashboard.locale` stay shared host preferences.
 
-Use preferences for small saved view choices, page params for shareable view state, declared settings for user configuration, and commands with `ctx.storage` for product data. Agents can use the authenticated preference GET/PUT routes documented in the webview and storage reference.
+Use preferences for small saved view choices, page params for shareable view state, declared settings for user configuration, and commands with `ctx.storage` for product data. Agents use the authenticated routes in the [webview preferences reference](https://prompt.studio/docs/references/extensions/webview-and-storage-api/#webview-preferences).

@@ -174,10 +174,10 @@ For example, Notes contributes one mode-owned navigation item opening its Notes 
 
 ## Typed page params
 
-Use `params` on a page for shareable filters, search text, sort choices, and time ranges. The types are `string`, `number`, `boolean`, and `string[]`, with optional matching defaults. Names are lowercase letters, digits, and hyphens, starting with a letter. Do not use host URL selectors (`resource`, `section`, `document`, or source-coordinate keys) or names starting with `_`.
+Use `params` on a page for shareable filters, search text, sort choices, and time ranges. The types are `string`, `number`, `boolean`, and `string[]`, each with an optional matching default. Names use lowercase letters, digits, and hyphens and start with a letter. Do not reuse host URL selectors such as `resource`, `section`, or `document`.
 
-Pass overrides on a page navigation target or to `serializePageUrl`. Navigation pushes history. A webview reads `page.location()` and `page.params<T>()` from `defineExtensionView`, subscribes with `page.subscribe`, and patches params with `page.updateParams`. Declare `page.params.update`. A `null` patch resets a name. Updates replace history and require the active page's extension owner.
+Pass `params` on a page navigation target to open a page with overrides. Navigation pushes history. In a webview, read params with `client.page.location()` and `client.page.params<T>()` from the [typed client](client-contracts.md), and listen with `client.page.subscribe(listener)`. Declare `page.params.update` to call `client.page.updateParams(patch)`. A `null` value resets a name to its default. Updates replace the current history entry, and only the extension that owns the active page can make them. The render-context `page` helper is deprecated.
 
-Native page-owned query and load callbacks receive defaults in `renderer.pageParams` and rerun when they change. Params do not change panel layout, page state keys, or breadcrumbs. Unknown or invalid URL params use defaults. Programmatic invalid params fail atomically.
+Native query and load callbacks owned by the active page receive values in `renderer.pageParams` and rerun when params change. Params do not change panel layout, page state keys, or breadcrumbs. Invalid URL values fall back to defaults. Invalid params on a navigation target fail and leave the current page unchanged.
 
-Use API `^0.1.4` or newer for these additions. Read `documentation/references/extensions/0005-webview-and-storage-api.md` and `documentation/guides/extensions/0002-workbench-cookbook.md` in the host repository for limits and examples.
+Page params need SDK 0.44 or newer. The [page params reference](https://prompt.studio/docs/references/extensions/webview-and-storage-api/#page-params) lists limits and error codes.
