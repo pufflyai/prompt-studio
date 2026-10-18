@@ -49,9 +49,8 @@ export const openSessionSidePanel = async (page: Page, title: string) => {
     .getByRole("tab", { selected: true })
     .click({ button: "right" });
   await switchSession(page, title);
-  await page
-    .locator('[data-workbench-panel-header="side"]')
-    .getByRole("tab", { name: title, exact: true })
-    .click({ button: "right" });
+  const tab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: title, exact: true });
+  await tab.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+  await expect(tab).toHaveCSS("font-style", "normal");
 };
