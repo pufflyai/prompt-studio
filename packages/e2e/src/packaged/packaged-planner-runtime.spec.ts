@@ -19,7 +19,6 @@ import { logTestPhase } from "../scripts/log-test-phase";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { buildBinary, runPackagedAsync } from "./packaged-helpers";
-import { preparePlannerSource } from "./packaged-planner-source";
 import {
   ACTIVE_CONFLICTS,
   ARCHIVED_CONFLICTS,
@@ -27,6 +26,7 @@ import {
   plannerCommands,
   seedTrackProject,
 } from "./packaged-planner-runtime-fixture";
+import { preparePlannerSource } from "./packaged-planner-source";
 import {
   type RuntimeDescriptor,
   runtimeAuthorization,
@@ -169,7 +169,11 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
 
     phase("install start");
     // Planner uses SDK and UI APIs that may not be on npm yet, so install it with the workspace builds.
-    await installPlanner(host, conflicting.folder, await preparePlannerSource(join(home, "fixtures", "current-planner")));
+    await installPlanner(
+      host,
+      conflicting.folder,
+      await preparePlannerSource(join(home, "fixtures", "current-planner")),
+    );
     await enablePlanner(host, valid.id);
     phase("install complete; seed start");
     const [conflictData] = await Promise.all([

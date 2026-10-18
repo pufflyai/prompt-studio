@@ -24,16 +24,27 @@ const setup = async () => {
   const save = () => saveTicketCommand.run(...args({ id: shorthand }));
   const pull = () => pullTicketCommand.run(...args({ id: shorthand }));
   const readTicket = async () => (await ticketsCollection(storage).list())[0];
+  // Dashboard uploads and saved images share the ticket's storage scope.
+  const files = storage.scope({ type: "resource", resource: { type: "ticket", id: (await readTicket()).id } }).files;
   const upload = async (name: string, data: Uint8Array) => ({
-    ...(await storage.files.put({ name, data, mimeType: "image/png" })),
+    ...(await files.put({ name, data, mimeType: "image/png" })),
     hash: new Bun.CryptoHasher("sha256").update(data).digest("hex"),
   });
-  return { storage, projectFiles, path: `${ticketFilesDir(shorthand)}/error.png`, save, pull, readTicket, upload };
+  return {
+    storage,
+    files,
+    projectFiles,
+    path: `${ticketFilesDir(shorthand)}/error.png`,
+    save,
+    pull,
+    readTicket,
+    upload,
+  };
 };
 
 describe("ticket images", () => {
   test("pull and save preserve separate attachments with the same name", async () => {
-    const { storage, projectFiles, readTicket, upload } = await setup();
+    const { storage, files, projectFiles, readTicket, upload } = await setup();
     const ticket = await readTicket();
     const attachments = [];
     for (const byte of [1, 2, 3]) {
@@ -45,7 +56,7 @@ describe("ticket images", () => {
     expect(paths).toHaveLength(3);
     const result = await saveTicketImages(storage, projectFiles, stored, paths);
     expect(result.replacedIds).toEqual([]);
-    expect(await Promise.all(result.attachments.map(({ id }) => storage.files.getBytes(id)))).toEqual([
+    expect(await Promise.all(result.attachments.map(({ id }) => files.getBytes(id)))).toEqual([
       new Uint8Array([1]),
       new Uint8Array([2]),
       new Uint8Array([3]),
@@ -54,7 +65,7 @@ describe("ticket images", () => {
     await projectFiles.writeBytes(secondPath, new Uint8Array([4]));
     const changed = await saveTicketImages(storage, projectFiles, stored, paths);
     expect(changed.replacedIds).toEqual([attachments[1].id]);
-    expect(await Promise.all(changed.attachments.map(({ id }) => storage.files.getBytes(id)))).toEqual([
+    expect(await Promise.all(changed.attachments.map(({ id }) => files.getBytes(id)))).toEqual([
       new Uint8Array([1]),
       new Uint8Array([4]),
       new Uint8Array([3]),
@@ -79,9 +90,8 @@ describe("ticket images", () => {
   });
 
   test("saving a checkout cannot overwrite a later dashboard upload with a colliding name", async () => {
-    const { storage, projectFiles, readTicket, pull, save, upload } = await setup();
+    const { storage, files, projectFiles, readTicket, pull, save, upload } = await setup();
     const ticket = await readTicket();
-    const files = storage.scope({ type: "resource", resource: { type: "ticket", id: ticket.id } }).files;
     const first = await upload("proof.png", new Uint8Array([1]));
     const second = await upload("proof.png", new Uint8Array([2]));
     await ticketsCollection(storage).put(ticket.id, { ...ticket, attachments: [first, second] });
@@ -95,7 +105,7 @@ describe("ticket images", () => {
     expect(await files.getBytes(later.id)).toEqual(new Uint8Array([3]));
   });
   test("save stores an image from the files folder as an attachment with its exact bytes", async () => {
-    const { storage, projectFiles, path, save, readTicket } = await setup();
+    const { files, projectFiles, path, save, readTicket } = await setup();
     await projectFiles.writeBytes(path, screenshot);
     await projectFiles.writeText(path.replace("error.png", "notes.md"), "notes");
 
@@ -105,7 +115,7 @@ describe("ticket images", () => {
     expect(ticket.files?.map(({ name }) => name)).toEqual(["notes.md"]);
     expect(ticket.attachments).toHaveLength(1);
     expect(ticket.attachments?.[0]).toMatchObject({ name: "error.png", mimeType: "image/png" });
-    expect(await storage.files.getBytes(ticket.attachments![0].id)).toEqual(screenshot);
+    expect(await files.getBytes(ticket.attachments![0].id)).toEqual(screenshot);
   });
 
   test("save keeps an unchanged image and replaces a changed one", async () => {

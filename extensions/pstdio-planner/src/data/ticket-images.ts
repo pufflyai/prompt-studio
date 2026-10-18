@@ -66,11 +66,12 @@ export const pullTicketImages = async (
   projectFiles: ArtifactMount,
   ticket: StoredTicket,
 ) => {
+  const files = storage.scope({ type: "resource", resource: { type: "ticket", id: ticket.id } }).files;
   const checkout = await readTicketImageCheckout(projectFiles, ticket.shorthand);
   const images = ticketImagePaths(ticket, checkout);
   for (const { name, attachment } of images) {
     const path = `${ticketFilesDir(ticket.shorthand)}/${name}`;
-    await projectFiles.writeBytes(path, await storage.files.getBytes(attachment.id));
+    await projectFiles.writeBytes(path, await files.getBytes(attachment.id));
   }
   await writeTicketImageCheckout(
     projectFiles,
