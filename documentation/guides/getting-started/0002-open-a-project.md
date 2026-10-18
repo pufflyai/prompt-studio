@@ -57,6 +57,10 @@ The workbench is the shared window where you use your tools and talk to agents. 
 - **Browse extensions** opens the extension settings so you can add tools.
 - **Settings** at the bottom of the sidebar holds runtime options, project options, and extension settings.
 
+If none of the project's enabled harness extensions is available, Start shows **No agent available**. Choose **Review extensions** to check the project's extensions, or **Check again** after changing setup. The warning shows any reasons supplied by the harness extensions. You can keep using other tools without an agent.
+
+**Checking agent availability…** means the check is still running. **Could not check agent availability** means the check failed; it does not mean no agent is installed. Choose **Check again** to retry. If project setup failed, finish that setup with **Retry setup** first.
+
 The example project has Notes and Planner enabled, so its sidebar includes **Notes** and **Tickets**. Those are extension tools. Your sidebar depends on the extensions you turn on.
 
 Next, [add tools](0003-add-tools.md).

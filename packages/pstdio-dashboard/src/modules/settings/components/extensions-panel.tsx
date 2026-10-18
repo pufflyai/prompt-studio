@@ -12,7 +12,6 @@ import {
   useInstallMarketplaceExtension,
   useMarketplaceExtensionContributions,
   useProjectExtensionMetadata,
-  useProjectExtensionSync,
   useProjectExtensions,
   useSetProjectExtensionEnabled,
   useUpgradeProjectExtension,
@@ -31,7 +30,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const { projectId, settingsInput } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
-  useProjectExtensionSync(projectId);
   const extensionsQuery = useProjectExtensions(projectId);
   const metadataQuery = useProjectExtensionMetadata(projectId);
   const setEnabled = useSetProjectExtensionEnabled(projectId);
