@@ -258,6 +258,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0004 — PRD: Templates and skills](../requirements/platform/0004-templates-and-skills.md)
 - [0005 — PRD: Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
 - [0007 — PRD: Synchronization contracts v0.1](../requirements/platform/0007-synchronization-contracts.md)
+- [0009 — PRD: Reliable documentation and extension authoring](../requirements/platform/0009-documentation-and-skills-reliability.md)
 
 ## ADRs
 
