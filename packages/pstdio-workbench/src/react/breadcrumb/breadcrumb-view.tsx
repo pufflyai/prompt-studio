@@ -87,7 +87,7 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   ) {
     crumbs.push({
       title: snapshot.label ?? resource.label ?? resource.id,
-      icon: snapshot.icon ?? workbench.resources.getKind(resource.type)?.icon,
+      icon: snapshot.icon ?? workbench.resources.getKind(resource.type, resource.extensionId)?.icon,
       resource,
     });
   }

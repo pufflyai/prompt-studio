@@ -80,3 +80,27 @@ export const StatusIndicators: StoryObj<typeof meta> = {
     await expect(within(dialog).getByRole("img", { name: "Session status: Failed" })).toBeVisible();
   },
 };
+
+const ownedWorkbench = createWorkbench();
+ownedWorkbench.resources.registerKind({ kind: "drawing", extensionId: "first", label: "First", icon: "File" });
+ownedWorkbench.resources.registerKind({ kind: "drawing", extensionId: "second", label: "Second", icon: "Folder" });
+export const OwnerIcons: StoryObj<typeof meta> = {
+  args: {
+    workbench: ownedWorkbench,
+    request: {
+      label: "Owner icons",
+      placeholder: "Search drawings",
+      list: () => [
+        { resource: { type: "drawing", id: "one", extensionId: "first", label: "First drawing" }, activate() {} },
+        { resource: { type: "drawing", id: "one", extensionId: "second", label: "Second drawing" }, activate() {} },
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "Owner icons" });
+    const first = within(dialog).getByRole("option", { name: "First drawing" });
+    const second = within(dialog).getByRole("option", { name: "Second drawing" });
+    await expect(first.querySelector("svg.lucide-file")).toBeInTheDocument();
+    await expect(second.querySelector("svg.lucide-folder")).toBeInTheDocument();
+  },
+};

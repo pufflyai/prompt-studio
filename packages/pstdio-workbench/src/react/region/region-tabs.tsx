@@ -41,7 +41,9 @@ const resolvePlacementIcon = (workbench: WorkbenchCore, placement: WorkbenchWidg
   const iconName = resolveTabIconName(
     placement,
     workbench.layout.getWidget(placement.contributionId),
-    placement.resource ? workbench.resources.getKind(placement.resource.type)?.icon : undefined,
+    placement.resource
+      ? workbench.resources.getKind(placement.resource.type, placement.resource.extensionId)?.icon
+      : undefined,
   );
   return iconName ? <WorkbenchIcon name={iconName} size={14} /> : undefined;
 };

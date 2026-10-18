@@ -41,7 +41,7 @@ export const dashboardResourceFromExtensionReference = (
   };
 };
 export const dashboardResourceParent = (
-  ctx: WorkbenchModuleContext,
+  ctx: Pick<WorkbenchModuleContext, "resources">,
   resource: ResourceRef,
   projectId: string,
 ): WorkbenchHierarchyNode | undefined => {
@@ -50,6 +50,6 @@ export const dashboardResourceParent = (
   if ("viewId" in reference) return reference;
   return dashboardResourceFromExtensionReference(reference, {
     projectId,
-    fallbackIcon: ctx.resources.getKind(reference.type)?.icon,
+    fallbackIcon: ctx.resources.getKind(reference.type, reference.extensionId)?.icon,
   });
 };
