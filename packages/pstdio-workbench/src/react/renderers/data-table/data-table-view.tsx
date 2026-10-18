@@ -1,4 +1,4 @@
-import { Stack } from "@chakra-ui/react";
+import { Box, Stack } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import {
   DataTable,
@@ -42,6 +42,15 @@ interface WorkbenchDataTableViewProps {
 }
 const initialResult: DataTableRendererQueryResult = { rows: [] };
 const noopSubscribe = () => () => {};
+
+const DataTableViewFrame = (props: { children: ReactNode }) => (
+  <Box position="relative" h="full" minH="0" minW="0" overflow="hidden">
+    {/* The table owns scrolling, so its rows must not grow the outer region. */}
+    <Stack position="absolute" inset="0" minH="0" minW="0" gap="0" bg="bg" overflow="hidden">
+      {props.children}
+    </Stack>
+  </Box>
+);
 
 export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const { workbench, contribution, placement } = props;
@@ -142,16 +151,21 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       .filter((column) => !column.hidden && !settings.hiddenColumns.includes(column.id))
       .map((column) => ({ id: column.id, label: column.label ?? column.id }));
     return (
-      <Stack h="full" minH="0" minW="0" gap="0" bg="bg" overflow="hidden">
+      <DataTableViewFrame>
         <DataTableSkeleton columns={skeletonColumns.length > 0 ? skeletonColumns : undefined} />
-      </Stack>
+      </DataTableViewFrame>
     );
   }
   if (!read.value && read.error) return <RendererReadNotice error={read.error} retry={read.retry} />;
-  if (provider && !viewsSource) return <DataTableSkeleton />;
+  if (provider && !viewsSource)
+    return (
+      <DataTableViewFrame>
+        <DataTableSkeleton />
+      </DataTableViewFrame>
+    );
 
   return (
-    <Stack h="full" minH="0" minW="0" gap="0" bg="bg" overflow="hidden">
+    <DataTableViewFrame>
       {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       <DataTable
         itemLabel={
@@ -208,6 +222,6 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
         }
         fullWidth
       />
-    </Stack>
+    </DataTableViewFrame>
   );
 };
