@@ -5,7 +5,7 @@ import { type RefObject, useState } from "react";
 import { layoutGraph } from "../model/graph-layout";
 import { dropRegion } from "./drop-region";
 import { GraphContent } from "./graph-content";
-import { geometry, newTrackWidth, trackHeaderHeight, visibleContentLeft } from "./graph-geometry";
+import { geometry, newTrackWidth, trackHeaderHeight } from "./graph-geometry";
 import { TrackHeader } from "./graph-tracks";
 import type { PlanViewProps } from "./plan-view";
 import { useCanvasPan } from "./use-canvas-pan";
@@ -66,7 +66,6 @@ export function PlanGraph(props: PlanViewProps) {
   const { ref, width, height } = useSize();
   const { zoom, change } = useCanvasZoom(ref);
   const { panning, handlers } = useCanvasPan(ref, zoom, change);
-  const [scrollLeft, setScrollLeft] = useState(0);
   const { collapsed, toggle } = useCollapsedTracks();
   const { box, trackAt, rows } = useGraphBox(sections, tracks, collapsed, ref);
   const sourceTrackId = sections.flatMap(({ section }) => section.rows).find(({ id }) => id === props.dragId)?.trackId;
@@ -99,7 +98,6 @@ export function PlanGraph(props: PlanViewProps) {
         aria-label="Project Timeline canvas"
         tabIndex={0}
         {...handlers}
-        onScroll={(event) => setScrollLeft(event.currentTarget.scrollLeft)}
       >
         <Box style={{ zoom }} w={`${canvasWidth}px`}>
           <TrackHeader
@@ -118,11 +116,12 @@ export function PlanGraph(props: PlanViewProps) {
             graph={{ box, trackAt, rows }}
             collapsed={collapsed}
             viewport={{
+              ref,
               width: width / zoom,
+              height: height / zoom,
               canvasWidth,
               canvasHeight,
               zoom,
-              headerLeft: visibleContentLeft(box.contentLeft, scrollLeft, zoom),
             }}
           />
         </Box>

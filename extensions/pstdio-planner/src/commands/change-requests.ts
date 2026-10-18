@@ -20,20 +20,23 @@ export const readReport = async (ctx: Pick<CommandContext, "commands">, reportId
   return outcome.value;
 };
 
+export class WorkspaceUnavailableError extends Error {}
+
 export const workspaceGitPath = async (ctx: CommandContext, workspaceId: string) => {
   const workspace = await ctx.workspaces.get(workspaceId);
-  if (!workspace) throw new Error(`Unknown workspace "${workspaceId}"`);
+  if (!workspace) throw new WorkspaceUnavailableError(`Unknown workspace "${workspaceId}"`);
   if (workspace.execution_kind !== "local" || !workspace.provider_capabilities_json?.diff)
-    throw new Error("This workspace does not support Git attempts.");
+    throw new WorkspaceUnavailableError("This workspace does not support Git attempts.");
   const path = workspace.root_path;
-  if (!path) throw new Error(`Workspace "${workspaceId}" has no repository path.`);
+  if (!path) throw new WorkspaceUnavailableError(`Workspace "${workspaceId}" has no repository path.`);
   return path;
 };
 
 export const workspaceHead = async (ctx: CommandContext, workspaceId: string) => {
   const path = await workspaceGitPath(ctx, workspaceId);
   const result = await ctx.process.run({ command: ["git", "-C", path, "rev-parse", "HEAD"] });
-  if (result.exitCode !== 0) throw new Error(result.stderr.trim() || "Could not read workspace HEAD.");
+  if (result.exitCode !== 0)
+    throw new WorkspaceUnavailableError(result.stderr.trim() || "Could not read workspace HEAD.");
   return result.stdout.trim();
 };
 

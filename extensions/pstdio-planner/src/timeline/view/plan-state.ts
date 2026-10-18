@@ -31,7 +31,7 @@ export function relationsFor(selected: PlanRow | undefined, plan: Plan | undefin
   return relations;
 }
 
-export function useDragAndDrop(client: PlanClient, onError: (error: string) => void) {
+export function useDragAndDrop(client: PlanClient) {
   const [dragId, setDragId] = useState<string>();
   const [dropTarget, setDropTarget] = useState<DropTarget>();
   // A drag cancelled with Escape or released outside a target ends without a drop.
@@ -60,8 +60,8 @@ export function useDragAndDrop(client: PlanClient, onError: (error: string) => v
         deadline: target.deadlineId ?? "none",
         before: target.beforeId,
       });
-    } catch (reason) {
-      onError(String(reason));
+    } catch {
+      // The command bridge reports the rejected action in host chrome.
     }
   };
 

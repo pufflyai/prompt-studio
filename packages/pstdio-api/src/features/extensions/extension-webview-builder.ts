@@ -6,9 +6,10 @@ import { runCommand } from "./install-extension-dependencies";
 export const extensionWebviewBuildOptions = {
   target: "browser",
   format: "esm",
+  splitting: true,
   define: { "process.env.NODE_ENV": '"production"' },
   minify: true,
-  naming: { entry: "module.[ext]", asset: "[name]-[hash].[ext]" },
+  naming: { entry: "module.[ext]", chunk: "chunk-[hash].[ext]", asset: "[name]-[hash].[ext]" },
 } satisfies Partial<Bun.BuildConfig>;
 
 export type ExtensionWebviewBuildInput = {
@@ -33,7 +34,9 @@ const buildArguments = (input: ExtensionWebviewBuildInput) => {
     `--target=${options.target}`,
     `--format=${options.format}`,
     ...(options.minify ? ["--minify"] : []),
+    ...(options.splitting ? ["--splitting"] : []),
     `--entry-naming=${options.naming.entry}`,
+    `--chunk-naming=${options.naming.chunk}`,
     `--asset-naming=${options.naming.asset}`,
     ...Object.entries(options.define).map(([name, value]) => `--define=${name}=${value}`),
   ];

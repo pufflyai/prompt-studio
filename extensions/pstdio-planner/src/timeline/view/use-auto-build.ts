@@ -13,7 +13,7 @@ const modeEvents = [
 ];
 
 export function useAutoBuild(client: PlanClient) {
-  const { value: mode, setValue: setMode, error: readError } = useLiveValue(client, readMode, modeEvents);
+  const { value: mode, setValue: setMode } = useLiveValue(client, readMode, modeEvents);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const refresh = async () => {
@@ -44,5 +44,5 @@ export function useAutoBuild(client: PlanClient) {
     }
   };
   // Saved run failures belong to the status popover, not a new configuration attempt.
-  return { mode, saving, error: error ?? readError, configure, refresh };
+  return { mode, saving, error, configure, refresh };
 }

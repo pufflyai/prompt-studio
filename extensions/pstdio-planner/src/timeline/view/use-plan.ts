@@ -1,5 +1,5 @@
 // Read the plan and reload it whenever Planner tickets or the stored plan change.
-import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
+import { createWebviewClient, type GuestHost, viewDataEvents } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import type { autoBuildCommand } from "../../commands/auto-build";
 import type { configureAutoBuildCommand, readAutoBuildCommand } from "../../commands/auto-build-mode";
@@ -23,10 +23,10 @@ export type PlanClient = ReturnType<typeof createWebviewClient<PlanCommands>>;
 const readPlan = (client: PlanClient) => client.commands["timeline.plan.read"]();
 
 // Planner reports tag changes as ticket changes, so track names stay current too.
-const planEvents = [plannerTicketsChanged, planChanged];
+const planEvents = [plannerTicketsChanged, planChanged, viewDataEvents.boardViewsChanged];
 
 export function usePlan(host: GuestHost) {
   const [client] = useState(() => createWebviewClient<PlanCommands>(host));
-  const { value: plan, error } = useLiveValue(client, readPlan, planEvents);
-  return { client, plan, error };
+  const { value: plan } = useLiveValue(client, readPlan, planEvents);
+  return { client, plan };
 }

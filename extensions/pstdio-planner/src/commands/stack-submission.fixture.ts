@@ -74,7 +74,11 @@ export async function stackSubmissionFixture() {
     storage,
     params: {},
     overrides: {
-      workspaces: { list: async () => [], get: async () => workspace, getDefault: async () => workspace } as never,
+      workspaces: {
+        list: async () => [],
+        get: async (id: string) => ({ ...workspace, id }),
+        getDefault: async () => workspace,
+      } as never,
       process: {
         run: async ({ command, cwd }: { command: string[]; cwd?: string }) => run(command, cwd ?? path),
       } as never,

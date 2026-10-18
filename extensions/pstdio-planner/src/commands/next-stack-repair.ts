@@ -1,5 +1,6 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import type { AttemptRecord, TicketAttemptSelection } from "../data/attempt-types";
+import { WorkspaceUnavailableError } from "./change-requests";
 import { readStackRepair } from "./update-stack";
 
 export async function readSelectedStackRepair(
@@ -10,12 +11,16 @@ export async function readSelectedStackRepair(
 ) {
   const existing = attempts.filter((attempt) => attempt.ticketId === ticketId && attempt.state !== "abandoned");
   const selection = selections.find((selection) => selection.ticketId === ticketId);
-  if (selection) {
-    const chosen = existing.find(({ workspaceId }) => workspaceId === selection.workspaceId);
-    return chosen ? readStackRepair(ctx, chosen) : null;
+  let chosen: AttemptRecord | undefined;
+  if (selection) chosen = existing.find(({ workspaceId }) => workspaceId === selection.workspaceId);
+  else if (existing.length === 1) chosen = existing[0];
+  if (!chosen) return null;
+  try {
+    return await readStackRepair(ctx, chosen);
+  } catch (error) {
+    if (!(error instanceof WorkspaceUnavailableError)) throw error;
+    return { unavailableWorkspaceId: chosen.workspaceId, detail: error.message, attempt: chosen };
   }
-  if (existing.length === 1) return readStackRepair(ctx, existing[0]!);
-  return null;
 }
 
 export const canOfferStackRepair = (

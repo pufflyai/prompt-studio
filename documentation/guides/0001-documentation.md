@@ -249,6 +249,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 ### Extensions
 
 - [0001 — PRD: Project extension runtime snapshot requirements](../requirements/extensions/0001-runtime-snapshots.md)
+- [0002 — PRD: Shared timeline renderer (proposed)](../requirements/extensions/0002-timeline-renderer.md)
 
 ### Platform
 

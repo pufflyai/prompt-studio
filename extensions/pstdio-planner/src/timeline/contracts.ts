@@ -45,6 +45,7 @@ export interface PlanRow {
   trackId: string | null;
   requests: ReviewRequestView[];
   requestErrors: string[];
+  // Only agent gates display their document inside the timeline.
   instructions: string;
   done: boolean;
   // Position in the whole execution order, starting at 1.
