@@ -72,6 +72,10 @@ test.each([
     kind: "info",
     dedupeKey: key,
   });
+  expect(await client.notifications.resolveByDedupeKey(projectId, { dedupeKey: key, status: "done" })).toMatchObject({
+    resolved: 1,
+    notifications: [expect.objectContaining({ id: notification.id, status: "done" })],
+  });
   const command = await notify(projectId).setStatusByKey(key, "done");
   expect(command).toEqual([expect.objectContaining({ id: notification.id, status: "done" })]);
   expect(await client.notifications.setStatusByKey(projectId, key, { status: "done" })).toEqual(command);

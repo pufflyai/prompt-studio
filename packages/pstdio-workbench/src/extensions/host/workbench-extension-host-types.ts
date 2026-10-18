@@ -9,7 +9,7 @@ import type {
   WorkbenchPanelRenderInput,
 } from "../../core";
 import type {
-  CreateBridgeWebviewHostCapabilities,
+  CreateBridgeWebviewHostAdapters,
   CreateBridgeWebviewProps,
   CreateBridgeWebviewTheme,
 } from "../bridge/bridge-webview-renderer";
@@ -39,8 +39,7 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   createNavigationWhenExpression?: (
     when: WorkbenchExtensionMetadata["navigationItems"][number]["when"],
   ) => string | undefined;
-  createWebviewHostCapabilities?: CreateBridgeWebviewHostCapabilities;
-  createWebviewHostCapabilityOverrides?: CreateBridgeWebviewHostCapabilities;
+  createWebviewHostAdapters?: CreateBridgeWebviewHostAdapters;
   createWebviewProps?: CreateBridgeWebviewProps;
   createWebviewTheme?: CreateBridgeWebviewTheme;
   executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;

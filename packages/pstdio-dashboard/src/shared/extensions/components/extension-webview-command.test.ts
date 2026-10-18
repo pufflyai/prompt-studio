@@ -136,3 +136,23 @@ test("dashboard webviews receive structured command rejections", async () => {
     }),
   ).toEqual(response);
 });
+
+test("dashboard native commands receive resource and cancellation context", async () => {
+  const workbench = createWorkbench();
+  const controller = new AbortController();
+  workbench.commands.registerCommand(
+    { id: "native.read", label: "Read" },
+    { execute: (_params, context) => ({ resource: context?.resource, aborted: context?.signal?.aborted }) },
+  );
+  controller.abort();
+  const result = await executeWebviewCommand({
+    commandId: "native.read",
+    resource: { type: "note", id: "1" },
+    signal: controller.signal,
+    workbench,
+    executeExtensionCommand: async () => {
+      throw new Error("Unexpected API call");
+    },
+  });
+  expect(result).toMatchObject({ outcome: { value: { resource: { type: "note", id: "1" }, aborted: true } } });
+});

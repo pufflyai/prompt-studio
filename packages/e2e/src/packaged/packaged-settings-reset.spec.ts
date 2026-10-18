@@ -32,8 +32,13 @@ test("typed webview settings delete restores the fallback across reloads", async
     await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/test.settings-fixture/settings`);
     const frame = page.frameLocator('iframe[title="Settings fixture"]');
     await expect(frame.locator("output")).toHaveText("comfortable");
+    await expect(frame.locator("#all")).toHaveText('{"density":"comfortable"}');
+    await frame.getByRole("button", { name: "Invalid setting", exact: true }).click();
+    await expect(frame.locator("#validation")).toHaveText("Invalid parameters for extension.settings.set.");
+    await expect(frame.locator("output")).toHaveText("comfortable");
     await frame.getByRole("button", { name: "Use compact", exact: true }).click();
     await expect(frame.locator("output")).toHaveText("compact");
+    await expect(frame.locator("#all")).toHaveText('{"density":"compact"}');
     await page.reload();
     await expect(frame.locator("output")).toHaveText("compact");
     await frame.getByRole("button", { name: "Reset", exact: true }).click();

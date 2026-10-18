@@ -55,7 +55,8 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
-// The browser suite also proves typed settings deletion restores its fallback after reload.
+// The browser suite checks shared host parameter validation and settings result shapes.
+// Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Planner covers timeline state, dependency recovery and Git conflicts in separate packaged cases.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";

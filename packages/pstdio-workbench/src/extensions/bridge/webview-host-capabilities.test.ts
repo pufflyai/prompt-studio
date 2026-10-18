@@ -47,15 +47,12 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
     });
     await expect(
       capabilities["commands.execute"]?.({ commandId: "lab.hello", params: { name: "Ada" } }),
-    ).resolves.toEqual({
-      params: { name: "Ada" },
-      status: "ok",
-    });
+    ).resolves.toEqual({ outcome: { ok: true, status: "success", value: { params: { name: "Ada" }, status: "ok" } } });
     await expect(
       capabilities["navigation.open"]?.({
         target: { kind: "page", page },
       }),
-    ).resolves.toEqual([expect.objectContaining({ location: { page } })]);
+    ).resolves.toBeUndefined();
     capabilities["notification.show"]?.({ level: "info", title: "Bridge ready" });
     capabilities["preferences.set"]?.({ name: "lab.theme", scope: { scope: "user" }, value: "dark" });
     const preference = capabilities["preferences.get"]?.({ name: "lab.theme", scope: { scope: "user" } });

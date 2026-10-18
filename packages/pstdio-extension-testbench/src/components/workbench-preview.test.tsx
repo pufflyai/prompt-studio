@@ -6,55 +6,7 @@ import { renderToString } from "react-dom/server";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import { ContributionExplorer } from "./contribution-explorer";
 import { createPreviewWorkbench } from "./workbench-preview";
-
-const baseBench = {
-  benchId: "bench-1",
-  inventory: { fileIconThemes: [], skills: [], templateTypes: [], templates: [], themes: [] },
-  metadata: {
-    commands: [],
-    commandPaletteContributions: [],
-    diagnostics: [],
-    extensions: [{ id: "lab", name: "lab", displayName: "Lab", sourcePath: "" }],
-    menuContributions: [],
-    modes: [],
-    pages: [],
-    views: [],
-    viewMenus: [],
-    placements: [],
-    resourceKinds: [],
-    resourceHierarchyProviders: [],
-    navigationItems: [],
-    navigationTrees: [],
-    statusBarItems: [],
-    activityItems: [],
-    settingsSections: [],
-    settingsDefinitions: [],
-    settingsPanels: [],
-    commandPaletteResources: [],
-    keybindings: [],
-  },
-  projectId: "project-1",
-  resources: [],
-  sourcePath: "./extensions/extension-lab",
-  summary: {
-    commands: 0,
-    diagnostics: 0,
-    extensions: 1,
-    keybindings: 0,
-    skills: 0,
-    templateTypes: 0,
-    templates: 0,
-    treeViews: 0,
-    views: 0,
-  },
-} satisfies ExtensionBenchLoadResponse;
-
-const defaultExecuteCommand = async (commandId: string) =>
-  ({
-    commandId,
-    extensionId: "lab",
-    outcome: { ok: true, status: "success", value: null },
-  }) satisfies CommandExecutionResult;
+import { baseBench, defaultExecuteCommand } from "./workbench-preview-test-fixtures";
 
 const createTestWorkbench = (
   bench: ExtensionBenchLoadResponse,
@@ -284,64 +236,4 @@ describe("ContributionExplorer", () => {
     expect(html).toContain("Keybindings (1)");
     expect(html).toContain("Diagnostics (1)");
   });
-});
-
-test("testbench webviews keep workspace, placement resource, metadata, and slot", async () => {
-  const requests: unknown[] = [];
-  const view = {
-    id: "lab.view.notes",
-    localId: "notes",
-    extensionId: "lab",
-    title: "Notes",
-    body: {
-      kind: "webview" as const,
-      webview: {
-        entry: { kind: "package-asset" as const, path: "./view.tsx", baseUrl: "file:///lab/extension.ts" },
-        runtimeUrl: "/runtime",
-        moduleUrl: "/module",
-        capabilities: ["commands.execute"],
-      },
-    },
-  };
-  const workbench = createPreviewWorkbench({
-    bench: { ...baseBench, metadata: { ...baseBench.metadata, views: [view] } },
-    executeCommand: async (commandId, request) => {
-      requests.push(request);
-      return defaultExecuteCommand(commandId);
-    },
-    getLastCommand: () => null,
-    getThemePreference: () => "system",
-    lastCommand: null,
-    onCommandCall: () => undefined,
-    publishLastCommand: (commandId, response) => ({
-      commandId,
-      extensionId: response.extensionId,
-      outcome: response.outcome,
-      tick: 1,
-    }),
-    setThemePreference: () => undefined,
-    themePreference: "system",
-  });
-  const resource = { type: "note", id: "note-1" };
-  const body = workbench.views.getView(view.id)!.body;
-  if (body.kind !== "react") throw new Error("Expected a hosted webview");
-  const frame = body.render({
-    workbench,
-    panel: { id: view.id, title: "Notes", region: "main", rendererId: view.id },
-    instance: { instanceId: "placement", panelId: view.id, viewId: view.id, closable: true, resource },
-    refresh: () => undefined,
-  }) as { props: { capabilities: Record<string, (request: unknown) => Promise<unknown>> } };
-  await frame.props.capabilities["commands.execute"]!({
-    commandId: "lab.command.read",
-    workspaceId: "remote-1",
-    metadata: { source: "preview" },
-  });
-  expect(requests).toMatchObject([
-    {
-      workspaceId: "remote-1",
-      resource,
-      metadata: { source: "preview" },
-      slot: { id: view.id, kind: "panel", context: { projectId: baseBench.projectId } },
-    },
-  ]);
 });

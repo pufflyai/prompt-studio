@@ -1,6 +1,6 @@
 import type { CommandExecutionResult } from "@pstdio/sdk/api";
-import type { CommandStreamClientEvent, ExtensionClient } from "@pstdio/sdk/client";
-import type { CommandOutcome, WebviewCommandsStreamParams } from "@pstdio/sdk/extensions";
+import type { CommandStreamClientEvent } from "@pstdio/sdk/client";
+import type { CommandOutcome, WebviewCommandsExecuteParams, WebviewCommandsStreamParams } from "@pstdio/sdk/extensions";
 import { commandExecutionResultSchema } from "pstdio-api-contracts";
 import { serializeCommandError } from "pstdio-api-contracts/extension-kernel";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
@@ -32,13 +32,12 @@ export const withFrameSignal = async <T>(hostEvents: HostEventPublisher, run: (s
 };
 
 interface StreamCapabilityDeps {
-  projectId: string;
-  stream: ExtensionClient["stream"];
-  publish(response: CommandExecutionResult): void;
+  stream(input: WebviewCommandsExecuteParams, signal: AbortSignal): AsyncIterable<CommandStreamClientEvent>;
+  publish?(response: CommandExecutionResult): void;
 }
 
 /** State belongs to a frame, across React renders and bridge reconnects. */
-export const createCommandStreamCapability = (hostEvents: HostEventPublisher) => {
+export const createWebviewCommandStreamHandler = (hostEvents: HostEventPublisher) => {
   const streams = new Map<string, { unread: number; stop: (code: string, emit?: boolean) => void }>();
   return async (input: WebviewCommandsStreamParams, deps: StreamCapabilityDeps) => {
     const { streamId } = input;
@@ -70,7 +69,7 @@ export const createCommandStreamCapability = (hostEvents: HostEventPublisher) =>
       const receive = (event: CommandStreamClientEvent) => {
         if (event.type === "end") {
           const response = commandExecutionResultSchema.parse(event.response);
-          deps.publish(response);
+          deps.publish?.(response);
           finish(response.outcome);
           return;
         }
@@ -80,11 +79,7 @@ export const createCommandStreamCapability = (hostEvents: HostEventPublisher) =>
       };
       const run = async () => {
         try {
-          for await (const event of deps.stream(
-            commandId,
-            { ...body, projectId: deps.projectId, source: "dashboard" },
-            { signal: controller.signal },
-          )) {
+          for await (const event of deps.stream({ commandId, ...body }, controller.signal)) {
             if (ended) break;
             receive(event);
           }

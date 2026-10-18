@@ -25,26 +25,28 @@ const setupWebviewWidget = () => {
 };
 
 describe("createBridgeWebviewRenderer", () => {
-  test("uses the injected createHostCapabilities factory", () => {
+  test("routes injected services through the shared capability factory", async () => {
     const { workbench, widget, placement } = setupWebviewWidget();
     const calls: { workbench: unknown; webviewId: string }[] = [];
-    const injected: HostCapabilityRegistry = {};
+    const injected = { executeCommand: async () => ({ outcome: { ok: true, status: "success", value: "injected" } }) };
 
     const renderer = createBridgeWebviewRenderer({
-      createHostCapabilities: (context) => {
+      createHostAdapters: (context) => {
         calls.push(context);
         return injected;
       },
     });
 
     const element = renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined }) as {
-      props: { capabilities: unknown };
+      props: { capabilities: HostCapabilityRegistry };
     };
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.workbench).toBe(workbench);
     expect(calls[0]?.webviewId).toBe("lab.page");
-    expect(element.props.capabilities).toBe(injected);
+    expect(await element.props.capabilities["commands.execute"]?.({ commandId: "read" })).toMatchObject({
+      outcome: { ok: true, value: "injected" },
+    });
   });
 
   test("falls back to workbench-native host capabilities", () => {
@@ -116,7 +118,7 @@ describe("createBridgeWebviewRenderer", () => {
     const { workbench, widget, placement } = setupWebviewWidget();
     const hostEvents: unknown[] = [];
     const renderer = createBridgeWebviewRenderer({
-      createHostCapabilities: (context) => {
+      createHostAdapters: (context) => {
         hostEvents.push(context.hostEvents);
         return {};
       },

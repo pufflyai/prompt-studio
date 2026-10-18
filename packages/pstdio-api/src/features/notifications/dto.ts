@@ -139,7 +139,7 @@ export const countNotificationsResponseSchema = z.object({ count: z.number() }).
 export const snoozeNotificationBodySchema = z.object({ until: z.string() }).strict();
 export const resolveByDedupeKeyBodySchema = z
   .object({
-    dedupeKey: z.string().min(1),
+    dedupeKey: z.string(),
     status: z.enum(["done", "dismissed", "expired"]).optional(),
   })
   .strict();

@@ -1,5 +1,7 @@
 // Project data for packaged Planner runtime checks.
+
 import { join, resolve } from "node:path";
+import { logTestPhase } from "../scripts/log-test-phase";
 
 const repoRoot = resolve(import.meta.dirname, "../../../..");
 export const plannerSource = join(repoRoot, "extensions", "pstdio-planner");
@@ -10,6 +12,8 @@ export type Execute = <T = { id: string }>(command: string, params?: Record<stri
 export const plannerCommands =
   (input: { baseUrl: string; headers: Record<string, string>; projectId: string }): Execute =>
   async <T>(command: string, params: Record<string, unknown> = {}) => {
+    const started = Date.now();
+    logTestPhase(`Planner browser command ${command}: start`);
     const response = await fetch(
       `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
       {
@@ -22,6 +26,7 @@ export const plannerCommands =
       outcome?: { status: string; value?: unknown; error?: { message?: string } };
     };
     if (body.outcome?.status !== "success") throw new Error(`${command}: ${JSON.stringify(body)}`);
+    logTestPhase(`Planner browser command ${command}: complete (${Date.now() - started}ms)`);
     return body.outcome.value as T;
   };
 

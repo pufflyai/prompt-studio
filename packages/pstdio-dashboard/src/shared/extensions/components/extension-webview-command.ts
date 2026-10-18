@@ -12,6 +12,7 @@ interface ExtensionCommandInput {
 }
 interface ExecuteWebviewCommandInput extends ExtensionCommandInput {
   executeExtensionCommand: (input: ExtensionCommandInput) => Promise<unknown>;
+  signal?: AbortSignal;
   workbench?: WorkbenchCore;
   projectId?: string;
 }
@@ -19,7 +20,7 @@ export const executeWebviewCommand = async (input: ExecuteWebviewCommandInput) =
   const { commandId, executeExtensionCommand, metadata, params, workspaceId, resource, slot, workbench } = input;
   const isExtensionCommand = commandId.includes(".command.");
   if (!isExtensionCommand && workbench?.commands.getCommand(commandId)) {
-    const value = await workbench.commands.executeCommand(commandId, params, { resource });
+    const value = await workbench.commands.executeCommand(commandId, params, { resource, signal: input.signal });
     return { commandId, extensionId: "pstdio", eventIds: [], outcome: { ok: true, status: "success", value } };
   }
   const execute = () =>

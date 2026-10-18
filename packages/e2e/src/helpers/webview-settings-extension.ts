@@ -27,7 +27,7 @@ export const writeWebviewSettingsExtension = (root: string) => {
     `
 import { defineExtension, defineView, definePage, packageAsset, workbenchModes } from "@pstdio/sdk/extensions";
 export const settings = { properties: { density: { type: "string", scope: "project", default: "comfortable" } } } as const;
-const view = defineView({ id: "settings", title: "Settings fixture", body: { kind: "webview", entry: packageAsset("./view.ts", import.meta.url), capabilities: ["extension.settings.get", "extension.settings.set", "extension.settings.delete"] } });
+const view = defineView({ id: "settings", title: "Settings fixture", body: { kind: "webview", entry: packageAsset("./view.ts", import.meta.url), capabilities: ["extension.settings.all", "extension.settings.get", "extension.settings.set", "extension.settings.delete"] } });
 const page = definePage({ id: "settings", title: "Settings", path: "settings", mode: workbenchModes.project, main: { kind: "view", view: view.ref, cardinality: "one" }, slots: [] });
 export default defineExtension({ settings, views: [view], pages: [page] });
 `,
@@ -39,10 +39,11 @@ import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions
 import type { settings } from "./extension";
 export default defineExtensionView({ render({ mount, host }) {
   const client = createWebviewClient<Record<string, never>, typeof settings>(host);
-  mount.innerHTML = '<button id="override">Use compact</button><button id="reset">Reset</button><output></output>';
-  const show = async () => { mount.querySelector('output').textContent = await client.settings.get("density"); };
+  mount.innerHTML = '<button id="override">Use compact</button><button id="reset">Reset</button><button id="invalid">Invalid setting</button><output></output><pre id="all"></pre><pre id="validation"></pre>';
+  const show = async () => { mount.querySelector('output').textContent = await client.settings.get("density"); mount.querySelector('#all').textContent = JSON.stringify(await client.settings.all()); };
   mount.querySelector('#override').onclick = async () => { await client.settings.set("density", "compact"); await show(); };
   mount.querySelector('#reset').onclick = async () => { await client.settings.delete("density"); await show(); };
+  mount.querySelector('#invalid').onclick = async () => { try { await host.call("extension.settings.set", { key: 7, value: "invalid" }); } catch (error) { mount.querySelector('#validation').textContent = error.message; } await show(); };
   void show();
 } });
 `,
