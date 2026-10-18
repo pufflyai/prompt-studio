@@ -135,7 +135,7 @@ export function DiffDrawer(props: DiffDrawerProps) {
     suppressScrollAdjustRef,
   });
 
-  const virtualizer = useVirtualizer({
+  const { virtualizer, virtualItems, totalSize } = useVirtualizer({
     count: diffs.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) => {
@@ -216,8 +216,6 @@ export function DiffDrawer(props: DiffDrawerProps) {
     });
   };
 
-  const virtualItems = virtualizer.getVirtualItems();
-
   return (
     <Stack h="full" minH="0" gap="0" bg="bg">
       <Box position="relative" flex="1" minH="0" bg="bg">
@@ -228,7 +226,7 @@ export function DiffDrawer(props: DiffDrawerProps) {
           viewportProps={{ style: { overflowAnchor: "none" } }}
           contentProps={{ p: "xs" }}
         >
-          <Box position="relative" width="100%" style={{ height: virtualizer.getTotalSize() }}>
+          <Box position="relative" width="100%" style={{ height: totalSize }}>
             {virtualItems.map((virtualItem) => {
               const diff = diffs[virtualItem.index];
               const path = getDiffPath(diff);

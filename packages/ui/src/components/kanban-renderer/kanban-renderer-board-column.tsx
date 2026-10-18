@@ -1,4 +1,4 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Box, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import { defaultRangeExtractor } from "@tanstack/react-virtual";
 import { type DragEvent, type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
@@ -19,6 +19,8 @@ interface BoardColumnCardsProps {
 
 export const BoardColumnCards = (props: BoardColumnCardsProps) => {
   const { column, selectedItemId, draggedKey, revealedItemId, onDragStart, onDragEnd, onDragTarget, onDrop } = props;
+  const recipe = useSlotRecipe({ key: "kanbanBoardColumn" });
+  const styles = recipe();
   const viewport = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
             }))),
       ])
     : column.items.map((item) => ({ key: JSON.stringify(["row", column.id, item.id]), item }));
-  const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
+  const { virtualizer, virtualItems, totalSize } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: entries.length,
     getScrollElement: () => viewport.current,
     getItemKey: (index) => entries[index].key,
@@ -95,10 +97,10 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
       size="xs"
       viewportRef={viewport}
       viewportProps={{ ...{ "data-board-column-viewport": column.id }, "aria-label": column.label }}
-      verticalScrollbarProps={{ margin: "0" }}
+      verticalScrollbarProps={{ css: styles.scrollbar }}
     >
       {column.items.length === 0 && column.totalCount ? (
-        <Stack alignItems="center" gap="2xs" paddingY="xl" textAlign="center">
+        <Stack css={styles.empty} alignItems="center" gap="2xs" paddingY="xl" textAlign="center">
           <Text textStyle="label/S/regular" color="fg.muted">
             No matching cards
           </Text>
@@ -107,8 +109,8 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
           </Text>
         </Stack>
       ) : null}
-      <Box position="relative" height={`${virtualizer.getTotalSize()}px`}>
-        {virtualizer.getVirtualItems().map((virtual) => {
+      <Box position="relative" height={`${totalSize}px`}>
+        {virtualItems.map((virtual) => {
           const entry = entries[virtual.index];
           const { item, group } = entry;
           const groupKey = group?.key ?? entry.groupKey;
@@ -125,7 +127,7 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
               top={`${virtual.start}px`}
               left="0"
               width="full"
-              paddingBottom="xs"
+              css={styles.entry}
               data-column-id={column.id}
               data-group-key={groupKey}
             >

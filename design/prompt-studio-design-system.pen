@@ -21463,6 +21463,7 @@
                               "type": "frame",
                               "id": "RsJBj",
                               "name": "Backlog",
+                              "context": "The column scroll viewport spans the full inner width. Heading and cards own their horizontal inset; an overflowing column places its 2px scrollbar against the inner right border.",
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
@@ -21473,7 +21474,10 @@
                               "strokeAlignment": "inner",
                               "layout": "vertical",
                               "gap": 8,
-                              "padding": 10,
+                              "padding": [
+                                10,
+                                0
+                              ],
                               "children": [
                                 {
                                   "type": "frame",
@@ -21483,9 +21487,9 @@
                                   "gap": 7,
                                   "padding": [
                                     2,
-                                    2,
+                                    12,
                                     6,
-                                    2
+                                    12
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -21557,85 +21561,110 @@
                                   ]
                                 },
                                 {
-                                  "id": "MTGOZ",
-                                  "type": "ref",
-                                  "ref": "jRZz3",
-                                  "name": "PS-171",
+                                  "type": "frame",
+                                  "id": "BKZJQ",
+                                  "name": "Card viewport",
+                                  "clip": true,
                                   "width": "fill_container",
-                                  "descendants": {
-                                    "f0MFjy": {
-                                      "content": "PS-171"
-                                    },
-                                    "dHDLZ": {
-                                      "content": "Bubblify the side panel across resources"
-                                    },
-                                    "M0eqp6/L109Bg": {
-                                      "content": "design"
-                                    },
-                                    "F5oG1": {
-                                      "enabled": false
-                                    },
-                                    "F5oG1/L109Bg": {
-                                      "content": "ui"
-                                    },
-                                    "AMjNo": {
-                                      "content": "Jul 15"
+                                  "height": "fill_container",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "vrXvv",
+                                      "name": "Cards",
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 8,
+                                      "padding": [
+                                        0,
+                                        10
+                                      ],
+                                      "children": [
+                                        {
+                                          "id": "MTGOZ",
+                                          "type": "ref",
+                                          "ref": "jRZz3",
+                                          "name": "PS-171",
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "f0MFjy": {
+                                              "content": "PS-171"
+                                            },
+                                            "dHDLZ": {
+                                              "content": "Bubblify the side panel across resources"
+                                            },
+                                            "M0eqp6/L109Bg": {
+                                              "content": "design"
+                                            },
+                                            "F5oG1": {
+                                              "enabled": false
+                                            },
+                                            "F5oG1/L109Bg": {
+                                              "content": "ui"
+                                            },
+                                            "AMjNo": {
+                                              "content": "Jul 15"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "x2N96",
+                                          "type": "ref",
+                                          "ref": "jRZz3",
+                                          "name": "PS-168",
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "f0MFjy": {
+                                              "content": "PS-168"
+                                            },
+                                            "dHDLZ": {
+                                              "content": "Saved filters for collection views"
+                                            },
+                                            "M0eqp6/L109Bg": {
+                                              "content": "design"
+                                            },
+                                            "F5oG1": {
+                                              "enabled": false
+                                            },
+                                            "F5oG1/L109Bg": {
+                                              "content": "ui"
+                                            },
+                                            "AMjNo": {
+                                              "content": "Jul 15"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "ktvZe",
+                                          "type": "ref",
+                                          "ref": "jRZz3",
+                                          "name": "PS-165",
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "f0MFjy": {
+                                              "content": "PS-165"
+                                            },
+                                            "dHDLZ": {
+                                              "content": "Extension-declared mode layouts"
+                                            },
+                                            "M0eqp6/L109Bg": {
+                                              "content": "platform"
+                                            },
+                                            "F5oG1": {
+                                              "enabled": false
+                                            },
+                                            "F5oG1/L109Bg": {
+                                              "content": "ui"
+                                            },
+                                            "AMjNo": {
+                                              "content": "Jul 13"
+                                            }
+                                          }
+                                        }
+                                      ]
                                     }
-                                  }
-                                },
-                                {
-                                  "id": "x2N96",
-                                  "type": "ref",
-                                  "ref": "jRZz3",
-                                  "name": "PS-168",
-                                  "width": "fill_container",
-                                  "descendants": {
-                                    "f0MFjy": {
-                                      "content": "PS-168"
-                                    },
-                                    "dHDLZ": {
-                                      "content": "Saved filters for collection views"
-                                    },
-                                    "M0eqp6/L109Bg": {
-                                      "content": "design"
-                                    },
-                                    "F5oG1": {
-                                      "enabled": false
-                                    },
-                                    "F5oG1/L109Bg": {
-                                      "content": "ui"
-                                    },
-                                    "AMjNo": {
-                                      "content": "Jul 15"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "ktvZe",
-                                  "type": "ref",
-                                  "ref": "jRZz3",
-                                  "name": "PS-165",
-                                  "width": "fill_container",
-                                  "descendants": {
-                                    "f0MFjy": {
-                                      "content": "PS-165"
-                                    },
-                                    "dHDLZ": {
-                                      "content": "Extension-declared mode layouts"
-                                    },
-                                    "M0eqp6/L109Bg": {
-                                      "content": "platform"
-                                    },
-                                    "F5oG1": {
-                                      "enabled": false
-                                    },
-                                    "F5oG1/L109Bg": {
-                                      "content": "ui"
-                                    },
-                                    "AMjNo": {
-                                      "content": "Jul 13"
-                                    }
-                                  }
+                                  ]
                                 }
                               ]
                             },
@@ -21643,6 +21672,7 @@
                               "type": "frame",
                               "id": "YZrrI",
                               "name": "Todo",
+                              "context": "The column scroll viewport spans the full inner width. Heading and cards own their horizontal inset; an overflowing column places its 2px scrollbar against the inner right border.",
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
@@ -21653,7 +21683,10 @@
                               "strokeAlignment": "inner",
                               "layout": "vertical",
                               "gap": 8,
-                              "padding": 10,
+                              "padding": [
+                                10,
+                                0
+                              ],
                               "children": [
                                 {
                                   "type": "frame",
@@ -21663,9 +21696,9 @@
                                   "gap": 7,
                                   "padding": [
                                     2,
-                                    2,
+                                    12,
                                     6,
-                                    2
+                                    12
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -21737,58 +21770,83 @@
                                   ]
                                 },
                                 {
-                                  "id": "TW6lM",
-                                  "type": "ref",
-                                  "ref": "jRZz3",
-                                  "name": "PS-161",
+                                  "type": "frame",
+                                  "id": "DsNUY",
+                                  "name": "Card viewport",
+                                  "clip": true,
                                   "width": "fill_container",
-                                  "descendants": {
-                                    "f0MFjy": {
-                                      "content": "PS-161"
-                                    },
-                                    "dHDLZ": {
-                                      "content": "Inherit workspace terminal cwd"
-                                    },
-                                    "M0eqp6/L109Bg": {
-                                      "content": "platform"
-                                    },
-                                    "F5oG1": {
-                                      "enabled": false
-                                    },
-                                    "F5oG1/L109Bg": {
-                                      "content": "ui"
-                                    },
-                                    "AMjNo": {
-                                      "content": "Jul 16"
+                                  "height": "fill_container",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "WQuON",
+                                      "name": "Cards",
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 8,
+                                      "padding": [
+                                        0,
+                                        10
+                                      ],
+                                      "children": [
+                                        {
+                                          "id": "TW6lM",
+                                          "type": "ref",
+                                          "ref": "jRZz3",
+                                          "name": "PS-161",
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "f0MFjy": {
+                                              "content": "PS-161"
+                                            },
+                                            "dHDLZ": {
+                                              "content": "Inherit workspace terminal cwd"
+                                            },
+                                            "M0eqp6/L109Bg": {
+                                              "content": "platform"
+                                            },
+                                            "F5oG1": {
+                                              "enabled": false
+                                            },
+                                            "F5oG1/L109Bg": {
+                                              "content": "ui"
+                                            },
+                                            "AMjNo": {
+                                              "content": "Jul 16"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "QJK4x",
+                                          "type": "ref",
+                                          "ref": "jRZz3",
+                                          "name": "PS-158",
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "f0MFjy": {
+                                              "content": "PS-158"
+                                            },
+                                            "dHDLZ": {
+                                              "content": "Chat scroll jumps while streaming"
+                                            },
+                                            "M0eqp6/L109Bg": {
+                                              "content": "design"
+                                            },
+                                            "F5oG1": {
+                                              "enabled": true
+                                            },
+                                            "F5oG1/L109Bg": {
+                                              "content": "ui"
+                                            },
+                                            "AMjNo": {
+                                              "content": "Jul 16"
+                                            }
+                                          }
+                                        }
+                                      ]
                                     }
-                                  }
-                                },
-                                {
-                                  "id": "QJK4x",
-                                  "type": "ref",
-                                  "ref": "jRZz3",
-                                  "name": "PS-158",
-                                  "width": "fill_container",
-                                  "descendants": {
-                                    "f0MFjy": {
-                                      "content": "PS-158"
-                                    },
-                                    "dHDLZ": {
-                                      "content": "Chat scroll jumps while streaming"
-                                    },
-                                    "M0eqp6/L109Bg": {
-                                      "content": "design"
-                                    },
-                                    "F5oG1": {
-                                      "enabled": true
-                                    },
-                                    "F5oG1/L109Bg": {
-                                      "content": "ui"
-                                    },
-                                    "AMjNo": {
-                                      "content": "Jul 16"
-                                    }
-                                  }
+                                  ]
                                 }
                               ]
                             },
@@ -21796,6 +21854,7 @@
                               "type": "frame",
                               "id": "v4KZP",
                               "name": "In progress",
+                              "context": "The column scroll viewport spans the full inner width. Heading and cards own their horizontal inset; an overflowing column places its 2px scrollbar against the inner right border.",
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
@@ -21806,7 +21865,10 @@
                               "strokeAlignment": "inner",
                               "layout": "vertical",
                               "gap": 8,
-                              "padding": 10,
+                              "padding": [
+                                10,
+                                0
+                              ],
                               "children": [
                                 {
                                   "type": "frame",
@@ -21816,9 +21878,9 @@
                                   "gap": 7,
                                   "padding": [
                                     2,
-                                    2,
+                                    12,
                                     6,
-                                    2
+                                    12
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -21890,85 +21952,110 @@
                                   ]
                                 },
                                 {
-                                  "id": "vzNEU",
-                                  "type": "ref",
-                                  "ref": "jRZz3",
-                                  "name": "PS-122",
+                                  "type": "frame",
+                                  "id": "lYawp",
+                                  "name": "Card viewport",
+                                  "clip": true,
                                   "width": "fill_container",
-                                  "descendants": {
-                                    "f0MFjy": {
-                                      "content": "PS-122"
-                                    },
-                                    "dHDLZ": {
-                                      "content": "Show sidebar shortcuts at rest"
-                                    },
-                                    "M0eqp6/L109Bg": {
-                                      "content": "design"
-                                    },
-                                    "F5oG1": {
-                                      "enabled": true
-                                    },
-                                    "F5oG1/L109Bg": {
-                                      "content": "ui"
-                                    },
-                                    "AMjNo": {
-                                      "content": "Jul 12"
+                                  "height": "fill_container",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "b4NQ9G",
+                                      "name": "Cards",
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 8,
+                                      "padding": [
+                                        0,
+                                        10
+                                      ],
+                                      "children": [
+                                        {
+                                          "id": "vzNEU",
+                                          "type": "ref",
+                                          "ref": "jRZz3",
+                                          "name": "PS-122",
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "f0MFjy": {
+                                              "content": "PS-122"
+                                            },
+                                            "dHDLZ": {
+                                              "content": "Show sidebar shortcuts at rest"
+                                            },
+                                            "M0eqp6/L109Bg": {
+                                              "content": "design"
+                                            },
+                                            "F5oG1": {
+                                              "enabled": true
+                                            },
+                                            "F5oG1/L109Bg": {
+                                              "content": "ui"
+                                            },
+                                            "AMjNo": {
+                                              "content": "Jul 12"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "L5BDY6",
+                                          "type": "ref",
+                                          "ref": "jRZz3",
+                                          "name": "PS-130",
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "f0MFjy": {
+                                              "content": "PS-130"
+                                            },
+                                            "dHDLZ": {
+                                              "content": "Harness run parameters"
+                                            },
+                                            "M0eqp6/L109Bg": {
+                                              "content": "platform"
+                                            },
+                                            "F5oG1": {
+                                              "enabled": false
+                                            },
+                                            "F5oG1/L109Bg": {
+                                              "content": "ui"
+                                            },
+                                            "AMjNo": {
+                                              "content": "Jul 11"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "kfgJc",
+                                          "type": "ref",
+                                          "ref": "jRZz3",
+                                          "name": "PS-94",
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "f0MFjy": {
+                                              "content": "PS-94"
+                                            },
+                                            "dHDLZ": {
+                                              "content": "Split planner loops into an extension"
+                                            },
+                                            "M0eqp6/L109Bg": {
+                                              "content": "platform"
+                                            },
+                                            "F5oG1": {
+                                              "enabled": false
+                                            },
+                                            "F5oG1/L109Bg": {
+                                              "content": "ui"
+                                            },
+                                            "AMjNo": {
+                                              "content": "Jul 09"
+                                            }
+                                          }
+                                        }
+                                      ]
                                     }
-                                  }
-                                },
-                                {
-                                  "id": "L5BDY6",
-                                  "type": "ref",
-                                  "ref": "jRZz3",
-                                  "name": "PS-130",
-                                  "width": "fill_container",
-                                  "descendants": {
-                                    "f0MFjy": {
-                                      "content": "PS-130"
-                                    },
-                                    "dHDLZ": {
-                                      "content": "Harness run parameters"
-                                    },
-                                    "M0eqp6/L109Bg": {
-                                      "content": "platform"
-                                    },
-                                    "F5oG1": {
-                                      "enabled": false
-                                    },
-                                    "F5oG1/L109Bg": {
-                                      "content": "ui"
-                                    },
-                                    "AMjNo": {
-                                      "content": "Jul 11"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "kfgJc",
-                                  "type": "ref",
-                                  "ref": "jRZz3",
-                                  "name": "PS-94",
-                                  "width": "fill_container",
-                                  "descendants": {
-                                    "f0MFjy": {
-                                      "content": "PS-94"
-                                    },
-                                    "dHDLZ": {
-                                      "content": "Split planner loops into an extension"
-                                    },
-                                    "M0eqp6/L109Bg": {
-                                      "content": "platform"
-                                    },
-                                    "F5oG1": {
-                                      "enabled": false
-                                    },
-                                    "F5oG1/L109Bg": {
-                                      "content": "ui"
-                                    },
-                                    "AMjNo": {
-                                      "content": "Jul 09"
-                                    }
-                                  }
+                                  ]
                                 }
                               ]
                             },
@@ -21976,6 +22063,7 @@
                               "type": "frame",
                               "id": "u2nl4t",
                               "name": "In review",
+                              "context": "The column scroll viewport spans the full inner width. Heading and cards own their horizontal inset; an overflowing column places its 2px scrollbar against the inner right border.",
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
@@ -21986,7 +22074,10 @@
                               "strokeAlignment": "inner",
                               "layout": "vertical",
                               "gap": 8,
-                              "padding": 10,
+                              "padding": [
+                                10,
+                                0
+                              ],
                               "children": [
                                 {
                                   "type": "frame",
@@ -21996,9 +22087,9 @@
                                   "gap": 7,
                                   "padding": [
                                     2,
-                                    2,
+                                    12,
                                     6,
-                                    2
+                                    12
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -22070,58 +22161,83 @@
                                   ]
                                 },
                                 {
-                                  "id": "vHySU",
-                                  "type": "ref",
-                                  "ref": "jRZz3",
-                                  "name": "PS-151",
+                                  "type": "frame",
+                                  "id": "G7hkec",
+                                  "name": "Card viewport",
+                                  "clip": true,
                                   "width": "fill_container",
-                                  "descendants": {
-                                    "f0MFjy": {
-                                      "content": "PS-151"
-                                    },
-                                    "dHDLZ": {
-                                      "content": "Improve chat and data tables"
-                                    },
-                                    "M0eqp6/L109Bg": {
-                                      "content": "design"
-                                    },
-                                    "F5oG1": {
-                                      "enabled": false
-                                    },
-                                    "F5oG1/L109Bg": {
-                                      "content": "ui"
-                                    },
-                                    "AMjNo": {
-                                      "content": "Jul 14"
+                                  "height": "fill_container",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "xAGmU",
+                                      "name": "Cards",
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 8,
+                                      "padding": [
+                                        0,
+                                        10
+                                      ],
+                                      "children": [
+                                        {
+                                          "id": "vHySU",
+                                          "type": "ref",
+                                          "ref": "jRZz3",
+                                          "name": "PS-151",
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "f0MFjy": {
+                                              "content": "PS-151"
+                                            },
+                                            "dHDLZ": {
+                                              "content": "Improve chat and data tables"
+                                            },
+                                            "M0eqp6/L109Bg": {
+                                              "content": "design"
+                                            },
+                                            "F5oG1": {
+                                              "enabled": false
+                                            },
+                                            "F5oG1/L109Bg": {
+                                              "content": "ui"
+                                            },
+                                            "AMjNo": {
+                                              "content": "Jul 14"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "EVc04",
+                                          "type": "ref",
+                                          "ref": "jRZz3",
+                                          "name": "PS-134",
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "f0MFjy": {
+                                              "content": "PS-134"
+                                            },
+                                            "dHDLZ": {
+                                              "content": "Feature-slice @pstdio/ui"
+                                            },
+                                            "M0eqp6/L109Bg": {
+                                              "content": "design"
+                                            },
+                                            "F5oG1": {
+                                              "enabled": true
+                                            },
+                                            "F5oG1/L109Bg": {
+                                              "content": "ui"
+                                            },
+                                            "AMjNo": {
+                                              "content": "Jul 08"
+                                            }
+                                          }
+                                        }
+                                      ]
                                     }
-                                  }
-                                },
-                                {
-                                  "id": "EVc04",
-                                  "type": "ref",
-                                  "ref": "jRZz3",
-                                  "name": "PS-134",
-                                  "width": "fill_container",
-                                  "descendants": {
-                                    "f0MFjy": {
-                                      "content": "PS-134"
-                                    },
-                                    "dHDLZ": {
-                                      "content": "Feature-slice @pstdio/ui"
-                                    },
-                                    "M0eqp6/L109Bg": {
-                                      "content": "design"
-                                    },
-                                    "F5oG1": {
-                                      "enabled": true
-                                    },
-                                    "F5oG1/L109Bg": {
-                                      "content": "ui"
-                                    },
-                                    "AMjNo": {
-                                      "content": "Jul 08"
-                                    }
-                                  }
+                                  ]
                                 }
                               ]
                             }

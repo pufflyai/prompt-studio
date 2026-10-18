@@ -17,6 +17,7 @@ import { editableSlotRecipe } from "./recipes/editable";
 import { folderPickerSlotRecipe } from "./recipes/folder-picker";
 import { fieldsetSlotRecipe } from "./recipes/form";
 import { inputRecipe } from "./recipes/input";
+import { kanbanBoardColumnSlotRecipe } from "./recipes/kanban-board-column";
 import { kbdRecipe } from "./recipes/kbd";
 import { linkRecipe } from "./recipes/link";
 import { listRowAccessoryRecipe } from "./recipes/list-row-accessory";
@@ -100,6 +101,7 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      kanbanBoardColumn: kanbanBoardColumnSlotRecipe,
       stickyUserMessage: stickyUserMessageRecipe,
       scrollArea: scrollAreaSlotRecipe,
       queuedFollowUp: queuedFollowUpRecipe,

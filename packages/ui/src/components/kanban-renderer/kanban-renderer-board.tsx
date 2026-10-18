@@ -1,4 +1,4 @@
-import { Stack } from "@chakra-ui/react";
+import { Stack, useSlotRecipe } from "@chakra-ui/react";
 import { type ComponentProps, type ComponentType, type DragEvent, useState } from "react";
 
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
@@ -60,6 +60,8 @@ interface KanbanRendererBoardProps {
 
 export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
   const { columns, selectedItemId = null, onMoveItem, onMoveToGroup, onCreateStart, onColumnAction } = props;
+  const columnRecipe = useSlotRecipe({ key: "kanbanBoardColumn" });
+  const columnStyles = columnRecipe();
 
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
   const [draggedKey, setDraggedKey] = useState<string | null>(null);
@@ -116,7 +118,7 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
           key={column.id}
           data-testid={`board-column-${column.id}`}
           gap="xs"
-          padding="compact"
+          css={columnStyles.root}
           borderWidth="1px"
           borderColor="border.subtle"
           borderRadius="sm"

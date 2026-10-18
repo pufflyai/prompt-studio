@@ -60,7 +60,7 @@ export const PaletteList = <T extends PaletteEntry>(props: PaletteListProps<T>) 
   const { entries, activeIndex, emptyLabel, onHover, scrollRef } = props;
   const rows = buildRows(entries);
   const activeRowIndex = getActiveRowIndex(rows, activeIndex);
-  const virtualizer = useVirtualizer({
+  const { virtualizer, virtualItems, totalSize } = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) => (rows[index]?.type === "group" ? GROUP_ROW_HEIGHT : ENTRY_ROW_HEIGHT),
@@ -84,8 +84,8 @@ export const PaletteList = <T extends PaletteEntry>(props: PaletteListProps<T>) 
   }
 
   return (
-    <Box role="listbox" position="relative" width="100%" style={{ height: virtualizer.getTotalSize() }}>
-      {virtualizer.getVirtualItems().map((virtualRow) => {
+    <Box role="listbox" position="relative" width="100%" style={{ height: totalSize }}>
+      {virtualItems.map((virtualRow) => {
         const row = rows[virtualRow.index];
         if (!row) return null;
 

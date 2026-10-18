@@ -1,4 +1,4 @@
-import { Badge, HStack, Icon, IconButton, Menu, Spacer, Text } from "@chakra-ui/react";
+import { Badge, HStack, Icon, IconButton, Menu, Spacer, Text, useSlotRecipe } from "@chakra-ui/react";
 import { MoreHorizontal, Plus } from "lucide-react";
 
 import { ListRow } from "@/components/list-row/list-row";
@@ -14,9 +14,11 @@ interface ColumnHeaderProps {
 
 export const ColumnHeader = (props: ColumnHeaderProps) => {
   const { column, onCreateStart, onColumnAction } = props;
+  const recipe = useSlotRecipe({ key: "kanbanBoardColumn" });
+  const styles = recipe();
 
   return (
-    <HStack minH="1.5rem" gap="2xs" alignItems="center" colorPalette={column.color ?? "gray"}>
+    <HStack css={styles.header} minH="1.5rem" gap="2xs" alignItems="center" colorPalette={column.color ?? "gray"}>
       <Icon
         data-testid="column-status-icon"
         as={getIconComponent(column.icon)}

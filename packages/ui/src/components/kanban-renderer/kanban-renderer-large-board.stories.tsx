@@ -33,7 +33,7 @@ export const VariableHeightCards: StoryObj = {
     const first = canvas.getByRole("button", { name: "Ticket 1." });
     first.focus();
     fireEvent.keyDown(first, { key: "End" });
-    const last = await canvas.findByRole("button", { name: items[999].cardProps.title });
+    const last = await canvas.findByRole("button", { name: items[999].cardProps.title.trim() });
     await expect(last).toHaveFocus();
     await expect(canvas.getAllByTestId("renderer-card").length).toBeLessThan(30);
     fireEvent.keyDown(last, { key: "Home" });

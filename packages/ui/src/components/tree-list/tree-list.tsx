@@ -147,7 +147,7 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
     scrollRef,
   } = props;
 
-  const virtualizer = useVirtualizer({
+  const { virtualizer, virtualItems, totalSize } = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => VIRTUAL_ROW_ESTIMATE,
@@ -172,10 +172,10 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
       minW="0"
       maxW="full"
       position="relative"
-      style={{ height: virtualizer.getTotalSize() }}
+      style={{ height: totalSize }}
       onKeyDown={keyboard.handleKeyDown}
     >
-      {virtualizer.getVirtualItems().map((virtualItem) => {
+      {virtualItems.map((virtualItem) => {
         const row = rows[virtualItem.index];
         if (!row) return null;
 
