@@ -1,6 +1,7 @@
 import type { BaseHookContext } from "./base";
 import type { HookResourceAnchor } from "./entities";
 
+/** @deprecated Use typed extension hook contexts from `@pstdio/sdk/extensions`. Removed in 0.45. */
 export type WorktreeCreateContext = BaseHookContext & {
   repoPath: string;
   worktreePath: string;
@@ -10,6 +11,7 @@ export type WorktreeCreateContext = BaseHookContext & {
   anchors?: HookResourceAnchor[];
 };
 
+/** @deprecated Use typed extension hook contexts from `@pstdio/sdk/extensions`. Removed in 0.45. */
 export type WorktreeContext = BaseHookContext & {
   repoPath: string;
   worktreePath: string;
@@ -19,6 +21,7 @@ export type WorktreeContext = BaseHookContext & {
   anchors?: HookResourceAnchor[];
 };
 
+/** @deprecated Use typed extension hook contexts from `@pstdio/sdk/extensions`. Removed in 0.45. */
 export type CommitContext = {
   repoPath: string;
   worktreePath: string;
@@ -27,12 +30,14 @@ export type CommitContext = {
   commitSha?: string;
 };
 
+/** @deprecated Use typed extension hook contexts from `@pstdio/sdk/extensions`. Removed in 0.45. */
 export type RebaseContext = {
   repoPath: string;
   branch: string;
   target: string;
 };
 
+/** @deprecated Use typed extension hook contexts from `@pstdio/sdk/extensions`. Removed in 0.45. */
 export type MergeContext = {
   repoPath: string;
   branch: string;
@@ -42,6 +47,7 @@ export type MergeContext = {
   commitSha?: string;
 };
 
+/** @deprecated Use typed extension hook contexts from `@pstdio/sdk/extensions`. Removed in 0.45. */
 export type ConflictContext = {
   repoPath: string;
   branch: string;
@@ -49,6 +55,7 @@ export type ConflictContext = {
   operation: "rebase" | "merge";
 };
 
+/** @deprecated Use typed extension hook contexts from `@pstdio/sdk/extensions`. Removed in 0.45. */
 export type WorktreeRemoveContext = {
   repoPath: string;
   worktreePath: string | null;

@@ -5,6 +5,7 @@ export const assertSafePathSegment = (value: string) => {
     throw new Error(`Unsafe path segment: ${value}`);
 };
 
+/** @deprecated Use the named file handle from the extension file API (PRD 0009). Removed in 0.45 after Planner and Reports adopt that API. */
 export const requireRepoFiles = (projectFiles: ArtifactMount | undefined) => {
   if (!projectFiles) throw new Error("This command must be run inside a project folder.");
   return projectFiles;
