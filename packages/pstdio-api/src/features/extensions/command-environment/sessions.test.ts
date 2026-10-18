@@ -122,6 +122,20 @@ test("extensions can create and open a session before sending its first message"
   }
 });
 
+const observeSessionRun = (isolated: Awaited<ReturnType<typeof createTestApp>>, sessionId: string) => {
+  const completion = Promise.withResolvers<string>();
+  let started = false;
+  const unsubscribe = isolated.eventBus.subscribe((event) => {
+    if (event.table !== "sessions" || event.op !== "set") return;
+    const session = event.data as { id: string; status: string };
+    if (session.id !== sessionId) return;
+    if (session.status === "in_progress") started = true;
+    if (session.status === "completed" && started) completion.resolve(session.status);
+    if (["failed", "cancelled", "disconnected"].includes(session.status)) completion.resolve(session.status);
+  });
+  return { completion: completion.promise, unsubscribe };
+};
+
 for (const queued of [false, true]) {
   test(`the first ${queued ? "queued" : "immediate"} extension message keeps its chosen parameters and model`, async () => {
     const starts: HarnessStartInput[] = [];
@@ -136,6 +150,7 @@ for (const queued of [false, true]) {
       },
     });
     const isolated = await createTestApp({ harnessRegistry: createTestHarnessRegistry([record]) });
+    let unsubscribe: (() => void) | undefined;
     try {
       const project = await createProject(isolated.app, "Configured idle session");
       const api = createSessionsApi(isolated.deps, {
@@ -153,13 +168,17 @@ for (const queued of [false, true]) {
           { emitStartedHook: false },
         );
       }
+      // Selected-model writes can publish the idle completed row before this run starts.
+      const observed = observeSessionRun(isolated, session.id);
+      unsubscribe = observed.unsubscribe;
       await api.followup({ sessionId: session.id, prompt: "First configured message" });
       if (queued) {
         expect((await api.get(session.id))?.status).toBe("queued");
         await isolated.deps.settingsService.update({ max_concurrent_sessions: null });
         await createSessionScheduler(isolated.deps).drainQueue();
       }
-      await waitForCompleted(isolated.app, session.id);
+      expect(await observed.completion).toBe("completed");
+      expect(await api.get(session.id)).toMatchObject({ status: "completed" });
       expect(starts).toHaveLength(1);
       expect(starts[0]).toMatchObject({
         prompt: "First configured message",
@@ -167,6 +186,7 @@ for (const queued of [false, true]) {
         params: { safe: true },
       });
     } finally {
+      unsubscribe?.();
       await isolated.close();
     }
   });
