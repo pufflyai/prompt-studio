@@ -23,7 +23,7 @@ const FloatingPanel = () => {
   );
 };
 const meta = {
-  tags: ["motion"],
+  tags: ["motion", "launcher-visibility"],
   title: "Components/Overlays/Bubble/Motion",
   component: FloatingPanel,
   parameters: { layout: "fullscreen" },
@@ -33,7 +33,10 @@ type Story = StoryObj<typeof meta>;
 export const LauncherAndPanel: Story = {
   play: async () => {
     const canvas = within(document.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Open Side Panel" }));
+    const launcher = canvas.getByRole("button", { name: "Open Side Panel" });
+    await userEvent.click(launcher);
+    await waitFor(() => expect(launcher).not.toBeVisible());
+    await expect(launcher.parentElement).toHaveAttribute("inert");
     await waitFor(() => expect(canvas.getByRole("dialog", { name: "Side Panel" })).toBeVisible());
     const panel = canvas.getByRole("dialog", { name: "Side Panel" });
     const draft = canvas.getByRole("textbox", { name: "Draft" });
@@ -42,7 +45,9 @@ export const LauncherAndPanel: Story = {
     await expect(panel).toHaveAttribute("inert");
     await expect(draft).toBeVisible();
     await waitFor(() => expect(draft).not.toBeVisible());
-    await userEvent.click(canvas.getByRole("button", { name: "Open Side Panel" }));
+    await waitFor(() => expect(launcher).toBeVisible());
+    launcher.focus();
+    await userEvent.keyboard("{Enter}");
     await expect(draft).toHaveValue("Keep this draft");
   },
 };

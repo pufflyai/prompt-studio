@@ -2,6 +2,7 @@ import { Input, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { SlidersHorizontal } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../workbench-story";
 
@@ -80,6 +81,23 @@ export const AttachedOnly: Story = {
 };
 export const DefaultBubble: Story = {
   render: () => <SidePanelStory />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const launcher = await body.findByRole("button", { name: "Open Side Panel" });
+    launcher.focus();
+    await userEvent.keyboard("{Enter}");
+    const panel = await body.findByRole("dialog", { name: "Side Panel" });
+    await waitFor(() => expect(launcher).not.toBeVisible());
+    await expect(launcher.parentElement).toHaveAttribute("inert");
+    const input = within(panel).getByRole("textbox", { name: "Object name" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "Terracotta");
+    await userEvent.click(within(panel).getByRole("button", { name: "Close Side Panel" }));
+    await waitFor(() => expect(panel).not.toBeVisible());
+    await waitFor(() => expect(launcher).toBeVisible());
+    await userEvent.click(launcher);
+    await expect(input).toHaveValue("Terracotta");
+  },
 };
 export const CustomBubbleIcon: Story = {
   parameters: {

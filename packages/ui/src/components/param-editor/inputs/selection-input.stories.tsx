@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { SelectionInput } from "./selection-input";
 
 const main = { id: "main", name: "main", icon: "git-commit-horizontal" };
@@ -19,7 +19,21 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const BranchChoices: Story = {};
+export const BranchChoices: Story = {
+  tags: ["menu-selection"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "main" }));
+    const selected = body.getByRole("menuitemradio", { name: "main" });
+    await expect(selected).toBeChecked();
+    expect(getComputedStyle(selected).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    expect(selected.querySelector(".lucide-check")).not.toBeNull();
+    await waitFor(() => expect(body.getByRole("menu")).toHaveFocus());
+    await userEvent.keyboard("{Home}{ArrowDown}{Enter}");
+    await waitFor(() => expect(canvas.getByRole("button", { name: "develop" })).toBeVisible());
+  },
+};
 export const StatusChoices: Story = {
   args: {
     id: "status",
@@ -80,6 +94,7 @@ export const OptionalSelection: Story = {
   },
 };
 export const MultiSelection: Story = {
+  tags: ["menu-selection"],
   args: { options: [main], defaultValue: ["main"], multiSelect: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
