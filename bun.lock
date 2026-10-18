@@ -132,7 +132,7 @@
     },
     "clients/desktop": {
       "name": "@pstdio/desktop",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "11.14.0",
@@ -202,7 +202,7 @@
     },
     "extensions/extension-lab": {
       "name": "extension-lab",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -223,7 +223,7 @@
     },
     "extensions/harness-claude-code": {
       "name": "harness-claude-code",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@pstdio/sdk": "^0.41.0",
       },
@@ -234,7 +234,7 @@
     },
     "extensions/harness-codex": {
       "name": "harness-codex",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@pstdio/sdk": "^0.41.0",
       },
@@ -245,7 +245,7 @@
     },
     "extensions/harness-open-code": {
       "name": "harness-open-code",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@pstdio/sdk": "^0.41.0",
       },
@@ -256,7 +256,7 @@
     },
     "extensions/pstdio-artifacts": {
       "name": "pstdio-artifacts",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -276,7 +276,7 @@
     },
     "extensions/pstdio-base-themes": {
       "name": "pstdio-base-themes",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -298,7 +298,7 @@
     },
     "extensions/pstdio-notes": {
       "name": "pstdio-notes",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@pstdio/sdk": "^0.42.0",
       },
@@ -309,7 +309,7 @@
     },
     "extensions/pstdio-planner": {
       "name": "pstdio-planner",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -332,7 +332,7 @@
     },
     "extensions/pstdio-reports": {
       "name": "pstdio-reports",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -343,7 +343,7 @@
     },
     "extensions/pstdio-skills": {
       "name": "pstdio-skills",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -361,7 +361,7 @@
     },
     "extensions/remote-workspaces": {
       "name": "remote-workspaces",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -465,7 +465,7 @@
     },
     "packages/pstdio": {
       "name": "pstdio",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "bin": {
         "pstdio": "./bin/pstdio.cjs",
         "pst": "./bin/pstdio.cjs",
@@ -491,12 +491,12 @@
         "typescript": "6.0.2",
       },
       "optionalDependencies": {
-        "@pstdio/cli-darwin-arm64": "0.43.1",
-        "@pstdio/cli-darwin-x64": "0.43.1",
-        "@pstdio/cli-linux-arm64": "0.43.1",
-        "@pstdio/cli-linux-x64": "0.43.1",
-        "@pstdio/cli-win-arm64": "0.43.1",
-        "@pstdio/cli-win-x64": "0.43.1",
+        "@pstdio/cli-darwin-arm64": "0.44.0",
+        "@pstdio/cli-darwin-x64": "0.44.0",
+        "@pstdio/cli-linux-arm64": "0.44.0",
+        "@pstdio/cli-linux-x64": "0.44.0",
+        "@pstdio/cli-win-arm64": "0.44.0",
+        "@pstdio/cli-win-x64": "0.44.0",
       },
     },
     "packages/pstdio-api": {
@@ -735,7 +735,7 @@
     },
     "packages/pstdio-workbench": {
       "name": "@pstdio/workbench",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
         "@pstdio/sdk": "workspace:^",
@@ -790,7 +790,7 @@
     },
     "packages/sdk": {
       "name": "@pstdio/sdk",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@noble/hashes": "^2.4.0",
         "mustache": "^4.2.0",
@@ -820,7 +820,7 @@
     },
     "packages/ui": {
       "name": "@pstdio/ui",
-      "version": "0.43.1",
+      "version": "0.44.0",
       "dependencies": {
         "@chakra-ui/charts": "^3.36.0",
         "@dnd-kit/core": "^6.3.1",
@@ -1854,18 +1854,6 @@
     "@posthog/types": ["@posthog/types@1.411.1", "", {}, "sha512-Gd7tnSYctcSXup3naVlAgavvenByRao6rsSYdMgWgP35KE9jFn+rMHNRJeI5LNjJuLzMXHEVcgzAN7xcATefdw=="],
 
     "@preact/signals-core": ["@preact/signals-core@1.14.0", "", {}, "sha512-AowtCcCU/33lFlh1zRFf/u+12rfrhtNakj7UpaGEsmMwUKpKWMVvcktOGcwBBNiB4lWrZWc01LhiyyzVklJyaQ=="],
-
-    "@pstdio/cli-darwin-arm64": ["@pstdio/cli-darwin-arm64@0.43.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-DESrVlWyTDi6LKmN074al6n7nL/phtkobmAZVY+e+0YSOt8CWUtY2w6BqznX4TDz3ki6IWARle3DY2Pd+I7cDQ=="],
-
-    "@pstdio/cli-darwin-x64": ["@pstdio/cli-darwin-x64@0.43.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-q77q+hPWGEQowxuETGvM6tiYbRhWVr7UtddbS/cJnZVtb8GL0tZPaXu+EW8Hr8mJW8WbY8EmeygNL6MbNE4IZQ=="],
-
-    "@pstdio/cli-linux-arm64": ["@pstdio/cli-linux-arm64@0.43.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-RwTmIFbyaEgm7Kx373mJEQaLcjmOBpDdBNW6AApEecWS/TQlzxAfjXuRkLvkWFwotoYwhXNP0C4Ku4y8FoOvjw=="],
-
-    "@pstdio/cli-linux-x64": ["@pstdio/cli-linux-x64@0.43.1", "", { "os": "linux", "cpu": "x64" }, "sha512-PaKbjn5fMmPg1EvaoH4eQJcT6VlldNy2bdGjI5L4Su56F5HWNOh5E4dFu/KPLIf+MsO2vA8VLWBpcNgZGaNjkw=="],
-
-    "@pstdio/cli-win-arm64": ["@pstdio/cli-win-arm64@0.43.1", "", { "os": "win32", "cpu": "arm64" }, "sha512-gjmygysiKdZpP7tR7mFM1/WgUUnE7zRe/mKj1gUOBBmc4H/ow5NjV7u7Dlcogz1A38g8e/Kq+5i9xLVBh9cAmw=="],
-
-    "@pstdio/cli-win-x64": ["@pstdio/cli-win-x64@0.43.1", "", { "os": "win32", "cpu": "x64" }, "sha512-Jac/3S30O1gaFrhAaAN4iKKo4oRfrCvMAimK09q8imkZ6JP2NwWyhv1VXu41x5E7PtZpGDyluYNY9dHmo9aZBw=="],
 
     "@pstdio/desktop": ["@pstdio/desktop@workspace:clients/desktop"],
 

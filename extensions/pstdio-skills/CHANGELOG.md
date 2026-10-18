@@ -1,5 +1,16 @@
 # Prompt Studio Skills
 
+## 0.44.0
+
+_2026-10-18_
+
+### Patch Changes
+
+- 62858a9: Move Planner sessions, workflow settings, board declarations, and the shared filter to the published replacement APIs.
+- d3a0941: Keep extension configuration, drafts, prototypes, tickets, reports, and backups in extension-storage.
+- 191998c: Route extension authoring skills to the public docs, label version-dependent APIs, and give targeted checks.
+- 034ffb2: Document typed webview clients and shared resource contracts for SDK 0.44 extension authors.
+
 ## 0.43.1
 
 _2026-10-13_

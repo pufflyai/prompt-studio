@@ -1,5 +1,14 @@
 # pstdio-base-themes
 
+## 0.44.0
+
+_2026-10-18_
+
+### Patch Changes
+
+- d3a0941: Keep extension configuration, drafts, prototypes, tickets, reports, and backups in extension-storage.
+- bee67a9: Align extra theme contrast and interaction colors, support application color roles in theme assets, and add a development-only component comparison Storybook.
+
 ## 0.43.1
 
 _2026-10-13_
