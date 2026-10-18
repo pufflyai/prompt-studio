@@ -7,7 +7,8 @@ import type {
   ExtensionLoggerApi,
   Struct,
 } from "@pstdio/sdk/extensions";
-import { commandRefId, resolveEventReferenceId } from "@pstdio/sdk/extensions";
+import { commandRefId } from "@pstdio/sdk/extensions";
+import { resolveEventReferenceId } from "pstdio-api-contracts";
 import type { ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 import { createInvocationScope, type InvocationScope } from "./scope";
 import type { BuildEnvironmentInput, CommandRunnerHostDeps } from "./types";

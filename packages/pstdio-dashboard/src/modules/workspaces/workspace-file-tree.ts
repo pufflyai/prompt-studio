@@ -7,7 +7,7 @@ import type {
   WorkbenchModuleContext,
 } from "@pstdio/workbench";
 import { createElement } from "react";
-import { apiRequest, getApiClient } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
   absoluteWorkspaceEntryPath,
@@ -17,7 +17,7 @@ import {
 } from "@/shared/workspaces/workspace-file-resource";
 import { WorkspaceFileChangeBadge, WorkspaceFileTreeIcon } from "./components/workspace-file-tree-presentation";
 import { resolveWorkspaceDiffRequest } from "./components/workspace-widget-state";
-import { type WorkspaceDiffFilesResponse, workspaceDiffFilePath } from "./data/workspace-queries";
+import { workspaceDiffFilePath } from "./data/workspace-queries";
 
 const OPEN_WORKSPACE_FILE_COMMAND = "dashboard.workspace.open-file";
 const CREATE_WORKSPACE_FILE_ACTION = "workspace-file.create";
@@ -234,10 +234,7 @@ export const loadWorkspaceFileEntries = async (
   );
   context.signal?.throwIfAborted();
   const diffSummary = diffRequest
-    ? await apiRequest<WorkspaceDiffFilesResponse | null>(
-        `/v1/workspaces/${diffRequest.workspaceId}/diff-files?mode=${diffRequest.mode}`,
-        { allowNotFound: true, signal: context.signal },
-      )
+    ? await getApiClient().workspaces.diffFiles(diffRequest.workspaceId, diffRequest.mode, context.signal)
     : null;
   context.signal?.throwIfAborted();
   const revealInFinder = await finderAvailable();

@@ -166,6 +166,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "babel-plugin-react-compiler": "^1.0.0",
     "cross-env": "10.1.0",
+    "pstdio-api-contracts": "workspace:*",
     "pstdio-file-types": "workspace:*",
     "react": "19.2.4",
     "react-dom": "19.2.4",

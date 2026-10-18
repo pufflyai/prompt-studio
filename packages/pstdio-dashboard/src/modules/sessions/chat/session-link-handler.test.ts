@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
-import { parsePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
+import { parsePageUrl } from "pstdio-api-contracts";
 import { getCollection, getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createWorkspacesModule } from "../../workspaces/module";

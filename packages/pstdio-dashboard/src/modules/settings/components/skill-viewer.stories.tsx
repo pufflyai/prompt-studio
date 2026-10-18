@@ -23,6 +23,7 @@ export default meta;
 type Story = StoryObj<typeof SkillViewerContent>;
 
 const baseSkill: ProjectSkillDetails = {
+  deleted_at: null,
   id: "skill-1",
   project_id: "project-1",
   name: "create-ticket",

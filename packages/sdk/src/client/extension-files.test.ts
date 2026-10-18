@@ -1,5 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { createExtensionFileCapabilities } from "./extension-file-capabilities";
+import { createExtensionControlsClient } from "./extension-controls";
+import type { RequestFn } from "./request";
+
+const createExtensionFileCapabilities = (input: {
+  projectId: string;
+  extensionInstanceId: string;
+  request: RequestFn;
+}) => {
+  const files = createExtensionControlsClient(input.request).files;
+  return {
+    upload: (params: Parameters<typeof files.upload>[2]) =>
+      files.upload(input.projectId, input.extensionInstanceId, params),
+    list: (params: Parameters<typeof files.list>[2]) => files.list(input.projectId, input.extensionInstanceId, params),
+    delete: (params: { id: string }) => files.delete(input.projectId, input.extensionInstanceId, params.id),
+  };
+};
 
 describe("createExtensionFileCapabilities", () => {
   test("uploads binary data with trusted project and extension owners", async () => {

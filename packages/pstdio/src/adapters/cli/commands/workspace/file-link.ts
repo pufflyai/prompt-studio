@@ -1,5 +1,6 @@
 import { posix } from "node:path";
-import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages } from "@pstdio/sdk/extensions";
+import { serializePageUrl } from "pstdio-api-contracts";
 import type { Argv } from "yargs";
 import { findProjectRoot, readConfig } from "@/features/config/config";
 import { listWorkspaces } from "@/features/workspaces/api/list-workspaces";

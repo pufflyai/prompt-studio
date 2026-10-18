@@ -1,39 +1,11 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { fileDiffSchema, workspaceDiffFilesResponseSchema, workspaceDiffResponseSchema } from "pstdio-api-contracts";
 import { getWorktreeDiff, getWorktreeDiffFile, getWorktreeDiffSummaryFiles } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 import { resolveBase, resolveHeadLabel } from "../resolve-base";
 import { resolveWorkspaceExecutionTarget } from "../workspace-provider-service";
-
-const fileDiffSchema = z.object({
-  filePath: z.string(),
-  change: z.enum(["added", "deleted", "modified", "renamed", "copied", "permissionChange"]),
-  additions: z.number(),
-  deletions: z.number(),
-  oldContent: z.string(),
-  newContent: z.string(),
-  oldPath: z.string().optional(),
-  newPath: z.string().optional(),
-});
-
-const fileDiffSummarySchema = fileDiffSchema.omit({ oldContent: true, newContent: true });
-
-const workspaceDiffResponseSchema = z.object({
-  workspace_id: z.string(),
-  base_ref: z.string(),
-  head_ref: z.string(),
-  files: z.array(fileDiffSchema),
-  totals: z.object({
-    additions: z.number(),
-    deletions: z.number(),
-    file_count: z.number(),
-  }),
-});
-
-const workspaceDiffFilesResponseSchema = workspaceDiffResponseSchema.extend({
-  files: z.array(fileDiffSummarySchema),
-});
 
 const diffModeSchema = z.enum(["current", "fork_point"]).default("current");
 

@@ -10,7 +10,8 @@ export const createBoardViewsClient = (request: RequestFn) => ({
     request<BoardSummary>(`${projectPath(projectId)}/boards/${encodeURIComponent(boardId)}`),
   get: (projectId: string, id: string) => request<BoardView>(viewPath(projectId, id)),
   boards: (projectId: string) => request<BoardSummary[]>(`${projectPath(projectId)}/boards`),
-  list: (projectId: string, boardId: string) => request<BoardViews>(boardPath(projectId, boardId)),
+  list: (projectId: string, boardId: string, options?: { signal?: AbortSignal }) =>
+    request<BoardViews>(boardPath(projectId, boardId), options),
   orphaned: (projectId: string) => request<BoardView[]>(`${projectPath(projectId)}/board-views?orphaned=true`),
   create: (projectId: string, boardId: string, input: BoardViewCreate) =>
     request<BoardView>(boardPath(projectId, boardId), { method: "POST", body: input }),

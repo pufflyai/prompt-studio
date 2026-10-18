@@ -46,7 +46,6 @@ export const ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES = ["host.dispatchKeyboardEven
 export const WEBVIEW_HOST_CAPABILITIES = [
   ...WEBVIEW_DECLARABLE_CAPABILITIES.filter((capability) => capability !== "clipboard.write"),
   ...WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
-  ...ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
 ] as const;
 
 export type WebviewHostCapability = (typeof WEBVIEW_HOST_CAPABILITIES)[number];

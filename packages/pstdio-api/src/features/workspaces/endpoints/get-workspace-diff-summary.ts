@@ -1,17 +1,11 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { workspaceDiffSummarySchema as diffSummaryResponseSchema } from "pstdio-api-contracts";
 import { getWorktreeDiffSummary } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 import { resolveBase } from "../resolve-base";
 import { resolveWorkspaceExecutionTarget } from "../workspace-provider-service";
-
-const diffSummaryResponseSchema = z.object({
-  workspace_id: z.string(),
-  additions: z.number(),
-  deletions: z.number(),
-  file_count: z.number(),
-});
 
 const diffModeSchema = z.enum(["current", "fork_point"]).default("current");
 

@@ -1,3 +1,18 @@
+export type {
+  AssetReference,
+  AssetTransfer,
+  CreateNotificationInput,
+  ListNotificationsQuery,
+  ListNotificationsResponse,
+  Notification,
+  NotificationAction,
+  NotificationActorType,
+  NotificationKind,
+  NotificationOrigin,
+  NotificationPriority,
+  NotificationStatus,
+  UpdateNotificationInput,
+} from "pstdio-api-contracts";
 export type { AgentAvailabilityType, AgentInfo, AgentModel, AgentSkillsLayout } from "./agent";
 export { harnessLocalId } from "./agent";
 export type { FileRecord } from "./file";

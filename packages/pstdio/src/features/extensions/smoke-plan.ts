@@ -1,5 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { type PageRef, serializePageUrl, workbenchPageDefinitions } from "@pstdio/sdk/extensions";
+import { type PageRef, workbenchPageDefinitions } from "@pstdio/sdk/extensions";
+import { serializePageUrl } from "pstdio-api-contracts";
 
 type Page = WorkbenchExtensionMetadata["pages"][number];
 export const planSmokePages = (inventory: Page[], extensionId: string, projectId: string) => {

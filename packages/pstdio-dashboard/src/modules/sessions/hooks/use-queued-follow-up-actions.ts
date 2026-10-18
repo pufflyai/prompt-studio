@@ -1,26 +1,16 @@
-import type {
-  CombineQueuedFollowUpsInput,
-  QueuedFollowUpUpdateResponse,
-  QueuedSteeringResult,
-  SteerQueuedFollowUpInput,
-  UpdateQueuedFollowUpInput,
-} from "@pstdio/sdk/api";
+import type { CombineQueuedFollowUpsInput, SteerQueuedFollowUpInput, UpdateQueuedFollowUpInput } from "@pstdio/sdk/api";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 
 interface QueueTarget {
   sessionId: string;
   queuePosition: number;
 }
-const path = (input: QueueTarget) => `/v1/sessions/${input.sessionId}/queued-follow-ups/${input.queuePosition}`;
 export const useUpdateQueuedFollowUp = () =>
   useMutation({
     mutationFn: (input: QueueTarget & UpdateQueuedFollowUpInput) => {
       const { sessionId, queuePosition, ...request } = input;
-      return apiRequest<QueuedFollowUpUpdateResponse>(path({ sessionId, queuePosition }), {
-        method: "PATCH",
-        body: request,
-      });
+      return getApiClient().sessions.updateQueuedFollowUp(sessionId, queuePosition, request);
     },
   });
 export const useRemoveQueuedFollowUp = () =>
@@ -31,10 +21,7 @@ export const useRemoveQueuedFollowUp = () =>
         steps?: number;
         expectedOrder?: { queuePosition: number; revision: string }[];
       },
-    ) =>
-      apiRequest<{ ok: true }>(`${path(input)}?expectedRevision=${encodeURIComponent(input.expectedRevision ?? "")}`, {
-        method: "DELETE",
-      }),
+    ) => getApiClient().sessions.removeQueuedFollowUp(input.sessionId, input.queuePosition, input.expectedRevision),
   });
 export const useMoveQueuedFollowUp = () =>
   useMutation({
@@ -46,33 +33,27 @@ export const useMoveQueuedFollowUp = () =>
         expectedOrder?: { queuePosition: number; revision: string }[];
       },
     ) =>
-      apiRequest<{ ok: true; queuePosition: number }>(`${path(input)}/move`, {
-        method: "POST",
-        body: {
-          direction: input.direction,
-          expectedRevision: input.expectedRevision,
-          steps: input.steps,
-          expectedOrder: input.expectedOrder,
-        },
+      getApiClient().sessions.moveQueuedFollowUp(input.sessionId, input.queuePosition, {
+        direction: input.direction,
+        expectedRevision: input.expectedRevision,
+        steps: input.steps,
+        expectedOrder: input.expectedOrder,
       }),
   });
 export const useCombineQueuedFollowUps = () =>
   useMutation({
     mutationFn: (input: QueueTarget & CombineQueuedFollowUpsInput) =>
-      apiRequest<QueuedFollowUpUpdateResponse>(`${path(input)}/combine`, {
-        method: "POST",
-        body: {
-          sourcePosition: input.sourcePosition,
-          sourceRevision: input.sourceRevision,
-          targetRevision: input.targetRevision,
-        },
+      getApiClient().sessions.combineQueuedFollowUps(input.sessionId, input.queuePosition, {
+        sourcePosition: input.sourcePosition,
+        sourceRevision: input.sourceRevision,
+        targetRevision: input.targetRevision,
       }),
   });
 export const useSteerQueuedFollowUp = () =>
   useMutation({
     mutationFn: (input: QueueTarget & SteerQueuedFollowUpInput) =>
-      apiRequest<QueuedSteeringResult>(`${path(input)}/steer`, {
-        method: "POST",
-        body: { expectedRevision: input.expectedRevision, expectedRunStartedAt: input.expectedRunStartedAt },
+      getApiClient().sessions.steerQueuedFollowUp(input.sessionId, input.queuePosition, {
+        expectedRevision: input.expectedRevision,
+        expectedRunStartedAt: input.expectedRunStartedAt,
       }),
   });
