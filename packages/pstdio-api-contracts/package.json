@@ -10,7 +10,8 @@
     "./extension-webview-path": "./src/extension-webview-path.ts",
     "./history-reconciliation": "./src/history-reconciliation.ts",
     "./performance-diagnostics": "./src/performance-diagnostics.ts",
-    "./session-attachment-types": "./src/session-attachment-types.ts"
+    "./session-attachment-types": "./src/session-attachment-types.ts",
+    "./data-table-values": "./src/extension-kernel/data-table-values.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
