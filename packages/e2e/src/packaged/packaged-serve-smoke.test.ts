@@ -11,6 +11,8 @@ import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
+// Localized parameter guidance is readable in compiled CLI help.
+import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
 // Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
 import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 // OpenAPI publishes recursive command causes without expanding forever.
@@ -93,6 +95,7 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 registerSharedCodexSmokeTests();
+registerCliHelpSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
 registerExtensionStartupSmokeTests();
