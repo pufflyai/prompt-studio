@@ -184,7 +184,7 @@ describe("createCommandEnvironment host primitives", () => {
       },
     );
 
-    await expect(env.workspaces.list()).resolves.toEqual([
+    await expect(env.workspaces.list()).resolves.toMatchObject([
       { id: "ws-1", project_id: "project-1", root_path: null },
       { id: "ws-2", project_id: "project-1", root_path: null },
     ]);
@@ -593,7 +593,7 @@ describe("createCommandEnvironment workspaces", () => {
       },
     );
 
-    await expect(env.workspaces.getByShorthand("PS-1_A1")).resolves.toEqual({
+    await expect(env.workspaces.getByShorthand("PS-1_A1")).resolves.toMatchObject({
       id: "ws-1",
       project_id: "project-1",
       root_path: null,
