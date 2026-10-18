@@ -1,3 +1,4 @@
+import type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
 import type { ThemePreference } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher, type HostEventPublisher } from "pstdio-extensions/bridge/host";
 import type {
@@ -25,7 +26,9 @@ export type CreateBridgeWebviewHostAdapters = (context: BridgeWebviewRenderConte
 
 // What the host pushes into the guest's props store. Hosts inject this to forward dynamic
 // data — e.g. the dashboard forwards extension command outcomes and theme preference.
-export type CreateBridgeWebviewProps = (context: BridgeWebviewRenderContext) => unknown;
+export type CreateBridgeWebviewProps = (
+  context: BridgeWebviewRenderContext,
+) => Partial<WebviewHostProps> & Record<string, unknown>;
 export type CreateBridgeWebviewTheme = (context: BridgeWebviewRenderContext) => ThemePreference;
 
 interface CreateBridgeWebviewRendererInput {

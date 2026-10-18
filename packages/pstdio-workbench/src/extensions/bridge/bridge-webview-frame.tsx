@@ -38,7 +38,7 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
       <ExtensionFrame
         view={view}
         {...frameProps}
-        props={{ ...(frameProps.props as object), ...pageProps }}
+        props={{ ...frameProps.props, ...pageProps }}
         onReady={() => {
           diagnostics.onReady();
           setError(null);

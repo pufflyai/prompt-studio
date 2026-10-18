@@ -92,7 +92,20 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
     "placement.close": capability("placement.close", placement && (() => placement.close())),
     "notification.show": capability(
       "notification.show",
-      notifications?.show && ((request) => after(notifications.show!(request), () => undefined)),
+      notifications?.show &&
+        ((request) =>
+          after(
+            notifications.show!(
+              "type" in request
+                ? request
+                : {
+                    type: request.level,
+                    ...(request.title === undefined ? {} : { title: request.title }),
+                    message: request.message ?? "",
+                  },
+            ),
+            () => undefined,
+          )),
     ),
     "notification.action": capability(
       "notification.action",
@@ -134,7 +147,8 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
     ),
     "extension.settings.set": capability(
       "extension.settings.set",
-      settings && ((request) => after(settings.set(request.key, request.value), () => undefined)),
+      settings &&
+        (async (request) => ({ key: request.key, value: (await settings.set(request.key, request.value)).value })),
     ),
     "extension.settings.delete": capability(
       "extension.settings.delete",

@@ -53,11 +53,15 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
         target: { kind: "page", page },
       }),
     ).resolves.toBeUndefined();
+    capabilities["notification.show"]?.({ type: "success", message: "Saved", metadata: { revision: 2 } });
+    expect(workbench.notifications.listNotifications()).toMatchObject([{ title: "Saved", metadata: { revision: 2 } }]);
     capabilities["notification.show"]?.({ level: "info", title: "Bridge ready" });
     capabilities["preferences.set"]?.({ name: "lab.theme", scope: { scope: "user" }, value: "dark" });
     const preference = capabilities["preferences.get"]?.({ name: "lab.theme", scope: { scope: "user" } });
     expect(preference).toBe("dark");
     expect(workbench.pages.store.getState().activePageId).toBe("pstdio.lab.page.tickets");
-    expect(workbench.notifications.listNotifications()).toMatchObject([{ title: "Bridge ready" }]);
+    expect(workbench.notifications.listNotifications()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ title: "Bridge ready" })]),
+    );
   });
 });

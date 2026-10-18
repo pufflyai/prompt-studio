@@ -55,7 +55,8 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
-// The browser suite checks shared host parameter validation and settings result shapes.
+// The browser suite checks typed host props, page updates, structured capability errors and saved settings.
+// Real React Query subscriptions cover matching events, reconnect deduplication and unmount cleanup.
 // Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Planner covers timeline state, dependency recovery and Git conflicts in separate packaged cases.

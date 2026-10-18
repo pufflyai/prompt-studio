@@ -155,7 +155,7 @@ describe("extension settings endpoints", () => {
       },
     } as unknown as GuestHost;
     const client = createWebviewClient<Record<string, never>, typeof settings>(host);
-    await client.settings.set("counter.step", 5);
+    expect(await client.settings.set("counter.step", 5)).toBe(5);
     expect(await client.settings.get("counter.step")).toBe(5);
     await client.settings.delete("counter.step");
     expect(await client.settings.get("counter.step")).toBe(1);

@@ -156,7 +156,10 @@ export const createHostCapabilityGate = (input: CreateHostCapabilityGateInput) =
 
   const deny = (diagnostic: WebviewCapabilityDiagnostic) => {
     emit(diagnostic);
-    return new Error(diagnostic.message);
+    return Object.assign(new Error(diagnostic.message), {
+      code: diagnostic.code,
+      data: { capability: diagnostic.capability },
+    });
   };
 
   return {

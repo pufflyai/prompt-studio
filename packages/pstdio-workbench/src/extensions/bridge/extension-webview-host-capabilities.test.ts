@@ -119,6 +119,7 @@ test("settings and preferences preserve saved data through shared result shapes"
       get: (key) => overrides.get(key) ?? "comfortable",
       set: (key, value) => {
         overrides.set(key, value);
+        return { value };
       },
       delete: (key) => {
         overrides.delete(key);
@@ -133,7 +134,10 @@ test("settings and preferences preserve saved data through shared result shapes"
     },
   });
   expect(await capabilities["extension.settings.all"]({})).toEqual({ density: "comfortable" });
-  expect(await capabilities["extension.settings.set"]({ key: "density", value: "compact" })).toBeUndefined();
+  expect(await capabilities["extension.settings.set"]({ key: "density", value: "compact" })).toEqual({
+    key: "density",
+    value: "compact",
+  });
   expect(await capabilities["extension.settings.get"]({ key: "density" })).toBe("compact");
   expect(await capabilities["extension.settings.delete"]({ key: "density" })).toBeUndefined();
   expect(await capabilities["extension.settings.get"]({ key: "density" })).toBe("comfortable");
@@ -273,4 +277,46 @@ test("notification validation keeps all supported legacy fields", async () => {
   };
   await capabilities["notification.action"](input);
   expect(received).toEqual(input);
+});
+
+test("canonical and deprecated toast inputs use one command notice shape", async () => {
+  const notices: unknown[] = [];
+  const capabilities = createExtensionWebviewHostCapabilities({
+    notifications: {
+      show: (notice) => {
+        notices.push(notice);
+      },
+    },
+  });
+  await capabilities["notification.show"]({ type: "success", message: "Saved", metadata: { revision: 2 } });
+  await capabilities["notification.show"]({ level: "warning", title: "Review", message: "Changed" });
+  await capabilities["notification.show"]({ level: "info", title: "Ready" });
+  expect(notices).toEqual([
+    { type: "success", message: "Saved", metadata: { revision: 2 } },
+    { type: "warning", title: "Review", message: "Changed" },
+    { type: "info", title: "Ready", message: "" },
+  ]);
+});
+
+test("setting write results use the saved value instead of echoing the input", async () => {
+  const values = new Map<string, unknown>();
+  const capabilities = createExtensionWebviewHostCapabilities({
+    settings: {
+      all: () => Object.fromEntries(values),
+      get: (key) => values.get(key),
+      set: (key, value) => {
+        const saved = Math.min(Number(value), 4);
+        values.set(key, saved);
+        return { value: saved };
+      },
+      delete: (key) => {
+        values.delete(key);
+      },
+    },
+  });
+  expect(await capabilities["extension.settings.set"]({ key: "columns", value: 5 })).toEqual({
+    key: "columns",
+    value: 4,
+  });
+  expect(await capabilities["extension.settings.get"]({ key: "columns" })).toBe(4);
 });

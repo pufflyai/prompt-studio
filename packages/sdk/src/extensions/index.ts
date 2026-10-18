@@ -136,6 +136,7 @@ export { EXTENSION_EVENTS_SCOPE, type WebviewEventsClient, type WebviewExtension
 export { matchesResourceWhen } from "./when";
 export const projectPrefix = () => ({ $prefix: "project" as const });
 
+export type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
   mergeOrderedHistory,
@@ -165,5 +166,6 @@ export type {
   NotificationStatus,
   UpdateNotificationInput,
 } from "./resource-compat";
+export { isWebviewCapabilityError, type WebviewCapabilityError } from "./webview-capability-error";
 export type { WebviewPageClient } from "./webview-page-client";
 export type { CommandStream, CommandStreamOptions, WebviewStreamsClient } from "./webview-streams";

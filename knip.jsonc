@@ -72,6 +72,7 @@
         "src/**/*.perf.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",
+        "src/**/*.fixture.tsx",
         // Packaged smoke tests bundle these extension entries by path.
         "src/packaged/fixtures/*-extension.ts",
         // Specs install fixture extensions by path.

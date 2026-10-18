@@ -1,23 +1,26 @@
+import type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { host } from "rimless";
 import type {
   ExtensionViewDescriptor,
   GuestApi,
+  HostApi,
   HostCapabilityRegistry,
   HostCapabilityRequest,
-  HostEventMessage,
   ThemePreference,
   WebviewCapabilityDiagnostic,
 } from "../contract";
 import { createHostCapabilityGate } from "../contract";
+import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
+import { capabilityReply } from "./capability-reply";
 import type { HostEventPublisher } from "./host-event-publisher";
 import { extensionIframeAllow } from "./iframe-permissions";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
 
 export interface ExtensionFrameProps {
   view: ExtensionViewDescriptor;
-  props: unknown;
+  props: Partial<WebviewHostProps> & Record<string, unknown>;
   theme: ThemePreference;
   capabilities?: HostCapabilityRegistry;
   /** Private guest shortcut forwarding, outside extension capability grants. */
@@ -31,18 +34,8 @@ export interface ExtensionFrameProps {
   title?: string;
 }
 
-type GuestRemote = {
-  init: (message: {
-    moduleUrl: string;
-    styles: string[];
-    props: unknown;
-    theme: ThemePreference;
-    themeVariables: Record<string, string>;
-    extensionId: string;
-  }) => Promise<void>;
-  themeUpdate: (message: { theme: ThemePreference; variables: Record<string, string> }) => void;
-  propsUpdate: (message: { props: unknown }) => void;
-  hostEvent?: (message: HostEventMessage) => void;
+type GuestRemote = Pick<HostApi, "init" | "themeUpdate" | "propsUpdate"> & {
+  hostEvent?: HostApi["hostEvent"];
 };
 
 const iframeStyle: CSSProperties = {
@@ -83,7 +76,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   // The connection belongs to one browsing context. Navigation keeps the iframe's
   // WindowProxy, so a different contentWindow means the runtime document is gone.
   const connectedWindowRef = useRef<Window | null>(null);
-  const propsRef = useRef(extensionProps);
+  const propsRef = useRef(createWebviewHostProps(extensionProps));
   const themeRef = useRef(theme);
   const capabilitiesRef = useRef(capabilities);
   const onKeyboardEventRef = useRef(onKeyboardEvent);
@@ -97,7 +90,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   // owns the new browsing context.
   const [frameEpoch, setFrameEpoch] = useState(0);
 
-  propsRef.current = extensionProps;
+  propsRef.current = createWebviewHostProps(extensionProps);
   themeRef.current = theme;
   capabilitiesRef.current = capabilities;
   onKeyboardEventRef.current = onKeyboardEvent;
@@ -160,7 +153,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         onErrorRef.current?.(payload);
       },
       call: async (request: HostCapabilityRequest) => {
-        return await createCapabilityGate().call(request);
+        return await capabilityReply(() => createCapabilityGate().call(request));
       },
     } satisfies GuestApi;
 
@@ -220,7 +213,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
 
   useEffect(() => {
     if (!initializedRef.current) return;
-    remoteRef.current?.propsUpdate({ props: extensionProps });
+    remoteRef.current?.propsUpdate({ props: createWebviewHostProps(extensionProps) });
   }, [extensionProps]);
 
   useEffect(() => {

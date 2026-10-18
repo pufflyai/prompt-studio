@@ -2,9 +2,13 @@ import type {
   WebviewHostCapability,
   WebviewHostCapabilityParams,
   WebviewHostCapabilityResult,
+  WebviewHostProps,
 } from "pstdio-api-contracts/extension-kernel";
+import type { PropsStore } from "./webview-props-store";
 
 export interface GuestHost {
+  /** Current host context. Supplied by the webview runtime. */
+  propsStore?: PropsStore<WebviewHostProps>;
   call<
     Capability extends WebviewHostCapability,
     const Params extends WebviewHostCapabilityParams[Capability] = WebviewHostCapabilityParams[Capability],

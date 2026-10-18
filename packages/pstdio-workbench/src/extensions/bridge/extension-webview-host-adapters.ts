@@ -1,6 +1,7 @@
 import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import type { CommandStreamClientEvent } from "@pstdio/sdk/client";
 import type {
+  CommandNotice,
   MaybePromise,
   NavigationTarget,
   PageLocation,
@@ -13,7 +14,6 @@ import type {
   WebviewHostCapabilityResults,
   WebviewNotificationActionParams,
   WebviewNotificationResolveParams,
-  WebviewNotificationShowParams,
   WebviewPageParamsUpdateParams,
   WebviewPreferencesGetParams,
   WebviewPreferencesSetParams,
@@ -24,12 +24,12 @@ import type { WorkbenchTerminalController } from "../../core";
 export interface ExtensionWebviewSettingsAdapter {
   all(): MaybePromise<Record<string, unknown>>;
   get(key: string): MaybePromise<unknown>;
-  set(key: string, value: WebviewExtensionSettingSetParams["value"]): MaybePromise<unknown>;
+  set(key: string, value: WebviewExtensionSettingSetParams["value"]): MaybePromise<{ value: unknown }>;
   delete(key: string): MaybePromise<void>;
 }
 
 export interface ExtensionWebviewNotificationsAdapter {
-  show?(notice: WebviewNotificationShowParams): MaybePromise<unknown>;
+  show?(notice: CommandNotice): MaybePromise<unknown>;
   create?(input: WebviewNotificationActionParams): MaybePromise<WebviewHostCapabilityResults["notification.action"]>;
   resolve?(input: WebviewNotificationResolveParams): MaybePromise<WebviewHostCapabilityResults["notification.resolve"]>;
 }

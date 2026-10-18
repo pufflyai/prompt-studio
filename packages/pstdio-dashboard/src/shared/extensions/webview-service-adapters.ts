@@ -33,7 +33,9 @@ export const createDashboardWebviewSettingsAdapter = (owner: SettingsOwner) => {
           ]),
         ),
       get: async (key) => (await getProjectExtensionSetting(projectId, extensionInstanceId, key)).value,
-      set: (key, value) => updateProjectExtensionSetting(projectId, extensionInstanceId, key, value),
+      set: async (key, value) => ({
+        value: (await updateProjectExtensionSetting(projectId, extensionInstanceId, key, value)).value,
+      }),
       delete: async (key) => {
         await deleteProjectExtensionSetting(projectId, extensionInstanceId, key);
       },
@@ -45,7 +47,7 @@ export const createDashboardWebviewSettingsAdapter = (owner: SettingsOwner) => {
           (await listGlobalExtensionSettings(installName)).settings.map((setting) => [setting.key, setting.value]),
         ),
       get: async (key) => (await getGlobalExtensionSetting(installName, key)).value,
-      set: (key, value) => updateGlobalExtensionSetting(installName, key, value),
+      set: async (key, value) => ({ value: (await updateGlobalExtensionSetting(installName, key, value)).value }),
       delete: async (key) => {
         await deleteGlobalExtensionSetting(installName, key);
       },
@@ -57,7 +59,7 @@ export const createDashboardWebviewNotificationsAdapter = (input: { projectId?: 
   const projectId = input.projectId;
   return {
     show: (notice) => {
-      toaster.create({ type: notice.level, title: notice.title, description: notice.message });
+      toaster.create({ type: notice.type, title: notice.title, description: notice.message });
     },
     ...(projectId
       ? ({
