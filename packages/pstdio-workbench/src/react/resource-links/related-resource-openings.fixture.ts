@@ -3,12 +3,13 @@ import { createWorkbench, type WorkbenchModuleContext } from "../../core";
 import { registerRelatedResourcePreviews } from "./related-resource-previews";
 import type { ResourceLinksService } from "./resource-links-types";
 
-export const ref = (type: string, id: string): ResourceRef => ({
-  type,
-  id,
-  extensionId: "example",
-  projectId: "project",
-});
+export const ref = (type: string, id: string) =>
+  ({
+    type,
+    id,
+    extensionId: "example",
+    projectId: "project",
+  }) satisfies ResourceRef;
 export const opening = (id: string, region: "side" | "secondary" | "main" = "side") => ({
   resource: ref("document", id),
   autoOpen: true,

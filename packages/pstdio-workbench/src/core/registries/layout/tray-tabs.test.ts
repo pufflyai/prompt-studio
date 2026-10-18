@@ -2,13 +2,14 @@ import { expect, test } from "bun:test";
 import type { WorkbenchWidgetPlacement } from "./layout-types";
 import { planTrayDrop } from "./tray-tabs";
 
-const tab = (widgetId: string, preview = false): WorkbenchWidgetPlacement => ({
-  widgetId,
-  contributionId: "document",
-  role: "sub-panel",
-  pinned: !preview,
-  tabRetention: preview ? "preview" : "persistent",
-});
+const tab = (widgetId: string, preview = false) =>
+  ({
+    widgetId,
+    contributionId: "document",
+    role: "sub-panel",
+    pinned: !preview,
+    tabRetention: preview ? "preview" : "persistent",
+  }) satisfies WorkbenchWidgetPlacement;
 
 test("dropping an unpinned tab preserves the destination preview and inserts a pinned tab", () => {
   const preview = tab("preview", true);
