@@ -28,6 +28,8 @@ Choose or create one folder to open a local project. A folder belongs to at most
 
 The folder picker starts at the host's home directory. It supports hidden folders, a typed path, parent navigation, selecting the current folder, and creating one child folder. Cancelling the picker leaves a newly created folder in place.
 
+On Windows hosts, `GET /v1/filesystem/drives` returns `{ drives: [{ name: "C:", path: "C:\\" }] }` for assigned drive-letter roots. Discovery uses host filesystem calls and needs no external tools. Other platforms return an empty list. The SDK exposes this as `client.filesystem.drives()`. The dashboard shows the drive selector only when the host reports drives; it never uses the browser's platform. Selecting a drive navigates to its root without opening a project. The selected drive follows the current path, and UNC paths have no selected drive. Failed directory listings keep the attempted path visible and disable folder actions while leaving typed paths, Home, and drive selection available for recovery.
+
 ## Workspace targets
 
 The default folder workspace supports files. Sessions reuse it and share its files. It does not provide diff, merge, rebase, or isolation. Choosing a root sets the file browser root and working directory; it does not sandbox an agent process.
