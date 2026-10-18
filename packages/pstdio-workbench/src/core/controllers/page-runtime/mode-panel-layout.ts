@@ -5,15 +5,20 @@ export const restoreModePanelLayout = (
   layout: WorkbenchLayout,
   saved: WorkbenchLayout | undefined,
   defaults: WorkbenchLayout,
+  pageLayout = layout,
 ) => {
   const regions = { ...layout.regions };
   for (const region of Object.values(layout.regions)) {
     if (!getWorkbenchModePanelForRegion(region.id)) continue;
-    const currentPage = region.widgets.filter((widget) => widget.placementIdentity?.kind === "page");
+    // Carried mode regions can replace a page's cached region. Restore that
+    // page's placements separately so their chosen destinations survive.
+    const currentPage = pageLayout.regions[region.id].widgets.filter(
+      (widget) => widget.placementIdentity?.kind === "page",
+    );
     const restored = saved?.regions[region.id] ?? defaults.regions[region.id];
     regions[region.id] = {
       ...restored,
-      savedWidgetOrder: region.id === "main" ? region.savedWidgetOrder : restored.savedWidgetOrder,
+      savedWidgetOrder: pageLayout.regions[region.id].savedWidgetOrder,
       widgets: [...currentPage, ...(saved?.regions[region.id].widgets ?? [])],
       activeWidgetId: restored.activeWidgetId ?? region.activeWidgetId,
     };

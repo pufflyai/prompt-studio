@@ -3,4 +3,4 @@
 "@pstdio/workbench": patch
 ---
 
-Restore each mode's tabs and panels as left and close unpinned tabs on page navigation within that mode.
+Restore each mode's tabs and panels and moved resource tab destinations, and close unpinned tabs on page navigation within that mode.

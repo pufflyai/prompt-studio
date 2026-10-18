@@ -98,6 +98,21 @@ const pageActivations = (
   if (restoresMode) return [];
   return latest.reconciliation.activate.length > 0 ? latest.reconciliation.activate : state.reconciliation.activate;
 };
+const revealPagePlacements = (
+  input: ConnectWorkbenchPageRuntimeInput,
+  layout: WorkbenchLayout,
+  placements: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>["reconciliation"]["activate"],
+) => {
+  for (const placement of placements) {
+    const key = placementIdentityKey(placement.identity);
+    const region = Object.values(layout.regions).find((region) =>
+      region.widgets.some(
+        (widget) => widget.placementIdentity && placementIdentityKey(widget.placementIdentity) === key,
+      ),
+    );
+    if (region) input.revealRegion?.(region.id);
+  }
+};
 const applyPageState = (
   input: ConnectWorkbenchPageRuntimeInput,
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
@@ -108,6 +123,7 @@ const applyPageState = (
   const previous = input.registry.store.getState();
   const modeChanged = previous.activeModeId !== state.activeModeId || previous.projectId !== state.projectId;
   const modeLayout = state.activeModeId ? input.loadModeLayout?.(state.projectId, state.activeModeId) : undefined;
+  const pageLayout = input.loadPageLayout?.(state);
   const restoresMode = isModeReturn(previous, state, modeChanged, modeLayout);
   if (source === "transition") {
     if (modeChanged && previous.activeModeId)
@@ -128,7 +144,12 @@ const applyPageState = (
     const layoutInput = {
       layout:
         modeChanged || restoredScope
-          ? restoreModePanelLayout(input.layout.getLayout(), modeLayout, input.layout.store.getInitialState().layout)
+          ? restoreModePanelLayout(
+              input.layout.getLayout(),
+              modeLayout,
+              input.layout.store.getInitialState().layout,
+              pageLayout,
+            )
           : input.layout.getLayout(),
       modeLayout,
       placements: bindPlacementsToActivePageLocation(latest),
@@ -138,9 +159,7 @@ const applyPageState = (
     const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
     input.layout.restoreLayout(mode ? applyModePanelAvailability(layout, panelsForMode(mode)) : layout);
     syncOwnedPanelMenus(input.layout);
-    if (source === "transition") {
-      for (const placement of activation) input.revealRegion?.(placement.region);
-    }
+    if (source === "transition") revealPagePlacements(input, layout, activation);
   });
   return restoresMode ? ("restore-mode" as const) : ("open-page" as const);
 };

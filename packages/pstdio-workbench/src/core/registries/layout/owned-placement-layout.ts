@@ -115,14 +115,16 @@ const restoreModeWidgets = (
   const ordered = restored.sort(
     (a, b) => (positions.get(a.widgetId) ?? order.length) - (positions.get(b.widgetId) ?? order.length),
   );
-  // Page snapshots own the mixed slots. Shared mode snapshots own the order
-  // of mode tabs occupying those slots, including edits made on another page.
-  const modePositions = new Map(saved.map((widget, index) => [widget.widgetId, index]));
-  const modes = ordered
-    .filter((widget) => widget.placementIdentity?.kind === "mode")
-    .sort((a, b) => (modePositions.get(a.widgetId) ?? saved.length) - (modePositions.get(b.widgetId) ?? saved.length));
-  let modeIndex = 0;
-  return ordered.map((widget) => (widget.placementIdentity?.kind === "mode" ? modes[modeIndex++]! : widget));
+  // Page snapshots own the mixed slots. Mode snapshots own the order of
+  // shared tabs occupying those slots, including edits made on another page.
+  const sharedPositions = new Map(saved.map((widget, index) => [widget.widgetId, index]));
+  const shared = ordered
+    .filter((widget) => widget.placementIdentity?.kind !== "page")
+    .sort(
+      (a, b) => (sharedPositions.get(a.widgetId) ?? saved.length) - (sharedPositions.get(b.widgetId) ?? saved.length),
+    );
+  let sharedIndex = 0;
+  return ordered.map((widget) => (widget.placementIdentity?.kind !== "page" ? shared[sharedIndex++]! : widget));
 };
 
 export const renderDesiredPlacements = (
