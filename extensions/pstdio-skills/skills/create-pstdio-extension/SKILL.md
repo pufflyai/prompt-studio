@@ -2,7 +2,7 @@
 name: create-pstdio-extension
 description: "Create or edit a Prompt Studio extension. Use for extension commands, hooks, schedules, templates, skills, pages, native editors, file trees, settings, themes, artifact storage, workspaces, agent harnesses, and validation."
 metadata:
-  version: 0.0.4
+  version: 0.0.5
 ---
 
 # Create a Prompt Studio extension
@@ -37,6 +37,7 @@ metadata:
    - Use Harnesses and workspace types only when adding a new execution or workspace provider.
 3. Implement the smallest useful extension change.
    - For custom UI, read [references/webviews.md](references/webviews.md) for shared UI, sizing, resource rebinding, and event subscriptions. Prefer native controls for standard forms.
+   - For SDK 0.44, read [references/client-contracts.md](references/client-contracts.md) for typed clients, host props, structured errors, query refresh, outcomes, and resource pages. Check the published SDK before adopting the new APIs.
    - Keep identity in `package.json`; do not add identity fields to `defineExtension()`.
    - Export a single default `defineExtension({ ... })` value from `extension.ts`.
    - Use `packageAsset()` for every shipped file or directory asset.

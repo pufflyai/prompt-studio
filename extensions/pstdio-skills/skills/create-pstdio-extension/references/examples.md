@@ -20,7 +20,7 @@ Omit custom mode chrome to retain host navigation. A view ref replaces that chro
 
 Provider contract modules export `qualifyRef(owner, ref)` results. Register local definitions in the provider. Import its qualified refs from a consumer; this preserves command types and page-panel ownership across installations.
 
-A webview declares `placement.close` and calls `host.call("placement.close", {})` to close itself. The host supplies its placement identity and protects fixed panels. Native tabs use the same controller. Single-resource Main views are fixed. Closing the last tab on a page supporting multiple resources follows the page's declared parent.
+With the published 0.44 SDK, a webview declares `placement.close` and calls `client.placement.close()` to close itself. See the [typed client contracts](client-contracts.md) before adopting it. The host supplies its placement identity and protects fixed panels. Native tabs use the same controller. Single-resource Main views are fixed. Closing the last tab on a page supporting multiple resources follows the page's declared parent.
 
 See [pages](pages.md) for ownership and [validation](validation.md) for the installation loop.
 
