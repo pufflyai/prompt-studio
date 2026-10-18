@@ -113,7 +113,11 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const commands = createCommandRegistry({ context });
   const renderers = createCoreRenderers(input);
 
-  const layoutCache = createWorkbenchLayoutCache(input, () => core?.pages.store.getState().activeModeId);
+  const layoutCache = createWorkbenchLayoutCache(
+    input,
+    () => core?.pages.store.getState().activeModeId,
+    (id) => core?.layout.getWidget(id)?.tab,
+  );
   const cachedInput = { ...input, persistence: undefined, layoutPersistence: layoutCache.layout };
   const locationAwareLayout = createLayoutModel({
     defaultRegionVisibility: {

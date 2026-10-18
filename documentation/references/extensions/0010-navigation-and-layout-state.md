@@ -31,6 +31,8 @@ Opening or selecting a tab in Side or Secondary keeps the current history entry 
 
 The project/mode layout cache owns shared Side/Bottom tabs, visibility and sizes. A separate Main snapshot uses the project, mode, page and resource identity, independently of a host's optional page persistence scope. Host page snapshots keep page-owned auxiliary slots. Switching modes preserves all outgoing tabs, including previews, and restores the destination mode as left. Modes with no panels hide every tray without deleting another mode’s saved layout.
 
+Layout snapshots store placement data. Runtime tab providers, including labels, menus and subscriptions, come from the current registered contribution when a snapshot restores. They are never read as executable providers from JSON.
+
 Moving a page-owned tab changes its saved destination. Returning to that resource page restores the tab in the chosen panel, including after reload. The mode still owns panel visibility and sizes. When page entry reveals its tab, it reveals the tab's actual destination rather than the page's default region. For example, moving a Zipline issue from Side to Bottom keeps it in Bottom when returning from the board.
 
 See the [cookbook](../../guides/extensions/0002-workbench-cookbook.md) for working examples. Host app authors can read the [workbench reference](../workbench/0001-overview.md) for the host controllers.

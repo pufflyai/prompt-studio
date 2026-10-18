@@ -1,4 +1,5 @@
 import type { LayoutPersistenceAdapter, WorkbenchLayout } from "../core";
+import { cacheLayoutData } from "../core/registries/layout/layout-tab-presentation";
 import {
   type CreateWorkbenchStoragePersistenceInput,
   readJson,
@@ -161,7 +162,10 @@ export const createLocalStorageLayoutPersistence = (
       return undefined;
     },
     setLayout: (layout, scope) => {
-      const persisted: PersistedWorkbenchLayoutV5 = { version: WORKBENCH_LAYOUT_VERSION, layout };
+      const persisted: PersistedWorkbenchLayoutV5 = {
+        version: WORKBENCH_LAYOUT_VERSION,
+        layout: cacheLayoutData(layout),
+      };
       const key = workbenchStoragePersistenceKey(input.namespace, "layout", scope);
       pending.delete(key);
       pending.set(key, {

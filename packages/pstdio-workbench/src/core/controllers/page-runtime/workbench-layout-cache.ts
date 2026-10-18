@@ -1,5 +1,6 @@
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutPersistenceAdapter } from "../../registries/layout/layout-model-types";
+import { restoreLayoutPresentation } from "../../registries/layout/layout-tab-presentation";
 import {
   createDefaultWorkbenchLayout,
   type WorkbenchLayout,
@@ -43,6 +44,7 @@ const isModePlacement = (placement: WorkbenchWidgetPlacement, region: (typeof wo
 export const createWorkbenchLayoutCache = (
   input: createWorkbenchInput,
   getActiveMode: () => string | undefined = () => undefined,
+  getTab: (contributionId: string) => WorkbenchWidgetPlacement["tab"] = () => undefined,
 ) => {
   // The persistence adapter does not enumerate keys. Track only scopes visited
   // by this workbench so live removal can edit their existing cached layouts.
@@ -61,7 +63,8 @@ export const createWorkbenchLayoutCache = (
       });
   const read = (scope?: string) => {
     scopes.add(scope);
-    return runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter.getLayout(scope));
+    const layout = runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter.getLayout(scope));
+    return layout ? restoreLayoutPresentation(layout, getTab) : undefined;
   };
   const write = (layout: WorkbenchLayout, scope?: string) => {
     scopes.add(scope);
