@@ -42,7 +42,10 @@ test.each([
   expect(second.filesPath).not.toBe(first.filesPath);
   expect(await projectFiles.exists(reportMarkdownPathFor(report))).toBe(false);
   if (keepEvidence) expect(await projectFiles.readText(evidencePath)).toBe("Original evidence");
-  expect((await reportsCollection(storage).list()).map((stored) => stored.name)).toEqual(["review", "review_01"]);
+  expect((await reportsCollection(storage).list()).map((stored) => stored.name).sort()).toEqual([
+    "review",
+    "review_01",
+  ]);
 });
 
 test("deleting a legacy duplicate report keeps shared paths until their last stored reference is removed", async () => {
