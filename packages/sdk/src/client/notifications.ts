@@ -4,6 +4,7 @@ import type {
   ListNotificationsResponse,
   Notification,
   NotificationStatus,
+  SetNotificationStatusInput,
   UpdateNotificationInput,
 } from "pstdio-api-contracts";
 import type { RequestFn } from "./request";
@@ -17,10 +18,17 @@ export type NotificationsClient = {
   get(projectId: string, id: string): Promise<Notification>;
   create(input: CreateNotificationInput): Promise<Notification>;
   update(projectId: string, id: string, input: UpdateNotificationInput): Promise<Notification>;
+  setStatus(projectId: string, id: string, input: SetNotificationStatusInput): Promise<Notification | null>;
+  setStatusByKey(projectId: string, key: string, input: SetNotificationStatusInput): Promise<Notification[]>;
+  /** @deprecated Use setStatus. */
   markRead(projectId: string, id: string): Promise<Notification>;
+  /** @deprecated Use setStatus or setStatusByKey. */
   dismiss(projectId: string, id: string): Promise<Notification>;
+  /** @deprecated Use setStatus or setStatusByKey. */
   markDone(projectId: string, id: string): Promise<Notification>;
+  /** @deprecated Use setStatus or setStatusByKey. */
   snooze(projectId: string, id: string, until: string): Promise<Notification>;
+  /** @deprecated Use setStatus or setStatusByKey. */
   resolveByDedupeKey(
     projectId: string,
     input: { dedupeKey: string; status?: Extract<NotificationStatus, "done" | "dismissed" | "expired"> },
@@ -58,6 +66,10 @@ export const createNotificationsClient = (request: RequestFn): NotificationsClie
   },
   update: (projectId, id, input) =>
     request(notificationPath(projectId, `/${encodeURIComponent(id)}`), { method: "PATCH", body: input }),
+  setStatus: (projectId, id, input) =>
+    request(notificationPath(projectId, `/${encodeURIComponent(id)}/status`), { method: "POST", body: input }),
+  setStatusByKey: (projectId, key, input) =>
+    request(notificationPath(projectId, "/status-by-key"), { method: "POST", body: { key, ...input } }),
   markRead: (projectId, id) =>
     request(notificationPath(projectId, `/${encodeURIComponent(id)}/read`), { method: "POST" }),
   dismiss: (projectId, id) =>

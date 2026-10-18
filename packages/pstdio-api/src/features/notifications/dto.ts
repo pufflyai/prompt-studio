@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { navigationTargetSchema } from "pstdio-api-contracts";
+import { commandSourceSchema, type Notification, navigationTargetSchema } from "pstdio-api-contracts";
 
 export const notificationKindSchema = z.enum([
   "needs_review",
@@ -56,7 +56,7 @@ export const notificationActionSchema = z.discriminatedUnion("kind", [
     .strict(),
 ]);
 
-export const notificationResponseSchema = z
+export const notificationResponseSchema: z.ZodType<Notification> = z
   .object({
     id: z.string(),
     projectId: z.string(),
@@ -65,7 +65,7 @@ export const notificationResponseSchema = z
     kind: notificationKindSchema,
     status: notificationStatusSchema,
     priority: notificationPrioritySchema,
-    source: z.string(),
+    source: commandSourceSchema,
     origin: z.enum(["core", "extension", "agent"]),
     sourceExtensionId: z.string().nullable().optional(),
     actorType: z.enum(["user", "agent", "system"]).nullable().optional(),
@@ -103,7 +103,7 @@ export const createNotificationBodySchema = z
 export const updateNotificationBodySchema = z
   .object({
     priority: notificationPrioritySchema.optional(),
-    snoozedUntil: z.string().nullable().optional(),
+    snoozedUntil: z.string().nullable().optional().openapi({ deprecated: true }),
     metadata: z.record(z.string(), z.any()).optional(),
   })
   .strict();

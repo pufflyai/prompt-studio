@@ -7,6 +7,12 @@ export type NotificationKind = "needs_review" | "ready_to_merge" | "blocked" | "
 
 export type NotificationStatus = "open" | "read" | "snoozed" | "done" | "dismissed" | "expired";
 
+export type NotificationFinalStatus = "done" | "dismissed";
+
+export type SetNotificationStatusInput =
+  | { status: "read" | NotificationFinalStatus; snoozedUntil?: never }
+  | { status: "snoozed"; snoozedUntil: string };
+
 export type NotificationPriority = "low" | "normal" | "high" | "urgent";
 
 export type NotificationActorType = "user" | "agent" | "system";
@@ -81,6 +87,7 @@ export interface CreateNotificationInput {
 
 export interface UpdateNotificationInput {
   priority?: NotificationPriority;
+  /** @deprecated Use notifications.setStatus with status and snoozedUntil. */
   snoozedUntil?: string | null;
   metadata?: JsonObject;
 }

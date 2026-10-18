@@ -17,6 +17,11 @@ in their owning PRs.
 | `/client` sessions `getConversationSources` | GET session conversation sources HTTP endpoint | None in repository source | None; HTTP path stays available | 0.45 |
 | `/client` skills `updatePreferences` | PUT project skill HTTP endpoint | None in repository source | None; HTTP path stays available | 0.45 |
 
+| `ctx.notify.resolve`, `ctx.notify.dismiss`, author `expired` | `setStatus` and `setStatusByKey` with `done` or `dismissed`; expiry stays host-owned | Planner, Reports and external consumers use the compatibility adapters until 0.45 adoption | None | 0.45 |
+| `notification.action`, `.resolve`, `.dismiss` bridge capabilities and parameter types | Invoke a command using `ctx.notify`; keep `notification.show` for toasts | Internal workbench fixture uses `.action`; no maintained extension callers | None | 0.45 |
+| HTTP notification `/read`, `/done`, `/dismiss`, `/snooze`, `/resolve-by-dedupe-key`; matching SDK methods | POST `/:id/status` and `/status-by-key`; SDK `setStatus` and `setStatusByKey` | CLI and dashboard compatibility callers; external consumers unknown | None | 0.45 |
+| HTTP `PATCH notifications/:id` `snoozedUntil`, `UpdateNotificationInput.snoozedUntil` | Status route with `status: "snoozed"` and a timestamp | External consumers unknown | None | 0.45 |
+
 `host.dispatchKeyboardEvent` is private guest plumbing, outside the public capability union.
 Keyboard forwarding continues through the private runtime path and requires no declaration.
 

@@ -47,7 +47,14 @@ export const createCommandContextDefaults = (input: {
     },
     navigation: { open: () => {} },
     events: { emit: async () => ({ delivered: 0 }) },
-    notify: { action: unavailable, dismiss: async () => [], resolve: async () => [], toast: async () => {} },
+    notify: {
+      setStatus: unavailable,
+      setStatusByKey: unavailable,
+      action: unavailable,
+      dismiss: async () => [],
+      resolve: async () => [],
+      toast: async () => {},
+    },
     views: {
       list: unavailable,
       create: unavailable,
