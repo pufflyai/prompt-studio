@@ -26,8 +26,10 @@ export default defineExtensionView({
   `params` schema and the result from its `run` return type. Bare keys resolve inside
   the declaring extension; the host bridge provides the extension id. Failed outcomes
   throw with the outcome reason.
-- `client.settings` has typed `all`, `get`, and `set` from the settings contribution.
+- `client.settings` has typed `all`, `get`, `set`, and `delete` from the settings contribution.
   Declare the settings contribution `as const` and export it so the types stay precise.
+  `await client.settings.delete(key)` removes the stored override and restores its declared fallback.
+  It does not store `null`; declare the `extension.settings.delete` capability.
 - `client.artifacts` has `list(mount, prefix?)`, `readText(mount, path)`, and
   `imageUrl(mount, path)` for artifact mounts the webview declared with
   `artifactsRead(mount)` (see [Artifact mounts and storage](#artifact-mounts-and-storage)). `imageUrl` returns a short-lived URL
@@ -441,7 +443,7 @@ The default scope is `user`, shared by clients of the runtime. `project` uses th
 
 Each JSON value may contain 16 KiB. An extension may store 256 KiB across all scopes. Writes exceeding either limit fail with `preference_too_large` and preserve stored values. Removing an extension retains its preferences for a later reinstall.
 
-`dashboard.themePreference` and `dashboard.locale` remain shared host names with their existing provider behavior. Access to names registered by another extension still works, but emits a deprecation warning. Use your own extension's preference names; cross-extension access will be removed in a later breaking release.
+`dashboard.themePreference` and `dashboard.locale` remain shared host names with their existing provider behavior. Access to names registered by another extension still works, but emits a deprecation warning. Use your own extension's preference names; cross-extension access is deprecated in 0.44 and will be removed in 0.45. Shared core preferences remain supported.
 
 Agents use the same authenticated API:
 
