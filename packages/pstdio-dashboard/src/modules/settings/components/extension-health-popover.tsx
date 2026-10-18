@@ -2,25 +2,27 @@ import { Button, HStack, Icon, Popover, Portal, Stack, Text } from "@chakra-ui/r
 import type { ExtensionDiagnostic, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { toaster } from "@pstdio/ui";
 import { ArrowUpCircle, CircleAlert, Copy, TriangleAlert } from "lucide-react";
+import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
 import { loadErrorClipboardText, loadErrorField } from "./extension-load-error";
 
 export interface ExtensionHealthPopoverProps {
   extension: ProjectExtensionInstance;
   diagnostics: ExtensionDiagnostic[];
+  unavailableHarnesses?: AgentInfo[];
   upgrading?: boolean;
   onUpgrade?: () => void;
 }
 
 export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
-  const { extension, diagnostics, upgrading, onUpgrade } = props;
+  const { extension, diagnostics, unavailableHarnesses = [], upgrading, onUpgrade } = props;
   const { t } = useTranslation("projects");
 
   // Red is reserved for a real load failure; a loaded extension's diagnostics are
   // surfaced as issues, whatever their severity.
   const failed = extension.status === "error";
   const issues = diagnostics.filter((diagnostic) => diagnostic.severity !== "info");
-  const count = failed ? 1 + issues.length : issues.length;
+  const count = issues.length + unavailableHarnesses.length + (failed ? 1 : 0);
   const errorCode = loadErrorField(extension.lastError, "code");
   const errorTitle =
     errorCode === "extension_manifest_unsupported_api_version"
@@ -94,6 +96,18 @@ export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
                     <Text key={`${diagnostic.code}-${index}`} textStyle="label/XS" color="fg.muted">
                       {diagnostic.code}: {diagnostic.message}
                     </Text>
+                  ))}
+                  {unavailableHarnesses.map((harness) => (
+                    <Stack key={harness.id} gap="0" minW="0">
+                      <Text textStyle="label/XS" color="fg.muted" wordBreak="break-word">
+                        {harness.name} is unavailable
+                      </Text>
+                      {harness.availability.reason && (
+                        <Text textStyle="label/XS" color="fg.muted" whiteSpace="pre-wrap" wordBreak="break-word">
+                          {harness.availability.reason}
+                        </Text>
+                      )}
+                    </Stack>
                   ))}
                 </Stack>
 

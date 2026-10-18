@@ -1,4 +1,4 @@
-import { Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import { TriangleAlert } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
@@ -41,31 +41,14 @@ export const StartHarnessStatus = (props: StartHarnessStatusProps) => {
 
   return (
     <AlertMessage status="warning" variant="subtle" role="alert" title="No agent available" icon={<TriangleAlert />}>
-      <Stack gap="xs" minW="0">
+      <Stack gap="xs" minW="0" align="flex-start">
         <Text>
           You can still use Prompt Studio from your own harness. Sessions within Prompt Studio are unavailable until a
           harness is available.
         </Text>
-        {agents.map((agent) => (
-          <Stack key={agent.id} gap="0" minW="0">
-            <Text textStyle="label/S/medium" wordBreak="break-word">
-              {agent.name}
-            </Text>
-            {agent.availability.reason && (
-              <Text whiteSpace="pre-wrap" wordBreak="break-word">
-                {agent.availability.reason}
-              </Text>
-            )}
-          </Stack>
-        ))}
-        <Flex gap="xs" wrap="wrap">
-          <Button size="sm" variant="outline" onClick={onReviewExtensions}>
-            Browse extensions
-          </Button>
-          <Button size="sm" variant="outline" loading={isFetching} onClick={onCheckAgain}>
-            Check again
-          </Button>
-        </Flex>
+        <Button size="sm" variant="outline" onClick={onReviewExtensions}>
+          Browse extensions
+        </Button>
       </Stack>
     </AlertMessage>
   );

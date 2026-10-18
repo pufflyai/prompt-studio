@@ -61,8 +61,6 @@ export const MixedAvailability: Story = {
 
 export const Checking: Story = { args: { isPending: true, isFetching: true } };
 
-export const CheckingAgain: Story = { args: { agents: [unavailableHelper], isFetching: true } };
-
 export const CheckFailed: Story = { args: { isError: true } };
 
 export const RefreshFailed: Story = { args: { agents: [unavailableHelper], isError: true } };

@@ -9,7 +9,6 @@ import { ArrowUpCircle, ChevronRight, Folder, Globe, Puzzle } from "lucide-react
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
-import { ExtensionHarnessWarnings } from "./extension-harness-warnings";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 
 export interface ExtensionListRowProps {
@@ -87,7 +86,6 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description ?? t("projectSettings.extensionsPanel.noDescription")}
         </Text>
-        <ExtensionHarnessWarnings harnesses={unavailableHarnesses} />
       </Stack>
 
       <HStack gap="2xs" w="72px" flexShrink="0" color="fg.subtle">
@@ -108,10 +106,18 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <ExtensionAutomationsPopover extensionName={extension.displayName} automations={automations} />
       </Box>
 
-      <Box w="52px" flexShrink="0" display="flex" justifyContent="flex-end" onClick={stopRowClick}>
+      <Box
+        w="52px"
+        flexShrink="0"
+        display="flex"
+        justifyContent="flex-end"
+        onClick={stopRowClick}
+        onKeyDown={stopRowClick}
+      >
         <ExtensionHealthPopover
           extension={extension}
           diagnostics={diagnostics}
+          unavailableHarnesses={unavailableHarnesses}
           upgrading={upgrading}
           onUpgrade={onUpgrade}
         />

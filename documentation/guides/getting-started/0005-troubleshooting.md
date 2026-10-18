@@ -54,7 +54,7 @@ The first time you open a folder, Prompt Studio downloads the default extensions
 
 ## An agent shows as not installed
 
-The Start page shows **No agent available** when none of the project's enabled harness extensions reports availability. Choose **Browse extensions** to inspect the project's extensions. If a harness supplies a reason, the warning shows it. You can still use Prompt Studio from your own harness while sessions within Prompt Studio are unavailable. After repairing setup, choose **Check again**. A check can reuse an availability result for up to five seconds.
+The Start page shows **No agent available** when none of the project's enabled harness extensions reports availability. You can still use Prompt Studio from your own harness while sessions within Prompt Studio are unavailable. Choose **Browse extensions** to inspect the project's extensions and any failure reasons they supply. Extension changes refresh availability. A check can reuse an availability result for up to five seconds.
 
 If Start says **Could not check agent availability**, retry the check before treating it as a missing agent. An empty harness list does not prove that no agent is installed on the computer: its harness extension may be disabled or may have failed to load. A harness that reports availability does not prove that you are signed in.
 

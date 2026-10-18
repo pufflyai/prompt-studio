@@ -163,6 +163,9 @@ export const LongHarnessReason: Story = {
       availability: { type: "NOT_FOUND", reason: `RemoteEndpoint/${"a".repeat(280)}` },
     })),
   },
+  play: async ({ canvasElement }) => {
+    canvasElement.querySelector<HTMLButtonElement>('[data-testid="extension-health-trigger"]')?.click();
+  },
 };
 
 export const Loaded: Story = {};

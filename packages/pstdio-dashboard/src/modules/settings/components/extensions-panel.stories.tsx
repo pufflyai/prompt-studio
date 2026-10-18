@@ -185,11 +185,19 @@ export const HarnessUnavailable: Story = {
   },
 };
 export const HarnessCheckUnknown: Story = { args: { ...HarnessUnavailable.args, agents: undefined } };
+export const HarnessAndExtensionIssues: Story = {
+  args: {
+    ...HarnessUnavailable.args,
+    diagnostics: [{ ...diagnostics[0]!, extensionId: remote.extensionId }],
+  },
+  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
+};
 export const LongHarnessReason: Story = {
   args: {
     ...HarnessUnavailable.args,
     agents: [{ ...remoteAgent, availability: { type: "NOT_FOUND", reason: `RemoteEndpoint/${"a".repeat(280)}` } }],
   },
+  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
 };
 export const HarnessDisabled: Story = {
   args: { ...HarnessUnavailable.args, extensions: [{ ...remote, enabled: false, status: "disabled" }] },

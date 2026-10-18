@@ -16,7 +16,7 @@ import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionDetailHealth } from "./extension-detail-health";
-import { ExtensionHarnessWarnings } from "./extension-harness-warnings";
+import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionSettingsForm } from "./extension-settings-form";
 import { settingsToParams } from "./extension-settings-params";
 
@@ -112,6 +112,15 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
             </Text>
           </Stack>
+          {unavailableHarnesses.length > 0 && (
+            <ExtensionHealthPopover
+              extension={extension}
+              diagnostics={diagnostics}
+              unavailableHarnesses={unavailableHarnesses}
+              upgrading={upgrading}
+              onUpgrade={onUpgrade}
+            />
+          )}
           {extension.canUpgrade && (
             <Button
               variant="primary"
@@ -177,7 +186,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         </Stack>
 
         {failed && <ExtensionDetailHealth extension={extension} upgrading={upgrading} onUpgrade={onUpgrade} />}
-        <ExtensionHarnessWarnings harnesses={unavailableHarnesses} />
 
         {!failed && diagnostics.length > 0 && (
           <AlertMessage
