@@ -1,7 +1,7 @@
 import type { PageLocation, PageOpenIntent, PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import type { Disposable } from "../../shared/disposable";
-import type { WorkbenchWidgetPlacement } from "../layout/layout-types";
-import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
+import type { WorkbenchRegion, WorkbenchWidgetPlacement } from "../layout/layout-types";
+import type { PlacementDestination, ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import {
   type OwnedPlacementState,
   openResourcePlacement,
@@ -15,6 +15,7 @@ export interface OwnedPlacementOpenInput {
   open?: PageOpenIntent;
   title?: string;
   relatedSource?: string;
+  region?: WorkbenchRegion;
 }
 export interface OwnedPlacementLocationContext {
   modeId: string;
@@ -23,7 +24,7 @@ export interface OwnedPlacementLocationContext {
   location?: PageLocation;
 }
 export interface OwnedPlacementPreparation {
-  connectRuntime(listener: () => void): Disposable;
+  connectRuntime(listener: (destination?: PlacementDestination) => void): Disposable;
   restore?(
     context: OwnedPlacementLocationContext,
     state?: OwnedPlacementState,
@@ -41,7 +42,7 @@ export interface OwnedPlacementPreparation {
   ): { state: OwnedPlacementState; identity: PlacementIdentity };
   resolve(modeId?: string, state?: OwnedPlacementState): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
   apply(state: OwnedPlacementState): void;
-  publish(): void;
+  publish(destination?: PlacementDestination): void;
 }
 const preparations = new WeakMap<object, OwnedPlacementPreparation>();
 export const setOwnedPlacementPreparation = (registry: object, preparation: OwnedPlacementPreparation) =>

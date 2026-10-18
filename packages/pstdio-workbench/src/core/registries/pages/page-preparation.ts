@@ -87,6 +87,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     const reconciliation = reconcileOwnedPlacements({
       current: current.placements,
       desired: composed.placements,
+      destinations: next.destinations,
       activate: next.activate,
       valuesEqual: input.valuesEqual,
     });
@@ -179,6 +180,9 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
         ...current,
         pageStates: { ...current.pageStates, [stateKey]: pageState },
         activate: [pagePlacementIdentity(page.id, slot.id, instanceKey)],
+        destinations: target.region
+          ? [{ identity: pagePlacementIdentity(page.id, slot.id, instanceKey), region: target.region }]
+          : undefined,
         action: "openPageSlot",
       },
       owned,

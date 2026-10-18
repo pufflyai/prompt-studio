@@ -22,8 +22,15 @@ Runnable examples live in the workbench's Storybook stories under `packages/pstd
 
 ## Tabs
 
-Adding a tab keeps other empty panels open. Closing or moving the last existing
+Adding a tab creates it directly in the panel whose **+** was selected and keeps
+other empty panels open. Closing or moving the last existing
 tab out of Side or Bottom closes that panel.
+
+Host Add commands receive the destination in `WorkbenchCommandExecutionContext.region`.
+Pass it to the placement open call or panel navigation target. Placement open calls
+use it for that open, including reuse of an existing tab. Omit it on ordinary opens
+to retain the live layout's placement. Extension command navigation
+results inherit the destination from the Add action.
 
 Hover over a tab or focus it with the keyboard to see its full title in a tooltip.
 The tooltip appears below the tab after 300 ms.

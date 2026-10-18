@@ -1,6 +1,6 @@
 import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { createWorkbench, type ResourceRef, type WorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench, type ResourceRef, type WorkbenchCore, type WorkbenchPanelRegion } from "@pstdio/workbench";
 import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { useState } from "react";
 
@@ -36,12 +36,18 @@ const branches = {
     label: "release/v0.31",
   },
 } as const satisfies Record<string, ResourceRef>;
-const openDocument = (workbench: WorkbenchCore, resource: ResourceRef, open: "pin" | "preview") => {
+const openDocument = (
+  workbench: WorkbenchCore,
+  resource: ResourceRef,
+  open: "pin" | "preview",
+  region?: WorkbenchPanelRegion,
+) => {
   const identity = workbench.shellPlacements.openPlacement({
     placementId: documentPlacementId,
     resource,
     title: resource.label,
     open,
+    region,
   });
   return identity;
 };
@@ -113,12 +119,13 @@ export const createResourceTabsWorkbench = (showCardinalityComparison = false) =
   workbench.commands.registerCommand(
     { id: newDocumentCommandId, label: "New document" },
     {
-      execute: () => {
+      execute: (_args, context) => {
         const number = nextDocumentNumber++;
         return openDocument(
           workbench,
           { type: "document", id: `new-${number}`, label: `Document ${number}.md` },
           "pin",
+          context?.region,
         );
       },
     },

@@ -5,7 +5,6 @@ import type {
   WorkbenchCore,
   WorkbenchPanelRegion,
 } from "../../core";
-import { addPanelToRegion } from "../../core/controllers/composition/add-panel";
 import { runUserAction } from "../../core/shared/run-user-action";
 
 interface OpenPanelWidgetInput {
@@ -30,11 +29,10 @@ export const openPanelWidget = async (input: OpenPanelWidgetInput) => {
     await open(resource);
   } else if (widget.openCommand) {
     await runUserAction(workbench, widget.title, async () => {
-      await addPanelToRegion(workbench, widget.id, region, async () => {
-        await workbench.commands.executeCommand(widget.openCommand!.commandId, widget.openCommand!.args, {
-          source: "panel-add",
-          ...(resource ? { resource } : {}),
-        });
+      await workbench.commands.executeCommand(widget.openCommand!.commandId, widget.openCommand!.args, {
+        source: "panel-add",
+        region,
+        ...(resource ? { resource } : {}),
       });
     });
   } else {

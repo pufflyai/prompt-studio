@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Keep empty panels open when adding a tool to another panel.
+Create tabs directly in the chosen panel without disturbing other panels.

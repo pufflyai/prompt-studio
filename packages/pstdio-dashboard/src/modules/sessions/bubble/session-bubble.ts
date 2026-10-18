@@ -1,5 +1,10 @@
 import { type PlacementIdentity, resourceKey, workbenchPanels } from "@pstdio/sdk/extensions";
-import type { ResourceRef, WorkbenchModuleContext, WorkbenchTabRetention } from "@pstdio/workbench";
+import type {
+  ResourceRef,
+  WorkbenchModuleContext,
+  WorkbenchPanelRegion,
+  WorkbenchTabRetention,
+} from "@pstdio/workbench";
 import { rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 
@@ -7,6 +12,7 @@ interface OpenSessionBubbleWidgetsInput {
   resource?: ResourceRef;
   title?: string;
   tabRetention?: WorkbenchTabRetention;
+  region?: WorkbenchPanelRegion;
 }
 export const openSessionBubbleWidgets = (
   ctx: Pick<WorkbenchModuleContext, "navigation">,
@@ -18,6 +24,7 @@ export const openSessionBubbleWidgets = (
     panel: workbenchPanels.projectSession,
     resource: input.resource,
     open: input.tabRetention === "persistent" ? "pin" : "preview",
+    region: input.region,
   });
 };
 export const selectSidenavSessionNode = (ctx: WorkbenchModuleContext, resource: ResourceRef | undefined) => {

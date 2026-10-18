@@ -1,6 +1,7 @@
 import type { PageSlotRef, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
-import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import { type PlacementDestination, placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
@@ -11,6 +12,27 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
+
+export const panelModeId = (core: WorkbenchCore, target: NavigationTargetPanel, proposedModeId?: string) => {
+  const modeId = proposedModeId ?? core.modes.getActiveModeId();
+  const mode = modeId ? core.modes.getMode(modeId) : undefined;
+  if (target.region && !isWorkbenchModePanelAvailable(mode, target.region))
+    throw new Error(`Panel cannot open in ${target.region}`);
+  return modeId;
+};
+
+const recordPanelOpenings = (
+  target: NavigationOperation,
+  placements: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>["reconciliation"]["activate"],
+  activate: Map<WorkbenchRegion, PlacementIdentity>,
+  destinations: Map<string, PlacementDestination>,
+) => {
+  const region = target.kind === "panel" ? target.region : undefined;
+  for (const placement of placements) {
+    activate.set(region ?? placement.region, placement.identity);
+    if (region) destinations.set(placementIdentityKey(placement.identity), { identity: placement.identity, region });
+  }
+};
 
 const placementContext = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) =>
   state.activeModeId
@@ -42,7 +64,7 @@ const prepareSharedPanel = (
     if (!placement || placement.modeId !== modeId)
       throw new Error(`Mode panel "${panel.id}" is not owned by the proposed mode`);
     const prepared = getOwnedPlacementPreparation(core.modePlacements).open(
-      { placementId: placement.id, resource: target.resource, open: target.open },
+      { placementId: placement.id, resource: target.resource, open: target.open, region: target.region },
       modeState,
     );
     return { modeState: prepared.state, shellState, identity: prepared.identity };
@@ -52,6 +74,7 @@ const prepareSharedPanel = (
       placementId: panel.id,
       resource: target.resource,
       open: target.open,
+      region: target.region,
       ...("title" in target ? { title: target.title } : {}),
     },
     shellState,
@@ -72,6 +95,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   let shellState = originalShell;
   let proposed = original;
   const activate = new Map<WorkbenchRegion, PlacementIdentity>();
+  const destinations = new Map<string, PlacementDestination>();
   const owned = (modeId = proposed.activeModeId) => ({
     shell: shell.resolve(undefined, shellState),
     mode: mode.resolve(modeId, modeState),
@@ -107,16 +131,16 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
         owned(page.modeId),
       );
     } else if (target.kind === "panel") {
+      const modeId = panelModeId(core, target, proposed.activeModeId);
       const panel = target.panel;
       if (panel.kind === "page-slot") {
         const page = requirePanelPage(proposed, panel);
         proposed = pages.prepare.slot(
-          { pageId: page.id, slotId: panel.id, resource: target.resource, open: target.open },
+          { pageId: page.id, slotId: panel.id, resource: target.resource, open: target.open, region: target.region },
           proposed,
           owned(),
         );
       } else {
-        const modeId = proposed.activeModeId ?? core.modes.getActiveModeId();
         const prepared = prepareSharedPanel(core, target, modeId, modeState, shellState);
         modeState = prepared.modeState;
         shellState = prepared.shellState;
@@ -130,7 +154,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     } else {
       throw new Error("Compound navigation accepts only page and panel targets");
     }
-    for (const placement of proposed.reconciliation.activate) activate.set(placement.region, placement.identity);
+    recordPanelOpenings(target, proposed.reconciliation.activate, activate, destinations);
   }
   const present = new Set(proposed.placements.map((placement) => placementIdentityKey(placement.identity)));
   const final = pages.prepare.compose(
@@ -138,6 +162,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     {
       ...proposed,
       activate: [...activate.values()].filter((identity) => present.has(placementIdentityKey(identity))),
+      destinations: [...destinations.values()],
       action: "prepareCompoundNavigation",
     },
     owned(),

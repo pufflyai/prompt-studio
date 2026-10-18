@@ -1,6 +1,6 @@
 import { Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { createWorkbench, type ResourceRef } from "../../../core";
+import { createWorkbench, type ResourceRef, type WorkbenchPanelRegion } from "../../../core";
 
 const guidePlacementId = "host.resource-guide";
 const openNextGuideCommandId = "host.resource-guide.open-next";
@@ -38,12 +38,13 @@ export const createResourceWorkbench = () => {
         );
         return guides.find((guide) => !openGuides.has(resourceKey(guide)));
       };
-      const openGuide = (resource: ResourceRef) =>
+      const openGuide = (resource: ResourceRef, region?: WorkbenchPanelRegion) =>
         ctx.shellPlacements.openPlacement({
           placementId: guidePlacementId,
           resource,
           title: resource.label,
           open: "pin",
+          region,
         });
       ctx.resources.registerKind({ kind: "guide", label: "Guide", icon: "BookOpen" });
       ctx.views.registerView({
@@ -82,9 +83,9 @@ export const createResourceWorkbench = () => {
         },
         {
           isEnabled: () => Boolean(nextGuide()),
-          execute: () => {
+          execute: (_args, context) => {
             const guide = nextGuide();
-            if (guide) return openGuide(guide);
+            if (guide) return openGuide(guide, context?.region);
           },
         },
       );

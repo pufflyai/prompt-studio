@@ -67,6 +67,7 @@ const registerCommands = (
             params: asParams(args),
             resource: executionContext?.resource,
             signal: executionContext?.signal,
+            region: executionContext?.region,
           }),
       },
     ),

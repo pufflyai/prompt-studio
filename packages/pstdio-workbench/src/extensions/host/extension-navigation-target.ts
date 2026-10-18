@@ -1,6 +1,6 @@
 import { type NavigationTarget as ExtensionNavigationTarget, isNavigationTarget } from "@pstdio/sdk/extensions";
 import { qualifyNavigationTarget } from "pstdio-api-contracts";
-import type { NavigationTarget, NavigationTargetCommand } from "../../core";
+import type { NavigationTarget, NavigationTargetCommand, WorkbenchPanelRegion } from "../../core";
 
 export interface ToWorkbenchNavigationTargetInput {
   commandIdOf?(
@@ -9,6 +9,7 @@ export interface ToWorkbenchNavigationTargetInput {
   commandTargetOf?(target: Extract<ExtensionNavigationTarget, { kind: "command" }>): NavigationTargetCommand;
   extensionId?: string;
   projectId?: string;
+  region?: WorkbenchPanelRegion;
 }
 
 const toCommandTarget = (
@@ -16,13 +17,18 @@ const toCommandTarget = (
   input: ToWorkbenchNavigationTargetInput,
 ) => {
   const override = input.commandTargetOf?.(target);
-  if (override) return override;
+  if (override) return { ...override, ...(input.region ? { region: input.region } : {}) };
   const command = target.target.command;
   const extensionId = command.extensionId ?? input.extensionId;
   const commandId =
     input.commandIdOf?.(command) ??
     (extensionId && extensionId !== "pstdio" ? `${extensionId}.command.${command.id}` : command.id);
-  return { kind: "command", commandId, args: target.target.params } satisfies NavigationTargetCommand;
+  return {
+    kind: "command",
+    commandId,
+    args: target.target.params,
+    ...(input.region ? { region: input.region } : {}),
+  } satisfies NavigationTargetCommand;
 };
 
 // The return type stays explicit: the compound branch recurses, and TypeScript
@@ -45,7 +51,7 @@ export function toWorkbenchNavigationTarget(
   if (target.kind === "command") return toCommandTarget(target, input);
   if (target.kind === "href") return target;
   if (target.kind === "page") return target;
-  if (target.kind === "panel") return target;
+  if (target.kind === "panel") return { ...target, ...(input.region ? { region: input.region } : {}) };
   return {
     kind: "compound",
     targets: target.targets.map((item) => toWorkbenchNavigationTarget(item, input)),
