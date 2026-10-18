@@ -104,7 +104,9 @@ export const getExtensionCatalog = () => {
 
 export class ExtensionNotInCatalogError extends Error {
   constructor(installName: string) {
-    super(`Extension "${installName}" is not in the extension catalog. Check the name, or install the extension from its folder path.`);
+    super(
+      `Extension "${installName}" is not in the extension catalog. Check the name, or install the extension from its folder path.`,
+    );
     this.name = "ExtensionNotInCatalogError";
   }
 }
