@@ -92,12 +92,17 @@ export const expectPackagedStreamingMotion = async (
   await page.getByRole("option", { name: "Motion replay", exact: true }).click();
   const text = page
     .locator('[data-rich-message="true"] [data-lexical-text="true"]')
-    .filter({ hasText: /^Step 1\./ })
+    .filter({ hasText: /^Step 1\./, visible: true })
     .first();
   await expect(text).toBeVisible();
   const earlier = await text.elementHandle();
   await expect(page.locator(".streaming-text-chunk").first()).toBeAttached();
-  await expect(page.getByText(/^Step 2\./).first()).toBeVisible();
+  await expect(
+    page
+      .getByText(/^Step 2\./)
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
   expect(await earlier?.evaluate((element) => element.isConnected)).toBe(true);
   await expect
     .poll(
@@ -108,8 +113,13 @@ export const expectPackagedStreamingMotion = async (
       { timeout: 15_000 },
     )
     .toBe("completed");
-  await expect(page.getByText(/^Step 30\./).first()).toBeVisible();
-  expect(await page.locator(".ai-message__root").count()).toBeLessThan(20);
+  await expect(
+    page
+      .getByText(/^Step 30\./)
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
+  expect(await page.locator(".ai-message__root:visible").count()).toBeLessThan(20);
   await expect
     .poll(() =>
       page

@@ -1,8 +1,8 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
+import { switchSession } from "../helpers/session-side-panel";
 import { uiOrigin as apiBase } from "../ui-server";
-import { switchSession } from "./helpers/resource-actions";
 
 const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
   await tab.click({ button: "right" });
@@ -274,7 +274,7 @@ test("renames a moved session and restores its destination after reload", async 
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const side = page.locator('[data-workbench-panel-header="side"]');
   await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true }));
-  await page.getByRole("menuitem", { name: "Session to rename", exact: true }).click();
+  await switchSession(page, "Session to rename");
   await openTabCustomMenu(side.getByRole("tab", { name: "Session to rename", exact: true }));
   await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
   const main = page.locator('[data-workbench-panel-header="main"]');

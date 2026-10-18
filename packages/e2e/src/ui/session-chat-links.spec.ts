@@ -2,6 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { switchSession } from "../helpers/session-side-panel";
 import { uiOrigin as apiBase } from "../ui-server";
 import { prepareDashboard } from "./helpers/workspace-files";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
@@ -106,10 +107,7 @@ test("retains Side chat and the editor draft during repeated file-position navig
     await page.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
     const header = page.locator('[data-workbench-panel-header="side"]');
     await header.getByRole("tab", { name: "New session", exact: true }).click({ button: "right" });
-    await page
-      .getByRole("menu", { name: "New session context menu", exact: true })
-      .getByRole("menuitem", { name: session.title, exact: true })
-      .click();
+    await switchSession(page, session.title);
     const side = page.getByTestId("workbench-side-panel-attached");
     const composer = side.locator('[data-testid="content-editable"][contenteditable="true"]').last();
     await composer.fill("Keep this reply draft");

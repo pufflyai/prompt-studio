@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+import { resolve } from "node:path";
 import { PstdioApiError } from "@pstdio/sdk/client";
 import { createHandler } from "./add";
 
@@ -67,8 +68,9 @@ describe("extensions add", () => {
     expect(deps.install).not.toHaveBeenCalled();
   });
   test("names the absolute source path to install from the project folder", async () => {
-    const deps = { ...makeDeps(), cwd: () => "/author/tool", findProjectRoot: () => null };
-    await expect(createHandler(deps)({ source: "." } as never)).rejects.toThrow("pst extensions add /author/tool");
+    const cwd = resolve("author/tool");
+    const deps = { ...makeDeps(), cwd: () => cwd, findProjectRoot: () => null };
+    await expect(createHandler(deps)({ source: "." } as never)).rejects.toThrow(`pst extensions add ${cwd}`);
     expect(deps.install).not.toHaveBeenCalled();
   });
   test("prints the host conflict and exits with code one", async () => {

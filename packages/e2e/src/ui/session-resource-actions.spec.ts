@@ -155,7 +155,10 @@ test("delete confirms, keeps a failed session usable, closes only its views, and
   await prepareResourceActionsDashboard(page, project.id);
   await page.goto(`/projects/${project.id}/sessions`);
   await openSessionSidePanel(page, a.title);
+  const kept = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Keep panel/ });
+  await expect(kept).toBeVisible();
   await row(page, b.title).click();
+  await expect(kept).toBeVisible();
   await breadcrumbMenu(page);
   await menuItem(page, "Delete session").click();
   await expect(page.getByRole("dialog")).toContainText("Delete this");
@@ -177,9 +180,7 @@ test("delete confirms, keeps a failed session usable, closes only its views, and
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(row(page, b.title)).toBeHidden();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/sessions$`));
-  await expect(
-    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Keep panel/ }),
-  ).toBeVisible();
+  await expect(kept).toBeVisible();
   expect((await request.get(`/v1/sessions/${b.id}`)).status()).toBe(404);
   await page.reload();
   await expect(row(page, b.title)).toBeHidden();

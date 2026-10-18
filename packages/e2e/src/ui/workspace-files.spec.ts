@@ -129,7 +129,7 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
     expect(await editorElement?.evaluate((element) => element.isConnected)).toBe(true);
 
     await changesTab.click();
-    const diffViewer = page.getByTestId("diff-viewer");
+    const diffViewer = page.getByTestId("diff-viewer").filter({ visible: true });
     const readmeBodyResponse = page.waitForResponse(
       (response) => response.url().includes("/diff-file?mode=fork_point&path=README.md") && response.ok(),
     );

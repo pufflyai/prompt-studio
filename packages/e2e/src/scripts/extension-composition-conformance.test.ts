@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 
 // Keep resource ownership valid when the Planner, showcases, and host fixtures are composed.
-const repoRoot = resolve(dirname(new URL(import.meta.url).pathname), "../../../..");
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 const plannerPath = join(repoRoot, "extensions/pstdio-planner");
 const labPath = join(repoRoot, "extensions/extension-lab");
 const fixturePath = join(repoRoot, "packages/workbench-fixture");
@@ -14,12 +15,9 @@ const loadRuntime = async (paths: string[]) => {
   return normalizeExtensionSources(loaded.sources, loaded.diagnostics);
 };
 describe("shipped extension composition", () => {
-  test("normalizes Planner and Extension Lab with only legacy status warnings", async () => {
+  test("normalizes Planner and Extension Lab without diagnostics", async () => {
     const runtime = await loadRuntime([plannerPath, labPath, fixturePath]);
-    expect(runtime.diagnostics.map(({ code, severity, extensionId }) => ({ code, severity, extensionId }))).toEqual([
-      { code: "deprecated_status_contribution", severity: "warning", extensionId: "pstdio.pstdio-planner" },
-      { code: "deprecated_status_contribution", severity: "warning", extensionId: "pstdio.workbench-fixture" },
-    ]);
+    expect(runtime.diagnostics).toEqual([]);
     expect(runtime.resourceKinds.map((kind) => [kind.localId, kind.extensionId])).toEqual([
       ["ticket", "pstdio.pstdio-planner"],
       ["scribble.document", "pstdio.extension-lab"],
@@ -60,13 +58,7 @@ describe("shipped extension composition", () => {
   });
   test("normalizes host fixtures without Planner or missing contribution diagnostics", async () => {
     const runtime = await loadRuntime([fixturePath]);
-    expect(runtime.diagnostics).toEqual([
-      expect.objectContaining({
-        code: "deprecated_status_contribution",
-        severity: "warning",
-        extensionId: "pstdio.workbench-fixture",
-      }),
-    ]);
+    expect(runtime.diagnostics).toEqual([]);
     const artifactSlot = runtime.pages
       .find((page) => page.localId === "lab-mode")
       ?.contribution.slots.find((slot) => slot.id === "artifact");

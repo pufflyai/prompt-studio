@@ -48,7 +48,7 @@ jobs:
 
       - name: Install Chromium for packaged extension smoke tests
         if: runner.os != 'Windows'
-        run: bunx playwright@1.60.0 install chromium --with-deps --no-shell
+        run: bunx playwright@1.60.0 install chromium --with-deps
 
       - name: Verify packaged Bun toolchain
         shell: bash

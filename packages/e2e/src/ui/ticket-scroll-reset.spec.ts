@@ -73,7 +73,7 @@ const scrollEditorToBottom = async (page: import("@playwright/test").Page) => {
   });
 };
 
-test("resets markdown scroll when switching from a ticket file back to the ticket", async ({ page, request }) => {
+test("restores markdown scroll when returning to a retained ticket or file", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Ticket Scroll Reset Project");
   const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
@@ -99,14 +99,17 @@ test("resets markdown scroll when switching from a ticket file back to the ticke
   await expect(page.locator('[role="textbox"]:visible').first()).toContainText("ticket-scroll-reset line 001");
   await scrollEditorToBottom(page);
   await expect.poll(() => editorScrollTop(page)).toBeGreaterThan(0);
+  const ticketScroll = await editorScrollTop(page);
 
   const fileRow = page.getByRole("option", { name: "scroll-proof" });
   await expect(fileRow).toBeVisible({ timeout: 15_000 });
   await fileRow.click();
   await expect(fileRow).toHaveAttribute("aria-selected", "true");
   await expect(page.locator('[role="textbox"]:visible').first()).toContainText("file-scroll-reset line 001");
+  await expect.poll(() => editorScrollTop(page)).toBe(0);
   await scrollEditorToBottom(page);
   await expect.poll(() => editorScrollTop(page)).toBeGreaterThan(0);
+  const fileScroll = await editorScrollTop(page);
 
   const ticketRow = page.getByRole("option", {
     name: new RegExp(ticket.shorthand),
@@ -115,5 +118,7 @@ test("resets markdown scroll when switching from a ticket file back to the ticke
   await expect(ticketRow).toHaveAttribute("aria-selected", "true");
   await expect(page.locator('[role="textbox"]:visible').first()).toContainText("ticket-scroll-reset line 001");
 
-  await expect.poll(() => editorScrollTop(page)).toBe(0);
+  await expect.poll(() => editorScrollTop(page)).toBe(ticketScroll);
+  await fileRow.click();
+  await expect.poll(() => editorScrollTop(page)).toBe(fileScroll);
 });
