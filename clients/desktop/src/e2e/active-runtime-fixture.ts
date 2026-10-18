@@ -87,12 +87,11 @@ export const startActiveRuntime = async (cleanup: Array<() => void | Promise<voi
       await stopProcess(runtimeProcess);
       return;
     }
+    response.setHeader("content-type", "text/html");
+    response.write("<!doctype html><html><body>");
     dashboardRequested.resolve();
     await dashboardReleased.promise;
-    response.setHeader("content-type", "text/html");
-    response.end(
-      '<!doctype html><html><body><main>Owned Prompt Studio dashboard<textarea aria-label="Draft"></textarea></main></body></html>',
-    );
+    response.end('<main>Owned Prompt Studio dashboard<textarea aria-label="Draft"></textarea></main></body></html>');
   });
   await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
   cleanup.push(async () => {

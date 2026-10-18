@@ -530,10 +530,14 @@ jobs:
       - name: Test Vite terminal e2e
         run: bun run --cwd packages/e2e test:vite-terminal
 
+      - name: Compile the packaged test CLI once
+        run: bun run --cwd scripts build:host
+
       - name: Test packaged e2e
         env:
-          DEBUG: pw:api,pw:browser
+          DEBUG: pw:browser
           E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
         run: bun run --cwd packages/e2e test:packaged
 
       - name: Preserve packaged and Vite test reports

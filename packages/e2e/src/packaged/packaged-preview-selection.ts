@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { type RuntimeDescriptor, runtimeAuthorization, signInBrowser } from "./packaged-serve-helpers";
 
 export const verifyPackagedPreviewSelection = async (page: Page, projectId: string, descriptor: RuntimeDescriptor) => {
@@ -31,11 +32,23 @@ export const verifyPackagedPreviewSelection = async (page: Page, projectId: stri
     await isolated.goto(`${descriptor.origin}/projects/${projectId}/sessions`);
     const header = isolated.locator('[data-workbench-panel-header="side"]');
     const open = async (title: string) => {
+      logTestPhase(`Preview selection open ${title}`);
       const showSide = isolated.getByRole("button", { name: "Show Side Panel", exact: true });
+      const openSide = isolated.getByRole("button", { name: "Open Side Panel", exact: true });
+      const reattach = isolated.getByRole("button", { name: "Reattach Side Panel", exact: true });
+      const addPanel = header.getByRole("button", { name: "Add panel", exact: true });
+      await expect(showSide.or(openSide).or(reattach).or(addPanel).filter({ visible: true }).first()).toBeVisible();
       if (await showSide.isVisible()) await showSide.click();
-      await header.getByRole("button", { name: "Add panel", exact: true }).click();
+      if (await openSide.isVisible()) {
+        await openSide.click();
+        await expect(reattach).toBeVisible();
+      }
+      if (await reattach.isVisible()) await reattach.click();
+      await addPanel.click();
       await isolated.getByRole("menuitem", { name: "Session", exact: true }).click();
-      await header.getByRole("tab", { selected: true }).click({ button: "right" });
+      const newSession = header.getByRole("tab", { name: "New session", exact: true });
+      await expect(newSession).toHaveAttribute("aria-selected", "true");
+      await newSession.click({ button: "right" });
       await isolated.getByRole("menuitem", { name: "Switch session", exact: true }).click();
       const picker = isolated.getByRole("dialog", { name: "Switch session", exact: true });
       await picker.getByRole("textbox").fill(title);
@@ -45,6 +58,7 @@ export const verifyPackagedPreviewSelection = async (page: Page, projectId: stri
       await tab.click({ button: "right" });
       await isolated.getByRole("menuitem", { name: "Unpin tab", exact: true }).click();
       await expect(tab).toHaveCSS("font-style", "italic");
+      logTestPhase(`Preview selection opened ${title}`);
       return tab;
     };
     const kept = await open("Selection kept");
@@ -52,11 +66,13 @@ export const verifyPackagedPreviewSelection = async (page: Page, projectId: stri
     await isolated.keyboard.press("Shift+F10");
     await isolated.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
     await expect(kept).toHaveCSS("font-style", "normal");
+    logTestPhase("Preview selection kept pinned");
     const old = await open("Selection old");
     await isolated
       .getByRole("region", { name: "Side Panel", exact: true })
       .getByRole("button", { name: "Open workspace", exact: true })
       .click();
+    logTestPhase("Preview selection workspace opened");
     // Leaving the page closes the old preview before the destination places its related tab.
     await expect(header.getByRole("tab", { name: /Selection replacement/ })).toHaveAttribute("aria-selected", "false");
     await expect(kept).toHaveAttribute("aria-selected", "true");
