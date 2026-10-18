@@ -43,7 +43,8 @@ export const StartHarnessStatus = (props: StartHarnessStatusProps) => {
     <AlertMessage status="warning" variant="subtle" role="alert" title="No agent available" icon={<TriangleAlert />}>
       <Stack gap="xs" minW="0">
         <Text>
-          No enabled harness extension is available for this project. Review your extensions to set up an agent.
+          You can still use Prompt Studio from your own harness. Sessions within Prompt Studio are unavailable until a
+          harness is available.
         </Text>
         {agents.map((agent) => (
           <Stack key={agent.id} gap="0" minW="0">
@@ -59,7 +60,7 @@ export const StartHarnessStatus = (props: StartHarnessStatusProps) => {
         ))}
         <Flex gap="xs" wrap="wrap">
           <Button size="sm" variant="outline" onClick={onReviewExtensions}>
-            Review extensions
+            Browse extensions
           </Button>
           <Button size="sm" variant="outline" loading={isFetching} onClick={onCheckAgain}>
             Check again
