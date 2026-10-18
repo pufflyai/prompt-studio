@@ -22,6 +22,7 @@ import type {
   SteerQueuedFollowUpInput,
   UpdateQueuedFollowUpInput,
 } from "pstdio-api-contracts";
+import type { ExtensionSession } from "pstdio-api-contracts/extension-kernel";
 import type { Session } from "../resources";
 import type { ClientOptions, RequestFn } from "./request";
 import { createSessionQueryClient } from "./session-query";
@@ -48,7 +49,7 @@ export type SessionClient = ReturnType<typeof createSessionQueryClient> & {
   ): Promise<HarnessCommandState & { harnessId: string }>;
   /** @deprecated Use query for one page or iterate for all matching sessions. */
   list(projectId: string, input?: ListSessionsInput): Promise<Session[]>;
-  get(sessionId: string): Promise<Session>;
+  get(sessionId: string): Promise<Session & ExtensionSession>;
   getHarnessCommands(sessionId: string, signal?: AbortSignal): Promise<HarnessCommandState & { harnessId: string }>;
   invokeHarnessOperation(
     sessionId: string,

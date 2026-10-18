@@ -6,7 +6,31 @@ import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
 
 export const makeStorage = () => ({ api: createMemoryStorage() });
 
-const createSessionResource = () => ({ type: "session" as const, id: "", title: "", status: "in_progress" as const });
+const createSessionResource = () => ({
+  type: "session" as const,
+  id: "",
+  title: "",
+  status: "in_progress" as const,
+  archived: false,
+  agent: null,
+  cwd: null,
+  usage: null,
+  lastSelectedModel: null,
+  workspaceId: null,
+  originalSessionId: null,
+  createdAt: "",
+  updatedAt: "",
+  lastRequestStarted: null,
+  lastRequestEnded: null,
+  last_selected_model: null,
+  workspace_id: null,
+  original_session_id: null,
+  created_at: "",
+  updated_at: "",
+  last_request_started: null,
+  last_request_ended: null,
+  anchors_json: [],
+});
 
 export const stubEnvironment = (
   storage: CommandRunnerEnvironment["storage"],

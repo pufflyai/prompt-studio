@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { listActivityInputSchema, listActivityResponseSchema } from "./activity";
+import type { SessionExit } from "./extension-kernel/types/sessions";
 import { extensionResourceRefSchema } from "./extensions";
 import { harnessOperationResponseSchema, harnessOperationSchema } from "./harness-commands";
 import { pendingQueuedFollowUpsResponseSchema } from "./queued-follow-ups";
@@ -30,6 +31,46 @@ export const sessionUsageSchema = z.object({
   cache_write_tokens: z.number(),
 });
 
+export const sessionExitSchema: z.ZodType<SessionExit> = z.object({
+  cause: z.enum([
+    "completed",
+    "user_stop",
+    "request_aborted",
+    "worker_lost",
+    "host_shutdown",
+    "timeout",
+    "failed",
+    "unknown",
+  ]),
+  startedAt: z.string().nullable(),
+  endedAt: z.string(),
+});
+
+export const extensionSessionSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  status: sessionStatusSchema,
+  archived: z.boolean(),
+  agent: z.string().nullable(),
+  cwd: z.string().nullable(),
+  lastSelectedModel: z.string().nullable(),
+  workspaceId: z.string().nullable(),
+  originalSessionId: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  lastRequestStarted: z.string().nullable(),
+  lastRequestEnded: z.string().nullable(),
+  lastExit: sessionExitSchema.nullable().optional(),
+  usage: z
+    .object({
+      inputTokens: z.number(),
+      outputTokens: z.number(),
+      cacheReadTokens: z.number(),
+      cacheWriteTokens: z.number(),
+    })
+    .nullable(),
+});
+
 export const sessionSchema = z.object({
   id: z.string(),
   project_id: z.string().nullable(),
@@ -52,7 +93,7 @@ export const sessionSchema = z.object({
   updated_at: z.string(),
 });
 
-export const createSessionResponseSchema = sessionSchema.extend({
+export const createSessionResponseSchema = sessionSchema.extend(extensionSessionSchema.shape).extend({
   operation_result: harnessOperationResponseSchema.optional(),
 });
 export type CreateSessionResponse = z.infer<typeof createSessionResponseSchema>;

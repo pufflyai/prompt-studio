@@ -35,9 +35,22 @@ test("session readers expose harness and usage through an explicit public mappin
     id: row.id,
     agent: "claude-code",
     workspace_id: workspace.id,
+    workspaceId: workspace.id,
+    createdAt: row.created_at,
+    originalSessionId: null,
+    cwd: null,
+    lastSelectedModel: null,
+    lastRequestStarted: row.last_request_started,
+    lastRequestEnded: null,
     usage: { input_tokens: 10, output_tokens: 5, cache_read_tokens: 0, cache_write_tokens: 2 },
   });
-  expect(await api.get(row.id)).toEqual({ ...page.items[0], last_exit: null });
+  expect(page.items[0].usage).toMatchObject({
+    inputTokens: 10,
+    outputTokens: 5,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 2,
+  });
+  expect(await api.get(row.id)).toEqual({ ...page.items[0], lastExit: null, last_exit: null });
   expect(page.items[0]).not.toHaveProperty("project_id");
   expect(page.items[0]).not.toHaveProperty("session_file_id");
   const foreign = await handle.deps.projectService.create({ name: "foreign" });

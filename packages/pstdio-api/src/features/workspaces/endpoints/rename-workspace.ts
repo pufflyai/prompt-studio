@@ -3,6 +3,7 @@ import { WorkspaceNameConflictError, WorkspaceNameValidationError, WorkspaceNotR
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema, renameWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
+import { toExtensionWorkspace } from "../extension-workspace";
 
 export const renameWorkspaceRoute = createRoute({
   method: "patch",
@@ -49,7 +50,7 @@ export const renameWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
       const workspace = await deps.workspaceService.rename(id, name);
       if (!workspace) return c.json({ error: `Workspace not found: ${id}` }, 404);
 
-      return c.json(workspace, 200);
+      return c.json({ ...workspace, ...toExtensionWorkspace(workspace) }, 200);
     } catch (error) {
       if (error instanceof WorkspaceNameValidationError) return c.json({ error: error.message }, 400);
       if (error instanceof WorkspaceNameConflictError) return c.json({ error: error.message }, 409);

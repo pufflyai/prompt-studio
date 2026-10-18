@@ -234,6 +234,18 @@ when a hook should react to a command outcome.
 
 ## Workspace Cleanup
 
+Session readers return `ExtensionSession`: `workspaceId`, `lastSelectedModel`, `originalSessionId`,
+`createdAt`, `updatedAt`, `lastRequestStarted` and `lastRequestEnded` use camelCase.
+`cwd` is the execution directory or null. `get` also returns `lastExit`.
+Usage totals use `inputTokens`, `outputTokens`, `cacheReadTokens` and `cacheWriteTokens`.
+The SDK client returns the same fields. Snake-case fields remain deprecated through 0.44.
+
+Workspace readers return `ExtensionWorkspace` with `projectId`, `shorthand`, `rootPath`,
+`providerId`, `providerState`, `executionKind`, `displayPath`, `capabilities`, `isDefault`,
+`setupError`, `createdAt` and `updatedAt`. Create one with
+`ctx.workspaces.create({ providerId: "pstdio.worktree", shorthandBase: "WS", params: { base: "main" } })`.
+Creation may attach anchors; read existing links through `ctx.resources`.
+
 `ctx.workspaces.removeWorktree(id)` removes the local worktree and branch but preserves the workspace record. `ctx.workspaces.delete(id)` performs the full provider cleanup and deletes the workspace. Both operations emit `worktree.removed` when they remove a local worktree.
 
 ## Diagnostics

@@ -83,6 +83,7 @@ export interface ExtensionSkillsApi {
 
 export type {
   ExtensionHarnessInput,
+  ExtensionSession,
   ExtensionSessionPage,
   ExtensionSessionQuery,
   ExtensionSessionResource,

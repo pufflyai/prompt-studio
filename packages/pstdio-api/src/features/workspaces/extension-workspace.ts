@@ -1,0 +1,35 @@
+import type { WorkspacesRouteDeps } from "./deps";
+
+type WorkspaceRow = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
+
+export const toExtensionWorkspace = (workspace: WorkspaceRow) => ({
+  id: workspace.id,
+  name: workspace.name,
+  branch: workspace.branch,
+  initializing: workspace.initializing,
+  projectId: workspace.project_id,
+  isDefault: workspace.is_default,
+  shorthand: workspace.workspace_shorthand,
+  rootPath: workspace.root_path,
+  providerId: workspace.provider_id,
+  providerState: workspace.provider_state,
+  executionKind: workspace.execution_kind,
+  displayPath: workspace.display_path,
+  capabilities: workspace.provider_capabilities_json,
+  setupError: workspace.setup_error,
+  createdAt: workspace.created_at,
+  updatedAt: workspace.updated_at,
+  project_id: workspace.project_id,
+  is_default: workspace.is_default,
+  workspace_shorthand: workspace.workspace_shorthand,
+  root_path: workspace.root_path,
+  provider_id: workspace.provider_id,
+  provider_state: workspace.provider_state,
+  execution_kind: workspace.execution_kind,
+  display_path: workspace.display_path,
+  provider_capabilities_json: workspace.provider_capabilities_json,
+  anchors_json: workspace.anchors_json,
+  setup_error: workspace.setup_error,
+  created_at: workspace.created_at,
+  updated_at: workspace.updated_at,
+});
