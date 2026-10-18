@@ -20,6 +20,11 @@
       // scripts/ci/install-native-dependencies.ts points npm_config_node_gyp at this package's binary.
       "ignoreDependencies": ["node-gyp"]
     },
+    "infra/account-manager": {
+      "entry": ["src/index.ts", "src/**/*.test.ts", "scripts/*.ts", "drizzle.config.ts"],
+      "project": ["src/**/*.ts", "scripts/**/*.ts", "drizzle.config.ts"],
+      "ignore": ["dist/**"]
+    },
     "infra/relay": {
       "entry": [
         "package.json",

@@ -25,3 +25,5 @@ clients/landing-page/public
 # Relay infrastructure and local inputs never belong in runtime images.
 infra/relay/terraform
 infra/relay/.env*
+infra/account-manager/.env*
+infra/account-manager/terraform

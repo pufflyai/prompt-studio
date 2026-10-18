@@ -175,6 +175,18 @@ test("relay changes select the isolated container check", () => {
   expect(pullRequest(["bun.lock"])).toHaveProperty("relaySmoke", true);
 });
 
+test("private account manager changes select the isolated infrastructure check", () => {
+  const scope = resolveCiScope({
+    event: "pull_request",
+    labels: [],
+    changedFiles: ["infra/account-manager/src/authority.ts"],
+    packageDirs: [...packageDirs, "infra/account-manager"],
+    affectedPackages: ["pstdio-account-manager"],
+  });
+  expect(scope.lernaFilter).toBe("--since HEAD~1");
+  expect(scope.relaySmoke).toBe(true);
+});
+
 test("local storage changes select production relay conformance", () => {
   expect(
     pullRequest(["packages/pstdio-db/src/services/extension-storage/grouped-storage.ts"], [], ["pstdio-db"]),

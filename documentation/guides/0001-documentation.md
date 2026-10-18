@@ -8,6 +8,7 @@ Prompt Studio is a workbench where people and agents build and use tools through
 - [Set up repository development](development/0001-setup.md)
 - [Run tests and validate changes](development/0002-testing.md)
 - [Build and smoke-test the relay](development/0006-relay.md)
+- [Develop private account authority](development/0007-account-manager.md)
 - [Write an extension](extensions/0001-authoring.md)
 - [Look up SDK methods](../references/sdk/0003-api.md)
 - [Check lessons when stuck](../lessons-learned)
@@ -322,6 +323,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0063 — Temporary Claude literal slash input](../adrs/0063-temporary-claude-literal-slash-input.md)
 - [0064 — Codex App Server runtime](../adrs/0064-codex-app-server-runtime.md)
 - [0065 — Stream command results over the shared client stream](../adrs/0065-stream-command-results-over-the-shared-client-stream.md)
+- [0076 — Separate account authority from content](../adrs/0076-separate-account-authority-from-content.md)
 
 ## Lessons learned
 

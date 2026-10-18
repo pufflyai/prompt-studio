@@ -123,6 +123,17 @@ Future Terraform configuration belongs under `infra/relay/terraform/`,
 separate from relay source. See the [relay development guide](../../guides/development/0006-relay.md)
 for isolated storage fixtures and container checks.
 
+## Account authority
+
+The private `pstdio-account-manager` workspace lives under `infra/account-manager/`.
+It consumes only the merged `pstdio-sync-contracts` identity and canonical JSON
+contracts. It owns a separate private PostgreSQL database/role and imports no
+relay content implementation, local API host, SDK, UI, client or extension code.
+It is not part of the CLI bundle. Future authenticated manager and relay services
+must preserve that authority boundary. See the
+[account authority guide](../../guides/development/0007-account-manager.md) and
+[ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
+
 ## Rules
 
 - No workspace package cycles.
