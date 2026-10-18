@@ -76,7 +76,8 @@ layer-map change.
    editor widgets, and terminal-specific React UI through its `./terminal`
    subpath. UI packages consume public terminal contracts through `@pstdio/sdk`
    and bundle shared table field helpers from `pstdio-api-contracts` rather than
-   depending on deprecated SDK host helpers. They must not own router wiring, React Query fetching policy, dashboard
+   depending on deprecated SDK host helpers. Its private `/collections` entry groups pure
+   table and history helpers without importing the Bun host kernel. They must not own router wiring, React Query fetching policy, dashboard
    project/repo concepts, or host persistence policy.
 
 6. **Workbench**

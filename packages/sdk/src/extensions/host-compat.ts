@@ -11,7 +11,7 @@ import {
   WEBVIEW_HOST_CAPABILITY_VERSION as hostWebviewHostCapabilityVersion,
   WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES as hostWebviewScopedDeclarableCapabilities,
 } from "pstdio-api-contracts/extension-kernel";
-import { mergeOrderedHistory as hostMergeOrderedHistory } from "pstdio-api-contracts/history-reconciliation";
+import { mergeOrderedHistory as hostMergeOrderedHistory } from "pstdio-api-contracts/collections";
 
 /** @deprecated Host-only. Hosts import `ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES` from `pstdio-api-contracts`. */
 export const ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES = hostAlwaysAvailableWebviewCapabilities;

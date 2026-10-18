@@ -1,4 +1,4 @@
-import { resolveDataTableFieldKind } from "pstdio-api-contracts/data-table-values";
+import { resolveDataTableFieldKind } from "pstdio-api-contracts/collections";
 import { isValidElement, type ReactNode } from "react";
 import type { AttributeDescriptor, KanbanRendererRow } from "@/components/kanban-renderer/types";
 import { isDataTableDiffValue, resolveDataTableComparableValue } from "./data-table-cell-value";

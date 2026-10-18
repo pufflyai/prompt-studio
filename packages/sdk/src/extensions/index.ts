@@ -59,7 +59,7 @@ export {
   reconcileMessageHistory,
   splitHistoryTurns,
   submittedPrompt,
-} from "pstdio-api-contracts/history-reconciliation";
+} from "pstdio-api-contracts/collections";
 export { SDK_VERSION } from "../version";
 export { type CommandResponse, unwrapCommandOutcome } from "./command-outcome";
 export { commandRefId, contributionRefId } from "./contribution-reference";

@@ -8,10 +8,9 @@
     "./agent-model-params": "./src/agent-model-params.ts",
     "./extension-kernel": "./src/extension-kernel/index.ts",
     "./extension-webview-path": "./src/extension-webview-path.ts",
-    "./history-reconciliation": "./src/history-reconciliation.ts",
     "./performance-diagnostics": "./src/performance-diagnostics.ts",
     "./session-attachment-types": "./src/session-attachment-types.ts",
-    "./data-table-values": "./src/extension-kernel/data-table-values.ts"
+    "./collections": "./src/collections.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
