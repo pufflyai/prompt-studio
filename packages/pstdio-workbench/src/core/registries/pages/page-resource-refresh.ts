@@ -1,5 +1,7 @@
-import { type PageLocation, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import type { PageLocation, ResourceRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageRuntimeState } from "./page-registry-types";
+
+type ResourceReferenceKey = (resource: ResourceRef) => string;
 
 export const refreshedResource = (current: ResourceRef, resource: ResourceRef) => ({
   ...current,
@@ -10,19 +12,21 @@ export const refreshedResource = (current: ResourceRef, resource: ResourceRef) =
 export const refreshResourceLocation = (
   location: PageLocation | undefined,
   resource: ResourceRef,
+  referenceKey: ResourceReferenceKey,
 ): PageLocation | undefined =>
   location
     ? {
         ...location,
-        ...(location.resource && resourceKey(location.resource) === resourceKey(resource)
+        ...(location.resource && referenceKey(location.resource) === referenceKey(resource)
           ? { resource: refreshedResource(location.resource, resource) }
           : {}),
-        ...(location.parent ? { parent: refreshResourceLocation(location.parent, resource) } : {}),
+        ...(location.parent ? { parent: refreshResourceLocation(location.parent, resource, referenceKey) } : {}),
       }
     : undefined;
 export const refreshPageResources = (
   states: Readonly<Record<string, WorkbenchPageRuntimeState>>,
   resource: ResourceRef,
+  referenceKey: ResourceReferenceKey,
 ) =>
   Object.fromEntries(
     Object.entries(states).map(([key, state]) => [
@@ -33,7 +37,7 @@ export const refreshPageResources = (
           Object.entries(state.resourceInstances).map(([slot, instances]) => [
             slot,
             instances.map((instance) =>
-              resourceKey(instance.resource) === resourceKey(resource)
+              referenceKey(instance.resource) === referenceKey(resource)
                 ? { ...instance, resource: refreshedResource(instance.resource, resource) }
                 : instance,
             ),

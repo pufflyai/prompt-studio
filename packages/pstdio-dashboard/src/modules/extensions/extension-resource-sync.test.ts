@@ -47,9 +47,16 @@ describe("open extension resource sync", () => {
     expect(workbench.layout.getLayout().activeWidgetId).toBe(selected);
     expect(workbench.getPrimaryResource()?.id).toBe("a");
   });
-  test("refreshes an inactive resource tab without selecting it", async () => {
+  test.each([
+    false,
+    true,
+  ])("refreshes an inactive resource tab without selecting it (batch only: %s)", async (batchOnly) => {
     let writable = true;
-    const { workbench, open } = openNoteWorkbench((resource) => ({ ...resource, metadata: { writable } }));
+    const { workbench, open } = openNoteWorkbench(
+      (resource) => ({ ...resource, metadata: { writable } }),
+      false,
+      batchOnly,
+    );
     workbench.modePlacements.registerPlacement({
       id: "notes",
       ref: { kind: "placement", id: "notes", extensionId },
