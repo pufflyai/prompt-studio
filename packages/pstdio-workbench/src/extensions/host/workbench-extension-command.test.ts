@@ -74,6 +74,92 @@ const setupPage = () => {
   return workbench;
 };
 describe("executeWorkbenchExtensionCommand", () => {
+  test("a command navigation result keeps the Add destination for the next command", async () => {
+    const workbench = setupPage();
+    workbench.shellPlacements.registerPlacement({
+      id: "tool",
+      region: "side",
+      item: { kind: "view", view: { kind: "view", id: "ticket-detail" }, presence: "closed" },
+    });
+    workbench.commands.registerCommand(
+      { id: "second", label: "Create tool" },
+      {
+        execute: (_args, context) => {
+          workbench.shellPlacements.openPlacement({ placementId: "tool", region: context?.region });
+        },
+      },
+    );
+    await executeWorkbenchExtensionCommandResponse(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: () => ({
+          outcome: {
+            ok: true,
+            status: "success",
+            navigationRequests: [
+              {
+                kind: "command",
+                target: { command: { kind: "command", id: "second" } },
+              },
+            ],
+          },
+        }),
+      },
+      "create-tool",
+      { region: "secondary" },
+    );
+    expect(workbench.layout.getActivePanel("secondary")).toBeDefined();
+    expect(workbench.layout.listPanelInstances("side")).toEqual([]);
+  });
+  test("an Add command opens extension navigation results directly in the requested panel", async () => {
+    const workbench = setupPage();
+    const panel = { kind: "placement" as const, extensionId: "acme.planner", id: "tool" };
+    workbench.modePlacements.registerPlacement({
+      id: "tool",
+      ref: panel,
+      modeId: "project",
+      region: "side",
+      item: {
+        kind: "binding",
+        binding: {
+          view: { kind: "view", id: "ticket-detail" },
+          kinds: [{ kind: "resource-kind", id: "tool" }],
+          cardinality: "many",
+        },
+      },
+    });
+    workbench.shell.setRegionOpen("side", true);
+    const seen: number[] = [];
+    const unsubscribe = workbench.layout.store.subscribe(() =>
+      seen.push(workbench.layout.listPanelInstances("side").length),
+    );
+    await executeWorkbenchExtensionCommandResponse(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: () => ({
+          outcome: {
+            ok: true,
+            status: "success",
+            navigationRequests: [
+              {
+                kind: "compound",
+                targets: [{ kind: "panel", panel, resource: { type: "tool", id: "created" }, open: "pin" }],
+              },
+            ],
+          },
+        }),
+      },
+      "create-tool",
+      { region: "secondary" },
+    );
+    unsubscribe();
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((count) => count === 0)).toBe(true);
+    expect(workbench.layout.getActivePanel("secondary")?.resource?.id).toBe("created");
+    expect(workbench.shell.getRegionState("side").open).toBe(true);
+  });
   test("preserves the response envelope when navigation conversion rejects a target", async () => {
     const workbench = setupPage();
     const response = {

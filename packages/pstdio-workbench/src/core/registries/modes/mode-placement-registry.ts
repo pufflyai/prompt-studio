@@ -4,7 +4,7 @@ import { notifyWorkbenchChange } from "../../shared/store/workbench-batch";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import { createPlacement } from "../layout/layout-operations";
 import type { RegisteredWidgetContribution, WorkbenchLayout, WorkbenchWidgetPlacement } from "../layout/layout-types";
-import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
+import type { PlacementDestination, ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import {
   clearOwnedPlacementState,
   closeOwnedPlacementInstance,
@@ -44,6 +44,8 @@ export interface WorkbenchModePlacementContribution extends WorkbenchPlacementPr
 
 interface OpenModePlacementTarget {
   panel: PlacementRef;
+  /** Explicit destination for this open. Omit to keep an existing tab's placement. */
+  region?: DockedWorkbenchRegion;
   resource?: ResourceRef;
   open?: PageOpenIntent;
   relatedSource?: string;
@@ -130,9 +132,9 @@ export const createWorkbenchModePlacementRegistry = (input: {
       .filter((placement) => !modeId || placement.modeId === modeId)
       .sort((left, right) => left.id.localeCompare(right.id));
 
-  let runtime: (() => void) | undefined;
-  const emitChange = () => {
-    runtime?.();
+  let runtime: ((destination?: PlacementDestination) => void) | undefined;
+  const emitChange = (destination?: PlacementDestination) => {
+    runtime?.(destination);
     for (const listener of listeners)
       notifyWorkbenchChange(listener, () => runWorkbenchEffect("mode placement subscriber", listener));
   };
@@ -210,6 +212,8 @@ export const createWorkbenchModePlacementRegistry = (input: {
     open(target, current = state) {
       const placement = placements.get(target.placementId);
       if (!placement) throw new Error(`Unknown mode placement: ${target.placementId}`);
+      if (target.region && placement.movableTo && !placement.movableTo.some((region) => region === target.region))
+        throw new Error(`Mode panel cannot open in ${target.region}: ${placement.id}`);
       return prepareOwnedPlacement({
         label,
         target,
@@ -282,7 +286,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
       if (!placement) throw new Error(`Unknown mode panel: ${target.panel.extensionId}.${target.panel.id}`);
       const prepared = preparation.open({ ...target, placementId: placement.id });
       preparation.apply(prepared.state);
-      preparation.publish();
+      preparation.publish(target.region ? { identity: prepared.identity, region: target.region } : undefined);
       return prepared.identity;
     },
 

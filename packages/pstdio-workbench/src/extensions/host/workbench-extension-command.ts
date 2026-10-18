@@ -1,5 +1,10 @@
 import type { CommandExecuteRequest, CommandExecutionResult, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleContext } from "../../core";
+import type {
+  ResourceRef,
+  WorkbenchCommandExecutionContext,
+  WorkbenchModuleContext,
+  WorkbenchPanelRegion,
+} from "../../core";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import { runResourceMutation } from "./workbench-resource-mutation";
@@ -16,6 +21,7 @@ export interface WorkbenchExtensionCommandContext {
   workbench: WorkbenchModuleContext;
 }
 export interface ExecuteWorkbenchExtensionCommandInput {
+  region?: WorkbenchPanelRegion;
   workspaceId?: string;
   signal?: AbortSignal;
   metadata?: Record<string, unknown>;
@@ -58,7 +64,7 @@ export const executeWorkbenchExtensionCommandResponse = async (
   if (outcome?.status === "success") {
     for (const target of outcome.navigationRequests ?? []) {
       try {
-        await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target));
+        await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { region: input.region }));
       } catch (error) {
         context.workbench.notifications.show({
           level: "warning",

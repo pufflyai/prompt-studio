@@ -11,6 +11,7 @@ import {
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
+import type { WorkbenchPanelRegion } from "../layout/layout-types";
 
 /** Core-only panel ref for host-owned shell placements. Extensions cannot address them. */
 export interface ShellPlacementRef {
@@ -24,9 +25,12 @@ export interface NavigationTargetShellPanel {
   resource?: SdkNavigationTargetPanel["resource"];
   open?: SdkNavigationTargetPanel["open"];
   title?: string;
+  region?: WorkbenchPanelRegion;
 }
 
-export type NavigationTargetPanel = SdkNavigationTargetPanel | NavigationTargetShellPanel;
+export type NavigationTargetPanel =
+  | (SdkNavigationTargetPanel & { region?: WorkbenchPanelRegion })
+  | NavigationTargetShellPanel;
 
 export type NavigationTargetPage = SdkNavigationTargetPage;
 
@@ -36,6 +40,7 @@ export interface NavigationTargetCommand {
   kind: "command";
   commandId: string;
   args?: unknown;
+  region?: WorkbenchPanelRegion;
 }
 
 export interface NavigationTargetHref {
@@ -73,7 +78,7 @@ export interface NavigationDispatcherContext {
   prepareNavigation?(targets: readonly (NavigationTargetPage | NavigationTargetPanel)[]): { commit(): unknown };
   openPanelTarget?(target: NavigationTargetPanel): unknown;
   openPageTarget?(target: NavigationTargetPage): unknown;
-  executeCommand(commandId: string, args?: unknown): Promise<unknown> | unknown;
+  executeCommand(commandId: string, args?: unknown, region?: WorkbenchPanelRegion): Promise<unknown> | unknown;
   openHref?(href: string): Promise<unknown> | unknown;
 }
 
@@ -122,7 +127,7 @@ const dispatchItem = async (target: NavigationTargetItem, dispatcher: Navigation
     if (!dispatcher.openHref) throw new Error(`Cannot open navigation href target: ${target.href}`);
     return dispatcher.openHref(target.href);
   }
-  return dispatcher.executeCommand(target.commandId, target.args);
+  return dispatcher.executeCommand(target.commandId, target.args, target.region);
 };
 
 const validateItem = (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {

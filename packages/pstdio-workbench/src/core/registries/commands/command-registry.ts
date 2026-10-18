@@ -7,6 +7,7 @@ import {
 } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import type { WorkbenchPanelRegion } from "../layout/layout-types";
 import { type ResourceRef, scopeWorkbenchResourceContextValues } from "../resources/resource-registry";
 
 export interface WorkbenchCommandExecutionError {
@@ -21,6 +22,8 @@ export interface WorkbenchCommandExecutionContext {
   resource?: ResourceRef;
   signal?: AbortSignal;
   source?: "panel-add";
+  /** Panel chosen by the caller for newly created tabs. */
+  region?: WorkbenchPanelRegion;
 }
 
 export interface CommandParamOption {

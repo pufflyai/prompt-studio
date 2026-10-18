@@ -54,12 +54,13 @@ export const createArrangementWorkbench = (
   w.commands.registerCommand(
     { id: "add-session", label: "New session" },
     {
-      execute: () =>
+      execute: (_args, context) =>
         w.navigation.openTarget({
           kind: "panel",
           panel: { kind: "placement", extensionId: "storybook", id: "sessions" },
           resource: { type: "session", id: crypto.randomUUID(), label: "New session" },
           open: "pin",
+          region: context?.region,
         }),
     },
   );
@@ -100,7 +101,7 @@ export const createArrangementWorkbench = (
   // Command references use the declared owner; this alias keeps the example's action identical to an extension action.
   w.commands.registerCommand(
     { id: "storybook.command.add-session", label: "Create session" },
-    { execute: () => w.commands.executeCommand("add-session") },
+    { execute: (args, context) => w.commands.executeCommand("add-session", args, context) },
   );
   w.pageLocations.switchProject("arrangement");
   for (let i = 0; i < (crowded ? 8 : 2); i++)

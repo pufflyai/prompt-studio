@@ -3,6 +3,7 @@ import {
   type WorkbenchCoreContributionContext,
   type WorkbenchLayout,
   type WorkbenchModuleContribution,
+  type WorkbenchPanelRegion,
   workbenchPanelRegions,
 } from "../../core";
 import { pageContextChanged } from "../../core/controllers/page-runtime/page-main-tabs";
@@ -20,6 +21,7 @@ export const WORKBENCH_TERMINAL_PANEL_SIZE = { defaultPx: 240, minPx: 128 };
 interface OpenWorkbenchTerminalOptions {
   resource?: ResourceRef;
   reveal?: boolean;
+  region?: WorkbenchPanelRegion;
 }
 type TerminalResource = OpenWorkbenchTerminalOptions["resource"];
 const terminalPlacements = (layout: WorkbenchLayout) =>
@@ -100,12 +102,12 @@ const getTerminalResource = (ctx: WorkbenchCoreContributionContext, resource: Te
     primaryResource
   );
 };
-// Opens a new terminal placement, revealing the bottom region if it is collapsed.
+// Opens a new terminal in the requested region, or Bottom when no region is given.
 export const openWorkbenchTerminal = (
   ctx: WorkbenchCoreContributionContext,
   input: OpenWorkbenchTerminalOptions = {},
 ) => {
-  const { reveal = true } = input;
+  const { reveal = true, region = "secondary" } = input;
   const workspace = getTerminalResource(ctx, input.resource);
   const title = getNextTerminalTitle(ctx);
   const index = Number.parseInt(terminalTitlePattern.exec(title)?.[1] ?? "1", 10);
@@ -124,14 +126,15 @@ export const openWorkbenchTerminal = (
     resource,
     open: "pin",
     title,
+    region,
   });
   if (identity.kind !== "shell") throw new Error("Terminal placement must be shell-owned");
-  if (reveal) {
-    ctx.shell.setRegionOpen("secondary", true);
+  if (reveal && region !== "main") {
+    ctx.shell.setRegionOpen(region, true);
   }
   const placement = ctx.layout
     .getLayout()
-    .regions.secondary.widgets.find(
+    .regions[region].widgets.find(
       (candidate) =>
         candidate.placementIdentity?.kind === "shell" &&
         candidate.placementIdentity.placementId === identity.placementId &&
@@ -195,9 +198,8 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
           icon: "SquareTerminal",
         },
         {
-          // "Add panel" moves the new tab into its chosen region and reveals that region itself.
           execute: (_args, context) =>
-            openWorkbenchTerminal(ctx, { resource: context?.resource, reveal: context?.source !== "panel-add" }),
+            openWorkbenchTerminal(ctx, { resource: context?.resource, region: context?.region }),
         },
       ),
     ];

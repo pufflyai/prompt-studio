@@ -164,11 +164,16 @@ export const createWorkbenchPageRegistry = <Value>(
         }
       });
     },
-    refreshModePlacements() {
-      refreshActiveModePlacements({ state: publishingState ?? store.getState(), registryInput: input, commit });
+    refreshModePlacements(destination) {
+      refreshActiveModePlacements({
+        state: publishingState ?? store.getState(),
+        registryInput: input,
+        commit,
+        destination,
+      });
     },
-    refreshShellPlacements() {
-      refreshShellPlacements({ state: publishingState ?? store.getState(), commit });
+    refreshShellPlacements(destination) {
+      refreshShellPlacements({ state: publishingState ?? store.getState(), commit, destination });
     },
     activateLocation: activatePageWithStates,
     clearProject(projectId) {
