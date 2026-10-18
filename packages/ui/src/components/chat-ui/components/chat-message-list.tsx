@@ -38,7 +38,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
   const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.key));
   const initialHeight = scrollRef.current?.clientHeight || 1;
   const gapCount = Math.max(leadingResponses.length + groups.length - 1, 0);
-  const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
+  const { virtualizer, virtualItems, totalSize, measurements } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: rows.length,
     getScrollElement: () => scrollRef.current as HTMLDivElement | null,
     estimateSize: (index) => ESTIMATED_MESSAGE_HEIGHT + (hasChatRowGap(rows, index) ? VIRTUAL_LIST_GAP : 0),
@@ -54,15 +54,13 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
       return indexes;
     },
   });
-  const totalSize = virtualizer.getTotalSize();
-  const measurements = virtualizer.measurementsCache;
 
   useTailReady({ itemCount: rows.length, onReady, scrollRef, totalSize });
 
   return (
     <Box px="xs">
       <Box position="relative" width="100%" style={{ height: totalSize }}>
-        {virtualizer.getVirtualItems().map((virtualItem) => {
+        {virtualItems.map((virtualItem) => {
           const row = rows[virtualItem.index];
           if (row.type === "user") {
             const end =

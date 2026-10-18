@@ -17,7 +17,7 @@ export const useVirtualizer = <TScrollElement extends Element, TItemElement exte
   const [, setMounted] = useState(false);
   useLayoutEffect(() => setMounted(true), []);
   const measure = options.measureElement ?? measureRenderedElement;
-  return useTanStackVirtualizer<TScrollElement, TItemElement>({
+  const virtualizer = useTanStackVirtualizer<TScrollElement, TItemElement>({
     ...options,
     // A row under a hidden ancestor, such as a retained workbench panel, has no layout and measures 0.
     // Keep its known size, or the list draws the wrong rows when it is shown again. A row hidden on
@@ -30,4 +30,12 @@ export const useVirtualizer = <TScrollElement extends Element, TItemElement exte
     // Rows measure through ref callbacks during React commits. Let React batch their updates.
     useFlushSync: false,
   });
+  // Render from current values. The instance stays the same when its measurements change,
+  // so reading its methods in a compiled component can cache an old list height.
+  return {
+    virtualizer,
+    virtualItems: virtualizer.getVirtualItems(),
+    totalSize: virtualizer.getTotalSize(),
+    measurements: virtualizer.measurementsCache,
+  };
 };

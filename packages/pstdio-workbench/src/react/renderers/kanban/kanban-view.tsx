@@ -24,6 +24,7 @@ import { RendererReadNotice } from "../renderer-read-notice";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { ViewToolbarActions } from "../view-toolbar-actions";
+import { prepareKanbanMove } from "./kanban-move";
 import { bindReactKanbanPresentation } from "./kanban-presentation";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 
@@ -195,15 +196,22 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         onActionError={(error, action) => reportUserActionError(workbench, action, error)}
         onAttributeChange={contribution.onAttributeChange}
         onMove={
-          contribution.onMove
-            ? (move) =>
+          contribution.onMove || contribution.onAttributeChange
+            ? (move) => {
+                const mutation = prepareKanbanMove(contribution, move);
+                return read.mutate((rows) => applyKanbanMove(rows, mutation.move), mutation.save);
+              }
+            : undefined
+        }
+        onReorder={
+          contribution.onReorder
+            ? (rowId, beforeRowId) =>
                 read.mutate(
-                  (rows) => applyKanbanMove(rows, move),
-                  () => contribution.onMove!(move),
+                  (rows) => applyKanbanMove(rows, { rowId, attributes: {}, order: { beforeRowId } }),
+                  () => contribution.onReorder!(rowId, beforeRowId),
                 )
             : undefined
         }
-        onReorder={contribution.onReorder}
         createRow={contribution.createRow}
         onCreateRow={contribution.onCreateRow}
         onColumnAction={

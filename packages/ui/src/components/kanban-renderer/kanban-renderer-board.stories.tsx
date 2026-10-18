@@ -208,6 +208,6 @@ export const WithContextMenuActions: Story = {
     await expect(await within(document.body).findByRole("menuitem", { name: "Run attempt" })).toBeVisible();
     await expect(within(document.body).getByRole("menuitem", { name: "Delete" })).toBeVisible();
     await userEvent.click(within(document.body).getByRole("menuitem", { name: "Run attempt" }));
-    await expect(runAttempt).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(runAttempt).toHaveBeenCalledTimes(1));
   },
 };

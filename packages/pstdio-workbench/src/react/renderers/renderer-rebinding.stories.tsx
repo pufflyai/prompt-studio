@@ -154,10 +154,10 @@ export const KanbanViewChange: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("Write docs")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Sort" }));
-    await userEvent.click(await within(document.body).findByRole("button", { name: "Add sort" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Display settings" }));
+    await userEvent.click(await within(document.body).findByRole("button", { name: "Board" }));
     await userEvent.keyboard("{Escape}");
-    // A new sort runs the query again, but the old rows stay on screen until the new ones arrive.
+    // A view change runs the query again, but the old rows stay on screen until the new ones arrive.
     await expect(canvas.getByText("Write docs")).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
     await expect(await canvas.findByText("Review docs")).toBeVisible();
