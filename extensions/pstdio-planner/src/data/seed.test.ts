@@ -144,7 +144,10 @@ describe("seedDefaultTags", () => {
 
     await seedDefaultTags(storage);
 
-    expect(await tagsCollection(storage).get(current.id)).toEqual(customized);
+    expect(await tagsCollection(storage).get(current.id)).toEqual({
+      ...customized,
+      options: customized.options.map((option) => ({ ...option, icon: "message-circle-warning" })),
+    });
   });
 
   test("backfills human_requested into projects with customized tags", async () => {

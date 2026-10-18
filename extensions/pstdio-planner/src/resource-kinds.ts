@@ -3,6 +3,8 @@ import { resolveTicketPathCommand } from "./commands/resolve-ticket-path";
 import { ticketRelatedOpeningsCommand } from "./commands/ticket-related-openings";
 import { TICKETS_DIR } from "./data/draft-storage";
 
+import { resolveTicketResourcesCommand } from "./commands/resolve-ticket-resources";
+
 export const ticketResourceKind = defineResourceKind({
   id: "ticket",
   prefix: projectPrefix(),
@@ -10,6 +12,7 @@ export const ticketResourceKind = defineResourceKind({
   label: l10n("resourceKinds.ticket.label", "Ticket"),
   icon: "component",
   paths: [{ prefix: `${TICKETS_DIR}/`, resolve: resolveTicketPathCommand.ref }],
+  resolveMany: resolveTicketResourcesCommand.ref,
   menuSlots: [
     {
       id: "header-overflow",

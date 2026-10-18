@@ -60,6 +60,54 @@ const decision: ReviewRequestView = {
   },
 };
 
+// The shape the create-proposal skill asks for: decisions, assumptions, and risks as readable options.
+const proposalReview: ReviewRequestView = {
+  ...task,
+  id: "proposal-review",
+  title: "Review the note tags proposal",
+  instructions: [
+    "- **D1.** The sidebar can filter by one tag or by several tags at once.",
+    "- **C1.** A note can have several tags, and tag names ignore case and surrounding spaces.",
+    "- **R1.** Tag edits change a note's modified time, which can reorder recent notes.",
+  ].join("\n"),
+  request: {
+    kind: "decision",
+    questions: [
+      {
+        id: "d1-filter",
+        label: "D1. How many tags can the sidebar filter by?",
+        required: true,
+        input: {
+          kind: "single-choice",
+          options: [
+            { id: "one", label: "One tag at a time (recommended)" },
+            { id: "many", label: "Several tags at once" },
+          ],
+        },
+      },
+      {
+        id: "confirm",
+        label: "Tick each assumption you accept",
+        required: false,
+        input: {
+          kind: "multiple-choice",
+          options: [{ id: "c1", label: "C1. A note can have several tags, and names ignore case and spaces" }],
+        },
+      },
+      {
+        id: "risks",
+        label: "Tick each risk you accept",
+        required: false,
+        input: {
+          kind: "multiple-choice",
+          options: [{ id: "r1", label: "R1. Tag edits can reorder recent notes" }],
+        },
+      },
+      { id: "notes", label: "Corrections or other answers", required: false, input: { kind: "text" } },
+    ],
+  },
+};
+
 const handoff: ReviewRequestView = {
   ...task,
   id: "handoff",
@@ -126,6 +174,7 @@ type Story = StoryObj<typeof RequestsPanel>;
 export const NoRequests: Story = { args: { row } };
 export const Task: Story = { args: { row: { ...row, requests: [task] } } };
 export const Decision: Story = { args: { row: { ...row, requests: [decision] } } };
+export const ProposalReview: Story = { args: { row: { ...row, requests: [proposalReview] } } };
 export const AttemptHandoff: Story = { args: { row: { ...row, requests: [handoff] } } };
 export const OpenSiblingAfterAnswer: Story = { args: { row: { ...row, requests: [answered, handoff] } } };
 export const Cancelled: Story = {

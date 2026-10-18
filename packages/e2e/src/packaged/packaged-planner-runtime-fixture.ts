@@ -1,10 +1,6 @@
 // Project data for packaged Planner runtime checks.
 
-import { join, resolve } from "node:path";
 import { logTestPhase } from "../scripts/log-test-phase";
-
-const repoRoot = resolve(import.meta.dirname, "../../../..");
-export const plannerSource = join(repoRoot, "extensions", "pstdio-planner");
 
 // Most seeding commands return the stored record with its id.
 export type Execute = <T = { id: string }>(command: string, params?: Record<string, unknown>) => Promise<T>;

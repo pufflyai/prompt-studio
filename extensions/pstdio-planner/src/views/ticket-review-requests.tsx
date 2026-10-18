@@ -1,5 +1,5 @@
 import "@pstdio/ui/style.css";
-import { Button, Stack, Text } from "@chakra-ui/react";
+import { Stack, Text } from "@chakra-ui/react";
 import {
   createWebviewClient,
   defineExtensionView,
@@ -11,7 +11,6 @@ import { ChakraProvider, psTheme, ScrollArea } from "@pstdio/ui";
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { listReviewRequestsCommand, openReviewRequestCommand, reviewCommand } from "../commands/review-requests";
-import { ticketPageTarget } from "../data/ticket-page-target";
 import { plannerTicketsChanged } from "../events";
 import { RequestsPanel } from "../timeline/view/requests-panel";
 import { useLiveValue } from "../timeline/view/use-live-value";
@@ -34,7 +33,7 @@ function TicketRequests(props: { host: GuestHost; resource: ResourceRef }) {
   const { value } = useLiveValue(client, read, events, resource.id);
   return (
     <ScrollArea h="full">
-      <Stack p="md" gap="md">
+      <Stack p="md" gap="md" w="full" maxW="2xl" mx="auto">
         <Text textStyle="label/L/medium">{resource.label ?? resource.shorthand}</Text>
         {value ? (
           <RequestsPanel
@@ -44,13 +43,6 @@ function TicketRequests(props: { host: GuestHost; resource: ResourceRef }) {
           />
         ) : null}
         {!value ? <Text>Loading requests…</Text> : null}
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => void host.call("navigation.open", { target: ticketPageTarget(resource) })}
-        >
-          Open ticket
-        </Button>
       </Stack>
     </ScrollArea>
   );

@@ -185,6 +185,18 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
     .flatMap((section: { rows: Array<{ id: string }> }) => section.rows)
     .find((entry: { id: string }) => entry.id === ticket.id);
   expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["human-needed"]) });
+  expect(
+    mixed.ticketRows.find((entry: { id: string }) => entry.id === ticket.id).attributes.reviewRequestItems,
+  ).toMatchObject([
+    { label: "1", icon: "message-circle-warning", color: "orange", target: { page: { id: "ticket-requests" } } },
+  ]);
+  const tree = await execute("ticket-files.tree.body", {
+    renderer: { rendererId: "pstdio.pstdio-planner.view.ticket-files", resource: { type: "ticket", id: ticket.id } },
+  });
+  expect(tree[0].nodes.find((node: { id: string }) => node.id === "review-requests")).toMatchObject({
+    icon: "message-circle-warning",
+    badge: { label: "1", color: "orange" },
+  });
   expect(await execute("review-requests.list", { ticket: ticket.id, openOnly: true })).toMatchObject({
     requests: [{ id: handoff.id }],
   });
@@ -194,4 +206,8 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
   expect(settled).toMatchObject({ state: "answered", outcomeText: "Platforms: macOS, Windows" });
   const [stored] = (await execute("read-tickets", {})).filter((entry: { id: string }) => entry.id === ticket.id);
   expect(stored.tagIds ?? []).not.toContain(reviewNeeded);
+  const resolved = await execute("timeline.plan.read", {});
+  expect(
+    resolved.ticketRows.find((entry: { id: string }) => entry.id === ticket.id).attributes.reviewRequestItems,
+  ).toMatchObject([{ label: "3", color: "green" }]);
 }

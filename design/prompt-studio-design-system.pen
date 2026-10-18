@@ -190883,6 +190883,208 @@
           }
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "T1I0q",
+      "x": 55230,
+      "y": 0,
+      "name": "Review request indicators · PS-670",
+      "width": 500,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "WrS3G",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Review requests",
+          "fontFamily": "$font-body",
+          "fontSize": 16,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "CKPNd",
+          "name": "Sidebar · Open",
+          "width": "fill_container",
+          "height": 28,
+          "gap": 8,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "OEEhB",
+              "name": "Review request icon",
+              "width": 16,
+              "height": 16,
+              "icon": "message-circle-warning",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "text",
+              "id": "UAaYB",
+              "name": "Sidebar label",
+              "fill": "$ds-fg",
+              "content": "Review requests",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "i7lUwR",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "uA6Ov",
+              "type": "ref",
+              "ref": "dbK8Z",
+              "name": "Sidebar count",
+              "theme": {
+                "badge": "subtle",
+                "palette": "orange",
+                "size": "sm"
+              },
+              "descendants": {
+                "ohhQY": {
+                  "enabled": false
+                },
+                "FaaBK": {
+                  "content": "3"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "p8olSW",
+          "type": "ref",
+          "ref": "dbK8Z",
+          "name": "Card and timeline · Open",
+          "theme": {
+            "badge": "subtle",
+            "palette": "orange",
+            "size": "sm"
+          },
+          "descendants": {
+            "ohhQY": {
+              "type": "icon",
+              "id": "iMhe5",
+              "name": "Review requests",
+              "width": 14,
+              "height": 14,
+              "icon": "message-circle-warning",
+              "library": "lucide",
+              "fill": "$badge-fg"
+            },
+            "FaaBK": {
+              "content": "3"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "AEBGE",
+          "name": "Sidebar · Resolved",
+          "width": "fill_container",
+          "height": 28,
+          "gap": 8,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "DfEUj",
+              "name": "Review request icon",
+              "width": 16,
+              "height": 16,
+              "icon": "message-circle-warning",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "text",
+              "id": "ruVGf",
+              "name": "Sidebar label",
+              "fill": "$ds-fg",
+              "content": "Review requests",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "kepW2",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "SRbxg",
+              "type": "ref",
+              "ref": "dbK8Z",
+              "name": "Sidebar count",
+              "theme": {
+                "badge": "subtle",
+                "palette": "green",
+                "size": "sm"
+              },
+              "descendants": {
+                "ohhQY": {
+                  "enabled": false
+                },
+                "FaaBK": {
+                  "content": "3"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ZQNxY",
+          "type": "ref",
+          "ref": "dbK8Z",
+          "name": "Card and timeline · Resolved",
+          "theme": {
+            "badge": "subtle",
+            "palette": "green",
+            "size": "sm"
+          },
+          "descendants": {
+            "ohhQY": {
+              "type": "icon",
+              "id": "mFtTF",
+              "name": "Review requests",
+              "width": 14,
+              "height": 14,
+              "icon": "message-circle-warning",
+              "library": "lucide",
+              "fill": "$badge-fg"
+            },
+            "FaaBK": {
+              "content": "3"
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "VyFTY",
+          "name": "Indicator behavior",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "No requests: no indicator. Orange: open count. Green: resolved total. Each indicator opens the ticket review requests page.",
+          "fontFamily": "$font-label",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
     }
   ],
   "themes": {
