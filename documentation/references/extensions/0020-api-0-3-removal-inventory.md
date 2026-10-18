@@ -29,6 +29,10 @@ in their owning PRs.
 | `unwrapCommandOutcome` | Check the outcome explicitly, or use `getCommandValue` and `CommandOutcomeError.outcome` | Compatibility consumers until extension adoption | None | 0.45 |
 | `createWebviewCommandStream`, `streamExtensionCommand`, `CommandStreamClientEvent`, SDK `extensions.stream`, `CommandStream.result` | Canonical chunk stream with `outcome` and `cancel`; SDK `extensions.streamCommand` | Legacy stream consumers; packaged parity test covers old and new | None | 0.45 |
 | Cross-extension registered preference names in `preferences.get`/`set` | Caller-owned names or supported core preferences | External callers unknown; compatibility access warns during 0.44 | None; keep owner values and core preferences | 0.45 |
+| HTTP workspace `provider_operation_kind: "archive"` value | `"delete"` for new operations | Historical workspace rows and external clients; no new archive operations | Convert stored operation kinds, provider capability JSON and archived provider states in the separate 0.45 conversion PR | 0.45 |
+
+HTTP `capabilities.archive` was deprecated in stable 0.43.1 and removed by PS-805 in 0.44. It is
+not a new 0.44 deprecation and must not be restored.
 
 `host.dispatchKeyboardEvent` is private guest plumbing, outside the public capability union.
 Keyboard forwarding continues through the private runtime path and requires no declaration.
