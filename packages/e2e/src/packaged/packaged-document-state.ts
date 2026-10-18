@@ -16,6 +16,7 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
   const main = page.locator('[data-workbench-panel-header="main"]');
   const optional = main.getByRole("tab", { name: "Lab", exact: true });
   await expect(optional).toBeVisible();
+  await optional.focus();
   await optional.getByRole("button", { name: "Close Lab", exact: true }).click();
   await expect(optional).toHaveCount(0);
   await navigate("b");
@@ -88,8 +89,12 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
   await expect(optional).toBeVisible();
+  await optional.focus();
   await optional.getByRole("button", { name: "Close Lab", exact: true }).click();
   await expect(optional).toHaveCount(0);
+  const fallbackA = await fallback.getAttribute("data-workbench-instance");
+  expect(fallbackA).not.toBeNull();
   await navigate("b");
+  await expect(fallback).not.toHaveAttribute("data-workbench-instance", fallbackA!);
   await expect(optional).toHaveCount(0);
 };

@@ -15,7 +15,10 @@ export const createDocumentLayoutPages = (
     resource: { kinds: [kind] },
     document: { metadataKey: "document" },
     main: { kind: "panels", empty },
-    slots: [{ id: "optional", region: "main", item: { kind: "view", view: optional, presence: "open" } }],
+    slots: [
+      { id: "marker", region: "main", item: { kind: "view", view: empty, presence: "fixed" } },
+      { id: "optional", region: "main", item: { kind: "view", view: optional, presence: "open" } },
+    ],
   }),
   definePage({
     id: "document-preview",
