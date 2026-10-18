@@ -63,8 +63,9 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   const page = useWorkbenchStore(workbench.pages.store, (state) =>
     state.activePageId ? state.pages[state.activePageId] : undefined,
   );
+  const routedResource = useWorkbenchStore(workbench.pages.store, (state) => state.location?.resource);
   const placement = useWorkbenchStore(workbench.layout.store, (state) =>
-    resolvePageBreadcrumbPlacement(state.layout, page),
+    resolvePageBreadcrumbPlacement(state.layout, page, routedResource),
   );
   const snapshot = usePlacementTab(placement, workbench);
   useWorkbenchResourceActionResolver(workbench);
