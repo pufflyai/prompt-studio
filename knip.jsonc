@@ -173,8 +173,8 @@
       ],
       "project": ["src/**/*.ts"],
       "ignore": ["dist/**"],
-      // tsconfig.build.json includes this transitive contract source in the declaration bundle.
-      "ignoreDependencies": ["pstdio-sync-contracts"]
+      // Public declarations inline private contracts, including their Zod types.
+      "ignoreDependencies": ["pstdio-sync-contracts", "zod"]
     },
     "packages/pstdio-workbench": {
       "entry": [

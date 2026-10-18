@@ -23,13 +23,17 @@ The API is also not settled. Breaking changes will keep coming for a while, and 
 - New APIs are added next to old ones, and the old ones are deprecated. Deprecated APIs are removed together in one breaking release. `AGENTS.md` states this rule.
 - `engines.pstdio` is one or more `^MAJOR.MINOR.PATCH` terms joined by `||`. Other forms are refused.
 - The host accepts an extension when its version satisfies the declaration.
-- CI keeps a checked-in report of the public `@pstdio/sdk/extensions` types. It fails when the report is out of date, when the report changed since the last release without a version bump, when the version moved more than one step, and when the version is lower than the one on `main`. The report keeps `@deprecated` tags, so a deprecation also requires a bump.
+- CI generates reports of the public SDK types from the last release and the proposed source when verification runs. Reports are ignored build output. It fails when the API changed since the last release without a version bump, when the version moved more than one step, and when the version is lower than the one on `main`. The report keeps `@deprecated` tags, so a deprecation also requires a bump.
 - The alpha status of the product lives in the `pstdio` package version, not in the API version.
 
 The report is not the SDK's published type bundle, because that bundle splits shared types into chunks with hashed names. The report builds each public extension entry into one self-contained file instead. A report must be stable, or every build would look like an API change. By default TypeScript prints union members in the order it first created their types, which changes with the order it checks files. PS-660 turned on the TypeScript 6.0 option `stableTypeOrdering`, which orders types the same way every time.
 
+PS-809 replaces the original committed snapshots with reports generated during verification. The release source is extracted into a temporary folder and its locked dependencies are installed without lifecycle scripts. Both sides use the current declaration generator and toolchain, with each source tree's type dependencies. Each revision supplies its public entrypoint inventory; older releases use their SDK exports. CI compares the union of entries and retains the generated reports and diff as an artifact, including on version-check failure. The local command does the same without changing tracked files.
+
 ## Consequences
 
+- PRs contain source changes instead of large generated declaration snapshots. Reviewers inspect the API diff in CI artifacts or the ignored local output.
+- Verification must install and build the released source as well as the proposed source. This costs extra CI time and depends on historical locked dependencies remaining available. A failed baseline build stops verification. Using one current generator for both sides avoids comparing output from different generator versions.
 - Additive host releases no longer touch extension manifests.
 - The version grows by at most one step per release. The alpha history would have produced about 5 steps instead of 14.
 - An extension that needs a newer API raises its minimum, and an older host tells the user to update Prompt Studio.
