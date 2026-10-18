@@ -120,6 +120,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     input,
     () => core?.pages.store.getState().activeModeId,
     (id) => core?.layout.getWidget(id)?.tab,
+    () => core?.pages.listPages() ?? [],
   );
   const cachedInput = { ...input, persistence: undefined, layoutPersistence: layoutCache.layout };
   const locationAwareLayout = createLayoutModel({

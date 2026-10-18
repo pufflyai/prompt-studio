@@ -2,22 +2,36 @@ import { expect, type Page } from "@playwright/test";
 
 export const verifyPackagedDocumentState = async (page: Page, origin: string, projectId: string) => {
   const resource = `pstdio://extension-resource/glass-lab-artifact/layout?extensionId=pstdio.workbench-fixture&projectId=${projectId}`;
-  const url = (document: string, route = "document-layout") =>
-    `${origin}/projects/${projectId}/extensions/pstdio.workbench-fixture/${route}?resource=${encodeURIComponent(resource)}&document=${document}`;
-  const navigate = (document: string, route = "document-layout") =>
+  const url = (document: string, route = "document-layout", section?: string) => {
+    const target = new URL(`${origin}/projects/${projectId}/extensions/pstdio.workbench-fixture/${route}`);
+    target.searchParams.set("resource", resource);
+    target.searchParams.set("document", document);
+    if (section) target.searchParams.set("section", JSON.stringify({ anchors: [{ id: section, heading: section }] }));
+    return target.href;
+  };
+  const navigate = (document: string, route = "document-layout", section?: string) =>
     page.evaluate(
       (href) => {
         history.pushState(null, "", href);
         dispatchEvent(new PopStateEvent("popstate"));
       },
-      url(document, route),
+      url(document, route, section),
     );
   await page.goto(url("a"));
   const main = page.locator('[data-workbench-panel-header="main"]');
   const optional = main.getByRole("tab", { name: "Lab", exact: true });
   await expect(optional).toBeVisible();
+  await main.getByRole("tab", { name: "Overview", exact: true }).click();
+  const section = page.frameLocator('iframe[title="Overview"]:visible').getByLabel("Current section", { exact: true });
+  await navigate("a", "document-layout", "first");
+  await expect(section).toHaveText("first");
+  await navigate("a", "document-layout", "second");
+  await expect(section).toHaveText("second");
   await optional.focus();
   await optional.getByRole("button", { name: "Close Lab", exact: true }).click();
+  await expect(optional).toHaveCount(0);
+  await navigate("a", "document-layout", "first");
+  await expect(section).toHaveText("first");
   await expect(optional).toHaveCount(0);
   await navigate("b");
   await expect(optional).toBeVisible();

@@ -33,6 +33,10 @@ The project/mode layout cache owns all Side/Bottom tabs, visibility and sizes, i
 
 Layout snapshots store placement data. Runtime tab providers, including labels, menus and subscriptions, come from the current registered contribution when a snapshot restores. They are never read as executable providers from JSON.
 
+Resource-page panel choices use the resource and its declared document as their owner. Section, source-position and parent breadcrumb changes keep those same choices. Closing an optional Main view in one section keeps it closed in every section of that document.
+
+An accepted version-5 snapshot may still store Main inside its older page scope. On first load, the cache transfers that entire tray to its captured route's Main owner, preserving foreign-created tabs, order and selection. It then removes Main from the old scope. Visiting a different document or project first does not take ownership of those tabs. An existing Main entry, including an empty one, always wins.
+
 Moving a page tab to Side or Bottom keeps that tab across other pages in the same mode, including after reload. For example, moving Tickets to Side keeps Tickets visible while Project Timeline opens in Main. Moving a Zipline issue from Side to Bottom keeps it in Bottom while visiting the board. Closing, pinning or unpinning such a tab edits its current panel and preserves the current route. Moving it into Main makes it local to the page where it was dropped. Returning to its creator page reuses an existing shared tab in its actual panel. A single-resource Main view has an identity for each resource, so opening resource B cannot replace resource A that was moved into another panel.
 
 Main choices remain independent between pages. Opening the same resource separately on another page and closing that shared view does not delete a hidden pinned Main view on the first page. Moving the first page's actual Main tab into Side or Bottom removes it from that page's Main snapshot.

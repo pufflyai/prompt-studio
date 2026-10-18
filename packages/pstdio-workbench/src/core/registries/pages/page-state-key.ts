@@ -29,10 +29,12 @@ export const pageStateKey = (
   page: WorkbenchPageContribution,
   location: PageLocation | undefined,
   resources: WorkbenchPageResourceCodec,
-) =>
-  (page.main.kind === "panels" || page.resource) && location
-    ? `${pageStateOwnerKey(page, location.resource, resources)}|${workbenchPageLocationKey({ ...location, position: undefined }, resources)}`
+) => {
+  if (page.resource) return pageStateOwnerKey(page, location?.resource, resources);
+  return page.main.kind === "panels" && location
+    ? `${page.id}|${workbenchPageLocationKey({ ...location, position: undefined }, resources)}`
     : page.id;
+};
 
 export const removePageStates = <State>(states: Readonly<Record<string, State>>, pageId: string) =>
   Object.fromEntries(Object.entries(states).filter(([key]) => key !== pageId && !key.startsWith(`${pageId}|`)));
