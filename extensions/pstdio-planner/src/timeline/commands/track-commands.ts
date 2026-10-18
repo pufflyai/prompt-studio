@@ -18,7 +18,7 @@ export async function readTrack(ctx: CommandContext, tags?: StoredTag[]) {
   const property = tags.find(({ id }) => id === binding);
   if (property?.type !== "single_select") {
     throw new Error(
-      "The timeline's Track property is missing or no longer single-select. In Settings > Project > Ticket tags, restore it as a single-select property.",
+      "The timeline's Track property is missing or no longer single-select. In Settings > Project Planner > Ticket tags, restore it as a single-select property.",
     );
   }
   return property;

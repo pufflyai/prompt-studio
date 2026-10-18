@@ -4,7 +4,7 @@ Planner adds tickets to Prompt Studio. Plan work on a board, hand tickets to cod
 
 ## Install
 
-Planner is not installed by default. Open **Settings → Project → Extensions**, find **Prompt Studio Planner** under **Available**, and select **Install**. You can also run this inside a project folder:
+Planner is not installed by default. Open **Settings → Project → Extensions**, find **Project Planner** under **Available**, and select **Install**. You can also run this inside a project folder:
 
 ```sh
 pst extensions add pstdio-planner
@@ -32,7 +32,7 @@ Use **Open tickets** in the dashboard command palette to open the current projec
 
 ## Refinement options
 
-Open Settings → Project → Extensions → Prompt Studio Planner, then the Settings tab. **Generate an artifact prototype for UX features** is enabled by default. It applies when refining a new feature with UX changes and Artifacts is installed and enabled for the project.
+Open Settings → Project → Extensions → Project Planner, then the Settings tab. **Generate an artifact prototype for UX features** is enabled by default. It applies when refining a new feature with UX changes and Artifacts is installed and enabled for the project.
 
 The refine-ticket skill reads the project option with `pst pstdio-planner refinement-policy`. The result contains `generateArtifactPrototype`. When enabled, the agent publishes an interactive prototype and links it in the ticket before completing refinement. If the option is off or Artifacts is unavailable, the agent records why it skipped the prototype. Tickets without a new UX feature do not require one.
 
@@ -40,7 +40,7 @@ Install the optional **Artifacts** extension from Extensions to use prototypes. 
 
 ## Implementation options
 
-Open Settings → Project → Extensions → Prompt Studio Planner, then the Settings tab, to configure the `implement-ticket` workflow:
+Open Settings → Project → Extensions → Project Planner, then the Settings tab, to configure the `implement-ticket` workflow:
 
 - **Adversarial review** runs a review automatically before the final commit and handoff.
 - **Open PR** opens a draft pull request after validation and links it to the ticket.

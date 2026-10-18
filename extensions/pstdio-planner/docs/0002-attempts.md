@@ -48,7 +48,7 @@ Planner then does the following:
 
 Planner does not merge work. Merging, delivering, and moving the ticket to Done are your decisions.
 
-If two implementation sessions are already running in the project, Run attempt does not start another one. To change the limit, open **Settings → Project → Extensions**, select **Prompt Studio Planner**, and set **Maximum in-progress tickets** on its **Settings** tab.
+If two implementation sessions are already running in the project, Run attempt does not start another one. To change the limit, open **Settings → Project → Extensions**, select **Project Planner**, and set **Maximum in-progress tickets** on its **Settings** tab.
 
 `pst tickets implement` is a lighter option. It moves the ticket to In Progress and starts one agent session with the implement-ticket prompt. It does not create a worktree, a managed attempt, or a review.
 

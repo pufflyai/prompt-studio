@@ -98,9 +98,9 @@ Planner sends a notification when a ticket needs you:
 
 Planner adds these settings for each project:
 
-- **Settings → Project → Extensions → Prompt Studio Planner → Settings** holds the options for the implement-ticket workflow. See the [Planner overview](../README.md#implementation-options).
-- **Settings → Project → Ticket tags** edits the project's [tags](0001-tags-and-statuses.md#tags).
-- **Settings → Project → Statuses** edits the project's [statuses](0001-tags-and-statuses.md#statuses).
+- **Settings → Project → Extensions → Project Planner → Settings** holds the options for the implement-ticket workflow. See the [Planner overview](../README.md#implementation-options).
+- **Settings → Project Planner → Ticket tags** edits the project's [tags](0001-tags-and-statuses.md#tags).
+- **Settings → Project Planner → Ticket status** edits the project's [statuses](0001-tags-and-statuses.md#statuses).
 - **Settings → Project → Templates** edits Planner's ticket, prompt, and document templates. The prompt templates hold the instructions Planner gives agents, for example when it runs an attempt or a review. Edit them to change how agents work on your tickets.
 
 The Ticket tags header keeps **Save** and **Reset** visible while you scroll through tag definitions.
