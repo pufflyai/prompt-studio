@@ -1,4 +1,3 @@
-import { stat } from "node:fs/promises";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
 import { findEnabledSource } from "../command-environment/types";
@@ -126,8 +125,7 @@ export const getExtensionFileContentHandler = (
     if (matchesEtag(c.req.raw.headers.get("if-none-match"), file.hash)) return c.body(null, 304, headers);
 
     try {
-      await stat(file.storage_path);
-      return c.body(Bun.file(file.storage_path).stream(), 200, headers);
+      return c.body(await deps.extensionFileService.read(file, c.req.raw.signal), 200, headers);
     } catch (error) {
       if (isMissingFileError(error)) return c.json({ error: `Extension file not found: ${fileId}` }, 404);
       throw error;

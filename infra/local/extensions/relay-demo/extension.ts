@@ -4,12 +4,10 @@ import {
   defineNavigationItem,
   definePage,
   defineView,
-  eventRef,
   params,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 
-const changed = eventRef({ extensionId: "pstdio-tests.relay-demo", id: "storage-changed" });
 const read = defineCommand({
   id: "read",
   title: "Read shared message",
@@ -22,7 +20,6 @@ const save = defineCommand({
   params: { message: params.text({ required: true }) },
   async run(ctx, { message }) {
     await ctx.storage.set("message", message);
-    await ctx.events.emit(changed, {});
     return { message };
   },
 });
@@ -31,7 +28,6 @@ const editor = defineView({
   title: "Shared message",
   body: {
     kind: "controls",
-    refreshEvents: [changed],
     async query(ctx) {
       return {
         params: [{ id: "message", type: "text", name: "Shared message", defaultValue: "" }],
@@ -40,7 +36,6 @@ const editor = defineView({
     },
     async onValueChange(ctx, { value }) {
       await ctx.storage.set("message", String(value));
-      await ctx.events.emit(changed, {});
     },
   },
 });

@@ -1,6 +1,7 @@
 import {
   type AssetStore,
   createLegacyRecordStorage,
+  type StorageObserver,
   type StorageOwner,
   scopeRecordStorage,
   storageRecordId,
@@ -15,8 +16,8 @@ import { getExtensionStorageOwner } from "./storage-owner";
 
 export type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
 
-export const createExtensionStorageDBService = (db: DbClient) => {
-  const grouped = createGroupedStorageDBService(db);
+export const createExtensionStorageDBService = (db: DbClient, observer?: StorageObserver) => {
+  const grouped = createGroupedStorageDBService(db, observer);
   const scopeFor = async (scope: KvScope) => {
     const owner = await getExtensionStorageOwner(db, scope.extension_instance_id);
     if (!owner) return null;

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-webview-broadcast";
+import {
+  subscribeToExtensionEventFeed,
+  subscribeToExtensionEventReset,
+} from "@/shared/extensions/extension-webview-broadcast";
 import { subscribeToResourceRemovals } from "@/shared/extensions/resource-removal-feed";
 import { createRuntimeCollections } from "./collections";
 import { createDashboardSyncWriterProvider, parseSyncDeleteEvent } from "./sync-client";
@@ -84,5 +87,20 @@ it("delivers committed anchor changes to views of both endpoints", async () => {
     expect(events).toEqual([event]);
   } finally {
     unsubscribe();
+  }
+});
+
+it("refreshes ordinary extension views after a committed storage change without extension-specific listeners", async () => {
+  const collections = createRuntimeCollections();
+  let resets = 0;
+  const stop = subscribeToExtensionEventReset(() => resets++, collections);
+  try {
+    createDashboardSyncWriterProvider(collections)
+      .getWriter("extension_events")!
+      .upsert({ id: "committed", eventId: "pstdio.event.storage-changed", projectId: "workbench" });
+    expect(resets).toBe(1);
+  } finally {
+    stop();
+    await collections.dispose();
   }
 });

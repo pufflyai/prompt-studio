@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { applyRecordChange, blankRecord } from "pstdio-sync";
+import { applyRecordChange, blankRecord, storageRecordId } from "pstdio-sync";
 import { fingerprint, type Snapshot, sealMutation } from "pstdio-sync-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createNativeRelayPeer } from "./native-relay-peer.fixture";
@@ -64,6 +64,14 @@ export const registerNativeRelaySmokeTests = () => {
           await fetch(`${host.baseUrl}/v1/environment`, { headers: runtimeAuthorization(host.descriptor) })
         ).json()) as { environmentId: string };
         const scope = { accountId: "owned-wire-peer", workbenchId: project.id, extensionId: "example.shared-notes" };
+        const bytes = new TextEncoder().encode("Ordinary files from another environment");
+        const asset = {
+          sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),
+          byteLength: bytes.byteLength,
+          mediaType: "text/plain",
+        };
+        const documentId = storageRecordId(["artifact-file"], "documents/remote.txt");
+        const blobId = storageRecordId(["blob-file"], "remote-attachment");
         const mutation = await sealMutation({
           protocolVersion: 1,
           scope,
@@ -77,6 +85,38 @@ export const registerNativeRelaySmokeTests = () => {
               baseDeleted: false,
               value: { expected: await fingerprint(null), next: "From the native connection" },
             },
+            {
+              recordId: documentId,
+              expectedRevision: 0,
+              baseDeleted: false,
+              value: {
+                expected: await fingerprint(null),
+                next: {
+                  path: "documents/remote.txt",
+                  kind: "file",
+                  parent: JSON.stringify(["mount-root", "documents"]),
+                  updatedAt: "2026-01-01T00:00:00.000Z",
+                },
+              },
+              asset: { base: null, next: asset },
+            },
+            {
+              recordId: blobId,
+              expectedRevision: 0,
+              baseDeleted: false,
+              value: {
+                expected: await fingerprint(null),
+                next: {
+                  name: "attachment.txt",
+                  mimeType: "text/plain",
+                  scopeType: "project",
+                  scopeId: project.id,
+                  createdAt: "2026-01-01T00:00:00.000Z",
+                  updatedAt: "2026-01-01T00:00:00.000Z",
+                },
+              },
+              asset: { base: null, next: asset },
+            },
           ],
         });
         const checkpoint = { epoch: "owned-wire-peer", sequence: 1 };
@@ -86,7 +126,12 @@ export const registerNativeRelaySmokeTests = () => {
           checkpoint,
           journalSequence: 1,
           publishedRevision: "published",
-          records: { [initial.recordId]: applyRecordChange(blankRecord(initial.recordId), mutation.changes[0]!) },
+          records: Object.fromEntries(
+            mutation.changes.map((change) => [
+              change.recordId,
+              applyRecordChange(blankRecord(change.recordId), change),
+            ]),
+          ),
           receipts: {
             "remote-save": {
               order: 1,
@@ -102,7 +147,7 @@ export const registerNativeRelaySmokeTests = () => {
         };
         // This owned protocol peer checks bundle wiring. Real manager/PostgreSQL/S3 behavior is tested separately.
         let recovered = false;
-        peer = createNativeRelayPeer(snapshot, (operationId) => {
+        peer = createNativeRelayPeer(snapshot, bytes, (operationId) => {
           recovered = operationId === "remote-save";
         });
         const configPath = join(root, "relay.json");
@@ -111,7 +156,8 @@ export const registerNativeRelaySmokeTests = () => {
           JSON.stringify({
             connections: [
               {
-                ...scope,
+                accountId: scope.accountId,
+                workbenchId: scope.workbenchId,
                 environmentId: identity.environmentId,
                 managerOrigin: peer.url.origin,
                 relayOrigin: peer.url.origin,
@@ -125,6 +171,21 @@ export const registerNativeRelaySmokeTests = () => {
         host = await startPackagedServe(root, { ...env, PSTDIO_RELAY_CONFIG_FILE: configPath });
         while ((await read(project.id)).value !== "From the native connection") await Bun.sleep(20);
         expect((await read(project.id)).value).toBe("From the native connection");
+        const filesResponse = await post(
+          `/projects/${project.id}/extensions/commands/example.shared-notes.command.read-files/execute`,
+          { params: {} },
+        );
+        const files = (await filesResponse.json()) as {
+          outcome: { ok: boolean; value: { document: string; attachment: string; reference: { url: string } } };
+        };
+        if (!files.outcome.ok) throw new Error(JSON.stringify(files.outcome));
+        expect(files.outcome.ok).toBe(true);
+        expect(files.outcome.value.document).toBe(new TextDecoder().decode(bytes));
+        expect(files.outcome.value.attachment).toBe(new TextDecoder().decode(bytes));
+        const content = await fetch(`${host.baseUrl}${files.outcome.value.reference.url}`, {
+          headers: runtimeAuthorization(host.descriptor),
+        });
+        expect(await content.text()).toBe(new TextDecoder().decode(bytes));
         await stopProcess(host.child);
         Object.assign(snapshot, {
           checkpoint: { epoch: "restored-peer", sequence: 0 },

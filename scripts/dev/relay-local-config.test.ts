@@ -1,11 +1,10 @@
 import { expect, test } from "bun:test";
 import { type LocalRelayConnection, localGrantNeedsEnrollment, upsertLocalRelayConnection } from "./relay-local-config";
 
-test("renewing the fixture grant preserves other shared workbench and extension connections", () => {
+test("renewing the fixture grant preserves other shared workbench connections", () => {
   const original: LocalRelayConnection = {
     accountId: "account",
     workbenchId: "fixture",
-    extensionId: "demo",
     environmentId: "environment",
     managerOrigin: "https://authority:8443",
     relayOrigin: "https://relay:8080",
@@ -14,7 +13,6 @@ test("renewing the fixture grant preserves other shared workbench and extension 
   const notes = {
     ...original,
     workbenchId: "actual-user-workbench",
-    extensionId: "notes",
     renewalGrant: "notes-secret",
   };
   const replacement = { ...original, renewalGrant: "renewed" };

@@ -24,7 +24,7 @@ test("runtime storage returns to project scope with the same durable migration v
     );
     writeFileSync(join(source, "extension.ts"), "export default {};");
     const project = await app.deps.projectService.create({ name: "Storage scopes" });
-    const { instance } = await app.deps.extensionService.enableInstalledSourceForProject({
+    const { instance, installedSource } = await app.deps.extensionService.enableInstalledSourceForProject({
       projectId: project.id,
       sourcePath: source,
       extensionId: "test.scope",
@@ -33,7 +33,11 @@ test("runtime storage returns to project scope with the same durable migration v
       displayName: "Scope",
       manifest: { name: "scope" },
     });
-    const storage = createStorageApi(app.deps, { extensionInstanceId: instance.id, projectId: project.id });
+    const storage = createStorageApi(app.deps, {
+      extensionInstanceId: instance.id,
+      extensionId: installedSource.extension_id,
+      projectId: project.id,
+    });
     await storage.set("value", "project");
     const resource = storage.scope({ type: "resource", resource: { type: "note", id: "one" } });
     await resource.set("value", "resource");

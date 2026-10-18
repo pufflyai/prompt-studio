@@ -4,6 +4,7 @@ import { checkpointSchema } from "./state";
 import { assetSchema, fingerprintSchema, identitySchema, mutationSchema } from "./wire";
 
 export const relayOperationSchema = z.enum([
+  "initialize",
   "snapshot",
   "replay",
   "submit",
@@ -65,3 +66,5 @@ export const relayAssetStatusSchema = z.strictObject({
   ),
 });
 export const relayEventSchema = z.strictObject({ protocolVersion: z.literal(1), type: z.enum(["ready", "changed"]) });
+
+export const relayInitializeSchema = z.strictObject({ publishedRevision: identitySchema });

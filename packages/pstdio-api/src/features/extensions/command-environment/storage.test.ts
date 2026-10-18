@@ -39,7 +39,11 @@ test("host storage exposes guarded groups, verified assets, legacy access, and i
         sourceKind: "local_path",
         sourcePath,
       });
-      return createStorageApi(handle.deps, { projectId: project.id, extensionInstanceId: enabled.instance.id });
+      return createStorageApi(handle.deps, {
+        projectId: project.id,
+        extensionInstanceId: enabled.instance.id,
+        extensionId: enabled.installedSource.extension_id,
+      });
     };
     const [first, other] = await Promise.all([context("First"), context("Other")]);
     await first.set("setting", "old API");

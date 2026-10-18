@@ -19,13 +19,14 @@ Edit one word in this sentence. Keep {{fds:text:EXAMPLE.REGULAR_INSEAM_SENTENCE}
 {"enabled": true}
 ~~~`;
 
-const LosslessSourceStory = () => {
-  const [markdown, setMarkdown] = useState(regressionSource);
+const LosslessSourceStory = (props: { source?: string }) => {
+  const { source = regressionSource } = props;
+  const [markdown, setMarkdown] = useState(source);
 
   return (
     <SimpleGrid columns={{ base: 1, lg: 2 }} gap="md">
       <Box borderWidth="1px" borderColor="border.subtle" minH="30rem">
-        <MarkdownEditor defaultState={regressionSource} isEditable onChange={setMarkdown} />
+        <MarkdownEditor defaultState={source} isEditable onChange={setMarkdown} />
       </Box>
       <Stack gap="sm" minW="0">
         <Text textStyle="label/M/medium">Emitted Markdown source</Text>
@@ -63,4 +64,9 @@ type Story = StoryObj<typeof MarkdownEditor>;
 
 export const LosslessEditing: Story = {
   render: () => <LosslessSourceStory />,
+};
+
+export const SelectAllHeadings: Story = {
+  tags: ["!manifest"],
+  render: () => <LosslessSourceStory source={"First paragraph.\n\n\n\nSecond paragraph.\n\n\n\nThird paragraph."} />,
 };

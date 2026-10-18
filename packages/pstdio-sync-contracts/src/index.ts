@@ -5,4 +5,5 @@ export * from "./identity";
 export * from "./replay";
 export * from "./state";
 export * from "./transport";
+export { relayInitializeSchema } from "./transport";
 export * from "./wire";

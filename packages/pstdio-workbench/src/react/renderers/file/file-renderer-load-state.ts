@@ -2,7 +2,13 @@
 // revision that drives the editor's React key, and the single place where a
 // fetched document is accepted.
 
-import type { FileRendererContent } from "../../../core";
+import type {
+  FileRendererContent,
+  FileRendererRefreshOrigin,
+  RegisteredFileRendererContribution,
+  ResourceRef,
+} from "../../../core";
+import { copyFileStorageVersions } from "../../../extensions/contributions/file-storage-versions";
 import type { FileEditController } from "./file-renderer-edit-state";
 
 export interface LoadedFile extends FileRendererContent {
@@ -67,4 +73,16 @@ export const acceptFileRendererLoad = (
     editorRevision: nextLoadedRevision(previous, next, loadKey, accepted.shown),
     loadKey,
   });
+};
+
+export const saveLoadedFile = async (
+  contribution: RegisteredFileRendererContribution,
+  resource: ResourceRef | undefined,
+  value: string,
+  origin: FileRendererRefreshOrigin,
+  loaded: FileRendererContent | undefined,
+) => {
+  const result = await contribution.save?.(resource, value, origin, loaded);
+  const content = loaded ? copyFileStorageVersions({ ...loaded, content: value }, result) : undefined;
+  return { result: result ?? undefined, content };
 };

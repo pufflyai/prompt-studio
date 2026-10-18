@@ -126,7 +126,7 @@ export const applyRecordChange = (record: StoredRecord, change: Change) => {
   }
   if (change.value) next.value = change.value.next;
   if (change.asset) next.asset = change.asset.next;
-  next.deleted = change.deleted ?? record.deleted;
+  next.deleted = change.deleted ?? change.baseDeleted;
   next.revision++;
   return next;
 };

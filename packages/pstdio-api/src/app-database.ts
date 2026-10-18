@@ -31,6 +31,7 @@ import type { AppLifecycle } from "./app-contracts";
 import { apiLogger } from "./lib/logger";
 import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "./lib/pglite-recovery-hint";
 import { logStartupPhase } from "./lib/startup-phase";
+import { storageObserver } from "./services/shared-files/storage-observation";
 
 const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
   const message = error instanceof Error ? `${error.message}\n${error.stack ?? ""}` : String(error);
@@ -76,7 +77,7 @@ export const createAppDatabaseServices = (db: DbClient) => ({
   extensionFilesDBService: createExtensionFilesDBService(db),
   extensionSkillPreferencesDBService: createExtensionSkillPreferencesDBService(db),
   extensionAutomationPreferencesDBService: createExtensionAutomationPreferencesDBService(db),
-  extensionStorageDBService: createExtensionStorageDBService(db),
+  extensionStorageDBService: createExtensionStorageDBService(db, storageObserver),
   resourceLinksDBService: createResourceLinksDBService(db),
   extensionResourceSequencesDBService: createExtensionResourceSequencesDBService(db),
   extensionSettingsDBService: createExtensionSettingsDBService(db),
