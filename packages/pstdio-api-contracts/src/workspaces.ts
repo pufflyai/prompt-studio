@@ -78,7 +78,13 @@ export const workspaceSchema = z.object({
   provider_state: workspaceProviderStateSchema,
   execution_kind: workspaceExecutionKindSchema,
   provider_operation_id: z.string().nullable(),
-  provider_operation_kind: z.enum(["create", "cancel", "archive", "delete"]).nullable(),
+  /** The archive value is deprecated. New operations use delete; historical rows remain readable until 0.45. */
+  provider_operation_kind: z
+    .enum(["create", "cancel", "archive", "delete"])
+    .describe(
+      'The "archive" value is deprecated; use "delete". Historical archive operations remain readable until 0.45.',
+    )
+    .nullable(),
   provider_error_json: workspaceProviderErrorSchema.nullable(),
   provider_capabilities_json: workspaceCapabilitiesSchema,
   display_path: z.string().nullable(),
