@@ -29,13 +29,14 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
   await expect(optional).toBeVisible();
   await page.goto(url("a", "document-preview"));
   await expect(optional).toBeVisible();
-  const a = await optional.locator("xpath=ancestor::*[@data-workbench-tab]").getAttribute("data-workbench-tab");
+  const placement = optional.locator("xpath=ancestor::*[@data-workbench-tab]");
+  const a = (await placement.getAttribute("data-workbench-tab")) ?? "";
+  expect(a).not.toBe("");
   await navigate("b", "document-preview");
   await expect(optional).toBeVisible();
-  expect(await optional.locator("xpath=ancestor::*[@data-workbench-tab]").getAttribute("data-workbench-tab")).not.toBe(
-    a,
-  );
+  await expect(placement).not.toHaveAttribute("data-workbench-tab", a);
   await navigate("a", "document-preview");
+  await expect(placement).toHaveAttribute("data-workbench-tab", a);
   await optional.focus();
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
