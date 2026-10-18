@@ -1,7 +1,6 @@
 import { Box, Image } from "@chakra-ui/react";
 import { PaletteShortcut, Tooltip, type TreeListActionMenuItem } from "@pstdio/ui";
 import type {
-  ContextKeyValue,
   KeybindingSequence,
   MenuPath,
   WorkbenchCommandExecutionContext,
@@ -23,7 +22,7 @@ export interface CreateMenuItemsInput {
 const commandContextValues = (
   workbench: WorkbenchCoreContributionContext,
   context: WorkbenchCommandExecutionContext | undefined,
-): Record<string, ContextKeyValue> =>
+) =>
   context?.resource
     ? scopeWorkbenchResourceContextValues(workbench.context.snapshot(), context.resource)
     : workbench.context.snapshot();

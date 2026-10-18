@@ -32,7 +32,7 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     if (placement.placementIdentity) workbench.closePlacement(placement.placementIdentity);
     else workbench.layout.closePanel(placement.widgetId);
   };
-  const tabAction = (key: string, title: string, icon: string, onClick: () => void): ResourceContextAction => ({
+  const tabAction = (key: string, title: string, icon: string, onClick: () => void) => ({
     key,
     label: title,
     icon: <WorkbenchIcon name={icon} size={14} />,
