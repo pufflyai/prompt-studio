@@ -1,0 +1,19 @@
+services:
+  prompt-studio:
+    volumes:
+      - type: volume
+        source: relay-app-deps
+        target: ${CONTAINER_WORKTREE:?CONTAINER_WORKTREE is required}/node_modules
+    environment:
+      BUN_INSTALL_CACHE_DIR: ${CONTAINER_WORKTREE}/node_modules/.cache/bun
+      PSTDIO_RELAY_CONFIG_FILE: ${HOST_PSTDIO_HOME}/relay.json
+      NODE_EXTRA_CA_CERTS: ${PSTDIO_RELAY_CA_FILE:?PSTDIO_RELAY_CA_FILE is required}
+networks:
+  default:
+    external: true
+    name: ${PSTDIO_RELAY_NETWORK:?PSTDIO_RELAY_NETWORK is required}
+
+volumes:
+  relay-app-deps:
+    external: true
+    name: ${PSTDIO_RELAY_PROJECT:?PSTDIO_RELAY_PROJECT is required}-app-deps

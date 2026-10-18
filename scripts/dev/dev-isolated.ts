@@ -13,6 +13,11 @@ import { resolveIsolatedUser } from "./isolated-user";
 import { resolveWorkingTreeDefaultExtensions } from "./working-tree-extensions";
 
 const COMPOSE_FILE = "infra/local/compose.yaml";
+const composeFiles = () => [
+  "-f",
+  COMPOSE_FILE,
+  ...(process.env.PSTDIO_ISOLATED_COMPOSE_FILE ? ["-f", process.env.PSTDIO_ISOLATED_COMPOSE_FILE] : []),
+];
 const PROJECT_PREFIX = "pstdio-cmp";
 const SERVICE = "prompt-studio";
 const CONTAINER_DASHBOARD_PORT = 5173;
@@ -147,7 +152,7 @@ const runCompose = (
   desktopMode = false,
   apiToken?: string,
 ) => {
-  const result = spawnSync("docker", ["compose", "-f", COMPOSE_FILE, "-p", projectName, ...extraArgs], {
+  const result = spawnSync("docker", ["compose", ...composeFiles(), "-p", projectName, ...extraArgs], {
     cwd: repoRoot,
     env: composeEnv(repoRoot, projectName, hostPorts, desktopMode, apiToken),
     stdio: "inherit",
@@ -164,7 +169,7 @@ const lookupHostPort = (
 ) => {
   const result = spawnSync(
     "docker",
-    ["compose", "-f", COMPOSE_FILE, "-p", projectName, "port", SERVICE, String(containerPort)],
+    ["compose", ...composeFiles(), "-p", projectName, "port", SERVICE, String(containerPort)],
     { cwd: repoRoot, env: composeEnv(repoRoot, projectName, hostPorts, desktopMode), encoding: "utf8" },
   );
   if (result.status !== 0) {
@@ -202,7 +207,7 @@ const createComposeServiceMonitor = (
   hostPorts: HostPorts,
   desktopMode: boolean,
 ) => {
-  const args = ["compose", "-f", COMPOSE_FILE, "-p", projectName];
+  const args = ["compose", ...composeFiles(), "-p", projectName];
   const options = {
     cwd: repoRoot,
     env: composeEnv(repoRoot, projectName, hostPorts, desktopMode),

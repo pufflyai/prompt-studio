@@ -98,6 +98,7 @@ services:
     profiles: ["test"]
     volumes:
       - tls-private:/tls-private
+      - relay-tls-private:/relay-tls-private
       - tls-public:/tls-public
 
   initialize:
@@ -156,6 +157,7 @@ volumes:
   objects-logs:
   fixture-data:
   access-trust:
+  relay-tls-private:
   tls-private:
   tls-public:
   recovery-key:

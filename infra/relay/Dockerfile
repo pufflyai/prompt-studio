@@ -11,14 +11,16 @@ COPY infra/relay/scripts ./infra/relay/scripts
 COPY infra/account-manager/src ./infra/account-manager/src
 COPY packages/pstdio-sync/src ./packages/pstdio-sync/src
 COPY packages/pstdio-sync-contracts/src ./packages/pstdio-sync-contracts/src
-RUN bun build infra/relay/src/server.ts infra/relay/src/index.ts infra/relay/scripts/smoke.ts infra/relay/scripts/initialize.fixture.ts infra/relay/scripts/transport-client-smoke.ts infra/relay/scripts/recovery-key.fixture.ts --target bun --outdir dist
+RUN bun build infra/relay/src/server.ts infra/relay/src/index.ts infra/relay/scripts/smoke.ts infra/relay/scripts/enroll-local.fixture.ts infra/relay/scripts/initialize.fixture.ts infra/relay/scripts/transport-client-smoke.ts infra/relay/scripts/recovery-key.fixture.ts --target bun --outdir dist
 
 RUN bun build infra/account-manager/src/server.ts --target bun --outfile dist/manager.js
 
 FROM oven/bun:1.4.2 AS tls-fixture
 WORKDIR /app
 COPY --chown=bun:bun infra/relay/scripts/tls.fixture.ts ./tls.fixture.ts
-RUN mkdir /tls-private /tls-public && chown bun:bun /tls-private /tls-public
+COPY --chown=bun:bun infra/relay/scripts/tls-validity.ts ./tls-validity.ts
+COPY --chown=bun:bun infra/relay/scripts/tls-validity.test.ts ./tls-validity.test.ts
+RUN mkdir /tls-private /tls-public /relay-tls-private && chown bun:bun /tls-private /tls-public /relay-tls-private
 USER bun
 CMD ["bun", "tls.fixture.ts"]
 
@@ -39,6 +41,7 @@ CMD ["bun", "smoke.js"]
 
 FROM base AS fixture
 COPY --from=build --chown=bun:bun /build/dist/scripts/initialize.fixture.js ./initialize.js
+COPY --from=build --chown=bun:bun /build/dist/scripts/enroll-local.fixture.js ./enroll-local.js
 COPY --from=build --chown=bun:bun /build/dist/scripts/recovery-key.fixture.js ./recovery-key.js
 COPY --from=build --chown=bun:bun /build/dist/manager.js ./manager.js
 COPY --chown=bun:bun infra/account-manager/drizzle ./manager-drizzle
