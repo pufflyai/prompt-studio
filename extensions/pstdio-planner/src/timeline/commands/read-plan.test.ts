@@ -93,9 +93,9 @@ test("the plan reads one ticket snapshot without loading workspace session histo
   ctx.workspaces.list = async () => [
     { id: "workspace", anchors_json: [{ type: "ticket", id: ticket.id, label: ticket.shorthand }] } as never,
   ];
-  ctx.sessions.listByWorkspace = async () => {
+  ctx.sessions.query = async () => {
     sessionReads++;
-    return [];
+    return { items: [], nextCursor: null };
   };
   const plan = await readPlanCommand.run(ctx, {});
   expect(plan.ticketRows).toContainEqual(expect.objectContaining({ id: ticket.id }));

@@ -7,6 +7,7 @@ import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { requestHumanCommand, reviewCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
+import { sessionQuery } from "./session-query.fixture";
 
 test.each([
   "completed",
@@ -16,10 +17,11 @@ test.each([
   const task = await ticket("Waiting for a human");
   const attempt = await runAttemptCommand.run(ctx, { ticket: task.id });
   ctx.sessions.get = async (id) => ({ type: "session", id, title: "Implementation", status }) as never;
-  ctx.sessions.list = async () =>
+  ctx.sessions.query = sessionQuery(async () =>
     status === "awaiting_input"
       ? [{ id: attempt.session.id, title: "Implementation", status, anchors_json: [{ type: "ticket", id: task.id }] }]
-      : [];
+      : [],
+  );
   await requestHumanCommand.run(ctx, {
     ticket: task.id,
     workspaceId: attempt.workspace.id,

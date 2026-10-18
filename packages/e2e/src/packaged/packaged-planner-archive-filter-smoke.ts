@@ -24,15 +24,19 @@ export const expectPlannerArchiveFilters = async (
   const archived = await execute("create-ticket", { title: "Archive filter smoke archived" });
   try {
     await execute("archive-ticket", { id: archived.id });
-    const all = await execute("query-tickets", { filters: {} });
+    const all = await execute("query-tickets", { filter: { conjunction: "and", rules: [] } });
     expect(all.rows).toContainEqual(expect.objectContaining({ id: active.id }));
     expect(all.rows).toContainEqual(expect.objectContaining({ id: archived.id }));
 
-    const activeOnly = await execute("query-tickets", { filters: { archived: ["active"] } });
+    const activeOnly = await execute("query-tickets", {
+      filter: { conjunction: "and", rules: [{ attributeId: "archived", condition: "is-any-of", value: ["active"] }] },
+    });
     expect(activeOnly.rows).toContainEqual(expect.objectContaining({ id: active.id }));
     expect(activeOnly.rows).not.toContainEqual(expect.objectContaining({ id: archived.id }));
 
-    const archivedOnly = await execute("query-tickets", { filters: { archived: ["archived"] } });
+    const archivedOnly = await execute("query-tickets", {
+      filter: { conjunction: "and", rules: [{ attributeId: "archived", condition: "is-any-of", value: ["archived"] }] },
+    });
     expect(archivedOnly.rows).toContainEqual(expect.objectContaining({ id: archived.id }));
     expect(archivedOnly.rows).not.toContainEqual(expect.objectContaining({ id: active.id }));
   } finally {

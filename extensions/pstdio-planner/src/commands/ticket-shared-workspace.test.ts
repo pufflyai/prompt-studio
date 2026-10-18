@@ -5,6 +5,7 @@ import { archiveTicketCommand } from "./archive-ticket";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";
+import { sessionQuery } from "./session-query.fixture";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
 const home: ExtensionWorkspace = {
@@ -108,10 +109,10 @@ describe("ticket work in shared folders", () => {
     const otherSession = {
       id: "other",
       title: "Another ticket's session",
-      status: "completed",
+      status: "completed" as const,
       anchors_json: [{ type: "ticket", id: "other-ticket" }],
     };
-    const listByWorkspace = mock(async () => [otherSession]);
+    const query = mock(sessionQuery(async () => [otherSession]));
     const sections = await listTicketFilesTreeCommand.run(
       ...makeCommandArgs({
         storage,
@@ -123,7 +124,7 @@ describe("ticket work in shared folders", () => {
         },
         overrides: {
           workspaces: { list: async () => [home], listProviders: async () => [] },
-          sessions: { list: async () => [otherSession], listByWorkspace } as never,
+          sessions: { query } as never,
         },
       }),
     );
@@ -140,6 +141,6 @@ describe("ticket work in shared folders", () => {
     expect(sections.find((section) => section.id === "sessions")?.nodes).toEqual([
       expect.objectContaining({ id: "sessions-empty" }),
     ]);
-    expect(listByWorkspace).not.toHaveBeenCalled();
+    expect(query).toHaveBeenCalled();
   });
 });

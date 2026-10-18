@@ -1,4 +1,5 @@
 import { fixture } from "./auto-build.fixture";
+import { sessionQuery } from "./session-query.fixture";
 
 export async function supervisorFixture(limit = 2) {
   const result = await fixture(limit);
@@ -17,7 +18,7 @@ export async function supervisorFixture(limit = 2) {
     return session;
   };
   result.ctx.sessions.get = async (id) => sessions.get(id) ?? null;
-  result.ctx.sessions.list = async () => [...sessions.values()] as never;
+  result.ctx.sessions.query = sessionQuery(async () => [...sessions.values()] as never);
   result.ctx.sessions.followup = async (input) => {
     prompts.push(input);
     sessions.get(input.sessionId)!.status = "in_progress";

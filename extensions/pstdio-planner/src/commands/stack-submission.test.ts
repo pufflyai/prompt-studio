@@ -4,6 +4,7 @@ import { dismissReviewCommand } from "./attempt-history";
 import { loadAttemptDependencies } from "./attempt-readiness";
 import { submitChangeRequestCommand } from "./change-requests";
 import { reconcileAttemptCommand } from "./reconcile-attempt";
+import { sessionQuery } from "./session-query.fixture";
 import { expectProcessFailure, stackSubmissionFixture } from "./stack-submission.fixture";
 
 const actor = { type: "agent" as const, id: "test", displayName: "Test" };
@@ -100,7 +101,10 @@ test("submission refuses stale upstream ancestry and records the new base after 
 test("submission rejects an owner detached from the workspace", async () => {
   const f = await stackSubmissionFixture();
   try {
-    f.ctx.sessions.listByWorkspace = async () => [];
+    f.ctx.sessions.query = sessionQuery(
+      async () => [],
+      async () => [],
+    );
     await expectProcessFailure(submitChangeRequestCommand.run(f.ctx, await f.params()), "linked");
     expect((await readAttempt(f.storage, "child"))?.revisions).toHaveLength(0);
   } finally {

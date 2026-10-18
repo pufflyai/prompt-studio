@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket, statusesCollection, ticketsCollection } from "./data/collections";
 import type { StoredTicket } from "./data/types";
-import { ticketStatuses } from "./ticket-status-provider";
+import { readStatusSettings, saveStatusSettings } from "./ticket-status-settings";
 
 const makeTicket = (statusId: string): StoredTicket => ({
   id: "ticket-1",
@@ -16,17 +16,17 @@ const makeTicket = (statusId: string): StoredTicket => ({
   updatedAt: "2026-01-01T00:00:00.000Z",
 });
 
-describe("ticketStatuses", () => {
-  const context = (storage: ReturnType<typeof createMemoryStorage>) =>
-    ({
-      storage,
-      events: { emit: async () => undefined },
-    }) as never;
+const context = (storage: ReturnType<typeof createMemoryStorage>) =>
+  ({
+    storage,
+    events: { emit: async () => undefined },
+  }) as never;
 
+describe("ticket status settings", () => {
   test("seeds stored statuses without exposing board behavior", async () => {
     const storage = createMemoryStorage();
 
-    const result = await ticketStatuses.query(context(storage));
+    const result = await readStatusSettings.run(context(storage), {});
 
     expect(result.statuses.find((status) => status.id === "backlog")).toMatchObject({
       isDefault: true,
@@ -38,7 +38,7 @@ describe("ticketStatuses", () => {
   test("exposes create and column commands as status commands", async () => {
     const storage = createMemoryStorage();
 
-    const result = await ticketStatuses.query(context(storage));
+    const result = await readStatusSettings.run(context(storage), {});
 
     expect(result.statuses.find((status) => status.id === "backlog")?.actions).toEqual(["create"]);
     expect(result.statuses.find((status) => status.id === "done")?.actions).toEqual(["archive_all"]);
@@ -47,9 +47,9 @@ describe("ticketStatuses", () => {
 
   test("stores create as canCreate and keeps the other commands apart", async () => {
     const storage = createMemoryStorage();
-    const current = await ticketStatuses.query(context(storage));
+    const current = await readStatusSettings.run(context(storage), {});
 
-    await ticketStatuses.save?.(context(storage), {
+    await saveStatusSettings.run(context(storage), {
       statuses: current.statuses.map((status) =>
         status.id === "backlog" ? { ...status, actions: ["archive_all"] } : status,
       ),
@@ -58,16 +58,16 @@ describe("ticketStatuses", () => {
     const stored = statusesCollection(storage);
     expect(await stored.get("backlog")).toMatchObject({ canCreate: false, columnActions: ["archive_all"] });
 
-    const reloaded = await ticketStatuses.query(context(storage));
+    const reloaded = await readStatusSettings.run(context(storage), {});
     expect(reloaded.statuses.find((status) => status.id === "backlog")?.actions).toEqual(["archive_all"]);
   });
 
   test("reassigns tickets when the shared editor removes a status", async () => {
     const storage = createMemoryStorage();
-    const current = await ticketStatuses.query(context(storage));
+    const current = await readStatusSettings.run(context(storage), {});
     await putTicket(storage, makeTicket("ready"));
 
-    await ticketStatuses.save?.(context(storage), {
+    await saveStatusSettings.run(context(storage), {
       statuses: current.statuses.filter((status) => status.id !== "ready"),
     });
 
@@ -76,10 +76,10 @@ describe("ticketStatuses", () => {
 
   test("preserves the drag rules the editor cannot reach", async () => {
     const storage = createMemoryStorage();
-    const current = await ticketStatuses.query(context(storage));
+    const current = await readStatusSettings.run(context(storage), {});
     const done = current.statuses.find((status) => status.id === "done")!;
 
-    await ticketStatuses.save?.(context(storage), {
+    await saveStatusSettings.run(context(storage), {
       statuses: current.statuses.map((status) => (status.id === done.id ? { ...status, label: "Complete" } : status)),
     });
 
@@ -90,4 +90,11 @@ describe("ticketStatuses", () => {
       columnActions: ["archive_all"],
     });
   });
+});
+
+test("missing status settings cannot erase the stored workflow", async () => {
+  const storage = createMemoryStorage();
+  const before = await readStatusSettings.run(context(storage), {});
+  await expect(saveStatusSettings.run(context(storage), {} as never)).rejects.toThrow("Statuses are required");
+  expect(await readStatusSettings.run(context(storage), {})).toEqual(before);
 });

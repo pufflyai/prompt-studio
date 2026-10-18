@@ -1,5 +1,6 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import type { AttemptRecord } from "../data/attempt-types";
+import { readSessionHistory } from "../data/session-history";
 import type { StoredTicket } from "../data/types";
 import type { PlanRow } from "../timeline/contracts";
 import { isLiveSession } from "./auto-build-sessions";
@@ -44,7 +45,7 @@ export async function nextWorkSnapshot(
   const snapshot = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
   const sessionIds = [...new Set(attempts.map(({ implementationSessionId }) => implementationSessionId))];
   const sessions = await Promise.all(sessionIds.map((id) => ctx.sessions.get(id)));
-  const history = (await ctx.sessions.list()).filter(({ id }) => sessionIds.includes(id));
+  const history = (await readSessionHistory(ctx.sessions)).filter(({ id }) => sessionIds.includes(id));
   const progressAt = Math.max(
     0,
     ...tickets.map(({ updatedAt }) => Date.parse(updatedAt)),

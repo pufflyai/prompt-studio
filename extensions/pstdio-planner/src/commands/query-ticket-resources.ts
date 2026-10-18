@@ -14,7 +14,16 @@ export const queryTicketResources: CommandPaletteResourceContribution["query"] =
   const { rows } = await runTicketsQuery({
     storage: ctx.storage,
     projectId: ctx.projectId,
-    filters: { [TICKET_ARCHIVE_STATE_ATTRIBUTE_ID]: [TICKET_ARCHIVE_STATE_ACTIVE] },
+    filter: {
+      conjunction: "and",
+      rules: [
+        {
+          attributeId: TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
+          condition: "is-any-of",
+          value: [TICKET_ARCHIVE_STATE_ACTIVE],
+        },
+      ],
+    },
   });
 
   const items = rows

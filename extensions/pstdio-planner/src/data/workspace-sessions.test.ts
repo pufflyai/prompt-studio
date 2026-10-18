@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
+import { sessionQuery } from "../commands/session-query.fixture";
 import { loadLatestWorkspaceSessions } from "./workspace-sessions";
 
 const makeWorkspace = (id: string, overrides: Partial<ExtensionWorkspace> = {}): ExtensionWorkspace => ({
@@ -12,10 +13,13 @@ const makeWorkspace = (id: string, overrides: Partial<ExtensionWorkspace> = {}):
 const makeSession = (id: string, status: string) => ({ id, title: id, status: status as "completed" });
 
 const sessionsApi = (byWorkspace: Record<string, Array<ReturnType<typeof makeSession>>>, calls: string[] = []) => ({
-  listByWorkspace: async (workspaceId: string) => {
-    calls.push(workspaceId);
-    return byWorkspace[workspaceId] ?? [];
-  },
+  query: sessionQuery(
+    async () => [],
+    async (workspaceId: string) => {
+      calls.push(workspaceId);
+      return byWorkspace[workspaceId] ?? [];
+    },
+  ),
 });
 
 describe("loadLatestWorkspaceSessions", () => {

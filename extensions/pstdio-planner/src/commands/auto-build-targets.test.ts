@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { nextTicketsCommand } from "./next-tickets";
+import { sessionQuery } from "./session-query.fixture";
 
 test("query and dispatch use an explicit feature base without changing project settings", async () => {
   const f = await fixture();
@@ -44,8 +45,9 @@ test.each([
       provider_capabilities_json: { diff: true },
       anchors_json: [{ type: "ticket", id: scenario === "another ticket" ? "other" : ticket.id }],
     }) as never;
-  f.ctx.sessions.listByWorkspace = async () =>
-    scenario === "active writer" ? [{ type: "session", id: "writer", title: "Writer", status: "in_progress" }] : [];
+  f.ctx.sessions.query = sessionQuery(async () =>
+    scenario === "active writer" ? [{ id: "writer", title: "Writer", status: "in_progress" }] : [],
+  );
   f.ctx.workspaces.create = async () => {
     throw new Error("Must preserve the chosen workspace");
   };

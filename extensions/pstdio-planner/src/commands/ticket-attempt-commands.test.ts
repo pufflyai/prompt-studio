@@ -5,6 +5,7 @@ import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicket } from "../data/types";
 import { commandParamsFor, makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { implementTicketCommand } from "./implement-ticket";
+import { sessionQuery } from "./session-query.fixture";
 import { ticketWorkspacesCommand, ticketWorktreesListCommand } from "./ticket-workspaces";
 
 const createSessionResource = () => ({
@@ -74,7 +75,10 @@ describe("implementTicketCommand", () => {
 });
 
 describe("ticket workspace listing", () => {
-  const sessionsByWorkspace: Record<string, Array<{ id: string; title: string; status: string }>> = {
+  const sessionsByWorkspace: Record<
+    string,
+    Array<{ id: string; title: string; status: import("@pstdio/sdk/extensions").ExtensionSessionSummary["status"] }>
+  > = {
     w1: [{ id: "s1", title: "Implement", status: "in_progress" }],
     w2: [{ id: "s2", title: "Implement", status: "completed" }],
   };
@@ -116,7 +120,10 @@ describe("ticket workspace listing", () => {
           ],
         },
         sessions: {
-          listByWorkspace: async (workspaceId: string) => sessionsByWorkspace[workspaceId] ?? [],
+          query: sessionQuery(
+            async () => [],
+            async (workspaceId: string) => sessionsByWorkspace[workspaceId] ?? [],
+          ),
         },
       } as never,
     });

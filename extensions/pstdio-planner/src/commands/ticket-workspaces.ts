@@ -1,5 +1,6 @@
 import { defineCommand, type ExtensionWorkspace, params } from "@pstdio/sdk/extensions";
 import { findTicket } from "../data/resolve";
+import { readSessionHistory } from "../data/session-history";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isLiveSessionStatus } from "../session-status";
 
@@ -24,7 +25,7 @@ export const ticketWorkspacesCommand = defineCommand({
     const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
     const rows = [];
     for (const ws of workspaces) {
-      const sessions = await ctx.sessions.listByWorkspace(ws.id);
+      const sessions = await readSessionHistory(ctx.sessions, { workspaceId: ws.id });
       rows.push({
         id: ws.id,
         workspace: ws.workspace_shorthand ?? ws.id,

@@ -1,4 +1,5 @@
 import { defineCommand, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
+import { readSessionHistory } from "../data/session-history";
 import { isLiveSessionStatus } from "../session-status";
 
 const phaseFromAnchors = (anchors: ResourceAnchor[]) => {
@@ -18,18 +19,20 @@ export const workspaceActivityCommand = defineCommand({
     workspaceId: params.text({ label: "Workspace", required: true }),
   },
   async run(ctx, commandParams) {
-    const sessions = (await ctx.sessions.listByWorkspace(commandParams.workspaceId)).map((session) => {
-      const anchors = (session.anchors_json ?? []) as ResourceAnchor[];
-      return {
-        id: session.id,
-        title: session.title,
-        status: session.status as string,
-        anchors,
-        phase: phaseFromAnchors(anchors),
-        ...(session.created_at ? { createdAt: session.created_at } : {}),
-        ...(session.updated_at ? { updatedAt: session.updated_at } : {}),
-      };
-    });
+    const sessions = (await readSessionHistory(ctx.sessions, { workspaceId: commandParams.workspaceId })).map(
+      (session) => {
+        const anchors = (session.anchors_json ?? []) as ResourceAnchor[];
+        return {
+          id: session.id,
+          title: session.title,
+          status: session.status as string,
+          anchors,
+          phase: phaseFromAnchors(anchors),
+          ...(session.created_at ? { createdAt: session.created_at } : {}),
+          ...(session.updated_at ? { updatedAt: session.updated_at } : {}),
+        };
+      },
+    );
 
     return {
       active: sessions.some((session) => isLiveSessionStatus(session.status)),

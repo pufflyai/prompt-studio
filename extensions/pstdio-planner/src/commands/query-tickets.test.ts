@@ -6,6 +6,7 @@ import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicket } from "../data/types";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
 import { queryTicketsCommand } from "./query-tickets";
+import { sessionQuery } from "./session-query.fixture";
 
 const makeTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
   id: "ticket-1",
@@ -20,7 +21,11 @@ const makeTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
   ...overrides,
 });
 
-type WorkspaceSession = Awaited<ReturnType<ExtensionSessionsApi["listByWorkspace"]>>[number];
+type WorkspaceSession = Partial<Awaited<ReturnType<ExtensionSessionsApi["query"]>>["items"][number]> & {
+  id: string;
+  title: string;
+  status: "completed" | "failed" | "in_progress";
+};
 
 const makeWorkspace = (id: string, shorthand: string, createdAt: string): ExtensionWorkspace => ({
   id,
@@ -38,7 +43,7 @@ describe("queryTicketsCommand", () => {
     await putTicket(storage, makeTicket({ archived: false, title: "Active" }));
     await putTicket(storage, makeTicket({ id: "ticket-2", shorthand: "T-2", archived: true, title: "Archived" }));
 
-    const ctx = makeCommandContext({ storage, params: { filters: {} } });
+    const ctx = makeCommandContext({ storage, params: { filter: { conjunction: "and", rules: [] } } });
     const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
 
     expect(result.rows.map((row) => row.title)).toEqual(["Active", "Archived"]);
@@ -52,7 +57,12 @@ describe("queryTicketsCommand", () => {
 
     const ctx = makeCommandContext({
       storage,
-      params: { filters: { archived: ["archived"] } },
+      params: {
+        filter: {
+          conjunction: "and",
+          rules: [{ attributeId: "archived", condition: "is-any-of", value: ["archived"] }],
+        },
+      },
     });
 
     const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
@@ -83,7 +93,12 @@ describe("queryTicketsCommand", () => {
             makeWorkspace("workspace-2", "T-1_A2", "2026-01-03T00:00:00.000Z"),
           ],
         },
-        sessions: { listByWorkspace: async (workspaceId: string) => sessionsByWorkspace[workspaceId] ?? [] },
+        sessions: {
+          query: sessionQuery(
+            async () => [],
+            async (workspaceId: string) => sessionsByWorkspace[workspaceId] ?? [],
+          ),
+        },
       },
     });
 

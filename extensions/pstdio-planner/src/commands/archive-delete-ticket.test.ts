@@ -17,7 +17,11 @@ describe("archiveTicketCommand", () => {
     );
 
     expect((await ticketsCollection(storage).get(created.id))?.archived).toBe(true);
-    const result = await runTicketsQuery({ storage, projectId: "proj-1", filters: { archived: ["active"] } });
+    const result = await runTicketsQuery({
+      storage,
+      projectId: "proj-1",
+      filter: { conjunction: "and", rules: [{ attributeId: "archived", condition: "is-any-of", value: ["active"] }] },
+    });
     expect(result.rows).toHaveLength(0);
   });
 });
