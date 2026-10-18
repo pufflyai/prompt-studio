@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { expectPackagedCollapsedMessage } from "./packaged-collapsed-message-smoke";
 import { expectPackagedPanelMotion, expectPackagedStreamingMotion } from "./packaged-motion-smoke";
 
@@ -17,7 +18,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
   });
   expect(response.ok).toBe(true);
   const project = (await response.json()) as { id: string };
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(PROVISIONED_CHROMIUM);
   try {
     const page = await browser.newPage({ extraHTTPHeaders: headers });
     await page.addInitScript((projectId) => {

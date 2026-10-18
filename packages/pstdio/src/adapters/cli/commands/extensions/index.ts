@@ -1,4 +1,4 @@
-import type { Argv } from "yargs";
+import { defineCommandGroup } from "../../command-group";
 import * as addCommand from "./add";
 import * as checkCommand from "./check";
 import * as devCommand from "./dev";
@@ -6,22 +6,12 @@ import * as installBrowserCommand from "./install-browser";
 import * as testCommand from "./test";
 import * as updateCommand from "./update";
 
-export const command = "extensions [command]";
-export const describe = "Manage extension source installs";
-
-let _yargs: Argv;
-
-export const builder = (yargs: Argv) => {
-  _yargs = yargs;
-  return yargs
-    .command(addCommand)
-    .command(checkCommand)
-    .command(devCommand)
-    .command(installBrowserCommand)
-    .command(updateCommand)
-    .command(testCommand);
-};
-
-export const handler = () => {
-  _yargs.showHelp();
-};
+export const { command, describe, subcommands, builder, handler } = defineCommandGroup(
+  { name: "extensions", describe: "Manage extension source installs" },
+  addCommand,
+  checkCommand,
+  devCommand,
+  installBrowserCommand,
+  updateCommand,
+  testCommand,
+);

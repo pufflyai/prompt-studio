@@ -6,6 +6,7 @@ import { chromium } from "@playwright/test";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { runTestCommand } from "../scripts/run-test-command";
 import { writeSmokeExtension } from "./extension-smoke-fixtures";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
 beforeAll(buildBinary, 180_000);
@@ -28,7 +29,7 @@ test("installs the smoke browser without external JavaScript runtimes", async ()
     expect({ code: result.status, output: result.stderr }).toMatchObject({ code: 0 });
     expect(existsSync(join(root, "home", "runtime.json"))).toBe(false);
     logTestPhase("launch installed Chromium");
-    const browser = await chromium.launch({ executablePath: chromium.executablePath() });
+    const browser = await chromium.launch(PROVISIONED_CHROMIUM);
     try {
       logTestPhase("open browser validation page");
       const page = await browser.newPage();

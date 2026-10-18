@@ -1,6 +1,6 @@
 # Extension API simplification release plan
 
-This is the release and acceptance appendix of [PRD 0011](../../requirements/platform/0011-simplify-extension-apis.md).
+This is the release and acceptance appendix of PRD 0011 (`documentation/requirements/platform/0011-simplify-extension-apis.md` in the repository).
 
 ## Removal inventory
 
@@ -11,7 +11,7 @@ removal release. Use export graphs and real registrations; string matching misse
 [API versioning](../../references/extensions/0014-api-versioning.md) and the API report now cover
 all eight public SDK entries: `/extensions`, `/extensions/react`, `/testing`, `/data`, `/prompts`,
 `/client`, `/api` and `/resources`. Deprecated aliases remain available through 0.44. The `/hooks`
-entry is host-only. [PRD 0012](../../requirements/platform/0012-align-extension-api-shapes.md#n-sdk-public-surface)
+entry is host-only. PRD 0012 (`documentation/requirements/platform/0012-align-extension-api-shapes.md` in the repository)
 records this policy. Extensions adopt the new APIs only after the 0.44 SDK is published.
 
 | Removal family | Replacement | Release |
@@ -56,8 +56,8 @@ the next breaking release.
 
 Core extensions type-check against npm through `scripts/verify/verify-published-extensions.ts`, and
 CI keeps SDK and extension PRs separate. Follow step 6 of
-[Extension API version checks](../../references/architecture/0024-extension-api-version-checks.md)
-and the [PR labels guide](../../guides/development/0004-pull-request-labels.md) in this order:
+Extension API version checks (`documentation/references/architecture/0024-extension-api-version-checks.md` in the repository)
+and the PR labels guide (`documentation/guides/development/0004-pull-request-labels.md` in the repository) in this order:
 
 1. Extension PRs move each first-party extension off deprecated APIs and declare
    `^0.2.0 || ^0.3.0`, since one build works with both. A PR that needs SDK changes not yet on npm

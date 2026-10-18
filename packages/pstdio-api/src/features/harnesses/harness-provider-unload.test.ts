@@ -6,6 +6,11 @@ import { createHarnessRegistryLifecycle } from "./harness-registry-lifecycle";
 import { createHarnessRegistryService } from "./harness-registry-service";
 import { createTestHarnessRecord } from "./test-harness-registry";
 
+// These registries read project harnesses or build host harnesses through `buildRegistry`.
+const getSourcesRuntime = async () => {
+  throw new Error("Host extension sources are not loaded in this test.");
+};
+
 test("project disablement releases its workers without a follow-up and preserves another project", async () => {
   const released: Array<string | undefined> = [];
   let finishRelease: () => void = () => {};
@@ -27,6 +32,7 @@ test("project disablement releases its workers without a follow-up and preserves
     installedExtensionSourcesService: { list: async () => [] } as never,
     installDefaultExtensions: async () => [],
     extensionRuntimeCatalog: {
+      getSourcesRuntime,
       get: async (projectId) =>
         ({
           generation: disabled ? 2 : 1,
@@ -79,6 +85,7 @@ test("a failed host cleanup still waits for project cleanup before shutdown reje
     installDefaultExtensions: async () => [],
     buildRegistry: async () => createHarnessRegistry([worker], () => ({}) as HarnessContext),
     extensionRuntimeCatalog: {
+      getSourcesRuntime,
       get: async () => ({ runtime: { harnesses: [worker] } }) as never,
       subscribeInvalidation: () => () => {},
     },
@@ -122,6 +129,7 @@ test("concurrent host reads cannot publish a handle retired by an older source l
       return lifecycle.get([newWorker]);
     },
     extensionRuntimeCatalog: {
+      getSourcesRuntime,
       get: async () => ({ runtime: { harnesses: [] } }) as never,
       subscribeInvalidation: (listener) => {
         notify = listener;
@@ -155,6 +163,7 @@ test("a project workspace change keeps workers of unchanged providers running", 
     installedExtensionSourcesService: { list: async () => [] } as never,
     installDefaultExtensions: async () => [],
     extensionRuntimeCatalog: {
+      getSourcesRuntime,
       get: async (projectId) =>
         ({ generation: 1, project: { id: projectId }, runtime: { harnesses: [worker] } }) as never,
       subscribeInvalidation: (listener) => {

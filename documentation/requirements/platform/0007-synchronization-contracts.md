@@ -1,6 +1,8 @@
 # PRD: Synchronization contracts v0.1
 
-Status: Proposed. PS-744 defines protocol evidence for PS-735. It does not ship cloud synchronization or complete the parent ticket.
+Status: Partly delivered in source, not released. Contracts, local storage, a relay,
+account authority, and an opt-in native runtime connection are on `main`. Product
+acceptance and release remain open. See the [delivery record](#delivery-record).
 
 ## Purpose
 
@@ -81,17 +83,51 @@ commit `565ceab57`, without importing its services or deployment setup. The orig
 20-test run and the failing restore/dependency logs are attached to PS-735.
 This child adds wire validation, map/list, third-client and compatibility evidence.
 
-## Handoff and remaining work
+## Delivery record
 
-PS-745 owns durable workbench/environment identities and resource ownership.
-PS-747 owns portable streamed bytes, completion, integrity and cancellation.
-PS-746 owns durable grouped local storage and additive public SDK operations.
-PS-743 owns the private relay workspace. Later relay work owns production
-PostgreSQL publication, transport, replay, snapshots, retention and provider adapters.
+Checked on 2026-10-18 against main commit `45580feb`. The newest stable release is
+`pstdio@0.43.1`. The newest nightly, `pstdio@0.44.0-nightly.20261018030230`, was
+built from `77fa5d81`, before #1146. `infra/relay` and `infra/account-manager` are
+private workspaces and ship in no npm or desktop release.
 
-This PRD does not establish production SDK, extension, dashboard, authorization,
-automation, backup-cleanup, provider, capacity or deployment acceptance. The fixed
-10,000-record/5 GiB workload and hosting estimate in PS-735 remain unchanged and
-unmeasured here. Small buffered fixtures and fault injection are protocol evidence.
-No cloud provisioning, product quotas, automatic history expiration, or public API
-removal is authorized by this child.
+| Area | State | Main implementation | Availability |
+| --- | --- | --- | --- |
+| Protocol contracts | Delivered | #1126: `packages/pstdio-sync-contracts` | Private package, not published |
+| Local storage | Delivered | #1136 workbench identity, #1139 resumable assets, #1140 grouped records in `packages/pstdio-sync` and `packages/pstdio-db/src/services/extension-storage/` | `storage.records` and `storage.assets` are in the nightly SDK, not in `@pstdio/sdk@0.43.1` (published type declarations checked) |
+| Relay storage | Delivered | #1141 PostgreSQL groups, replay, and restore, and #1143 S3 assets, in `infra/relay/src/storage/` and `infra/relay/src/assets/` | Not released |
+| Real transport | Delivered, opt-in | #1164 authenticated relay HTTP and finite WebSocket subscriptions. #1165 native runtime connection in `packages/pstdio-sync/src/relay/` and `packages/pstdio-api/src/services/relay/`. #1169 syncs extension records, files, and attachments and refreshes views. A runtime connects only when `PSTDIO_RELAY_CONFIG_FILE` names a connection file. The native client fetches snapshots; it does not use incremental replay. | `main` only |
+| Recovery | Delivered in runtime code | The client journal requeues missing accepted work and its ancestry before pending work, and submits recovery proofs. Relay restore is an internal operator operation with no HTTP route. | `main` only |
+| Authorization | Delivered in source | #1146 durable grants and #1163 Better Auth sessions in `infra/account-manager`. The relay checks finite access through `pstdio-account-manager/access`. | Not released |
+| Product acceptance | Open | No dashboard view shows sync state, conflicts, or resolution. The [two-dashboard relay guide](../../guides/development/0008-two-dashboard-relay.md) is a manual check with no recorded pass. | None |
+
+Evidence, with its kind:
+
+- Protocol tests, passed locally on 2026-10-18 on macOS with Docker 29.7.2:
+  `bun run --cwd packages/pstdio-sync-contracts test` (27 tests) and
+  `test:conformance` (30 tests against PGlite, PostgreSQL, and RustFS). The
+  documentation audit's HTTP 403 readiness failure was an environment blocker in
+  its container and did not occur on this host.
+- Real transport tests, passed locally on 2026-10-18:
+  `bun run --cwd infra/relay test:transport` (29 tests in 16 files over real HTTP
+  and WebSocket, PostgreSQL, RustFS, and the account manager).
+- Unit tests, passed locally on 2026-10-18: `bun run --cwd packages/pstdio-sync test`
+  (14 tests).
+- CI: the `relay_smoke` job runs the relay storage, asset, transport, and isolated
+  suites, the production-relay conformance entry, and the account manager suite.
+  These were not rerun here.
+- Gap: no automated test runs the API relay runtime against the real relay. The
+  compiled smoke `packages/e2e/src/packaged/packaged-native-relay-smoke.ts` uses an
+  owned wire peer.
+
+The local dashboard stream is separate from relay content. It sends 11 runtime
+tables, including `board_views` and `board_default_views`, and sends delete events
+only after a delete succeeds. See [real-time updates](0003-realtime-updates.md).
+Relay-synchronized records and files refresh views through the
+`pstdio.event.storage-changed` event instead.
+
+Remaining work: a recorded two-environment journey through the product, a sync and
+conflict surface for people, live Google sign-in, deployed network and role
+isolation, production backups and retention, release packaging, and the fixed
+10,000-record/5 GiB workload and hosting estimate from PS-735, which is still
+unmeasured. No cloud provisioning, product quotas, automatic history expiration, or
+public API removal is authorized by this PRD.

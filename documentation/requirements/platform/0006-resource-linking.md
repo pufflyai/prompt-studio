@@ -1,6 +1,6 @@
 # General resource linking
 
-Status: Proposed. Host/SDK stage implemented; shared UI, first-party adoption, and API cleanup remain proposed.
+Status: Partly delivered. The host/SDK and shared UI stages are released. First-party adoption and legacy cleanup remain proposed. See the [delivery record](#delivery-record).
 
 ## Product need
 
@@ -39,3 +39,18 @@ Cross-project links, public sharing, content access grants, domain record regist
 ## Mission test
 
 Linking helps people reuse tool outputs. Most extensions need shared link persistence and scope. People get searchable controls; agents get the same operations. Stable identities preserve extension ownership and remote execution.
+
+## Delivery record
+
+Checked on 2026-10-18 against main commit `45580feb`. The newest stable release is `pstdio@0.43.1`.
+
+| Stage | State | Main implementation | Availability |
+| --- | --- | --- | --- |
+| 1. Host/SDK | Delivered | #918: `packages/pstdio-db/src/services/resource-links.ts`, migration `0037_nebulous_galactus.sql`, HTTP routes in `packages/pstdio-api/src/features/resource-anchors/`, owner policy and validators in `packages/pstdio-api/src/features/extensions/command-environment/`, `pst resources link`, `unlink`, and `links`, and SDK `client.resources` and `ctx.resources` | `pstdio@0.42.0` and `@pstdio/sdk@0.42.0` |
+| 2. Shared UI | Delivered | #967: `packages/pstdio-workbench/src/react/resource-links/` and `packages/pstdio-dashboard/src/modules/resource-links/`. #973 removed the automatic header button and kept the command, overlay, and controls. | `pstdio@0.42.0` |
+| 3. First-party adoption | Not started on `main` | Planner still writes links through `ctx.sessions.addAnchors` and `ctx.workspaces.addAnchors`. No first-party kind declares `validateAnchors`, so Planner has no managed-attempt guard yet. | None |
+| 4. Legacy cleanup | Not started | The session and workspace anchor methods are still present and not marked `@deprecated`. Draft #1175 plans the API cleanup and draft #1184 changes link consistency; neither is merged. | None |
+
+Acceptance 1, 4, and 6 need stage 3. Link changes reach dashboards as `resource_anchor_events` stream events, not as a synced table.
+
+Evidence: unit tests, passed locally on 2026-10-18: `packages/pstdio-db/src/services/resource-links.test.ts` (owners, pagination, atomic creation, cleanup of both directions on deletion) and `packages/pstdio-db/src/db/resource-anchor-migration.test.ts`. The packaged smoke `packages/e2e/src/packaged/packaged-resource-links-smoke.ts` uses two independent fixture extensions and runs in the full CI stage; it was not rerun here. No Planner-to-Artifacts journey has been run.

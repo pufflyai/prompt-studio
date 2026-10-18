@@ -12,6 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname } from "node:path";
+import { isRuntimePidAlive } from "./process-liveness";
 import { withRuntimeDescriptorLock } from "./runtime-descriptor-lock";
 
 export type RuntimeOwnerType = "desktop" | "persistent";
@@ -138,15 +139,6 @@ export const cleanupRuntimeDescriptor = (path: string, identity: Pick<RuntimeDes
     unlinkSync(path);
     return true;
   });
-
-export const isRuntimePidAlive = (pid: number) => {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code !== "ESRCH";
-  }
-};
 
 const parseReadyResponse = (value: unknown): RuntimeReadyResponse | null => {
   if (!isRecord(value)) return null;

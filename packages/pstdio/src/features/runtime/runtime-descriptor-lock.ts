@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import { isRuntimePidAlive } from "./process-liveness";
 
 type LockOwner = {
   id: string;
@@ -17,15 +18,6 @@ const LOCK_WAIT_TIMEOUT_MS = 5_000;
 
 const sleep = (milliseconds: number) => {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
-};
-
-const isProcessRunning = (pid: number) => {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code !== "ESRCH";
-  }
 };
 
 const readOwner = (claimPath: string) => {
@@ -72,7 +64,7 @@ const listClaims = (lockPath: string) => {
         changed = true;
         break;
       }
-      if (!Number.isFinite(owner.pid) || !isProcessRunning(owner.pid)) {
+      if (!Number.isFinite(owner.pid) || !isRuntimePidAlive(owner.pid)) {
         removeClaim(claimPath);
         changed = true;
         break;
@@ -93,7 +85,7 @@ const hasChoosingClaim = (lockPath: string) => {
     const claimPath = join(lockPath, name);
     const owner = readOwner(claimPath);
     if (!owner) continue;
-    if (!Number.isFinite(owner.pid) || !isProcessRunning(owner.pid)) {
+    if (!Number.isFinite(owner.pid) || !isRuntimePidAlive(owner.pid)) {
       removeClaim(claimPath);
     } else {
       choosing = true;

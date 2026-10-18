@@ -19,7 +19,9 @@ pst extensions check
 
 `pst extensions dev` installs the package dependencies, then watches the source. Keep it running while you edit. Changes to declarations, callbacks, and webview files all reload through the same loop. Stop the watcher before you install a final version with `pst extensions add --force <path>`.
 
-Set `engines.pstdio` to a caret range of the extension API version your Prompt Studio ships, such as `^0.1.0`. The range keeps the extension loading across releases that only add features. See [API versioning](../../references/extensions/0014-api-versioning.md).
+It worked when `pst extensions check` reports `Errors: 0` for your copy and the dashboard shows your copy's tools in the project Sidenav. If the check reports a declaration error, fix the field it names. If your copy's pages open Extension Lab instead, a `pstdio.extension-lab` owner ID is still left in the copied source. If `pst extensions dev` says it needs a linked project, run it from a project folder or pass the absolute path it prints.
+
+Set `engines.pstdio` to a caret range of the extension API version your Prompt Studio ships. Release 0.43.x ships API 0.1.6, so use `^0.1.0`. `main` and nightly builds ship API 0.2.0, which does not load `^0.1.0`. Extension Lab declares `^0.1.0 || ^0.2.0` so one build loads on both. The range keeps the extension loading across releases that only add features. See [API versioning](../../references/extensions/0014-api-versioning.md).
 
 ## Who owns what
 
@@ -128,11 +130,6 @@ const node: TreeNode = {
 row prevents ticket operations from appearing in its menu. Opening the menu does not navigate. The action still
 uses the clicked file when another document is active. Actions with input fields use the standard parameter dialog.
 
-## Check an authoring change
-
-Typecheck the extension with `skipLibCheck: false`. Fix the field named by `pst extensions check`; declaration errors identify the extension, contribution, field path, and expected value. With `pst extensions dev` running, test edits, another resource, revisiting, reloading, Back and Forward, closing panels one at a time, and moving between modes.
-
-The linked examples are compiled and tested with Extension Lab, so they match the current API. To build your own host app on the workbench, see the [Workbench reference](../../references/workbench/0001-overview.md).
 ### Session rows
 
 A session may open a preview panel while retaining its own action identity:
@@ -150,6 +147,8 @@ const node = {
 Import `TreeNode` and `workbenchPanels` from `@pstdio/sdk/extensions`. Use the existing `sessionSlots` menu refs to contribute session commands. The host supplies the row resource as command context and preserves it when collecting parameters.
 
 ## Share a filtered page
+
+Page `params`, the webview `page` client, and `renderer.pageParams` are on `main` and in nightly builds. They are not in `@pstdio/sdk@0.43.1`, so this recipe does not compile against release 0.43.x.
 
 Declare the values that should travel in a link:
 
@@ -191,3 +190,9 @@ export default defineExtensionView({
 Use `navigation.open` with `{ kind: "page", page: board.ref, params: { range: "now-7d" } }` for an explicit destination. It pushes history, so Back restores the previous range. To build a link outside a webview, call `serializePageUrl({ projectId, page: { id: board.id, ref: board.ref, path: board.path, params: board.params }, params: { range: "now-7d" } })` with a qualified page ref.
 
 A native view query reads `renderer.pageParams?.range`. The host reruns it when a page-owned placement's params change. Use page params for shareable view state, preferences for saved view choices, declared settings for user configuration, and `ctx.storage` for extension product data.
+
+## Check an authoring change
+
+Typecheck the extension with `skipLibCheck: false`. Fix the field named by `pst extensions check`; declaration errors identify the extension, contribution, field path, and expected value. With `pst extensions dev` running, test edits, another resource, revisiting, reloading, Back and Forward, closing panels one at a time, and moving between modes.
+
+The linked examples are compiled and tested with Extension Lab, so they match the current API. To build your own host app on the workbench, see the [Workbench reference](../../references/workbench/0001-overview.md).

@@ -9,7 +9,15 @@ pst workspaces merge --id <workspace-shorthand> [--delete-workspace]
 pst workspaces delete --id <workspace-shorthand>
 ```
 
-A workspace shorthand is the short name shown in workspace lists, such as `PS-1_A1`.
+Run these commands inside a linked project. A workspace shorthand is the short name shown in workspace lists:
+
+| Shorthand | Workspace |
+| --- | --- |
+| `default` | The project's default workspace. |
+| `WS-1`, `WS-2`, ... | Standalone workspaces. `pst workspaces create` makes these and prints the new name, for example `Created workspace WS-1 at <path>`. Numbers count up within each project. |
+| `PS-12_A1`, `PS-12_A2`, ... | Workspaces that an extension creates for one of its items. Planner uses the ticket ID, `_A`, and the attempt number, so the first attempt at ticket `PS-12` is `PS-12_A1`. |
+
+`merge`, `delete`, and `file-link` accept a shorthand. `file-link` also accepts the workspace ID from `pst workspaces list`.
 
 ## Create a workspace
 
@@ -44,7 +52,7 @@ Run `pst workspaces <command> --help` for current options.
 Run inside a linked project:
 
 ```sh
-pst workspaces file-link --workspace W-1 --path src/app.ts --line 12 --column 4
+pst workspaces file-link --workspace WS-1 --path src/app.ts --line 12 --column 4
 ```
 
 The command accepts a workspace shorthand or UUID and prints JSON containing `href`, a canonical dashboard path. Paths are workspace-root relative. The command does not read or change the file. A column requires a line; coordinates must be positive integers. Copied URLs restore the selected file after reload. Remote workspace file transport remains unavailable.

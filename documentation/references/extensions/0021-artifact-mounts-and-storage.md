@@ -2,6 +2,8 @@
 
 Store extension data through owned records, assets, allocated files, and constrained artifact mounts.
 
+`ctx.storage.records`, `ctx.storage.assets`, and the `.publishers/<publisher>/` file root are on `main` and in `0.44.0-nightly` builds. They ship in the release after 0.43.x; `@pstdio/sdk` 0.43.1 and the 0.43.1 app do not have them. On 0.43.x, use `get`, `set`, `delete`, and `collection`, which are not deprecated there, and `ctx.extensionFiles` writes under `.pstdio/ext/<publisher>.<name>/`. See [storage availability](../sdk/0004-storage.md#availability).
+
 `ctx.storage.records` saves related records as one durable group using the revisions
 their caller observed. It supports shared text/list/map operations, JSON, immutable
 asset references, tombstones, durable outcomes, and retained conflict resolution.

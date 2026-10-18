@@ -71,7 +71,8 @@ const docker = (...args: string[]) => run([...compose, ...args]);
 
 if (process.argv.includes("--down")) {
   for (const app of apps) await studio(app, ["--down"]);
-  await docker("down", "--volumes", "--remove-orphans");
+  // The profile includes the test-only services, so their volumes are removed too.
+  await docker("--profile", "test", "down", "--volumes", "--remove-orphans");
   await run(["docker", "volume", "rm", `${project}-app-deps`]);
   await rm(directory, { recursive: true, force: true });
   console.log(`Stopped ${name} and removed its isolated data`);

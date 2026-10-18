@@ -5,7 +5,7 @@ import { findProjectRoot, readConfig } from "@/features/config/config";
 import { ensureApi } from "@/features/ensure-api";
 import { localExtensionSourceRequest } from "@/features/extensions/local-source-request";
 import { isLocalExtensionSource, type uploadExtensionSource } from "@/features/extensions/upload-source";
-import { type ExtensionsAddArgs, formatInstallOutput } from "./shared";
+import { type ExtensionsAddArgs, formatInstallOutput, linkedProjectRequired } from "./shared";
 
 export const command = "add <source>";
 export const describe = "Install editable extension source";
@@ -70,8 +70,10 @@ export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ExtensionsAddArgs>) => {
     const project = resolveLinkedProject(deps);
-    if (!project)
-      throw new Error("Run `pst extensions add` inside a linked project. Create or link the project first.");
+    if (!project) {
+      const source = isLocalExtensionSource(argv.source) ? argv.source : undefined;
+      throw linkedProjectRequired({ command: "add", cwd: deps.cwd(), source });
+    }
     await deps.ensureApi(process.env.PSTDIO_API_URL);
     const options = { installName: argv.name, force: argv.force, skipInstall: argv["skip-install"] };
     try {

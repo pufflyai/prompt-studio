@@ -82,6 +82,17 @@ jobs:
       - name: Check formatting
         run: bun run format:check
 
+      # Offline and deterministic, so every stage runs them. A code rename can break a documentation link
+      # without touching a Markdown file. External sites are checked by the Documentation links workflow.
+      - name: Check documentation links, published routes, and exported skills
+        run: bun run --cwd scripts verify:docs-links
+
+      - name: Check that the SDK references name every public method
+        run: bun run --cwd scripts verify:sdk-reference
+
+      - name: Check that guide code blocks match their maintained examples
+        run: bun run --cwd scripts verify:docs-snippets
+
       - name: Check package boundaries and browser test origins
         run: bun run verify:boundaries
 

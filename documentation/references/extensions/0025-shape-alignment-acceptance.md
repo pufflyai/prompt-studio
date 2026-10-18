@@ -1,7 +1,7 @@
 # Extension API shape alignment acceptance
 
-[PRD 0012](../../requirements/platform/0012-align-extension-api-shapes.md) follows the shared release gates in
-[PRD 0011](../../requirements/platform/0011-simplify-extension-apis.md#delivery-and-acceptance).
+PRD 0012 (`documentation/requirements/platform/0012-align-extension-api-shapes.md` in the repository) follows the shared release gates in
+PRD 0011 (`documentation/requirements/platform/0011-simplify-extension-apis.md` in the repository).
 0.44 adds the replacement APIs and deprecations before its Version Packages PR merges.
 0.45 adopts the published 0.44 SDK, converts data and removes the deprecated APIs.
 An API that misses stable 0.44 moves to the next breaking release.

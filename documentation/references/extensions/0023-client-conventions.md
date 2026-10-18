@@ -45,7 +45,7 @@ Saved-view pages contain the views only. The existing board `list` response reta
 Database collections apply the limit in SQL. Catalog metadata already belongs to the runtime
 registry. Catalog pages bound the response and load details for selected entries. Skill pages read
 file content only for the selected skills and preserve extension skill precedence over project skills.
-This does not add a storage or registry capacity limit; [capacity](../../requirements/platform/0010-bound-client-storage-and-isolate-sync-failures.md)
+This does not add a storage or registry capacity limit; capacity (`documentation/requirements/platform/0010-bound-client-storage-and-isolate-sync-failures.md` in the repository)
 owns that separate requirement.
 
 ## Project scope and requests

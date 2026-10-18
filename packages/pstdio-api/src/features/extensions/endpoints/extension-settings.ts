@@ -177,7 +177,7 @@ const resolveProjectSettingsContext = async (deps: ExtensionsRouteDeps, projectI
 const resolveGlobalSettingsContext = async (deps: ExtensionsRouteDeps, installName: string) => {
   const installedSource = await deps.extensionService.getInstalledSource(installName);
   if (!installedSource) return null;
-  const runtime = await deps.extensionRuntimeCatalog.getInstalledSourceRuntime(installedSource);
+  const runtime = await deps.extensionRuntimeCatalog.getSourcesRuntime([installedSource]);
   return settingsContextForRuntime(runtime, {
     extensionId: installedSource.extension_id,
     extensionInstanceId: "",

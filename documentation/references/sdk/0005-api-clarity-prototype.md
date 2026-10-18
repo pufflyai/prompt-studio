@@ -1,9 +1,9 @@
 # API clarity prototype
 
 Measured: 2026-10-17. Experimental contracts; not published APIs.
-Used by the [storage PRD](../../requirements/platform/0009-standardize-storage-api.md),
-[capacity PRD](../../requirements/platform/0010-bound-client-storage-and-isolate-sync-failures.md)
-and [API PRD](../../requirements/platform/0011-simplify-extension-apis.md).
+Used by the storage PRD (`documentation/requirements/platform/0009-standardize-storage-api.md` in the repository),
+capacity PRD (`documentation/requirements/platform/0010-bound-client-storage-and-isolate-sync-failures.md` in the repository)
+and API PRD (`documentation/requirements/platform/0011-simplify-extension-apis.md` in the repository).
 
 This is a historical design experiment from 2026-10-17. Its source is preserved at a fixed Git revision.
 The prototype is not part of the current SDK, and its syntax counts are not release acceptance evidence.

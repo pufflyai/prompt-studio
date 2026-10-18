@@ -50,6 +50,12 @@ Tree reads belong to the mounted placement. Changing its resource or navigation 
 
 Navigation trees in the sidenav keep their available rows when a read fails. They do not show an inline load-error notice or Retry button, including on the initial load. Later data refreshes and connection recovery load the tree again. Trees in other panels keep their load-error notices and Retry controls.
 
+## Navigation item groups
+
+A navigation item's `group` names a collapsible Sidenav section. The section belongs to the extension that declared the item: its ID is `<extensionId>:<group>`. Each extension's items for one owner and slot also register as their own contribution. Two extensions that both use `group: "Tools"` therefore show two separate **Tools** sections. The workbench does not merge equal labels from different extensions, because a merged section would have no single owner for its order, hiding, and moves. An empty `group` places items at the slot root. See [`navigation-item-contributions.ts`](../../../packages/pstdio-workbench/src/extensions/contributions/navigation-item-contributions.ts).
+
+Choose a group label that names your tool, such as its display name, rather than a generic word. People can still collect rows that share a mode or page owner into their own group with **New group** in the Sidenav menu; see [API](0002-api.md).
+
 ## Resource actions on navigation rows
 
 Set `TreeNode.resource` to the subject of row actions. `target` remains the normal-click destination. Session rows in the Sessions level, workspace group, and Planner ticket section use the same session reference for both. The shared tree resolves resource menu contributions and keeps the clicked resource in command context, including parameter dialogs. Opening or dismissing a menu does not navigate.

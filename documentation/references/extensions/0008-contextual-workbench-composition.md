@@ -22,4 +22,4 @@ Navigation items and trees contribute to the default host sidebar, including in 
 
 ## Examples
 
-The [workbench cookbook](../../guides/extensions/0002-workbench-cookbook.md) links working examples for editable pages, inspectors, shared panels, editor collections, provider refs, and webview lifecycle. See also [Contributions](0004-contribution-api.md), [Modes and layout](0009-modes-and-layout.md), [Navigation and layout state](0010-navigation-and-layout-state.md), and the [composition architecture](../architecture/0009-extension-workbench-composition.md).
+The [workbench cookbook](../../guides/extensions/0002-workbench-cookbook.md) links working examples for editable pages, inspectors, shared panels, editor collections, provider refs, and webview lifecycle. See also [Contributions](0004-contribution-api.md), [Modes and layout](0009-modes-and-layout.md), and [Navigation and layout state](0010-navigation-and-layout-state.md).

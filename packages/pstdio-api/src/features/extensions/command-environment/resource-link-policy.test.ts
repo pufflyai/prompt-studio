@@ -51,3 +51,17 @@ test("resource links use the enabled owner after replacing an extension source",
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("resource links name an undeclared kind instead of calling its owner ambiguous", async () => {
+  const app = await createTestApp();
+  try {
+    const project = await app.deps.projectService.create({ name: "Undeclared kind" });
+    const api = createResourcesApi(app.deps, { projectId: project.id, extensionId: "example.caller" });
+    const source = { type: "project", id: project.id };
+    await expect(api.addAnchors(source, [{ type: "missing-kind", id: "target", role: "context" }])).rejects.toThrow(
+      /no enabled extension declares resource kind "missing-kind"/i,
+    );
+  } finally {
+    await app.close();
+  }
+});

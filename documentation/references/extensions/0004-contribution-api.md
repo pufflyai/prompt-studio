@@ -288,6 +288,22 @@ Use `presentation: "primary"` for the main action and `"secondary"` for other
 actions. Secondary is the default. More than one primary action produces a
 warning, and an unknown command produces an error diagnostic.
 
+## Table and board row actions
+
+Row and selection actions pass row IDs to their commands. Row activation passes the whole row. This applies to 0.43.x and `main`.
+
+| Callback | What the host passes |
+| --- | --- |
+| `rowActions` command on a `dataTable` or `kanban` view | Command params `{ rowId }`: the row's `id` string |
+| `selectionActions` command on a `dataTable` with `selectionMode: "multiple"` | Command params `{ rowIds }`: an array of the selected rows' `id` strings |
+| `onRowActivate` on a `dataTable` or `kanban` view | `{ row }`: the row object. For a data table, this is the row your `query` returned, `{ id, values, resource? }`. |
+
+Declare the parameter on the action's command, such as `rowId: params.text({ required: true })` or `rowIds: params.json<string[]>({ required: true })`. Load the item by its ID in the handler. An action command does not receive `row` or `values`.
+
+A data table runs a row action command at once and then refreshes the view. On a kanban board, a row action command that declares parameters first opens the shared parameter form with `rowId` filled in. A row action command with no parameters runs at once.
+
+Use `onRowActivate` to open the row. Request navigation with `ctx.navigation.open(target)` and return nothing. A returned target does not navigate.
+
 ## Appearance Contributions
 
 Themes and file icon themes use contribution arrays. Define each theme with a

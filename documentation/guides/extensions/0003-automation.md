@@ -32,6 +32,15 @@ const requireTitle = defineMiddleware<{ title?: string }>({
 export default defineExtension({ middlewares: [requireTitle] });
 ```
 
+Check it from the project folder after installing the extension:
+
+```sh
+pst tickets create --content "# Draft"   # rejected: Supply a ticket title. (exit code 1)
+pst tickets create --title "Draft"       # prints the created ticket as JSON
+```
+
+The policy reads the `title` parameter only, so a title written as a Markdown heading in `--content` is rejected too. If both commands succeed, the middleware is not loaded: run `pst extensions check` and confirm that Planner and your extension are enabled in this project.
+
 Middleware may continue, reject, patch parameters, or replace the invocation.
 It does not call a `next` handler. Prefer a provider's exported command ref when
 one is available so its parameter and result types stay connected to the provider.
@@ -101,6 +110,8 @@ The dashboard shows schedules as automations. People turn each one on or off per
 project on the extension's page in **Settings → Extensions**. Automations are on
 by default. Set `disabled: true` to ship one turned off. A person's choice always
 wins over the default, and the scheduler skips automations that are off.
+
+To check a schedule, open your extension in **Settings → Extensions** and find it under automations. If it is missing, check that the schedule is listed in `defineExtension({ schedules })` and that `pst extensions check` reports no errors. Hooks and scheduled commands write only to storage here, so add a read command if you want to see their results from `pst`.
 
 Use settings for project policy and storage for data that must survive a restart.
 See the [extension API](../../references/extensions/0001-api.md) for command outcomes, schedules, and context APIs.

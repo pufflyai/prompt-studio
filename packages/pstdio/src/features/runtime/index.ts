@@ -1,3 +1,4 @@
+export { isRuntimePidAlive } from "./process-liveness";
 export {
   observeRuntimeShutdown,
   promoteRuntime,
@@ -9,7 +10,6 @@ export {
 export {
   cleanupRuntimeDescriptor,
   discoverRuntime,
-  isRuntimePidAlive,
   parseRuntimeDescriptor,
   promoteRuntimeDescriptor,
   type RuntimeDescriptor,

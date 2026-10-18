@@ -15,7 +15,7 @@ should provide this behavior without an application retry loop.
 
 ## External limitation
 
-Native run [36161700264](https://github.com/pufflyai/prompt-studio/actions/runs/36161700264)
+Native run 36161700264 (run no longer on GitHub)
 uses Node 24.20.0. Three homes fail synchronous removal with `EPERM, Permission
 denied` after their runtime has terminated. Failure returns in about 120 ms even
 though the fixture requests five retries with a 100 ms linear delay.

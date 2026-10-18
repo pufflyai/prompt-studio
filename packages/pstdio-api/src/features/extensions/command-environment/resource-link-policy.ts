@@ -26,6 +26,8 @@ export const canonicalResource = async (
   if (!extensionId && hostKinds.has(resource.type)) extensionId = "pstdio";
   if (!extensionId && owners.some((kind) => kind.extensionId === input.extensionId)) extensionId = input.extensionId;
   if (!extensionId && owners.length === 1) extensionId = owners[0]!.extensionId;
+  if (!extensionId && owners.length === 0)
+    throw new Error(`No enabled extension declares resource kind "${resource.type}".`);
   if (!extensionId) throw new Error(`Resource owner is ambiguous for "${resource.type}".`);
   const ref = { ...resource, extensionId, projectId: input.projectId };
   if (extensionId === "pstdio") {

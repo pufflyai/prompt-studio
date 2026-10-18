@@ -32,7 +32,15 @@ Other workspaces come from workspace providers. A provider creates the workspace
 
 A Git worktree gives a session its own copy of the repository on a new branch. Work there does not touch your folder until you merge it with `pst workspaces merge`. Git worktrees need a repository with at least one commit. If the project is a subfolder of a repository, the session works in the same subfolder of the worktree.
 
-Workspaces get short names. A new workspace is named `WS-1`, `WS-2`, and so on. A tool can ask for a name based on its own item, so a Planner ticket `PS-7` gets workspaces such as `PS-7_A1`.
+Workspaces get short names that you can pass to `pst` commands instead of their IDs:
+
+| Short name | Workspace |
+| --- | --- |
+| `default` | The project's default workspace |
+| `WS-1`, `WS-2`, ... | Standalone workspaces, such as the ones `pst workspaces create` makes. Numbers count up within each project. |
+| `PS-7_A1`, `PS-7_A2`, ... | Workspaces a tool creates for one of its items. Planner names each attempt at ticket `PS-7` after the ticket, with `_A` and the attempt number. |
+
+`pst workspaces list` shows each workspace's short name, ID, branch, and folder.
 
 Remote environments are covered in [Local and remote work](0004-local-and-remote.md).
 

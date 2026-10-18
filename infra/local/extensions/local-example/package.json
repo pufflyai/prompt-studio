@@ -13,6 +13,9 @@
   },
   "private": true,
   "type": "module",
+  "scripts": {
+    "test": "bun test"
+  },
   "dependencies": {
     "@pstdio/sdk": "^0.25.0"
   }

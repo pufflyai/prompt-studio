@@ -1,6 +1,6 @@
 # Test the relay with two dashboards
 
-Run this from the PS-775 stack checkout:
+Run this from the repository root:
 
 ```sh
 bun run dev:relay
@@ -49,7 +49,7 @@ bun run dev:relay -- --name=my-relay
 bun run dev:relay -- --name=my-relay --down
 ```
 
-Use the same name when rerunning. Existing native credentials are retained. If enrollment was interrupted before its config was saved, a new fixture enrollment revokes the environment's old grants and creates a fresh one. Cleanup removes only that named fixture's apps, homes, database/object volumes and dependency volume. It does not prune Docker globally.
+Use the same name when rerunning. The first run of a new name can stop with `TypeError: The socket connection was closed unexpectedly` from `scripts/dev/relay-local.ts`. Each app installs the default extensions into its own home, and the first `pstdio-artifacts` install downloads about 450 MB of dependencies. It took 46 to 79 seconds here. The setup request waits for that install and the API closes the idle connection first. Run the same command again after the app's log shows the install finished; in one check, the third run succeeded after 43 seconds. Existing native credentials are retained. If enrollment was interrupted before its config was saved, a new fixture enrollment revokes the environment's old grants and creates a fresh one. Cleanup removes only that named fixture's apps, homes, database/object volumes and dependency volume. It does not prune Docker globally.
 
 Connection files live under ignored `__test-tmp__/dev-isolated/<app>/` and `__test-tmp__/relay/<name>/`. Treat these files as credentials. Do not commit or attach their contents to reports.
 

@@ -35,7 +35,7 @@ export const renderWebviewBuildErrorModule = (error: WebviewBuildError) =>
 
 export type ExtensionWebviewAssetDeps = {
   extensionService: InstalledSourceLookup;
-  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "getInstalledSourceRuntime">;
+  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "getSourcesRuntime">;
   webviewCacheRoot?: string;
 };
 
@@ -74,7 +74,7 @@ export const resolveWebviewAssetFile = async (
   const source = await deps.extensionService.getInstalledSourceById(input.installedExtensionId);
   if (!source) return null;
 
-  const runtime = await deps.extensionRuntimeCatalog.getInstalledSourceRuntime(source);
+  const runtime = await deps.extensionRuntimeCatalog.getSourcesRuntime([source]);
   const webview = runtime.views.find((view) => view.id === input.webviewId)?.contribution.body;
   if (!webview || webview.kind !== "webview") return null;
 

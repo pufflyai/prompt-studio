@@ -11,7 +11,7 @@ Open a folder to create a local project, or to return to one you already opened.
 
 The folder does not need to be a Git repository, and you do not need a coding agent installed yet. You can add both later.
 
-The first project does need Git installed and an internet connection. Prompt Studio downloads the default extensions from GitHub with Git when you open your first folder. Without them, the agent list stays empty. If the download fails, see [Troubleshooting](0005-troubleshooting.md#default-extensions-did-not-install).
+The first project does need the `git` command and an internet connection. Prompt Studio uses `git` to download the default extensions from GitHub when you open your first folder. It needs `git` for this download even when your folder is not a Git repository. Without these extensions, the agent list stays empty. If the download fails, see [Troubleshooting](0005-troubleshooting.md#default-extensions-did-not-install).
 
 ![Open project folder dialog with a folder path, a list of folders, and an Open folder button.](../../images/open-project-folder.png)
 
@@ -37,7 +37,7 @@ Other `pst` commands find the project from the folder you run them in. See [CLI 
 ## What happens when you open a folder
 
 - The folder name becomes the project name. You can rename the project in its settings.
-- Prompt Studio writes `.pstdio/config.json` in the folder. This file links the folder to its project. A `.pstdio/.gitignore` keeps it out of Git.
+- Prompt Studio writes `.pstdio/config.json` in the folder. This file links the folder to its project, so the docs call such a folder a linked project. Commands such as `pst extensions add` only work inside a linked project. A `.pstdio/.gitignore` keeps the file out of Git.
 - The project gets its default workspace: the folder itself. Agent sessions work in this folder and share its files.
 - The default extensions are downloaded, installed, and turned on. They connect the Claude Code, Codex, and OpenCode agents, and add themes and skills.
 

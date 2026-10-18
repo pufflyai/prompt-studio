@@ -192,6 +192,16 @@ const resolveEntry = (diagnostics: ExtensionDiagnostic[], packagePath: string, p
   return resolved;
 };
 
+/**
+ * Who compared `engines.pstdio` with `EXTENSION_API_VERSION`: the host that loads the
+ * extension, or the pst that checks a source folder without a host.
+ */
+export type ExtensionApiProvider = "host" | "pst";
+
+// The pst running a source check can be a different release than the user's host.
+const PST_CHECK_NOTE =
+  "If your Prompt Studio host runs a different release than this pst, use the pst from that release, or install the extension and run `pst extensions check` in the linked project so the host checks it.";
+
 const apiVersionRepair = (targetsOlderApi: boolean, upgradable: boolean) => {
   if (!targetsOlderApi) return "Update Prompt Studio, or use a build of the extension for this host.";
   if (upgradable) return "Upgrade the extension to its build for this host.";
@@ -202,7 +212,11 @@ const apiVersionRepair = (targetsOlderApi: boolean, upgradable: boolean) => {
  * `upgradable` means the host can replace this source with a release built for it. Any other
  * source is owned by whoever wrote it, so the advice is to fix the source itself.
  */
-export const getExtensionApiVersionError = (name: string, declared: string, options: { upgradable?: boolean } = {}) => {
+export const getExtensionApiVersionError = (
+  name: string,
+  declared: string,
+  options: { upgradable?: boolean; apiProvider?: ExtensionApiProvider } = {},
+) => {
   const minimums = parseExtensionApiDeclaration(declared);
   // Catalog builds that predate caret ranges are fixed by upgrading, not by editing their manifest.
   if (!minimums && options.upgradable) {
@@ -215,6 +229,10 @@ export const getExtensionApiVersionError = (name: string, declared: string, opti
 
   // No term matched, so a term whose minimum is below the host must be on an older breaking line.
   const targetsOlderApi = minimums.every((minimum) => Bun.semver.order(minimum, EXTENSION_API_VERSION) < 0);
+  if (options.apiProvider === "pst") {
+    const repair = targetsOlderApi ? apiVersionRepair(true, false) : "Update pst to a release with this extension API.";
+    return `Extension "${name}" targets extension API ${declared} but this pst provides ${EXTENSION_API_VERSION}. ${repair} ${PST_CHECK_NOTE}`;
+  }
   return `Extension "${name}" targets extension API ${declared} but this host provides ${EXTENSION_API_VERSION}. ${apiVersionRepair(targetsOlderApi, options.upgradable === true)}`;
 };
 
@@ -306,11 +324,14 @@ export const readPackageManifestMetadata = (packageDir: string): ReadPackageMani
   return { manifest, entryPath, diagnostics };
 };
 
-export const readPackageManifest = (packageDir: string): ReadPackageManifestResult => {
+export const readPackageManifest = (
+  packageDir: string,
+  options: { apiProvider?: ExtensionApiProvider } = {},
+): ReadPackageManifestResult => {
   const result = readPackageManifestMetadata(packageDir);
   if (!result.manifest) return result;
 
-  const versionError = getExtensionApiVersionError(result.manifest.name, result.manifest.enginesPstdio);
+  const versionError = getExtensionApiVersionError(result.manifest.name, result.manifest.enginesPstdio, options);
   if (!versionError) return result;
 
   return {

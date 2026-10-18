@@ -18,9 +18,7 @@ Download the app from [prompt.studio](https://prompt.studio). The site offers th
 The app includes the `pst` command. You do not need Bun, Node.js, or a separate CLI download.
 
 - On macOS, drag the app to Applications and open it from there. After you create your first project, the app offers to add the `pst` command at `/usr/local/bin/pst`. If you choose **Install**, macOS asks for your password in a window that says "osascript wants to make changes." If you choose **Not Now** or cancel the password window, the app does not ask again. Choose **Prompt Studio → Install pst Command…** when you want `pst` in Terminal.
-- On Linux, the `.deb` package installs the app and `/usr/bin/pst`. For the portable `.zip`, extract it to a folder whose path has no spaces, then run `prompt-studio` from that folder. The portable build does not add `pst` to your terminal.
-
-Agents in Prompt Studio can still run `pst` when your terminal cannot.
+- On Linux, the `.deb` package installs the app and `/usr/bin/pst`. For the portable `.zip`, extract it to a folder whose path has no spaces, then run `prompt-studio` from that folder. The portable build does not add `pst` to your terminal. Agents in Prompt Studio can still run `pst` when your terminal cannot.
 - On Windows, run the Setup installer. It does not need an administrator password. It adds `pst` to your `PATH`. Close and reopen your terminal before you use it.
 
 Check the command:
@@ -30,6 +28,8 @@ pst --version
 ```
 
 If an older `pst` is already installed, the app keeps it. Remove the other installation, then install the command again from the app. Run `command -v pst` on macOS or Linux, or `where.exe pst` on Windows, to see which one runs.
+
+The desktop app, `pst`, and the `@pstdio/sdk` package share one version number. Extensions check a separate extension API version. If you build extensions, read [App, SDK, and extension API versions](../../references/extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
 
 ### Update the app
 
@@ -52,6 +52,8 @@ pst update-channel stable
 pst update-channel        # prints the current channel
 ```
 
+`pst update-channel` reads and saves the setting through the Prompt Studio runtime, so it needs the runtime running. It does not work when auto-start is turned off and no runtime is running.
+
 The choice belongs to this computer. The app never installs an older version. If you switch from Nightly back to Stable, the app keeps the nightly build until a newer stable release is out. Windows always follows Stable.
 
 ## Install only the command-line tool
@@ -65,7 +67,9 @@ pst --version
 
 The package installs two names for the same command: `pst` and `pstdio`.
 
-To follow nightly builds of the command-line tool, install `pstdio@nightly` instead. Each nightly GitHub release also has an `install.sh` that installs that nightly.
+The package's `pst` launcher is a small Node.js script that starts the Prompt Studio binary for your platform, so Node.js must also be on your `PATH`. If `pst --version` prints `env: node: No such file or directory`, install Node.js, or use the desktop app, which includes `pst`.
+
+To follow nightly builds of the command-line tool, install `pstdio@nightly` instead. Each GitHub release, stable or nightly, also has an `install.sh` that installs that release.
 
 ## Start Prompt Studio
 

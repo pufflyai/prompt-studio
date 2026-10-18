@@ -1,0 +1,113 @@
+[
+  {
+    "section": "Guides",
+    "label": "Getting started",
+    "path": "/docs/guides/getting-started/",
+    "pages": "documentation/guides/getting-started"
+  },
+  {
+    "section": "Guides",
+    "label": "How Prompt Studio works",
+    "path": "/docs/guides/concepts/",
+    "pages": "documentation/guides/concepts"
+  },
+  {
+    "section": "Guides",
+    "label": "Build extensions",
+    "path": "/docs/guides/extensions/",
+    "pages": "documentation/guides/extensions"
+  },
+  {
+    "section": "Guides",
+    "label": "Use the SDK",
+    "path": "/docs/guides/sdk/",
+    "pages": "documentation/guides/sdk"
+  },
+  {
+    "section": "References",
+    "label": "CLI",
+    "path": "/docs/references/cli/",
+    "pages": "documentation/references/cli"
+  },
+  {
+    "section": "References",
+    "label": "Extension API",
+    "path": "/docs/references/extensions/",
+    "pages": "documentation/references/extensions"
+  },
+  {
+    "section": "References",
+    "label": "SDK",
+    "path": "/docs/references/sdk/",
+    "pages": "documentation/references/sdk"
+  },
+  {
+    "section": "References",
+    "label": "Workbench",
+    "path": "/docs/references/workbench/",
+    "pages": "documentation/references/workbench"
+  },
+  {
+    "section": "Extensions",
+    "label": "Planner",
+    "path": "/docs/extensions/planner/",
+    "pages": "extensions/pstdio-planner/docs",
+    "overview": "extensions/pstdio-planner/README.md"
+  },
+  {
+    "section": "Extensions",
+    "label": "Notes",
+    "path": "/docs/extensions/notes/",
+    "pages": "extensions/pstdio-notes/docs",
+    "overview": "extensions/pstdio-notes/README.md"
+  },
+  {
+    "section": "Extensions",
+    "label": "Reports",
+    "path": "/docs/extensions/reports/",
+    "pages": "extensions/pstdio-reports/docs",
+    "overview": "extensions/pstdio-reports/README.md"
+  },
+  {
+    "section": "Extensions",
+    "label": "Artifacts",
+    "path": "/docs/extensions/artifacts/",
+    "pages": "extensions/pstdio-artifacts/docs",
+    "overview": "extensions/pstdio-artifacts/README.md"
+  },
+  {
+    "section": "Extensions",
+    "label": "Remote Workspaces",
+    "path": "/docs/extensions/remote-workspaces/",
+    "pages": "extensions/remote-workspaces/docs",
+    "overview": "extensions/remote-workspaces/README.md"
+  },
+  {
+    "section": "Extensions",
+    "label": "Claude Code",
+    "path": "/docs/extensions/claude-code/",
+    "pages": "extensions/harness-claude-code/docs",
+    "overview": "extensions/harness-claude-code/README.md"
+  },
+  {
+    "section": "Extensions",
+    "label": "Codex",
+    "path": "/docs/extensions/codex/",
+    "pages": "extensions/harness-codex/docs",
+    "overview": "extensions/harness-codex/README.md"
+  },
+  {
+    "section": "Extensions",
+    "label": "OpenCode",
+    "path": "/docs/extensions/opencode/",
+    "pages": "extensions/harness-open-code/docs",
+    "overview": "extensions/harness-open-code/README.md"
+  },
+  {
+    "section": "Extensions",
+    "label": "Extension Lab",
+    "path": "/docs/extensions/extension-lab/",
+    "pages": "extensions/extension-lab/docs",
+    "overview": "extensions/extension-lab/README.md"
+  }
+]

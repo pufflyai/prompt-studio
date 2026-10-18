@@ -13,11 +13,27 @@ Choose checks that cover the changed behavior and its affected callers. Start wi
 Documentation-only changes need content, link, path, and formatting checks. A documentation path in a source comment, prompt, or test fixture does not by itself require application tests.
 
 ```bash
+bun run --cwd scripts verify:docs-links      # relative links, published routes, anchors, exported skills
+bun run --cwd scripts verify:sdk-reference   # SDK references name every public method
+bun run --cwd scripts verify:docs-snippets   # authoring guide code equals infra/local/extensions/bookmarks
+```
+
+`static_checks` runs the first two on every stage. External sites are checked separately by the **Documentation links** workflow (`.github/workflows/docs-external-links.yml`) every Monday and on manual dispatch, so an outage elsewhere cannot fail a pull request. Run it locally with `bun run --cwd scripts verify:docs-external-links`.
+
+```bash
 bun test <path-to-test> # from the owning package directory
 bun run --cwd packages/<name> test
 bun run --cwd packages/<name> lint
 bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts
 ```
+
+Run a single dashboard test through the package script, because the dashboard runner needs two flags:
+
+```bash
+bun run --cwd packages/pstdio-dashboard test -- src/workbench.test.ts
+```
+
+The script runs `bun test --conditions production --tsconfig-override tsconfig.app.json`. `--tsconfig-override tsconfig.app.json` loads the `@/*` path alias; a plain `bun test <file>` in the dashboard fails with `Cannot find module '@/...'`. `--conditions production` makes dependencies resolve their `production` export condition, as the built dashboard does. `test:coverage` uses the same flags. The dashboard imports `@pstdio/ui` and `@pstdio/workbench` from their `dist` folders, so build them first after changing them.
 
 Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks described in `AGENTS.md`. Documentation-reference-only edits do not.
 
@@ -53,7 +69,7 @@ Test and Build runs one stage per event. The `scope` job runs `scripts/ci/pull-r
 | Stage | Event | Runs | `ci_passed` requires |
 | --- | --- | --- | --- |
 | Pull request | Opening, reopening, a new push, or a new label on a pull request | Linux only: static checks, and lint and unit tests scoped to the changed packages. The published extension, harness CLI, license and Docker checks run when their files change. | No job failed |
-| Merge queue | `merge_group` | Static checks and an unsigned build of every client. No tests and no lint. | The static check, client build and Docker jobs passed |
+| Merge queue | `merge_group` | Static checks, an unsigned build of every client, Docker image builds, and the relay and account Docker checks. No package tests and no lint. | The static check, client build and Docker jobs passed, and no job failed |
 | Full | A push to `main`, a manual run, or a pull request with the `ci:full` label | Every job, including Windows, e2e, the desktop tests and the packaged toolchain check | Every job passed |
 
 A newer event on the same pull request cancels the older run. Every merge queue and `main` commit keeps its own run, so a red commit can always be traced.
@@ -62,11 +78,12 @@ A newer event on the same pull request cancels the older run. Every merge queue 
 
 The pull request stage is meant to finish in a few minutes, so it runs only Linux jobs:
 
-- `static_checks` runs the whole-repo checks: formatting, package boundaries, knip, the lockfile, the extension API version and report, changesets, the monorepo build, committed build outputs, and translations.
+- `static_checks` runs the whole-repo checks: formatting, documentation links (`bun run --cwd scripts verify:docs-links`), SDK reference coverage (`bun run --cwd scripts verify:sdk-reference`), package boundaries, knip, the lockfile, the extension API version and report, changesets, the monorepo build, committed build outputs, and translations. The documentation checks are offline, so every stage runs them.
 - `lint_and_test` builds, lints and tests the changed packages and the packages that depend on them. It compares the merge commit with the target branch.
 - `database_tests` runs the `pstdio-api` tests in four shards and the `pstdio-db` tests in three, when a change affects either package. Together these suites took 6 to 8 minutes in one job, so each shard runs on its own runner. The `pstdio-db` shards use `bun test --shard`; the API test runner accepts the same `--shard=<index>/<count>` argument.
-- `published_extensions` runs for extension, SDK, UI, and API contract changes. `harness_cli_support` runs the minimum supported agent CLIs for harness changes. `license_check` runs when a `package.json` or `bun.lock` changes.
+- `published_extensions` runs for extension, SDK, UI, and API contract changes. `harness_cli_support` runs the minimum supported agent CLIs for harness changes. Documentation files (Markdown, `design/`, and `LICENSE`) do not select either job. `license_check` runs when a `package.json` or `bun.lock` changes.
 - `build_docker` builds both images when a `package.json`, `bun.lock`, or `Dockerfile` changes. This catches container install failures before the merge queue.
+- `relay_smoke` runs when `pstdio-relay`, `pstdio-db`, or `pstdio-account-manager` or a package that depends on them changes. It runs the PGlite container lock check, `infra/relay` `test:isolated`, `test:storage`, `test:assets`, and `test:transport`, the production relay conformance entry, and `infra/account-manager` `test:isolated`. See [Relay development](0006-relay.md).
 - A change under `scripts/` or any other file outside the workspace packages lints and tests every package and runs the checks above, including Docker builds. This covers `.dockerignore`, `bunfig.toml`, and `.npmrc`. Markdown files, files under `design/`, and `LICENSE` do not count.
 
 Windows, e2e, packaged, and desktop jobs do not run in the scoped pull request stage. Add the `ci:full` label to a risky pull request to run the full stage, for example a change to process launching, the database, a harness, or packaging. Adding the label starts a full run, and each later push to the pull request runs the full stage too. Removing the label starts no run; the next push runs the scoped checks.
@@ -78,6 +95,7 @@ The merge queue proves that every client still builds from the merged result bef
 - `static_checks`, the same job as on a pull request.
 - `build_clients` builds without signing, because signing secrets are trusted only on `main` and release tags. The Linux row builds the monorepo, compiles the CLI for every platform with `bun run --cwd scripts build:all`, scaffolds the platform packages, and makes the Linux desktop app. The macOS arm64 (`macos-15`), macOS x64 (`macos-15-intel`), and Windows rows make their desktop apps. Desktop sidecars must be compiled on their own platform, so each desktop app needs a native runner.
 - `build_docker` builds the API and landing page images.
+- `relay_smoke`, the same Docker checks as on a pull request. A failure fails `ci_passed`.
 
 The `main` ruleset turned the queue on on 2026-10-12, after the queue's jobs passed every `main` run since the stages were split. It squashes, builds up to five groups at once, merges up to five pull requests per group, and merges a group only when every pull request in it passed (`ALLGREEN`). `ci_passed` is the only required check, on pull requests and in the queue.
 
@@ -95,7 +113,7 @@ Run it locally with GitHub CLI authentication: `bun scripts/ci/report-ci-failure
 
 The full stage adds:
 
-- `lint_and_test` and `database_tests` for every package, and the published extension, harness CLI, and license checks.
+- `lint_and_test` and `database_tests` for every package, `relay_smoke`, and the published extension, harness CLI, and license checks.
 - `windows_test_and_build` and `windows_database_tests`. Database and API tests run on a separate runner because their PGlite setup dominates the serial test time.
 - `e2e` (three browser shards), `e2e_cli`, and `packaged_and_vite_e2e`.
 - The desktop source Electron specs, packaged renderer benchmarks, and packaged desktop smoke tests in the Linux, macOS arm64, and Windows rows of `build_clients`, run against the unsigned app from the same row. Linux runs them under `xvfb-run`. The Intel macOS row only builds. The release workflow also runs the launch benchmarks and Intel tests against signed release artifacts.
@@ -115,13 +133,27 @@ Run `bun run --cwd scripts verify:published-extensions` to typecheck and test ev
 
 Published-extension checks and public-package consumer checks use a one-day minimum release age for fresh installs. This keeps a third-party publish in progress from selecting packages whose matching dependencies are not available yet. Prompt Studio packages in the Changesets release group are exempt, so these checks can use the SDK and UI immediately after a release. The repository's frozen-lockfile install is unchanged. See [Bun's minimum release age](https://bun.sh/docs/pm/cli/install#minimum-release-age).
 
-On a pull request, the CI job runs for extension, SDK, UI, and API contract changes, and for changes outside the workspace packages. It always runs in the full stage. The merge queue skips it because it reads the npm registry. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
+On a pull request, the CI job runs for extension, SDK, UI, and API contract changes other than documentation files, and for changes outside the workspace packages. It always runs in the full stage. The merge queue skips it because it reads the npm registry. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
 
 ## Extension smoke checks
 
 The user-facing `pst extensions test` command is described in [Smoke checks](../extensions/0006-smoke-checks.md). To check its packaged behavior in this repository, build dashboard assets first, run `bun run validate`, then `bun run --cwd scripts verify:packages`. Packaged consumer fixtures exercise passing views, startup exceptions, capability denials caught by guest code, forged host diagnostics, fixed main panels, and browser setup without external JavaScript runtimes. For interactive dashboard validation use `bun run dev:playwright` and stop it with `bun run dev:playwright:down`. These contributor commands are not prerequisites for installed CLI users.
 
 Package verification provisions Chromium through the compiled CLI before starting the timed tests, including on Windows x64. The install test reuses the browser and package caches while checking a fresh caller directory with no external JavaScript runtimes. Cold downloads remain subject to the existing CI job limit instead of the runtime test's 30-second deadline. The compiled bundle leaves out Playwright's optional BiDi modules; see [ADR 0029](../../adrs/0029-temporary-chromium-only-playwright-bundle.md).
+
+`pst extensions install-browser` installs full Chromium without Playwright's separate headless shell (`--no-shell`), and `pst extensions test` launches that browser. Packaged tests launch the same browser with `PROVISIONED_CHROMIUM` from `packages/e2e/src/packaged/packaged-chromium.ts`, which selects Playwright's `chromium` channel. A plain `chromium.launch()` would look for the headless shell, which a clean machine does not have. Use `PROVISIONED_CHROMIUM` for every Chromium launch in a packaged test. Firefox and WebKit cases still need `playwright install`.
+
+Packaged tests need a compiled binary that contains the dashboard. `buildBinary` in the tests compiles `dist/pstdio` but does not build the dashboard, so build it first. Without it, `GET /` returns 404 and browser sign-in waits until its timeout. To prove a clean environment, use a new browser folder and home:
+
+```bash
+bun run build -- --scope pstdio-dashboard --include-dependencies
+bun run --cwd scripts build:host
+export PLAYWRIGHT_BROWSERS_PATH="$(mktemp -d)" PSTDIO_HOME="$(mktemp -d)" E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
+dist/pstdio extensions install-browser
+cd packages/e2e && bun test src/packaged/packaged-serve-helpers.test.ts src/packaged/extension-browser-install.test.ts
+```
+
+Copy `dist/pstdio` to a private path and point `E2E_PACKAGED_BINARY_PATH` at the copy when another task may rebuild the binary at the same time.
 
 ## Isolation
 

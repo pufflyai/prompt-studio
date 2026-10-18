@@ -15,7 +15,7 @@ job starts. Product startup limits remain unchanged.
 ## External limitation
 
 GitHub's `macos-15-intel` runner indexes files while native tests run. In
-[diagnostic run 36184062396](https://github.com/pufflyai/prompt-studio/actions/runs/36184062396),
+diagnostic run 36184062396 (run no longer on GitHub),
 Spotlight's `mdworker_shared`, `mds_stores`, and `mds` consumed at least 86.5 CPU
 seconds during about 114 wall seconds on a four-CPU machine. They also ran during
 the failed warm launch. System load started at 9.78. Profiling itself adds load,
@@ -30,7 +30,7 @@ explain every Intel failure.
 
 Disable Spotlight indexing with `sudo mdutil -a -i off` on the disposable native
 Intel macOS CI runner before dependency installation. Record indexing status.
-[Control run 36184823777](https://github.com/pufflyai/prompt-studio/actions/runs/36184823777)
+Control run 36184823777 (run no longer on GitHub)
 tests the exact unchanged signed application without profiling. All 19 original
 cases pass in 232.7 seconds, with no retries or skips. Cold startup takes 5369 ms,
 warm attachment 2164 ms, startup windows 695/812 ms, and recovery 90 ms. The prior
@@ -39,7 +39,7 @@ retaining the measured contention fix in the Intel jobs; it does not establish
 Spotlight as the only possible source of slow startup. Application startup,
 retries, performance budgets, and timeouts stay unchanged.
 
-A fresh signed build in [run 36185150848](https://github.com/pufflyai/prompt-studio/actions/runs/36185150848)
+A fresh signed build in run 36185150848 (run no longer on GitHub)
 still passes only 17 of 19 cases with indexing disabled. Its first launch spends
 about 8.9 seconds before the first application initialization log, and cold
 workbench readiness takes 10090 ms, above the unchanged 8000 ms limit. Warm

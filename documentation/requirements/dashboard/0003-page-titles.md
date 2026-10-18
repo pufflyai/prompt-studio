@@ -32,3 +32,15 @@ Search-engine optimization, configurable title templates, and new routes for ret
 A future implementation needs a Storybook or browser journey that navigates between project, session, workspace, and extension pages, changes a resource title, and verifies fallback behavior during loading. Follow the [design rules](../../../design/DESIGN.md) and [manual browser workflow](../../guides/development/0001-setup.md#playwright-validation).
 
 Current sources: [dashboard HTML](../../../packages/pstdio-dashboard/index.html) and [page navigation](../../references/workbench/0004-navigation.md).
+
+## Delivery record
+
+Checked on 2026-10-18 against main commit `45580feb`.
+
+| Field | Record |
+| --- | --- |
+| Status | Proposed. Not implemented. |
+| Implementation | None. `packages/pstdio-dashboard/index.html` sets the static title `Prompt Studio`, and no dashboard or workbench source writes `document.title`. |
+| Availability | Not in any release. |
+| Remaining work | Every requirement above, plus the acceptance evidence. |
+| Evidence | Source search on 2026-10-18. |

@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { createWorkspaceFilesMount } from "./artifact-mount";
+import type { KeptWorkspaceFile } from "./workspace-sync-dir";
 
 const tempDirs: string[] = [];
 
@@ -12,8 +14,18 @@ const createTempDir = () => {
   return dir;
 };
 
-const createSyncMount = (root: string) =>
-  createWorkspaceFilesMount(root, { syncStateRoot: join(root, ".workspace-sync-state") });
+const createSyncMount = (root: string, kept: KeptWorkspaceFile[] = []) =>
+  createWorkspaceFilesMount(root, {
+    syncStateRoot: join(root, ".workspace-sync-state"),
+    onKeptFile: (file) => kept.push(file),
+  });
+
+const writeWorkspaceFile = (root: string, path: string, content: string) => {
+  mkdirSync(dirname(join(root, path)), { recursive: true });
+  writeFileSync(join(root, path), content);
+};
+
+const readWorkspaceFile = (root: string, path: string) => readFileSync(join(root, path), "utf8");
 
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
@@ -35,6 +47,79 @@ describe("createWorkspaceFilesMount.syncDir", () => {
     await mount.syncDir(".claude/skills", [{ path: "a/SKILL.md", content: "A2" }]);
     expect(readFileSync(join(root, ".claude/skills/a/SKILL.md"), "utf8")).toBe("A2");
     expect(existsSync(join(root, ".claude/skills/b/SKILL.md"))).toBe(false);
+  });
+
+  test("keeps a same-path file it did not write and never prunes it", async () => {
+    const root = createTempDir();
+    writeWorkspaceFile(root, ".claude/skills/review/SKILL.md", "Local");
+    const kept: KeptWorkspaceFile[] = [];
+
+    await createSyncMount(root, kept).syncDir(".claude/skills", [{ path: "review/SKILL.md", content: "Extension" }]);
+    await createSyncMount(root, kept).syncDir(".claude/skills", []);
+
+    expect(readWorkspaceFile(root, ".claude/skills/review/SKILL.md")).toBe("Local");
+    expect(kept).toEqual([{ path: ".claude/skills/review/SKILL.md", reason: "unmanaged" }]);
+  });
+
+  test("adopts an existing file with the wanted content, then updates it", async () => {
+    const root = createTempDir();
+    writeWorkspaceFile(root, ".claude/skills/review/SKILL.md", "Extension");
+    const kept: KeptWorkspaceFile[] = [];
+
+    await createSyncMount(root, kept).syncDir(".claude/skills", [{ path: "review/SKILL.md", content: "Extension" }]);
+    await createSyncMount(root, kept).syncDir(".claude/skills", [{ path: "review/SKILL.md", content: "Extension 2" }]);
+
+    expect(readWorkspaceFile(root, ".claude/skills/review/SKILL.md")).toBe("Extension 2");
+    expect(kept).toEqual([]);
+  });
+
+  test("keeps a file the user edited after a sync and stops managing it", async () => {
+    const root = createTempDir();
+    const kept: KeptWorkspaceFile[] = [];
+    await createSyncMount(root, kept).syncDir(".claude/skills", [{ path: "review/SKILL.md", content: "Extension" }]);
+    writeWorkspaceFile(root, ".claude/skills/review/SKILL.md", "Mine");
+
+    await createSyncMount(root, kept).syncDir(".claude/skills", [{ path: "review/SKILL.md", content: "Extension 2" }]);
+    await createSyncMount(root, kept).syncDir(".claude/skills", []);
+
+    expect(readWorkspaceFile(root, ".claude/skills/review/SKILL.md")).toBe("Mine");
+    expect(kept).toEqual([{ path: ".claude/skills/review/SKILL.md", reason: "edited" }]);
+  });
+
+  test("prunes unedited managed files and keeps edited ones that leave the set", async () => {
+    const root = createTempDir();
+    const kept: KeptWorkspaceFile[] = [];
+    await createSyncMount(root, kept).syncDir(".claude/skills", [
+      { path: "a/SKILL.md", content: "A" },
+      { path: "b/SKILL.md", content: "B" },
+    ]);
+    writeWorkspaceFile(root, ".claude/skills/b/SKILL.md", "B edited");
+
+    await createSyncMount(root, kept).syncDir(".claude/skills", []);
+    await createSyncMount(root, kept).syncDir(".claude/skills", []);
+
+    expect(existsSync(join(root, ".claude/skills/a/SKILL.md"))).toBe(false);
+    expect(readWorkspaceFile(root, ".claude/skills/b/SKILL.md")).toBe("B edited");
+    expect(kept).toEqual([{ path: ".claude/skills/b/SKILL.md", reason: "edited" }]);
+  });
+
+  test("keeps updating files recorded by sync state without content hashes", async () => {
+    const root = createTempDir();
+    writeWorkspaceFile(root, ".claude/skills/review/SKILL.md", "Old extension");
+    const stateFile = `${createHash("sha256").update(".claude/skills").digest("hex")}.json`;
+    writeWorkspaceFile(
+      root,
+      join(".workspace-sync-state", stateFile),
+      JSON.stringify({ version: 1, dir: ".claude/skills", files: [".claude/skills/review/SKILL.md"] }),
+    );
+    const kept: KeptWorkspaceFile[] = [];
+
+    await createSyncMount(root, kept).syncDir(".claude/skills", [{ path: "review/SKILL.md", content: "New" }]);
+    writeWorkspaceFile(root, ".claude/skills/review/SKILL.md", "Mine");
+    await createSyncMount(root, kept).syncDir(".claude/skills", [{ path: "review/SKILL.md", content: "Newer" }]);
+
+    expect(readWorkspaceFile(root, ".claude/skills/review/SKILL.md")).toBe("Mine");
+    expect(kept).toEqual([{ path: ".claude/skills/review/SKILL.md", reason: "edited" }]);
   });
 
   test("two syncs of the same dir at once both create the new folders", async () => {

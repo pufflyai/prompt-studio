@@ -74,8 +74,11 @@ Sessions run in the project folder by default, and they share its files. In a Gi
 
 ```sh
 pst workspaces create --provider pstdio.worktree
-pst sessions create --prompt "Try the refactor" --workspace-id <workspace-id>
+# Created workspace WS-1 at ...
+pst sessions create --prompt "Try the refactor" --workspace-id WS-1
 ```
+
+`pst workspaces create` prints the new workspace's short name, such as `WS-1`. `--workspace-id` accepts that short name or the workspace ID that `pst workspaces list` shows. The repository needs at least one commit.
 
 Read [Projects and workspaces](../concepts/0001-projects-and-workspaces.md) to choose between them.
 
@@ -87,7 +90,12 @@ Extensions can ship skills: instructions that teach an agent how to use a tool. 
 pst agents setup claude-code
 ```
 
-This copies the skills into the project folder, where the agent reads them. Add `--global-skills` to install them in the agent's global settings folder instead. Run it again after you turn on a new extension. For example, Planner adds skills for its ticket workflow, and Prompt Studio Skills adds a skill for writing extensions.
+This copies the skills into the project folder, where the agent reads them. Add `--global-skills` to install them in the agent's global settings folder instead. Run it again after you turn on a new extension. For example, Planner adds skills for its ticket workflow, and Prompt Studio Skills adds a skill for writing extensions. Prompt Studio also copies the skills into each workspace it prepares for a session.
+
+The installed skill folders are copies. To change a skill, edit its source in the extension that ships it, then reinstall or reload that extension. Edits to an installed copy can be lost:
+
+- From the release after 0.43.x, `pst agents setup` installs only missing skills and keeps existing skill folders. The automatic copy updates only files that Prompt Studio wrote and that nobody edited. To replace the installed folders of enabled skills with their source, and discard local edits, run `pst agents install-skills claude-code --force`.
+- In 0.43.x, `pst agents setup` and the automatic copy replace installed skill files with the source every time, so local edits in them are lost.
 
 To learn what the host and the harness each do, read [Agents and harnesses](../concepts/0003-agents.md). For every session command, see [CLI sessions](../../references/cli/0006-sessions.md).
 

@@ -18,7 +18,7 @@ Declare hooks with `defineHook({ id, event, run })` and register them in `hooks`
 
 Callbacks receive the context and a typed payload. Payload fields use camelCase and include the resource identifiers needed to load further data. Use their exported types instead of assuming every event shares one payload.
 
-Most hooks do follow-up work after a change was accepted. Provisioning is different: the host waits for `workspaceEvents.provision` hooks before it marks a workspace ready. `workspaceEvents.ready` is for setup after readiness. See the [hook runtime boundaries](../architecture/0011-hooks-runtime-boundaries.md).
+Most hooks do follow-up work after a change was accepted. Provisioning is different: the host waits for `workspaceEvents.provision` hooks before it marks a workspace ready. `workspaceEvents.ready` is for setup after readiness.
 
 ## Schedules and durable work
 

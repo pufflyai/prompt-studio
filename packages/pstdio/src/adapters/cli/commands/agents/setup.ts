@@ -2,10 +2,10 @@ import type { Arguments, Argv } from "yargs";
 import { resolveHarnessId } from "@/features/agents/api/resolve-harness-id";
 import { findProjectRoot, readConfig } from "@/features/config/config";
 import { getProjectFolder } from "@/features/projects/project-folder";
-import { installSkillsForAgent } from "@/features/skills/install-skills";
+import { describeSkillInstall, installSkillsForAgent } from "@/features/skills/install-skills";
 
 export const command = "setup <agent-id>";
-export const describe = "Configure an agent and install skills";
+export const describe = "Configure an agent and install missing skills";
 
 export const builder = (yargs: Argv) =>
   yargs
@@ -55,26 +55,19 @@ export const createHandler = (deps: Deps) => {
 
     if (!projectConfig && !shouldInstallGlobalSkills) {
       deps.log("No project configured — skipping skill installation.");
+      return;
     }
 
-    let installedSkills: string[] = [];
-    const shouldInstallSkills = Boolean(projectConfig || shouldInstallGlobalSkills);
-    if (shouldInstallSkills) {
-      installedSkills = await deps.installSkillsForAgent({
-        root:
-          projectConfig && !shouldInstallGlobalSkills
-            ? await deps.getProjectFolder(projectConfig.project_id)
-            : installRoot,
-        agentId,
-        projectId: projectConfig?.project_id,
-        global: shouldInstallGlobalSkills,
-      });
-      if (installedSkills.length > 0) {
-        deps.log(`Installed ${installedSkills.length} skill(s): ${installedSkills.join(", ")}`);
-      } else {
-        deps.log("All skills already installed.");
-      }
-    }
+    const result = await deps.installSkillsForAgent({
+      root:
+        projectConfig && !shouldInstallGlobalSkills
+          ? await deps.getProjectFolder(projectConfig.project_id)
+          : installRoot,
+      agentId,
+      projectId: projectConfig?.project_id,
+      global: shouldInstallGlobalSkills,
+    });
+    for (const line of describeSkillInstall(result, { agentId, global: shouldInstallGlobalSkills })) deps.log(line);
   };
 };
 

@@ -1,503 +1,120 @@
-# Prompt Studio extension API
+# Extension API routing index
 
-## Package manifest
+Use this page to find the maintained contract for each authoring decision. The public pages below are the authority for behavior. The type declarations in the `@pstdio/sdk` package installed next to your extension are the authority for exact signatures. The offline essentials at the end cover rules that agents often get wrong.
 
-Every extension package needs a `package.json` next to its entry file:
+## Check versions before choosing an API
 
-```json
-{
-  "name": "planner",
-  "version": "0.1.0",
-  "displayName": "Planner",
-  "description": "Planner workflow extension.",
-  "publisher": "pstdio",
-  "main": "./extension.ts",
-  "engines": {
-    "pstdio": "^0.1.0 || ^0.2.0"
-  },
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@pstdio/sdk": "latest"
-  }
-}
-```
+Three version numbers matter. They can differ, and a package number does not tell you the API version.
 
-Set `pstdio.projectFiles.tracked` when the extension uses its allocated project directory. It defaults to false.
+| Number | What it describes | How to read it |
+| --- | --- | --- |
+| App or CLI version | The Prompt Studio release that runs the host | **Help** at the bottom of the dashboard sidebar shows the running host; `pst --version` shows the `pst` you ran |
+| SDK package version | The `@pstdio/sdk` package your extension compiles against | `version` in `node_modules/@pstdio/sdk/package.json` |
+| Extension API version | The contract a host accepts in `engines.pstdio` | `pst extensions check` prints the version of the `pst` you ran; the SDK exports its own as `EXTENSION_API_VERSION` |
 
-Required fields are `name`, `version`, `publisher`, `main`, and `engines.pstdio`. The extension id is derived as
-`${publisher}.${name}`. Keep the package `name` lowercase kebab-case because it scopes command ids, catalog names,
-artifact roots, themes, and CLI paths.
+Before you write code:
 
-Set `engines.pstdio` to a caret range of the current extension API, such as `^0.1.0`. `pst extensions check` prints
-the current value. Leave it alone after host updates. Raise the minimum only when the extension starts using an API
-added in a newer version, such as `^0.1.3`. On `0.x`, a new minor is a breaking release: after fixing the code for
-`0.2.0`, declare `^0.2.0`, or `^0.1.3 || ^0.2.0` if the same code works on both. Exact versions, tilde ranges,
-wildcards, and prerelease tags are refused.
+1. Read the host's app version in **Help** at the bottom of the dashboard sidebar. The [versions table](https://prompt.studio/docs/references/extensions/api-versioning/#versions-in-current-releases) maps it to an extension API version; for example, 0.43.1 provides API 0.1.6.
+2. Run `pst --version`. If it differs from the host's app version, `pst` checks use a different API version than the host does.
+3. Compare with `EXTENSION_API_VERSION` from the SDK installed next to your extension. If it is newer than the host's API, install the SDK release that matches the host, such as `@pstdio/sdk@0.43.1`, or update Prompt Studio. Do not use an API the host does not have.
+4. Declare `engines.pstdio` as a caret range that starts at the lowest API version your code needs, such as `^0.1.0`. Never widen the range only to silence a check. A range is a promise that the extension works on that API.
 
-## Entry module
+In `pst extensions check --json`, `versions.extensionApi` is always the API version of the `pst` you ran, never the host's. A source check compares your range with that version. After an install, `pst extensions check` asks the host, which checks the range with its own version; trust its `extension_manifest_unsupported_api_version` diagnostic. [App, SDK, and extension API versions](https://prompt.studio/docs/references/extensions/api-versioning/#app-sdk-and-extension-api-versions) explains how to align them.
 
-`extension.ts` should only export contributions:
+### APIs that depend on the version
 
-```ts
-import { defineTemplate } from "@pstdio/sdk/extensions";
-import { defineCommand, defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
+| API | Availability | On an older host |
+| --- | --- | --- |
+| `ctx.storage.collection(name)` | Every 0.1 and 0.2 host. Deprecated from API 0.2.0. | Use it. |
+| `ctx.storage.records`, `ctx.storage.assets`, `client.assets` | API 0.2.0 and newer. Published 0.1.x SDKs do not have them. | Use `ctx.storage.collection`. |
+| `ctx.extensionFiles` root | API 0.1: `.pstdio/ext/<publisher>.<name>/`. API 0.2: `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. | Use relative paths only; the methods are the same. |
+| `statuses` contributions (`defineStatuses`) | Deprecated from API 0.1.3. Removed on `main`, so the release after 0.43.x no longer has it. | Do not add new ones. Return enum attributes from the query instead. |
+| Setting `options` loaded from a command | API 0.1.2 and newer. | Use fixed `enum` choices. |
 
-const createTicket = defineCommand({
-  id: "tickets.create",
-  title: "Create ticket",
-  cli: true,
-  palette: [{ label: "Create ticket" }],
-  params: { title: params.text({ label: "Title", required: true }) },
-  async run(_ctx, commandParams) {
-    return { title: commandParams.title };
-  },
-});
+[API versioning](https://prompt.studio/docs/references/extensions/api-versioning/) explains ranges and breaking changes. [Scoped checks and versions](https://prompt.studio/docs/references/extensions/manifest-and-installation/#scoped-checks-and-versions) explains what each check compares.
 
-export default defineExtension({
-  settings: {
-    properties: { defaultStatus: { type: "string", title: "Default status", scope: "project", default: "backlog" } },
-  },
+## Route each decision
 
-  commands: [createTicket],
+| Decision | Public contract | Bundled help |
+| --- | --- | --- |
+| Build a first working extension | [Write an extension](https://prompt.studio/docs/guides/extensions/authoring/) | [Examples](examples.md) |
+| Package fields, IDs, and `engines.pstdio` | [Package manifest](https://prompt.studio/docs/references/extensions/manifest-and-installation/#package-manifest), [IDs and scopes](https://prompt.studio/docs/references/extensions/manifest-and-installation/#ids-and-scopes) | This page |
+| Where the source lives, user or repo scope, installing | [Installing and updating](https://prompt.studio/docs/references/extensions/manifest-and-installation/#installing-and-updating), [Developing a repo-scoped extension](https://prompt.studio/docs/references/extensions/manifest-and-installation/#developing-a-repo-scoped-extension) | [Scope and source](scope.md) |
+| Commands, parameters, and CLI parity | [Commands](https://prompt.studio/docs/references/extensions/command-and-process-api/#commands), [CLI contributions](https://prompt.studio/docs/references/extensions/command-and-process-api/#cli-contributions), [Make actions CLI-ready](https://prompt.studio/docs/guides/extensions/cli-ready-actions/) | This page |
+| Choices loaded by a command, toolbar actions | [Command-backed choices](https://prompt.studio/docs/references/extensions/command-and-process-api/#command-backed-choices), [Native view toolbar actions](https://prompt.studio/docs/references/extensions/contribution-api/#native-view-toolbar-actions) | [Native actions](native-actions.md) |
+| Middleware, hooks, events, and schedules | [Middlewares and hooks](https://prompt.studio/docs/references/extensions/command-and-process-api/#middlewares-and-hooks), [Lifecycle automation](https://prompt.studio/docs/references/extensions/lifecycle-automation/), [Automation cookbook](https://prompt.studio/docs/guides/extensions/automation/) | |
+| Long-running work | [Durable work](https://prompt.studio/docs/references/extensions/durable-automation/) | |
+| Structured data | [Save related records](https://prompt.studio/docs/guides/sdk/storage/), [Grouped storage](https://prompt.studio/docs/references/sdk/storage/), [Data migrations](https://prompt.studio/docs/references/extensions/data-migrations/) | [Storage and workspaces](host-storage-and-workspaces.md) |
+| Extension-owned files | [Extension file storage](https://prompt.studio/docs/guides/extensions/extension-storage/), [Artifact mounts and storage](https://prompt.studio/docs/references/extensions/webview-and-storage-api/#artifact-mounts-and-storage) | [Storage and workspaces](host-storage-and-workspaces.md) |
+| Tables, boards, trees, controls, and files | [Dashboard UI contributions](https://prompt.studio/docs/references/extensions/contribution-api/#dashboard-ui-contributions), [Views: filter, sort, and display](https://prompt.studio/docs/references/extensions/contribution-api/#views-filter-sort-and-display) | This page |
+| Refresh after a change | [Renderer edit and refresh](https://prompt.studio/docs/references/extensions/renderer-edit-refresh-lifecycle/) | This page |
+| Pages, panels, and navigation | [Workbench composition](https://prompt.studio/docs/references/extensions/contextual-workbench-composition/), [Navigation and layout state](https://prompt.studio/docs/references/extensions/navigation-and-layout-state/), [Sidenav levels](https://prompt.studio/docs/references/extensions/contribution-api/#sidenav-levels), [Workbench cookbook](https://prompt.studio/docs/guides/extensions/workbench-cookbook/) | [Pages and panels](pages.md) |
+| Modes and chrome | [Modes and layout](https://prompt.studio/docs/references/extensions/modes-and-layout/) | [Pages and panels](pages.md) |
+| Custom UI in a webview | [Webview client](https://prompt.studio/docs/references/extensions/webview-and-storage-api/#webview-client), [Package assets](https://prompt.studio/docs/references/extensions/webview-and-storage-api/#package-assets) | [Webviews](webviews.md) |
+| Extension settings | [Settings](https://prompt.studio/docs/references/extensions/contribution-api/#settings) | |
+| Notifications | [Notifications](https://prompt.studio/docs/references/extensions/notifications/) | |
+| Workflow states on a board | [Workflow status migration](https://prompt.studio/docs/references/extensions/workflow-status-migration/) | |
+| Agent harnesses | [Harness command API](https://prompt.studio/docs/references/extensions/harness-commands/), [Agents and harnesses](https://prompt.studio/docs/guides/concepts/agents/) | |
+| SDK methods | [Method reference](https://prompt.studio/docs/references/sdk/api/) | |
+| Validate | [Smoke checks](https://prompt.studio/docs/guides/extensions/smoke-checks/) | [Validation](validation.md) |
 
-  templates: [
-    defineTemplate({
-      id: "ticket",
-      title: "Ticket",
-      type: "ticket",
-      source: packageAsset("./templates/ticket.md", import.meta.url),
-    }),
-  ],
-});
-```
+## Offline essentials
 
-Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersion` in `defineExtension()`.
+### Package and entry
 
-## Derived IDs
+- `package.json` needs `name`, `version`, `publisher`, `main`, `type: "module"`, and `engines.pstdio`. The extension ID is `<publisher>.<name>`. Use lowercase kebab-case for `name`.
+- `extension.ts` has one default export: `defineExtension({ ... })`. Do not put `id`, `name`, `version`, or other identity fields in it.
+- Local contribution IDs are lowercase kebab-case segments joined by dots, such as `ticket-status.create`. In package `bookmarks`, command `add` becomes `pst bookmarks add`, and command `ticket-status.create` becomes `pst bookmarks ticket-status create`.
+- Use `packageAsset("./path", import.meta.url)` for every shipped file. The path must stay inside the package.
 
-For package name `planner`:
+### Commands are the single entry point
 
-```txt
-extension id     pstdio.planner
-local command id tickets.create
-runtime id       pstdio.planner.command.tickets.create
-CLI path         pst planner tickets create
-artifact root    <project-folder>/.pstdio/extension-storage/planner/
-template id      planner.ticket
-skill id         planner.create-guide
-theme id         planner.monokai
-```
+A command with `cli: true` is also a CLI command. Toolbar actions, row actions, menus, and the palette call the same command. Return JSON data. A person and an agent then use one code path. Check both entry points: run `pst <name> <command> --help`, call the command from the CLI, and use the same action in the dashboard.
 
-Local ids must use lowercase kebab-case segments separated by dots (e.g. `ticket-status.create`). `pst extensions check` reports any other form as an error.
+### Storage results and writes
 
-Catalog display names are derived from contribution keys by converting spaces and dots to kebab-case. Historical
-camelCase and snake_case keys such as `createPstdioExtension` were normalized the same way; those forms are now
-rejected by `pst extensions check`.
+These rules hold for `ctx.storage.collection(name)`, the API every current host supports.
 
-## Contribution types
+- `list()` returns a plain array of items: `TItem[]`. It is not `{ items }` or `{ rows }`. Map it to rows yourself in a table `query`.
+- `get(id)` returns the item or `undefined`.
+- `put(id, value)` creates or replaces. Use it for new items.
+- `update(id, value)` replaces only an existing item. It throws if the item was deleted, so a late edit cannot bring a deleted item back. Use it for edits. Do not check `get` and then call `put`; another writer can delete the item between the two calls.
+- For mounted text files, `writeText` creates or replaces and `updateText` changes only an existing file.
 
-| Type                                              | Use case                                                                          |
-| ------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `commands`                                        | User-triggered or automation-triggered operations.                                |
-| `middlewares`                                     | Validate, reject, patch params, or replace invocation data before a command runs. |
-| `hooks`                                           | React to emitted events without vetoing the original operation.                   |
-| `schedules`                                       | Run a command on a cron expression.                                               |
-| `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
-| `templateTypes`                                   | Add a custom template category.                                                   |
-| `views`, `viewMenus`                              | Reusable UI bodies and menus owned by a view.                                      |
-| `pages`, `navigationItems`, `navigationTrees`     | Routed screens and explicit navigation.                                           |
-| `placements`                                      | Mode-wide views and resource bindings outside pages.                              |
-| `resourceKinds`                                   | Domain resource identity, labels, icons, and menus.                               |
-| `modes`                                           | Typed Workbench modes referenced by placements.                                   |
-| `statusBarItems`                                  | View references rendered outside docked layout.                                   |
-| `resourceHierarchyProviders`                      | Domain parent lookup for resources. Page targets supply breadcrumb destinations.                  |
-| `settingsPanels`                                  | References from host settings slots to views.                                     |
-| `activityItems`                                   | Activity-rail entries that select a Workbench mode.                               |
-| `artifactMounts`                                  | Safe file access under `.pstdio/extension-storage/<package-name>/`.                                 |
-| `workspaceTypes`, `harnesses`                     | Advanced provider integrations.                                                   |
+On API 0.2.0 and newer hosts, prefer `ctx.storage.records`. Read a record, keep its revision, and commit related changes as one group. Read the [save workflow](https://prompt.studio/docs/guides/sdk/storage/) before you use it.
 
-Editable template types must declare `list`, `read`, `save`, and `delete` command refs. The dashboard invokes those commands and never reads template storage directly. Store user overrides in `ctx.storage`; read packaged defaults with `ctx.packageFiles`.
+### Save first, then emit the event
 
-The commands exchange `{ name, title, type }` summaries and `{ name, title, type, content }` content values. Read and delete accept `{ name }`. Save accepts `{ name, title?, type, content }`.
+1. Validate the input.
+2. Write to storage and wait for the write to finish.
+3. Emit the change event with `ctx.events.emit(eventRef, payload)`.
+4. Return the saved value.
 
-## Host capability validation
+Never emit before the write succeeds. A failed write must not emit. Views that list the event in `refreshEvents` run their `query` again; webviews subscribe and read again. The event payload is a signal, not the data.
 
-`pst extensions check` validates declared dashboard UI surfaces against the dashboard build that will load them. Contract-valid extensions can still fail if the host does not advertise the bridge for a surface. The diagnostic code is `extension_host_capability_missing`; its metadata includes `contributionId`, `missingCapability`, `hostVersion`, and `requiredSince` when known.
+### Table and board actions receive IDs, activation receives the row
 
-If no host descriptor is available, the check reports `hostCompatibility.status: "unverified"`. This means the extension contract was checked, but dashboard bridge support was not proven.
-
-Current dashboard capability names:
-
-| Capability | Surface |
+| Callback | What the host passes |
 | --- | --- |
-| `command.v1` | Dashboard command execution. |
-| `menu.v1` | Menu command entries. |
-| `command-palette.v1` | Command palette entries. |
-| `mode.v1` | Workbench modes and resource layouts. |
-| `view.webview.v1` | Webview bodies. |
-| `view.tree.v1` | Tree bodies. |
-| `view.file.v1` | File bodies. |
-| `view.controls.v1` | Controls bodies and menus. |
-| `view.kanban.v1` | Kanban bodies. |
-| `view.data-table.v1` | Data table bodies. |
-| `page.v1` | Routed pages with owned view and resource-bound slots. |
-| `placement.v1` | Mode-wide docked view and resource bindings. |
-| `navigation-item.v1` | Fixed host navigation items. |
-| `navigation-tree.v1` | Page- or mode-owned tree sections. |
-| `status-bar-item.v1` | Views placed in the status bar. |
-| `settings.section.v1` | Settings navigation sections. |
-| `settings.panel.v1` | Settings placements that reference views. |
-| `settings.definition.v1` | Extension setting definitions. |
-| `renderer.command-palette-resource.v1` | Command palette resource providers. |
-| `keybinding.v1` | Dashboard keybindings. |
-| `resource-hierarchy.v1` | Resource hierarchy from native renderers. |
+| `rowActions` command (data table and kanban) | Command input `{ rowId }`: the row's `id` string |
+| `selectionActions` command (data table, with `selectionMode: "multiple"`) | Command input `{ rowIds }`: an array of row `id` strings |
+| `onRowActivate(ctx, { row })` | The whole row object: `{ id, values, resource? }` for a table |
 
-## Commands and params
+Declare `rowId: params.text({ required: true })` or `rowIds: params.json<string[]>()` on the action's command, and load the item by that ID. Do not expect `row` or `values` in an action command. A data table runs the action command at once. On a kanban board, an action command that declares parameters first opens its form, with `rowId` filled in. Row activation only requests navigation with `ctx.navigation.open(target)` and returns nothing.
 
-Commands can be exposed to the CLI with `cli: true` or `cli: { path, description, examples }`. Add dashboard entry
-points with `menus` and a host-owned workbench target such as `workbench.nav.actions` or
-`workbench.nav.overflow`. Add command palette entries explicitly with `palette`.
+### Navigation and removal
 
-Available param builders include `params.text`, `params.longText`, `params.number`, `params.boolean`,
-`params.select`, `params.multiSelect`, `params.harness`, `params.resource`, `params.workspace`, and
-`params.json`. `params.workspace({ providers })` shows the host's workspace type and provider fields, such as a
-Git base branch, and passes `{ providerId, params }` to the command.
+- Commands and callbacks request navigation with `ctx.navigation.open(target)`. A returned target is only data and does nothing.
+- After deleting a resource, call `await ctx.resources.removed({ type, id })` so open views close their bindings.
+- The host never guesses a page from a resource kind. Give every target an explicit page or panel.
 
-Command params are the handler's second argument. `ctx` in a command includes:
+### Each project has its own data
 
-- `projectId`, `workspaceId`, `project`, `extensionId`, `name`, `source`, and `resource`
-- `commandId`, `invocationId`, `signal`, `invocation`, `attachment`, and `slot`
-- `attachment` for host-owned workbench invocations, including the target, mode, project, and active resource
-- `storage`, `artifacts`, `files`, read-only `packageFiles`, and project-scoped `extensionFiles`
-- `projectFiles`, `workspaceFiles`, `skills`, `sessions`, and `workspaces`
-- `commands`, `events`, `activity`, `notify`
-- `process`, optional `terminal`, `net`, `connections`, `logger`, and `settings`
+`ctx.storage` belongs to the extension in the current project. Another project that enables the same extension sees different data. A unit test with the SDK's memory storage cannot show this. To check it, link two real project folders, enable the extension in both, add an item in one, and list in both:
 
-Harness handlers also receive host-wide, extension-scoped `state`. See `host-storage-and-workspaces.md` for storage and workspace recipes.
-
-Return transport-safe JSON values from commands. To reject before a command runs, use middleware and
-`ctx.commands.reject({ code, reason })`.
-
-## Settings
-
-Declare settings under `settings.properties` with a `type` and a `scope` of `"project"` or `"global"`. The Settings
-tab on the extension's page edits `boolean`, `number`, and `string` settings. Read them with `ctx.settings`.
-
-A `string` setting can offer fixed choices with `enum`, or load them from a command with `options`. `options` takes the
-same fields as command param options: `command`, `valueField`, `labelField`, and optional `params`. The command must
-belong to the same extension and return a list of rows:
-
-```ts
-"target.branch": {
-  type: "string",
-  scope: "project",
-  default: "",
-  title: "Target branch",
-  options: { command: listBranches.ref, valueField: "branch", labelField: "branch" },
-},
+```sh
+pst <name> list --project-id <first-project-id> --json
+pst <name> list --project-id <second-project-id> --json
 ```
 
-The form shows a searchable dropdown. Clearing it removes the saved value, so the setting uses its `default`. Saved
-values are not checked against the options, and a saved value the command no longer lists stays selected. Check the
-value where the extension uses it. Setting `options` was introduced in extension API 0.1.2. Declare `engines.pstdio: "^0.1.2 || ^0.2.0"` when supporting both API lines.
-
-## Middlewares
-
-Reference a command with a typed `CommandRef` or a string `commandId`.
-
-Middleware may return:
-
-- nothing or `ctx.commands.continue()`
-- `ctx.commands.patchParams({ ... })`
-- `ctx.commands.replaceParams({ ... })`
-- `ctx.commands.replaceInvocation({ ... })`
-- `ctx.commands.reject({ code, reason })`
-
-## Hooks and events
-
-Use kernel event refs from `@pstdio/sdk/extensions` when possible:
-
-- `projectEvents.opened`
-- `sessionEvents.started`, `resumed`, `awaitingInput`, `succeeded`, `failed`, `completed`
-- `workspaceEvents.created`, `provision` (awaited), `ready`, `deleted`
-- `worktreeEvents.removed`
-- `gitEvents.committed`, `rebased`, `merged`, `conflicted`
-
-Use `commandEvent(commandRef, "completed")` to react to command lifecycle events. Hooks observe events; they do not
-cancel the operation that emitted the event.
-
-## Package assets
-
-Use `packageAsset("./relative/path", import.meta.url)` for all shipped files and directories. Asset paths must resolve
-inside the extension package. Skill assets may point at a directory containing `SKILL.md` plus support files.
-
-## Webviews
-
-A view with `body.kind: "webview"` points at an entry with `packageAsset()`. Declare only the capabilities the
-webview needs, such as `commands.execute`, `navigation.open`, `notification.show`, `preferences.get`, and
-`preferences.set`. Settings panels and status-bar items reference that view instead of declaring another body.
-
-To copy text, declare `clipboard.write` and call `navigator.clipboard.writeText(text)` from a click handler inside the webview. The host delegates `clipboard-write` only to declared views. This is a browser permission, not a bridge method. Clipboard reads remain blocked. `@pstdio/ui` exports `CopyButton` for this action.
-
-Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
-
-A webview can read files from an artifact mount its extension defines. Declare one grant per mount with
-`artifactsRead(mount)`; there is no wildcard grant. A mount's `path` is relative to the extension's
-package-name root in the default workspace's extension storage directory (`<project-folder>/.pstdio/extension-storage/<package-name>/<path>/`); its `id` only names the
-mount in refs and grants and never changes the disk path.
-
-```ts
-const runArtifacts = defineArtifactMount({ id: "runs", path: "runs", label: "Runs" });
-
-const report = defineView({
-  id: "report",
-  title: "Report",
-  body: {
-    kind: "webview",
-    entry: packageAsset("./webviews/report.tsx", import.meta.url),
-    capabilities: ["commands.execute", artifactsRead(runArtifacts)],
-  },
-});
-```
-
-The typed client then exposes `client.artifacts.list(mount, prefix?)`, `client.artifacts.readText(mount, path)`,
-and `client.artifacts.imageUrl(mount, path)`, which returns a short-lived URL for png, jpeg, webp, or gif
-images. The host enforces the boundary: undeclared mounts are denied by the bridge, path traversal and
-symlink escapes are rejected, text reads over 5 MB and images over 20 MB return limit errors, and other
-media types are refused. `pst extensions check` fails a webview that declares `artifacts.read` on a mount
-its extension does not define.
-
-Webviews store extension-owned files through the `files` object passed to
-`defineExtensionView({ render })`. Declare `files.upload`, `files.list`, and
-`files.delete` separately. `files.pick()` is browser-local and needs no declaration.
-
-```ts
-const imports = defineView({
-  id: "imports",
-  title: "Imports",
-  body: {
-    kind: "webview",
-    entry: packageAsset("./webviews/imports.ts", import.meta.url),
-    capabilities: ["files.upload", "files.list", "files.delete"],
-  },
-});
-```
-
-```ts
-const [selected] = await files.pick({ accept: ".csv,text/csv" });
-if (selected) {
-  const uploaded = await files.upload({
-    name: selected.name,
-    data: await selected.arrayBuffer(),
-    mimeType: selected.type || "text/csv",
-  });
-  const projectFiles = await files.list();
-  await files.delete(uploaded.id);
-}
-```
-
-Omitting `scope` uses project scope. Pass `{ type: "resource", id: resource.id }`,
-or an extension-defined `{ type, id }` to
-upload and list another group. Commands address those scopes with different runtime
-shapes:
-
-```ts
-ctx.storage.scope({ type: "resource", resource }).files;
-ctx.storage.scope({ type: "import", id: importId }).files;
-```
-
-`resource` is the full resource reference with at least `type` and `id`.
-Extension-defined command scopes require an id. The host fixes the project and extension
-instance owner. Global settings webviews do not get host-backed file methods because
-they have no project owner. The upload limit is 25 MiB.
-
-Declare `navigation.open` to open an explicit page or panel target:
-
-```ts
-await host.call("navigation.open", {
-  target: {
-    kind: "page",
-    page: ticketPage.ref,
-    resource: { type: "ticket", id: "PS-260", label: "Dashboard webview capabilities" },
-  },
-});
-```
-
-The target chooses the screen. The host never guesses a page or panel from the resource kind.
-
-## Handler navigation and removal
-
-Returned command data never triggers navigation or resource cleanup. Open targets with `ctx.navigation.open(target)` and report committed deletions with `await ctx.resources.removed(resource)`. Table and kanban activation callbacks return void.
-
-Commands and interaction callbacks use `ctx.navigation.open(target)`. It accepts the same `NavigationTarget` as webview `navigation.open`. The method records a request and returns void; it does not wait for the browser. Return ordinary data from the handler.
-
-Successful UI invocations apply recorded requests once through the existing navigation dispatcher. Nested calls share request order and keep each caller's extension identity. Failed children discard their requests; a failed root applies none. CLI, schedule, and event-hook execution records no navigation. A target-shaped return value is only data.
-
-After the data owner commits deletion, call `await ctx.resources.removed({ type: "note", id })`. The host checks that this extension declares the resource kind, fills its extension and project identity, and sends the fact to every connected client. Explicit foreign extension or project scope is rejected. Reporting does not delete data and is independent of later command failures.
-
-Identity is the existing `ResourceRef` tuple: extension, project, type, and ID. Repo- or workspace-backed resources must use IDs unique within that tuple. Artifact mounts are project-owned, even when invoked from a workspace. No additional resource registry is required.
-
-Clean bindings close, including retained inactive pages. A remaining routed resource is selected before the page parent. Dirty or saving file editors keep their draft, display a removal notice, and stop saving; users can copy the draft and close the tab. Removal also clears cached file content and visited layout caches. A missed live report still requires missing-resource handling on load.
-
-Data owners must prevent stale saves from recreating deleted data. For mounted text files, use `mount.writeText(path, value)` to create or replace, and `mount.updateText(path, value)` to update only an existing file. The latter opens without creating and cannot recreate a file deleted during that write. An existence check followed by write is insufficient. For stored collection items, use `collection.update(id, value)`. It atomically replaces an existing item and throws if it was deleted; `collection.put` still creates or replaces items.
-
-## Pages and navigation
-
-A page owns its route and declares an optional resource constraint separately from Main presentation. Main shows a view or peer panels with an empty view. Extra slots and mode placements share the same static-view or resource-binding item.
-
-Use the compiled [Scribble](examples/scribble.ts), [Zipline](examples/zipline.ts), and [Pigeon](examples/pigeon.ts) modules for declarations. Read [pages and panels](pages.md) for cardinality, shared mode panels, resource identity, and closing.
-
-Navigation items and trees belong to a mode or page. Omitted mode chrome keeps the host sidebar in custom modes. A replacement view or false overrides it. Page navigation owns browser history; panel navigation preserves location. Compounds accept only page and panel steps.
-
-## Native resource views
-
-Use native view bodies when the host should own the editor or tree chrome instead of loading a custom
-webview. Views own their body only. A page declares its routed resource and Main presentation separately. Extra page slots and mode placements use the same resource binding for their own instances.
-
-File view bodies need a `load` callback; an optional `save` callback makes text content editable.
-Load callbacks return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
-`mimeType`, and `placeholder`. Images are always read-only.
-
-The host picks the editor from `fileName` and `mimeType`: Markdown opens in the rich Markdown editor, other
-text opens in the Monaco code editor, and a result without a `fileName` falls back to the Markdown editor.
-Return `textRenderer: "monaco"` to force the code editor for a file the host would open as Markdown.
-
-The rich Markdown editor preserves source outside the syntax the user edits. Prompts, templates, configuration
-files, and other machine-read Markdown need no renderer override. Use `textRenderer: "monaco"` only when the user
-should edit raw Markdown in the code editor.
-
-Tree view bodies need a `body` callback; `children` and `footer` callbacks are optional. Body callbacks
-return `TreeViewSection[]`. Children and footer callbacks return `TreeNode[]`.
-
-### Refresh native renderers with events
-
-Every native renderer can declare `refreshEvents`. Use a typed `eventRef()` for events owned by the extension, or a
-string id for an event owned by another extension. Emit the event only after the mutation succeeds. The host reruns
-only renderer callbacks that declared that event; it does not refresh renderers after unrelated commands.
-
-```ts
-import { defineCommand } from "@pstdio/sdk/extensions";
-import { defineExtension, defineView, eventRef } from "@pstdio/sdk/extensions";
-
-const ticketsChanged = eventRef<{ ticketId: string }>({ extensionId: "example.tickets", id: "changed" });
-
-const tickets = defineView({
-  id: "tickets",
-  title: "Tickets",
-  body: {
-    kind: "dataTable",
-    query: async () => ({ rows: [] }),
-    refreshEvents: [ticketsChanged],
-  },
-});
-
-export default defineExtension({
-  views: [tickets],
-  commands: [
-    defineCommand({
-      id: "update-ticket",
-      title: "Update ticket",
-      async run(ctx, _commandParams) {
-        // Persist the update first.
-        await ctx.events.emit(ticketsChanged, { ticketId: "ticket-1" });
-      },
-    }),
-  ],
-});
-```
-
-## Project navigation UI
-
-For a Planner-style list or board, define a view with `body.kind: "kanban"` and a
-`query` callback. Use the view as the page's Main presentation. Add a `navigationItems`
-contribution whose action targets that page. Paths belong to pages, never views. The page selects its
-declared mode; navigation never switches a mode as a separate step.
-
-For an editable inspector, define a `controls` view with a `query` callback plus optional
-`onValueChange`, `onApply`, and `onReset` callbacks. Attach it to an owner with
-`defineViewMenu({ owner: owner.ref, view: inspector.ref, side: "right" })`. Bind resource
-views through page slots, and keep mode-wide region choices in `placements`. Omitting both
-`onValueChange` and `onApply` makes controls read-only. Callback payloads must be JSON.
-Commit file metadata or data URLs, never live `File` objects.
-
-## Harnesses
-
-A harness contributes an agent that drives sessions. The host injects an event sink (and, for providers with the
-`Approvals` capability, an approval channel) and owns the session lifecycle: timeouts, persistence, and status
-transitions are keyed off the returned `HarnessSession`. Ids are namespaced as
-`${publisher}.${package-name}.${provider.id}` (for example `pstdio.harness-claude-code.harness.claude-code`).
-
-```ts
-import { defineExtension, defineHarness, l10n } from "@pstdio/sdk/extensions";
-import type { HarnessProvider, HarnessSession } from "@pstdio/sdk/extensions";
-
-// Implement these process adapters for your agent. See harness-codex for a complete provider.
-declare const runAgent: (
-  ctx: Parameters<HarnessProvider["start"]>[0],
-  input: Parameters<HarnessProvider["start"]>[1],
-) => HarnessSession["done"];
-declare const abort: () => void;
-declare const resumeAgent: NonNullable<HarnessProvider["resume"]>;
-
-const myAgent = defineHarness({
-  id: "my-agent",
-  label: l10n("harness.myAgent", "My Agent"),
-  capabilities: () => ["ContextUsage"],
-  detect: async (ctx) => {
-    const result = await ctx.process.run({ command: ["my-agent", "--version"] });
-    // `reason` tells the person why the harness cannot run. The harness menu and `pst agents list` show it.
-    if (result.exitCode !== 0) return { available: false, reason: "`my-agent --version` failed. Install My Agent." };
-    return { available: true, version: result.stdout.trim() };
-  },
-  listModels: () => [{ id: "my-model" }],
-  start: (ctx, input): HarnessSession => {
-    input.events.push({ op: "add", path: "/messages/0", value: { id: "m0", role: "user", parts: [] } });
-    return { agentSessionId: input.sessionId, done: runAgent(ctx, input), stop: () => abort() };
-  },
-  resume: (ctx, input) => resumeAgent(ctx, input),
-});
-
-export default defineExtension({ harnesses: [myAgent] });
-```
-
-- `start`/`resume` push `SessionMessage` JSON patches into `input.events` and return a `HarnessSession` whose `done`
-  promise settles exactly once with `{ status: "completed" | "failed" | "cancelled" | "disconnected" }`.
-- Set `timeoutStrategy: "provider"` only when the harness self-terminates; otherwise the host stops the session after
-  a period without events.
-- Implement `reattach` (and advertise `SessionReattach`) to re-bind orphaned provider sessions after a host restart.
-- Consumers select a harness with `ctx.sessions.create({ harness: { harnessId, model } })` using the namespaced id.
-
-### Board and table views
-
-Kanban and data table views share one view model: a `filter` (one root group of
-`{ attributeId, condition, value }` rules joined by `"and"` or `"or"`, with at most
-one level of nested groups), ordered `sorts`, and display `settings`. Each field
-kind accepts a fixed list of conditions; read them from `VIEW_FILTER_CONDITIONS`
-in `@pstdio/sdk/extensions`. Search is screen state and is never saved or sent to
-a query.
-
-Declare the starting view with `defaultFilter`, `defaultSorts`, and
-`defaultSettings`. Data table columns can declare `type` (`"string"`, `"number"`,
-`"date"`) and `groupable: true`, and table `defaultSettings` can set `grouping`,
-`rowNumbers`, `wrapRows`, `showStats`, `hiddenColumns`, and `columnOrder`. The
-query receives `filter`, `sorts`, and `settings`; use them only to narrow what
-you load, because the renderer applies the full view to the rows you return.
-Use `defaultFilter`, `defaultSorts`, and saved-view `filter` and `sorts` fields.
-
-### Shared views
-
-The host owns saved views per project, extension instance, and local view ID,
-for kanban and data table views alike. Do not persist user-created views in
-extension storage. Keep view and field IDs stable across releases. Return
-complete attributes or columns from queries; the host uses their enum options
-to validate saved settings, rules, and sorts. A successful query can
-remove rules for deleted fields and options. A failed query preserves them.
-
-`defaultViews` declares read-only built-ins. Use `defaultActiveViewId` for the
-extension fallback. The shared project default takes precedence. People and agents can choose any saved or built-in view as the shared project default.
-Disabled boards retain saved data; removing a board leaves orphaned views that
-agents can inspect with `pst views list --orphaned`.
+Use a scope from `ctx.storage.scope(...)` only for data owned by a resource or another named group inside the same project.

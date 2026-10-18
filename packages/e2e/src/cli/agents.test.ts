@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { enableCoreSkillsExtension } from "./extension-helpers";
 import { cleanupDirs, createGitRepo, createTempDir, runPstdio, runPstdioSafe } from "./helpers";
@@ -95,6 +95,38 @@ describe("pstdio agents (filesystem)", () => {
       // Skills are installed either during project creation (via registerRepo) or agent setup
       expect(existsSync(join(repo, ".claude", "skills", "pstdio", "SKILL.md"))).toBe(true);
       expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "keeps existing skill folders until --force replaces them",
+    async () => {
+      const repo = createGitRepo();
+      // The global skill folder is outside every workspace, so workspace provisioning never writes there.
+      const home = createTempDir();
+      dirs.push(repo, home);
+      run("projects create e2e-agents-skill-folders", repo);
+      await enableCoreSkillsExtension(api.url, readProjectId(repo));
+      const installSkills = (flags = "") =>
+        runPstdio(`agents install-skills claude-code --global-skills ${flags}`, repo, {
+          PSTDIO_API_URL: api.url,
+          HOME: home,
+          USERPROFILE: home,
+        });
+      const skillFile = join(home, ".claude", "skills", "pstdio", "SKILL.md");
+
+      expect(installSkills()).toMatch(/Installed \d+ skill\(s\): .*pstdio/);
+      const source = readFileSync(skillFile, "utf8");
+
+      writeFileSync(skillFile, "edited");
+      const output = installSkills();
+      expect(output).toMatch(/Kept \d+ existing skill folder\(s\) unchanged: .*pstdio/);
+      expect(output).toContain("pst agents install-skills claude-code --global-skills --force");
+      expect(readFileSync(skillFile, "utf8")).toBe("edited");
+
+      expect(installSkills("--force")).toMatch(/Replaced \d+ skill\(s\): .*pstdio/);
+      expect(readFileSync(skillFile, "utf8")).toBe(source);
     },
     TEST_TIMEOUT,
   );

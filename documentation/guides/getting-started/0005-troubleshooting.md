@@ -46,7 +46,7 @@ On Windows, close and reopen your terminal after you install the app, so it sees
 
 The first time you open a folder, Prompt Studio downloads the default extensions from GitHub with Git. They connect the agents. If this fails, no agent appears in the agent list.
 
-- Check that Git is installed: run `git --version` in a terminal.
+- Check that Git is installed: run `git --version` in a terminal. Prompt Studio needs the `git` command for this download, even when your project folder is not a Git repository.
 - Check that your computer can reach `github.com`.
 - Open **Settings → Project folder** and choose **Retry setup**, or open the same folder again.
 
@@ -73,7 +73,9 @@ Open **Settings → Extensions** in the project. An extension that failed shows 
 - For a core extension, choose **Upgrade** when it is offered. It installs the build that matches your Prompt Studio version.
 - For an extension from a local folder, fix its source, then choose **Reload**.
 
-`pst extensions check` checks every installed extension without opening the dashboard. It prints the Prompt Studio, extension API, and SDK versions, then any problems it found.
+`pst extensions check` checks every installed extension without opening the dashboard. Run it inside a linked project. It prints the version of the `pst` you ran, its extension API and SDK versions, and then the problems the runtime found. It does not print the runtime's own version; read that in **Help** at the bottom of the dashboard sidebar.
+
+An error such as `targets extension API ^0.2.0 but this host provides 0.1.6` means the extension needs a newer Prompt Studio release than the one that checked it. When the error says `this pst provides`, the `pst` command you ran did the check, not your runtime. Update Prompt Studio, or use a build of the extension for your release. Do not edit the extension's `engines.pstdio` range only to make the error go away. See [App, SDK, and extension API versions](../../references/extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions) to find out which version each check uses.
 
 ## The dashboard does not open
 

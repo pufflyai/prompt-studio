@@ -2,7 +2,7 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.18
+  version: 0.0.19
 ---
 
 Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report, then follow the configured review and pull request steps.
@@ -12,17 +12,17 @@ Implement Planner tickets in a Prompt Studio workspace. Produce a committed revi
 Always work in a Prompt Studio workspace. Never use `git worktree add` or your agent's own worktree tool. Prompt Studio does not track those, so the ticket, reports, reviews and merges cannot find the work.
 
 - If you run inside a workspace from `pst pstdio-planner run-attempt`, work there.
-- When asked to implement tickets in a worktree, run `pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'`. It prints the workspace shorthand and path. Link each ticket with `pst tickets link --id <ticket> --workspace <workspace>`, then work at the printed path. Other workspace types use their own provider ID and declared parameters.
+- When asked to implement tickets in a worktree, run `pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'`. It prints the workspace shorthand and path. Link each ticket with `pst tickets link --id <ticket> --workspace <workspace>`, then work at the printed path. Other workspace types use their own provider ID and declared parameters. See [Workspaces](https://prompt.studio/docs/references/cli/workspaces/).
 - For several tickets in one workspace, create one workspace and link every ticket to it.
 - For one workspace per ticket, create and link a workspace for each ticket.
 
-Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>` has a managed attempt. The Planner derives its ticket status from the attempt and review verdicts; do not set that status directly. In any other workspace, skip step 5, update the ticket status after fixing review findings, and give the user the workspace ID, commit SHA, and report ID.
+Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>` has a managed attempt. The Planner derives its ticket status from the attempt and review verdicts; do not set that status directly. In any other workspace, skip step 5, update the ticket status after fixing review findings, and give the user the workspace ID, commit SHA, and report ID. See [Attempts](https://prompt.studio/docs/extensions/planner/attempts/#run-an-attempt) and [How Planner sets the ticket status](https://prompt.studio/docs/extensions/planner/attempts/#how-planner-sets-the-ticket-status).
 
 ### Branches and dependency code
 
 Your working branch, dependency base, and delivery target have different roles. Keep the working branch assigned to your workspace. The attempt's recorded base is the code your change builds on. The delivery target comes from the implementation policy; it is not a command to check out that branch or reset your workspace to it.
 
-Before editing a managed attempt:
+Before editing a managed attempt (see [Dependencies](https://prompt.studio/docs/extensions/planner/attempts/#dependencies) and [Updating a dependency stack](https://prompt.studio/docs/extensions/planner/attempts/#updating-a-dependency-stack)):
 
 1. Read `pst pstdio-planner read-attempt-history --workspace-id <workspace-id>`. Keep the owner session ID, recorded base, and latest revision number.
 2. Read the ticket's dependencies and inspect the required files in this workspace. A submitted prerequisite can exist only on its own branch. A Done ticket or an answered human request does not prove that its commits reached the target branch or your workspace.
@@ -35,8 +35,8 @@ Dependency integration is part of implementing this ticket. This assignment auth
 1. Identify the ticket. Pass its shorthand, such as `PS-12`, to `--id`. If it is missing or ambiguous, ask the user to confirm it.
    - For "implement the next ticket", list tickets in the project's ready status with `pst tickets list --status <ready-status>`. Use `pst statuses list` to find the status name.
    - Read the full body with `pst tickets panel --id <shorthand>` before changing code.
-   - Read the workflow options with `pst pstdio-planner implementation-policy`. `adversarialReview` and `openPr` are enabled by default and can be toggled in the current project's Planner settings. Explicit user instructions for this task take precedence.
-2. Implement only the ticket's scope. Follow the repository's contributor rules.
+   - Read the workflow options with `pst pstdio-planner implementation-policy`. `adversarialReview` and `openPr` are enabled by default and can be toggled in the current project's Planner settings; see [Implementation options](https://prompt.studio/docs/extensions/planner/#implementation-options). Explicit user instructions for this task take precedence.
+2. Implement only the ticket's scope. Follow the repository's contributor rules and its own requirements documents. Prompt Studio's product requirements apply only when the repository is Prompt Studio.
 3. Run the required validation, follow the adversarial review step below, and commit the finished change in the managed workspace.
 4. Create the change request report described below.
 5. Keep the `reportId` returned by `pst reports save`. Read the commit SHA with `git rev-parse HEAD`, then run:
@@ -48,7 +48,7 @@ Dependency integration is part of implementing this ticket. This assignment auth
 
 When you cannot proceed without a person's decision or action, create a Planner review request. This records the blocker and sets Review Needed in the timeline. Do this before ending the turn. Do not only ask in chat or set a ticket status.
 
-Use `pst pstdio-planner request-human` with the ticket, a short title, concrete instructions, and a task or decision request. Include what you tried, the evidence, and exactly what the person must decide or do.
+Use `pst pstdio-planner request-human` with the ticket, a short title, concrete instructions, and a task or decision request. See [Review requests](https://prompt.studio/docs/extensions/planner/review-requests/). Include what you tried, the evidence, and exactly what the person must decide or do.
 
 ```bash
 pst pstdio-planner request-human --ticket PS-12 \
@@ -78,7 +78,7 @@ Read `pst pstdio-planner implementation-policy` again before handoff so changes 
 
 ## Change request report
 
-The report must explain the change and include outputs that a reviewer can inspect.
+The report must explain the change and include outputs that a reviewer can inspect. See [Write a report](https://prompt.studio/docs/extensions/reports/#write-a-report).
 
 1. Run `pst reports write --kind change_request --name change_request --template change-request` and keep the returned `name`, `path`, and `filesPath`. The paths are absolute locations in the default project folder on the host, not the active worktree or remote environment.
 2. Explain why the change is needed and why you chose the implementation.
@@ -106,7 +106,7 @@ Use concrete artifacts that another person or agent can inspect and reproduce.
 
 ### Repair a changed dependency base
 
-For a `tickets next` action of `update-stack`, reuse the listed workspace and its implementation session. Read the ticket and existing review findings. Run `pst pstdio-planner update-stack` with the exact workspace HEAD and owner session; resolve any merge conflicts, commit, and retry. Preserve the ticket's branch and PR target rules. Validate the result, run the configured adversarial review, save a fresh report, and submit the exact HEAD with `--expected-revision`. A passed review stays on its old revision; do not fabricate a rejection or reopen it to permit a correction. Complete required CI on the latest pushed PR commit.
+For a `tickets next` action of `update-stack`, reuse the listed workspace and its implementation session. See [Updating a dependency stack](https://prompt.studio/docs/extensions/planner/attempts/#updating-a-dependency-stack). Read the ticket and existing review findings. Run `pst pstdio-planner update-stack` with the exact workspace HEAD and owner session; resolve any merge conflicts, commit, and retry. Preserve the ticket's branch and PR target rules. Validate the result, run the configured adversarial review, save a fresh report, and submit the exact HEAD with `--expected-revision`. A passed review stays on its old revision; do not fabricate a rejection or reopen it to permit a correction. Complete required CI on the latest pushed PR commit.
 
 ### Recover a missing workspace
 

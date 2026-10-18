@@ -13,7 +13,7 @@ const resolveHarnessId = async (id: string) => {
 
 describe("agents setup", () => {
   test("installs project skills in the default workspace despite an old config link", async () => {
-    const installSkillsForAgent = mock(async () => ["create-ticket"]);
+    const installSkillsForAgent = mock(async () => ({ installed: ["create-ticket"], kept: [], replaced: [] }));
     const log = mock();
 
     const handler = createHandler({
@@ -38,8 +38,26 @@ describe("agents setup", () => {
     expect(log).toHaveBeenCalledWith("Installed 1 skill(s): create-ticket");
   });
 
+  test("reports kept skill folders and how to replace them", async () => {
+    const log = mock();
+    const handler = createHandler({
+      resolveHarnessId,
+      getProjectFolder: async () => "/project-home",
+      cwd: () => "/repo",
+      findProjectRoot: () => "/repo",
+      readConfig: () => ({ project_id: "proj-1" }),
+      installSkillsForAgent: async () => ({ installed: [], kept: ["create-ticket", "pstdio"], replaced: [] }),
+      log,
+    });
+
+    await handler({ "agent-id": "claude-code", "global-skills": false } as never);
+
+    expect(log).toHaveBeenCalledWith("Kept 2 existing skill folder(s) unchanged: create-ticket, pstdio");
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("pst agents install-skills claude-code --force"));
+  });
+
   test("skips skill installation without project config", async () => {
-    const installSkillsForAgent = mock(async () => []);
+    const installSkillsForAgent = mock(async () => ({ installed: [], kept: [], replaced: [] }));
     const log = mock();
 
     const handler = createHandler({
@@ -56,11 +74,10 @@ describe("agents setup", () => {
 
     expect(installSkillsForAgent).not.toHaveBeenCalled();
     expect(log).toHaveBeenCalledWith("No project configured — skipping skill installation.");
-    expect(log).not.toHaveBeenCalledWith("All skills already installed.");
   });
 
   test("supports global skill install outside git repositories", async () => {
-    const installSkillsForAgent = mock(async () => ["create-ticket"]);
+    const installSkillsForAgent = mock(async () => ({ installed: ["create-ticket"], kept: [], replaced: [] }));
 
     const handler = createHandler({
       resolveHarnessId,
@@ -89,7 +106,7 @@ describe("agents setup", () => {
       cwd: () => "/cwd",
       findProjectRoot: () => "/cwd",
       readConfig: () => ({ project_id: "p1" }),
-      installSkillsForAgent: async () => [],
+      installSkillsForAgent: async () => ({ installed: [], kept: [], replaced: [] }),
       log: mock(),
     });
 

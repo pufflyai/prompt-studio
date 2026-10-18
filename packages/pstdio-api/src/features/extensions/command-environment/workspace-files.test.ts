@@ -1,9 +1,10 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type WorkspaceCapabilities, workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import { createProjectsDBService, folderWorkspaceCapabilities } from "pstdio-db";
+import { apiLogger } from "../../../lib/logger";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createCommandEnvironment } from "./index";
@@ -136,4 +137,27 @@ test("workspace targets reject failed, remote, and cross-project access", async 
   workspace.execution_kind = "local";
   workspace.project_id = "another-project";
   for (const mount of mounts(env)) await expect(mount.readText("notes.txt")).rejects.toThrow("local file target");
+});
+
+test("workspace sync keeps a file it does not own and logs where it is", async () => {
+  await mkdir(join(root, ".claude/skills/review"), { recursive: true });
+  await writeFile(join(root, ".claude/skills/review/SKILL.md"), "Local");
+  const warnSpy = spyOn(apiLogger, "warn").mockImplementation(() => {});
+
+  try {
+    await environment().workspaceFiles!.syncDir(".claude/skills", [{ path: "review/SKILL.md", content: "Extension" }]);
+
+    expect(await readFile(join(root, ".claude/skills/review/SKILL.md"), "utf8")).toBe("Local");
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "extension.workspace_sync.kept_file",
+        extensionId: "example.tools",
+        path: join(root, ".claude/skills/review/SKILL.md"),
+        reason: "unmanaged",
+      }),
+      expect.any(String),
+    );
+  } finally {
+    warnSpy.mockRestore();
+  }
 });

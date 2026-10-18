@@ -5,19 +5,25 @@
 
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
-import { posix, resolve } from "node:path";
+import { join, posix, resolve } from "node:path";
 import { waitForRuntimeDescriptor } from "./desktop-runtime-startup";
+import { resolveCredentialMounts, writeCredentialComposeFile, writeExtraCaContext } from "./isolated-host-files";
 import { resolveIsolatedUser } from "./isolated-user";
 import { resolveWorkingTreeDefaultExtensions } from "./working-tree-extensions";
 
 const COMPOSE_FILE = "infra/local/compose.yaml";
-const composeFiles = () => [
-  "-f",
-  COMPOSE_FILE,
-  ...(process.env.PSTDIO_ISOLATED_COMPOSE_FILE ? ["-f", process.env.PSTDIO_ISOLATED_COMPOSE_FILE] : []),
-];
+const CREDENTIALS_COMPOSE_FILE = "credentials.compose.json";
+const composeFiles = (repoRoot: string, projectName: string) => {
+  const credentials = join(resolveStackDirectory(repoRoot, projectName), CREDENTIALS_COMPOSE_FILE);
+  return [
+    "-f",
+    COMPOSE_FILE,
+    ...(process.env.PSTDIO_ISOLATED_COMPOSE_FILE ? ["-f", process.env.PSTDIO_ISOLATED_COMPOSE_FILE] : []),
+    ...(existsSync(credentials) ? ["-f", credentials] : []),
+  ];
+};
 const PROJECT_PREFIX = "pstdio-cmp";
 const SERVICE = "prompt-studio";
 const CONTAINER_DASHBOARD_PORT = 5173;
@@ -71,12 +77,15 @@ export const resolveContainerPorts = (hostPorts: HostPorts, desktopMode: boolean
   api: desktopMode ? hostPorts.api : CONTAINER_API_PORT,
 });
 
-export const resolveIsolatedHome = (repoRoot: string, projectName: string) => {
+const resolveStackDirectory = (repoRoot: string, projectName: string) => {
   if (!/^[a-z0-9][a-z0-9_-]*$/.test(projectName)) {
     throw new Error(`Invalid isolated stack name: ${projectName}`);
   }
-  return resolve(repoRoot, "__test-tmp__", "dev-isolated", projectName, "pstdio-home");
+  return resolve(repoRoot, "__test-tmp__", "dev-isolated", projectName);
 };
+
+export const resolveIsolatedHome = (repoRoot: string, projectName: string) =>
+  join(resolveStackDirectory(repoRoot, projectName), "pstdio-home");
 
 export const resolveIsolatedDashboardUrl = (port: number) => `http://${ISOLATED_BROWSER_HOST}:${port}/`;
 
@@ -132,6 +141,7 @@ const composeEnv = (
     repoRoot,
   }),
   HOST_PSTDIO_HOME: resolveIsolatedHome(repoRoot, projectName),
+  PSTDIO_ISOLATED_CA_DIR: join(resolveStackDirectory(repoRoot, projectName), "extra-ca"),
   PSTDIO_DEFAULT_EXTENSIONS: resolveIsolatedDefaultExtensions(repoRoot),
   PSTDIO_EXTENSION_RELEASE_REF: resolveIsolatedExtensionReleaseRef(repoRoot),
   PSTDIO_DESKTOP_FLOW: desktopMode ? "1" : "0",
@@ -152,11 +162,15 @@ const runCompose = (
   desktopMode = false,
   apiToken?: string,
 ) => {
-  const result = spawnSync("docker", ["compose", ...composeFiles(), "-p", projectName, ...extraArgs], {
-    cwd: repoRoot,
-    env: composeEnv(repoRoot, projectName, hostPorts, desktopMode, apiToken),
-    stdio: "inherit",
-  });
+  const result = spawnSync(
+    "docker",
+    ["compose", ...composeFiles(repoRoot, projectName), "-p", projectName, ...extraArgs],
+    {
+      cwd: repoRoot,
+      env: composeEnv(repoRoot, projectName, hostPorts, desktopMode, apiToken),
+      stdio: "inherit",
+    },
+  );
   if (result.status !== 0) process.exit(result.status ?? 1);
 };
 
@@ -169,7 +183,7 @@ const lookupHostPort = (
 ) => {
   const result = spawnSync(
     "docker",
-    ["compose", ...composeFiles(), "-p", projectName, "port", SERVICE, String(containerPort)],
+    ["compose", ...composeFiles(repoRoot, projectName), "-p", projectName, "port", SERVICE, String(containerPort)],
     { cwd: repoRoot, env: composeEnv(repoRoot, projectName, hostPorts, desktopMode), encoding: "utf8" },
   );
   if (result.status !== 0) {
@@ -207,7 +221,7 @@ const createComposeServiceMonitor = (
   hostPorts: HostPorts,
   desktopMode: boolean,
 ) => {
-  const args = ["compose", ...composeFiles(), "-p", projectName];
+  const args = ["compose", ...composeFiles(repoRoot, projectName), "-p", projectName];
   const options = {
     cwd: repoRoot,
     env: composeEnv(repoRoot, projectName, hostPorts, desktopMode),
@@ -266,7 +280,7 @@ const main = async () => {
 
   if (hasFlag(args, "--down")) {
     runCompose(projectName, repoRoot, ["down", "-v"]);
-    rmSync(resolve(repoRoot, "__test-tmp__", "dev-isolated", projectName), { recursive: true, force: true });
+    rmSync(resolveStackDirectory(repoRoot, projectName), { recursive: true, force: true });
     return;
   }
 
@@ -277,6 +291,13 @@ const main = async () => {
 
   const hostPorts = await reserveHostPorts();
   mkdirSync(pstdioHome, { recursive: true });
+  const stackDirectory = resolveStackDirectory(repoRoot, projectName);
+  const caCount = writeExtraCaContext(join(stackDirectory, "extra-ca"), process.env.NODE_EXTRA_CA_CERTS);
+  if (caCount > 0) process.stdout.write(`Trusting ${caCount} certificate(s) from NODE_EXTRA_CA_CERTS in the image.\n`);
+  const credentials = resolveCredentialMounts(process.env.HOME ?? process.env.USERPROFILE ?? "");
+  writeCredentialComposeFile(join(stackDirectory, CREDENTIALS_COMPOSE_FILE), credentials.mounted);
+  for (const missing of credentials.missing)
+    process.stdout.write(`Not mounted, file is missing: ${missing}. Sign that agent in on the host or in the stack.\n`);
   // The API listens on every container interface, so it needs a token. The desktop flow's runtime
   // creates its own; the Vite flow gets one per run, and the dashboard dev server holds it.
   const apiToken = desktopMode ? undefined : randomBytes(32).toString("base64url");

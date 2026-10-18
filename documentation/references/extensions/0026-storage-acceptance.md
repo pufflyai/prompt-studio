@@ -1,6 +1,6 @@
 # Extension storage acceptance
 
-This is the acceptance appendix of [PRD 0009](../../requirements/platform/0009-standardize-storage-api.md).
+This is the acceptance appendix of PRD 0009 (`documentation/requirements/platform/0009-standardize-storage-api.md` in the repository).
 
 ## Completion checks
 

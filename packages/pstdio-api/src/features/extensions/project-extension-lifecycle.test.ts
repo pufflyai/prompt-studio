@@ -37,7 +37,7 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
       extensionConnectionService: { removeExtension: mock(async () => {}) },
       extensionRuntimeCatalog: {
         get: mock(async () => ({ runtime: { schedules: [] as Array<Record<string, unknown>> } })),
-        getInstalledSourceRuntime: mock(async () => ({ hooks: [], skills: input.skills ?? [] })),
+        getSourcesRuntime: mock(async () => ({ hooks: [], skills: input.skills ?? [] })),
       },
       extensionService: {
         enableInstalledSourceForProject: async () => ({ instance: extensionInstance(true), installedSource }),

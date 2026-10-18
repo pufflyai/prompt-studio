@@ -40,7 +40,7 @@ export const getExtensionContributionsHandler = (
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
-    const runtime = await deps.extensionRuntimeCatalog.getInstalledSourceRuntime(existing.installedSource);
+    const runtime = await deps.extensionRuntimeCatalog.getSourcesRuntime([existing.installedSource]);
     return c.json(await assembleWorkbenchMetadata(deps, projectId, runtime, [existing]), 200);
   };
 };

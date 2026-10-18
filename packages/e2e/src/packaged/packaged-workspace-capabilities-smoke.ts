@@ -8,6 +8,7 @@ import { workbenchPages } from "@pstdio/sdk/extensions";
 import { serializePageUrl } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 const source = `
@@ -28,7 +29,7 @@ export const registerWorkspaceCapabilitiesSmokeTests = () => {
   test("packaged remote workspace shows its state and actions without requesting files", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-workspace-capabilities-"));
     let child: ChildProcess | undefined;
-    const browser = await chromium.launch();
+    const browser = await chromium.launch(PROVISIONED_CHROMIUM);
     try {
       const runtime = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
       child = runtime.child;

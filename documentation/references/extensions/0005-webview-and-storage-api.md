@@ -46,6 +46,21 @@ export default defineExtensionView({
 - Pass `{ extensionId }` as the second argument only in tests, where no host bridge
   provides one.
 
+### View render context
+
+`render` receives one context object. These parts are in 0.43.x and `main`, except `page`:
+
+| Member | What it does |
+| --- | --- |
+| `mount` | The DOM element the view renders into. |
+| `host.call(method, params?)` | Calls a host capability that the webview declared. |
+| `host.onEvent(scope, handler)` | Listens to host messages on one scope and returns an unsubscribe function. The webview events client uses the `extension.events` scope; prefer it for extension events. |
+| `files` | Picks local files and stores extension-owned files. See [Webview files](#webview-files). |
+| `propsStore.get()` | Returns the current props the host passed to the view. |
+| `propsStore.subscribe(listener)` | Calls `listener` with new props whenever the host changes them. Returns an unsubscribe function. |
+| `page` | Reads and updates page params. On `main` only; it ships in the release after 0.43.x. See [Page params](#page-params). |
+| `locale`, `t` | The active locale and a translation helper. |
+
 ### Webview files
 
 Use `client.files`. The old render-context `files` helper is deprecated through 0.44.
@@ -258,12 +273,24 @@ Package asset paths must be relative and stay inside the package.
 
 Command and hook handlers can read other packaged files through `ctx.packageFiles`. This API is read-only and scoped to the installed package root. Files omitted from an installed copy by `.gitignore` are unavailable at runtime.
 
-Set `pstdio.projectFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. It is rooted at `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. Publishers with the same package name keep separate files and ignore rules. The host adds an ignore entry for that publisher on the first write unless `tracked` is true.
+Set `pstdio.projectFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. It is rooted at `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/` from extension API 0.2, which ships in the release after 0.43.x. In 0.43.x it is rooted at `.pstdio/ext/<publisher>.<name>/`. Publishers with the same package name keep separate files and ignore rules. The host adds an ignore entry for that publisher on the first write unless `tracked` is true.
 
 ## Artifact mounts and storage
 
 See [artifact mounts and storage](0021-artifact-mounts-and-storage.md) for records, assets,
 allocated files, webview reads and watched mounts.
+
+### Collection and file writes
+
+These rules apply to 0.43.x and `main`:
+
+- `ctx.storage.collection(name).list()` returns a plain array of items, `TItem[]`. It is not `{ items }` or `{ rows }`. Map the items to rows yourself in a table or board `query`.
+- `get(id)` returns the item, or `undefined` when it does not exist.
+- `put(id, value)` creates or replaces an item. Use it for new items.
+- `update(id, value)` replaces only an existing item. It throws when the item does not exist, including when another writer deleted it, so a late edit cannot bring a deleted item back. Use it for edits instead of `get` followed by `put`.
+- On an artifact mount or `ctx.extensionFiles`, `writeText(path, value)` creates or replaces a file. `updateText(path, value)` changes only an existing file. It fails when the file is missing and never recreates a file that was deleted during the write.
+
+Save before you announce a change. In a command, validate the input, wait for the storage write to finish, then call `ctx.events.emit(eventRef, payload)`, then return the saved value. Do not emit when the write failed. Views that list the event in `refreshEvents` run their `query` again, and webviews that subscribe read again, so they must find the data already saved. The event payload is a signal, not the data.
 
 ### Webview reads
 
@@ -303,6 +330,8 @@ The host allows 16 live streams per frame and 8 MiB of unread JSON per stream. O
 The low-level `commands.stream` bridge accepts `start`, `cancel`, and `ack` operations. `createWebviewClient` handles IDs, consumed-byte acknowledgements, and scoped `data`/`end` events for you.
 
 ## Page params
+
+Page params are on `main` (extension API 0.1.7 and later) and ship in the release after 0.43.x. `@pstdio/sdk` 0.43.1 and the 0.43.1 app do not have them.
 
 A page can declare a `params` record. Each definition has a `type`: `string`, `number`, `boolean`, or `string[]`. It may have a matching `default`. String definitions may also restrict values with `values`.
 

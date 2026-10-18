@@ -1,58 +1,60 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { createTempDir, PSTDIO_CLI, runPstdioSafe } from "./helpers";
-import { type ApiInstance, startApi } from "./start-api";
-import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
+import { describe, expect, test } from "bun:test";
+import { createTempDir, runPstdioSafe } from "./helpers";
+import { TEST_TIMEOUT } from "./timeouts";
 
-let api: ApiInstance;
+const commandGroups = [
+  "agents",
+  "auth",
+  "auth tokens",
+  "automation",
+  "connections",
+  "extensions",
+  "notifications",
+  "projects",
+  "resources",
+  "sessions",
+  "views",
+  "workspaces",
+];
 
-beforeAll(async () => {
-  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: "[]" } });
-}, SETUP_TIMEOUT);
-
-afterAll(async () => {
-  await api?.stop();
-});
-
-const runPstdioCaptured = (args: string, env: Record<string, string>) => {
-  const result = spawnSync("bun", ["run", PSTDIO_CLI, ...args.split(" ")], {
-    cwd: process.cwd(),
-    env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1", PSTDIO_DISABLE_API_AUTO_START: "1", ...env },
-    encoding: "utf8",
-    timeout: TEST_TIMEOUT,
-  });
-
-  return {
-    exitCode: result.status ?? 1,
-    output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
-  };
-};
+// No API runs in these tests and auto-start stays disabled, so any command that needs one fails.
+const runOffline = (args: string) => runPstdioSafe(args, createTempDir(), { PSTDIO_DISABLE_API_AUTO_START: "1" });
 
 describe("cli help and feedback", () => {
-  test(
-    "shows agents help when subcommand is missing",
-    () => {
-      const result = runPstdioCaptured("agents", { PSTDIO_API_URL: api.url });
-      const { output } = result;
+  for (const group of commandGroups) {
+    test(
+      `shows ${group} help without an API when the subcommand is missing`,
+      () => {
+        const result = runOffline(group);
 
-      expect(result.exitCode).toBe(0);
-      expect(output).toContain("pstdio agents [command]");
-      expect(output).toContain("Manage coding agents");
-      expect(output).toContain("pstdio agents list");
+        expect(result.exitCode, result.stderr).toBe(0);
+        expect(result.stdout).toContain(`pstdio ${group} [command]`);
+        expect(result.stdout).toContain("Commands:");
+      },
+      TEST_TIMEOUT,
+    );
+  }
+
+  test(
+    "prints an error and group help for an unknown subcommand",
+    () => {
+      const result = runOffline("agents bogus");
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("Unknown argument: bogus");
+      expect(result.stderr).toContain("pstdio agents list");
     },
     TEST_TIMEOUT,
   );
 
   test(
-    "shows projects help when subcommand is missing",
+    "prints an error and nested group help for an unknown nested subcommand",
     () => {
-      const result = runPstdioCaptured("projects", { PSTDIO_API_URL: api.url });
-      const { output } = result;
+      const result = runOffline("auth tokens bogus");
 
-      expect(result.exitCode).toBe(0);
-      expect(output).toContain("pstdio projects [command]");
-      expect(output).toContain("Manage projects");
-      expect(output).toContain("pstdio projects list");
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("Unknown argument: bogus");
+      expect(result.stderr).toContain("pstdio auth tokens issue");
     },
     TEST_TIMEOUT,
   );
@@ -60,9 +62,7 @@ describe("cli help and feedback", () => {
   test(
     "prints error and root help for unknown command",
     () => {
-      const result = runPstdioSafe("foo", createTempDir(), {
-        PSTDIO_DISABLE_API_AUTO_START: "1",
-      });
+      const result = runOffline("foo");
 
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain("Unknown argument: foo");

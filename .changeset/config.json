@@ -29,6 +29,7 @@
   "bumpVersionsWithWorkspaceProtocolOnly": true,
   "ignore": [
     "@pstdio/landing-page",
+    "bookmarks",
     "e2e",
     "font-editor",
     "local-example",

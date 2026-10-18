@@ -14,7 +14,7 @@ The existing project ID is the stable workbench ID used by the synchronization c
 
 The CLI exposes `pst projects environment` and `pst projects bind <id> --environment <environment-id> --name <name> --path <folder>`. The SDK provides `client.runtime.environment()`, `client.projects.bindEnvironment(id, input)`, and `client.runtime.resolveTarget({ environmentId, workbenchId, workspaceId })`. Target resolution requires all three identities and never substitutes a default workspace.
 
-Binding creates local metadata. It does not connect to a relay, prove account ownership, or grant hosted access. Caller-supplied account IDs are not accepted as authorization. The account layer will authorize shared content before replication. Local-only projects and bindings to a shared identity can coexist without changing each other's state or config.
+Binding creates local metadata. It does not connect to a relay, prove account ownership, or grant hosted access. Caller-supplied account IDs are not accepted as authorization. Relay replication is a separate, opt-in runtime connection that uses finite access from the account manager; see [synchronization contracts](0026-synchronization-contracts.md#local-ui-sync-and-relay-ownership). Local-only projects and bindings to a shared identity can coexist without changing each other's state or config.
 
 Each environment owns its workspaces, folders, sessions, processes, terminals, credentials, caches, and development overrides. Those rows stay in its local database. Two runtimes can bind the same project ID to different folders and workspace IDs. See [local and remote ownership](0012-local-and-remote.md) and the [relay ownership boundary](0026-synchronization-contracts.md#local-ui-sync-and-relay-ownership).
 

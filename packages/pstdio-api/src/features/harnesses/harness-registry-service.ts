@@ -5,7 +5,6 @@ import { type ExtensionConnectionsApi, isLocalizedString } from "pstdio-api-cont
 import type { HarnessContextFactory, HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { installDefaultExtensions } from "../extensions/default-extensions";
 import { createProcessApi, findFreePort } from "../extensions/extension-process-api";
@@ -66,10 +65,11 @@ const harnessLogger = (extensionId: string) => ({
 // Project-scoped calls resolve harnesses from the project's runtime snapshot, so
 // they observe the same catalog generation as every other extension consumer.
 // The host-wide union (no projectId) is not an enabled-project runtime and keeps
-// its own loading over the user extensions root plus registered sources.
+// its own source set: the user extensions root plus registered sources. It imports
+// them through the catalog, so an unchanged source keeps its harness and workers.
 export const createHarnessRegistryService = (input: {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
-  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "get" | "subscribeInvalidation">;
+  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "get" | "getSourcesRuntime" | "subscribeInvalidation">;
   /** Override the expensive host-scope load+normalize+build. Tests inject a counting fake. */
   buildRegistry?: (input: BuildRegistryInput) => Promise<HarnessRegistry>;
   installDefaultExtensions?: typeof installDefaultExtensions;
@@ -125,11 +125,10 @@ export const createHarnessRegistryService = (input: {
   const defaultBuildRegistry = async ({ paths }: BuildRegistryInput) => {
     ensureActive();
     const generation = resolutionGeneration;
-    const loaded = await loadExtensionSources({
-      extensionPackages: [...paths.entries()].map(([path, sourceKind]) => ({ path, sourceKind })),
-    });
+    const runtime = await input.extensionRuntimeCatalog.getSourcesRuntime(
+      [...paths].map(([source_path, source_kind]) => ({ source_path, source_kind })),
+    );
     if (generation !== resolutionGeneration) return null;
-    const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
     return lifecycle.get(runtime.harnesses);
   };
 

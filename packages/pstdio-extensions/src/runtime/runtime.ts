@@ -9,6 +9,7 @@ export type LoadExtensionRuntimeInput = {
   extensionRoots?: LoadExtensionSourcesOptions["extensionRoots"];
   /** Explicit extension packages to load. */
   extensionPackages?: LoadExtensionSourcesOptions["extensionPackages"];
+  apiProvider?: LoadExtensionSourcesOptions["apiProvider"];
 };
 
 export const loadExtensionRuntime = async (input: LoadExtensionRuntimeInput = {}) => {
@@ -22,6 +23,7 @@ export const loadExtensionRuntime = async (input: LoadExtensionRuntimeInput = {}
   const loaded = await loadExtensionSources({
     extensionRoots: roots,
     extensionPackages: input.extensionPackages,
+    apiProvider: input.apiProvider,
   });
 
   return normalizeExtensionSources(loaded.sources, loaded.diagnostics);

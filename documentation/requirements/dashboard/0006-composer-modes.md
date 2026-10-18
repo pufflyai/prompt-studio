@@ -1,8 +1,8 @@
 # PRD: Composer modes and provider state
 
-Status: Implemented in PS-459 after design approval. Rich provider readback and verified composition remain capability-dependent.
+Status: Partly delivered. Goal, plan, state, and confirmation behavior is covered by adapter and fixture tests. Rich metrics, complete composition, and live provider proof remain open. See the [delivery record](#delivery-record).
 
-Updated: 2026-10-04
+Updated: 2026-10-18
 
 ## Purpose
 
@@ -158,3 +158,18 @@ Queue rows have no numbers, title, or pencil action. Remove appears on hover, fo
 Row edges reorder; compatible centers combine; the flush strip above the viewport sends into active work. Keep its up-arrow and lowercase label “drop here to send now” in all states. The strip is 20 px high with a larger drag hit region, overlays existing space, and squares the queue's top corners during dragging. It is transparent with dashed top/side borders at idle; the targeted state uses canonical accent fill, contrasting text, and a solid outline at 30% text opacity. Show only one destination. Keyboard and touch can reach each destination, and edge dragging scrolls overflow.
 
 Hide the send-now strip when the conversation cannot accept live input, including unsupported harnesses, inactive work, and blocking input. Keep the queue's rounded top corners and allow reordering and combining. Different saved settings and unsaved edits disable an otherwise supported strip with a reason. Dropping on that blocked strip shows the reason beside the queue and keeps the saved request intact. Combining requires matching complete settings and resolved edits. A failure keeps saved work intact. Uncertain native delivery remains visible and cannot replay automatically.
+
+## Delivery record
+
+Checked on 2026-10-18 against main commit `45580feb`. The newest stable release is `pstdio@0.43.1`.
+
+| Field | Record |
+| --- | --- |
+| Implementation | Harness command SDK and composer controls in #887. Native commands, Codex goal commands, and Codex plan approval (`extensions/harness-codex/src/plan-approval.ts`) in #893. Queued request editing and native steering in #958. Codex questions in the shared composer in #874, and the exported question form in #1053. |
+| Availability | #874, #887, #893, and #958 shipped in `pstdio@0.42.0`. #1053 shipped in `pstdio@0.43.1`. |
+| Fixture coverage | Codex adapter tests cover goal dispatch and acknowledgement, planning reported apart from goals, the blocked goal-and-plan combination, completed proposals as decisions, revision-bound approval, and stale revisions. Dashboard tests cover dispatch of the displayed revision and draft-preserving Continue planning and Skip. Playwright specs `plan-approval.spec.ts` and `harness-commands.spec.ts` drive `workbench-fixture` harnesses, not real providers. |
+| Rich metrics | Not delivered. Codex reports goal status, token use, budget, and seconds as one summary string in `extensions/harness-codex/src/command-state.ts`, not as separate labeled metrics with freshness. Claude Code forwards `/goal` and states that goal status is unavailable. OpenCode declares no modes. |
+| UI composition | Not complete. Goal and Plan together stay disabled with a reason until a provider verifies the combination. This record did not audit every Pencil frame against the running UI. |
+| Live provider proof | None. `harness-cli-support.yml` installs real agent CLIs without a login, so it checks the installed CLI contract, not an authenticated goal or plan session. |
+| Remaining work | Structured metric readback per provider, verified Goal and Plan composition, public SDK contract additions, and authenticated provider acceptance. |
+| Evidence | Unit tests, passed locally on 2026-10-18: `plan-approval.test.ts`, `command-state.test.ts`, and `goal-commands.test.ts` in `extensions/harness-codex/src` (24 tests), and `packages/pstdio-dashboard/src/modules/sessions/chat/harness-confirmation.test.ts`. The Playwright specs run in the full CI stage on `main` and were not rerun for this record. |

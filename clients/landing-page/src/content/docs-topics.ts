@@ -1,3 +1,5 @@
+import docsTopics from "./docs-topics.json";
+
 export type DocsSection = "Guides" | "References" | "Extensions";
 
 export interface DocsTopic {
@@ -11,62 +13,12 @@ export interface DocsTopic {
   overview?: string;
 }
 
-const extension = (label: string, slug: string, folder: string): DocsTopic => ({
-  section: "Extensions",
-  label,
-  path: `/docs/extensions/${slug}/`,
-  pages: `extensions/${folder}/docs`,
-  overview: `extensions/${folder}/README.md`,
-});
-
 /**
  * The only repo docs the website publishes, in sidebar order. A folder that is not
  * listed here stays in the repo, so a new internal folder is private until added.
+ * The list is JSON so that repository checks can read it without importing website code.
  */
-export const DOCS_TOPICS: DocsTopic[] = [
-  {
-    section: "Guides",
-    label: "Getting started",
-    path: "/docs/guides/getting-started/",
-    pages: "documentation/guides/getting-started",
-  },
-  {
-    section: "Guides",
-    label: "How Prompt Studio works",
-    path: "/docs/guides/concepts/",
-    pages: "documentation/guides/concepts",
-  },
-  {
-    section: "Guides",
-    label: "Build extensions",
-    path: "/docs/guides/extensions/",
-    pages: "documentation/guides/extensions",
-  },
-  { section: "Guides", label: "Use the SDK", path: "/docs/guides/sdk/", pages: "documentation/guides/sdk" },
-  { section: "References", label: "CLI", path: "/docs/references/cli/", pages: "documentation/references/cli" },
-  {
-    section: "References",
-    label: "Extension API",
-    path: "/docs/references/extensions/",
-    pages: "documentation/references/extensions",
-  },
-  { section: "References", label: "SDK", path: "/docs/references/sdk/", pages: "documentation/references/sdk" },
-  {
-    section: "References",
-    label: "Workbench",
-    path: "/docs/references/workbench/",
-    pages: "documentation/references/workbench",
-  },
-  extension("Planner", "planner", "pstdio-planner"),
-  extension("Notes", "notes", "pstdio-notes"),
-  extension("Reports", "reports", "pstdio-reports"),
-  extension("Artifacts", "artifacts", "pstdio-artifacts"),
-  extension("Remote Workspaces", "remote-workspaces", "remote-workspaces"),
-  extension("Claude Code", "claude-code", "harness-claude-code"),
-  extension("Codex", "codex", "harness-codex"),
-  extension("OpenCode", "opencode", "harness-open-code"),
-  extension("Extension Lab", "extension-lab", "extension-lab"),
-];
+export const DOCS_TOPICS = docsTopics as DocsTopic[];
 
 export const DOCS_SECTIONS: DocsSection[] = ["Guides", "References", "Extensions"];
 

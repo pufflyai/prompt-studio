@@ -7,6 +7,8 @@ Publishers with the same package name keep separate files and ignore rules, incl
 after disable, reload, and uninstall. The relative file methods stay unchanged.
 This is a breaking filesystem layout change.
 
+API 0.2 is on `main` and in `0.44.0-nightly` builds. It ships in the release after 0.43.x. Release 0.43.x provides API 0.1.6 and still uses `.pstdio/ext/<publisher>.<name>/`, so do not move files before the app you run provides API 0.2. See [App, SDK, and extension API versions](../../references/extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
+
 Declared artifact mounts keep their existing paths under the package-name root.
 They cannot start with the reserved `.publishers` segment, including case variants.
 Rename any existing mount that uses that segment before upgrading.

@@ -1,5 +1,4 @@
-import type { Argv } from "yargs";
-import { ensureApi } from "@/features/ensure-api";
+import { defineCommandGroup } from "../../command-group";
 import * as approveCommand from "./approve";
 import * as archiveCommand from "./archive";
 import * as createCommand from "./create";
@@ -14,32 +13,20 @@ import * as stopCommand from "./stop";
 import * as streamCommand from "./stream";
 import * as viewCommand from "./view";
 
-export const command = "sessions [command]";
-export const describe = "Manage sessions";
-
-let _yargs: Argv;
-
-export const builder = (yargs: Argv) => {
-  _yargs = yargs;
-  return yargs
-    .command(approveCommand)
-    .command(archiveCommand)
-    .command(createCommand)
-    .command(denyCommand)
-    .command(followUpCommand)
-    .command(listCommand)
-    .command(queuedCommand)
-    .command(updateQueuedCommand)
-    .command(combineQueuedCommand)
-    .command(steerCommand)
-    .command(resolveSessionIdCommand)
-    .command(streamCommand)
-    .command(stopCommand)
-    .command(viewCommand);
-};
-
-export const middlewares = [() => ensureApi(process.env.PSTDIO_API_URL)];
-
-export const handler = () => {
-  _yargs.showHelp();
-};
+export const { command, describe, subcommands, builder, handler } = defineCommandGroup(
+  { name: "sessions", describe: "Manage sessions" },
+  approveCommand,
+  archiveCommand,
+  createCommand,
+  denyCommand,
+  followUpCommand,
+  listCommand,
+  queuedCommand,
+  updateQueuedCommand,
+  combineQueuedCommand,
+  steerCommand,
+  resolveSessionIdCommand,
+  streamCommand,
+  stopCommand,
+  viewCommand,
+);

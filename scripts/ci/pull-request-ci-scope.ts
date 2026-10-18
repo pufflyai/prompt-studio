@@ -59,17 +59,21 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
     return { stage: "pull_request", ...everyCheck };
   }
 
+  // Prose cannot change how an extension compiles or detects a CLI. The changed package still runs its own tests,
+  // and static_checks validates every documentation link.
+  const changedCode = changedFiles.filter((file) => !isDocumentation(file));
+
   return {
     stage: "pull_request",
     dockerBuild: changedFiles.some((file) => ["package.json", "bun.lock", "Dockerfile"].includes(basename(file))),
     lernaFilter: `--since ${PULL_REQUEST_BASE}`,
     relaySmoke: affectedPackages.some((name) => ["pstdio-relay", "pstdio-db", "pstdio-account-manager"].includes(name)),
     databaseTests: affectedPackages.some((name) => SHARDED_TEST_PACKAGES.includes(name)),
-    publishedExtensions: changedFiles.some((file) =>
+    publishedExtensions: changedCode.some((file) =>
       ["extensions", "packages/sdk", "packages/ui", "packages/pstdio-api-contracts"].some((dir) => isInside(file, dir)),
     ),
     license: changedFiles.some((file) => ["bun.lock", "package.json"].includes(basename(file))),
-    harnessCli: changedFiles.some((file) =>
+    harnessCli: changedCode.some((file) =>
       ["extensions/harness-codex", "extensions/harness-claude-code", "extensions/harness-open-code"].some((dir) =>
         isInside(file, dir),
       ),

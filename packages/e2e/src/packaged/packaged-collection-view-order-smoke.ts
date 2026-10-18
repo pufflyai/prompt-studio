@@ -7,6 +7,7 @@ import { chromium, expect, type Page } from "@playwright/test";
 import { WORKSPACES_COLLECTION_ID } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 const verifyOrder = async (page: Page, projectId: string, boardId: string) => {
@@ -73,7 +74,7 @@ export const registerCollectionViewOrderSmokeTests = () => {
       });
       expect(response.status).toBe(201);
       const { id } = (await response.json()) as { id: string };
-      browser = await chromium.launch();
+      browser = await chromium.launch(PROVISIONED_CHROMIUM);
       const page = await browser.newPage({ extraHTTPHeaders: runtimeAuthorization(runtime.descriptor) });
       await signInBrowser(page, runtime.descriptor);
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));

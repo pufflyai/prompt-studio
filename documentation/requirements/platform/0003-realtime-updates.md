@@ -1,5 +1,5 @@
 ---
-status: "draft"
+status: "current"
 created: "2026-03-10T20:12:05Z"
 ---
 
@@ -64,15 +64,23 @@ Heartbeats carry the latest sequence id to keep the connection warm.
 
 ### Synced Tables
 
-- `projects`
+The API sends these 11 tables:
+
+- `board_views`
+- `board_default_views`
 - `settings`
-- `notifications`
+- `projects`
 - `installed_extension_sources`
+- `notifications`
 - `extension_instances`
 - `sessions`
 - `workspaces`
 - `files`
 - `workspace_sessions`
+
+`board_default_views` rows use a derived sync ID from `boardDefaultSyncRow`.
+Resource link changes travel as `resource_anchor_events` events on the same stream.
+They are not a synced table and are not part of `init`.
 
 Planner tickets, ticket statuses, ticket tags, and ticket file metadata are not
 core synced tables. Dashboard ticket surfaces load planner-owned data through
@@ -96,6 +104,10 @@ The authoritative table list is [SYNCED_TABLES](../../../packages/pstdio-api/src
 
 - Y.js tables are intentionally excluded from this stream.
 - Session content is represented by related file records instead of large inline blobs in the sync payload.
+- A delete sends `sync:delete` events only after the database delete succeeds. A
+  project delete first lists the synced rows that cascade from it, then sends
+  their deletes children first and the project last. A missing project sends
+  nothing.
 - The dashboard sync provider starts automatically on app mount.
 
 ## Errors
@@ -104,3 +116,15 @@ The authoritative table list is [SYNCED_TABLES](../../../packages/pstdio-api/src
 | ------------------------ | --------------------------------------------------------------------------- |
 | Stale UI after reconnect | The client lost its sequence cursor or failed to replay missed events.      |
 | Missing live updates     | The sync stream could not connect or the event bus did not emit the change. |
+
+## Delivery record
+
+Checked on 2026-10-18 against main commit `45580feb`. The newest stable release is `pstdio@0.43.1`.
+
+| Field | Record |
+| --- | --- |
+| Status | Released. |
+| Implementation | `packages/pstdio-api/src/features/sync/` (stream, snapshot, and cascade order) and `packages/pstdio-dashboard/src/lib/sync/`. Board views joined the stream in #845. Project delete cascades came in #922. |
+| Availability | #845 shipped in `pstdio@0.39.0` and #922 in `pstdio@0.42.0`. |
+| Remaining work | The dashboard's own table list in `packages/pstdio-dashboard/src/lib/sync/collections.ts` still names `templates`, which the API no longer sends. A child row created between the cascade listing and the delete would be removed without its own delete event; this is read from source and not tested. |
+| Evidence | Unit tests, passed locally on 2026-10-18: `stream.test.ts`, `stream-race.test.ts`, and `get-full-state.test.ts` in `packages/pstdio-api/src/features/sync/`, and `packages/pstdio-api/src/services/project-service.test.ts` ("delete publishes every synced dependent after the rows are gone"). |

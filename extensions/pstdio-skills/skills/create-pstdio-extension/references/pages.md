@@ -2,6 +2,8 @@
 
 A page owns a route, its routed resource, and page panels. A view supplies content. A mode owns shared panels, region policy, and chrome. Use Main, Side, and Secondary for panels; use `navigationItems` and `navigationTrees` for Sidenav content.
 
+The public contracts are [Workbench composition](https://prompt.studio/docs/references/extensions/contextual-workbench-composition/), [Navigation and layout state](https://prompt.studio/docs/references/extensions/navigation-and-layout-state/), [Modes and layout](https://prompt.studio/docs/references/extensions/modes-and-layout/), and [Workbench navigation](https://prompt.studio/docs/references/workbench/navigation/). The [Workbench cookbook](https://prompt.studio/docs/guides/extensions/workbench-cookbook/) has worked examples.
+
 ## Choose a structure
 
 | Need | Pattern |
@@ -39,6 +41,8 @@ A panel target opens a panel while preserving the route and breadcrumbs. Its pag
 
 Omitted mode chrome keeps host navigation, including navigation owned by a custom mode. A replacement view or `false` overrides it. Shared mode panels retain mounted state across pages when declared `keep-mounted` and dispose when their owner is removed.
 
+Commands and row activation callbacks request navigation with `ctx.navigation.open(target)` and return data. After committing deletion, call `await ctx.resources.removed(resource)`. The host removes clean resource bindings across clients and inactive pages. Other active resources stay selected. Dirty editors retain their draft and stop saving until explicitly closed. Keep missing-resource loads for disconnected clients and use update-only writes for existing documents.
+
 ## Closing
 
 Static presence is `fixed`, `open`, or `closed`. Fixed panels cannot close. Open and closed are initial values; saved user choices win later.
@@ -57,15 +61,9 @@ Export `qualifyRef(owner, ref)` from provider contract modules. It supports nest
 
 Use `workbenchPages.sessions` and `workbenchPages.workspaces` without a resource for their home pages. Use `workbenchPages.session` with a session or session draft, and `workbenchPages.workspace` with a workspace.
 
-## Refresh installed guidance
-
-The source of this shipped skill is `extensions/pstdio-skills/skills/create-pstdio-extension` in the Prompt Studio repository. `.agents/skills` contains installed copies, not a second authoring source.
-
-Update `pstdio-skills` with the SDK release, then run `pst agents install-skills <agent-id>` from the project folder. The installer adds missing skills and replaces each existing same-name skill directory. Before running it, copy any local edits outside that directory or move them into the extension's source skill. The installer does not merge local edits. Restart the agent session to read the updated files. For source development, first load the skill extension through `pst extensions dev <path-to-pstdio-skills>`.
-
-Commands and row activation callbacks request navigation with `ctx.navigation.open(target)` and return data. After committing deletion, call `await ctx.resources.removed(resource)`. The host removes clean resource bindings across clients and inactive pages. Other active resources stay selected. Dirty editors retain their draft and stop saving until explicitly closed. Keep missing-resource loads for disconnected clients and use update-only writes for existing documents.
-
 ## Sidenav levels
+
+The public contract is [Sidenav levels](https://prompt.studio/docs/references/extensions/contribution-api/#sidenav-levels).
 
 A page-owned content navigation tree starts a sidenav level. Its sections replace the mode content while that page or any child location is open. The nearest owner in the page location parent chain wins, so levels can nest. Pages with only header or footer trees do not start a level.
 

@@ -27,6 +27,15 @@ extension package. Files an extension deliberately edits as project source, such
 icon fonts under `packages/ui/public/font/`, stay at their configured project paths.
 The extension's settings and temporary files still belong in extension storage.
 
+## Availability
+
+This page describes `main`, which ships in the release after 0.43.x. Release 0.43.x differs:
+
+- `ctx.extensionFiles` writes to `.pstdio/ext/<publisher>.<name>/`. The `.publishers/<publisher>/` root comes with extension API 0.2; see [Allocated extension files in API 0.2](0009-allocated-extension-files.md).
+- `ctx.storage.records` and `ctx.storage.assets` do not exist. Use `ctx.storage.get`, `set`, `delete`, and `collection`. See [storage availability](../../references/sdk/0004-storage.md#availability).
+- Planner and Reports keep their files in `.pstdio/tickets/` and `.pstdio/reports/`. The moves in [Move existing local files](#move-existing-local-files) apply only after you update to a release with the updated extensions.
+- Declared artifact mounts already live under `.pstdio/extension-storage/<package-name>/`.
+
 ## Drafts, prototypes, and published artifacts
 
 A prototype is a working draft, often an HTML page with TypeScript build sources and

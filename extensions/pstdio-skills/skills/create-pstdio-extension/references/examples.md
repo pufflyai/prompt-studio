@@ -28,7 +28,7 @@ Native [controls.ts](./examples/controls.ts) shows typed text and read-only fiel
 
 ## Resource reviewer
 
-Copy the complete `examples/resource-reviewer` folder into an extension package. Set `main` to its `extension.ts`, and keep its `preview-entry.tsx` package asset inside that package. For the example, use package name `resource-reviewer`, publisher `examples`, display name `Resource reviewer`, `type: "module"`, and the supported host version from the [manifest guidance](extension-api.md). When adapting its identity, update the qualified event owner in `catalog.ts` to match the resulting extension ID. Choose [scope](scope.md) for the actual user request; the example does not require a custom mode or host chrome overrides.
+Copy the complete `examples/resource-reviewer` folder into an extension package. Set `main` to its `extension.ts`, and keep its `preview-entry.tsx` package asset inside that package. For the example, use package name `resource-reviewer`, publisher `examples`, display name `Resource reviewer`, `type: "module"`, and an `engines.pstdio` range chosen with the [version check](extension-api.md#check-versions-before-choosing-an-api). When adapting its identity, update the qualified event owner in `catalog.ts` to match the resulting extension ID. Choose [scope](scope.md) for the actual user request; the example does not require a custom mode or host chrome overrides.
 
 | File | Responsibility |
 | --- | --- |
@@ -47,4 +47,4 @@ Open **Resource reviewer** under Tools, or search for **Release checklist** or *
 
 ## Larger application references
 
-The complete [Extension Lab](https://github.com/pufflyai/prompt-studio/tree/main/extensions/extension-lab) provides additional applications. Its [Kiln composition](https://github.com/pufflyai/prompt-studio/blob/main/extensions/extension-lab/src/examples/kiln.ts) places a viewport in Main, an inspector in Side, and a timeline in Secondary. That timeline placement is a product choice. Keep controls inside Main when they belong to one preview, as the reviewer does. Copy the complete Extension Lab package when exploring Kiln; its module depends on shared files and is not a standalone snippet.
+The complete [Extension Lab](https://github.com/pufflyai/prompt-studio/tree/main/extensions/extension-lab) provides additional applications. Its [documentation](https://prompt.studio/docs/extensions/extension-lab/) explains how to try them. Its [Kiln composition](https://github.com/pufflyai/prompt-studio/blob/main/extensions/extension-lab/src/examples/kiln.ts) places a viewport in Main, an inspector in Side, and a timeline in Secondary. That timeline placement is a product choice. Keep controls inside Main when they belong to one preview, as the reviewer does. Copy the complete Extension Lab package when exploring Kiln; its module depends on shared files and is not a standalone snippet.

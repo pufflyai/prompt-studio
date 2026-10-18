@@ -48,18 +48,34 @@ Invalid packages produce diagnostics from `pst extensions check`. Missing manife
 
 `pst extensions check` asks the API host to check its user and repo-local roots. Run it inside a linked project. Use `--scope repo` or `--scope user` to check one host root. Errors outside the selected scope do not affect the result. Repo scope requires a local default workspace.
 
-`pst extensions check <path>` checks a local source folder for authoring. It does not install files or start the API.
+`pst extensions check <path>` checks a local source folder for authoring. It does not install files or start the API. It compares `engines.pstdio` with the extension API version built into the `pst` you ran, not with your runtime's version. See [which version each check uses](0014-api-versioning.md#which-version-each-check-uses).
 
-The command prints the CLI, extension API, SDK, and bundled dashboard versions before its
-diagnostics. `--json` returns them in `versions`, alongside `checks`. Compatibility status and
-errors are reported for each checked root.
+Both forms start with a header that names what was checked and which versions were compared:
+
+| Line | Source check (`<path>`) | Installed check |
+| --- | --- | --- |
+| `Checked:` | `source folder <absolute path> (not installed, so no host took part)` | `extensions installed on the host at <API URL> for project <id>` |
+| `This pst:` | Extension API, `pst`, and SDK versions of the `pst` you ran. | The same versions. The host checks `engines.pstdio` with its own extension API version, which it does not report yet. |
+| `Manifest engines.pstdio:` | The range in the source's `package.json`, or `not declared`. | Not printed. A range the host rejects appears as a diagnostic. |
+
+When a source check rejects the manifest range, the error says `this pst provides <version>` instead of `this host provides`. The host's own checks keep the host wording. If your runtime is a different release than that `pst`, the error describes the tool, not the extension: use the `pst` from the runtime's release, or install the extension and run the installed check.
+
+`--json` uses one envelope with a different result key for each form:
+
+| Key | Source check | Installed check |
+| --- | --- | --- |
+| `target` | `{ "kind": "source", "path" }` | `{ "kind": "installed", "projectId", "host" }` |
+| `versions` | `cli`, `extensionApi`, and `sdk` of the `pst` you ran, plus `manifestRange` | `cli`, `extensionApi`, and `sdk` of the `pst` you ran |
+| Result | `check`: the local checker's report, including the resolved `runtime` | `checks`: one entry per host root, each with `scope` (`user` or `repo`), `extensionsRoot`, `errorCount`, `warningCount`, `diagnostics`, and `hostCompatibility` |
+
+`versions.extensionApi` is never the runtime's version. Compatibility status and errors are reported for each checked root.
 
 | Component | Version source | Compatibility rule |
 | --- | --- | --- |
 | CLI | Installed `pstdio` package | Owns the bundled runtime and dashboard release. |
 | Extension API | `EXTENSION_API_VERSION` | Must be included in the caret ranges declared by `engines.pstdio`. |
 | SDK | `SDK_VERSION` from `@pstdio/sdk/extensions` | Shares the public fixed release group; its package number is separate from the host contract version. |
-| Dashboard | The CLI's bundled dashboard release | Each declared contribution must have a supported host capability. |
+| Dashboard capabilities | The capability table that ran the check | Each declared contribution must have a supported host capability. |
 
 An extension that targets an older API is repaired where it comes from. A catalog extension is
 upgraded to its build for this host. Any other extension is fixed in its source folder: update the

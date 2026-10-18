@@ -17,6 +17,7 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { buildBinary, runPackagedAsync } from "./packaged-helpers";
 import {
   ACTIVE_CONFLICTS,
@@ -171,7 +172,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
 
     // A valid Track cannot hide a missing module behind a schema error.
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
-    browser = await chromium.launch({ headless: true });
+    browser = await chromium.launch(PROVISIONED_CHROMIUM);
     const page = await (await browser.newContext()).newPage();
     await page.addInitScript(() => {
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");

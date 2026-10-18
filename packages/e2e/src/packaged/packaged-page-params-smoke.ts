@@ -6,13 +6,14 @@ import { join } from "node:path";
 import { chromium } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writePageParamsExtension } from "../helpers/page-params-extension";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 export const registerPageParamsSmokeTests = () => {
   test("packaged page params and server preferences survive browser and runtime restarts", async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-page-params-"));
     let child: ChildProcess | null = null;
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch(PROVISIONED_CHROMIUM);
     try {
       writePageParamsExtension(root);
       let started = await startPackagedServe(root);
