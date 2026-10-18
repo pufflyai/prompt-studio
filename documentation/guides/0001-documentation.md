@@ -260,6 +260,8 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0005 — PRD: Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
 - [0007 — PRD: Synchronization contracts v0.1](../requirements/platform/0007-synchronization-contracts.md)
 
+- Extension API plans: [0009 — PRD: Standardize extension storage](../requirements/platform/0009-standardize-storage-api.md), [0010 — PRD: Bound client storage and isolate sync failures](../requirements/platform/0010-bound-client-storage-and-isolate-sync-failures.md), [0011 — PRD: Simplify extension APIs](../requirements/platform/0011-simplify-extension-apis.md), [0012 — PRD: Align extension API shapes](../requirements/platform/0012-align-extension-api-shapes.md)
+
 ## ADRs
 
 - [0001 — ADR: Unified Test Runner — bun test](../adrs/0001-unified-bun-test.md)
