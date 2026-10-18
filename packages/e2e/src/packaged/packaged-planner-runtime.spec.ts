@@ -15,6 +15,7 @@ import { join } from "node:path";
 import { type Browser, chromium, expect, type Page, test } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { buildBinary, runPackagedAsync } from "./packaged-helpers";
 import {
@@ -145,6 +146,9 @@ const expectConflictsPreserved = async (execute: Execute, trackId: string, track
 };
 
 browserTest("serves populated Planner projects and recovers cached webviews", async () => {
+  const startedAt = Date.now();
+  const phase = (name: string) => logTestPhase(`Planner browser ${name} (${Date.now() - startedAt}ms)`);
+  phase("runtime start");
   const home = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-packaged-planner-runtime-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
@@ -152,13 +156,17 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     const started = await startPackagedServe(home, { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" });
     child = started.child;
     const host = { baseUrl: started.baseUrl, descriptor: started.descriptor, home };
+    phase("runtime ready");
     const conflicting = await createProject(host, "conflicting-track");
     const valid = await createProject(host, "valid-track");
 
+    phase("install start");
     await installPlanner(host, conflicting.folder);
     await enablePlanner(host, valid.id);
+    phase("install complete; seed start");
     const conflictData = await seedTrackProject(conflicting.execute, "multi_select");
     await seedTrackProject(valid.execute, "single_select");
+    phase("seed complete");
     expect(await moduleStatus(host, valid.id, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
 
     // A valid Track cannot hide a missing module behind a schema error.
@@ -220,6 +228,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     await expect(autoBuild.getByRole("group", { name: "Title filter", exact: true })).toHaveCount(0);
     await autoBuild.getByRole("button", { name: "Cancel", exact: true }).click();
 
+    phase("views checked; conflict start");
     // Ordinary ticket work stays available while host chrome reports the Track problem.
     expect(await ticketRows(conflicting.execute)).toHaveLength(ACTIVE_CONFLICTS + ARCHIVED_CONFLICTS + 3);
     timeline = await openTimeline(page, host, conflicting.id);
@@ -231,6 +240,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     ).rejects.toThrow(new RegExp(`Track has more than one value on .*${conflictData.draft.shorthand}`));
     await expectConflictsPreserved(conflicting.execute, conflictData.track.id, trackOptions);
 
+    phase("repair start");
     for (const ticket of [...conflictData.active, ...conflictData.archived]) {
       await conflicting.execute("set-ticket-attribute", {
         rowId: ticket.id,
@@ -253,9 +263,11 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
       ACTIVE_CONFLICTS + ARCHIVED_CONFLICTS,
     );
     expect(resolved.every((row) => row.title.startsWith("Seeded"))).toBe(true);
+    phase("repair complete; reload");
     await page.reload();
     await expect(timeline.getByText("Platform", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
 
+    phase("reload complete; asset recovery start");
     // An asset request republishes a module that disappeared while its signature remained.
     rmSync(join(timelineCache(host), "module.js"));
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
@@ -281,7 +293,9 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     writeFileSync(entry, original);
     expect(await reloadPlanner(host, valid.id)).toMatchObject({ status: "loaded", lastError: null });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
+    phase("checks complete");
   } finally {
+    phase("cleanup start");
     await browser?.close();
     if (child) await stopProcess(child);
     rmSync(home, { recursive: true, force: true });
