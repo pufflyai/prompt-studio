@@ -34,7 +34,9 @@ The routed page owns its breadcrumb and page actions. A collection page uses Mai
 
 ## Mounted views
 
-Visited registered views remain mounted when navigation hides them. Returning to a page or mode reuses its live view, including its iframe and local state. Docked views have stable portal hosts owned by the workbench. Moving a tab changes the host's DOM parent without remounting its React content. Hidden views do not take layout space or accept user input.
+Main tabs belong to the current page, including pinned shell, mode and host tabs moved there. They hide on page leave and restore with that page. Side and Bottom keep shared tabs within the current mode. Moving a tab out of Main makes it shared again. Pinning controls retention, not scope.
+
+Visited registered views remain mounted when navigation hides them. Returning to a page or mode reuses its live view, including its iframe and local state. Docked views have stable portal hosts owned by the workbench. Moving a tab changes the host's DOM parent without remounting its React content. Hidden views do not take layout space or accept user input. A pinned Main terminal keeps its running process while its page is hidden.
 
 A resource binding with `cardinality: "one"` keeps one placement when its resource changes. The host updates that live view's resource and attached menus. A binding with `cardinality: "many"` gives each open resource its own placement.
 

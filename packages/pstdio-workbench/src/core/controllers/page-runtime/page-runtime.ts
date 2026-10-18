@@ -30,6 +30,7 @@ import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable } from "../../shared/disposable";
 import { restoreModePanelLayout } from "./mode-panel-layout";
+import { pageContextChanged, scopePageMainTabs } from "./page-main-tabs";
 import { closeDepartingPagePreviews, departingPagePreviews } from "./page-preview-lifetime";
 import { connectTrayPreviewRemoval } from "./tray-preview-removal";
 import { retainTrayPreviews } from "./tray-preview-retention";
@@ -37,6 +38,7 @@ export interface ConnectWorkbenchPageRuntimeInput {
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
   saveModeLayout?(projectId: string | undefined, modeId: string, layout: WorkbenchLayout): void;
+  savePageMain?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>, layout: WorkbenchLayout): void;
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
@@ -130,6 +132,7 @@ const applyPageState = (
       input.saveModeLayout?.(previous.projectId, previous.activeModeId, input.layout.getLayout());
     for (const preview of departingPagePreviews(state, previous, input.layout.getLayout()))
       input.layout.removeWidgetPlacement(preview.widgetId);
+    if (pageContextChanged(state, previous)) input.savePageMain?.(previous, input.layout.getLayout());
   }
   activateWorkbenchPageMode(input.modes, state.activeModeId, () => {
     // Scope listeners must apply the destination mode's panel policy to its saved layout.
@@ -143,7 +146,7 @@ const applyPageState = (
     const activation = pageActivations(state, latest, restoresMode);
     const layoutInput = {
       layout:
-        modeChanged || restoredScope
+        modeChanged || restoredScope || pageContextChanged(state, previous)
           ? restoreModePanelLayout(
               input.layout.getLayout(),
               modeLayout,
@@ -177,12 +180,19 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
     },
     (state) =>
       retainTrayPreviews(
-        closeDepartingPagePreviews(
-          state,
-          input.registry.store.getState(),
-          input.layout.getLayout(),
-          getWorkbenchPageRegistryInternals(input.registry).resources,
-        ),
+        scopePageMainTabs({
+          state: closeDepartingPagePreviews(
+            state,
+            input.registry.store.getState(),
+            input.layout.getLayout(),
+            getWorkbenchPageRegistryInternals(input.registry).resources,
+          ),
+          previous: input.registry.store.getState(),
+          layout: input.layout.getLayout(),
+          pageLayout: input.loadPageLayout?.(state),
+          modeLayout: state.activeModeId ? input.loadModeLayout?.(state.projectId, state.activeModeId) : undefined,
+          isRegistered: (id) => Boolean(input.layout.getWidget(id)),
+        }),
         input.registry.store.getState(),
         input.loadPageLayout?.(state) ?? input.layout.getLayout(),
         getWorkbenchPageRegistryInternals(input.registry).resources,
@@ -231,6 +241,7 @@ export interface CreateLiveWorkbenchPageRegistryInput {
   loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
   loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
   saveModeLayout?: ConnectWorkbenchPageRuntimeInput["saveModeLayout"];
+  savePageMain?: ConnectWorkbenchPageRuntimeInput["savePageMain"];
   restorePageState?: CreateWorkbenchPageRegistryInput<WorkbenchWidgetPlacement>["restorePageState"];
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
@@ -283,6 +294,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     loadPageLayout: input.loadPageLayout,
     loadModeLayout: input.loadModeLayout,
     saveModeLayout: input.saveModeLayout,
+    savePageMain: input.savePageMain,
     beforeApply: (state) => {
       input.beforeApply?.(state);
       const shell = getOwnedPlacementPreparation(input.shellPlacements);

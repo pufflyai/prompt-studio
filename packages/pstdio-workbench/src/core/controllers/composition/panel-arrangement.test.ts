@@ -42,7 +42,7 @@ test("opening an existing moved panel reveals its actual destination", async () 
   expect(w.layout.getLayout().regions.secondary.activeWidgetId).toBe(session.widgetId);
 });
 
-test("a page restores mixed positions while preserving the shared mode tab order", async () => {
+test("each page restores its own Main tabs and order", async () => {
   const w = harness();
   await w.navigation.openTarget(navigate("alpha"));
   await w.navigation.openTarget(openFile("page-file"));
@@ -51,11 +51,12 @@ test("a page restores mixed positions while preserving the shared mode tab order
     await w.navigation.openTarget({ kind: "panel", panel, resource: resource(id), open: "pin" });
     w.movePanel(w.layout.getLayout().regions.side.widgets[0]!.widgetId, "main");
   }
-  await w.navigation.openTarget(navigate("beta"));
   const tabs = w.layout.getLayout().regions.main.widgets;
   w.layout.reorderPanel(tabs.find((tab) => tab.resource?.id === "b")!.widgetId, {
     beforeWidgetId: tabs.find((tab) => tab.resource?.id === "a")!.widgetId,
   });
+  await w.navigation.openTarget(navigate("beta"));
+  expect(w.layout.getLayout().regions.main.widgets.map((tab) => tab.resource?.id)).not.toContain("b");
   await w.navigation.openTarget(navigate("alpha"));
   expect(w.layout.getLayout().regions.main.widgets.map((tab) => tab.resource?.id)).toEqual(["page-file", "b", "a"]);
 });
@@ -180,7 +181,7 @@ test("page and shared mode placements restore their chosen regions after navigat
   w.movePanel(pageTab.widgetId, "secondary");
   w.movePanel(modeTab.widgetId, "main");
   await w.navigation.openTarget(navigate("beta"));
-  expect(w.layout.getLayout().regions.main.widgets.some((t) => t.widgetId === modeTab.widgetId)).toBe(true);
+  expect(w.layout.getLayout().regions.main.widgets.some((t) => t.widgetId === modeTab.widgetId)).toBe(false);
   await w.navigation.openTarget(navigate("alpha"));
   expect(w.layout.getLayout().regions.secondary.widgets[0]?.widgetId).toBe(pageTab.widgetId);
   const restored = harness(saved);

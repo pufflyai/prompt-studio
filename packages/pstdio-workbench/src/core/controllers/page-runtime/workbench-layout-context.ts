@@ -1,5 +1,6 @@
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { pageLayoutContext } from "./page-main-tabs";
 import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 
 export const createShellLayoutContext = (resolve: () => WorkbenchCore) => ({
@@ -19,10 +20,16 @@ export const connectModeLayoutCache = (core: WorkbenchCore, cache: ReturnType<ty
   const save = () => {
     const state = core.pages.store.getState();
     if (state.activeModeId) cache.saveMode(state.projectId, state.activeModeId, core.layout.getLayout());
+    if (state.activeModeId === core.modes.getActiveModeId())
+      cache.savePageMain(pageLayoutContext(state), core.layout.getLayout());
   };
   core.layout.store.subscribe(() => {
     // The page runtime saves the outgoing mode before publishing the incoming layout.
-    if (!core.modes.isTransitioning()) save();
+    if (
+      !core.modes.isTransitioning() &&
+      getWorkbenchPageRegistryInternals(core.pages).getPublishingState() === core.pages.store.getState()
+    )
+      save();
   });
   core.pages.store.subscribe(save);
 };

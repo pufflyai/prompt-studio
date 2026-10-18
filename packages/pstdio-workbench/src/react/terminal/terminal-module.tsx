@@ -5,6 +5,7 @@ import {
   type WorkbenchModuleContribution,
   workbenchPanelRegions,
 } from "../../core";
+import { pageContextChanged } from "../../core/controllers/page-runtime/page-main-tabs";
 import { departingPagePreviews } from "../../core/controllers/page-runtime/page-preview-lifetime";
 import { toPanelInstance } from "../../core/registries/layout/panel-api";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
@@ -45,11 +46,19 @@ const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) =>
     const closedPreviews = new Set(
       departingPagePreviews(page, previousPage, previousState.layout).map((tab) => tab.widgetId),
     );
+    const hiddenMain = new Set(
+      pageContextChanged(page, previousPage)
+        ? previousState.layout.regions.main.widgets
+            .filter((tab) => tab.tabRetention !== "preview")
+            .map((tab) => tab.widgetId)
+        : [],
+    );
     previousPage = page;
     if (modeChanged || ctx.modes.isTransitioning()) return;
     const currentIds = new Set(terminalPlacements(state.layout).map((placement) => placement.widgetId));
     const previousIds = terminalPlacements(previousState.layout).map((placement) => placement.widgetId);
     for (const instanceId of previousIds) {
+      if (hiddenMain.has(instanceId)) continue;
       if (scopeChanged && !closedPreviews.has(instanceId)) continue;
       if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(instanceId);
     }

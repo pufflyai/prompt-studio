@@ -7,7 +7,7 @@ test.each(["main", "side", "secondary"] as const)("page navigation closes every 
   s.open("temporary", region);
   s.w.layout.setRegionVisible(region, true);
   s.navigate("alpha-list");
-  expect(s.ids(region)).toEqual(["kept"]);
+  expect(s.ids(region)).toEqual(region === "main" ? [] : ["kept"]);
   s.navigate("alpha");
   expect(s.ids(region)).toEqual(["kept"]);
 });

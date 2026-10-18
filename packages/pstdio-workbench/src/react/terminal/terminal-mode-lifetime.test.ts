@@ -2,6 +2,38 @@ import { expect, test } from "bun:test";
 import { modePanelFixture } from "../../core/controllers/page-runtime/mode-panel-state.fixture";
 import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "./terminal-module";
 
+test.each([
+  true,
+  false,
+])("a pinned Main terminal hides on page leave without ending its process, scoped=%s", async (scoped) => {
+  const { w, navigate } = modePanelFixture(undefined, scoped);
+  w.registerModule(createWorkbenchTerminalModule());
+  let killed = 0;
+  w.terminal.setSessionOpener(async () => ({
+    id: "page-terminal",
+    write() {},
+    resize() {},
+    kill() {
+      killed++;
+    },
+    onData: () => () => undefined,
+    onExit: () => () => undefined,
+    onError: () => () => undefined,
+  }));
+  const tab = openWorkbenchTerminal(w);
+  await w.terminal.open({ bindingId: tab.instanceId, request: { cols: 80, rows: 24 } });
+  w.movePanel(tab.instanceId, "main");
+  navigate("alpha-list");
+  expect(w.layout.listPanelInstances("main").map((panel) => panel.instanceId)).not.toContain(tab.instanceId);
+  expect(killed).toBe(0);
+  navigate("alpha");
+  expect(w.layout.getActivePanel("main")?.instanceId).toBe(tab.instanceId);
+  expect(killed).toBe(0);
+  w.closePlacement(w.layout.getActivePanel("main")!.placementIdentity!);
+  await Promise.resolve();
+  expect(killed).toBe(1);
+});
+
 test.each([true, false])("leaving a page closes its preview terminal process, scoped=%s", async (scoped) => {
   const { w, navigate } = modePanelFixture(undefined, scoped);
   w.registerModule(createWorkbenchTerminalModule());

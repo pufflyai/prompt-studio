@@ -80,8 +80,12 @@ export const loadWorkbenchLocationLayout = (
 };
 
 export const createPageStateRestorer =
-  (input: createWorkbenchInput) => (page: WorkbenchPageContribution, location: PageLocation, projectId: string) => {
-    const layout = loadWorkbenchLocationLayout(input, {
+  (
+    input: createWorkbenchInput,
+    loadLayout = (context: WorkbenchPagePersistenceScopeInput) => loadWorkbenchLocationLayout(input, context),
+  ) =>
+  (page: WorkbenchPageContribution, location: PageLocation, projectId: string) => {
+    const layout = loadLayout({
       modeId: page.modeId,
       pageId: page.id,
       projectId,

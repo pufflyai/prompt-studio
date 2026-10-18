@@ -100,7 +100,7 @@ describe("page primary slot lifecycle", () => {
     expect(registry.store.getState().reconciliation.remove).toEqual([]);
     expect(registry.store.getState().reconciliation.add).toEqual([]);
   });
-  test("retains each instance and its pin intent for host tray composition", () => {
+  test("restores each routed resource's own Main instance and pin intent", () => {
     const registry = createRegistry();
     registerPage(registry, {
       id: "files",
@@ -128,8 +128,10 @@ describe("page primary slot lifecycle", () => {
     activatePage(registry, { pageId: "files", resource: { type: "file", id: "B" }, open: "pin" });
     activatePage(registry, { pageId: "files", resource: { type: "file", id: "C" } });
     const placements = activePagePlacements(registry, "$main");
-    expect(placements.map((candidate) => candidate.identity.instanceKey)).toEqual(["file:A", "file:B", "file:C"]);
-    expect(placements.map((candidate) => candidate.value.open)).toEqual(["preview", "pin", "preview"]);
+    expect(placements.map((candidate) => candidate.identity.instanceKey)).toEqual(["file:C"]);
+    expect(placements.map((candidate) => candidate.value.open)).toEqual(["preview"]);
+    activatePage(registry, { pageId: "files", resource: { type: "file", id: "B" } });
+    expect(activePagePlacements(registry, "$main").map((candidate) => candidate.value.open)).toEqual(["pin"]);
   });
   test("updates one existing resource instance when metadata or section changes", () => {
     const registry = createRegistry();

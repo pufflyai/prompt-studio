@@ -7,7 +7,7 @@ export const pageStateKey = (
   location: PageLocation | undefined,
   resources: WorkbenchPageResourceCodec,
 ) =>
-  page.main.kind === "panels" && location
+  (page.main.kind === "panels" || page.resource) && location
     ? `${page.id}|${workbenchPageLocationKey({ ...location, position: undefined }, resources)}`
     : page.id;
 

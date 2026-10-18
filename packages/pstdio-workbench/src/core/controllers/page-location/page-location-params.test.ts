@@ -75,7 +75,7 @@ test("contextual parents restore their own params", () => {
   expect(h.registry.store.getState().location?.params).toEqual({ range: "now-6h" });
 });
 
-test("closing auxiliary and inactive primary panels preserves current page params", () => {
+test("closing auxiliary and inactive Main panels preserves current page params", () => {
   const h = createHarness();
   const board = h.registry.getPage("board")!;
   h.registry.registerPage({
@@ -105,25 +105,35 @@ test("closing auxiliary and inactive primary panels preserves current page param
     ref: resourceRef,
     path: "resource-board",
     params: board.params,
+    slots: [
+      {
+        id: "cards",
+        region: "main",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [{ kind: "resource-kind", id: "ticket" }],
+            view: { kind: "view", id: "ticket" },
+            cardinality: "many",
+          },
+        },
+      },
+    ],
   });
-  for (const [id, range] of [
-    ["PS-1", "now-6h"],
-    ["PS-2", "now-24h"],
-  ]) {
-    h.controller.navigate({
-      kind: "page",
-      page: resourceRef,
-      resource: { type: "ticket", id: id! },
-      open: "pin",
-      params: { range: range! },
-    });
-  }
+  h.controller.navigate({
+    kind: "page",
+    page: resourceRef,
+    resource: { type: "ticket", id: "PS-2" },
+    params: { range: "now-24h" },
+  });
+  for (const id of ["PS-1", "PS-2"])
+    h.registry.openSlot({ pageId: "resource-board", slotId: "cards", resource: { type: "ticket", id }, open: "pin" });
   const resourceUrl = h.browser.current().url;
   expect(
     h.controller.closePlacement({
       kind: "page",
       pageId: "resource-board",
-      slotId: "$main",
+      slotId: "cards",
       instanceKey: "pstdio://ticket/PS-1",
     }).ok,
   ).toBe(true);
