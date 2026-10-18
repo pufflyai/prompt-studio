@@ -1,4 +1,4 @@
-import { resolvePageParams } from "@pstdio/sdk/extensions";
+import { resolvePageParams } from "pstdio-api-contracts";
 import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 

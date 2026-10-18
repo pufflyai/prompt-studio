@@ -52,6 +52,24 @@ const createHost = (respond: (call: RecordedCall) => unknown, extensionId?: stri
 const successOutcome = (value: unknown) => ({ outcome: { ok: true, status: "success", value } });
 
 describe("createWebviewClient commands", () => {
+  test("command rejection errors retain the full host outcome", async () => {
+    const outcome = {
+      ok: false,
+      status: "rejected",
+      code: "stale_revision",
+      reason: "Changed",
+      data: { revision: 2 },
+      cause: { source: "storage" },
+      notices: [{ type: "warning", message: "Reload" }],
+      diagnostics: [{ code: "conflict", message: "Changed", severity: "warning" }],
+    };
+    const { host } = createHost(() => ({ outcome }), "example");
+    const client = createWebviewClient<typeof commands>(host);
+    await expect(client.commands["ticket-status.read"]()).rejects.toMatchObject({
+      code: "stale_revision",
+      outcome,
+    });
+  });
   test("scopes command execution to the selected workspace", async () => {
     const { host, calls } = createHost(() => successOutcome({ statuses: [] }), "pstdio-planner");
     const client = createWebviewClient<typeof commands>(host, { workspaceId: "remote-workspace" });
@@ -173,7 +191,7 @@ describe("createWebviewClient settings", () => {
   });
 
   test("writes one setting by key", async () => {
-    const { host, calls } = createHost(() => undefined, "pstdio-planner");
+    const { host, calls } = createHost(() => ({ key: "board.columns", value: 5 }), "pstdio-planner");
     const client = createWebviewClient<typeof commands, typeof settings>(host);
 
     await client.settings.set("board.columns", 5);

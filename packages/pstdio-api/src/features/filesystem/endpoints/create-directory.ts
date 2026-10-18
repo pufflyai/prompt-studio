@@ -15,7 +15,9 @@ export const createDirectoryRoute = createRoute({
         "application/json": {
           schema: z
             .object({
-              parent_path: z.string().min(1),
+              parentPath: z.string().min(1).optional(),
+              /** @deprecated Use parentPath. */
+              parent_path: z.string().min(1).optional(),
               name: z
                 .string()
                 .trim()
@@ -26,7 +28,13 @@ export const createDirectoryRoute = createRoute({
                   "Enter one folder name.",
                 ),
             })
-            .strict(),
+            .strict()
+            .refine(
+              (input) =>
+                Boolean(input.parentPath ?? input.parent_path) &&
+                (!input.parentPath || !input.parent_path || input.parentPath === input.parent_path),
+              { message: "Provide parentPath; legacy parent_path must match when both are supplied." },
+            ),
         },
       },
     },
@@ -42,9 +50,9 @@ export const createDirectoryRoute = createRoute({
 });
 
 export const createDirectoryHandler: AppRouteHandler<typeof createDirectoryRoute> = async (c) => {
-  const { parent_path, name } = c.req.valid("json");
+  const { parentPath, parent_path, name } = c.req.valid("json");
   try {
-    const parent = await realpath(parent_path);
+    const parent = await realpath((parentPath ?? parent_path)!);
     if (!(await stat(parent)).isDirectory()) return c.json({ error: "The parent must be an existing directory." }, 400);
     const path = join(parent, name);
     await mkdir(path);

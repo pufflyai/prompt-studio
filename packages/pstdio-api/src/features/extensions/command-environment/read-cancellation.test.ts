@@ -10,9 +10,9 @@ test("cancelled command readers do not dispatch host work", async () => {
   let reads = 0;
   const deps = {
     sessionService: {
-      list: async () => {
+      query: async () => {
         reads++;
-        return [];
+        return { rows: [], nextCursor: null };
       },
     },
     workspaceService: {
@@ -25,17 +25,11 @@ test("cancelled command readers do not dispatch host work", async () => {
         return { id, project_id: "p" };
       },
     },
-    workspaceSessionService: {
-      listByWorkspace: async () => {
-        reads++;
-        return [];
-      },
-    },
   } as never;
   const sessions = createSessionsApi(deps, { projectId: "p", project: {} as never, signal: controller.signal });
   const workspaces = createWorkspacesApi(deps, { projectId: "p", signal: controller.signal }, {} as never);
   controller.abort();
-  const results = await Promise.allSettled([sessions.list(), sessions.listByWorkspace("w"), workspaces.list()]);
+  const results = await Promise.allSettled([sessions.query(), sessions.query({ workspaceId: "w" }), workspaces.list()]);
   expect(reads).toBe(0);
   expect(results.map((result) => result.status)).toEqual(["rejected", "rejected", "rejected"]);
 });
@@ -47,16 +41,16 @@ test("cancellation during workspace resolution prevents the next session lookup"
   const sessions = createSessionsApi(
     {
       workspaceService: { get: () => workspace.promise },
-      workspaceSessionService: {
-        listByWorkspace: async () => {
+      sessionService: {
+        query: async () => {
           childReads++;
-          return [];
+          return { rows: [], nextCursor: null };
         },
       },
     } as never,
     { projectId: "p", project: {} as never, signal: controller.signal },
   );
-  const reading = sessions.listByWorkspace("w");
+  const reading = sessions.query({ workspaceId: "w" });
   controller.abort();
   workspace.resolve({ id: "w", project_id: "p" });
   await expect(reading).rejects.toThrow();
@@ -76,9 +70,9 @@ test("a cancelled real command invocation cannot continue into later host reader
       },
     },
     sessionService: {
-      list: async () => {
+      query: async () => {
         laterReads++;
-        return [];
+        return { rows: [], nextCursor: null };
       },
     },
     extensionStorageService: {
@@ -109,7 +103,7 @@ test("a cancelled real command invocation cannot continue into later host reader
             title: "Read",
             async run(ctx) {
               await ctx.workspaces.list();
-              await ctx.sessions.list();
+              await ctx.sessions.query();
               await ctx.storage.get("key");
               return {};
             },

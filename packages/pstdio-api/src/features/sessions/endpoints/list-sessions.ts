@@ -1,17 +1,20 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { projectQueryFields, projectQueryMessage, validProjectQuery } from "../../project-query";
 import type { SessionsRouteDeps } from "../deps";
 import { sessionResponseSchema } from "../dto";
+import { toSessionResponse } from "../session-response";
 
 export const listSessionsRoute = createRoute({
   method: "get",
   path: "/sessions",
-  description: "List sessions for a project.",
+  description: "List sessions for a project. Deprecated: use GET /projects/{projectId}/sessions for bounded queries.",
+  deprecated: true,
   tags: ["Sessions"],
   request: {
     query: z
       .object({
-        project_id: z.string().openapi({ description: "Project ID" }),
+        ...projectQueryFields,
         status: z
           .enum(["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"])
           .optional()
@@ -26,6 +29,7 @@ export const listSessionsRoute = createRoute({
         archived: z.string().optional().openapi({ description: "Include archived" }),
       })
       .strict()
+      .refine(validProjectQuery, { message: projectQueryMessage })
       .refine((input) => Boolean(input.anchor_type) === Boolean(input.anchor_id), {
         message: "Provide both anchor_type and anchor_id",
       }),
@@ -43,7 +47,7 @@ export const listSessionsHandler = (deps: SessionsRouteDeps): AppRouteHandler<ty
     const query = c.req.valid("query");
 
     const page = await deps.sessionService.query(
-      query.project_id,
+      (query.projectId ?? query.project_id)!,
       {
         status: query.status ? [query.status] : undefined,
         agent: query.agent,
@@ -56,6 +60,9 @@ export const listSessionsHandler = (deps: SessionsRouteDeps): AppRouteHandler<ty
       },
       { unpaged: true },
     );
-    return c.json(page.rows, 200);
+    return c.json(
+      page.rows.map((row) => toSessionResponse(row, row.workspace_id)),
+      200,
+    );
   };
 };

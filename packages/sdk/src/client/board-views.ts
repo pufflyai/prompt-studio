@@ -1,4 +1,13 @@
-import type { BoardSummary, BoardView, BoardViewCreate, BoardViews, BoardViewUpdate } from "pstdio-api-contracts";
+import type {
+  BoardSummary,
+  BoardView,
+  BoardViewCreate,
+  BoardViews,
+  BoardViewUpdate,
+  Page,
+  PageQuery,
+} from "pstdio-api-contracts";
+import { pageQuery } from "./page-query";
 import type { RequestFn } from "./request";
 
 const projectPath = (id: string) => `/v1/projects/${encodeURIComponent(id)}`;
@@ -9,8 +18,20 @@ export const createBoardViewsClient = (request: RequestFn) => ({
   board: (projectId: string, boardId: string) =>
     request<BoardSummary>(`${projectPath(projectId)}/boards/${encodeURIComponent(boardId)}`),
   get: (projectId: string, id: string) => request<BoardView>(viewPath(projectId, id)),
+  queryBoards: (projectId: string, input?: PageQuery) =>
+    request<Page<BoardSummary>>(`${projectPath(projectId)}/boards/query${pageQuery(input)}`),
+  /** @deprecated Use queryBoards for bounded pages. */
   boards: (projectId: string) => request<BoardSummary[]>(`${projectPath(projectId)}/boards`),
-  list: (projectId: string, boardId: string) => request<BoardViews>(boardPath(projectId, boardId)),
+  query: (projectId: string, boardId: string, input?: PageQuery) =>
+    request<Page<BoardView>>(`${boardPath(projectId, boardId)}/query${pageQuery(input)}`),
+  /** @deprecated Use query for bounded pages. Default metadata stays available from list through 0.44. */
+  list: (projectId: string, boardId: string, options?: { signal?: AbortSignal }) =>
+    request<BoardViews>(boardPath(projectId, boardId), options),
+  queryOrphaned: (projectId: string, input?: PageQuery) =>
+    request<Page<BoardView>>(
+      `${projectPath(projectId)}/board-views/query?orphaned=true${pageQuery(input).replace("?", "&")}`,
+    ),
+  /** @deprecated Use queryOrphaned for bounded pages. */
   orphaned: (projectId: string) => request<BoardView[]>(`${projectPath(projectId)}/board-views?orphaned=true`),
   create: (projectId: string, boardId: string, input: BoardViewCreate) =>
     request<BoardView>(boardPath(projectId, boardId), { method: "POST", body: input }),

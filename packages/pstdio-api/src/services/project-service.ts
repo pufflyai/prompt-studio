@@ -42,5 +42,5 @@ export const createProjectService = (deps: ProjectServiceDeps) => {
     if (project) deps.eventBus.emit(project.table, "delete", { id: project.id });
     return true;
   };
-  return { list: db.list, get: db.get, create, update, setDefaults, delete: deleteProject };
+  return { query: db.query, list: db.list, get: db.get, create, update, setDefaults, delete: deleteProject };
 };

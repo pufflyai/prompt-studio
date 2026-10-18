@@ -1,6 +1,7 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, gt, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { extension_instances, projects } from "../../db/schemas.pg";
+import { type PageQuery, pageBoundary, pageLimit, queryPage } from "../query-page";
 import { deriveShorthand } from "./derive-shorthand";
 
 type ProjectRecord = typeof projects.$inferSelect;
@@ -9,6 +10,18 @@ const nowTimestamp = () => new Date().toISOString();
 
 export const createProjectsDBService = (db: DbClient) => {
   const list = async () => db.select().from(projects).where(isNull(projects.deleted_at)).orderBy(projects.created_at);
+
+  const query = async (input: PageQuery = {}) => {
+    const limit = pageLimit(input);
+    const boundary = pageBoundary(input.cursor, "projects");
+    const rows = await db
+      .select()
+      .from(projects)
+      .where(and(isNull(projects.deleted_at), boundary ? gt(projects.id, boundary) : undefined))
+      .orderBy(asc(projects.id))
+      .limit(limit + 1);
+    return queryPage(rows, limit, "projects");
+  };
 
   const get = async (id: string) => {
     const [project] = await db
@@ -97,6 +110,7 @@ export const createProjectsDBService = (db: DbClient) => {
 
   return {
     list,
+    query,
     get,
     create,
     update,

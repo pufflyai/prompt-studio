@@ -1,5 +1,5 @@
-import { defaultPageResourceCodec, parseWorkbenchPageUrl } from "@pstdio/sdk/extensions";
 import type { WorkbenchCore } from "@pstdio/workbench";
+import { defaultPageResourceCodec, parseWorkbenchPageUrl } from "pstdio-api-contracts";
 import { getApiClient } from "@/lib/api";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { getProjectExtensionMetadata } from "@/shared/extensions/api";

@@ -1,6 +1,6 @@
 import type {
   CommandExecuteRequest,
-  CommandExecuteResponse,
+  CommandExecutionResult,
   ExtensionCommandRecord,
   ListExtensionCommandsResponse,
   LocalizableString,
@@ -27,9 +27,9 @@ export type ExtensionCommandTable = {
 };
 
 type DispatchDeps = {
-  stream: ExtensionClient["stream"];
+  streamCommand: ExtensionClient["streamCommand"];
   cwd: () => string;
-  execute: (commandId: string, request: CommandExecuteRequest) => Promise<CommandExecuteResponse>;
+  execute: (commandId: string, request: CommandExecuteRequest) => Promise<CommandExecutionResult>;
   listCommands: (projectId: string) => Promise<ListExtensionCommandsResponse>;
   log: (message: string) => void;
   error?: (message: string) => void;
@@ -82,6 +82,17 @@ const localizeCommands = (
     ...command,
     title: resolveTranslatedString(command.title, command.extensionId, translations, locale) ?? command.id,
     description: resolveTranslatedString(command.description, command.extensionId, translations, locale),
+    params:
+      command.params &&
+      Object.fromEntries(
+        Object.entries(command.params).map(([name, descriptor]) => [
+          name,
+          {
+            ...descriptor,
+            description: resolveTranslatedString(descriptor.description, command.extensionId, translations, locale),
+          },
+        ]),
+      ),
   }));
 
 const commandCliPaths = (command: ExtensionCommandRecord) => {
@@ -130,7 +141,7 @@ const formatCollision = (collision: ExtensionCommandCollision) => {
 
 // The CLI emits a command's result as JSON so callers can pipe/parse it; it owns
 // no bespoke per-command formatting.
-const outputForResponse = (response: CommandExecuteResponse, json: boolean) => {
+const outputForResponse = (response: CommandExecutionResult, json: boolean) => {
   if (json) return JSON.stringify(response);
   if (response.outcome.status === "success") return JSON.stringify(response.outcome.value ?? null);
   return `${response.outcome.status}: ${response.outcome.reason ?? response.outcome.code ?? response.commandId}`;
@@ -139,7 +150,7 @@ const outputForResponse = (response: CommandExecuteResponse, json: boolean) => {
 const defaultDeps = (): DispatchDeps => ({
   cwd: () => process.cwd(),
   execute: (commandId, request) => apiClient().extensions.execute(commandId, request),
-  stream: (...args) => apiClient().extensions.stream(...args),
+  streamCommand: (...args) => apiClient().extensions.streamCommand(...args),
   listCommands: (projectId) => apiClient().extensions.listCommands(projectId),
   log: (message) => console.log(message),
   error: (message) => console.error(message),
@@ -228,7 +239,7 @@ export const renderCommandHelp = (command: ExtensionCommandRecord) => {
     lines.push("", "Options:");
     for (const [name, descriptor] of params) {
       lines.push(
-        `  ${formatParamName(name)}${describeParamValue(descriptor)}  ${descriptor.description ?? ""}`.trimEnd(),
+        `  ${formatParamName(name)}${describeParamValue(descriptor)}  ${displayString(descriptor.description)}`.trimEnd(),
       );
     }
   }
@@ -314,7 +325,7 @@ export const dispatchExtensionCliCommand = async (input: {
     return printExtensionCommandStream({
       commandId: command.id,
       request: { projectId, workspaceId, params, source: "cli" },
-      stream: deps.stream,
+      streamCommand: deps.streamCommand,
       log: deps.log,
     });
 

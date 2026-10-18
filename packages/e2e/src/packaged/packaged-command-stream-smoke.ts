@@ -18,6 +18,8 @@ export const registerCommandStreamSmokeTests = () => {
       const started = await startPackagedServe(root);
       child = started.child;
       const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
+      const documentation = await fetch(`${started.baseUrl}/openapi.json`, { headers });
+      expect(documentation.status).toBe(200);
       const created = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
         headers,
@@ -31,6 +33,25 @@ export const registerCommandStreamSmokeTests = () => {
       );
       expect(events.slice(0, 3)).toEqual([1, 2, 3].map((done) => ({ type: "data", data: { done, total: 3 } })));
       expect(events.at(-1)).toMatchObject({ type: "end", response: { outcome: { ok: true, value: { total: 3 } } } });
+      const stream = client.extensions.streamCommand(project.id, "test.stream-fixture.command.progress");
+      expect(await Array.fromAsync(stream)).toEqual([1, 2, 3].map((done) => ({ done, total: 3 })));
+      expect(await stream.outcome).toEqual({ ok: true, status: "success", value: { total: 3 } });
+      const rejected = client.extensions.streamCommand(project.id, "test.stream-fixture.command.reject");
+      expect(await Array.fromAsync(rejected)).toEqual([]);
+      const rejection = await rejected.outcome;
+      expect(rejection).toMatchObject({
+        ok: false,
+        status: "rejected",
+        code: "stale_revision",
+        data: { expectedRevision: 1, actualRevision: 2 },
+        cause: { source: "storage" },
+        notices: [{ type: "warning" }],
+        diagnostics: [{ code: "conflict" }],
+      });
+      const legacyRejection = await Array.fromAsync(
+        client.extensions.stream("test.stream-fixture.command.reject", { projectId: project.id }),
+      );
+      expect(legacyRejection).toMatchObject([{ type: "end", response: { outcome: rejection } }]);
       const cli = spawnSync(
         PACKAGED_BINARY_PATH,
         ["stream-fixture", "progress", "--project-id", project.id, "--stream"],
@@ -45,6 +66,21 @@ export const registerCommandStreamSmokeTests = () => {
           },
         },
       );
+      for (const flag of ["--stream", "--json"]) {
+        const result = spawnSync(PACKAGED_BINARY_PATH, ["stream-fixture", "reject", "--project-id", project.id, flag], {
+          cwd: root,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            PSTDIO_API_URL: started.baseUrl,
+            PSTDIO_API_TOKEN: started.descriptor.token,
+            PSTDIO_HOME: root,
+          },
+        });
+        expect(result.status, result.stderr).toBe(1);
+        const output = flag === "--json" ? result.stderr : result.stdout;
+        expect(JSON.parse(output).outcome).toEqual(rejection);
+      }
       expect(cli.status, cli.stderr).toBe(0);
       const lines = cli.stdout
         .trim()

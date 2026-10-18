@@ -1,6 +1,7 @@
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { createSessionResource, makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
+import { sessionQuery } from "./session-query.fixture";
 export async function fixture(limit = 2) {
   const storage = createMemoryStorage();
   const settings: Record<string, unknown> = { "automation.maxInProgress": limit };
@@ -28,7 +29,12 @@ export async function fixture(limit = 2) {
         },
       },
       workspaces: {
-        get: async () => null,
+        get: async (id: string) => ({
+          id,
+          root_path: `/repo/${id}`,
+          execution_kind: "local",
+          provider_capabilities_json: { diff: true },
+        }),
         list: async () => [],
         create: async () => {
           sequence += 1;
@@ -36,8 +42,10 @@ export async function fixture(limit = 2) {
         },
       } as never,
       sessions: {
-        list: async () => [],
-        listByWorkspace: async () => [],
+        query: sessionQuery(
+          async () => [],
+          async () => [],
+        ),
         create: async () => ({ ...createSessionResource(), id: `session-${sequence}` }),
         get: async () => createSessionResource(),
       } as never,

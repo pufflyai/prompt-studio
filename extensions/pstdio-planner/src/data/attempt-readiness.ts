@@ -1,4 +1,5 @@
 import type { AttemptRecord, TicketAttemptSelection } from "./attempt-types";
+import type { DependencyDelivery } from "./dependency-deliveries";
 import { hasPendingInput } from "./review-request-storage";
 import type { TicketReviewRequests } from "./review-request-types";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
@@ -42,6 +43,7 @@ interface ResolveAttemptReadinessInput {
   doneStatusIds: Set<string>;
   mainHeadSha: string;
   mergedHeads: Map<string, string[]>;
+  dependencyDeliveries: Map<string, DependencyDelivery>;
   activeImplementationCount: number;
   maxInProgress: number;
   isAncestor(baseSha: string, headSha: string): Promise<boolean>;
@@ -64,38 +66,71 @@ const isDependencyAttemptReady = (input: DependencyInput, attempt: AttemptRecord
   return input.dependencyReview === undefined && selected && isSelectedAttemptViable(attempt);
 };
 
+const selectDependencyAttempt = async (input: DependencyInput, dependency: AttemptReadinessTicket) => {
+  const selection = input.selections.find((candidate) => candidate.ticketId === dependency.id);
+  const attempts = input.attempts.filter((attempt) => attempt.ticketId === dependency.id);
+  const done = input.doneStatusIds.has(dependency.statusId ?? "");
+  const delivery = input.dependencyDeliveries.get(dependency.id);
+  const active = attempts.some((attempt) => input.activeImplementationWorkspaceIds?.has(attempt.workspaceId));
+  const candidates = attempts.filter(
+    (attempt) =>
+      (!selection || attempt.workspaceId === selection.workspaceId) &&
+      isDependencyAttemptReady(input, attempt, done, Boolean(selection)),
+  );
+  if (delivery && active)
+    return {
+      decision: "wait",
+      reason: "dependency-not-ready",
+      dependencyIds: [dependency.shorthand],
+    } satisfies AttemptReadinessResult;
+  if (candidates.length > 1)
+    return {
+      decision: "wait",
+      reason: "ambiguous-dependency-attempt",
+      dependencyIds: [dependency.shorthand],
+    } satisfies AttemptReadinessResult;
+  const selectedAttempt = attempts.find(({ workspaceId }) => workspaceId === selection?.workspaceId);
+  if (selection && !selectedAttempt)
+    return {
+      decision: "wait",
+      reason: "dependency-not-ready",
+      dependencyIds: [dependency.shorthand],
+    } satisfies AttemptReadinessResult;
+  const selectedHead = selectedAttempt ? latestHead(selectedAttempt) : null;
+  if (
+    done &&
+    delivery?.mergeSha &&
+    (!selection || (selectedHead !== null && selectedHead === delivery.headSha)) &&
+    (await input.isAncestor(delivery.mergeSha, input.mainHeadSha))
+  )
+    return null;
+  // A completed human task may have no code artifact. Managed code must still reach this base.
+  if (done && attempts.length === 0 && !delivery) return null;
+  const selected = candidates.filter(
+    (attempt) => !delivery || (delivery.headSha !== null && latestHead(attempt) === delivery.headSha),
+  );
+  if (selected.length === 0)
+    return {
+      decision: "wait",
+      reason: "dependency-not-ready",
+      dependencyIds: [dependency.shorthand],
+    } satisfies AttemptReadinessResult;
+  const head = latestHead(selected[0]!)!;
+  const integrated = await Promise.all(
+    [head, ...(input.mergedHeads.get(head) ?? [])].map((commit) => input.isAncestor(commit, input.mainHeadSha)),
+  );
+  if (integrated.some(Boolean)) return null;
+  return selected[0]!;
+};
+
 const selectDependencyAttempts = async (input: DependencyInput, dependencies: AttemptReadinessTicket[]) => {
   const selectedAttempts: AttemptRecord[] = [];
   for (const dependency of dependencies) {
-    const selection = input.selections.find((candidate) => candidate.ticketId === dependency.id);
-    const attempts = input.attempts.filter((attempt) => attempt.ticketId === dependency.id);
-    const done = input.doneStatusIds.has(dependency.statusId ?? "");
-    // A completed human task may have no code artifact. Managed code must still reach this base.
-    if (done && attempts.length === 0) continue;
-    const selected = attempts.filter(
-      (attempt) =>
-        (!selection || attempt.workspaceId === selection.workspaceId) &&
-        isDependencyAttemptReady(input, attempt, done, Boolean(selection)),
-    );
-    if (selected.length === 0)
-      return {
-        decision: "wait",
-        reason: "dependency-not-ready",
-        dependencyIds: [dependency.shorthand],
-      } satisfies AttemptReadinessResult;
-    if (selected.length > 1)
-      return {
-        decision: "wait",
-        reason: "ambiguous-dependency-attempt",
-        dependencyIds: [dependency.shorthand],
-      } satisfies AttemptReadinessResult;
-    const head = latestHead(selected[0]!)!;
-    const integrated = await Promise.all(
-      [head, ...(input.mergedHeads.get(head) ?? [])].map((commit) => input.isAncestor(commit, input.mainHeadSha)),
-    );
-    if (integrated.some(Boolean)) continue;
-    if (!selectedAttempts.some((attempt) => attempt.workspaceId === selected[0]!.workspaceId))
-      selectedAttempts.push(selected[0]!);
+    const selected = await selectDependencyAttempt(input, dependency);
+    if (!selected) continue;
+    if ("decision" in selected) return selected;
+    if (!selectedAttempts.some((attempt) => attempt.workspaceId === selected.workspaceId))
+      selectedAttempts.push(selected);
   }
   return selectedAttempts;
 };

@@ -35,11 +35,22 @@ test("session readers expose harness and usage through an explicit public mappin
     id: row.id,
     agent: "claude-code",
     workspace_id: workspace.id,
+    workspaceId: workspace.id,
+    createdAt: row.created_at,
+    originalSessionId: null,
+    cwd: null,
+    lastSelectedModel: null,
+    lastRequestStarted: row.last_request_started,
+    lastRequestEnded: null,
     usage: { input_tokens: 10, output_tokens: 5, cache_read_tokens: 0, cache_write_tokens: 2 },
   });
-  expect(await api.get(row.id)).toEqual({ ...page.items[0], last_exit: null });
-  expect(await api.list()).toMatchObject([{ id: row.id, agent: "claude-code" }]);
-  expect(await api.listByWorkspace(workspace.id)).toEqual(page.items);
+  expect(page.items[0].usage).toMatchObject({
+    inputTokens: 10,
+    outputTokens: 5,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 2,
+  });
+  expect(await api.get(row.id)).toEqual({ ...page.items[0], lastExit: null, last_exit: null });
   expect(page.items[0]).not.toHaveProperty("project_id");
   expect(page.items[0]).not.toHaveProperty("session_file_id");
   const foreign = await handle.deps.projectService.create({ name: "foreign" });
@@ -111,6 +122,20 @@ test("extensions can create and open a session before sending its first message"
   }
 });
 
+const observeSessionRun = (isolated: Awaited<ReturnType<typeof createTestApp>>, sessionId: string) => {
+  const completion = Promise.withResolvers<string>();
+  let started = false;
+  const unsubscribe = isolated.eventBus.subscribe((event) => {
+    if (event.table !== "sessions" || event.op !== "set") return;
+    const session = event.data as { id: string; status: string };
+    if (session.id !== sessionId) return;
+    if (session.status === "in_progress") started = true;
+    if (session.status === "completed" && started) completion.resolve(session.status);
+    if (["failed", "cancelled", "disconnected"].includes(session.status)) completion.resolve(session.status);
+  });
+  return { completion: completion.promise, unsubscribe };
+};
+
 for (const queued of [false, true]) {
   test(`the first ${queued ? "queued" : "immediate"} extension message keeps its chosen parameters and model`, async () => {
     const starts: HarnessStartInput[] = [];
@@ -125,6 +150,7 @@ for (const queued of [false, true]) {
       },
     });
     const isolated = await createTestApp({ harnessRegistry: createTestHarnessRegistry([record]) });
+    let unsubscribe: (() => void) | undefined;
     try {
       const project = await createProject(isolated.app, "Configured idle session");
       const api = createSessionsApi(isolated.deps, {
@@ -142,13 +168,17 @@ for (const queued of [false, true]) {
           { emitStartedHook: false },
         );
       }
+      // Selected-model writes can publish the idle completed row before this run starts.
+      const observed = observeSessionRun(isolated, session.id);
+      unsubscribe = observed.unsubscribe;
       await api.followup({ sessionId: session.id, prompt: "First configured message" });
       if (queued) {
         expect((await api.get(session.id))?.status).toBe("queued");
         await isolated.deps.settingsService.update({ max_concurrent_sessions: null });
         await createSessionScheduler(isolated.deps).drainQueue();
       }
-      await waitForCompleted(isolated.app, session.id);
+      expect(await observed.completion).toBe("completed");
+      expect(await api.get(session.id)).toMatchObject({ status: "completed" });
       expect(starts).toHaveLength(1);
       expect(starts[0]).toMatchObject({
         prompt: "First configured message",
@@ -156,6 +186,7 @@ for (const queued of [false, true]) {
         params: { safe: true },
       });
     } finally {
+      unsubscribe?.();
       await isolated.close();
     }
   });

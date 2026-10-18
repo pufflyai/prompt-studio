@@ -15,11 +15,13 @@ const TERMINAL_SESSION_CAPABILITY = "terminal.session";
  * Renderer-side session over the `terminal.session` capability. It is the shared
  * renderer adapter with an awaitable `kill`, so it plugs straight into the
  * `Terminal` component's `bridge` prop.
+ * @deprecated No extension uses this capability. Use the host terminal surface.
  */
 export interface TerminalSessionAdapter extends RendererTerminalSessionAdapter {
   kill(signal?: string): Promise<void>;
 }
 
+/** @deprecated Use the host terminal surface. */
 export interface TerminalSessionBridge {
   openSession(request: TerminalSessionRequest): Promise<TerminalSessionAdapter>;
 }
@@ -29,6 +31,7 @@ export interface TerminalSessionBridge {
  * Operations go through `host.call("terminal.session", ...)`; output and exit
  * events arrive through the host event channel. The webview must declare the
  * `terminal.session` capability or every call is rejected by the host gate.
+ * @deprecated Use the host terminal surface.
  */
 export const createTerminalSessionBridge = (host: GuestHost): TerminalSessionBridge => ({
   async openSession(request) {

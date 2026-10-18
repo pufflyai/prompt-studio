@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { CommandOutcome } from "@pstdio/sdk/extensions";
 import { dispatchExtensionCliCommand } from "./extension-cli-router";
 
 test("stream flag prints data and final outcome as NDJSON", async () => {
@@ -22,12 +23,17 @@ test("stream flag prints data and final outcome as NDJSON", async () => {
         ],
       }),
       log: (line) => lines.push(line),
-      async *stream(_command, input) {
-        params = input.params;
-        yield { type: "data", data: "one" };
-        yield {
-          type: "end",
-          response: { commandId: "logs.tail", extensionId: "logs", outcome: { ok: true, status: "success", value: 1 } },
+      streamCommand(projectId, commandId, input) {
+        expect(projectId).toBe("p1");
+        expect(commandId).toBe("logs.tail");
+        params = input?.params;
+        return {
+          async *[Symbol.asyncIterator]() {
+            yield "one";
+          },
+          outcome: Promise.resolve({ ok: true, status: "success", value: 1 } satisfies CommandOutcome),
+          result: Promise.resolve(1),
+          cancel: async () => {},
         };
       },
     },
@@ -48,11 +54,22 @@ test("SIGINT aborts the command stream and exits with code 130", async () => {
     commandId: "tail",
     request: { projectId: "p1" },
     log: (line) => lines.push(line),
-    async *stream(_command, _input, options) {
-      process.emit("SIGINT");
-      aborted = options!.signal!.aborted;
-      options!.signal!.throwIfAborted();
-      yield { type: "data", data: "unreachable" };
+    streamCommand(_project, _command, _input, options) {
+      return {
+        async *[Symbol.asyncIterator]() {
+          process.emit("SIGINT");
+          aborted = options!.signal!.aborted;
+          yield* [];
+        },
+        outcome: Promise.resolve({
+          ok: false,
+          status: "error",
+          code: "command_stream_cancelled",
+          reason: "Cancelled",
+        } satisfies CommandOutcome),
+        result: Promise.resolve(undefined),
+        cancel: async () => {},
+      };
     },
   });
   expect(exit).toBe(130);
@@ -91,11 +108,42 @@ test("a parameter value equal to --stream remains an ordinary command argument",
           outcome: { ok: true, status: "success", value: "--stream" },
         };
       },
-      async *stream() {
-        yield await Promise.reject(new Error("Must execute normally"));
+      streamCommand() {
+        throw new Error("Must execute normally");
       },
     },
   });
   expect(status).toBe(0);
   expect(executed).toBe(true);
+});
+
+test("CLI streaming keeps structured rejection details", async () => {
+  const { printExtensionCommandStream } = await import("./extension-cli-stream");
+  const lines: string[] = [];
+  const outcome = {
+    ok: false,
+    status: "rejected",
+    code: "stale_revision",
+    reason: "Changed",
+    data: { revision: 2 },
+    cause: { source: "storage" },
+    notices: [{ type: "warning", message: "Reload" }],
+    diagnostics: [{ code: "conflict", message: "Changed", severity: "warning" }],
+  } satisfies CommandOutcome;
+  expect(
+    await printExtensionCommandStream({
+      commandId: "save",
+      request: { projectId: "p1" },
+      streamCommand: () => ({
+        async *[Symbol.asyncIterator]() {
+          yield* [];
+        },
+        outcome: Promise.resolve(outcome),
+        result: Promise.resolve(undefined),
+        cancel: async () => {},
+      }),
+      log: (line) => lines.push(line),
+    }),
+  ).toBe(1);
+  expect(lines.map((line) => JSON.parse(line))).toEqual([{ type: "end", outcome }]);
 });

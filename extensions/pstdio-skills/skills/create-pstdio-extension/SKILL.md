@@ -17,14 +17,16 @@ For a new extension, follow the public walkthrough first: [Write an extension](h
    - Commands do the work. Expose them with `cli: true` so people and agents use the same action. See [Make actions CLI-ready](https://prompt.studio/docs/guides/extensions/cli-ready-actions/).
    - Use middlewares to check or change a command call before it runs, hooks to react to events, and schedules for cron. See [Lifecycle automation](https://prompt.studio/docs/references/extensions/lifecycle-automation/).
    - Use `ctx.automation.enqueue(...)` for work that outlives a request. See [Durable work](https://prompt.studio/docs/references/extensions/durable-automation/).
+   - Use `resourceKinds` for domain resource identity and resource menus.
    - Use `views` for table, board, tree, controls, file, and webview bodies; `pages` for routed screens; `navigationItems` and `navigationTrees` for the sidebar; `viewMenus` and `placements` for attached and mode-wide panels. Choose with [Pages and panels](references/pages.md).
    - Use templates, skills, themes, and file icon themes for packaged static assets.
-   - For workflow states on a board, return enum attributes from the collection query and own the editor through commands and a settings panel. Do not add `statuses` contributions; they are deprecated. See [Workflow status migration](https://prompt.studio/docs/references/extensions/workflow-status-migration/).
+   - For workflow states on a board, return enum attributes from the collection query and own the editor through commands and a settings panel. Do not add `statuses` contributions; they are deprecated in 0.43.x and removed on `main`. See [Workflow status migration](https://prompt.studio/docs/references/extensions/workflow-status-migration/).
    - Add harnesses and workspace types only for a new agent or workspace provider.
    - Start from a typechecked example in [Examples](references/examples.md).
 4. **Store data in the right place.** Structured data goes in `ctx.storage`; extension-owned files go under `.pstdio/extension-storage/<package-name>/`. Read [Storage results and writes](references/extension-api.md#storage-results-and-writes) and [Storage and workspace APIs](references/host-storage-and-workspaces.md). Save first, then emit the change event, then return the saved value.
 5. **Wire native actions and navigation.** Toolbar, row, and selection actions call commands. Row and selection actions pass `rowId` or `rowIds`; `onRowActivate` receives the `row`. See [Native actions](references/native-actions.md) and [Table and board actions](references/extension-api.md#table-and-board-actions-receive-ids-activation-receives-the-row). Request navigation with `ctx.navigation.open(target)` and give every target an explicit page or panel.
 6. **Use a webview only when native views cannot express the content.** Read [Webviews](references/webviews.md).
+   For typed clients, host props, structured errors, query refresh, outcomes, and resource pages, read [Client contracts](references/client-contracts.md). These are SDK 0.44 APIs on `main`; check the installed SDK before you use them.
 7. **Implement the smallest useful change.**
    - Keep identity in `package.json`. Export one default `defineExtension({ ... })` from `extension.ts`.
    - Use `packageAsset("./path", import.meta.url)` for every shipped file. Keep paths inside the package.

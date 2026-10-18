@@ -1,4 +1,4 @@
-import type { CommandExecuteResponse, WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
+import type { CommandExecutionResult, WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
 
 const labExtensionId = "pstdio.extension-lab";
 const issuesExtensionId = "acme.issue-tracker";
@@ -62,7 +62,6 @@ export const metadata = {
   ],
   navigationTrees: [],
   statusBarItems: [],
-  statuses: [],
   activityItems: [],
   settingsSections: [],
   settingsPanels: [],
@@ -74,7 +73,7 @@ export const response = {
   commandId: `${labExtensionId}.command.say-hello`,
   extensionId: labExtensionId,
   outcome: { ok: true, status: "success", value: { message: "hello" } },
-} satisfies CommandExecuteResponse;
+} satisfies CommandExecutionResult;
 export const metadataWithLabMode = {
   ...metadata,
   modes: [

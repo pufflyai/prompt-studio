@@ -27,6 +27,7 @@ export {
   localContributionIdPattern,
 } from "./contribution-id";
 export { resolveDataTableComparableValue, resolveDataTableFieldKind } from "./data-table-values";
+export * from "./event-reference";
 export type {
   CommitPayload,
   ConflictPayload,
@@ -58,7 +59,10 @@ export {
   resolvePageParams,
   validatePageParamDefinitions,
 } from "./page-params";
+export * from "./page-resource-codec";
+export * from "./page-url";
 export { commandRef, eventRef } from "./refs";
+export { serializeCommandError } from "./serialize-error";
 export { defineSlot } from "./slots";
 export { isFileSourcePosition } from "./source-position";
 export type * from "./types";
@@ -73,3 +77,4 @@ export {
   WEBVIEW_HOST_CAPABILITY_VERSION,
   WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
 } from "./types/webview-capabilities";
+export { artifactMountId, EXTENSION_EVENTS_SCOPE } from "./webview-protocol";

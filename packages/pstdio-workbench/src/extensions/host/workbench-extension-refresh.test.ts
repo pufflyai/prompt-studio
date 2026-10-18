@@ -32,7 +32,6 @@ const metadata = {
   navigationItems: [],
   navigationTrees: [],
   statusBarItems: [],
-  statuses: [],
   settingsPanels: [],
   diagnostics: [],
 } satisfies WorkbenchExtensionMetadata;

@@ -9,12 +9,18 @@ export interface WebviewPageClient {
   updateParams(params: Readonly<Record<string, PageParamValue | null>>): Promise<PageLocation>;
 }
 
-export const createWebviewPageClient = <TProps>(host: GuestHost, propsStore: PropsStore<TProps>): WebviewPageClient => {
-  const props = () => propsStore.get() as { pageLocation?: PageLocation; pageParams?: PageParams } | undefined;
+export const createWebviewPageClient = <TProps>(
+  host: GuestHost,
+  propsStore:
+    | PropsStore<TProps>
+    | PropsStore<import("pstdio-api-contracts/extension-kernel").WebviewHostProps>
+    | undefined = host.propsStore,
+): WebviewPageClient => {
+  const props = () => propsStore?.get() as { pageLocation?: PageLocation; pageParams?: PageParams } | undefined;
   return {
     location: () => props()?.pageLocation,
     params: <T extends Record<string, PageParamValue>>() => (props()?.pageParams ?? {}) as T,
-    subscribe: (listener) => propsStore.subscribe(() => listener(props()?.pageLocation)),
+    subscribe: (listener) => propsStore?.subscribe(() => listener(props()?.pageLocation)) ?? (() => {}),
     updateParams: async (params) => (await host.call("page.params.update", { params })).location,
   };
 };

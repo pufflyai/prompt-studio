@@ -163,20 +163,19 @@ Connection requests must use a relative path. The host rejects undeclared method
 
 Harnesses that can use a remote execution target set `cwdRequirement: "optional"`. Their start, resume, reattach, and message inputs receive `workspace.executionTarget`. A remote target contains the provider id and its opaque provider reference. It does not contain a local path.
 
-Command outcomes must be transport-safe:
+Command outcomes are a validated union. `ok: true` requires `status: "success"`; rejection and
+error outcomes have `ok: false`. Both failure variants carry `code?`, `reason`, `data?`, `cause?`,
+`error?`, `diagnostics?` and `notices?`. Serialized errors keep nested causes. Notices and diagnostics
+also apply to successful outcomes. The kernel, HTTP and webview use this same contract.
 
-```ts
-type CommandOutcome<T = unknown> =
-  | { ok: true; status: "success"; value: T }
-  | { ok: false; status: "rejected"; code?: string; reason: string }
-  | {
-      ok: false;
-      status: "error";
-      code?: string;
-      reason: string;
-      error?: SerializedError;
-    };
-```
+A recoverable rejection, such as `stale_revision`, keeps its data on every path. Commands inspect
+`ctx.commands.execute(...).status`. The SDK HTTP client returns `{ commandId, extensionId, outcome }`.
+Webview `client.commands` returns the value or throws `CommandOutcomeError`; read its `outcome`
+for the complete rejection. `getCommandValue(outcome)` provides the same throwing behavior.
+
+In 0.44, `unwrapCommandOutcome` is deprecated; use `getCommandValue` or check the outcome explicitly.
+The SDK `execute` result retains the old optional fields for source compatibility during that
+release. New code narrows `outcome.ok` or `outcome.status` before reading variant-specific fields.
 
 ## Middlewares And Hooks
 
@@ -233,6 +232,18 @@ uses Planner's commands or their lifecycle events. Use
 when a hook should react to a command outcome.
 
 ## Workspace Cleanup
+
+Session readers return `ExtensionSession`: `workspaceId`, `lastSelectedModel`, `originalSessionId`,
+`createdAt`, `updatedAt`, `lastRequestStarted` and `lastRequestEnded` use camelCase.
+`cwd` is the execution directory or null. `get` also returns `lastExit`.
+Usage totals use `inputTokens`, `outputTokens`, `cacheReadTokens` and `cacheWriteTokens`.
+The SDK client returns the same fields. Snake-case fields remain deprecated through 0.44.
+
+Workspace readers return `ExtensionWorkspace` with `projectId`, `shorthand`, `rootPath`,
+`providerId`, `providerState`, `executionKind`, `displayPath`, `capabilities`, `isDefault`,
+`setupError`, `createdAt` and `updatedAt`. Create one with
+`ctx.workspaces.create({ providerId: "pstdio.worktree", shorthandBase: "WS", params: { base: "main" } })`.
+Creation may attach anchors; read existing links through `ctx.resources`.
 
 `ctx.workspaces.removeWorktree(id)` removes the local worktree and branch but preserves the workspace record. `ctx.workspaces.delete(id)` performs the full provider cleanup and deletes the workspace. Both operations emit `worktree.removed` when they remove a local worktree.
 
@@ -451,6 +462,6 @@ for (const session of sessions) {
 
 Without a workspace filter, `workspace_id` is the earliest linked workspace, with link ID breaking timestamp ties. With a workspace filter it is the selected workspace. Multiple links do not duplicate session items.
 
-`get()`, `list()`, `listByWorkspace()` and `create()` also expose the typed harness ID as `agent`. `list()` and `listByWorkspace()` remain available but are deprecated; use `query()` and `query({ workspaceId })`. The old methods keep their existing ordering and archive behavior.
+`get()` and `create()` also expose the typed harness ID as `agent`. Use `query()` or `query({ workspaceId })` to list sessions. Read every `nextCursor` page when a command needs the full history. Results are newest first and exclude archived sessions unless `includeArchived: true` is set.
 
 Views can refresh on `viewDataEvents.sessionsChanged` (`view.sessions.changed`). Query with `updatedFrom` and merge by session ID. Webviews read sessions through an extension command using `commands.execute`.

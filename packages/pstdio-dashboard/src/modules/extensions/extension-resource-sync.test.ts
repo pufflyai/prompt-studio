@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
@@ -50,7 +50,7 @@ const openNoteWorkbench = (
         commandId,
         extensionId,
         outcome: { ok: true, status: "success", value: await resolve(resource) },
-      } as CommandExecuteResponse;
+      } as CommandExecutionResult;
     },
   });
   workbench.pageLocations.setProject(projectId);
@@ -157,7 +157,7 @@ test("same-kind open resources resolve through their own extension and refresh w
         commandId,
         extensionId: resource.extensionId,
         outcome: { ok: true, status: "success", value: { ...resource, label: commandId } },
-      } as CommandExecuteResponse;
+      } as CommandExecutionResult;
     },
   });
   workbench.pageLocations.setProject(projectId);

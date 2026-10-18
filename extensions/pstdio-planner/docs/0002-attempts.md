@@ -95,7 +95,7 @@ For a root ticket deliberately moved to another target branch, pass `--base <tar
 
 A revision identifies both its base and HEAD. Correcting a recorded base can create a fresh revision with the same HEAD and a fresh report; prior review evidence remains on the original base/HEAD pair. Even retrying an existing submission rechecks current dependency ancestry.
 
-An owner can submit a later correction after a passed review. Earlier review evidence stays attached to its original commit. The optional `--expected-attempt-state` parameter is deprecated; ownership, exact HEAD, and the revision counter protect submission. No extra mandatory managed review is introduced by stack repair. A live implementation owner cannot supply a dependency revision while replacing that work.
+An owner can submit a later correction after a passed review. Earlier review evidence stays attached to its original commit. The optional `--expected-attempt-state` parameter is deprecated in 0.44 and removed in 0.45; ownership, exact HEAD, and `--expected-revision` protect submission. Human review requests retain the old state guard through 0.44; use the workspace owner and `--revision` guard instead. No extra mandatory managed review is introduced by stack repair. A live implementation owner cannot supply a dependency revision while replacing that work.
 
 ## How Planner sets the ticket status
 

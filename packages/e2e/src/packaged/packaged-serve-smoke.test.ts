@@ -11,8 +11,12 @@ import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
+// Localized parameter guidance is readable in compiled CLI help.
+import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
 // Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
 import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
+// OpenAPI publishes recursive command causes without expanding forever.
+// Canonical and deprecated streams preserve full rejections through the SDK and compiled CLI.
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 // Independent hosts also bind one workbench identity to their own environment and folder.
@@ -24,7 +28,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
-// Includes legacy status provider loading and its migration warning.
+// Includes linked dependency loading and missing dependency diagnostics.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
@@ -50,7 +54,12 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // Native relay coverage hydrates artifact mounts and attachment URLs, and restores foreign journal work after restart.
 import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
+// The browser suite checks typed host props, page updates, structured capability errors and saved settings.
+// Real React Query subscriptions cover matching events, reconnect deduplication and unmount cleanup.
+// Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
+// Planner covers timeline state, dependency recovery and Git conflicts in separate packaged cases.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
@@ -63,6 +72,7 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 // Resource links include owner batch-resolution commands and their public workbench metadata.
 // Includes resource path prefixes, owner resolver commands, and resolution through HTTP.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
+import { registerResourcePageSmokeTests } from "./packaged-resource-pages-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
@@ -88,6 +98,7 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 registerSharedCodexSmokeTests();
+registerCliHelpSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
 registerExtensionStartupSmokeTests();
@@ -98,6 +109,7 @@ registerConnectionStatusSmokeTests();
 registerAssetStorageSmokeTests();
 registerGroupedStorageSmokeTests();
 registerNativeRelaySmokeTests();
+registerNotificationStatusSmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.
 
@@ -245,3 +257,5 @@ registerStorageMigrationSmokeTests();
 registerWorkspaceCapabilitiesSmokeTests();
 
 registerPageParamsSmokeTests();
+
+registerResourcePageSmokeTests();

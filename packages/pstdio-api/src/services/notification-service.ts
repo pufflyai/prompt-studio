@@ -8,6 +8,7 @@ import type {
   NotificationOrigin,
   NotificationStatus,
   ResourceRef,
+  SetNotificationStatusInput,
   UpdateNotificationInput,
 } from "pstdio-api-contracts";
 import type { createActivityEventsDBService, createNotificationsDBService, notifications } from "pstdio-db";
@@ -166,24 +167,30 @@ export const createNotificationService = (deps: NotificationServiceDeps) => {
     return toNotification(row);
   };
 
+  const setStatus = async (projectId: string, id: string, input: SetNotificationStatusInput) => {
+    const { item, changed } = await deps.notificationsDb.setStatus(projectId, id, input);
+    if (!item) return null;
+    if (changed) await emitUpdate(deps, item, `notification.${input.status}`, `notification ${id} ${input.status}`);
+    return toNotification(item);
+  };
+
+  const setStatusByKey = async (projectId: string, key: string, input: SetNotificationStatusInput) => {
+    const { items, updated } = await deps.notificationsDb.setStatusByKey(projectId, key, input);
+    for (const row of updated)
+      await emitUpdate(deps, row, `notification.${input.status}`, `notification ${row.id} ${input.status}`);
+    return items.map(toNotification);
+  };
+
   const transition = async (projectId: string, id: string, status: "read" | "done" | "dismissed" | "expired") => {
-    const updates = {
-      read: () => deps.notificationsDb.markRead(projectId, id),
-      done: () => deps.notificationsDb.markDone(projectId, id),
-      dismissed: () => deps.notificationsDb.dismiss(projectId, id),
-      expired: () => deps.notificationsDb.expire(projectId, id),
-    };
-    const row = await updates[status]();
+    if (status !== "expired") return setStatus(projectId, id, { status });
+    const row = await deps.notificationsDb.expire(projectId, id);
     if (!row) return null;
     await emitUpdate(deps, row, `notification.${status}`, `notification ${row.id} ${status}`);
     return toNotification(row);
   };
 
   const snooze = async (projectId: string, id: string, until: string) => {
-    const row = await deps.notificationsDb.snooze(projectId, id, until);
-    if (!row) return null;
-    await emitUpdate(deps, row, "notification.snoozed", `notification ${row.id} snoozed until ${until}`);
-    return toNotification(row);
+    return setStatus(projectId, id, { status: "snoozed", snoozedUntil: until });
   };
 
   const resolveByDedupeKey = async (
@@ -191,6 +198,10 @@ export const createNotificationService = (deps: NotificationServiceDeps) => {
     dedupeKey: string,
     status: Extract<NotificationStatus, "done" | "dismissed" | "expired"> = "done",
   ) => {
+    if (status !== "expired") {
+      const notifications = await setStatusByKey(projectId, dedupeKey, { status });
+      return { resolved: notifications.length, notifications };
+    }
     const rows = await deps.notificationsDb.resolveByDedupeKey(projectId, dedupeKey, status);
     for (const row of rows) {
       await emitUpdate(deps, row, `notification.${status}`, `notification ${row.id} resolved (${status})`);
@@ -207,6 +218,8 @@ export const createNotificationService = (deps: NotificationServiceDeps) => {
   };
 
   return {
+    setStatus,
+    setStatusByKey,
     count,
     create,
     get: async (projectId: string, id: string) => {

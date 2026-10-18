@@ -1,11 +1,6 @@
 import type { KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
 import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
-import {
-  kanbanBuiltInViews,
-  legacyFiltersFromViewFilter,
-  legacyOrderingFromSorts,
-  type WorkbenchExtensionKanbanRendererRecord,
-} from "pstdio-api-contracts";
+import { kanbanBuiltInViews, type WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
 import type { Disposable, KanbanRendererCreateSubmission, KanbanRendererQueryState, ResourceRef } from "../../core";
@@ -14,11 +9,7 @@ import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../reac
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { collectionBadgeTarget } from "./collection-badge-navigation";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "./kanban-renderer-adapter";
-import {
-  createStatusOptionsResolver,
-  statusColorConfig,
-  toWorkbenchBoardColumnConfig,
-} from "./kanban-renderer-board-config";
+import { toWorkbenchBoardColumnConfig } from "./kanban-renderer-board-config";
 import {
   createMutableAttributeSource,
   defaultResolveRowActionResource,
@@ -187,7 +178,6 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     });
 
   for (const record of records) {
-    const resolveStatusOptions = createStatusOptionsResolver(context, record);
     const reportUnknownDisplay = (attributeId: string, kind: string) =>
       context.workbench.notifications.show({
         id: `workbench.extension.${record.extensionId}.kanban.${record.id}.display.${attributeId}`,
@@ -200,12 +190,10 @@ export const registerWorkbenchExtensionKanbanRenderers = (
       record.attributes,
       localize,
       decorate,
-      resolveStatusOptions,
       reportUnknownDisplay,
     );
     let wireAttributes = record.attributes;
     const builtIns = kanbanBuiltInViews(record);
-    let columnGrouping = builtIns.settings.columnGrouping;
     const originalRows = new WeakMap<KanbanRendererRow, KanbanRendererRow>();
     let columnConfigs: ColumnConfigRecord | undefined;
     let latestQueryId = 0;
@@ -241,11 +229,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           emptyDescription: localize(record.emptyDescription, ""),
           hideToolbar: record.hideToolbar,
           createRow: toCreateRowConfig(record, localize),
-          getBoardColumnConfig: (groupKey) =>
-            toWorkbenchBoardColumnConfig(
-              columnConfigs?.[groupKey] ?? statusColorConfig(context, record, wireAttributes, columnGrouping, groupKey),
-              localize,
-            ),
+          getBoardColumnConfig: (groupKey) => toWorkbenchBoardColumnConfig(columnConfigs?.[groupKey], localize),
           onRowActivate,
           executeQuery: async (state: KanbanRendererQueryState, signal) => {
             latestQueryId += 1;
@@ -255,11 +239,9 @@ export const registerWorkbenchExtensionKanbanRenderers = (
               record,
               record.queryHandlerId,
               {
-                // Old extensions still read `filters` and `settings.ordering`; both are derived from the view.
-                settings: { ...state.settings, ordering: legacyOrderingFromSorts(state.sorts) },
+                settings: state.settings,
                 filter: state.filter,
                 sorts: state.sorts,
-                filters: legacyFiltersFromViewFilter(state.filter),
               },
               undefined,
               signal,
@@ -284,7 +266,6 @@ export const registerWorkbenchExtensionKanbanRenderers = (
               return isQueryResult(value) ? mapRows(value.rows ?? []) : [];
             }
 
-            columnGrouping = state.settings.columnGrouping;
             if (Array.isArray(value)) return mapRows(value);
             if (!isQueryResult(value)) return [];
             const nextAttributes = value.attributes ?? wireAttributes;
@@ -303,10 +284,6 @@ export const registerWorkbenchExtensionKanbanRenderers = (
             : undefined,
           onMove: record.moveHandlerId
             ? (move) => runMutation(record, record.moveHandlerId!, { ...move }).then(() => undefined)
-            : undefined,
-          onReorder: record.reorderHandlerId
-            ? (rowId, beforeRowId) =>
-                runMutation(record, record.reorderHandlerId!, { rowId, beforeRowId }).then(() => undefined)
             : undefined,
           onCreateRow: toCreateRowHandler(
             record,

@@ -2,6 +2,7 @@ import type { JsonObject, ResourceAnchorValidationInput, ResourceRef } from "pst
 import { createCommandRunner } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { resolveCommandWorkspaceDir } from "../execute-project-extension-command";
+import { createExtensionLogger } from "../extension-logger";
 import { createCommandEnvironment } from "./index";
 
 const rejectLinkMutation = async (): Promise<never> => {
@@ -18,6 +19,7 @@ export const runAnchorValidator = async (
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
   const workspace = await deps.workspaceService.getDefault(projectId);
   const runner = createCommandRunner(snapshot.runtime, {
+    createLogger: createExtensionLogger,
     buildEnvironment: (input) => {
       const environment = createCommandEnvironment(deps, snapshot.enabledSources, {
         ...input,

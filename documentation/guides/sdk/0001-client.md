@@ -69,40 +69,50 @@ client.sync; // SSE sync helpers
 client.runtime; // Browser login links and, from the release after 0.43.x, environment identity
 ```
 
+Session and workspace results share the extension context's camelCase fields. For example, read
+`session.workspaceId` and `workspace.rootPath`. Snake-case aliases remain deprecated through 0.44.
+Create a workspace with `client.workspaces.create(projectId, { providerId: "pstdio.worktree", params: { base: "main" } })`.
+
 Processes that hold the descriptor token can sign a browser in with `client.runtime.createBrowserLogin()`. It returns
 `{ url }`, a dashboard link with a single-use code in the URL fragment that expires after 60 seconds. Open that link
 in the browser. Do not forward the descriptor token into renderer JavaScript.
 
+Collection reads return `{ items, nextCursor: string | null }`. Follow the cursor with the same scope
+and filters until it is null. See [client conventions](../../references/extensions/0023-client-conventions.md)
+for ordering, limits and the deprecated 0.44 adapters.
+
 ## Projects
 
 ```ts
-const projects = await client.projects.list();
+const projects = await client.projects.query();
 const project = await client.projects.get(projectId);
 const created = await client.projects.create({
-  initial_workspace: { provider_id: "pstdio.root", params: { path: "/projects/notes" } },
+  initialWorkspace: { providerId: "pstdio.root", params: { path: "/projects/notes" } },
 });
 const workspace = await client.projects.retrySetup(projectId);
 await client.projects.delete(projectId);
 ```
 
-`retrySetup` returns the existing default workspace after retrying initialization. Check its `setup_error` and `provider_state` for failures that remain. It preserves local folders and existing remote provider resources.
+`retrySetup` returns the existing default workspace after retrying initialization. Check its `setupError` and `providerState` for failures that remain. It preserves local folders and existing remote provider resources.
 
 ## Sessions
 
 ```ts
-const sessions = await client.sessions.list(projectId);
+const firstPage = await client.sessions.query(projectId, { limit: 50 });
+for await (const session of client.sessions.iterate(projectId, { includeArchived: true })) {
+  console.log(session.id, session.status);
+}
 const session = await client.sessions.get(sessionId);
 const attachment = await client.sessions.uploadAttachment(projectId, {
   name: "notes.txt",
   data: new TextEncoder().encode("context"),
   mimeType: "text/plain",
 });
-const created = await client.sessions.create({
-  project_id: projectId,
+const created = await client.sessions.create(projectId, {
   title: "Fix the bug",
   prompt: "Please fix the login page",
   agent: "pstdio.harness-claude-code.harness.claude-code",
-  attachments: [{ file_id: attachment.file_id }],
+  attachments: [{ fileId: attachment.fileId }],
 });
 
 await client.sessions.followUp(sessionId, {
@@ -123,14 +133,23 @@ await client.sessions.deleteAttachment(projectId, unusedUpload.file_id);
 const conversation = await client.sessions.getConversation(sessionId);
 ```
 
+`query` returns `{ items, nextCursor }`. `iterate` reads each page on demand; breaking the loop
+does not fetch another page. Both accept the [command query filters](../../references/extensions/0003-command-and-process-api.md#sessions),
+including status arrays, archive state, workspace and inclusive timestamp bounds. An empty status array matches nothing.
+Pass `{ signal }` as the third argument to cancel a query or stop iteration, including during a cached page.
+The unpaged `list` method and `GET /v1/sessions` are deprecated through 0.44.
+
+The paged HTTP route is `GET /v1/projects/:projectId/sessions`. It uses camelCase query names,
+comma-separated statuses, and paired `anchorType`/`anchorId` fields. Cursors keep their creation-time
+and ID position when newer rows arrive. Rows archived during paging are skipped unless `includeArchived` is true.
+
 ## Workspaces
 
 ```ts
-const workspaces = await client.workspaces.list(projectId);
+const workspaces = await client.workspaces.query(projectId);
 const workspace = await client.workspaces.getByShorthand(projectId, "WS-1");
-const created = await client.workspaces.create({
-  project_id: projectId,
-  provider_id: "pstdio.worktree",
+const created = await client.workspaces.create(projectId, {
+  providerId: "pstdio.worktree",
   params: { base: "HEAD" },
 });
 await client.workspaces.delete(workspaceId);
@@ -139,15 +158,15 @@ await client.workspaces.delete(workspaceId);
 ## Skills
 
 ```ts
-const skills = await client.skills.list(projectId);
-const skill = await client.skills.get(projectId, skillId);
+const skills = await client.skills.query(projectId);
+const skill = await client.skills.get(projectId, skillName);
 ```
 
 ## Agents
 
 ```ts
-const agents = await client.agents.info({ project: projectId });
-const models = await client.agents.models("pstdio.harness-claude-code.harness.claude-code");
+const agents = await client.agents.query(projectId);
+const models = await client.agents.queryModels(projectId, "pstdio.harness-claude-code.harness.claude-code");
 ```
 
 ## Extension-Owned Planner Tickets

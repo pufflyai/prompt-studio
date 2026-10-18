@@ -2,7 +2,12 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { ExtensionCatalogAssetError } from "../../../services/extension-asset-catalog";
 import type { AppRouteHandler } from "../../../types";
 import type { SkillsRouteDeps } from "../deps";
-import { badRequestResponseSchema, notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
+import {
+  badRequestResponseSchema,
+  notFoundResponseSchema,
+  skillWithContentResponseSchema,
+  toSkillResponse,
+} from "../dto";
 import { getSkillInstallStatus } from "../skill-install-status";
 
 export const getSkillRoute = createRoute({
@@ -54,6 +59,13 @@ export const getSkillHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof g
 
     return c.json(
       {
+        ...toSkillResponse(skill),
+        installedAgents: installStatus.installed_agents,
+        agentInstallations: installStatus.agent_installations.map((item) => ({
+          agentId: item.agent_id,
+          agentName: item.agent_name,
+          installedVersion: item.installed_version,
+        })),
         id: skill.id,
         project_id: skill.project_id,
         source_kind: skill.source_kind,

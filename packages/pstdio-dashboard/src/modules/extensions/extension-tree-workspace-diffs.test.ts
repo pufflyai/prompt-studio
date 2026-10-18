@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
 const response = {
@@ -36,7 +36,7 @@ const response = {
       },
     ],
   },
-} satisfies CommandExecuteResponse;
+} satisfies CommandExecutionResult;
 
 describe("withWorkspaceDiffMetadata", () => {
   test("adds diff metadata to workspace resource targets in extension tree responses", async () => {
@@ -47,6 +47,7 @@ describe("withWorkspaceDiffMetadata", () => {
       fileCount: 3,
     }));
 
+    if (!decorated.outcome.ok) throw new Error(decorated.outcome.reason);
     expect(decorated.outcome.value).toMatchObject([
       {
         nodes: [

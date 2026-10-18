@@ -73,7 +73,7 @@ Public pages and bundled skills reach readers who do not have the repository. Fo
 These checks run in the `static_checks` job of Test and Build on every pull request, in the merge queue, and on `main`. They work offline and finish in a few seconds. They run on every change because renaming a source file can break a documentation link.
 
 - `bun run --cwd scripts verify:docs-links` checks relative links and heading anchors in `documentation/`, every `README.md`, extension docs, and skills. It also checks website docs URLs against the routes the website generates from the allow-list, GitHub links to `main`, the rules above, and exported skill folders.
-- `bun run --cwd scripts verify:sdk-reference` checks that the SDK references name every public method group and method. It reads `PstdioClient` from `@pstdio/sdk/client` for `references/sdk/`, and the extension context, view context, and webview client from the [extension API report](../../packages/sdk/api-report/extensions.d.ts) for `references/extensions/` and `references/sdk/`. A name counts as documented when a code span or code block names it in the same section or table row as its group or type, or as `group.method`. Deprecated methods are skipped.
+- `bun run --cwd scripts verify:sdk-reference` checks that the SDK references name every public method group and method. It reads `PstdioClient` from `@pstdio/sdk/client` for `references/sdk/`, and the extension context, view context, and webview client from the source files that declare them ([context](../../packages/pstdio-api-contracts/src/extension-kernel/types/context.ts), [view context](../../packages/sdk/src/extensions/define-extension-view.ts), and [webview client](../../packages/sdk/src/extensions/webview-client.ts)) for `references/extensions/` and `references/sdk/`. Generated API reports are not checked in, so the check reads source. A name counts as documented when a code span or code block names it in the same section or table row as its group or type, or as `group.method`. Deprecated methods are skipped.
 
 The weekly **Documentation links** workflow checks external URLs. It never runs on pull requests, so another site's outage cannot fail unrelated work. Failed URLs and the files that link to them appear in its job summary. Sites that refuse scripted requests (HTTP 401 or 403) are listed for a manual check but do not fail the run. Run it with `bun run --cwd scripts verify:docs-external-links`.
 
@@ -103,7 +103,7 @@ When a public API changes, update these together in the same pull request:
 2. The walkthrough or example that uses the API.
 3. The skill that routes agents to it, including its links and offline essentials. See [maintaining skills](development/0009-maintaining-skills.md).
 
-When an authoring contract changes, such as the manifest, a context API, or an extension CLI command, also run a fresh-agent trial with the packaged skill before the release. Use an agent with no earlier context, as described in [PRD 0009](../requirements/platform/0009-documentation-and-skills-reliability.md#w8-final-fresh-agent-and-release-gate).
+When an authoring contract changes, such as the manifest, a context API, or an extension CLI command, also run a fresh-agent trial with the packaged skill before the release. Use an agent with no earlier context, as described in [PRD 0013](../requirements/platform/0013-documentation-and-skills-reliability.md#w8-final-fresh-agent-and-release-gate).
 
 ## Screenshots and GIFs
 
@@ -296,6 +296,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 ### Extensions
 
 - [0001 — PRD: Project extension runtime snapshot requirements](../requirements/extensions/0001-runtime-snapshots.md)
+- [0002 — PRD: Shared timeline renderer (proposed)](../requirements/extensions/0002-timeline-renderer.md)
 
 ### Platform
 
@@ -305,7 +306,9 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0004 — PRD: Templates and skills](../requirements/platform/0004-templates-and-skills.md)
 - [0005 — PRD: Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
 - [0007 — PRD: Synchronization contracts v0.1](../requirements/platform/0007-synchronization-contracts.md)
-- [0009 — PRD: Reliable documentation and extension authoring](../requirements/platform/0009-documentation-and-skills-reliability.md)
+- [0013 — PRD: Reliable documentation and extension authoring](../requirements/platform/0013-documentation-and-skills-reliability.md)
+
+- Extension API plans: [0009 — PRD: Standardize extension storage](../requirements/platform/0009-standardize-storage-api.md), [0010 — PRD: Bound client storage and isolate sync failures](../requirements/platform/0010-bound-client-storage-and-isolate-sync-failures.md), [0011 — PRD: Simplify extension APIs](../requirements/platform/0011-simplify-extension-apis.md), [0012 — PRD: Align extension API shapes](../requirements/platform/0012-align-extension-api-shapes.md)
 
 ## ADRs
 

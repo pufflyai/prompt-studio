@@ -2,8 +2,9 @@ import { and, eq, or, sql } from "drizzle-orm";
 import type { ResourceAnchor, ResourceRef, ResourceRole } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../db/connection.pglite";
 import { resource_anchors as edges } from "../db/schemas/resource-anchors";
+import { lockResourceLinkSource } from "./resource-link-source";
 
-type Database = Pick<DbClient, "select" | "insert" | "delete" | "transaction">;
+type Database = Pick<DbClient, "select" | "insert" | "delete" | "update" | "transaction">;
 export type CanonicalResource = ResourceRef & { projectId: string; extensionId: string };
 type Edge = typeof edges.$inferSelect;
 
@@ -80,7 +81,10 @@ export const writeResourceLinks = async (
     .onConflictDoUpdate({
       target: [edges.project_id, ...keyColumns],
       set: { role: sql`excluded.role`, details: sql`excluded.details` },
-      setWhere: sql`${edges.role} is distinct from excluded.role or ${edges.details} is distinct from excluded.details`,
+      // Identity and role are already stored in dedicated columns. Legacy details may omit them.
+      setWhere: sql`${edges.role} is distinct from excluded.role or
+        (${edges.details} - array['extensionId', 'projectId', 'type', 'id', 'role']) is distinct from
+        (excluded.details - array['extensionId', 'projectId', 'type', 'id', 'role'])`,
     })
     .returning();
   return changed.map(item);
@@ -105,7 +109,13 @@ const refsMatch = (resource: CanonicalResource, refs: ResourceRef[]) =>
   );
 
 export const createResourceLinksDBService = (db: Database) => ({
-  add: (resource: CanonicalResource, anchors: ResourceAnchor[]) => writeResourceLinks(db, resource, anchors),
+  add: (resource: CanonicalResource, anchors: ResourceAnchor[], details = anchors) =>
+    db.transaction(async (tx) => {
+      const touchSource = await lockResourceLinkSource(tx, resource);
+      const changed = await writeResourceLinks(tx, resource, anchors, details);
+      if (changed.length) await touchSource();
+      return changed;
+    }),
   find: async (resource: CanonicalResource, refs: ResourceRef[]) => {
     if (!refs.length) return [];
     const rows = await db
@@ -121,21 +131,26 @@ export const createResourceLinksDBService = (db: Database) => ({
       );
     return rows.map(item);
   },
-  remove: async (resource: CanonicalResource, refs: ResourceRef[]) => {
-    if (!refs.length) return [];
-    const changed = await db
-      .delete(edges)
-      .where(
-        and(
-          sourceMatch(resource),
-          or(
-            ...refs.map((ref) => targetMatch({ ...ref, projectId: resource.projectId, extensionId: ref.extensionId! })),
+  remove: async (resource: CanonicalResource, refs: ResourceRef[]) =>
+    db.transaction(async (tx) => {
+      const touchSource = await lockResourceLinkSource(tx, resource);
+      if (!refs.length) return [];
+      const changed = await tx
+        .delete(edges)
+        .where(
+          and(
+            sourceMatch(resource),
+            or(
+              ...refs.map((ref) =>
+                targetMatch({ ...ref, projectId: resource.projectId, extensionId: ref.extensionId! }),
+              ),
+            ),
           ),
-        ),
-      )
-      .returning();
-    return changed.map(item);
-  },
+        )
+        .returning();
+      if (changed.length) await touchSource();
+      return changed.map(item);
+    }),
   removeValidated: async (
     resource: CanonicalResource,
     refs: ResourceRef[],
@@ -143,6 +158,7 @@ export const createResourceLinksDBService = (db: Database) => ({
   ) => {
     if (!refs.length) return [];
     return db.transaction(async (tx) => {
+      const touchSource = await lockResourceLinkSource(tx, resource);
       const current = await tx
         .select()
         .from(edges)
@@ -157,6 +173,7 @@ export const createResourceLinksDBService = (db: Database) => ({
         .delete(edges)
         .where(and(sourceMatch(resource), or(...current.map((row) => targetMatch(item(row).target)))))
         .returning();
+      if (changed.length) await touchSource();
       return changed.map(item);
     });
   },

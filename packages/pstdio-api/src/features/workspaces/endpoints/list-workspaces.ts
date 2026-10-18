@@ -1,15 +1,19 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { projectQueryFields, projectQueryMessage, validProjectQuery } from "../../project-query";
 import type { WorkspacesRouteDeps } from "../deps";
-import { workspaceListItemSchema } from "../dto";
+import { workspaceListItemResponseSchema } from "../dto";
+import { toExtensionWorkspace } from "../extension-workspace";
 
 const listWorkspacesQuerySchema = z
   .object({
-    project_id: z.string(),
+    ...projectQueryFields,
   })
-  .strict();
+  .strict()
+  .refine(validProjectQuery, { message: projectQueryMessage });
 
 export const listWorkspacesRoute = createRoute({
+  deprecated: true,
   method: "get",
   path: "/workspaces",
   description: "List active workspaces for a project.",
@@ -20,15 +24,18 @@ export const listWorkspacesRoute = createRoute({
   responses: {
     200: {
       description: "List of workspaces.",
-      content: { "application/json": { schema: z.array(workspaceListItemSchema) } },
+      content: { "application/json": { schema: z.array(workspaceListItemResponseSchema) } },
     },
   },
 });
 
 export const listWorkspacesHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof listWorkspacesRoute> => {
   return async (c) => {
-    const { project_id } = c.req.valid("query");
-    const workspaces = await deps.workspaceService.list(project_id);
-    return c.json(workspaces, 200);
+    const { projectId, project_id } = c.req.valid("query");
+    const workspaces = await deps.workspaceService.list((projectId ?? project_id)!);
+    return c.json(
+      workspaces.map((workspace) => ({ ...workspace, ...toExtensionWorkspace(workspace) })),
+      200,
+    );
   };
 };

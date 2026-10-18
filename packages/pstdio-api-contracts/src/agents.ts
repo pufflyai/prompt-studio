@@ -72,3 +72,8 @@ export { findAgentModel, resolveAgentModelParams } from "./agent-model-params";
 
 /** Bare provider id of a (possibly namespaced) harness id, e.g. "pstdio.harness-claude-code.harness.claude-code" -> "claude-code". */
 export const harnessLocalId = (id: string) => id.slice(id.lastIndexOf(".") + 1);
+
+export const agentDetailsSchema = agentInfoSchema.extend({
+  skills: agentSkillsLayoutSchema.extend({ globalDir: z.string() }).optional(),
+});
+export type AgentDetails = z.infer<typeof agentDetailsSchema>;

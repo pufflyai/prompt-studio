@@ -3,6 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION, type ExtensionSessionPage } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -41,6 +42,7 @@ export const registerSessionQuerySmokeTests = () => {
           commands: [{ id: "read", ref: { kind: "command", id: "read" }, title: "Read sessions",
             run(ctx, params) { return ctx.sessions.query({ cursor: params?.cursor, agent: "test.session-query.harness.worker", status: ["completed"] }); }
           }, {id:"inspect",ref:{kind:"command",id:"inspect"},title:"Inspect execution",run(ctx,params){return ctx.sessions.get(params.sessionId);}},
+          {id:"workspace",ref:{kind:"command",id:"workspace"},title:"Read workspace",run(ctx){return ctx.workspaces.getDefault();}},
           {id:"continue",ref:{kind:"command",id:"continue"},title:"Guarded continuation",async run(ctx,params){try{await ctx.sessions.followup({sessionId:params.sessionId,prompt:"Automatic continuation",expectedRun:params.expectedRun});return {accepted:true};}catch(error){return {accepted:false,error:error.message};}}}]
         };
       `,
@@ -91,6 +93,16 @@ export const registerSessionQuerySmokeTests = () => {
         items: [{ id: session.id, agent: "test.session-query.harness.worker", usage }],
         nextCursor: null,
       });
+      const client = createClient({ baseUrl: runtime.baseUrl, token: runtime.descriptor.token });
+      const filter = { agent: "test.session-query.harness.worker", status: ["completed"] as const };
+      const paged = await client.sessions.query(project.id, { ...filter, status: [...filter.status] });
+      expect(paged).toEqual(page);
+      const iterated = [];
+      for await (const item of client.sessions.iterate(project.id, { ...filter, status: [...filter.status] })) {
+        iterated.push(item);
+      }
+      expect(iterated).toEqual(page?.items);
+      expect(await client.sessions.query(project.id, { status: [] })).toEqual({ items: [], nextCursor: null });
       const cursor = Buffer.from(JSON.stringify({ projectId: project.id, createdAt: "", id: "" })).toString(
         "base64url",
       );
@@ -108,6 +120,24 @@ export const registerSessionQuerySmokeTests = () => {
           })
         ).outcome.value;
       const observed = await execute("inspect", { sessionId: session.id });
+      expect(observed).toMatchObject({
+        workspaceId: observed.workspace_id,
+        createdAt: observed.created_at,
+        lastSelectedModel: observed.last_selected_model,
+        lastRequestStarted: observed.last_request_started,
+        usage: { inputTokens: 12, outputTokens: 4, cacheReadTokens: 3, cacheWriteTokens: 0 },
+      });
+      expect(observed.lastExit).toEqual(observed.last_exit);
+      expect(await client.sessions.get(session.id)).toMatchObject(observed);
+      const workspace = await execute("workspace", {});
+      expect(workspace).toMatchObject({
+        projectId: project.id,
+        providerId: "pstdio.root",
+        rootPath: workspace.root_path,
+      });
+      for (const field of ["provider_ref_json", "provider_error_json", "deleted_at"])
+        expect(workspace).not.toHaveProperty(field);
+      expect(await client.workspaces.getByShorthand(project.id, workspace.shorthand)).toMatchObject(workspace);
       expect(observed.last_exit).toMatchObject({
         cause: "completed",
         startedAt: observed.last_request_started,

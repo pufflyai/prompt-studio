@@ -9,34 +9,26 @@
  * can push updates into.
  */
 
+import type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
 import type { GuestHost } from "./guest-host";
+import { createWebviewFilesClient, type WebviewFilesClient } from "./webview-files-client";
+
+export type { WebviewFilesClient } from "./webview-files-client";
+
+import type { PropsStore } from "./webview-props-store";
+
+export type { PropsStore } from "./webview-props-store";
+
 import { createWebviewPageClient, type WebviewPageClient } from "./webview-page-client";
 
 export type { GuestHost } from "./guest-host";
 
-export type PropsStore<TProps = unknown> = {
-  get: () => TProps;
-  subscribe: (listener: (props: TProps) => void) => () => void;
-};
-
-export interface WebviewFilesClient {
-  pick(opts?: { accept?: string; multiple?: boolean }): Promise<File[]>;
-  upload(input: {
-    name: string;
-    data: Uint8Array | ArrayBuffer;
-    mimeType?: string;
-    scope?: { type: string; id?: string };
-  }): Promise<import("pstdio-api-contracts/extension-kernel").ExtensionBlobRef>;
-  list(input?: {
-    scope?: { type: string; id?: string };
-  }): Promise<import("pstdio-api-contracts/extension-kernel").ExtensionBlobRef[]>;
-  delete(id: string): Promise<void>;
-}
-
 export type ExtensionViewRenderContext<TProps = unknown> = {
   mount: HTMLElement;
   host: GuestHost;
+  /** @deprecated Use createWebviewClient(host).files. */
   files: WebviewFilesClient;
+  /** @deprecated Use createWebviewClient(host).page. */
   page: WebviewPageClient;
   propsStore: PropsStore<TProps>;
   locale: string;
@@ -56,40 +48,6 @@ export type ExtensionViewModule<TProps = unknown> = {
   ) => Promise<() => void> | (() => void) | void;
 };
 // biome-ignore-end lint/suspicious/noConfusingVoidType: render/mount may return void or a cleanup
-
-const pickFiles = (opts: { accept?: string; multiple?: boolean } = {}) =>
-  new Promise<File[]>((resolve, reject) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = opts.accept ?? "";
-    input.multiple = opts.multiple ?? false;
-    input.style.display = "none";
-    input.addEventListener("change", () => {
-      const files = input.files ? Array.from(input.files) : [];
-      input.remove();
-      resolve(files);
-    });
-    input.addEventListener("cancel", () => {
-      input.remove();
-      resolve([]);
-    });
-    input.addEventListener("error", () => {
-      input.remove();
-      reject(new Error("Could not pick files."));
-    });
-    document.body.appendChild(input);
-    input.click();
-  });
-
-const createFilesClient = (host: GuestHost): WebviewFilesClient => ({
-  pick: pickFiles,
-  upload: (input) => host.call("files.upload", input),
-  list: async (input) => {
-    const response = await host.call("files.list", input ?? {});
-    return response.files;
-  },
-  delete: (id) => host.call("files.delete", { id }),
-});
 
 const readTranslationProps = (props: unknown) => {
   const translations =
@@ -121,7 +79,7 @@ const createTranslationApi = <TProps>(propsStore: PropsStore<TProps>) => {
   return { locale, t };
 };
 
-export const defineExtensionView = <TProps = unknown>(definition: {
+export const defineExtensionView = <TProps = WebviewHostProps>(definition: {
   render: ExtensionViewRender<TProps>;
 }): ExtensionViewModule<TProps> => ({
   mount: async (mount, host, propsStore) => {
@@ -129,7 +87,7 @@ export const defineExtensionView = <TProps = unknown>(definition: {
     const cleanup = await definition.render({
       mount,
       host,
-      files: createFilesClient(host),
+      files: createWebviewFilesClient(host),
       page: createWebviewPageClient(host, propsStore),
       propsStore,
       get locale() {

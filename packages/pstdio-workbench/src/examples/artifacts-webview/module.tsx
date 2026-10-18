@@ -1,6 +1,6 @@
 import type { WorkbenchModuleContribution } from "../../core";
 import {
-  createWorkbenchWebviewHostCapabilities,
+  createWorkbenchWebviewHostAdapters,
   getBridgeWebviewHostEventPublisher,
   renderBridgeWebviewFrame,
 } from "../../extensions";
@@ -55,9 +55,9 @@ export const createArtifactsWebviewExampleModule = (
               placement: instance,
               hostEvents: getBridgeWebviewHostEventPublisher(workbench, instance),
             },
-            createHostCapabilities: (context) => ({
-              ...createWorkbenchWebviewHostCapabilities(context),
-              "artifacts.read": readArtifacts,
+            createHostAdapters: (context) => ({
+              ...createWorkbenchWebviewHostAdapters(context),
+              artifacts: { read: readArtifacts },
             }),
             createProps: ({ placement }) => ({ placement, resource: placement.resource }),
             ownerId: "workbench",

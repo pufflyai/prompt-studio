@@ -270,7 +270,6 @@ export const toInternalWorkbenchExtensionMetadata = (
     controlsRenderers: controlsRenderers(metadata),
     keybindings: metadata.keybindings ?? [],
     settingsDefinitions: metadata.settingsDefinitions ?? [],
-    statuses: metadata.statuses,
     statusBarItems: metadata.statusBarItems.map((item) => ({
       id: item.id,
       extensionId: item.extensionId,

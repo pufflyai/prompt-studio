@@ -58,6 +58,18 @@ test("ten live command readers share one connection and cancel their handlers", 
     await expect.poll(state, { timeout: 1000, intervals: [20] }).toMatchObject({ active: 0, cancelled: 10 });
     await frame.getByRole("button", { name: "Progress", exact: true }).click();
     await expect(frame.locator("output")).toHaveText('{"chunks":[1,2,3],"result":{"total":3}}');
+    await frame.getByRole("button", { name: "Reject", exact: true }).click();
+    await expect
+      .poll(async () => JSON.parse((await frame.locator("output").textContent()) ?? "null"))
+      .toMatchObject({
+        ok: false,
+        status: "rejected",
+        code: "stale_revision",
+        data: { expectedRevision: 1, actualRevision: 2 },
+        cause: { source: "storage" },
+        notices: [{ type: "warning" }],
+        diagnostics: [{ code: "conflict" }],
+      });
     const screenshot = testInfo.outputPath("stream-progress.png");
     await page.screenshot({ path: screenshot });
     await testInfo.attach("stream-progress", { path: screenshot, contentType: "image/png" });

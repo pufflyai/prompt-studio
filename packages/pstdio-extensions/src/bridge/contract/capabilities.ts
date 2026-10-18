@@ -1,12 +1,10 @@
+import type { WebviewHostCapability, WebviewScopedDeclarableCapability } from "pstdio-api-contracts";
 import {
-  ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
   WEBVIEW_DECLARABLE_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITY_VERSION,
   WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
-  type WebviewHostCapability,
-  type WebviewScopedDeclarableCapability,
-} from "@pstdio/sdk/extensions";
+} from "pstdio-api-contracts";
 import type { HostCapabilityRequest } from "./index";
 
 export {
@@ -18,7 +16,7 @@ export {
   type WebviewDeclarableCapability,
   type WebviewHostCapability,
   type WebviewScopedDeclarableCapability,
-} from "@pstdio/sdk/extensions";
+} from "pstdio-api-contracts";
 
 export type WebviewCapabilityDiagnosticCode =
   | "undeclared_webview_capability"
@@ -94,12 +92,6 @@ export const validateWebviewCapabilityDeclarations = (
   const allowed = new Set<WebviewHostCapability>();
   const allowedScopes = new Map<WebviewHostCapability, Set<string>>();
 
-  // Always-available capabilities never need a declaration — enable them wherever the
-  // host implements them.
-  for (const name of ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES) {
-    if (capabilities[name]) allowed.add(name);
-  }
-
   for (const declaration of declaredCapabilities ?? []) {
     const parsed = parseWebviewCapabilityDeclaration(declaration);
     if (!isPublicCapability(parsed.name) || !validateDeclarationShape(parsed)) {
@@ -164,7 +156,10 @@ export const createHostCapabilityGate = (input: CreateHostCapabilityGateInput) =
 
   const deny = (diagnostic: WebviewCapabilityDiagnostic) => {
     emit(diagnostic);
-    return new Error(diagnostic.message);
+    return Object.assign(new Error(diagnostic.message), {
+      code: diagnostic.code,
+      data: { capability: diagnostic.capability },
+    });
   };
 
   return {

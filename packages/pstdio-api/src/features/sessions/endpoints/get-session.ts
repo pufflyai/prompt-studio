@@ -1,7 +1,10 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { extensionSessionSchema } from "pstdio-api-contracts";
+import { readSessionExit } from "../../../services/session-exit";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
+import { toSessionResponse } from "../session-response";
 
 export const getSessionRoute = createRoute({
   method: "get",
@@ -19,7 +22,7 @@ export const getSessionRoute = createRoute({
   responses: {
     200: {
       description: "Session found.",
-      content: { "application/json": { schema: sessionResponseSchema } },
+      content: { "application/json": { schema: sessionResponseSchema.extend(extensionSessionSchema.shape) } },
     },
     404: {
       description: "Session not found.",
@@ -37,6 +40,18 @@ export const getSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<type
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
-    return c.json(session, 200);
+    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
+    const lastExit = session.project_id
+      ? await readSessionExit(deps.activityEventsService, { ...session, project_id: session.project_id })
+      : null;
+    return c.json(
+      {
+        ...session,
+        ...toSessionResponse(session, workspace?.project_id === session.project_id ? workspace.id : null),
+        lastExit,
+        last_exit: lastExit,
+      },
+      200,
+    );
   };
 };

@@ -1,11 +1,10 @@
 import type {
+  ActivityPage,
   ApprovalInput,
   CombineQueuedFollowUpsInput,
   CreateSessionInput,
-  CreateSessionResponse,
   DraftHarnessCommandInput,
   FollowUpInput,
-  FollowUpResponse,
   HarnessCommandState,
   HarnessOperation,
   ListSessionActivityInput,
@@ -16,17 +15,25 @@ import type {
   ResolveSessionIdInput,
   ResolveSessionIdResponse,
   SessionAttachment,
+  SessionAttachmentDetails,
   SessionConversationResponse,
   SessionConversationSources,
+  SessionCreateRequest,
+  SessionCreateResponse,
+  SessionDetails,
+  SessionFollowUpRequest,
+  SessionFollowUpResponse,
   SessionQueuedMessagesResponse,
   SteerQueuedFollowUpInput,
   UpdateQueuedFollowUpInput,
 } from "pstdio-api-contracts";
 import type { Session } from "../resources";
 import type { ClientOptions, RequestFn } from "./request";
+import { createSessionQueryClient } from "./session-query";
 import { createSessionStreamTransport } from "./session-stream";
 import type { SseEvent } from "./sse";
 
+/** @deprecated Use ExtensionSessionQuery from @pstdio/sdk/extensions with query or iterate. */
 export type ListSessionsInput = {
   status?: string;
   agent?: string;
@@ -39,13 +46,14 @@ export type ListSessionsInput = {
   anchorId?: string;
 };
 
-export type SessionClient = {
+export type SessionClient = ReturnType<typeof createSessionQueryClient> & {
   getDraftHarnessCommands(
     input: DraftHarnessCommandInput,
     signal?: AbortSignal,
   ): Promise<HarnessCommandState & { harnessId: string }>;
+  /** @deprecated Use query for one page or iterate for all matching sessions. */
   list(projectId: string, input?: ListSessionsInput): Promise<Session[]>;
-  get(sessionId: string): Promise<Session>;
+  get(sessionId: string): Promise<Session & SessionDetails>;
   getHarnessCommands(sessionId: string, signal?: AbortSignal): Promise<HarnessCommandState & { harnessId: string }>;
   invokeHarnessOperation(
     sessionId: string,
@@ -55,14 +63,17 @@ export type SessionClient = {
   uploadAttachment(
     projectId: string,
     input: { name: string; data: Uint8Array | ArrayBuffer; mimeType?: string | null },
-  ): Promise<SessionAttachment>;
+  ): Promise<SessionAttachment & SessionAttachmentDetails>;
   deleteAttachment(projectId: string, fileId: string): Promise<void>;
-  create(input: CreateSessionInput): Promise<CreateSessionResponse>;
+  create(projectId: string, input: Omit<SessionCreateRequest, "projectId">): Promise<SessionCreateResponse>;
+  /** @deprecated Pass projectId first and use camelCase input. */
+  create(input: CreateSessionInput): Promise<SessionCreateResponse>;
   archive(sessionId: string): Promise<void>;
   delete(sessionId: string): Promise<void>;
-  followUp(sessionId: string, input: FollowUpInput): Promise<FollowUpResponse>;
+  followUp(sessionId: string, input: SessionFollowUpRequest | FollowUpInput): Promise<SessionFollowUpResponse>;
   approve(sessionId: string, input: ApprovalInput): Promise<void>;
   getConversation(sessionId: string, signal?: AbortSignal): Promise<SessionConversationResponse>;
+  /** @deprecated No maintained client caller. Use `GET /v1/sessions/{id}/conversation/sources` for this operation; the convenience method is removed in 0.45. */
   getConversationSources(sessionId: string, signal?: AbortSignal): Promise<SessionConversationSources>;
   getQueuedMessages(sessionId: string, options?: { signal?: AbortSignal }): Promise<SessionQueuedMessagesResponse>;
   steerQueuedFollowUp(
@@ -81,10 +92,25 @@ export type SessionClient = {
     queuePosition: number,
     input: CombineQueuedFollowUpsInput,
   ): Promise<QueuedFollowUpUpdateResponse>;
+  removeQueuedFollowUp(sessionId: string, queuePosition: number, expectedRevision?: string): Promise<{ ok: true }>;
+  moveQueuedFollowUp(
+    sessionId: string,
+    queuePosition: number,
+    input: {
+      direction: "up" | "down";
+      expectedRevision?: string;
+      steps?: number;
+      expectedOrder?: { queuePosition: number; revision: string }[];
+    },
+  ): Promise<{ ok: true; queuePosition: number }>;
   resolveSessionId(input: ResolveSessionIdInput): Promise<ResolveSessionIdResponse>;
-  updateStatus(sessionId: string, status: string): Promise<Session>;
-  rename(sessionId: string, title: string): Promise<Session>;
-  listActivity(sessionId: string, input?: ListSessionActivityInput): Promise<ListSessionActivityResponse>;
+  updateStatus(sessionId: string, status: string): Promise<Session & SessionDetails>;
+  rename(sessionId: string, title: string): Promise<Session & SessionDetails>;
+  /** @deprecated No maintained client caller. Use `GET /v1/sessions/{id}/activity` for this operation; the convenience method is removed in 0.45. */
+  listActivity(
+    sessionId: string,
+    input?: ListSessionActivityInput,
+  ): Promise<ListSessionActivityResponse & ActivityPage>;
   stream(sessionId: string, onEvent: (event: SseEvent) => void, options?: { signal?: AbortSignal }): Promise<void>;
   connectStream(sessionId: string, handlers: SessionStreamHandlers): SessionStreamConnection;
 };
@@ -103,7 +129,7 @@ export type SessionStreamConnection = {
 };
 
 const buildSessionsQuery = (projectId: string, input: ListSessionsInput = {}) => {
-  const params = new URLSearchParams({ project_id: projectId });
+  const params = new URLSearchParams({ projectId });
   if (input.status) params.append("status", input.status);
   if (input.agent) params.append("agent", input.agent);
   if (input.workspaceId) params.append("workspace_id", input.workspaceId);
@@ -148,11 +174,13 @@ export const createSessionClient = (
   streams = createSessionStreamTransport(request, clientOptions),
 ): SessionClient => {
   return {
+    ...createSessionQueryClient(request),
     getDraftHarnessCommands: (input, signal) =>
       request("/v1/sessions/harness-command-state", { method: "POST", body: input, signal }),
     listActivity: (sessionId, input = {}) => {
       const params = new URLSearchParams();
-      if (input.event_type) params.append("event_type", input.event_type);
+      if (input.eventType) params.append("eventType", input.eventType);
+      else if (input.event_type) params.append("event_type", input.event_type);
       if (input.from) params.append("from", input.from);
       if (input.to) params.append("to", input.to);
       if (input.cursor) params.append("cursor", input.cursor);
@@ -178,7 +206,11 @@ export const createSessionClient = (
       request(`/v1/projects/${encodeURIComponent(projectId)}/session-attachments/${encodeURIComponent(fileId)}`, {
         method: "DELETE",
       }),
-    create: (input) => request("/v1/sessions", { method: "POST", body: input }),
+    create: (projectOrInput: string | CreateSessionInput, input?: Omit<SessionCreateRequest, "projectId">) =>
+      request("/v1/sessions", {
+        method: "POST",
+        body: typeof projectOrInput === "string" ? { ...input, projectId: projectOrInput } : projectOrInput,
+      }),
     archive: (sessionId) => request(`/v1/sessions/${sessionId}/archive`, { method: "POST" }),
     delete: (sessionId) => request(`/v1/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }),
     followUp: (sessionId, input) => request(`/v1/sessions/${sessionId}/follow-up`, { method: "POST", body: input }),
@@ -194,6 +226,13 @@ export const createSessionClient = (
       request(`/v1/sessions/${sessionId}/queued-follow-ups/${queuePosition}`, { method: "PATCH", body: input }),
     combineQueuedFollowUps: (sessionId, queuePosition, input) =>
       request(`/v1/sessions/${sessionId}/queued-follow-ups/${queuePosition}/combine`, { method: "POST", body: input }),
+    removeQueuedFollowUp: (id, position, expectedRevision = "") =>
+      request(
+        `/v1/sessions/${encodeURIComponent(id)}/queued-follow-ups/${position}?expectedRevision=${encodeURIComponent(expectedRevision)}`,
+        { method: "DELETE" },
+      ),
+    moveQueuedFollowUp: (id, position, body) =>
+      request(`/v1/sessions/${encodeURIComponent(id)}/queued-follow-ups/${position}/move`, { method: "POST", body }),
     resolveSessionId: (input) => request("/v1/sessions/resolve-session-id", { method: "POST", body: input }),
     updateStatus: (sessionId, status) =>
       request(`/v1/sessions/${sessionId}/status`, { method: "PATCH", body: { status } }),
@@ -202,7 +241,10 @@ export const createSessionClient = (
       new Promise<void>((resolve, reject) => {
         const subscription = streams.subscribe(sessionId, {
           onEvent: (event, data) => {
-            onEvent({ event, data: JSON.stringify(data) });
+            onEvent({
+              event,
+              data: JSON.stringify(data),
+            });
             if (event === "end") resolve();
           },
           onError: reject,

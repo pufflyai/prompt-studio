@@ -22,7 +22,7 @@ describe("webview extension invalidations", () => {
         commandId: "notes.save",
         extensionId: "notes",
         eventIds: ["notes.changed"],
-        outcome: { ok: true, status: "success" },
+        outcome: { ok: true, status: "success", value: undefined },
       },
       { projectId: "project-1" },
     );

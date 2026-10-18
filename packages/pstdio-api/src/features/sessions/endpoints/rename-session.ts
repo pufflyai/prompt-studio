@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
+import { toSessionResponse } from "../session-response";
 
 export const renameSessionRoute = createRoute({
   method: "patch",
@@ -26,5 +27,6 @@ export const renameSessionHandler =
     const { title } = c.req.valid("json");
     const session = await deps.sessionService.update(id, { title });
     if (!session) return c.json({ error: `Session not found: ${id}` }, 404);
-    return c.json(session, 200);
+    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
+    return c.json(toSessionResponse(session, workspace?.project_id === session.project_id ? workspace.id : null), 200);
   };

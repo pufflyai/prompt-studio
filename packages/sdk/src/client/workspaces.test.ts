@@ -75,7 +75,7 @@ describe("workspace file client", () => {
       },
       {
         path: "/v1/workspaces/workspace%201/entry?path=docs%2Fread+me.md",
-        options: { method: "PATCH", body: { destination_path: "archive/read me.md" } },
+        options: { method: "PATCH", body: { destinationPath: "archive/read me.md" } },
       },
       {
         path: "/v1/workspaces/workspace%201/entry?path=docs%2Fread+me.md",

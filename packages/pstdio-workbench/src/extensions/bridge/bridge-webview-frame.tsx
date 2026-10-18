@@ -1,5 +1,5 @@
 import { Box, Center, Stack, Text } from "@chakra-ui/react";
-import { resolvePageParams } from "@pstdio/sdk/extensions";
+import { resolvePageParams } from "pstdio-api-contracts";
 import { createWebviewDiagnostics, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore } from "../../core";
@@ -38,7 +38,7 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
       <ExtensionFrame
         view={view}
         {...frameProps}
-        props={{ ...(frameProps.props as object), ...pageProps }}
+        props={{ ...frameProps.props, ...pageProps }}
         onReady={() => {
           diagnostics.onReady();
           setError(null);

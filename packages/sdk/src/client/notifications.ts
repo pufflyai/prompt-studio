@@ -4,23 +4,36 @@ import type {
   ListNotificationsResponse,
   Notification,
   NotificationStatus,
+  Page,
+  SetNotificationStatusInput,
   UpdateNotificationInput,
 } from "pstdio-api-contracts";
 import type { RequestFn } from "./request";
 
 export type NotificationsClient = {
+  query(projectId: string, input?: ListNotificationsQuery): Promise<Page<Notification>>;
+  /** @deprecated Use query for the required nullable cursor contract. */
   list(projectId: string, query?: ListNotificationsQuery): Promise<ListNotificationsResponse>;
   count(
     projectId: string,
     query?: Pick<ListNotificationsQuery, "status" | "priority" | "sourceExtensionId">,
   ): Promise<{ count: number }>;
   get(projectId: string, id: string): Promise<Notification>;
+  create(projectId: string, input: Omit<CreateNotificationInput, "projectId">): Promise<Notification>;
+  /** @deprecated Pass projectId as the first argument. */
   create(input: CreateNotificationInput): Promise<Notification>;
   update(projectId: string, id: string, input: UpdateNotificationInput): Promise<Notification>;
+  setStatus(projectId: string, id: string, input: SetNotificationStatusInput): Promise<Notification | null>;
+  setStatusByKey(projectId: string, key: string, input: SetNotificationStatusInput): Promise<Notification[]>;
+  /** @deprecated Use setStatus. */
   markRead(projectId: string, id: string): Promise<Notification>;
+  /** @deprecated Use setStatus or setStatusByKey. */
   dismiss(projectId: string, id: string): Promise<Notification>;
+  /** @deprecated Use setStatus or setStatusByKey. */
   markDone(projectId: string, id: string): Promise<Notification>;
+  /** @deprecated Use setStatus or setStatusByKey. */
   snooze(projectId: string, id: string, until: string): Promise<Notification>;
+  /** @deprecated Use setStatus or setStatusByKey. */
   resolveByDedupeKey(
     projectId: string,
     input: { dedupeKey: string; status?: Extract<NotificationStatus, "done" | "dismissed" | "expired"> },
@@ -49,15 +62,24 @@ const notificationPath = (projectId: string, suffix = "") =>
   `/v1/projects/${encodeURIComponent(projectId)}/notifications${suffix}`;
 
 export const createNotificationsClient = (request: RequestFn): NotificationsClient => ({
+  query: async (projectId, input) => {
+    const page = await request<ListNotificationsResponse>(notificationPath(projectId, buildQuery(input)));
+    return { ...page, nextCursor: page.nextCursor ?? null };
+  },
   list: (projectId, query) => request(notificationPath(projectId, buildQuery(query))),
   count: (projectId, query) => request(notificationPath(projectId, `/count${buildQuery(query)}`)),
   get: (projectId, id) => request(notificationPath(projectId, `/${encodeURIComponent(id)}`)),
-  create: (input) => {
-    const { projectId, ...body } = input;
+  create: (projectOrInput: string | CreateNotificationInput, input?: Omit<CreateNotificationInput, "projectId">) => {
+    const { projectId, ...body } =
+      typeof projectOrInput === "string" ? { ...input, projectId: projectOrInput } : projectOrInput;
     return request(notificationPath(projectId), { method: "POST", body });
   },
   update: (projectId, id, input) =>
     request(notificationPath(projectId, `/${encodeURIComponent(id)}`), { method: "PATCH", body: input }),
+  setStatus: (projectId, id, input) =>
+    request(notificationPath(projectId, `/${encodeURIComponent(id)}/status`), { method: "POST", body: input }),
+  setStatusByKey: (projectId, key, input) =>
+    request(notificationPath(projectId, "/status-by-key"), { method: "POST", body: { key, ...input } }),
   markRead: (projectId, id) =>
     request(notificationPath(projectId, `/${encodeURIComponent(id)}/read`), { method: "POST" }),
   dismiss: (projectId, id) =>

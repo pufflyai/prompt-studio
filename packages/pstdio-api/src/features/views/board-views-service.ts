@@ -1,76 +1,21 @@
-import { isDeepStrictEqual } from "node:util";
 import {
   type BoardViewCreate,
   type BoardViewUpdate,
   boardDefaultSyncRow,
   EMPTY_VIEW_FILTER,
+  type PageQuery,
 } from "pstdio-api-contracts";
 import { LastBoardViewError } from "pstdio-db";
-import { type BoardViewsDeps, getBoards, type ResolvedBoard, requireBoard, resolveBoardFields } from "./resolve-board";
-import { cleanBoardView } from "./view-cleanup";
+import { catalogPage } from "../../services/catalog-page";
+import { createBoardViewReader } from "./board-view-reader";
+import { type BoardViewsDeps, getBoards, requireBoard, resolveBoardFields } from "./resolve-board";
 import { BoardViewError, validateBoardView } from "./view-rules";
 
 export const createBoardViewsService = (deps: BoardViewsDeps) => {
   const db = deps.boardViewsService;
   const emitView = (row: NonNullable<Awaited<ReturnType<typeof db.get>>>, op: "set" | "delete" = "set") =>
     deps.eventBus.emit("board_views", op, row);
-  const savedView = (board: ResolvedBoard, row: Awaited<ReturnType<typeof db.list>>[number]) => ({
-    id: row.id,
-    boardId: board.id,
-    title: row.title,
-    settings: row.settings,
-    filter: row.filter,
-    sorts: row.sorts.slice(0, 1),
-    builtIn: false,
-  });
-  const summary = async (board: ResolvedBoard) => ({
-    id: board.id,
-    title: board.title,
-    kind: board.kind,
-    extensionId: board.extensionId,
-    fields: await resolveBoardFields(deps, board),
-  });
-  const listResolved = async (board: ResolvedBoard) => {
-    const declaredDefault =
-      board.body.defaultActiveViewId ??
-      (board.kind === "kanban" ? board.body.defaultViews?.find((view) => view.isDefault)?.id : undefined);
-    const defaultIndex = Math.max(
-      0,
-      board.startingViews.findIndex((view) => view.id === declaredDefault),
-    );
-    const initialized = await db.initialize(board.scope, board.startingViews, defaultIndex);
-    for (const row of initialized) emitView(row);
-    if (initialized.length) {
-      const initial = initialized[defaultIndex];
-      deps.eventBus.emit(
-        "board_default_views",
-        "set",
-        boardDefaultSyncRow({
-          ...board.scope,
-          default_view_id: initial.id,
-          updated_at: initial.updated_at,
-        }),
-      );
-    }
-    let rows: (Awaited<ReturnType<typeof db.list>>[number] | null)[] = await db.list(board.scope);
-    // A failed extension query, or a table that cannot describe its columns yet, is never
-    // evidence that a saved field disappeared.
-    const fields = await resolveBoardFields(deps, board).catch(() => undefined);
-    rows = await Promise.all(
-      rows.map(async (row) => {
-        if (!row) return null;
-        const cleaned = cleanBoardView(board, row, fields);
-        if (isDeepStrictEqual(cleaned, { settings: row.settings, filter: row.filter, sorts: row.sorts })) return row;
-        const updated = await db.clean(row, cleaned);
-        if (updated) emitView(updated);
-        return updated ?? (await db.get(board.scope.project_id, row.id));
-      }),
-    );
-    const views = rows.filter((row) => row !== null).map((row) => savedView(board, row));
-    const chosen = (await db.getDefault(board.scope))?.default_view_id;
-    const defaultViewId = [chosen, views[0].id].find((id) => views.some((view) => view.id === id))!;
-    return { views, defaultViewId };
-  };
+  const { savedView, summary, listResolved, queryResolved } = createBoardViewReader(deps, emitView);
   const getSaved = async (projectId: string, id: string, allowOrphan = false) => {
     const boards = await getBoards(deps, projectId);
     const row = await db.get(projectId, id);
@@ -96,7 +41,35 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
       if (!view) throw new BoardViewError("View not found", 404);
       return view;
     },
+    queryBoards: async (projectId: string, input: PageQuery = {}) => {
+      const page = catalogPage(await getBoards(deps, projectId), `boards:${projectId}`, input);
+      return { ...page, items: await Promise.all(page.items.map(summary)) };
+    },
+    queryOrphaned: async (projectId: string, input: PageQuery = {}) => {
+      const boards = await getBoards(deps, projectId);
+      const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
+      const page = await db.queryOrphaned(
+        projectId,
+        input,
+        snapshot.enabledSources.map((source) => source.instance.id),
+        boards.map((board) => board.scope),
+      );
+      return {
+        items: page.rows.map((row) => ({
+          id: row.id,
+          boardId: `${snapshot.enabledSources.find((source) => source.instance.id === row.extension_instance_id)!.installedSource.extension_id}.view.${row.board_id}`,
+          title: row.title,
+          settings: row.settings,
+          filter: row.filter,
+          sorts: row.sorts.slice(0, 1),
+          builtIn: false,
+        })),
+        nextCursor: page.nextCursor,
+      };
+    },
     boards: async (projectId: string) => Promise.all((await getBoards(deps, projectId)).map(summary)),
+    query: async (projectId: string, boardId: string, input: PageQuery = {}) =>
+      queryResolved(await requireBoard(deps, projectId, boardId), input),
     list: async (projectId: string, boardId: string) => listResolved(await requireBoard(deps, projectId, boardId)),
     orphaned: async (projectId: string) => {
       const boards = await getBoards(deps, projectId);

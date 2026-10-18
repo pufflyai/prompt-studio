@@ -53,3 +53,16 @@ test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
     }
   },
 );
+
+test("accepts parentPath and keeps the deprecated parent_path input", async () => {
+  const root = mkdtempSync(join(tmpdir(), "canonical-folder-"));
+  roots.push(root);
+  const response = await createFilesystemRoutes({}).request("/filesystem/directories", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ parentPath: root, name: "canonical" }),
+  });
+  expect(response.status).toBe(201);
+  expect(existsSync(join(root, "canonical"))).toBe(true);
+  expect((await request(root, "legacy")).status).toBe(201);
+});

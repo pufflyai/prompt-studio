@@ -4,8 +4,9 @@ import type {
   WebviewHostCapability,
   WebviewHostCapabilityParams,
   WebviewHostCapabilityResult,
+  WebviewHostProps,
 } from "@pstdio/sdk/extensions";
-import type { HostCapabilityRequest } from "../contract";
+import type { HostCapabilityReply, HostCapabilityRequest } from "../contract";
 import { normalizeRuntimeError } from "../normalize-error";
 
 export {
@@ -18,9 +19,10 @@ export {
 } from "@pstdio/sdk/extensions";
 
 export const createGuestHost = (
-  call: (request: HostCapabilityRequest) => Promise<unknown>,
+  call: (request: HostCapabilityRequest) => Promise<HostCapabilityReply>,
   onEvent: GuestHost["onEvent"],
   extensionId?: string,
+  propsStore?: PropsStore<WebviewHostProps>,
 ): GuestHost => ({
   call: async <Capability extends WebviewHostCapability, Params extends WebviewHostCapabilityParams[Capability]>(
     method: Capability,
@@ -29,16 +31,18 @@ export const createGuestHost = (
       : [params: Params]
   ) => {
     try {
-      return (await call({ method, params: args[0] })) as WebviewHostCapabilityResult<Capability, Params>;
+      const reply = await call({ method, params: args[0] });
+      if (!reply.ok) throw Object.assign(new Error(reply.error.message), reply.error);
+      return reply.value as WebviewHostCapabilityResult<Capability, Params>;
     } catch (error) {
-      // RPC rejections cross the frame boundary as plain objects; hand guests a
-      // real Error carrying the host's message (e.g. a capability denial).
+      // Transport failures can still arrive as plain objects.
       if (error instanceof Error) throw error;
       throw new Error(normalizeRuntimeError(error).message);
     }
   },
   onEvent,
   extensionId,
+  propsStore,
 });
 
 export const createPropsStore = <TProps>(initial: TProps): PropsStore<TProps> & { set: (next: TProps) => void } => {

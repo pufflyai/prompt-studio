@@ -2,26 +2,40 @@ import type {
   BindEnvironmentInput,
   CreateProjectInput,
   EnvironmentBinding,
-  ListActivityResponse,
-  ListProjectActivityInput,
+  InitialWorkspaceRequest,
+  Page,
+  PageQuery,
+  ProjectCreateRequest,
+  ProjectDetails,
+  ProjectUpdateRequest,
   UpdateProjectInput,
 } from "pstdio-api-contracts";
+import type { ExtensionWorkspace } from "pstdio-api-contracts/extension-kernel";
 import type { Project, Workspace } from "../resources";
+import { pageQuery } from "./page-query";
 import type { RequestFn } from "./request";
 
 export type ProjectClient = {
+  query(input?: PageQuery): Promise<Page<Project & ProjectDetails>>;
+  /** @deprecated Use query to read one bounded page. */
   list(): Promise<Project[]>;
-  get(projectId: string): Promise<Project>;
-  create(input: CreateProjectInput): Promise<Project>;
-  bindEnvironment(workbenchId: string, input: BindEnvironmentInput): Promise<EnvironmentBinding>;
-  attachInitialWorkspace(projectId: string, input: CreateProjectInput["initial_workspace"]): Promise<Workspace>;
-  retrySetup(projectId: string): Promise<Workspace>;
-  update(projectId: string, input: UpdateProjectInput): Promise<Project>;
+  get(projectId: string): Promise<Project & ProjectDetails>;
+  create(input: ProjectCreateRequest | CreateProjectInput): Promise<Project & ProjectDetails>;
+  bindEnvironment(
+    workbenchId: string,
+    input: BindEnvironmentInput,
+  ): Promise<EnvironmentBinding & { workspace: Workspace & ExtensionWorkspace }>;
+  attachInitialWorkspace(
+    projectId: string,
+    input: InitialWorkspaceRequest | CreateProjectInput["initial_workspace"],
+  ): Promise<Workspace & ExtensionWorkspace>;
+  retrySetup(projectId: string): Promise<Workspace & ExtensionWorkspace>;
+  update(projectId: string, input: ProjectUpdateRequest | UpdateProjectInput): Promise<Project & ProjectDetails>;
   delete(projectId: string): Promise<void>;
-  listActivity(projectId: string, input?: ListProjectActivityInput): Promise<ListActivityResponse>;
 };
 
 export const createProjectClient = (request: RequestFn): ProjectClient => ({
+  query: (input) => request(`/v1/projects/query${pageQuery(input)}`),
   list: () => request("/v1/projects"),
   get: (projectId) => request(`/v1/projects/${projectId}`),
   create: (input) => request("/v1/projects", { method: "POST", body: input }),
@@ -32,15 +46,4 @@ export const createProjectClient = (request: RequestFn): ProjectClient => ({
   retrySetup: (projectId) => request(`/v1/projects/${projectId}/retry-setup`, { method: "POST" }),
   update: (projectId, input) => request(`/v1/projects/${projectId}`, { method: "PATCH", body: input }),
   delete: (projectId) => request(`/v1/projects/${projectId}`, { method: "DELETE" }),
-  listActivity: (projectId, input = {}) => {
-    const params = new URLSearchParams();
-    if (input.resource_type) params.append("resource_type", input.resource_type);
-    if (input.event_type) params.append("event_type", input.event_type);
-    if (input.from) params.append("from", input.from);
-    if (input.to) params.append("to", input.to);
-    if (input.cursor) params.append("cursor", input.cursor);
-    if (input.limit !== undefined) params.append("limit", String(input.limit));
-    const query = params.toString();
-    return request(`/v1/projects/${projectId}/activity${query ? `?${query}` : ""}`);
-  },
 });

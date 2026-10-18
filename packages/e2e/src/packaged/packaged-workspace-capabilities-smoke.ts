@@ -4,7 +4,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, expect as expectPage } from "@playwright/test";
-import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages } from "@pstdio/sdk/extensions";
+import { serializePageUrl } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
@@ -14,7 +15,7 @@ const source = `
 const ready = (providerRef) => ({
   state: "ready", executionKind: "remote", providerRef,
   executionTarget: { kind: "remote", providerId: "example.cloud.workspace-type.remote", providerRef },
-  capabilities: { files: "none", diff: false, merge: false, rebase: false, archive: false, delete: true },
+  capabilities: { files: "none", diff: false, merge: false, rebase: false, delete: true },
 });
 export default { workspaceTypes: [{
   id: "remote", ref: { kind: "workspace-type", id: "remote" }, label: "Cloud workspace",

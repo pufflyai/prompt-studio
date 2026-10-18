@@ -110,12 +110,48 @@ On `0.x`, a new minor version is a breaking release. When one arrives, update th
 
 Anything an extension author writes code or manifest content against:
 
-- Public types exported from `@pstdio/sdk/extensions` and `@pstdio/sdk/extensions/react`.
+- Types and runtime contracts of the public SDK subpaths listed below.
 - Manifest fields: `package.json` identity fields, `engines.pstdio`, and the `pstdio` metadata block.
 - Contribution validation rules that the host and `pst extensions check` apply.
 - Webview bridge capabilities and payloads.
 - Command, middleware, hook, and event payloads that the host sends or accepts.
 - Documented runtime behavior that extensions rely on, such as what the host does with a command result.
+
+## Public SDK subpaths
+
+Every public subpath follows the same change levels and deprecation window. The API report covers
+all of them. Public means a supported consumer outside this repository may import it; usage by an
+extension is not the only test. In particular, Granite uses `/client`, and published UI and
+workbench packages use `/api` and `/resources`.
+
+| Subpath | Status | Purpose |
+| --- | --- | --- |
+| `/extensions` | Public, reported | Extension definitions, contexts and typed webview clients. |
+| `/extensions/react` | Public, reported | React helpers for extensions. |
+| `/testing` | Public, reported | Test contexts and in-memory service implementations. |
+| `/data` | Public, reported | Pure frontmatter, draft-layout and name helpers. |
+| `/prompts` | Public, reported | Prompt rendering helpers. |
+| `/client` | Public, reported | Typed HTTP clients for agents, scripts and hosts. |
+| `/api` | Public, reported | HTTP request/response and terminal transport contracts. |
+| `/resources` | Public, reported | Shared resource records, including assets and notifications. |
+| `/hooks` | Host-only, deprecated in 0.44 | Old filesystem-hook contexts. Use typed hooks from `/extensions`; removal is planned for 0.45. |
+
+The report entry inventory is `packages/sdk/api-report-entries.json`. Adding a public subpath also
+adds it there. `/testing`, `/data`, `/prompts` and `/client` are versioned APIs even when a change
+has no manifest or bridge effect. A missing in-repo caller does not permit removal of a published
+method. Deprecate it first, then remove it in the next breaking release.
+
+`/resources` owns shared asset and notification type names. The older `/client`, `/api` and
+`/extensions` paths keep deprecated aliases through 0.44. `/api` owns the renderer terminal
+adapter; the separate extension terminal bridge is deprecated with the typed webview cleanup.
+
+Host routing, event resolution, capability tables and artifact mount normalization belong to
+`pstdio-api-contracts`. Hosts import them there. Their old `/extensions` exports are deprecated
+aliases through 0.44. Keyboard forwarding is a private guest operation; an extension cannot
+declare it or invoke it through the public typed capability union.
+
+The dashboard uses the typed HTTP client. Only transport URL resolution (such as its terminal
+WebSocket) remains outside that client; dashboard code does not build paths for JSON requests.
 
 ## Change levels
 

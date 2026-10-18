@@ -1,19 +1,17 @@
 export type {
-  CreateNotificationInput,
   HistoryProjection,
   HistoryRecoveryInput,
   HistoryRecoveryResult,
-  ListNotificationsQuery,
-  ListNotificationsResponse,
-  Notification,
-  NotificationAction,
-  NotificationActorType,
-  NotificationKind,
-  NotificationOrigin,
-  NotificationPriority,
-  NotificationStatus,
-  UpdateNotificationInput,
 } from "pstdio-api-contracts";
+export {
+  HistoryConflict,
+  historyMessageKey,
+  historyValueKey,
+  mergeHistoryMetadata,
+  reconcileMessageHistory,
+  splitHistoryTurns,
+  submittedPrompt,
+} from "pstdio-api-contracts/collections";
 export type * from "pstdio-api-contracts/extension-kernel";
 export type {
   CommitPayload,
@@ -26,7 +24,6 @@ export type {
   WorktreeRemovedPayload,
 } from "pstdio-api-contracts/extension-kernel";
 export {
-  ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
   DEFAULT_DATA_TABLE_SETTINGS,
   defineSlot,
   dockedWorkbenchRegions,
@@ -43,23 +40,13 @@ export {
   localContributionIdGrammar,
   localContributionIdPattern,
   normalizeBooleanViewRule,
-  normalizePageParams,
   packageAsset,
   projectEvents,
   projectSlots,
-  qualifyNavigationTarget,
-  resolveDataTableComparableValue,
-  resolveDataTableFieldKind,
-  resolvePageParams,
   sessionEvents,
   sessionSlots,
   VIEW_FILTER_CONDITIONS,
-  validatePageParamDefinitions,
   viewDataEvents,
-  WEBVIEW_DECLARABLE_CAPABILITIES,
-  WEBVIEW_HOST_CAPABILITIES,
-  WEBVIEW_HOST_CAPABILITY_VERSION,
-  WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
   workbenchModeDefinitions,
   workbenchModes,
   workbenchPageDefinitions,
@@ -73,18 +60,8 @@ export {
   workspaceSlots,
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
-export {
-  HistoryConflict,
-  historyMessageKey,
-  historyValueKey,
-  mergeHistoryMetadata,
-  mergeOrderedHistory,
-  reconcileMessageHistory,
-  splitHistoryTurns,
-  submittedPrompt,
-} from "pstdio-api-contracts/history-reconciliation";
 export { SDK_VERSION } from "../version";
-export { type CommandResponse, unwrapCommandOutcome } from "./command-outcome";
+export { CommandOutcomeError, type CommandResponse, getCommandValue, unwrapCommandOutcome } from "./command-outcome";
 export { commandRefId, contributionRefId } from "./contribution-reference";
 export { defineCommand, defineHook, defineMiddleware, streamOf } from "./define-command";
 export {
@@ -107,7 +84,6 @@ export {
   defineSettingsSection,
   defineSkill,
   defineStatusBarItem,
-  defineStatuses,
   defineTemplate,
   defineTemplateType,
   defineTheme,
@@ -160,5 +136,36 @@ export { EXTENSION_EVENTS_SCOPE, type WebviewEventsClient, type WebviewExtension
 export { matchesResourceWhen } from "./when";
 export const projectPrefix = () => ({ $prefix: "project" as const });
 
+export type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
+export {
+  ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
+  mergeOrderedHistory,
+  normalizePageParams,
+  qualifyNavigationTarget,
+  resolveDataTableComparableValue,
+  resolveDataTableFieldKind,
+  resolvePageParams,
+  validatePageParamDefinitions,
+  WEBVIEW_DECLARABLE_CAPABILITIES,
+  WEBVIEW_HOST_CAPABILITIES,
+  WEBVIEW_HOST_CAPABILITY_VERSION,
+  WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
+} from "./host-compat";
+export type {
+  AssetReference,
+  AssetTransfer,
+  CreateNotificationInput,
+  ListNotificationsQuery,
+  ListNotificationsResponse,
+  Notification,
+  NotificationAction,
+  NotificationActorType,
+  NotificationKind,
+  NotificationOrigin,
+  NotificationPriority,
+  NotificationStatus,
+  UpdateNotificationInput,
+} from "./resource-compat";
+export { isWebviewCapabilityError, type WebviewCapabilityError } from "./webview-capability-error";
 export type { WebviewPageClient } from "./webview-page-client";
 export type { CommandStream, CommandStreamOptions, WebviewStreamsClient } from "./webview-streams";

@@ -93,7 +93,6 @@ const localIdRecordsByKind = (runtime: ExtensionRuntime): [string, ContributionS
   ["settingsPanel", runtime.settingsPanels],
   ["settingsSection", runtime.settingsSections],
   ["skill", runtime.skills],
-  ["status", runtime.statuses],
   ["statusBarItem", runtime.statusBarItems],
   ["template", runtime.templates],
   ["templateType", runtime.templateTypes],

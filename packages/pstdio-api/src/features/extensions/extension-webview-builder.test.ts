@@ -2,10 +2,41 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { runInNewContext } from "node:vm";
 import { buildExtensionWebview } from "./extension-webview-builder";
 
 describe("buildExtensionWebview", () => {
+  test("keeps deferred view modules in loadable browser chunks", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-lazy-test-"));
+    const entryPath = join(root, "main.ts");
+    const outdir = join(root, "dist");
+    const key = `webview-detail-${crypto.randomUUID()}`;
+    const state = globalThis as Record<string, unknown>;
+    writeFileSync(entryPath, 'export const openDetails = () => import("./details.ts");');
+    writeFileSync(
+      join(root, "details.ts"),
+      `import "./details.css"; globalThis[${JSON.stringify(key)}] = true; export const ready = true;`,
+    );
+    writeFileSync(join(root, "details.css"), ".details { display: grid; }");
+
+    try {
+      const result = await buildExtensionWebview({ entryPath, outdir, signal: new AbortController().signal });
+      expect(result.success).toBe(true);
+      const output = join(outdir, "module.js");
+      const imports = new Bun.Transpiler({ loader: "js" }).scanImports(readFileSync(output, "utf8"));
+      expect(imports.filter(({ kind }) => kind === "dynamic-import")).toHaveLength(1);
+      expect(await Bun.file(join(outdir, "module.css")).exists()).toBe(true);
+      const view = await import(pathToFileURL(output).href);
+      expect(state[key]).toBeUndefined();
+      expect((await view.openDetails()).ready).toBe(true);
+      expect(state[key]).toBe(true);
+    } finally {
+      delete state[key];
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("builds self-contained production browser code", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-builder-test-"));
     const entryPath = join(root, "main.ts");

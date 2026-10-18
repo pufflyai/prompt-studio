@@ -1,93 +1,107 @@
-/**
- * Keeps the checked-in public extension API report current, and checks that EXTENSION_API_VERSION
- * moved one step when the report changed since the last release.
- *
- * Run with `--write` to regenerate the report after changing the public extension API.
- */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { changedApiEntries, normalizeReport } from "./api-report";
+import { readApiEntries, runApiCommand, withReleaseSource } from "./api-report-source";
 import { checkExtensionApiReleaseStep } from "./extension-api-release-step";
 
 const ROOT = path.resolve(import.meta.dir, "../..");
-const SDK_DIR = path.join(ROOT, "packages/sdk");
-const REPORT_DIR = "packages/sdk/api-report";
-const REPORT_FILES = ["extensions.d.ts", "extensions-react.d.ts"];
 const VERSION_FILE = "packages/pstdio-api-contracts/src/extension-kernel/types/extension.ts";
 
-const run = (command: string[], cwd = ROOT) => {
-  const result = spawnSync(command[0]!, command.slice(1), { cwd, encoding: "utf8" });
-  return result.status === 0 ? result.stdout : null;
+const readVersion = (source: string) => {
+  const version = source.match(/EXTENSION_API_VERSION = "([^"]+)"/)?.[1];
+  if (!version) throw new Error("Could not read EXTENSION_API_VERSION.");
+  return version;
 };
 
-// Documentation and region comments (which name source files) are not API, so editing or moving them must
-// not look like an API change. A deprecation is an additive change, so its tag stays as a bare marker.
-export const normalizeReport = (report: string) =>
-  `${report
-    .replace(/\/\*\*[\s\S]*?\*\//g, (comment) => (comment.includes("@deprecated") ? "/** @deprecated */" : ""))
-    .split("\n")
-    .filter((line) => line.trim() !== "" && !line.trimStart().startsWith("//"))
-    .join("\n")}\n`;
-
-const buildReport = () => {
-  const result = spawnSync("bun", ["run", "build:api-report"], { cwd: SDK_DIR, encoding: "utf8" });
-  if (result.status !== 0) throw new Error(`build:api-report failed:\n${result.stdout}${result.stderr}`);
-
-  return new Map(
-    REPORT_FILES.map((file) => [file, normalizeReport(readFileSync(path.join(SDK_DIR, ".api-report", file), "utf8"))]),
-  );
-};
-
-const readCheckedInReport = (file: string) => {
-  const reportPath = path.join(ROOT, REPORT_DIR, file);
-  return existsSync(reportPath) ? readFileSync(reportPath, "utf8") : null;
-};
-
-const readVersionAt = (ref: string) =>
-  run(["git", "show", `${ref}:${VERSION_FILE}`])?.match(/EXTENSION_API_VERSION = "([^"]+)"/)?.[1] ?? null;
-
-const readLastRelease = () => {
-  const tag = run(["git", "describe", "--tags", "--match", "pstdio@*", "--abbrev=0", "HEAD"])?.trim();
-  if (!tag) throw new Error("No pstdio@* release tag is reachable from HEAD. Fetch the tags and run again.");
-
-  const released = readVersionAt(tag);
-  if (!released) throw new Error(`Could not read EXTENSION_API_VERSION at ${tag}.`);
-
-  const reports = new Map(REPORT_FILES.map((file) => [file, run(["git", "show", `${tag}:${REPORT_DIR}/${file}`])]));
-  return { tag, released, reports };
-};
-
-const main = () => {
-  const write = process.argv.includes("--write");
-  const built = buildReport();
-  const errors: string[] = [];
-
-  for (const [file, report] of built) {
-    if (readCheckedInReport(file) === report) continue;
-    if (write) {
-      mkdirSync(path.join(ROOT, REPORT_DIR), { recursive: true });
-      writeFileSync(path.join(ROOT, REPORT_DIR, file), report);
-      console.log(`Updated ${REPORT_DIR}/${file}`);
-    } else {
-      errors.push(
-        `${REPORT_DIR}/${file} does not match the public extension API. Run \`bun run verify:extension-api-report --write\` and commit the result.`,
+const buildReport = (source: string, output: string) => {
+  mkdirSync(output, { recursive: true });
+  const entries = readApiEntries(source);
+  if (entries.length > 0) {
+    // One generator owns both sides; each source tree resolves its own locked type dependencies.
+    try {
+      runApiCommand(
+        ROOT,
+        [
+          path.join(ROOT, "packages/sdk/node_modules/.bin/rolldown"),
+          "-c",
+          "packages/sdk/rolldown.api-report.config.ts",
+        ],
+        {
+          ...process.env,
+          PSTDIO_API_REPORT_SOURCE: source,
+          PSTDIO_API_REPORT_OUTPUT: output,
+          PSTDIO_API_REPORT_ENTRIES: JSON.stringify(entries),
+        },
       );
+    } catch (error) {
+      throw new Error(`API report generation failed for ${source}:\n${error}`);
     }
   }
 
-  const { tag, released, reports } = readLastRelease();
-  const reportChanged = [...built].some(([file, report]) => reports.get(file) !== report);
-  const onMain = readVersionAt("origin/main");
-  errors.push(...checkExtensionApiReleaseStep({ released, current: EXTENSION_API_VERSION, reportChanged, onMain }));
-
-  if (errors.length > 0) {
-    console.error(`Extension API report violations (${errors.length}):`);
-    for (const error of errors) console.error(`  - ${error}`);
-    process.exit(1);
-  }
-
-  console.log(`Extension API report OK: ${EXTENSION_API_VERSION} (last release ${tag} shipped ${released}).`);
+  return new Map(
+    entries.map((entry) => {
+      const file = path.join(output, `${entry.replaceAll("/", "-")}.d.ts`);
+      const report = normalizeReport(readFileSync(file, "utf8"));
+      writeFileSync(file, report);
+      return [entry, report];
+    }),
+  );
 };
 
-if (import.meta.main) main();
+const writeDiff = (output: string) => {
+  const diff = spawnSync("git", ["diff", "--no-index", "--no-prefix", "--", "released", "proposed"], {
+    cwd: output,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (diff.status !== 0 && diff.status !== 1) throw new Error(`Could not produce the API diff: ${diff.stderr}`);
+  writeFileSync(path.join(output, "api.diff"), diff.stdout);
+};
+
+export const verifyApiReport = (root = ROOT) => {
+  const output = path.join(root, ".api-report");
+  rmSync(output, { recursive: true, force: true });
+  mkdirSync(output, { recursive: true });
+  const tag = runApiCommand(root, ["git", "describe", "--tags", "--match", "pstdio@*", "--abbrev=0", "HEAD"]);
+  const released = readVersion(runApiCommand(root, ["git", "show", `${tag}:${VERSION_FILE}`]));
+  const current = readVersion(readFileSync(path.join(root, VERSION_FILE), "utf8"));
+  const releasedReports = withReleaseSource(root, tag, (source) => buildReport(source, path.join(output, "released")));
+  const proposedReports = buildReport(root, path.join(output, "proposed"));
+  const changed = changedApiEntries(releasedReports, proposedReports);
+  const main = spawnSync("git", ["show", `origin/main:${VERSION_FILE}`], { cwd: root, encoding: "utf8" });
+  const onMain = main.status === 0 ? readVersion(main.stdout) : null;
+  const errors = checkExtensionApiReleaseStep({ released, current, reportChanged: changed.length > 0, onMain });
+  writeDiff(output);
+  const summary = [
+    "## Public SDK API comparison",
+    "",
+    `Baseline: ${tag} (API ${released}). Proposed API: ${current}.`,
+    "",
+    changed.length > 0
+      ? `Changed entrypoints: ${changed.map((entry) => `\`${entry}\``).join(", ")}.`
+      : "No public type changes.",
+    "",
+    "Download the `sdk-api-report` CI artifact for `api.diff` and both generated reports.",
+    "Locally, these files are in `.api-report/`.",
+    "",
+    ...errors.map((error) => `- ${error}`),
+    "",
+    "Reviewers must classify changes as breaking or additive; this check compares declarations only.",
+    "",
+  ].join("\n");
+  writeFileSync(path.join(output, "summary.md"), summary);
+  return { tag, released, current, changed, errors, summary };
+};
+
+if (import.meta.main) {
+  try {
+    const result = verifyApiReport();
+    if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, result.summary);
+    console.log(result.summary);
+    process.exitCode = result.errors.length > 0 ? 1 : 0;
+  } catch (error) {
+    console.error(error);
+    process.exitCode = 1;
+  }
+}

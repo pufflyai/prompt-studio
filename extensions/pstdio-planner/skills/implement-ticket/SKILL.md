@@ -107,3 +107,9 @@ Use concrete artifacts that another person or agent can inspect and reproduce.
 ### Repair a changed dependency base
 
 For a `tickets next` action of `update-stack`, reuse the listed workspace and its implementation session. See [Updating a dependency stack](https://prompt.studio/docs/extensions/planner/attempts/#updating-a-dependency-stack). Read the ticket and existing review findings. Run `pst pstdio-planner update-stack` with the exact workspace HEAD and owner session; resolve any merge conflicts, commit, and retry. Preserve the ticket's branch and PR target rules. Validate the result, run the configured adversarial review, save a fresh report, and submit the exact HEAD with `--expected-revision`. A passed review stays on its old revision; do not fabricate a rejection or reopen it to permit a correction. Complete required CI on the latest pushed PR commit.
+
+### Recover a missing workspace
+
+A `recover-workspace` action is runnable work. Dispatch it through Auto Build. Planner creates a managed continuation from available Git code and passes the old attempt, session, revision, report and PR references. Missing workspace availability alone does not require a human decision or a blocked ticket.
+
+In the continuation, read those references and restore previous code from surviving branches, commits or PRs. Fetch the PR branch when needed. If no previous code can be found, restart from the ticket requirements. Record what was recovered and what had to be redone. Keep the new assigned workspace and branch, integrate required dependencies with update-stack, validate, and submit a fresh revision. Old attempts and approvals remain historical evidence; they do not approve the recovered revision. Real dependency, access, assignment and human-input rules still apply. Never replace an intact workspace or a running owner merely to repair a stack.

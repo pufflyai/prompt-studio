@@ -1,11 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "../../core";
-import { createExtensionWebviewHostCapabilities } from "./webview-command-capabilities";
+import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
+import { createWorkbenchExtensionWebviewAdapters } from "./webview-command-capabilities";
 
-describe("createExtensionWebviewHostCapabilities", () => {
+const createCapabilities =
+  (input: Parameters<typeof createWorkbenchExtensionWebviewAdapters>[0]) =>
+  (context: Parameters<ReturnType<typeof createWorkbenchExtensionWebviewAdapters>>[0]) =>
+    createExtensionWebviewHostCapabilities(createWorkbenchExtensionWebviewAdapters(input)(context));
+
+describe("extension webview command adapters", () => {
   test("preserves the requested workspace and command metadata", async () => {
     const requests: unknown[] = [];
-    const capabilities = createExtensionWebviewHostCapabilities({
+    const capabilities = createCapabilities({
       executeCommand: (commandId, body) => {
         requests.push({ commandId, body });
         return { outcome: { ok: true, status: "success" } };
@@ -53,7 +59,7 @@ describe("createExtensionWebviewHostCapabilities", () => {
       slots: [],
     });
     workbench.pageLocations.setProject("project-1");
-    const capabilities = createExtensionWebviewHostCapabilities({
+    const capabilities = createCapabilities({
       executeCommand: async () => ({}),
       extensionIdForWebview: () => "pstdio.lab",
       projectId: "proj-1",
@@ -91,7 +97,7 @@ test("webview command calls apply navigation once and preserve the response enve
       ],
     },
   };
-  const capabilities = createExtensionWebviewHostCapabilities({
+  const capabilities = createCapabilities({
     executeCommand: () => response,
     extensionIdForWebview: () => "notes",
     projectId: "project",
@@ -99,4 +105,17 @@ test("webview command calls apply navigation once and preserve the response enve
   })({ placement: {}, webviewId: "notes", workbench } as never);
   expect(await capabilities["commands.execute"]?.({ commandId: "notes.create" })).toEqual(response);
   expect(opened).toBe(1);
+});
+
+test("webviews receive structured command rejections", async () => {
+  const response = {
+    outcome: { ok: false, status: "rejected", code: "needs_review", reason: "Review first", data: { revision: 2 } },
+  };
+  const capabilities = createCapabilities({
+    executeCommand: () => response,
+    extensionIdForWebview: () => "notes",
+    projectId: "project",
+    slotKind: "panel",
+  })({ placement: {}, webviewId: "notes", workbench: createWorkbench() } as never);
+  expect(await capabilities["commands.execute"]?.({ commandId: "notes.command.save" })).toEqual(response);
 });

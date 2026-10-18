@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
 
 interface StartSetupStatusProps {
@@ -11,7 +11,7 @@ interface StartSetupStatusProps {
 export const StartSetupStatus = (props: StartSetupStatusProps) => {
   const { projectId, error } = props;
   const retry = useMutation({
-    mutationFn: () => apiRequest(`/v1/projects/${projectId}/retry-setup`, { method: "POST" }),
+    mutationFn: () => getApiClient().projects.retrySetup(projectId),
   });
 
   return (

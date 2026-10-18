@@ -1,9 +1,10 @@
 import type { CommandContext, CommandInvocation, CommandMiddlewareResult, JsonObject } from "@pstdio/sdk/extensions";
+import type { CommandFailureDetails } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeMiddlewareRecord } from "../../types/runtime";
 
 export type MiddlewareChainResult =
   | { status: "continue"; invocation: CommandInvocation }
-  | { status: "reject"; rejection: { code?: string; reason: string; data?: JsonObject } };
+  | { status: "reject"; rejection: CommandFailureDetails };
 
 export const runMiddlewareChain = async (
   middlewares: RuntimeMiddlewareRecord[],
@@ -31,9 +32,10 @@ export const runMiddlewareChain = async (
     if (!result || result.type === "continue") continue;
 
     if (result.type === "reject") {
+      const { type: _type, ...rejection } = result;
       return {
         status: "reject",
-        rejection: { code: result.code, reason: result.reason, data: result.data },
+        rejection,
       };
     }
 

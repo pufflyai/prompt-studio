@@ -5,6 +5,7 @@ import type { WorkspacesRouteDeps } from "../deps";
 import { listWorkspaceProviders } from "../workspace-provider-catalog";
 
 export const listWorkspaceProvidersRoute = createRoute({
+  deprecated: true,
   method: "get",
   path: "/projects/{projectId}/workspace-providers",
   tags: ["Workspaces"],

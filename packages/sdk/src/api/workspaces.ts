@@ -12,12 +12,15 @@ import type {
   WriteWorkspaceFileInput as ContractWriteWorkspaceFileInput,
 } from "pstdio-api-contracts";
 
+/** @deprecated Use ExtensionWorkspaceCreateInput with projectId first. */
 export type CreateWorkspaceInput = ContractCreateWorkspaceInput;
 export type ListWorkspaceActivityInput = ContractListWorkspaceActivityInput;
+/** @deprecated Use ActivityPage. */
 export type ListWorkspaceActivityResponse = ContractListWorkspaceActivityResponse;
 export type RemoveWorktreeResponse = ContractRemoveWorktreeResponse;
 export type RenameWorkspaceInput = ContractRenameWorkspaceInput;
 export type ListWorkspaceFilesInput = ContractListWorkspaceFilesInput;
+/** @deprecated Use WorkspaceEntryMoveInput. */
 export type MoveWorkspaceEntryInput = ContractMoveWorkspaceEntryInput;
 export type WorkspaceFileContent = ContractWorkspaceFileContent;
 export type WorkspaceFileEntry = ContractWorkspaceFileEntry;

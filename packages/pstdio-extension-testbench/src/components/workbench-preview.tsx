@@ -1,11 +1,10 @@
 import { Box } from "@chakra-ui/react";
-import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest, CommandExecutionResult } from "@pstdio/sdk/api";
 import { workbenchModes } from "@pstdio/sdk/extensions";
 import { getThemePreferenceMode, type ThemePreference, type ThemePreferenceOption } from "@pstdio/ui";
 import { createScriptedTerminalBridge } from "@pstdio/ui/terminal";
 import { createWorkbench } from "@pstdio/workbench";
 import {
-  createWorkbenchWebviewHostCapabilities,
   refreshOpenWorkbenchExtensionWebviews,
   registerWorkbenchExtensionContributions,
   registerWorkbenchExtensionRendererRefreshEvents,
@@ -31,13 +30,13 @@ import {
 export interface ExtensionHostCommandEvent {
   commandId: string;
   extensionId: string;
-  outcome: CommandExecuteResponse["outcome"];
+  outcome: CommandExecutionResult["outcome"];
   tick: number;
 }
 
 type CommandCallRecorder = (entry: CommandCallLogEntry) => void;
 
-type ExecuteWorkbenchCommand = (commandId: string, request: CommandExecuteRequest) => Promise<CommandExecuteResponse>;
+type ExecuteWorkbenchCommand = (commandId: string, request: CommandExecuteRequest) => Promise<CommandExecutionResult>;
 
 type ExtensionWorkbenchPreviewProps = {
   bench: ExtensionBenchLoadResponse;
@@ -51,7 +50,7 @@ type ExtensionWorkbenchPreviewProps = {
 type CreatePreviewWorkbenchProps = ExtensionWorkbenchPreviewProps & {
   getLastCommand: () => ExtensionHostCommandEvent | null;
   getThemePreference: () => ThemePreference;
-  publishLastCommand: (commandId: string, response: CommandExecuteResponse) => ExtensionHostCommandEvent;
+  publishLastCommand: (commandId: string, response: CommandExecutionResult) => ExtensionHostCommandEvent;
 };
 
 const createCallId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -153,12 +152,6 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
     },
     metadata: bench.metadata,
     projectId: bench.projectId,
-    createWebviewHostCapabilityOverrides: (context) =>
-      createWorkbenchWebviewHostCapabilities({
-        workbench: context.workbench,
-        placement: context.placement,
-        extensionId: context.extensionId,
-      }),
     createWebviewProps: ({ placement }) => ({
       lastCommand: getLastCommand() ?? undefined,
       placement,

@@ -27,7 +27,7 @@ const makeStorageService = () => ({
   deleteCollectionItem: async () => {},
 });
 
-test("archive cascades to the workspace's active sessions", async () => {
+test("deletion archives the workspace's active sessions", async () => {
   const archivedWorkspaces: string[] = [];
   const archivedSessions: string[] = [];
   const env = createCommandEnvironment(
@@ -58,7 +58,6 @@ test("archive cascades to the workspace's active sessions", async () => {
             diff: true,
             merge: true,
             rebase: true,
-            archive: true,
             delete: true,
           },
           display_path: null,
@@ -95,7 +94,7 @@ test("archive cascades to the workspace's active sessions", async () => {
     },
   );
 
-  await env.workspaces.archive("ws-1");
+  await env.workspaces.delete("ws-1");
 
   expect(archivedWorkspaces).toEqual(["ws-1"]);
   expect(archivedSessions).toEqual(["session-1"]);
@@ -113,7 +112,7 @@ test("fires worktree.removed after extension-initiated deletion", async () => {
     branch: "workspace/T-1_A1",
     root_path: "/repo/.worktrees/T-1_A1",
     provider_id: "pstdio.worktree",
-    provider_capabilities_json: { archive: true, delete: true },
+    provider_capabilities_json: { delete: true },
     provider_ref_json: null,
     provider_state: "ready",
     execution_kind: "local",

@@ -111,7 +111,6 @@ const contributionIds = (check: InstalledExtensionSource["check"]) => {
     ...check.navigationItems,
     ...check.navigationTrees,
     ...check.statusBarItems,
-    ...check.statuses,
     ...(check.activityItems ?? []),
     ...(check.settingsSections ?? []),
     ...check.settingsPanels,

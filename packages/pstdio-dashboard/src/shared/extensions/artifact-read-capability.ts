@@ -1,12 +1,8 @@
+import type { WebviewArtifactsReadParams } from "@pstdio/sdk/extensions";
 import { buildAbsoluteApiUrl } from "@/lib/api";
 import { getExtensionArtifactImageUrl, listExtensionArtifacts, readExtensionArtifactText } from "./api";
 
-type ArtifactsReadRequest =
-  | { op: "list"; mount: string; prefix?: string }
-  | { op: "readText"; mount: string; path: string }
-  | { op: "imageUrl"; mount: string; path: string };
-
-interface CreateArtifactsReadCapabilityInput {
+interface CreateArtifactsReadAdapterInput {
   projectId: string;
   extensionInstanceId: string;
   webviewId: string;
@@ -17,10 +13,8 @@ interface CreateArtifactsReadCapabilityInput {
  * already checked the mount grant; the API enforces mount ownership, path
  * confinement, media types, and size limits.
  */
-export const createArtifactsReadCapability = (input: CreateArtifactsReadCapabilityInput) => {
-  return async (params: unknown) => {
-    const request = params as ArtifactsReadRequest;
-
+export const createArtifactsReadAdapter = (input: CreateArtifactsReadAdapterInput) => {
+  return async (request: WebviewArtifactsReadParams) => {
     if (request.op === "list") {
       const { files } = await listExtensionArtifacts(
         input.projectId,
@@ -39,17 +33,13 @@ export const createArtifactsReadCapability = (input: CreateArtifactsReadCapabili
       );
       return content;
     }
-    if (request.op === "imageUrl") {
-      const { url } = await getExtensionArtifactImageUrl(
-        input.projectId,
-        input.extensionInstanceId,
-        request.mount,
-        request.path,
-        input.webviewId,
-      );
-      return buildAbsoluteApiUrl(url);
-    }
-
-    throw new Error("Unsupported artifacts.read operation.");
+    const { url } = await getExtensionArtifactImageUrl(
+      input.projectId,
+      input.extensionInstanceId,
+      request.mount,
+      request.path,
+      input.webviewId,
+    );
+    return buildAbsoluteApiUrl(url);
   };
 };

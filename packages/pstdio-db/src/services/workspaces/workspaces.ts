@@ -15,6 +15,7 @@ import {
 } from "./provider-operations";
 import { renameWorkspace } from "./rename-workspace";
 import { attachInitialProvider, findByPath } from "./workspace-location";
+import { createWorkspaceQuery } from "./workspace-query";
 import {
   buildWorkspaceRecord,
   type CreateInput,
@@ -161,9 +162,10 @@ export const createWorkspacesDBService = (db: DbClient) => {
         .update(workspaces)
         .set({ deleted_at: timestamp, archived: true, updated_at: timestamp })
         .where(and(eq(workspaces.id, id), isNull(workspaces.deleted_at)))
-        .returning();
-      if (!row) return [];
-      return createResourceLinksDBService(tx).removeResource(hostResourceRef("workspace", row));
+        .returning(workspaceColumns);
+      if (!row) return null;
+      const changes = await createResourceLinksDBService(tx).removeResource(hostResourceRef("workspace", row));
+      return { workspace: row, changes };
     });
 
   const archive = async (id: string) => {
@@ -228,6 +230,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
     findByPath: (rootPath: string) => findByPath(db, rootPath),
     get,
     list,
+    query: createWorkspaceQuery(db),
     listForProviderReconciliation,
     getByShorthand,
     softDelete,

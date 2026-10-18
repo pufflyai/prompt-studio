@@ -88,6 +88,34 @@ Plan for about 6 GB of free Docker disk for the first stack and about 4 GB for e
 
 Each stack also gets a Docker network from Docker's default address pools. When many stacks or other projects keep networks, a new stack fails with `all predefined address pools have been fully subnetted`. Stop your own unused stacks with `--down`; do not remove other projects' networks.
 
+### Planner timeline stress test
+
+Start a named Docker stack with 1,000 real Planner tickets, five dependency chains in five tracks, and ticket documents larger than 1 KB:
+
+```bash
+bun run dev:planner-stress
+```
+
+Open the printed **Timeline** URL. The default saved view, **Focus 25 of 1,000**, uses a Title filter matching exactly 25 tickets. **All** shows the full plan. The complete 1,000-ticket snapshot still reaches the iframe; this exercises client-side filtering and viewport rendering. No agent sessions are started. The stack remains available until you stop it. Repeating the command resumes an interrupted seed without adding duplicate tickets.
+
+Run the browser stress check against that stack:
+
+```bash
+bun run --cwd packages/e2e playwright install chromium
+bun run test:planner-stress
+```
+
+The check confirms all 1,000 tickets are loaded, exactly 25 match the saved filter, and the full plan keeps its card window bounded. It exercises three switches between the saved filter and All, then opens the deferred details, track form, and Auto Build editor without saving changes. The JSON report includes first timeline open, plan read time, uncompressed response bytes, iframe JavaScript and stylesheet transfer bytes before first render, mounted cards, filter-switch times, and page JavaScript heap use before opening editors. The first open includes host startup and any on-demand webview build. The separate `iframeStartupMs` starts when the iframe runtime document is requested, excluding the earlier host startup. Heap use includes the host and iframe. These are observed measurements, not timing budgets.
+
+Use `--name my-stress` with both commands for another independent stack. Follow logs or remove the default fixture with:
+
+```bash
+bun run dev:planner-stress -- --logs
+bun run dev:planner-stress -- --down
+```
+
+For an automated check using a disposable packaged runtime and temporary home, run `bun run test:planner-stress -- --packaged`. It builds the host binary if needed, installs Planner normally, and removes the runtime and fixture after the check. The Docker command above is the persistent environment for manual use.
+
 ### Sign agents in inside the stack
 
 The isolated stack, including `bun run dev:playwright`, runs agents inside its container. Each agent needs a login that the container can read. Sign in once on the host before you start a stack. The image installs these versions:

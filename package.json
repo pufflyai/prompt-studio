@@ -36,6 +36,8 @@
     "dev:isolated": "bun ./scripts/dev/dev-isolated.ts",
     "dev:playwright": "bun ./scripts/dev/dev-isolated.ts --name pstdio-playwright",
     "dev:playwright:down": "bun ./scripts/dev/dev-isolated.ts --name pstdio-playwright --down",
+    "dev:planner-stress": "bun ./scripts/dev/dev-planner-stress.ts",
+    "test:planner-stress": "bun run --cwd packages/e2e test:planner-stress",
     "dev:api": "bun run --cwd packages/pstdio-api dev",
     "dev:landing-page": "bun run --cwd clients/landing-page dev",
     "storybook:ui": "bun run --cwd packages/ui storybook",

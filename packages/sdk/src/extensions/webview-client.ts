@@ -1,16 +1,22 @@
 import type {
   CommandDefinition,
+  CommandNotice,
   JsonObject,
+  NavigationTarget,
   ParamObjectSchema,
   ParamsOf,
   WebviewArtifactFile,
+  WebviewPreferencesGetParams,
+  WebviewPreferencesSetParams,
 } from "pstdio-api-contracts/extension-kernel";
-import { unwrapCommandOutcome } from "./command-outcome";
+import { getCommandValue } from "./command-outcome";
 import type { SettingsMap } from "./define-extension";
 import type { GuestHost } from "./define-extension-view";
 import { type ArtifactMountKey, artifactMountId } from "./webview-capabilities";
 import { createWebviewEventsClient, type WebviewEventsClient } from "./webview-events";
-import { type CommandStreamOptions, createWebviewCommandStream, type WebviewStreamsClient } from "./webview-streams";
+import { createWebviewFilesClient, type WebviewFilesClient } from "./webview-files-client";
+import { createWebviewPageClient, type WebviewPageClient } from "./webview-page-client";
+import { type CommandStreamOptions, openWebviewCommandStream, type WebviewStreamsClient } from "./webview-streams";
 
 // Command types derive from a record of `defineCommand` values (the extension's
 // exported commands map), not from `typeof extension`: `defineExtension` cannot keep
@@ -31,7 +37,9 @@ export type WebviewCommandsClient<TCommands> = {
 export type WebviewSettingsClient<TSettings> = {
   all: () => Promise<Partial<TSettings>>;
   get: <K extends keyof TSettings & string>(key: K) => Promise<TSettings[K] | undefined>;
-  set: <K extends keyof TSettings & string>(key: K, value: TSettings[K]) => Promise<void>;
+  set: <K extends keyof TSettings & string>(key: K, value: TSettings[K]) => Promise<TSettings[K]>;
+  /** Remove the stored value and restore the declared fallback. */
+  delete: <K extends keyof TSettings & string>(key: K) => Promise<void>;
 };
 
 // Without a settings source the client rejects every key, instead of degrading to
@@ -50,6 +58,22 @@ export type WebviewArtifactsClient = {
 };
 
 export type WebviewClient<TCommands, TSettings = undefined> = {
+  files: WebviewFilesClient;
+  page: WebviewPageClient;
+  navigation: { open(target: NavigationTarget): Promise<void> };
+  placement: { close(): Promise<void> };
+  notify: { toast(notice: CommandNotice): Promise<void> };
+  preferences: {
+    get(
+      name: string,
+      scope?: WebviewPreferencesGetParams["scope"],
+    ): Promise<WebviewPreferencesSetParams["value"] | undefined>;
+    set(
+      name: string,
+      value: WebviewPreferencesSetParams["value"],
+      scope?: WebviewPreferencesGetParams["scope"],
+    ): Promise<{ name: string; value: WebviewPreferencesSetParams["value"] }>;
+  };
   artifacts: WebviewArtifactsClient;
   commands: WebviewCommandsClient<TCommands>;
   streams: WebviewStreamsClient<TCommands>;
@@ -95,7 +119,7 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
       params,
       ...(options?.workspaceId ? { workspaceId: options.workspaceId } : {}),
     });
-    return unwrapCommandOutcome(response);
+    return getCommandValue(response.outcome);
   };
 
   // Command keys only exist at the type level, so property access builds the calls.
@@ -116,7 +140,7 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
         typeof key !== "string"
           ? undefined
           : (params?: JsonObject, streamOptions?: CommandStreamOptions) =>
-              createWebviewCommandStream(
+              openWebviewCommandStream(
                 host,
                 { commandId: `${extensionId}.command.${key}`, params, workspaceId: options?.workspaceId },
                 streamOptions,
@@ -128,7 +152,10 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     all: async () => (await host.call("extension.settings.all", {})) ?? {},
     get: (key: string) => host.call("extension.settings.get", { key }),
     set: async (key: string, value: unknown) => {
-      await host.call("extension.settings.set", { key, value });
+      return (await host.call("extension.settings.set", { key, value })).value;
+    },
+    delete: async (key: string) => {
+      await host.call("extension.settings.delete", { key });
     },
   };
 
@@ -144,5 +171,23 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
   };
 
   const events = createWebviewEventsClient(host, extensionId);
-  return { artifacts, commands, streams, events, settings } as WebviewClient<TCommands, TSettings>;
+  const hostClient: Pick<WebviewClient<TCommands, TSettings>, "navigation" | "placement" | "notify" | "preferences"> = {
+    navigation: { open: (target) => host.call("navigation.open", { target }) },
+    placement: { close: () => host.call("placement.close", {}) },
+    notify: { toast: (notice) => host.call("notification.show", notice) },
+    preferences: {
+      get: (name, scope) => host.call("preferences.get", { name, scope }),
+      set: (name, value, scope) => host.call("preferences.set", { name, value, scope }),
+    },
+  };
+  return {
+    ...hostClient,
+    files: createWebviewFilesClient(host),
+    page: createWebviewPageClient(host),
+    artifacts,
+    commands,
+    streams,
+    events,
+    settings,
+  } as WebviewClient<TCommands, TSettings>;
 };

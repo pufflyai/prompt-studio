@@ -72,6 +72,7 @@
         "src/**/*.perf.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",
+        "src/**/*.fixture.tsx",
         // Packaged smoke tests bundle these extension entries by path.
         "src/packaged/fixtures/*-extension.ts",
         // Specs install fixture extensions by path.
@@ -173,8 +174,8 @@
       ],
       "project": ["src/**/*.ts"],
       "ignore": ["dist/**"],
-      // tsconfig.build.json includes this transitive contract source in the declaration bundle.
-      "ignoreDependencies": ["pstdio-sync-contracts"]
+      // Public declarations inline private contracts, including their Zod types.
+      "ignoreDependencies": ["pstdio-sync-contracts", "zod"]
     },
     "packages/pstdio-workbench": {
       "entry": [
@@ -248,11 +249,11 @@
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
         "src/views/tags-settings-panel.tsx",
+        "src/views/status-settings-panel.tsx",
         "src/views/ticket-review-requests.tsx",
-        "vendor/collection-filter.js",
         "src/timeline/view/entry.tsx"
       ],
-      "project": ["*.ts", "src/**/*.{ts,tsx}", "vendor/**/*.js"]
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-skills": {
       // The skill's example extensions are typechecked source.

@@ -9,7 +9,7 @@ import { timelineInitialState, type timelineQueryData } from "./timeline-query";
 
 interface PlanHeaderProps {
   data: ReturnType<typeof timelineQueryData>;
-  viewsSource: CollectionViewsSource<KanbanRendererSettings>;
+  viewsSource?: CollectionViewsSource<KanbanRendererSettings>;
   search: string;
   onSearchChange: (value: string) => void;
   resultLabel: string;
@@ -33,12 +33,17 @@ export function PlanHeader(props: PlanHeaderProps) {
       views={views}
       viewsSource={viewsSource}
       fields={data.attributes}
-      optionsFor={(field) =>
-        (categories.find(({ id }) => id === field.id)?.options ?? []).map((option) => ({
+      optionsFor={(field) => {
+        const counts = new Map<string, number>();
+        for (const row of data.rows) {
+          for (const value of new Set(getAttributeStringValues(row, field)))
+            counts.set(value, (counts.get(value) ?? 0) + 1);
+        }
+        return (categories.find(({ id }) => id === field.id)?.options ?? []).map((option) => ({
           ...option,
-          count: data.rows.filter((row) => getAttributeStringValues(row, field).includes(option.value)).length,
-        }))
-      }
+          count: counts.get(option.value) ?? 0,
+        }));
+      }}
       search={search}
       onSearchChange={onSearchChange}
       searchResultLabel={resultLabel}

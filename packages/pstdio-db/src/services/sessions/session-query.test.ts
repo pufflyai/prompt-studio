@@ -24,7 +24,7 @@ const create = async (title: string, agent = "claude-code", date = "2026-10-01T0
   return row;
 };
 
-test("pages newest first without duplicates when timestamps tie and new sessions arrive", async () => {
+test("pages newest first without duplicates when timestamps tie and sessions arrive or are archived", async () => {
   const rows = await Promise.all([create("a"), create("b"), create("c")]);
   const expected = rows
     .map((row) => row.id)
@@ -36,6 +36,11 @@ test("pages newest first without duplicates when timestamps tie and new sessions
   const second = await service.query(projectId, { limit: 2, cursor: first.nextCursor! });
   expect(second.rows.map((row) => row.id)).toEqual(expected.slice(2));
   expect(second.nextCursor).toBeNull();
+  await service.archive(expected[2]);
+  expect((await service.query(projectId, { cursor: first.nextCursor! })).rows).toEqual([]);
+  expect(
+    (await service.query(projectId, { cursor: first.nextCursor!, includeArchived: true })).rows.map((row) => row.id),
+  ).toEqual(expected.slice(2));
   expect((await service.query(projectId, { cursor: "invalid", limit: 0 })).rows).toHaveLength(1);
   const other = (await createProjectsDBService(conn.db).create({ name: "other" })).id;
   const foreign = await service.create({ project_id: other, title: "foreign", agent: "codex" });

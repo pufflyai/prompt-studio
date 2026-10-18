@@ -147,6 +147,7 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
   );
   const humanNeeded = flags.includes("human-needed");
   const gate = index.gates.has(ticket.id);
+  const status = index.statuses.get(ticket.statusId ?? "");
   return {
     id: ticket.id,
     shorthand: ticket.shorthand,
@@ -164,7 +165,7 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
     requests,
     requestErrors: errors,
     instructions: ticket.content ?? "",
-    status: index.statuses.get(ticket.statusId ?? "") ?? null,
+    status: status ? { id: status.id, name: status.name, icon: status.icon, color: status.color } : null,
     done: isDone(ticket, index),
     step,
     ancestors: ancestors(ticket, index),

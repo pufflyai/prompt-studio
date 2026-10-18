@@ -59,7 +59,7 @@ describe("defineExtensionView", () => {
     let greeting = "";
     let fallback = "";
 
-    const view = defineExtensionView({
+    const view = defineExtensionView<typeof props>({
       render: (context) => {
         locale = context.locale;
         save = context.t("save", "Save");
@@ -97,7 +97,7 @@ describe("defineExtensionView", () => {
     });
 
     let filesClient: WebviewFilesClient | undefined;
-    const view = defineExtensionView({
+    const view = defineExtensionView<undefined>({
       render: ({ files }) => {
         filesClient = files;
       },

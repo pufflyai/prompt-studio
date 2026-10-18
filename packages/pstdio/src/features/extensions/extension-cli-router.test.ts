@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { CommandExecuteResponse, ExtensionCommandRecord } from "@pstdio/sdk/api";
+import type { CommandExecutionResult, ExtensionCommandRecord } from "@pstdio/sdk/api";
 import {
   buildExtensionCommandTable,
   dispatchExtensionCliCommand,
@@ -28,7 +28,7 @@ const labCommands: ExtensionCommandRecord[] = [
   },
 ];
 
-const successResponse: CommandExecuteResponse = {
+const successResponse: CommandExecutionResult = {
   commandId: "lab.counter.bump",
   extensionId: "pstdio.extension-lab",
   outcome: { ok: true, status: "success", value: { counter: 2 } },
@@ -219,7 +219,7 @@ describe("extension CLI router dispatch", () => {
       rawArgs: ["lab", "counter", "read"],
       deps: {
         execute: mock(
-          async (): Promise<CommandExecuteResponse> => ({
+          async (): Promise<CommandExecutionResult> => ({
             commandId: "lab.counter.read",
             extensionId: "pstdio.extension-lab",
             outcome: { ok: true, status: "success", value: [{ shorthand: "T-1", title: "First" }] },
@@ -267,7 +267,7 @@ describe("extension CLI router dispatch", () => {
 
   test("dispatches extension commands through global CLI aliases", async () => {
     const execute = mock(
-      async (_commandId: string, _request: unknown): Promise<CommandExecuteResponse> => ({
+      async (_commandId: string, _request: unknown): Promise<CommandExecutionResult> => ({
         commandId: "acme-tools.workspaceNote.set",
         extensionId: "acme.acme-tools",
         outcome: { ok: true, status: "success", value: { workspaceId: "workspace-1", note: "checked" } },
@@ -299,7 +299,7 @@ describe("extension CLI router dispatch", () => {
     const previousSessionId = process.env.PSTDIO_SESSION_ID;
     process.env.PSTDIO_SESSION_ID = "session-from-env";
     const execute = mock(
-      async (_commandId: string, _request: unknown): Promise<CommandExecuteResponse> => ({
+      async (_commandId: string, _request: unknown): Promise<CommandExecutionResult> => ({
         commandId: "acme-tools.workspaceNote.set",
         extensionId: "acme.acme-tools",
         outcome: { ok: true, status: "success", value: { workspaceId: "workspace-1", note: "checked" } },

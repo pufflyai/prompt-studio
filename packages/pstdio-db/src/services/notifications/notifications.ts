@@ -2,6 +2,8 @@ import { and, desc, eq, inArray, lt, lte, or, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { notifications } from "../../db/schemas.pg";
 
+import { createNotificationStatusDBService } from "./notification-status";
+
 type NotificationRow = typeof notifications.$inferSelect;
 type NotificationStatus = "open" | "read" | "snoozed" | "done" | "dismissed" | "expired";
 type NotificationPriority = "low" | "normal" | "high" | "urgent";
@@ -304,7 +306,15 @@ export const createNotificationsDBService = (db: DbClient) => {
     const timestamp = nowTimestamp();
     const [updated] = await db
       .update(notifications)
-      .set({ ...input, updated_at: timestamp })
+      .set({
+        ...input,
+        updated_at: timestamp,
+        status:
+          input.status ??
+          (input.snoozed_until === null
+            ? sql`case when ${notifications.status} = 'snoozed' then 'open' else ${notifications.status} end`
+            : undefined),
+      })
       .where(and(eq(notifications.project_id, projectId), eq(notifications.id, id)))
       .returning();
     return updated ?? null;
@@ -333,6 +343,7 @@ export const createNotificationsDBService = (db: DbClient) => {
       .returning();
 
   return {
+    ...createNotificationStatusDBService(db),
     create,
     count,
     dismiss: (projectId: string, id: string) => updateStatus(projectId, id, "dismissed"),

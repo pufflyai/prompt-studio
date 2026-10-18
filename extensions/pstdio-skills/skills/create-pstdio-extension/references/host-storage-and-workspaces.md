@@ -59,6 +59,6 @@ To end work in a workspace:
 
 - `ctx.workspaces.removeWorktree(id)` frees a Git worktree and its branch but keeps the workspace record and its sessions. The host emits `worktree.removed`.
 - `ctx.workspaces.delete(id)` asks the provider to clean up and removes the workspace. For a Git worktree this also discards uncommitted changes.
-- `ctx.workspaces.archive(id)` is a deprecated name for `delete(id)`. It deletes the workspace; it does not keep it readable. Do not use it in new code.
+- On 0.43.x, `ctx.workspaces.archive(id)` is a deprecated name for `delete(id)`. It deletes the workspace; it does not keep it readable. It is removed on `main`, so do not use it.
 
 See [Workspaces](https://prompt.studio/docs/references/cli/workspaces/) and [Projects and workspaces](https://prompt.studio/docs/guides/concepts/projects-and-workspaces/).

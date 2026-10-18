@@ -27,7 +27,7 @@ import type { JsonObject, JsonValue, MaybePromise, Struct } from "./json";
 import type { PageContribution } from "./pages";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { PackageAssetDescriptor } from "./resources";
-import type { StatusBarItemContribution, StatusContribution } from "./statuses";
+import type { StatusBarItemContribution } from "./status-bar";
 import type {
   NavigationItemContribution,
   NavigationTreeContribution,
@@ -97,8 +97,6 @@ export interface WorkspaceCapabilities {
   diff: boolean;
   merge: boolean;
   rebase: boolean;
-  /** @deprecated Use delete. */
-  archive: boolean;
   delete: boolean;
 }
 
@@ -187,8 +185,6 @@ export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace
   create(ctx: ExtensionContextBase, input: WorkspaceProviderCreateInput): MaybePromise<WorkspaceProviderResult>;
   resolve(ctx: ExtensionContextBase, input: WorkspaceProviderResolveInput): MaybePromise<WorkspaceProviderResult>;
   cancel?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;
-  /** @deprecated Use the delete hook. */
-  archive?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;
   delete?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<void>;
 }
 
@@ -248,8 +244,6 @@ export interface UiContributions {
   navigationItems?: readonly NavigationItemContribution[];
   navigationTrees?: readonly NavigationTreeContribution[];
   statusBarItems?: readonly StatusBarItemContribution[];
-  /** @deprecated Use extension-owned values and commands, a settings panel, and query-returned enum attributes. */
-  statuses?: readonly StatusContribution[];
   modes?: readonly ModeContribution[];
   pages?: readonly PageContribution[];
   resourceKinds?: readonly ResourceKindDefinition[];

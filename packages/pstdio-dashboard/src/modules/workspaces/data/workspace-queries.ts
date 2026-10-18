@@ -1,15 +1,10 @@
 import type { ListWorkspaceFilesInput } from "@pstdio/sdk/api";
 import type { Diff } from "@pstdio/ui/diff";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
-import { createApiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 
 export interface WorkspaceDiffSummaryFile extends Diff {
   filePath: string;
-}
-
-export interface WorkspaceDiffFilesResponse {
-  workspace_id: string;
-  files: WorkspaceDiffSummaryFile[];
 }
 
 export type WorkspaceDiffMode = "current" | "fork_point";
@@ -27,25 +22,18 @@ export const workspaceDiffFileQueryKey = (workspaceId: string, mode: WorkspaceDi
   ["workspace-diffs", workspaceId, "file", mode, path] as const;
 
 export const workspaceDiffFilesQueryOptions = (workspaceId: string, mode: WorkspaceDiffMode) => {
-  const apiRequest = createApiRequest();
+  const client = getApiClient().workspaces;
   return queryOptions({
     queryKey: workspaceDiffFilesQueryKey(workspaceId, mode),
-    queryFn: () =>
-      apiRequest<WorkspaceDiffFilesResponse | null>(`/v1/workspaces/${workspaceId}/diff-files?mode=${mode}`, {
-        allowNotFound: true,
-      }),
+    queryFn: () => client.diffFiles(workspaceId, mode),
   });
 };
 
 export const workspaceDiffFileQueryOptions = (workspaceId: string, mode: WorkspaceDiffMode, path: string) => {
-  const apiRequest = createApiRequest();
+  const client = getApiClient().workspaces;
   return queryOptions({
     queryKey: workspaceDiffFileQueryKey(workspaceId, mode, path),
-    queryFn: () =>
-      apiRequest<WorkspaceDiffSummaryFile | null>(
-        `/v1/workspaces/${workspaceId}/diff-file?mode=${mode}&path=${encodeURIComponent(path)}`,
-        { allowNotFound: true },
-      ),
+    queryFn: () => client.diffFile(workspaceId, mode, path),
   });
 };
 

@@ -148,7 +148,7 @@ tree shows its placement line after the last visible descendant.
 
 ## Declared data dependencies
 
-Extensions use public `viewDataEvents` for host-owned session, workspace, and session-workspace link data. Events carry `projectId`. Reassignment invalidates both former and new owners; removals use the previous row. Notification churn does not broadcast a view refresh. A file change broadcasts one only for a watched artifact mount: a renderer that lists `artifactChanged(mount)` reloads when that mount's files change outside the mount API (see [Watched mounts](0005-webview-and-storage-api.md#watched-mounts)). Each renderer also declares its own extension data events. The core extensions and host views declare these dependencies:
+Extensions use public `viewDataEvents` for host-owned session, workspace, and session-workspace link data. Events carry `projectId`. Reassignment invalidates both former and new owners; removals use the previous row. Notification churn does not broadcast a view refresh. A file change broadcasts one only for a watched artifact mount: a renderer that lists `artifactChanged(mount)` reloads when that mount's files change outside the mount API (see [Watched mounts](0021-artifact-mounts-and-storage.md#watched-mounts)). Each renderer also declares its own extension data events. The core extensions and host views declare these dependencies:
 
 | Native view | Dependencies |
 | --- | --- |
@@ -166,7 +166,7 @@ A Kanban view can declare `onMove(ctx, { rowId, attributes, order })`. One drop 
 
 The workbench read owner previews the move immediately and saves consecutive gestures in order. It keeps a journal of local edits over its last accepted query. Reads begun before a move or during saving cannot replace that preview. Failed saves remove only that operation's preview, preserve later gestures, and report the failure once. After the saves settle, one fresh query replaces the journal. A failed refresh retains the preview and exposes Retry.
 
-`onAttributeChange` still handles inline edits. `onReorder` is deprecated for moves; old declarations keep their existing callbacks until a breaking release removes them. `onMove` takes precedence for both board and list drops.
+`onAttributeChange` handles inline edits. Use `onMove` for both board and list drops. It receives grouping changes and manual order in one operation. `onReorder` has been removed.
 
 `schemaRefreshEvents` declares events that change attribute fields or options. Saved-view validation and filter cleanup read on these events and on event-reset recovery. When it is omitted, the host retains the existing content-event refresh behavior. Shared-view content and order continue to arrive through live sync.
 

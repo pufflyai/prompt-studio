@@ -1,4 +1,4 @@
-import type { CommandExecuteRequest, CommandExecuteResponse, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest, CommandExecutionResult, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleContext } from "../../core";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
@@ -54,8 +54,7 @@ export const executeWorkbenchExtensionCommandResponse = async (
     },
     input.signal,
   );
-  unwrapCommandValue(response);
-  const outcome = (response as Partial<CommandExecuteResponse> | undefined)?.outcome;
+  const outcome = (response as Partial<CommandExecutionResult> | undefined)?.outcome;
   if (outcome?.status === "success") {
     for (const target of outcome.navigationRequests ?? []) {
       try {

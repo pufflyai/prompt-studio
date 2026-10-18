@@ -8,6 +8,7 @@ import type { AttemptRecord } from "../data/attempt-types";
 import { putTicket } from "../data/collections";
 import { seedDefaultStatuses } from "../data/seed";
 import { makeCommandContext } from "./command-context.fixture";
+import { sessionQuery } from "./session-query.fixture";
 
 export async function stackSubmissionFixture() {
   const path = await mkdtemp(join(tmpdir(), "planner-stack-"));
@@ -74,7 +75,11 @@ export async function stackSubmissionFixture() {
     storage,
     params: {},
     overrides: {
-      workspaces: { list: async () => [], get: async () => workspace, getDefault: async () => workspace } as never,
+      workspaces: {
+        list: async () => [],
+        get: async (id: string) => ({ ...workspace, id }),
+        getDefault: async () => workspace,
+      } as never,
       process: {
         run: async ({ command, cwd }: { command: string[]; cwd?: string }) => run(command, cwd ?? path),
       } as never,
@@ -90,8 +95,10 @@ export async function stackSubmissionFixture() {
         }),
       } as never,
       sessions: {
-        list: async () => [],
-        listByWorkspace: async () => [{ type: "session", id: "owner", title: "Owner", status: "completed" }],
+        query: sessionQuery(
+          async () => [],
+          async () => [{ type: "session", id: "owner", title: "Owner", status: "completed" }],
+        ),
         get: async (id: string) => ({ type: "session", id, title: id, status: "completed" }),
       } as never,
     },

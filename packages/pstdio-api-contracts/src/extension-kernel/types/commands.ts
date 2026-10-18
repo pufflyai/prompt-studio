@@ -58,11 +58,18 @@ export interface CommandReplaceInvocation<TParams extends Struct = Struct> {
   invocation: CommandInvocation<TParams>;
 }
 
-export interface CommandReject {
-  type: "reject";
+export interface CommandFailureDetails {
   code?: string;
   reason: string;
   data?: JsonObject;
+  cause?: JsonValue;
+  error?: SerializedError;
+  notices?: CommandNotice[];
+  diagnostics?: CommandDiagnostic[];
+}
+
+export interface CommandReject extends CommandFailureDetails {
+  type: "reject";
 }
 
 export type CommandMiddlewareResult<TParams extends Struct = Struct> =
@@ -99,24 +106,14 @@ export type CommandOutcome<TResult = unknown> =
       notices?: CommandNotice[];
       diagnostics?: CommandDiagnostic[];
     }
-  | {
+  | (CommandFailureDetails & {
       ok: false;
       status: "rejected";
-      code?: string;
-      reason: string;
-      data?: JsonObject;
-      notices?: CommandNotice[];
-      diagnostics?: CommandDiagnostic[];
-    }
-  | {
+    })
+  | (CommandFailureDetails & {
       ok: false;
       status: "error";
-      code?: string;
-      reason: string;
-      error?: SerializedError;
-      notices?: CommandNotice[];
-      diagnostics?: CommandDiagnostic[];
-    };
+    });
 
 export interface CommandHelpersApi {
   execute<TParams extends Struct = Struct, TResult = unknown>(

@@ -1,6 +1,6 @@
 import type { TerminalSessionOperation, TerminalSessionResult } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
-import type { CommandOutcome } from "./commands";
+import type { CommandNotice, CommandOutcome } from "./commands";
 import type { ExtensionBlobRef } from "./context";
 import type { JsonObject, JsonValue } from "./json";
 import type { NavigationTarget } from "./navigation-target";
@@ -46,15 +46,18 @@ export const ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES = ["host.dispatchKeyboardEven
 export const WEBVIEW_HOST_CAPABILITIES = [
   ...WEBVIEW_DECLARABLE_CAPABILITIES.filter((capability) => capability !== "clipboard.write"),
   ...WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
-  ...ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
 ] as const;
 
 export type WebviewHostCapability = (typeof WEBVIEW_HOST_CAPABILITIES)[number];
 export type WebviewDeclarableCapability = (typeof WEBVIEW_DECLARABLE_CAPABILITIES)[number];
 export type WebviewScopedDeclarableCapability = (typeof WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES)[number];
+/** @deprecated Use bare capability names. Versions will be removed in 0.45. */
+export type VersionedWebviewCapabilityDeclaration =
+  `${WebviewDeclarableCapability}@${typeof WEBVIEW_HOST_CAPABILITY_VERSION}`;
+
 export type WebviewCapabilityDeclaration =
   | WebviewDeclarableCapability
-  | `${WebviewDeclarableCapability}@${typeof WEBVIEW_HOST_CAPABILITY_VERSION}`
+  | VersionedWebviewCapabilityDeclaration
   | `${WebviewScopedDeclarableCapability}:${string}`;
 
 export interface WebviewCommandsExecuteParams {
@@ -78,18 +81,22 @@ export interface WebviewNavigationOpenParams {
   target: NavigationTarget;
 }
 
+/** @deprecated Use CommandNotice with type and message. */
 export interface WebviewNotificationShowParams {
   level: "info" | "success" | "warning" | "error";
   title: string;
   message?: string;
 }
 
+/** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
 export type WebviewNotificationActionParams = Omit<CreateNotificationInput, "projectId">;
+/** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
 export interface WebviewNotificationResolveParams {
   id?: string;
   dedupeKey?: string;
   status?: Extract<NotificationStatus, "done" | "dismissed" | "expired">;
 }
+/** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
 export type WebviewNotificationDismissParams = Pick<WebviewNotificationResolveParams, "id" | "dedupeKey">;
 
 export interface WebviewPreferencesGetParams {
@@ -164,9 +171,12 @@ export interface WebviewHostCapabilityParams {
   "page.params.update": WebviewPageParamsUpdateParams;
   "navigation.open": WebviewNavigationOpenParams;
   "placement.close": Record<string, never>;
-  "notification.show": WebviewNotificationShowParams;
+  "notification.show": CommandNotice | WebviewNotificationShowParams;
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.action": WebviewNotificationActionParams;
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.resolve": WebviewNotificationResolveParams;
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.dismiss": WebviewNotificationDismissParams;
   "preferences.get": WebviewPreferencesGetParams;
   "preferences.set": WebviewPreferencesSetParams;
@@ -174,9 +184,12 @@ export interface WebviewHostCapabilityParams {
   "extension.settings.get": WebviewExtensionSettingKeyParams;
   "extension.settings.set": WebviewExtensionSettingSetParams;
   "extension.settings.delete": WebviewExtensionSettingKeyParams;
+  /** @deprecated Use the host terminal surface. */
   "terminal.session": TerminalSessionOperation;
   "files.upload": WebviewFilesUploadParams;
+  /** @deprecated Use extension commands and owned storage. */
   "files.list": WebviewFilesListParams;
+  /** @deprecated Use extension commands and owned storage. */
   "files.delete": WebviewFilesDeleteParams;
   "artifacts.read": WebviewArtifactsReadParams;
   "host.dispatchKeyboardEvent": WebviewKeyboardEventParams;
@@ -189,18 +202,24 @@ export interface WebviewHostCapabilityResults {
   "navigation.open": void;
   "placement.close": void;
   "notification.show": void;
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.action": Notification;
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.resolve": Notification | { resolved: number; notifications: Notification[] };
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.dismiss": Notification | { resolved: number; notifications: Notification[] };
   "preferences.get": WebviewPreferencesSetParams["value"] | undefined;
   "preferences.set": { name: string; value: WebviewPreferencesSetParams["value"] };
   "extension.settings.all": Record<string, unknown>;
   "extension.settings.get": unknown;
-  "extension.settings.set": void;
+  "extension.settings.set": { key: string; value: unknown };
   "extension.settings.delete": void;
+  /** @deprecated Use the host terminal surface. */
   "terminal.session": TerminalSessionResult;
   "files.upload": ExtensionBlobRef;
+  /** @deprecated Use extension commands and owned storage. */
   "files.list": { files: ExtensionBlobRef[] };
+  /** @deprecated Use extension commands and owned storage. */
   "files.delete": void;
   "artifacts.read": WebviewArtifactFile[] | string;
   "host.dispatchKeyboardEvent": void;

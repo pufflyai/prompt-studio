@@ -2,6 +2,8 @@
 
 Use a webview for content that native file, tree, table, board, or controls views cannot express. The public contract is [Webview client](https://prompt.studio/docs/references/extensions/webview-and-storage-api/#webview-client). Prefer a native controls view for ordinary parameters: the host provides the parameter editor, form state, and scrolling. Use the public `@pstdio/ui/param-editor` export when a custom webview actually needs an embedded form.
 
+For SDK 0.44, use the [typed client contracts](client-contracts.md) for capabilities, host props, errors and `useCommandQuery.refreshOn`. Adopt them after the SDK is published. The compiled examples retain their compatible subscriptions until their separate adoption PR.
+
 ## Mount shared UI and own only the content
 
 The typechecked [preview entry](examples/resource-reviewer/preview-entry.tsx) imports `@pstdio/ui/style.css`, mounts React inside `defineExtensionView`, supplies `ChakraProvider` with `psTheme`, and returns `root.unmount` as cleanup. Declare the bridge capabilities the webview calls; the reviewer needs `commands.execute`.

@@ -1,4 +1,4 @@
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import {
   type DashboardWorkspaceDiffSummary,
   formatDashboardWorkspaceDiffOverview,
@@ -67,10 +67,10 @@ const withSectionDiffMetadata = async (value: unknown, resolveSummary: ResolveWo
 };
 
 export const withWorkspaceDiffMetadata = async (
-  response: CommandExecuteResponse,
+  response: CommandExecutionResult,
   resolveSummary: ResolveWorkspaceDiffSummary = resolveDashboardWorkspaceDiffSummary,
   signal?: AbortSignal,
-): Promise<CommandExecuteResponse> => {
+): Promise<CommandExecutionResult> => {
   if (!response.outcome.ok || !Array.isArray(response.outcome.value)) return response;
 
   const resolve: ResolveWorkspaceDiffSummary = async (id) => {

@@ -4,7 +4,7 @@ import { createGuestHost } from "./define-extension-view";
 describe("createGuestHost", () => {
   test("returns host call results unchanged", async () => {
     const host = createGuestHost(
-      async () => [{ path: "result.json", size: 12, mediaType: "application/json" }],
+      async () => ({ ok: true, value: [{ path: "result.json", size: 12, mediaType: "application/json" }] }),
       () => () => {},
     );
 

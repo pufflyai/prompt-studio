@@ -31,26 +31,62 @@ export interface SessionExit {
 }
 
 export interface ExtensionSessionUsage {
+  /** @deprecated Use inputTokens. */
   input_tokens: number;
+  /** @deprecated Use outputTokens. */
   output_tokens: number;
+  /** @deprecated Use cacheReadTokens. */
   cache_read_tokens: number;
+  /** @deprecated Use cacheWriteTokens. */
   cache_write_tokens: number;
 }
 
+export interface ExtensionSession {
+  id: string;
+  title: string;
+  status: SessionStatus;
+  archived: boolean;
+  agent: string | null;
+  cwd: string | null;
+  lastSelectedModel: string | null;
+  workspaceId: string | null;
+  originalSessionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastRequestStarted: string | null;
+  lastRequestEnded: string | null;
+  /** Available when reading a session by ID. */
+  lastExit?: SessionExit | null;
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    cacheWriteTokens: number;
+  } | null;
+}
+
+/** @deprecated Use ExtensionSession. Snake-case fields are removed in 0.45. */
 export interface ExtensionSessionSummary {
   id: string;
   title: string;
   status: SessionStatus;
   archived: boolean;
   agent: string | null;
+  /** @deprecated Use lastSelectedModel. */
   last_selected_model: string | null;
+  /** @deprecated Use workspaceId. */
   workspace_id: string | null;
+  /** @deprecated Use originalSessionId. */
   original_session_id: string | null;
+  /** @deprecated Use createdAt. */
   created_at: string;
+  /** @deprecated Use updatedAt. */
   updated_at: string;
-  /** Start and end of the latest run only. */
+  /** @deprecated Use lastRequestStarted. */
   last_request_started: string | null;
+  /** @deprecated Use lastRequestEnded. */
   last_request_ended: string | null;
+  /** @deprecated Read links through resources. */
   anchors_json: ResourceAnchor[];
   /** Totals at the last conversation save. Null when no usage was recorded. */
   usage: ExtensionSessionUsage | null;
@@ -73,10 +109,11 @@ export interface ExtensionSessionQuery {
 
 export interface ExtensionSessionPage {
   /** Newest first: created_at descending, then id descending. */
-  items: ExtensionSessionSummary[];
+  items: (ExtensionSession & ExtensionSessionSummary)[];
   nextCursor: string | null;
 }
 
+/** @deprecated Use ExtensionSession. */
 export interface ExtensionSessionResource {
   type: "session";
   id: string;
@@ -102,54 +139,16 @@ export interface ExtensionSessionsApi {
     queuePosition: number,
     input: SteerQueuedFollowUpInput,
   ): Promise<QueuedSteeringResult>;
-  get(id: string): Promise<{
-    id: string;
-    title: string;
-    status?: string;
-    /** Exact latest execution exit. Null for historical runs without evidence. */
-    last_exit?: SessionExit | null;
-    original_session_id?: string | null;
-    cwd?: string | null;
-    updated_at?: string | null;
-    anchors_json?: ResourceAnchor[];
-    archived?: boolean;
-    agent?: string | null;
-    last_selected_model?: string | null;
-    workspace_id?: string | null;
-    created_at?: string | null;
-    last_request_started?: string | null;
-    last_request_ended?: string | null;
-    usage?: ExtensionSessionUsage | null;
-  } | null>;
+  get(id: string): Promise<
+    | (ExtensionSession &
+        ExtensionSessionSummary & {
+          /** @deprecated Use lastExit. */
+          last_exit?: SessionExit | null;
+        })
+    | null
+  >;
 
   query(input?: ExtensionSessionQuery): Promise<ExtensionSessionPage>;
-
-  /** @deprecated Use query() for filters, paging and session details. */
-  list(): Promise<
-    Array<{
-      id: string;
-      title: string;
-      status: SessionStatus;
-      agent?: string | null;
-      last_request_started?: string | null;
-      last_request_ended?: string | null;
-      updated_at?: string | null;
-      anchors_json?: ResourceAnchor[];
-    }>
-  >;
-
-  /** @deprecated Use query({ workspaceId }). query() orders newest first. */
-  listByWorkspace(workspaceId: string): Promise<
-    Array<{
-      id: string;
-      title: string;
-      status: SessionStatus;
-      agent?: string | null;
-      created_at?: string | null;
-      updated_at?: string | null;
-      anchors_json?: ResourceAnchor[];
-    }>
-  >;
 
   create(input: {
     title: string;
@@ -159,7 +158,7 @@ export interface ExtensionSessionsApi {
     anchors?: ResourceAnchor[];
     attachments?: SessionAttachmentRef[];
     originalSessionId?: string;
-  }): Promise<ExtensionSessionResource>;
+  }): Promise<ExtensionSession & ExtensionSessionSummary & ExtensionSessionResource>;
 
   followup(input: {
     sessionId: string;
@@ -169,7 +168,9 @@ export interface ExtensionSessionsApi {
     expectedRun?: SessionRunSnapshot;
   }): Promise<void>;
 
+  /** @deprecated Use resources.addAnchors with a session reference. */
   addAnchors(sessionId: string, anchors: ResourceAnchor[]): Promise<void>;
+  /** @deprecated Use resources.removeAnchors with a session reference. */
   removeAnchors(sessionId: string, refs: ResourceRef[]): Promise<void>;
 }
 

@@ -2,9 +2,10 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { ExtensionCatalogAssetError } from "../../../services/extension-asset-catalog";
 import type { AppRouteHandler } from "../../../types";
 import type { SkillsRouteDeps } from "../deps";
-import { badRequestResponseSchema, skillResponseSchema } from "../dto";
+import { badRequestResponseSchema, skillResponseSchema, toSkillResponse } from "../dto";
 
 export const listSkillsRoute = createRoute({
+  deprecated: true,
   method: "get",
   path: "/projects/{projectId}/skills",
   description: "List all skills for a project.",
@@ -39,28 +40,6 @@ export const listSkillsHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof
       if (error instanceof ExtensionCatalogAssetError) return c.json({ error: error.message }, 400);
       throw error;
     }
-    return c.json(
-      skills.map((skill) => ({
-        id: skill.id,
-        project_id: skill.project_id,
-        source_kind: skill.source_kind,
-        name: skill.name,
-        title: skill.title,
-        description: skill.description,
-        files: skill.files,
-        editable: skill.editable,
-        extension_instance_id: skill.extension_instance_id,
-        extension_id: skill.extension_id,
-        installed_extension_id: skill.installed_extension_id,
-        install_name: skill.install_name,
-        key: skill.key,
-        source: skill.source,
-        enabled: skill.enabled,
-        created_at: skill.created_at,
-        updated_at: skill.updated_at,
-        deleted_at: skill.deleted_at,
-      })),
-      200,
-    );
+    return c.json(skills.map(toSkillResponse), 200);
   };
 };

@@ -29,3 +29,5 @@ export const resourceAnchorPageSchema = z.object({
   items: z.array(z.object({ source: resourceLinkRefSchema, target: resourceAnchorSchema })),
   nextCursor: z.string().optional(),
 });
+
+export const resourceAnchorQueryPageSchema = resourceAnchorPageSchema.extend({ nextCursor: z.string().nullable() });

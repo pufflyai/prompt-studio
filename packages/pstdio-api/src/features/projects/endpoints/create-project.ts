@@ -63,7 +63,9 @@ const openExistingProject = async (
     }
   }
   const response = toProjectResponse(project);
-  return extensionWarnings.length ? { ...response, extension_warnings: extensionWarnings } : response;
+  return extensionWarnings.length
+    ? { ...response, extension_warnings: extensionWarnings, extensionWarnings }
+    : response;
 };
 
 export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof createProjectRoute> => {
@@ -92,7 +94,9 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
           });
           const response = toProjectResponse(project);
           return c.json(
-            extensionWarnings.length ? { ...response, extension_warnings: extensionWarnings } : response,
+            extensionWarnings.length
+              ? { ...response, extension_warnings: extensionWarnings, extensionWarnings }
+              : response,
             201,
           );
         });

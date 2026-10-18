@@ -27,6 +27,7 @@ export const markNotificationReadRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/notifications/{id}/read",
   tags: ["Notifications"],
+  deprecated: true,
   request: { params: notificationParamsSchema },
   responses: transitionResponses,
 });
@@ -35,6 +36,7 @@ export const markNotificationDoneRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/notifications/{id}/done",
   tags: ["Notifications"],
+  deprecated: true,
   request: { params: notificationParamsSchema },
   responses: transitionResponses,
 });
@@ -43,6 +45,7 @@ export const dismissNotificationRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/notifications/{id}/dismiss",
   tags: ["Notifications"],
+  deprecated: true,
   request: { params: notificationParamsSchema },
   responses: transitionResponses,
 });
@@ -51,6 +54,7 @@ export const snoozeNotificationRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/notifications/{id}/snooze",
   tags: ["Notifications"],
+  deprecated: true,
   request: {
     params: notificationParamsSchema,
     body: { content: { "application/json": { schema: snoozeNotificationBodySchema } } },
@@ -62,6 +66,7 @@ export const resolveNotificationByDedupeKeyRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/notifications/resolve-by-dedupe-key",
   tags: ["Notifications"],
+  deprecated: true,
   request: {
     params: projectParamsSchema,
     body: { content: { "application/json": { schema: resolveByDedupeKeyBodySchema } } },

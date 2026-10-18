@@ -42,6 +42,8 @@ const resolve = (input: {
   selections?: TicketAttemptSelection[];
   ancestors?: Array<[string, string]>;
   mergedHeads?: Map<string, string[]>;
+  dependencyDeliveries?: Map<string, { headSha: string | null; mergeSha: string | null }>;
+  activeImplementationWorkspaceIds?: Set<string>;
   target?: string;
   activeImplementationCount?: number;
   mainHeadSha?: string;
@@ -54,6 +56,8 @@ const resolve = (input: {
     selections: input.selections ?? [],
     doneStatusIds: new Set(["done"]),
     mergedHeads: input.mergedHeads ?? new Map(),
+    dependencyDeliveries: input.dependencyDeliveries ?? new Map(),
+    activeImplementationWorkspaceIds: input.activeImplementationWorkspaceIds,
     mainHeadSha: input.mainHeadSha ?? "main",
     activeImplementationCount: input.activeImplementationCount ?? 0,
     maxInProgress: 2,
@@ -62,6 +66,92 @@ const resolve = (input: {
   });
 
 describe("attempt readiness", () => {
+  test("a delivered PR cannot choose between ambiguous variants or replace an explicit selection", async () => {
+    const dependency = { ...ticket("PS-1"), statusId: "done" };
+    const selection = (workspaceId: string) => ({
+      ticketId: dependency.id,
+      workspaceId,
+      selectedAt: "2026-10-15T00:00:00Z",
+      humanRequestId: null,
+      selectedBy: { type: "human" as const, id: "user", displayName: "User" },
+    });
+    const input = {
+      tickets: [dependency, ticket("PS-3", [dependency.id])],
+      attempts: [attempt("PS-1", "first", "first-head"), attempt("PS-1", "second", "second-head")],
+      dependencyDeliveries: new Map([[dependency.id, { headSha: "first-head", mergeSha: "delivered" }]]),
+      ancestors: [["delivered", "main"]] as Array<[string, string]>,
+    };
+    expect(await resolve(input)).toMatchObject({ decision: "wait", reason: "ambiguous-dependency-attempt" });
+    expect(await resolve({ ...input, selections: [selection("second")] })).toMatchObject({
+      decision: "wait",
+      reason: "dependency-not-ready",
+    });
+    expect(await resolve({ ...input, selections: [selection("missing")] })).toMatchObject({
+      decision: "wait",
+      reason: "dependency-not-ready",
+    });
+    expect(await resolve({ ...input, activeImplementationWorkspaceIds: new Set(["second"]) })).toMatchObject({
+      decision: "wait",
+      reason: "dependency-not-ready",
+    });
+  });
+
+  test("uses the delivered replacement PR when an old empty attempt outlives its workspace", async () => {
+    const dependency = { ...ticket("PS-1"), statusId: "done" };
+    const stale = { ...attempt("PS-1", "deleted", "old"), state: "implementing" as const, revisions: [] };
+    expect(
+      await resolve({
+        tickets: [dependency, ticket("PS-3", [dependency.id])],
+        attempts: [stale],
+        dependencyDeliveries: new Map([[dependency.id, { headSha: "recovery", mergeSha: "delivered" }]]),
+        ancestors: [["delivered", "main"]],
+      }),
+    ).toMatchObject({ decision: "ready", mode: "main", dependencyAttemptIds: [] });
+  });
+
+  test("a selected attempt without revisions waits even when another variant was delivered", async () => {
+    const dependency = { ...ticket("PS-1"), statusId: "done" };
+    expect(
+      await resolve({
+        tickets: [dependency, ticket("PS-3", [dependency.id])],
+        attempts: [{ ...attempt("PS-1", "selected", "old"), state: "implementing", revisions: [] }],
+        selections: [
+          {
+            ticketId: dependency.id,
+            workspaceId: "selected",
+            selectedAt: "2026-10-15T00:00:00Z",
+            humanRequestId: null,
+            selectedBy: { type: "human", id: "user", displayName: "User" },
+          },
+        ],
+        dependencyDeliveries: new Map([[dependency.id, { headSha: "other-variant", mergeSha: "delivered" }]]),
+        ancestors: [["delivered", "main"]],
+      }),
+    ).toEqual({ decision: "wait", reason: "dependency-not-ready", dependencyIds: [dependency.id] });
+  });
+
+  test("an older merged stack parent does not deliver a newer unmerged replacement PR", async () => {
+    const dependency = { ...ticket("PS-1"), statusId: "done" };
+    expect(
+      await resolve({
+        tickets: [dependency, ticket("PS-3", [dependency.id])],
+        attempts: [attempt("PS-1", "old", "stack-parent")],
+        dependencyDeliveries: new Map([[dependency.id, { headSha: "replacement", mergeSha: null }]]),
+        ancestors: [["stack-parent", "main"]],
+      }),
+    ).toMatchObject({ decision: "wait", reason: "dependency-not-ready", dependencyIds: [dependency.id] });
+  });
+
+  test("a replacement merge outside the selected target does not satisfy its dependency", async () => {
+    const dependency = { ...ticket("PS-1"), statusId: "done" };
+    expect(
+      await resolve({
+        tickets: [dependency, ticket("PS-3", [dependency.id])],
+        dependencyDeliveries: new Map([[dependency.id, { headSha: "replacement", mergeSha: "other-branch" }]]),
+      }),
+    ).toMatchObject({ decision: "wait", reason: "dependency-not-ready" });
+  });
+
   test("starts from main when every dependency is merged", async () => {
     const dependency = { ...ticket("PS-1"), statusId: "done" };
 

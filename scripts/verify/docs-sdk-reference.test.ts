@@ -48,6 +48,20 @@ describe("public contract", () => {
       { group: "navigation", methods: ["open"] },
     ]);
   });
+
+  test("reads groups whose type combines other types", () => {
+    const root = writeTree({
+      "client.d.ts": `
+declare const createQueries: () => { query(): Promise<string[]> };
+type SessionClient = ReturnType<typeof createQueries> & { create(): Promise<void> };
+export type PstdioClient = { sessions: SessionClient };
+`,
+    });
+
+    expect(readContractGroups(join(root, "client.d.ts"), "PstdioClient")).toEqual([
+      { group: "sessions", type: "SessionClient", methods: ["query", "create"] },
+    ]);
+  });
 });
 
 describe("reference coverage", () => {

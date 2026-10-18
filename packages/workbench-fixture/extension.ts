@@ -14,7 +14,6 @@ import { labSettings } from "./src/data/lab-settings";
 import { labHarnesses } from "./src/harnesses";
 import { labHooks } from "./src/hooks";
 import { labMiddlewares } from "./src/middlewares";
-import { labWorkflowStatuses } from "./src/renderers/lab-workflow-statuses";
 import {
   createLabUi,
   labActivityItems,
@@ -48,7 +47,6 @@ const extension = defineExtension({
   navigationItems: [...labUi.navigationItems],
   navigationTrees: labUi.navigationTrees,
   statusBarItems: labUi.statusBarItems,
-  statuses: [labWorkflowStatuses],
   activityItems: labActivityItems,
   commandPaletteResources: [
     defineCommandPaletteResource({

@@ -1,16 +1,18 @@
 import { type KanbanRendererAttributeDescriptor, l10n } from "@pstdio/sdk/extensions";
-import type { Plan } from "../contracts";
+import type { Deadline, Plan } from "../contracts";
 
-export function timelineTicketProperties(plan: Plan) {
+export function timelineTicketAttributes(deadlines: readonly Deadline[]) {
   const attributes: KanbanRendererAttributeDescriptor[] = [
     {
       id: "milestone",
       label: l10n("ticketProperties.milestone", "Milestone"),
       type: {
         kind: "enum",
-        options: plan.sections.flatMap(({ deadline }) =>
-          deadline ? [{ value: deadline.id, label: deadline.name || deadline.date, icon: "calendar" }] : [],
-        ),
+        options: deadlines.map((deadline) => ({
+          value: deadline.id,
+          label: deadline.name || deadline.date,
+          icon: "calendar",
+        })),
       },
       filterable: true,
       displayable: true,
@@ -56,6 +58,11 @@ export function timelineTicketProperties(plan: Plan) {
       displayable: true,
     },
   ];
+  return attributes;
+}
+
+export function timelineTicketProperties(plan: Plan) {
+  const attributes = timelineTicketAttributes(plan.sections.flatMap(({ deadline }) => (deadline ? [deadline] : [])));
   const values = new Map(
     plan.sections.flatMap((section) => {
       const { deadline, counts } = section;

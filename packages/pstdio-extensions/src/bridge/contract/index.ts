@@ -1,3 +1,5 @@
+import type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
+
 export const HOST_READY_EVENT = "pstdio.extension.ready";
 export const HOST_RUNTIME_ERROR_EVENT = "pstdio.extension.runtime-error";
 
@@ -6,7 +8,7 @@ export type ThemePreference = "dark" | "light";
 export type InitMessage = {
   moduleUrl: string;
   styles: string[];
-  props: unknown;
+  props: WebviewHostProps;
   theme: ThemePreference;
   themeVariables: Record<string, string>;
   /** Id of the extension that owns the view; exposed to the guest as `host.extensionId`. */
@@ -19,7 +21,7 @@ export type ThemeUpdateMessage = {
 };
 
 export type PropsUpdateMessage = {
-  props: unknown;
+  props: WebviewHostProps;
 };
 
 export type ReadyPayload = {
@@ -30,6 +32,10 @@ export type RuntimeErrorPayload = {
   message: string;
   stack?: string;
 };
+
+export type HostCapabilityReply =
+  | { ok: true; value: unknown }
+  | { ok: false; error: { code: string; message: string; data?: unknown } };
 
 export type HostCapabilityRequest = {
   method: string;
@@ -51,9 +57,10 @@ export type HostApi = {
 };
 
 export type GuestApi = {
+  dispatchKeyboardEvent: (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => Promise<void>;
   ready: (payload: ReadyPayload) => void;
   runtimeError: (payload: RuntimeErrorPayload) => void;
-  call: (request: HostCapabilityRequest) => Promise<unknown>;
+  call: (request: HostCapabilityRequest) => Promise<HostCapabilityReply>;
 };
 
 export type ExtensionViewDescriptor = {

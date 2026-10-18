@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type { FilePart, HarnessAttachment, SessionAttachment, SessionAttachmentRef } from "pstdio-api-contracts";
+import type { FilePart, HarnessAttachment, SessionAttachmentRef } from "pstdio-api-contracts";
 import { readableFilePath } from "pstdio-storage";
 import type { SessionsRouteDeps } from "./deps";
 
@@ -16,7 +16,12 @@ const submittingAttachmentFileIds = new Set<string>();
 export const sessionAttachmentContentUrl = (projectId: string, fileId: string) =>
   `/v1/projects/${encodeURIComponent(projectId)}/session-attachments/${encodeURIComponent(fileId)}/content`;
 
-export const toSessionAttachment = (projectId: string, file: FileRow): SessionAttachment => ({
+export const toSessionAttachment = (projectId: string, file: FileRow) => ({
+  fileId: file.id,
+  mimeType: file.mime_type,
+  sizeBytes: file.size_bytes,
+  createdAt: file.created_at,
+  updatedAt: file.updated_at,
   file_id: file.id,
   name: file.file_name,
   mime_type: file.mime_type,

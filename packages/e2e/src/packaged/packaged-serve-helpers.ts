@@ -14,14 +14,14 @@ export type RuntimeDescriptor = {
   protocolVersion: number;
 };
 
-export const runtimeAuthorization = (descriptor: RuntimeDescriptor) => ({
+export const runtimeAuthorization = (descriptor: Pick<RuntimeDescriptor, "token">) => ({
   authorization: `Bearer ${descriptor.token}`,
 });
 
 // Page loads never sign a browser in (ADR 0054). Sign in the way `pst` does: open a single-use
 // login link that a bearer holder created. The dashboard stores the session before checking
 // runtime readiness. Wait for that authenticated check before navigating away (ADR 0057).
-export const signInBrowser = async (page: Page, descriptor: RuntimeDescriptor) => {
+export const signInBrowser = async (page: Page, descriptor: Pick<RuntimeDescriptor, "origin" | "token">) => {
   const response = await fetch(`${descriptor.origin}/runtime/browser-login`, {
     method: "POST",
     headers: runtimeAuthorization(descriptor),

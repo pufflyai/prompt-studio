@@ -330,6 +330,13 @@
       "when": 1792262815740,
       "tag": "0046_clean_tomas",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792323433881,
+      "tag": "0047_faithful_reavers",
+      "breakpoints": true
     }
   ]
 }

@@ -90,7 +90,8 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
     connection = undefined;
     const failed = [...subscriptions.values()];
     subscriptions.clear();
-    for (const subscription of failed) subscription.onError(error);
+    const failure = new Error(error instanceof Error ? error.message : String(error), { cause: error });
+    for (const subscription of failed) subscription.onError(failure);
   };
 
   const open = () => {

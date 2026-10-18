@@ -1,17 +1,30 @@
 export type {
   BridgeWebviewConfig,
   BridgeWebviewRenderContext,
-  CreateBridgeWebviewHostCapabilities,
+  CreateBridgeWebviewHostAdapters,
   CreateBridgeWebviewProps,
   CreateBridgeWebviewTheme,
 } from "./bridge/bridge-webview-renderer";
 export { getBridgeWebviewHostEventPublisher, renderBridgeWebviewFrame } from "./bridge/bridge-webview-renderer";
+export type {
+  ExtensionWebviewFilesAdapter,
+  ExtensionWebviewHostAdapters,
+  ExtensionWebviewNotificationsAdapter,
+  ExtensionWebviewPreferencesAdapter,
+  ExtensionWebviewSettingsAdapter,
+} from "./bridge/extension-webview-host-adapters";
+export { createExtensionWebviewHostCapabilities } from "./bridge/extension-webview-host-capabilities";
 export { createTerminalSessionCapability } from "./bridge/terminal-session-capability";
+export { WebviewHostCapabilityError } from "./bridge/webview-capability-params";
 export type {
   ExtensionWebviewArtifactCapabilities,
   ExtensionWebviewFileCapabilities,
 } from "./bridge/webview-command-capabilities";
-export { createWorkbenchWebviewHostCapabilities } from "./bridge/webview-host-capabilities";
+export { withFrameSignal } from "./bridge/webview-command-streams";
+export {
+  createWorkbenchWebviewHostAdapters,
+  createWorkbenchWebviewHostCapabilities,
+} from "./bridge/webview-host-capabilities";
 export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";
 export {
   registerWorkbenchExtensionControlsRenderers,
@@ -47,6 +60,7 @@ export {
   toWorkbenchNavigationTarget,
 } from "./host/extension-navigation-target";
 export {
+  createExtensionSlot,
   executeWorkbenchExtensionCommandResponse,
   type WorkbenchExtensionCommandContext,
 } from "./host/workbench-extension-command";

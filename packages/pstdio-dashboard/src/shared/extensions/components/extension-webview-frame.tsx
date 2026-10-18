@@ -1,41 +1,33 @@
 import { Center, Text } from "@chakra-ui/react";
-import type { ResourceRef, WebviewCommandsStreamParams } from "@pstdio/sdk/extensions";
-import { getThemePreferenceMode, toaster, useThemePreference } from "@pstdio/ui";
+import type { ResourceRef } from "@pstdio/sdk/extensions";
+import { getThemePreferenceMode, useThemePreference } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
-import { createTerminalSessionCapability, createWorkbenchWebviewHostCapabilities } from "@pstdio/workbench/extensions";
+import { createExtensionWebviewHostCapabilities } from "@pstdio/workbench/extensions";
 import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
-import { apiRequest, buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
+import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { getExtensionTranslationContext, resolveLocalizableString } from "@/shared/extensions/extension-localization";
-import {
-  deleteGlobalExtensionSetting,
-  deleteProjectExtensionSetting,
-  getGlobalExtensionSetting,
-  getProjectExtensionSetting,
-  listGlobalExtensionSettings,
-  listProjectExtensionSettings,
-  updateGlobalExtensionSetting,
-  updateProjectExtensionSetting,
-} from "../api";
-import { createCommandStreamCapability, withFrameSignal } from "../command-stream-capability";
 import {
   type ExtensionCommandEvent,
   publishExtensionCommandEvent,
   subscribeToExtensionCommandFeed,
 } from "../extension-webview-broadcast";
-import { createDashboardExtensionWebviewCapabilities } from "../extension-webview-capabilities";
+import { createDashboardExtensionWebviewAdapters } from "../extension-webview-capabilities";
 import { subscribeWebviewExtensionEvents } from "../extension-webview-events";
 import { openExtensionViews } from "../open-extension-views";
 import { usePausedExtensions } from "../paused-extensions";
 import { useExecuteExtensionCommand, useProjectExtensions } from "../use-project-extensions";
 import { useWebviewPageProps } from "../use-webview-page-props";
 import { createDashboardOwnedPreferences } from "../webview-owned-preferences";
-import { executeWebviewCommand } from "./extension-webview-command";
+import {
+  createDashboardWebviewNotificationsAdapter,
+  createDashboardWebviewSettingsAdapter,
+} from "../webview-service-adapters";
+import { executeWebviewCommand, webviewCommandSlot } from "./extension-webview-command";
 import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
-import { notificationStatusRouteVerb } from "./notification-transition-route";
 import { PausedExtensionView } from "./paused-extension-view";
 
 interface ExtensionWebviewFrameProps {
@@ -49,11 +41,11 @@ interface ExtensionWebviewFrameProps {
   title?: string;
   webview?: WebviewDescriptor;
   webviewId: string;
+  slotKind?: "panel" | "settings";
   workbench?: WorkbenchCore;
 }
 
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
-
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const owner = getRuntimeCollections();
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
@@ -61,7 +53,6 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const { themePreference, themePreferences } = useThemePreference();
   const executeCommand = useExecuteExtensionCommand(projectId);
   const [hostEvents] = useState(createHostEventPublisher);
-  const [streamCommand] = useState(() => createCommandStreamCapability(hostEvents));
   const { pageLocation, pageParams } = useWebviewPageProps(props.workbench);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
   const [locale, setLocale] = useState(currentLocale);
@@ -92,156 +83,56 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const frameTitle = webview.title ? resolveLocalizableString(webview.title, extensionId) : (title ?? "Extension view");
   const translations = getExtensionTranslationContext(extensionId, locale);
 
-  const listSettings = async () => {
-    if (projectId && extensionInstanceId) return listProjectExtensionSettings(projectId, extensionInstanceId);
-    if (installName) return listGlobalExtensionSettings(installName);
-    return { settings: [] };
-  };
-
-  const readSettingValue = async (key: string) => {
-    if (projectId && extensionInstanceId)
-      return (await getProjectExtensionSetting(projectId, extensionInstanceId, key)).value;
-    if (installName) return (await getGlobalExtensionSetting(installName, key)).value;
-    throw new Error("Extension settings are unavailable without an extension owner.");
-  };
-
-  const updateSettingValue = async (key: string, value: unknown) => {
-    if (projectId && extensionInstanceId)
-      return updateProjectExtensionSetting(projectId, extensionInstanceId, key, value);
-    if (installName) return updateGlobalExtensionSetting(installName, key, value);
-    throw new Error("Extension settings are unavailable without an extension owner.");
-  };
-
-  const deleteSettingValue = async (key: string) => {
-    if (projectId && extensionInstanceId) return deleteProjectExtensionSetting(projectId, extensionInstanceId, key);
-    if (installName) return deleteGlobalExtensionSetting(installName, key);
-    throw new Error("Extension settings are unavailable without an extension owner.");
-  };
-
-  const requireProjectId = () => {
-    if (!projectId) throw new Error("Notification capabilities require a project.");
-    return projectId;
-  };
-
-  const notificationPath = (suffix = "") =>
-    `/v1/projects/${encodeURIComponent(requireProjectId())}/notifications${suffix}`;
-
-  const extensionNotificationPath = () =>
-    `/v1/projects/${encodeURIComponent(requireProjectId())}/extensions/${encodeURIComponent(extensionId)}/notifications`;
-
-  const resolveNotification = async (params: unknown) => {
-    const input = params as { id?: string; dedupeKey?: string; status?: "done" | "dismissed" | "expired" };
-    const status = input.status ?? "done";
-
-    if (input.dedupeKey) {
-      return apiRequest(notificationPath("/resolve-by-dedupe-key"), {
-        method: "POST",
-        body: { dedupeKey: input.dedupeKey, status },
-      });
-    }
-
-    if (!input.id) throw new Error("notification.resolve requires id or dedupeKey.");
-    if (status === "expired") throw new Error("notification.resolve by id does not support expired.");
-
-    return apiRequest(notificationPath(`/${encodeURIComponent(input.id)}/${notificationStatusRouteVerb(status)}`), {
-      method: "POST",
-    });
-  };
-
-  const baseCapabilities = {
-    ...(props.workbench
-      ? createWorkbenchWebviewHostCapabilities({
-          workbench: props.workbench,
-          placement: props.placement,
-          hostEvents,
-          extensionId,
-          ownedPreferences: createDashboardOwnedPreferences({
+  const capabilities = createExtensionWebviewHostCapabilities(
+    createDashboardExtensionWebviewAdapters({
+      base: {
+        hostEvents,
+        terminal,
+        executeCommand: (commandInput, signal) =>
+          executeWebviewCommand({
+            ...commandInput,
+            signal,
+            resource: commandInput.resource ?? resource ?? props.placement?.resource,
+            slot: webviewCommandSlot({ projectId, webviewId, slotKind: props.slotKind }),
+            workbench: props.workbench,
             projectId,
-            instanceId: extensionInstanceId,
-            installName,
+            executeExtensionCommand: (input) =>
+              executeCommand.mutateAsync({
+                signal,
+                commandId: input.commandId,
+                body: {
+                  metadata: input.metadata,
+                  params: input.params,
+                  workspaceId: input.workspaceId,
+                  resource: input.resource,
+                  slot: input.slot,
+                  source: "dashboard",
+                },
+              }),
           }),
-        })
-      : {}),
-    "commands.stream": (params: unknown) =>
-      streamCommand(params as WebviewCommandsStreamParams, {
-        projectId: requireProjectId(),
-        stream: (...args) => getApiClient().extensions.stream(...args),
-        publish: (response) => publishExtensionCommandEvent(response, { projectId }, owner),
-      }),
-    "commands.execute": async (params: unknown) => {
-      const commandInput = params as Parameters<typeof executeWebviewCommand>[0];
-      return withFrameSignal(hostEvents, (signal) =>
-        executeWebviewCommand({
-          ...commandInput,
-          workbench: props.workbench,
-          projectId,
-          executeExtensionCommand: (input) =>
-            executeCommand.mutateAsync({
-              signal,
-              commandId: input.commandId,
-              body: {
-                metadata: input.metadata,
-                params: input.params,
-                workspaceId: input.workspaceId,
-                resource: input.resource,
-                source: "dashboard",
-              },
-            }),
-        }),
-      );
-    },
-    "notification.show": (params: unknown) => {
-      const notification = params as {
-        level: "error" | "info" | "loading" | "success" | "warning";
-        message?: string;
-        title?: string;
-      };
-      toaster.create({ type: notification.level, title: notification.title, description: notification.message });
-    },
-    "notification.action": (params: unknown) =>
-      apiRequest(extensionNotificationPath(), {
-        method: "POST",
-        body: params,
-      }),
-    "notification.resolve": resolveNotification,
-    "notification.dismiss": (params: unknown) => {
-      const input = params as { id?: string; dedupeKey?: string };
-      return resolveNotification({ ...input, status: "dismissed" });
-    },
-    "extension.settings.all": async () => {
-      const response = await listSettings();
-      return Object.fromEntries(response.settings.map((setting) => [setting.key, setting.value]));
-    },
-    "extension.settings.get": (params: unknown) => {
-      const { key } = params as { key: string };
-      return readSettingValue(key);
-    },
-    "extension.settings.set": async (params: unknown) => {
-      const { key, value } = params as { key: string; value: unknown };
-      await updateSettingValue(key, value);
-    },
-    "extension.settings.delete": async (params: unknown) => {
-      const { key } = params as { key: string };
-      await deleteSettingValue(key);
-    },
-    "host.dispatchKeyboardEvent": (params: unknown) => {
-      const event = new KeyboardEvent("keydown", {
-        ...(params as KeyboardEventInit),
-        bubbles: true,
-        cancelable: true,
-      });
-      document.dispatchEvent(event);
-    },
-    ...(terminal ? { "terminal.session": createTerminalSessionCapability({ terminal, hostEvents }) } : {}),
-  };
-  const capabilities = createDashboardExtensionWebviewCapabilities({
-    base: baseCapabilities,
-    extensionId,
-    extensionInstanceId,
-    projectId,
-    webviewId,
-    workbench: props.workbench,
-  });
+        streamCommand: projectId
+          ? (input, signal) => {
+              const { commandId, ...body } = input;
+              return getApiClient().extensions.stream(
+                commandId,
+                { ...body, projectId, source: "dashboard" },
+                { signal },
+              );
+            }
+          : undefined,
+        commandCompleted: (response) => publishExtensionCommandEvent(response, { projectId }, owner),
+        settings: createDashboardWebviewSettingsAdapter({ projectId, extensionInstanceId, installName }),
+        notifications: createDashboardWebviewNotificationsAdapter({ projectId, extensionId }),
+      },
+      extensionId,
+      extensionInstanceId,
+      projectId,
+      webviewId,
+      workbench: props.workbench,
+      placement: props.placement,
+      ownedPreferences: createDashboardOwnedPreferences({ projectId, instanceId: extensionInstanceId, installName }),
+    }),
+  );
 
   if (!webview.runtimeUrl || !webview.moduleUrl) {
     if (!webview.assetUrl) {

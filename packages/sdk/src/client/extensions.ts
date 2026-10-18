@@ -1,6 +1,8 @@
 import type {
+  CommandExecuteBody,
   CommandExecuteRequest,
   CommandExecuteResponse,
+  CommandExecutionResult,
   ConfigureExtensionConnectionInput,
   DispatchExtensionEventInput,
   EnableInstalledExtensionRequest,
@@ -9,54 +11,72 @@ import type {
   ExtensionDiagnosticsResponse,
   InstallExtensionRequest,
   InstallExtensionResponse,
+  JsonValue,
   ListExtensionAppearanceResponse,
   ListExtensionCommandsResponse,
   ListExtensionConnectionsResponse,
   ListProjectExtensionsResponse,
   UpgradeProjectExtensionResponse,
 } from "pstdio-api-contracts";
-import { type CommandStreamClientEvent, streamExtensionCommand } from "./extension-stream";
+import type { CommandStream } from "../extensions/command-stream";
+import { createExtensionControlsClient } from "./extension-controls";
+import { createExtensionManagementClient } from "./extension-management";
+import { type CommandStreamClientEvent, openExtensionCommandStream, streamExtensionCommand } from "./extension-stream";
 import type { RequestFn } from "./request";
 import type { createSessionStreamTransport } from "./session-stream";
 
-export type ExtensionClient = {
-  install(
-    projectId: string,
-    input: InstallExtensionRequest | { upload: FormData },
-    options?: { signal?: AbortSignal },
-  ): Promise<InstallExtensionResponse>;
-  diagnostics(projectId: string, options?: { scope?: "user" | "repo" }): Promise<ExtensionDiagnosticsResponse>;
-  stream(
-    commandId: string,
-    input: CommandExecuteRequest,
-    options?: { signal?: AbortSignal },
-  ): AsyncIterable<CommandStreamClientEvent>;
-  enableInstalled(
-    projectId: string,
-    installName: string,
-    request: EnableInstalledExtensionRequest,
-  ): Promise<EnableInstalledExtensionResponse>;
-  listAppearance(projectId: string): Promise<ListExtensionAppearanceResponse>;
-  listCommands(projectId: string): Promise<ListExtensionCommandsResponse>;
-  listProject(projectId: string): Promise<ListProjectExtensionsResponse>;
-  upgradeProject(projectId: string, instanceId: string): Promise<UpgradeProjectExtensionResponse>;
-  listConnections(projectId: string): Promise<ListExtensionConnectionsResponse>;
-  configureConnection(
-    projectId: string,
-    extensionId: string,
-    connectionId: string,
-    input: ConfigureExtensionConnectionInput,
-  ): Promise<ExtensionConnectionRecord>;
-  checkConnection(projectId: string, extensionId: string, connectionId: string): Promise<ExtensionConnectionRecord>;
-  deleteConnection(projectId: string, extensionId: string, connectionId: string): Promise<void>;
-  execute(commandId: string, request: CommandExecuteRequest): Promise<CommandExecuteResponse>;
-  dispatchEvent(projectId: string, input: DispatchExtensionEventInput): Promise<void>;
-};
+export type ExtensionClient = ReturnType<typeof createExtensionControlsClient> &
+  ReturnType<typeof createExtensionManagementClient> & {
+    install(
+      projectId: string,
+      input: InstallExtensionRequest | { upload: FormData },
+      options?: { signal?: AbortSignal },
+    ): Promise<InstallExtensionResponse>;
+    diagnostics(projectId: string, options?: { scope?: "user" | "repo" }): Promise<ExtensionDiagnosticsResponse>;
+    streamCommand(
+      projectId: string,
+      commandId: string,
+      input?: CommandExecuteBody,
+      options?: { signal?: AbortSignal },
+    ): CommandStream<JsonValue>;
+    /** @deprecated Use streamCommand for chunks and a complete final outcome. */
+    stream(
+      commandId: string,
+      input: CommandExecuteRequest,
+      options?: { signal?: AbortSignal },
+    ): AsyncIterable<CommandStreamClientEvent>;
+    enableInstalled(
+      projectId: string,
+      installName: string,
+      request: EnableInstalledExtensionRequest,
+    ): Promise<EnableInstalledExtensionResponse>;
+    listAppearance(projectId: string): Promise<ListExtensionAppearanceResponse>;
+    listCommands(projectId: string): Promise<ListExtensionCommandsResponse>;
+    listProject(projectId: string): Promise<ListProjectExtensionsResponse>;
+    upgradeProject(projectId: string, instanceId: string): Promise<UpgradeProjectExtensionResponse>;
+    listConnections(projectId: string): Promise<ListExtensionConnectionsResponse>;
+    configureConnection(
+      projectId: string,
+      extensionId: string,
+      connectionId: string,
+      input: ConfigureExtensionConnectionInput,
+    ): Promise<ExtensionConnectionRecord>;
+    checkConnection(projectId: string, extensionId: string, connectionId: string): Promise<ExtensionConnectionRecord>;
+    deleteConnection(projectId: string, extensionId: string, connectionId: string): Promise<void>;
+    execute(
+      commandId: string,
+      request: CommandExecuteRequest,
+      options?: { signal?: AbortSignal },
+    ): Promise<CommandExecutionResult & CommandExecuteResponse>;
+    dispatchEvent(projectId: string, input: DispatchExtensionEventInput): Promise<void>;
+  };
 
 export const createExtensionClient = (
   request: RequestFn,
   streams: ReturnType<typeof createSessionStreamTransport>,
 ): ExtensionClient => ({
+  ...createExtensionControlsClient(request),
+  ...createExtensionManagementClient(request),
   install: (projectId, input, options) =>
     request(`/v1/projects/${projectId}/extensions/install`, {
       method: "POST",
@@ -66,6 +86,8 @@ export const createExtensionClient = (
   diagnostics: (projectId, options) =>
     request(`/v1/projects/${projectId}/extensions/diagnostics${options?.scope ? `?scope=${options.scope}` : ""}`),
   stream: (commandId, input, options) => streamExtensionCommand(streams, commandId, input, options),
+  streamCommand: (projectId, commandId, input, options) =>
+    openExtensionCommandStream(streams, projectId, commandId, input, options),
   enableInstalled: (projectId, installName, body) =>
     request(`/v1/projects/${projectId}/extensions/installed/${encodeURIComponent(installName)}/enable`, {
       method: "POST",
@@ -92,11 +114,12 @@ export const createExtensionClient = (
       `/v1/projects/${projectId}/extension-connections/${encodeURIComponent(extensionId)}/${encodeURIComponent(connectionId)}`,
       { method: "DELETE" },
     ),
-  execute: (commandId, input) => {
+  execute: (commandId, input, options) => {
     const { projectId, ...body } = input;
     return request(`/v1/projects/${projectId}/extensions/commands/${encodeURIComponent(commandId)}/execute`, {
       method: "POST",
       body,
+      signal: options?.signal,
     });
   },
   dispatchEvent: (projectId, body) =>

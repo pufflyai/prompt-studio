@@ -1,6 +1,7 @@
 // Read a value through a command, read it again whenever one of the given events fires, and retry after a failure.
 import type { EventRef } from "@pstdio/sdk/extensions";
 import { useEffect, useState } from "react";
+import { createLiveRead } from "./live-read";
 import type { PlanClient } from "./use-plan";
 
 // A failed read, for example while Planner restarts, is retried after this delay until it succeeds.
@@ -14,33 +15,26 @@ export function useLiveValue<T, Client extends Pick<PlanClient, "events">>(
   resourceId?: string,
 ) {
   const [value, setValue] = useState<T>();
-  const [error, setError] = useState<string>();
   useEffect(() => {
-    let active = true;
-    let request = 0;
     let retry: ReturnType<typeof setTimeout> | undefined;
+    const reader = createLiveRead(() => read(client, resourceId), {
+      onValue: (next) => {
+        setValue(next);
+      },
+      onError: () => {
+        retry = setTimeout(() => void refresh(), retryDelayMs);
+      },
+    });
     const refresh = async () => {
-      const serial = ++request;
       clearTimeout(retry);
-      try {
-        const next = await read(client, resourceId);
-        if (active && serial === request) {
-          setValue(next);
-          setError(undefined);
-        }
-      } catch (reason) {
-        if (active && serial === request) {
-          setError(String(reason));
-          retry = setTimeout(() => void refresh(), retryDelayMs);
-        }
-      }
+      await reader.refresh();
     };
 
     // Subscribe before the first read so a change during that read is not missed.
     const unsubscribe = events.map((event) => client.events.subscribe(event, () => void refresh()));
     void refresh();
     return () => {
-      active = false;
+      reader.dispose();
       clearTimeout(retry);
       for (const stop of unsubscribe) {
         stop();
@@ -48,5 +42,5 @@ export function useLiveValue<T, Client extends Pick<PlanClient, "events">>(
     };
   }, [client, read, events, resourceId]);
 
-  return { value, setValue, error };
+  return { value, setValue };
 }

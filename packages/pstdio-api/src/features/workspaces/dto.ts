@@ -1,8 +1,11 @@
 import { z } from "@hono/zod-openapi";
 import {
   createWorkspaceInputSchema,
+  extensionWorkspaceCreateInputSchema,
+  extensionWorkspaceFields,
   moveWorkspaceEntryInputSchema,
   renameWorkspaceInputSchema,
+  workspaceEntryMoveInputSchema,
   workspaceFileContentSchema,
   workspaceFileEntrySchema,
   workspaceFilesResponseSchema,
@@ -11,9 +14,18 @@ import {
   writeWorkspaceFileInputSchema,
 } from "pstdio-api-contracts";
 
-export const workspaceResponseSchema = workspaceSchema;
-export { workspaceListItemSchema };
-export const createWorkspaceBodySchema = createWorkspaceInputSchema.strict();
+export const workspaceResponseSchema = workspaceSchema.extend(extensionWorkspaceFields);
+export const workspaceListItemResponseSchema = workspaceListItemSchema.extend(extensionWorkspaceFields);
+export const createWorkspaceBodySchema = z.union([
+  createWorkspaceInputSchema.strict(),
+  extensionWorkspaceCreateInputSchema.strict().transform((input) => ({
+    project_id: input.projectId,
+    provider_id: input.providerId,
+    shorthand_base: input.shorthandBase,
+    params: input.params,
+    anchors: input.anchors,
+  })),
+]);
 export const renameWorkspaceBodySchema = renameWorkspaceInputSchema.strict();
 export const listWorkspaceFilesQuerySchema = z
   .object({
@@ -24,7 +36,10 @@ export const listWorkspaceFilesQuerySchema = z
   .strict();
 export const workspaceFilePathQuerySchema = z.object({ path: z.string().min(1) }).strict();
 export const writeWorkspaceFileBodySchema = writeWorkspaceFileInputSchema.strict();
-export const moveWorkspaceEntryBodySchema = moveWorkspaceEntryInputSchema.strict();
+export const moveWorkspaceEntryBodySchema = z.union([
+  moveWorkspaceEntryInputSchema.strict(),
+  workspaceEntryMoveInputSchema.strict().transform(({ destinationPath }) => ({ destination_path: destinationPath })),
+]);
 export { workspaceFileContentSchema, workspaceFileEntrySchema, workspaceFilesResponseSchema };
 
 export const uploadStartupLogBodySchema = z.object({ content_base64: z.string() }).strict();

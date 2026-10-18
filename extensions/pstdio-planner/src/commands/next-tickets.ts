@@ -2,10 +2,12 @@ import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensio
 import { filterRowsByView } from "@pstdio/ui/collection-view";
 import { findPendingPrerequisites } from "../data/attempt-readiness";
 import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
+import type { AttemptRecord, TicketAttemptSelection } from "../data/attempt-types";
 import { usableAutoBuildIgnore } from "../data/auto-build-ignore";
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
+import type { DependencyDeliveryReads } from "../data/dependency-deliveries";
 import { resolveImplementationBase } from "../data/implementation-targets";
 import { readTicketReviewRequests } from "../data/review-request-storage";
 import { readPlanCommand } from "../timeline/commands/read-plan";
@@ -18,11 +20,56 @@ import { type NextTicketQuery, selectNextTicketRows, selectNextTicketScopeRows }
 import type { NextTicket, WaitingTicket } from "./next-ticket-types";
 import { nextTicketWait } from "./next-ticket-wait";
 import { nextWorkSnapshot } from "./next-work-snapshot";
+import { readRecoveryBase, readRecoverySeed } from "./workspace-recovery";
+
+async function appendStackRepair(
+  ctx: CommandContext,
+  summary: Pick<NextTicket, "id" | "ticket" | "title">,
+  attempts: AttemptRecord[],
+  selections: TicketAttemptSelection[],
+  next: NextTicket[],
+  waiting: WaitingTicket[],
+  mode: AutoBuildMode,
+  deliveryReads: DependencyDeliveryReads,
+  base?: string,
+) {
+  const repair = await readSelectedStackRepair(ctx, summary.id, attempts, selections);
+  if (!repair) return false;
+  if ("unavailableWorkspaceId" in repair) {
+    const recoveryBase = await readRecoveryBase(ctx, repair.attempt, base);
+    const { readiness } = await loadAttemptReadiness(
+      ctx,
+      summary.id,
+      { base: recoveryBase, dependencyReview: mode.blockOnReview ? "approved" : "submitted" },
+      deliveryReads,
+    );
+    if (readiness.decision === "wait")
+      waiting.push({ ...summary, reason: readiness.reason, dependencyIds: readiness.dependencyIds });
+    else
+      next.push({
+        ...summary,
+        action: "recover-workspace",
+        recoveryBaseSha: recoveryBase,
+        workspaceId: repair.unavailableWorkspaceId,
+        baseHeadSha: readiness.baseHeadSha,
+        recoveryHeadSha: await readRecoverySeed(ctx, repair.attempt, readiness.baseHeadSha),
+        detail: repair.detail,
+      });
+  } else {
+    next.push({
+      ...summary,
+      action: "update-stack",
+      workspaceId: repair.workspaceId,
+      baseHeadSha: repair.base.headSha,
+    });
+  }
+  return true;
+}
 
 export async function readNextTickets(
   ctx: CommandContext,
   mode: AutoBuildMode,
-  input: NextTicketQuery = {},
+  input: NextTicketQuery & { base?: string } = {},
   scope?: NextTicketQuery[],
 ) {
   const [plan, attempts, tickets, resumptions, capacity, assignments, requests] = await Promise.all([
@@ -54,7 +101,9 @@ export async function readNextTickets(
   );
   const next: NextTicket[] = [];
   const waiting: WaitingTicket[] = [];
-  let base: string | undefined;
+  // Share GitHub reads within this query; dispatch rechecks create a fresh query.
+  const deliveryReads: DependencyDeliveryReads = new Map();
+  let base = input.base;
   for (const row of selected) {
     const summary = { id: row.id, ticket: row.shorthand, title: row.title };
     const pending = findPendingPrerequisites(byRef.get(row.id)!, byRef, requests);
@@ -65,27 +114,25 @@ export async function readNextTickets(
       resumable: resumptions.has(row.id),
       capacity,
     });
-    if (canOfferStackRepair(wait?.reason, resumptions.has(row.id), capacity)) {
-      const repair = await readSelectedStackRepair(ctx, row.id, attempts, selections);
-      if (repair) {
-        next.push({
-          ...summary,
-          action: "update-stack",
-          workspaceId: repair.workspaceId,
-          baseHeadSha: repair.base.headSha,
-        });
-        continue;
-      }
-    }
+    if (
+      canOfferStackRepair(wait?.reason, resumptions.has(row.id), capacity) &&
+      (await appendStackRepair(ctx, summary, attempts, selections, next, waiting, mode, deliveryReads, input.base))
+    )
+      continue;
     if (wait) {
       waiting.push({ ...summary, ...wait });
       continue;
     }
-    base ??= await resolveImplementationBase(ctx, await ctx.settings.all());
-    const { readiness } = await loadAttemptReadiness(ctx, row.id, {
-      base,
-      dependencyReview: mode.blockOnReview ? "approved" : "submitted",
-    });
+    const resumption = resumptions.get(row.id);
+    const recordedBase =
+      resumption && attempts.find(({ workspaceId }) => workspaceId === resumption.workspaceId)?.base.headSha;
+    if (!recordedBase) base ??= await resolveImplementationBase(ctx, await ctx.settings.all());
+    const { readiness } = await loadAttemptReadiness(
+      ctx,
+      row.id,
+      { base: recordedBase ?? base, dependencyReview: mode.blockOnReview ? "approved" : "submitted" },
+      deliveryReads,
+    );
     if (readiness.decision === "wait") {
       waiting.push({ ...summary, reason: readiness.reason, dependencyIds: readiness.dependencyIds });
     } else if (resumptions.has(row.id)) {
@@ -114,7 +161,13 @@ export const nextTicketsCommand = defineCommand({
     description: "Query launchable tickets and waiting reasons using current Auto Build rules.",
     examples: ["pst tickets next --track Workbench", "pst tickets next --status Todo --tags High"],
   },
-  params: { track: params.text(), status: params.text(), tags: params.list(), parent: params.text() },
+  params: {
+    track: params.text(),
+    status: params.text(),
+    tags: params.list(),
+    parent: params.text(),
+    base: params.text({ label: "Root target branch" }),
+  },
   async run(ctx, input) {
     const mode = await readAutoBuildMode(ctx);
     const { tickets, waiting, capacity } = await readNextTickets(ctx, mode, input);

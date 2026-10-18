@@ -1,4 +1,5 @@
-import type { HostCapabilityRegistry, ThemePreference } from "pstdio-extensions/bridge/contract";
+import type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
+import type { ThemePreference } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher, type HostEventPublisher } from "pstdio-extensions/bridge/host";
 import type {
   WorkbenchCore,
@@ -7,7 +8,9 @@ import type {
   WorkbenchRendererRegistration,
 } from "../../core";
 import { BridgeWebviewFrame } from "./bridge-webview-frame";
-import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
+import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
+import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
+import { createWorkbenchWebviewHostAdapters } from "./webview-host-capabilities";
 
 export interface BridgeWebviewRenderContext {
   workbench: WorkbenchCore;
@@ -18,17 +21,18 @@ export interface BridgeWebviewRenderContext {
   hostEvents: HostEventPublisher;
 }
 
-// How guest capability calls reach the host. Hosts inject this to swap the workbench-native
-// wiring for their own — e.g. the dashboard routes `commands.execute` through its REST API.
-export type CreateBridgeWebviewHostCapabilities = (context: BridgeWebviewRenderContext) => HostCapabilityRegistry;
+// Hosts supply services. The shared factory owns capability routing, validation and results.
+export type CreateBridgeWebviewHostAdapters = (context: BridgeWebviewRenderContext) => ExtensionWebviewHostAdapters;
 
 // What the host pushes into the guest's props store. Hosts inject this to forward dynamic
 // data — e.g. the dashboard forwards extension command outcomes and theme preference.
-export type CreateBridgeWebviewProps = (context: BridgeWebviewRenderContext) => unknown;
+export type CreateBridgeWebviewProps = (
+  context: BridgeWebviewRenderContext,
+) => Partial<WebviewHostProps> & Record<string, unknown>;
 export type CreateBridgeWebviewTheme = (context: BridgeWebviewRenderContext) => ThemePreference;
 
 interface CreateBridgeWebviewRendererInput {
-  createHostCapabilities?: CreateBridgeWebviewHostCapabilities;
+  createHostAdapters?: CreateBridgeWebviewHostAdapters;
   createProps?: CreateBridgeWebviewProps;
   createTheme?: CreateBridgeWebviewTheme;
 }
@@ -77,22 +81,14 @@ export const getBridgeWebviewHostEventPublisher = (workbench: WorkbenchCore, ins
 
 export const renderBridgeWebviewFrame = (input: {
   context: BridgeWebviewRenderContext;
-  createHostCapabilities: CreateBridgeWebviewHostCapabilities;
+  createHostAdapters: CreateBridgeWebviewHostAdapters;
   createProps: CreateBridgeWebviewProps;
   createTheme?: CreateBridgeWebviewTheme;
   ownerId?: string;
   title: string;
   webview: BridgeWebviewConfig;
 }) => {
-  const {
-    context,
-    createHostCapabilities,
-    createProps,
-    createTheme = createLightTheme,
-    ownerId,
-    title,
-    webview,
-  } = input;
+  const { context, createHostAdapters, createProps, createTheme = createLightTheme, ownerId, title, webview } = input;
   return (
     <BridgeWebviewFrame
       view={{
@@ -109,7 +105,9 @@ export const renderBridgeWebviewFrame = (input: {
       props={createProps(context)}
       workbench={context.workbench}
       theme={createTheme(context)}
-      capabilities={createHostCapabilities({ ...context, extensionId: ownerId ?? context.extensionId })}
+      capabilities={createExtensionWebviewHostCapabilities(
+        createHostAdapters({ ...context, extensionId: ownerId ?? context.extensionId }),
+      )}
       hostEvents={context.hostEvents}
     />
   );
@@ -117,7 +115,7 @@ export const renderBridgeWebviewFrame = (input: {
 
 const renderBridgeWebview = (
   input: WorkbenchPanelRenderInput,
-  createHostCapabilities: CreateBridgeWebviewHostCapabilities,
+  createHostAdapters: CreateBridgeWebviewHostAdapters,
   createProps: CreateBridgeWebviewProps,
   createTheme: CreateBridgeWebviewTheme,
 ) => {
@@ -132,7 +130,7 @@ const renderBridgeWebview = (
       placement: instance,
       hostEvents: getBridgeWebviewHostEventPublisher(workbench, instance),
     },
-    createHostCapabilities,
+    createHostAdapters,
     createProps,
     createTheme,
     ownerId: "ownerId" in panel ? panel.ownerId : undefined,
@@ -142,12 +140,12 @@ const renderBridgeWebview = (
 };
 
 export const createBridgeWebviewRenderer = (input: CreateBridgeWebviewRendererInput = {}) => {
-  const createHostCapabilities = input.createHostCapabilities ?? createWorkbenchWebviewHostCapabilities;
+  const createHostAdapters = input.createHostAdapters ?? createWorkbenchWebviewHostAdapters;
   const createProps = input.createProps ?? createPlacementProps;
   const createTheme = input.createTheme ?? createLightTheme;
 
   return {
     id: BRIDGE_WEBVIEW_RENDERER_ID,
-    render: (renderInput) => renderBridgeWebview(renderInput, createHostCapabilities, createProps, createTheme),
+    render: (renderInput) => renderBridgeWebview(renderInput, createHostAdapters, createProps, createTheme),
   } satisfies WorkbenchRendererRegistration;
 };

@@ -46,9 +46,9 @@ test("close requires a declaration and rejects a caller-supplied placement ident
   const undeclared = createHostCapabilityGate({ capabilities });
   await expect(undeclared.call({ method: "placement.close" })).rejects.toThrow("did not declare");
   const declared = createHostCapabilityGate({ capabilities, declaredCapabilities: ["placement.close"] });
-  await expect(declared.call({ method: "placement.close", params: { placementId: "inspector" } })).rejects.toThrow(
-    "takes no parameters",
-  );
+  await expect(
+    declared.call({ method: "placement.close", params: { placementId: "inspector" } }),
+  ).rejects.toMatchObject({ code: "invalid_params" });
   expect(workbench.pages.store.getState()).toBe(before);
 });
 

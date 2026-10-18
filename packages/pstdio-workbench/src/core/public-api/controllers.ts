@@ -1,4 +1,4 @@
-export { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
+export { defaultPageResourceCodec } from "pstdio-api-contracts";
 export type {
   WorkbenchBreadcrumbChangeListener,
   WorkbenchBreadcrumbController,

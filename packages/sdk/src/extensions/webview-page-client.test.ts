@@ -9,7 +9,7 @@ test("webview page client reads live host props and forwards param updates", asy
   const listeners = new Set<(value: typeof props) => void>();
   const calls: unknown[] = [];
   let observed = 0;
-  const view = defineExtensionView({
+  const view = defineExtensionView<typeof props>({
     render: async ({ page }) => {
       expect(page.location()).toEqual(props.pageLocation);
       expect(page.params()).toEqual(props.pageParams);

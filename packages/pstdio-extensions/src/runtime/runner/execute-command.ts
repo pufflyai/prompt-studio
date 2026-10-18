@@ -153,9 +153,7 @@ const runExtensionCommand = async (
       {
         ok: false,
         status: "rejected",
-        code: middlewareResult.rejection.code,
-        reason: middlewareResult.rejection.reason,
-        data: middlewareResult.rejection.data,
+        ...middlewareResult.rejection,
       },
       notices,
     );

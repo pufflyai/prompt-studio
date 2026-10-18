@@ -8,6 +8,7 @@ import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
 import { reconcileAttemptCommand } from "./reconcile-attempt";
 import { runReviewCommand } from "./run-review";
+import { sessionQuery } from "./session-query.fixture";
 
 const baseAttempt = (state: AttemptRecord["state"]): AttemptRecord => ({
   schemaVersion: 1,
@@ -180,13 +181,16 @@ describe("reconcileAttemptCommand", () => {
       failNextAttemptPut = true;
       return session;
     };
-    fixture.ctx.sessions.listByWorkspace = async () =>
-      fixture.sessions.map((input, index) => ({
-        id: `review-retry-${index + 1}`,
-        title: "Retry",
-        status: "in_progress" as const,
-        anchors_json: (input as { anchors?: [] }).anchors ?? [],
-      }));
+    fixture.ctx.sessions.query = sessionQuery(
+      async () => [],
+      async () =>
+        fixture.sessions.map((input, index) => ({
+          id: `review-retry-${index + 1}`,
+          title: "Retry",
+          status: "in_progress" as const,
+          anchors_json: (input as { anchors?: [] }).anchors ?? [],
+        })),
+    );
 
     await expect(reconcileAttemptCommand.run(fixture.ctx, commandParamsFor(fixture.ctx))).rejects.toThrow(
       "transient attempt persistence failure",

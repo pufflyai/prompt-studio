@@ -1,7 +1,16 @@
 import { expect } from "bun:test";
+import { rename } from "node:fs/promises";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { runTestCommand } from "../scripts/run-test-command";
+
+const git = async (path: string, ...args: string[]) => {
+  const started = Date.now();
+  const { stdout } = await runTestCommand("git", ["-C", path, ...args], {});
+  logTestPhase(`Planner stack git ${args[0]} (${Date.now() - started}ms)`);
+  return stdout.trim();
+};
 
 export async function expectPackagedDependencyStacks(input: { baseUrl: string; headers: Record<string, string> }) {
   await expectDependencyStack(input, false);
@@ -9,13 +18,20 @@ export async function expectPackagedDependencyStacks(input: { baseUrl: string; h
 }
 
 async function expectDependencyStack(input: { baseUrl: string; headers: Record<string, string> }, conflict: boolean) {
+  const scenario = conflict ? "conflict" : "normal";
+  const scenarioStarted = Date.now();
+  logTestPhase(`Planner stack ${scenario}: start`);
   const request = async (path: string, method = "GET", body?: unknown) => {
+    const requested = Date.now();
     const response = await fetch(`${input.baseUrl}/v1${path}`, {
       method,
       headers: { ...input.headers, "content-type": "application/json" },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     const bodyText = await response.text();
+    logTestPhase(
+      `Planner stack ${scenario}: ${method} ${path.split("/").at(-2)} (${Date.now() - requested}ms; total ${Date.now() - scenarioStarted}ms)`,
+    );
     expect(response.ok, `${method} ${path}: ${response.status} ${bodyText}`).toBe(true);
     return JSON.parse(bodyText);
   };
@@ -24,10 +40,6 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
     agents: ["pstdio.workbench-fixture.harness.fake"],
   });
   const folder = projectInput.initial_workspace.params.path;
-  const git = async (path: string, ...args: string[]) => {
-    const { stdout } = await runTestCommand("git", ["-C", path, ...args], {});
-    return stdout.trim();
-  };
   await runTestCommand("git", ["init", "-b", "main", folder], {});
   await git(folder, "config", "user.name", "Stack smoke");
   await git(folder, "config", "user.email", "smoke@example.invalid");
@@ -152,4 +164,81 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
     (await execute("list-attempts")).filter((attempt: { ticketId: string }) => attempt.ticketId === child.id),
   ).toHaveLength(1);
   expect((await execute("review-requests.list", { ticket: child.id })).requests).toHaveLength(0);
+  return { execute, request, project, folder, original, started, updated, stop, child };
+}
+
+export async function expectPackagedWorkspaceRecovery(input: { baseUrl: string; headers: Record<string, string> }) {
+  const { execute, request, project, started, updated, stop, child } = await expectDependencyStack(input, false);
+  const ready = await execute("create-ticket", {
+    content: "# Work independent of the missing workspace",
+    status: "Todo",
+  });
+  const path = started.workspace.root_path;
+  const recoveryMode = await execute("auto-build.configure", {
+    enabled: true,
+    prompt: "Recover the missing workspace.",
+  });
+  await rename(path, `${path}.missing`);
+  try {
+    const next = await execute("next-tickets");
+    expect(next.tickets).toContainEqual(expect.objectContaining({ id: ready.id, action: "start" }));
+    expect(next.tickets).toContainEqual(expect.objectContaining({ id: child.id, action: "recover-workspace" }));
+    const recovery = await execute("auto-build.dispatch", { ticket: child.id, revision: recoveryMode.revision });
+    expect(recovery.decision).toBe("started");
+    expect(recovery.workspaceId).not.toBe(started.workspace.id);
+    await stop(recovery.sessionId);
+    const recoveredWorkspace = (await request(`/workspaces?project_id=${project.id}`)).find(
+      (workspace: { id: string }) => workspace.id === recovery.workspaceId,
+    );
+    expect(recoveredWorkspace).toBeDefined();
+    expect(await git(recoveredWorkspace.root_path, "show", "HEAD:child.ts")).toContain("true");
+    expect((await execute("read-attempt-history", { workspaceId: started.workspace.id })).attempt.state).toBe(
+      "abandoned",
+    );
+    await execute("update-ticket", { id: child.id, status: "Done" });
+    const params = { content: "# Wait for the selected recovery revision", status: "Todo", dependsOn: [child.id] };
+    const dependent = await execute("create-ticket", params);
+    expect(await execute("attempt-readiness", { ticket: dependent.id, base: updated.headSha })).toMatchObject({
+      decision: "wait",
+      reason: "dependency-not-ready",
+    });
+  } finally {
+    await rename(`${path}.missing`, path);
+    await execute("auto-build.configure", { enabled: false });
+  }
+}
+
+export async function expectPackagedDraftAdoption(input: { baseUrl: string; headers: Record<string, string> }) {
+  const { execute, folder, original, updated, stop } = await expectDependencyStack(input, false);
+  await git(folder, "branch", "feature/acceptance", updated.headSha);
+  const draftTicket = await execute("create-ticket", { content: "# Continue a feature draft", status: "Todo" });
+  const draft = await execute("create-workspace", {
+    ticket: draftTicket.id,
+    provider_id: "pstdio.worktree",
+    params: { base: original },
+  });
+  const draftPath = draft.workspace.root_path;
+  const draftHead = await git(draftPath, "rev-parse", "HEAD");
+  await Bun.write(join(draftPath, "draft.ts"), "export const preserved = true;\n");
+  await git(draftPath, "add", "draft.ts");
+  const status = await git(draftPath, "status", "--porcelain");
+  const mode = await execute("auto-build.configure", { enabled: true, prompt: "Continue the feature draft." });
+  try {
+    const feature = await execute("next-tickets", { base: "feature/acceptance" });
+    expect(feature.tickets).toContainEqual(
+      expect.objectContaining({ id: draftTicket.id, baseHeadSha: updated.headSha }),
+    );
+    const adopted = await execute("auto-build.dispatch", {
+      ticket: draftTicket.id,
+      revision: mode.revision,
+      base: "feature/acceptance",
+      workspaceId: draft.workspace.id,
+    });
+    expect(adopted).toMatchObject({ decision: "started", workspaceId: draft.workspace.id });
+    await stop(adopted.sessionId);
+    expect(await git(draftPath, "rev-parse", "HEAD")).toBe(draftHead);
+    expect(await git(draftPath, "status", "--porcelain")).toBe(status);
+  } finally {
+    await execute("auto-build.configure", { enabled: false });
+  }
 }

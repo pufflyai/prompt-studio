@@ -12,6 +12,7 @@ import {
   putHarnessParamDefaultsRoute,
 } from "./endpoints/harness-param-defaults";
 import { listProjectsHandler, listProjectsRoute } from "./endpoints/list-projects";
+import { queryProjectsHandler, queryProjectsRoute } from "./endpoints/query-projects";
 import { removeProjectHandler, removeProjectRoute } from "./endpoints/remove-project";
 import { retryProjectSetupHandler, retryProjectSetupRoute } from "./endpoints/retry-project-setup";
 import { updateProjectHandler, updateProjectRoute } from "./endpoints/update-project";
@@ -19,6 +20,7 @@ import { updateProjectHandler, updateProjectRoute } from "./endpoints/update-pro
 export const createProjectRoutes = (deps: ProjectsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
+  routes.openapi(queryProjectsRoute, queryProjectsHandler(deps));
   routes.openapi(listProjectsRoute, listProjectsHandler(deps));
   routes.openapi(bindEnvironmentRoute, bindEnvironmentHandler(deps));
   routes.openapi(attachWorkspaceRoute, attachWorkspaceHandler(deps));

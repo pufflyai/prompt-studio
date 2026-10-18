@@ -3,6 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import { createClient } from "@pstdio/sdk/client";
+import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
@@ -133,6 +135,39 @@ afterEach(async () => {
 });
 
 describe("extension settings endpoints", () => {
+  test("typed webview deletion restores the project fallback without a stored null", async () => {
+    const api = createClient({
+      baseUrl: "http://localhost",
+      fetch: ((url: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+        app.request(url, init)) as unknown as typeof fetch,
+    });
+    const settings = { properties: { "counter.step": { type: "number", scope: "project", default: 1 } } } as const;
+    const host = {
+      extensionId: "pstdio.settings-lab",
+      async call(method: string, input: { key: string; value?: unknown }) {
+        if (method === "extension.settings.get")
+          return (await api.extensions.projectSettings.get(projectId, instanceId, input.key)).value;
+        if (method === "extension.settings.set")
+          return api.extensions.projectSettings.set(projectId, instanceId, input.key, input.value);
+        if (method === "extension.settings.delete")
+          return api.extensions.projectSettings.delete(projectId, instanceId, input.key);
+        throw new Error(`Unsupported test capability: ${method}`);
+      },
+    } as unknown as GuestHost;
+    const client = createWebviewClient<Record<string, never>, typeof settings>(host);
+    expect(await client.settings.set("counter.step", 5)).toBe(5);
+    expect(await client.settings.get("counter.step")).toBe(5);
+    await client.settings.delete("counter.step");
+    expect(await client.settings.get("counter.step")).toBe(1);
+    expect(await api.extensions.projectSettings.get(projectId, instanceId, "counter.step")).toMatchObject({
+      value: 1,
+      source: "default",
+    });
+    await client.settings.set("counter.step", 8);
+    await host.call("extension.settings.delete", { key: "counter.step" });
+    expect(await client.settings.get("counter.step")).toBe(1);
+  });
+
   test("gets declared settings through validation", async () => {
     const declared = await app.request(`/v1/projects/${projectId}/extensions/${instanceId}/settings/counter.step`);
     expect(declared.status).toBe(200);

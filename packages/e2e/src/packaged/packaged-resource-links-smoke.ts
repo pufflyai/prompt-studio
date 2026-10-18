@@ -46,6 +46,12 @@ export const registerResourceLinksSmokeTests = () => {
           resourceKinds: [{id:"item", ref:{kind:"resource-kind",id:"item"}, resolveMany:{kind:"command",id:"resolve-many"}, paths:[{prefix:"items/",resolve:{kind:"command",id:"resolve-path"}}]}],
           commandPaletteResources: [{id:"items", ref:{kind:"command-palette-resource",id:"items"}, title:"Items", resourceKind:{kind:"resource-kind",id:"item"}, refreshEvents:["view.resource-anchors.changed"], query:async () => ({items:[]})}],
           commands: [
+            {id:"link-host",ref:{kind:"command",id:"link-host"},title:"Link host source",async run(ctx,params){
+              const targets=[{type:"project",id:ctx.projectId}];
+              if(params.legacy) await ctx.workspaces.addAnchors(params.id,targets);
+              else await ctx.resources.addAnchors({type:"workspace",id:params.id},targets);
+              return ctx.workspaces.get(params.id);
+            }},
             {id:"resolve-path", ref:{kind:"command",id:"resolve-path"}, title:"Resolve path", async run(_ctx, params) { return {resource:{type:"item",id:params.path,label:params.workspaceId},target:{kind:"page",page:{kind:"page",id:"items"}}}; }},
             {id:"resolve-many", ref:{kind:"command",id:"resolve-many"}, title:"Resolve resources", async run(_ctx, params) { return params.resources.map(resource => ({resource:{...resource,label:resource.id}})); }},
             {id:"link", ref:{kind:"command",id:"link"}, title:"Link", async run(ctx) { await ctx.resources.addAnchors({type:"item",id:"one"}, [{type:"item",id:"two",extensionId:"test.art",role:"result",metadata:{revision:2}}]); }},
@@ -70,6 +76,20 @@ export const registerResourceLinksSmokeTests = () => {
         request(`/v1/projects/${project.id}/extensions/commands/test.${owner}.command.${command}/execute`, {
           source: "api",
         });
+      const [workspace] = await fetch(`${runtime.baseUrl}/v1/workspaces?project_id=${project.id}`, {
+        headers: runtimeAuthorization(runtime.descriptor),
+      }).then((response) => response.json());
+      const linkHost = (id: string, legacy = false) =>
+        request(`/v1/projects/${project.id}/extensions/commands/test.notes.command.link-host/execute`, {
+          source: "api",
+          params: { id, legacy },
+        });
+      const linked = await linkHost(workspace.id);
+      expect(linked.outcome.ok).toBe(true);
+      expect(linked.outcome.value.updatedAt).not.toBe(workspace.updated_at);
+      const repeated = await linkHost(workspace.id, true);
+      expect(repeated.outcome.value.updatedAt).toBe(linked.outcome.value.updatedAt);
+      expect((await linkHost("missing")).outcome.ok).toBe(false);
       const batch = await request(
         `/v1/projects/${project.id}/extensions/commands/test.art.command.resolve-many/execute`,
         {

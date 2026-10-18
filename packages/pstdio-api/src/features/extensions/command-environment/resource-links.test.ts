@@ -161,3 +161,45 @@ test("workspace deletion publishes current incoming workspace and session projec
     await app.close();
   }
 });
+
+test("generic and legacy host links share source checks, timestamps and change events", async () => {
+  const app = await createTestApp();
+  try {
+    const project = await app.deps.projectService.create({ name: "Host link rules" });
+    const foreign = await app.deps.projectService.create({ name: "Other project" });
+    const workspace = await app.deps.workspaceService.createStandalone({ project_id: project.id });
+    const resources = createResourcesApi(app.deps, { projectId: project.id, extensionId: "pstdio" });
+    const workspaces = createWorkspacesApi(app.deps, { projectId: project.id }, {} as never);
+    const source = { type: "workspace", id: workspace.id };
+    const target = { type: "project", id: project.id };
+    const count = () =>
+      app.deps.eventBus.getSince(0).filter((event) => event.table === "resource_anchor_events").length;
+    const before = count();
+    await expect(resources.addAnchors({ ...source, id: "missing" }, [target])).rejects.toThrow("not found");
+    await expect(resources.addAnchors(source, [{ ...target, id: foreign.id }])).rejects.toThrow("another project");
+    expect(count()).toBe(before);
+    await resources.addAnchors(source, [target, target]);
+    expect(count()).toBe(before + 1);
+    const added = (await app.deps.workspaceService.get(workspace.id))!;
+    expect(added.updated_at).not.toBe(workspace.updated_at);
+    await workspaces.addAnchors(workspace.id, [target]);
+    expect(count()).toBe(before + 1);
+    expect((await app.deps.workspaceService.get(workspace.id))!.updated_at).toBe(added.updated_at);
+    await workspaces.removeAnchors(workspace.id, [target]);
+    expect(count()).toBe(before + 2);
+    expect((await resources.listAnchors({ resource: source })).items).toEqual([]);
+    await resources.removeAnchors(source, [target]);
+    expect(count()).toBe(before + 2);
+    const start = app.deps.eventBus.seq;
+    const projectEvents = () => app.deps.eventBus.getSince(start).filter((event) => event.table === "projects");
+    await resources.addAnchors(target, [source]);
+    expect(projectEvents()).toHaveLength(1);
+    expect(projectEvents()[0]!.data).toEqual(await app.deps.projectService.get(project.id));
+    await resources.addAnchors(target, [source]);
+    expect(projectEvents()).toHaveLength(1);
+    await resources.removeAnchors(target, [source]);
+    expect(projectEvents()).toHaveLength(2);
+  } finally {
+    await app.close();
+  }
+});

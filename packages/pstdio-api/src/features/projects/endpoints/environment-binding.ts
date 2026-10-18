@@ -1,11 +1,15 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { bindEnvironmentInputSchema, environmentBindingSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
+import { workspaceResponseSchema } from "../../workspaces/dto";
+import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import { rootProviderId } from "../../workspaces/workspace-provider-service";
 import type { ProjectsRouteDeps } from "../deps";
 import { initializeProjectWorkspace, resolveInitialWorkspace, withFolderCreation } from "../project-folder";
 
-const response = { content: { "application/json": { schema: environmentBindingSchema } } };
+const response = {
+  content: { "application/json": { schema: environmentBindingSchema.extend({ workspace: workspaceResponseSchema }) } },
+};
 const error = { content: { "application/json": { schema: z.object({ error: z.string() }) } } };
 type Workspace = Pick<
   NonNullable<Awaited<ReturnType<ProjectsRouteDeps["workspaceService"]["getDefault"]>>>,
@@ -65,7 +69,10 @@ export const bindEnvironmentHandler =
         // Workspace provisioning owns paths and config. Shared workbench identity never
         // carries a default folder or another environment's workspace ID.
         const workspace = await initializeProjectWorkspace(deps, id, initial.initial);
-        return c.json({ ...identity, workbenchId: id, workspace }, hasBinding(home) ? 200 : 201);
+        return c.json(
+          { ...identity, workbenchId: id, workspace: { ...workspace, ...toExtensionWorkspace(workspace) } },
+          hasBinding(home) ? 200 : 201,
+        );
       }),
     );
   };

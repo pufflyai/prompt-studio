@@ -1,11 +1,12 @@
 import {
   type CreateExtensionWorkspaceInput,
-  type ExtensionWorkspace,
+  type ExtensionWorkspaceCreateInput,
   type WorkspaceProviderRef,
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
+import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
 import { listWorkspaceProviders } from "../../workspaces/workspace-provider-catalog";
 import {
@@ -54,30 +55,40 @@ export const createExtensionWorkspace = async (
   deps: ExtensionsRouteDeps,
   input: {
     projectId: string;
-    workspaceInput: CreateExtensionWorkspaceInput;
+    workspaceInput: ExtensionWorkspaceCreateInput | CreateExtensionWorkspaceInput;
     signal?: AbortSignal;
   },
   runtimeDeps: CommandEnvironmentRuntimeDeps,
 ) => {
-  if (input.workspaceInput.project_id && input.workspaceInput.project_id !== input.projectId) {
+  const workspaceInput =
+    "providerId" in input.workspaceInput
+      ? input.workspaceInput
+      : {
+          projectId: input.workspaceInput.project_id,
+          providerId: input.workspaceInput.provider_id,
+          shorthandBase: input.workspaceInput.shorthand_base,
+          params: input.workspaceInput.params,
+          anchors: input.workspaceInput.anchors,
+        };
+  if (workspaceInput.projectId && workspaceInput.projectId !== input.projectId) {
     throw new Error("Workspace project must match the command project.");
   }
   const projectId = input.projectId;
-  const anchors = input.workspaceInput.anchors ?? [];
-  const shorthandBase = input.workspaceInput.shorthand_base;
-  if (!shorthandBase) throw new Error("Workspace creation requires shorthand_base");
+  const anchors = workspaceInput.anchors ?? [];
+  const shorthandBase = workspaceInput.shorthandBase;
 
   const workspace = await createProviderBackedWorkspace(deps, {
     projectId,
     shorthandBase,
     anchors,
-    providerId: input.workspaceInput.provider_id ?? "pstdio.worktree",
-    params: input.workspaceInput.params,
+    providerId: workspaceInput.providerId,
+    params: workspaceInput.params,
+    standalone: !shorthandBase,
     setupWorktree: runtimeDeps.setupWorkspaceWorktree,
     provision: (workspace, repoPath) => runtimeDeps.runWorkspaceProvisioning(deps, { projectId, workspace, repoPath }),
     signal: input.signal,
   });
-  return workspace as ExtensionWorkspace;
+  return toExtensionWorkspace(workspace);
 };
 
 export const createWorkspacesApi = (
@@ -95,9 +106,9 @@ export const createWorkspacesApi = (
     if (!workspace) throw new Error(`Workspace not found: ${id}`);
     return workspace;
   };
-  const projectWorkspace = async (workspace: WorkspaceRecord, _signal?: AbortSignal) => workspace as ExtensionWorkspace;
+  const projectWorkspace = toExtensionWorkspace;
   const projectOptionalWorkspace = async (workspace: WorkspaceRecord | null) =>
-    workspace ? projectWorkspace(workspace, input.signal) : null;
+    workspace ? projectWorkspace(workspace) : null;
 
   const deleteWorkspace = async (id: string) => {
     const workspace = await requireScopedWorkspace(id);
@@ -106,12 +117,12 @@ export const createWorkspacesApi = (
     const removed = await remove(deps, workspace);
     await finalizeWorkspaceDelete(deps, workspace);
     if (removed && workspace.root_path) {
-      const { anchors_json: _anchors, ...eventWorkspace } = workspace;
+      const { anchors_json: _anchors, ...eventWorkspace } = toExtensionWorkspace(workspace);
       const fireRemoved = runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync;
       fireRemoved(deps, workspace.project_id, worktreeEvents.removed, {
         projectId: workspace.project_id,
         worktreePath: workspace.root_path,
-        workspace: eventWorkspace as ExtensionWorkspace,
+        workspace: eventWorkspace,
         workspaceId: workspace.id,
       });
     }
@@ -125,7 +136,7 @@ export const createWorkspacesApi = (
       read(async () =>
         Promise.all(
           (await read(() => deps.workspaceService.list(input.projectId))).map((workspace) =>
-            projectWorkspace(workspace, input.signal),
+            projectWorkspace(workspace),
           ),
         ),
       ),
@@ -142,7 +153,7 @@ export const createWorkspacesApi = (
         runtimeDeps,
       );
       input.signal?.throwIfAborted();
-      return projectWorkspace(workspace as WorkspaceRecord);
+      return workspace;
     },
     addAnchors: async (id, anchors) => {
       await requireScopedWorkspace(id);
@@ -190,11 +201,6 @@ export const createWorkspacesApi = (
     cancel: async (id) => {
       const workspace = await requireScopedWorkspace(id);
       return projectWorkspace(await cancelProviderBackedWorkspace(deps, workspace));
-    },
-    archive: async (id) => {
-      const workspace = await requireScopedWorkspace(id);
-      await deleteWorkspace(id);
-      return { ...workspace, deleted_at: new Date().toISOString() } as ExtensionWorkspace;
     },
     removeWorktree: async (id) => {
       const workspace = await requireScopedWorkspace(id);

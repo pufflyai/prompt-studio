@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type {
   ContributionKind,
   ExtensionDefinition,
@@ -80,6 +83,31 @@ const webviewRuntime = (entryPath: string, capabilities?: WebviewCapabilityDecla
 };
 
 describe("buildWorkbenchExtensionMetadata", () => {
+  test("loads the entry stylesheet once instead of also mounting deferred chunk styles", () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-styles-"));
+    const dist = join(root, "installed-lab", "pstdio.lab.view.page", "dist");
+    mkdirSync(dist, { recursive: true });
+    for (const file of ["module.css", "chunk-details.css", "chunk-editor.css"])
+      writeFileSync(join(dist, file), "body {}");
+    try {
+      const metadata = buildWorkbenchExtensionMetadata({
+        installedExtensionIdsByExtensionId: new Map([["pstdio.lab", "installed-lab"]]),
+        installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
+        runtime: webviewRuntime("./src/main.tsx"),
+        webviewCacheRoot: root,
+      });
+      const body = metadata.views[0]?.body;
+      if (body?.kind !== "webview") throw new Error("Expected a webview body");
+      const entryStyle = webviewUrlIssuer.assetUrl(
+        { installedExtensionId: "installed-lab", webviewId: "pstdio.lab.view.page" },
+        "module.css",
+      );
+      expect(body.webview.styles).toEqual([entryStyle]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("publishes extension identity and typed mode identity", () => {
     const mode = defineMode({ id: "review", label: "Review", icon: "message-circle", regions: ["main"] });
     const metadata = buildWorkbenchExtensionMetadata({

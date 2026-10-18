@@ -208,7 +208,15 @@ export const useExecuteExtensionCommand = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ commandId, body, signal }: { commandId: string; body: unknown; signal?: AbortSignal }) => {
+    mutationFn: async ({
+      commandId,
+      body,
+      signal,
+    }: {
+      commandId: string;
+      body: Omit<import("@pstdio/sdk/api").CommandExecuteRequest, "projectId">;
+      signal?: AbortSignal;
+    }) => {
       if (!projectId) throw new Error("Project id is required to execute extension commands.");
       const response = await executeExtensionCommand(projectId, commandId, body, signal);
       publishExtensionCommandEvent(response, { projectId }, owner);

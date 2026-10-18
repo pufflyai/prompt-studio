@@ -1,5 +1,9 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { listWorkspaceActivityInputSchema, listWorkspaceActivityResponseSchema } from "pstdio-api-contracts";
+import {
+  activityPageSchema,
+  listWorkspaceActivityInputSchema,
+  listWorkspaceActivityResponseSchema,
+} from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { listActivityEvents } from "../../activity/activity-events";
 import type { WorkspacesRouteDeps } from "../deps";
@@ -16,7 +20,7 @@ export const listWorkspaceActivityRoute = createRoute({
   responses: {
     200: {
       description: "Workspace activity events.",
-      content: { "application/json": { schema: listWorkspaceActivityResponseSchema } },
+      content: { "application/json": { schema: listWorkspaceActivityResponseSchema.extend(activityPageSchema.shape) } },
     },
     404: {
       description: "Workspace not found.",
@@ -41,7 +45,7 @@ export const listWorkspaceActivityHandler = (
       projectId: workspace.project_id,
       resourceType: "workspace",
       resourceId: workspace.id,
-      eventType: query.event_type,
+      eventType: query.eventType ?? query.event_type,
       from: query.from,
       to: query.to,
       cursor: query.cursor,

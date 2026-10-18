@@ -31,16 +31,11 @@ interface HostProps {
 function TicketRequests(props: { host: GuestHost; resource: ResourceRef }) {
   const { host, resource } = props;
   const [client] = useState(() => createWebviewClient<Commands>(host));
-  const { value, error } = useLiveValue(client, read, events, resource.id);
+  const { value } = useLiveValue(client, read, events, resource.id);
   return (
     <ScrollArea h="full">
       <Stack p="md" gap="md">
         <Text textStyle="label/L/medium">{resource.label ?? resource.shorthand}</Text>
-        {error ? (
-          <Text role="alert" color="fg.error">
-            {error}
-          </Text>
-        ) : null}
         {value ? (
           <RequestsPanel
             row={{ requests: value.requests, requestErrors: value.errors }}
@@ -48,7 +43,7 @@ function TicketRequests(props: { host: GuestHost; resource: ResourceRef }) {
             onOpenChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
           />
         ) : null}
-        {!value && !error ? <Text>Loading requests…</Text> : null}
+        {!value ? <Text>Loading requests…</Text> : null}
         <Button
           size="sm"
           variant="outline"

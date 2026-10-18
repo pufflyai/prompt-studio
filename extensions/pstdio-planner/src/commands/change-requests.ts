@@ -1,10 +1,11 @@
 import type { ParamsOf } from "@pstdio/sdk/extensions";
-import { type CommandContext, commandRef, defineCommand, params } from "@pstdio/sdk/extensions";
+import { type CommandContext, commandRef, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { appendRevision } from "../data/attempt-state";
 import { appendAttemptEvent, putAttempt, readAttempt, reviewThreadsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
+import { readSessionHistory } from "../data/session-history";
 import { inlineThreadIsOutdated } from "../data/thread-mapping";
 import { withWriteGuard } from "../data/write-guard";
 import { validateSubmittedStack } from "./stack-validation";
@@ -20,20 +21,23 @@ export const readReport = async (ctx: Pick<CommandContext, "commands">, reportId
   return outcome.value;
 };
 
+export class WorkspaceUnavailableError extends Error {}
+
 export const workspaceGitPath = async (ctx: CommandContext, workspaceId: string) => {
   const workspace = await ctx.workspaces.get(workspaceId);
-  if (!workspace) throw new Error(`Unknown workspace "${workspaceId}"`);
+  if (!workspace) throw new WorkspaceUnavailableError(`Unknown workspace "${workspaceId}"`);
   if (workspace.execution_kind !== "local" || !workspace.provider_capabilities_json?.diff)
-    throw new Error("This workspace does not support Git attempts.");
+    throw new WorkspaceUnavailableError("This workspace does not support Git attempts.");
   const path = workspace.root_path;
-  if (!path) throw new Error(`Workspace "${workspaceId}" has no repository path.`);
+  if (!path) throw new WorkspaceUnavailableError(`Workspace "${workspaceId}" has no repository path.`);
   return path;
 };
 
 export const workspaceHead = async (ctx: CommandContext, workspaceId: string) => {
   const path = await workspaceGitPath(ctx, workspaceId);
   const result = await ctx.process.run({ command: ["git", "-C", path, "rev-parse", "HEAD"] });
-  if (result.exitCode !== 0) throw new Error(result.stderr.trim() || "Could not read workspace HEAD.");
+  if (result.exitCode !== 0)
+    throw new WorkspaceUnavailableError(result.stderr.trim() || "Could not read workspace HEAD.");
   return result.stdout.trim();
 };
 
@@ -84,6 +88,10 @@ const submissionParams = {
   changeRequestReportId: params.text({ required: true }),
   /** @deprecated Ownership and expectedRevision replace the attempt-state gate. */
   expectedAttemptState: params.select({
+    description: l10n(
+      "attempts.expectedAttemptState.deprecated",
+      "Deprecated in 0.44. Use ownership checks and expectedRevision. Removed in 0.45.",
+    ),
     options: [
       { label: "Implementing", value: "implementing" },
       { label: "Changes requested", value: "changes_requested" },
@@ -99,7 +107,11 @@ async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeo
   if (!implementationSessionId || attempt.implementationSessionId !== implementationSessionId) {
     throw new Error("The implementation session does not own this attempt.");
   }
-  if (!(await ctx.sessions.listByWorkspace(attempt.workspaceId)).some(({ id }) => id === implementationSessionId))
+  if (
+    !(await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(
+      ({ id }) => id === implementationSessionId,
+    )
+  )
     throw new Error("The implementation session is not linked to this workspace.");
   const currentHead = await workspaceHead(ctx, attempt.workspaceId);
   if (currentHead !== commandParams.headSha) throw new Error("Workspace HEAD changed before submission.");

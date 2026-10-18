@@ -83,6 +83,7 @@ export interface ExtensionSkillsApi {
 
 export type {
   ExtensionHarnessInput,
+  ExtensionSession,
   ExtensionSessionPage,
   ExtensionSessionQuery,
   ExtensionSessionResource,
@@ -110,11 +111,16 @@ export interface ExtensionActivityApi {
 export interface ExtensionNotifyApi {
   toast(notice: CommandNotice): Promise<void>;
   action(input: Omit<CreateNotificationInput, "projectId">): Promise<Notification>;
+  setStatus(id: string, status: "done" | "dismissed"): Promise<Notification | null>;
+  setStatusByKey(key: string, status: "done" | "dismissed"): Promise<Notification[]>;
+  /** @deprecated Use setStatus or setStatusByKey. */
   resolve(input: {
     id?: string;
     dedupeKey?: string;
+    /** @deprecated Use setStatus or setStatusByKey. Expiry belongs to the host. */
     status?: Extract<NotificationStatus, "done" | "dismissed" | "expired">;
   }): Promise<Notification[]>;
+  /** @deprecated Use setStatus or setStatusByKey with "dismissed". */
   dismiss(input: { id?: string; dedupeKey?: string }): Promise<Notification[]>;
 }
 

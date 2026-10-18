@@ -1,65 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { renderToString } from "react-dom/server";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import { ContributionExplorer } from "./contribution-explorer";
 import { createPreviewWorkbench } from "./workbench-preview";
-
-const baseBench = {
-  benchId: "bench-1",
-  inventory: { fileIconThemes: [], skills: [], templateTypes: [], templates: [], themes: [] },
-  metadata: {
-    commands: [],
-    commandPaletteContributions: [],
-    diagnostics: [],
-    extensions: [{ id: "lab", name: "lab", displayName: "Lab", sourcePath: "" }],
-    menuContributions: [],
-    modes: [],
-    pages: [],
-    views: [],
-    viewMenus: [],
-    placements: [],
-    resourceKinds: [],
-    resourceHierarchyProviders: [],
-    navigationItems: [],
-    navigationTrees: [],
-    statusBarItems: [],
-    statuses: [],
-    activityItems: [],
-    settingsSections: [],
-    settingsDefinitions: [],
-    settingsPanels: [],
-    commandPaletteResources: [],
-    keybindings: [],
-  },
-  projectId: "project-1",
-  resources: [],
-  sourcePath: "./extensions/extension-lab",
-  summary: {
-    commands: 0,
-    diagnostics: 0,
-    extensions: 1,
-    keybindings: 0,
-    skills: 0,
-    templateTypes: 0,
-    templates: 0,
-    treeViews: 0,
-    views: 0,
-  },
-} satisfies ExtensionBenchLoadResponse;
-
-const defaultExecuteCommand = async (commandId: string) =>
-  ({
-    commandId,
-    extensionId: "lab",
-    outcome: { ok: true, status: "success", value: null },
-  }) satisfies CommandExecuteResponse;
+import { baseBench, defaultExecuteCommand } from "./workbench-preview-test-fixtures";
 
 const createTestWorkbench = (
   bench: ExtensionBenchLoadResponse,
-  executeCommand: (commandId: string) => Promise<CommandExecuteResponse> = defaultExecuteCommand,
+  executeCommand: (commandId: string) => Promise<CommandExecutionResult> = defaultExecuteCommand,
 ) =>
   createPreviewWorkbench({
     bench,

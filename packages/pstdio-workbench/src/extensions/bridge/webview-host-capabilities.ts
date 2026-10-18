@@ -1,75 +1,62 @@
-import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
-import type { NavigationTarget, WorkbenchCore, WorkbenchPanelInstance } from "../../core";
-import { createTerminalSessionCapability } from "./terminal-session-capability";
-import { createWebviewPreferencesCapabilities, type WebviewOwnedPreferences } from "./webview-preferences-capability";
+import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
+import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
+import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
+import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
+import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
 
-interface CreateWorkbenchWebviewHostCapabilitiesInput {
-  dispatchKeyboardEvent?: (event: KeyboardEventInit) => void;
+interface CreateWorkbenchWebviewHostAdaptersInput {
   workbench: WorkbenchCore;
   placement?: WorkbenchPanelInstance;
   extensionId?: string;
+  projectId?: string;
   ownedPreferences?: WebviewOwnedPreferences;
   warn?: (message: string) => void;
-  /** Event channel into the guest; terminal.session is only offered when present. */
   hostEvents?: HostEventPublisher;
 }
 
-const dispatchDocumentKeyboardEvent = (params: KeyboardEventInit) => {
-  if (typeof document === "undefined") return;
-  const event = new KeyboardEvent("keydown", { ...params, bubbles: true, cancelable: true });
-  document.dispatchEvent(event);
+export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebviewHostAdaptersInput) => {
+  const { workbench, placement, extensionId, projectId, hostEvents } = input;
+  return {
+    hostEvents,
+    executeCommand: async (request, signal) => ({
+      outcome: {
+        ok: true,
+        status: "success",
+        value: await workbench.commands.executeCommand(request.commandId, request.params, {
+          resource: request.resource,
+          signal,
+        }),
+      },
+    }),
+    placement: placement?.placementIdentity
+      ? { close: () => workbench.closePlacement(placement.placementIdentity!) }
+      : undefined,
+    pageParams: {
+      update: (patch) => {
+        const state = workbench.pages.store.getState();
+        if (!state.location) throw new Error("page_params_no_page");
+        if (!extensionId || extensionId !== state.location.page.extensionId) throw new Error("page_params_not_owner");
+        return workbench.pageLocations.updateParams(patch);
+      },
+    },
+    navigation: {
+      open: (target) =>
+        workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId })),
+    },
+    notifications: {
+      show: (notice) =>
+        workbench.notifications.show({
+          level: notice.type,
+          metadata: notice.metadata,
+          title: notice.title ?? notice.message,
+          message: notice.title === undefined ? undefined : notice.message,
+        }),
+    },
+    preferences: createWebviewPreferencesAdapter(input),
+    terminal: workbench.terminal,
+  } satisfies ExtensionWebviewHostAdapters;
 };
 
-export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWebviewHostCapabilitiesInput) =>
-  ({
-    ...(input.placement?.placementIdentity
-      ? {
-          "placement.close": (params: unknown) => {
-            if (
-              params !== undefined &&
-              (typeof params !== "object" || params === null || Array.isArray(params) || Object.keys(params).length > 0)
-            ) {
-              throw new Error("placement.close takes no parameters; the host supplies the calling placement.");
-            }
-            input.workbench.closePlacement(input.placement!.placementIdentity!);
-          },
-        }
-      : {}),
-    "commands.execute": (params: unknown) => {
-      const request = params as { commandId: string; params?: unknown };
-      return input.workbench.commands.executeCommand(request.commandId, request.params);
-    },
-    "page.params.update": (params: unknown) => {
-      const state = input.workbench.pages.store.getState();
-      if (!state.location) throw new Error("page_params_no_page");
-      if (!input.extensionId || input.extensionId !== state.location.page.extensionId)
-        throw new Error("page_params_not_owner");
-      const patch = (params as { params: Parameters<WorkbenchCore["pageLocations"]["updateParams"]>[0] }).params;
-      return { location: input.workbench.pageLocations.updateParams(patch) };
-    },
-    "navigation.open": (params: unknown) => {
-      const request = params as { target?: NavigationTarget };
-      if (!request.target) throw new Error("navigation.open requires a target.");
-      return input.workbench.navigation.openTarget(request.target);
-    },
-    "notification.show": (params: unknown) => {
-      const notification = params as Parameters<WorkbenchCore["notifications"]["show"]>[0];
-      return input.workbench.notifications.show({
-        level: notification.level,
-        message: notification.message,
-        title: notification.title,
-      });
-    },
-    ...createWebviewPreferencesCapabilities(input),
-    "host.dispatchKeyboardEvent": (params: unknown) =>
-      (input.dispatchKeyboardEvent ?? dispatchDocumentKeyboardEvent)(params as KeyboardEventInit),
-    ...(input.hostEvents
-      ? {
-          "terminal.session": createTerminalSessionCapability({
-            terminal: input.workbench.terminal,
-            hostEvents: input.hostEvents,
-          }),
-        }
-      : {}),
-  }) satisfies HostCapabilityRegistry;
+export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWebviewHostAdaptersInput) =>
+  createExtensionWebviewHostCapabilities(createWorkbenchWebviewHostAdapters(input));

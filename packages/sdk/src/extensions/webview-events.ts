@@ -1,8 +1,10 @@
 import type { RendererEventReference } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_EVENTS_SCOPE as hostExtensionEventsScope } from "pstdio-api-contracts/extension-kernel";
 import { resolveEventReferenceId } from "./event-reference";
 import type { GuestHost } from "./guest-host";
 
-export const EXTENSION_EVENTS_SCOPE = "extension.events";
+/** @deprecated Host-only. Hosts import `EXTENSION_EVENTS_SCOPE` from `pstdio-api-contracts`. */
+export const EXTENSION_EVENTS_SCOPE = hostExtensionEventsScope;
 
 export type WebviewExtensionEvent = { type: "changed"; id: string } | { type: "reset" };
 

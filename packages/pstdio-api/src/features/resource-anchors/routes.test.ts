@@ -37,3 +37,25 @@ test("HTTP links host resources with project scope and preserves links in sync s
     await app.close();
   }
 });
+
+test("canonical link pages use a terminal null and retain the deprecated cursor shape", async () => {
+  const handle = await createTestApp();
+  try {
+    const project = await handle.deps.projectService.create({ name: "Link pages" });
+    const workspace = await handle.deps.workspaceService.createStandalone({ project_id: project.id });
+    const path = `/v1/projects/${project.id}/resource-anchors`;
+    const init = {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ resource: { type: "workspace", id: workspace.id } }),
+    };
+    const response = await handle.app.request(`${path}/query-page`, init);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ items: [], nextCursor: null });
+    expect(await (await handle.app.request(`${path}/query`, init)).json()).toEqual({ items: [] });
+    const notifications = await (await handle.app.request(`/v1/projects/${project.id}/notifications`)).json();
+    expect(notifications).toEqual({ items: [], nextCursor: null });
+  } finally {
+    await handle.close();
+  }
+});

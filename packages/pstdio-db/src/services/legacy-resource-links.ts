@@ -50,7 +50,7 @@ export const createLegacyAnchorMutations = <Record>(
   const table = kind === "workspace" ? workspaces : sessions;
   const mutate = (id: string, refs: ResourceRef[], operation: "add" | "remove") =>
     db.transaction(async (tx) => {
-      const [row] = await tx.select().from(table).where(eq(table.id, id)).for("update");
+      const [row] = await tx.select().from(table).where(eq(table.id, id));
       if (!row) return null;
       const source = hostResourceRef(kind, row);
       const links = createResourceLinksDBService(tx);
@@ -58,11 +58,8 @@ export const createLegacyAnchorMutations = <Record>(
         throw new Error("Resource belongs to another project.");
       const canonical = refs.map((ref) => ({ ...ref, extensionId: legacyResourceOwner(ref) }));
       const changed =
-        operation === "add"
-          ? await writeResourceLinks(tx, source, canonical, refs)
-          : await links.remove(source, canonical);
+        operation === "add" ? await links.add(source, canonical, refs) : await links.remove(source, canonical);
       if (!changed.length) return null;
-      await tx.update(table).set({ updated_at: new Date().toISOString() }).where(eq(table.id, id));
       return { record: await read(tx, id), changes: changed };
     });
   return {

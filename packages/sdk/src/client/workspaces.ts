@@ -1,9 +1,11 @@
 import type {
+  ActivityPage,
   CreateWorkspaceInput,
   ListWorkspaceActivityInput,
   ListWorkspaceActivityResponse,
   ListWorkspaceFilesInput,
-  MoveWorkspaceEntryInput,
+  Page,
+  PageQuery,
   RemoveWorktreeResponse,
   RenameWorkspaceInput,
   WorkspaceFileContent,
@@ -12,16 +14,38 @@ import type {
   WorkspaceProviderDescriptor,
   WriteWorkspaceFileInput,
 } from "pstdio-api-contracts";
+import type { ExtensionWorkspace, ExtensionWorkspaceCreateInput } from "pstdio-api-contracts/extension-kernel";
 import type { Workspace, WorkspaceListItem } from "../resources";
+import { pageQuery } from "./page-query";
 import type { RequestFn } from "./request";
+import { createWorkspaceDiffClient } from "./workspace-diffs";
 
-export type WorkspaceClient = {
-  listProviders(projectId: string): Promise<WorkspaceProviderDescriptor[]>;
-  list(projectId: string): Promise<WorkspaceListItem[]>;
-  getByShorthand(projectId: string, shorthand: string): Promise<Workspace>;
-  create(input: CreateWorkspaceInput): Promise<Workspace>;
-  rename(workspaceId: string, input: RenameWorkspaceInput): Promise<Workspace>;
-  listActivity(workspaceId: string, input?: ListWorkspaceActivityInput): Promise<ListWorkspaceActivityResponse>;
+export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
+  queryProviders(
+    projectId: string,
+    input?: PageQuery,
+    options?: { signal?: AbortSignal },
+  ): Promise<Page<WorkspaceProviderDescriptor>>;
+  /** @deprecated Use queryProviders for bounded pages. */
+  listProviders(projectId: string, options?: { signal?: AbortSignal }): Promise<WorkspaceProviderDescriptor[]>;
+  query(projectId: string, input?: PageQuery): Promise<Page<WorkspaceListItem & ExtensionWorkspace>>;
+  /** @deprecated Use query to read one bounded page. */
+  list(projectId: string): Promise<(WorkspaceListItem & ExtensionWorkspace)[]>;
+  getByShorthand(projectId: string, shorthand: string): Promise<Workspace & ExtensionWorkspace>;
+  create(
+    projectId: string,
+    input: Omit<ExtensionWorkspaceCreateInput, "projectId">,
+  ): Promise<Workspace & ExtensionWorkspace>;
+  /** @deprecated Pass projectId first and use camelCase input. */
+  create(
+    input: CreateWorkspaceInput | (ExtensionWorkspaceCreateInput & { projectId: string }),
+  ): Promise<Workspace & ExtensionWorkspace>;
+  rename(workspaceId: string, input: RenameWorkspaceInput): Promise<Workspace & ExtensionWorkspace>;
+  /** @deprecated No maintained client caller. Use `GET /v1/workspaces/{id}/activity` for this operation; the convenience method is removed in 0.45. */
+  listActivity(
+    workspaceId: string,
+    input?: ListWorkspaceActivityInput,
+  ): Promise<ListWorkspaceActivityResponse & ActivityPage>;
   listFiles(
     workspaceId: string,
     input?: ListWorkspaceFilesInput,
@@ -38,7 +62,11 @@ export type WorkspaceClient = {
 };
 
 export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
-  listProviders: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/workspace-providers`),
+  ...createWorkspaceDiffClient(request),
+  queryProviders: (projectId, input, options) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/workspace-providers/query${pageQuery(input)}`, options),
+  listProviders: (projectId, options) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/workspace-providers`, options),
   listFiles: (workspaceId, input = {}, options) => {
     const params = new URLSearchParams();
     if (input.path !== undefined) params.append("path", input.path);
@@ -73,7 +101,7 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
   },
   moveEntry: (workspaceId, path, destinationPath) => {
     const params = new URLSearchParams({ path });
-    const body: MoveWorkspaceEntryInput = { destination_path: destinationPath };
+    const body = { destinationPath };
     return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/entry?${params.toString()}`, {
       method: "PATCH",
       body,
@@ -87,7 +115,8 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
   },
   listActivity: (workspaceId, input = {}) => {
     const params = new URLSearchParams();
-    if (input.event_type) params.append("event_type", input.event_type);
+    if (input.eventType) params.append("eventType", input.eventType);
+    else if (input.event_type) params.append("event_type", input.event_type);
     if (input.from) params.append("from", input.from);
     if (input.to) params.append("to", input.to);
     if (input.cursor) params.append("cursor", input.cursor);
@@ -95,12 +124,20 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
     const query = params.toString();
     return request(`/v1/workspaces/${workspaceId}/activity${query ? `?${query}` : ""}`);
   },
-  list: (projectId) => request(`/v1/workspaces?project_id=${projectId}`),
+  query: (projectId, input) => request(`/v1/projects/${encodeURIComponent(projectId)}/workspaces${pageQuery(input)}`),
+  list: (projectId) => request(`/v1/workspaces?projectId=${encodeURIComponent(projectId)}`),
   getByShorthand: (projectId, shorthand) =>
     request(
-      `/v1/workspaces/by-shorthand?project_id=${encodeURIComponent(projectId)}&shorthand=${encodeURIComponent(shorthand)}`,
+      `/v1/workspaces/by-shorthand?projectId=${encodeURIComponent(projectId)}&shorthand=${encodeURIComponent(shorthand)}`,
     ),
-  create: (input) => request("/v1/workspaces", { method: "POST", body: input }),
+  create: (
+    projectOrInput: string | CreateWorkspaceInput | (ExtensionWorkspaceCreateInput & { projectId: string }),
+    input?: Omit<ExtensionWorkspaceCreateInput, "projectId">,
+  ) =>
+    request("/v1/workspaces", {
+      method: "POST",
+      body: typeof projectOrInput === "string" ? { ...input, projectId: projectOrInput } : projectOrInput,
+    }),
   rename: (workspaceId, input) => request(`/v1/workspaces/${workspaceId}`, { method: "PATCH", body: input }),
   removeWorktree: (workspaceId) => request(`/v1/workspaces/${workspaceId}/remove-worktree`, { method: "POST" }),
   delete: (workspaceId) => request(`/v1/workspaces/${workspaceId}`, { method: "DELETE" }),

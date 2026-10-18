@@ -3,6 +3,7 @@ import {
   addResourceAnchorsSchema,
   removeResourceAnchorsSchema,
   resourceAnchorPageSchema,
+  resourceAnchorQueryPageSchema,
   resourceAnchorQuerySchema,
 } from "pstdio-api-contracts";
 import type { AppBindings } from "../../types";
@@ -33,12 +34,26 @@ const remove = createRoute({
   },
 });
 const query = createRoute({
+  deprecated: true,
   method: "post",
   path: "/projects/{projectId}/resource-anchors/query",
   tags: ["Resources"],
   request: { params, body: { content: { "application/json": { schema: resourceAnchorQuerySchema } } } },
   responses: {
     200: { description: "Resource anchors", content: { "application/json": { schema: resourceAnchorPageSchema } } },
+    ...responses,
+  },
+});
+
+const queryPage = createRoute({
+  ...query,
+  deprecated: false,
+  path: "/projects/{projectId}/resource-anchors/query-page",
+  responses: {
+    200: {
+      description: "One link page with a required nullable cursor",
+      content: { "application/json": { schema: resourceAnchorQueryPageSchema } },
+    },
     ...responses,
   },
 });
@@ -59,6 +74,14 @@ export const createResourceAnchorRoutes = (deps: ExtensionsRouteDeps) => {
     try {
       await createResourceLinksApi(deps, c.req.valid("param")).removeAnchors(body.resource, body.refs);
       return c.json({}, 200);
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+  routes.openapi(queryPage, async (c) => {
+    try {
+      const result = await createResourceLinksApi(deps, c.req.valid("param")).queryAnchors(c.req.valid("json"));
+      return c.json(result, 200);
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
     }

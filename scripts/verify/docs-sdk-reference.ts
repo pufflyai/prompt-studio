@@ -3,9 +3,8 @@
  * without a reference entry. It compares names, not wording: a method counts as documented when a code span
  * or code block names it in a section or table row that also names its group, or calls `group.method`.
  *
- * Contracts come from public declarations. The extension API uses the checked-in report of
- * `@pstdio/sdk/extensions`. The report does not cover `@pstdio/sdk/client`, so its `PstdioClient`
- * type is read from the entry's source. Deprecated methods are skipped; the reference names their replacement.
+ * Contracts come from the source files that declare the public types, because generated API reports are not
+ * checked in. Deprecated methods are skipped; the reference names their replacement.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -37,19 +36,19 @@ export const SDK_CONTRACTS: Contract[] = [
   },
   {
     prefix: "ctx",
-    declarations: "packages/sdk/api-report/extensions.d.ts",
+    declarations: "packages/pstdio-api-contracts/src/extension-kernel/types/context.ts",
     type: "ExtensionContextBase",
     references: ["documentation/references/extensions", "documentation/references/sdk"],
   },
   {
     prefix: "view context",
-    declarations: "packages/sdk/api-report/extensions.d.ts",
+    declarations: "packages/sdk/src/extensions/define-extension-view.ts",
     type: "ExtensionViewRenderContext",
     references: ["documentation/references/extensions", "documentation/references/sdk"],
   },
   {
     prefix: "webview client",
-    declarations: "packages/sdk/api-report/extensions.d.ts",
+    declarations: "packages/sdk/src/extensions/webview-client.ts",
     type: "WebviewClient",
     references: ["documentation/references/extensions", "documentation/references/sdk"],
   },
@@ -88,7 +87,9 @@ export const readContractGroups = (file: string, typeName: string) => {
   const groups: ContractGroup[] = [];
   for (const member of checker.getTypeAtLocation(declaration.name).getProperties()) {
     const type = valueType(member);
-    if (!(type.flags & ts.TypeFlags.Object) || type.getCallSignatures().length > 0 || !isSdkType(type)) continue;
+    // Clients built as `ReturnType<...> & { ... }` are intersections, not plain object types.
+    const isObjectLike = type.flags & (ts.TypeFlags.Object | ts.TypeFlags.Intersection);
+    if (!isObjectLike || type.getCallSignatures().length > 0 || !isSdkType(type)) continue;
     const methods = type
       .getProperties()
       .filter((method) => valueType(method).getCallSignatures().length > 0 && !isDeprecated(method, checker))

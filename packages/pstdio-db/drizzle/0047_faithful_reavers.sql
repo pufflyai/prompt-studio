@@ -1,0 +1,1 @@
+ALTER TABLE "workspaces" ALTER COLUMN "provider_capabilities_json" SET DEFAULT '{"files":"write","diff":true,"merge":true,"rebase":true,"delete":true}'::jsonb;

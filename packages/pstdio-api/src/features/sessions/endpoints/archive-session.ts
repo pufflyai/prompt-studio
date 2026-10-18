@@ -3,6 +3,7 @@ import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
+import { toSessionResponse } from "../session-response";
 
 export const archiveSessionRoute = createRoute({
   method: "post",
@@ -64,6 +65,7 @@ export const archiveSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<
       });
     }
 
-    return c.json(updated, 200);
+    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(updated.id);
+    return c.json(toSessionResponse(updated, workspace?.project_id === updated.project_id ? workspace.id : null), 200);
   };
 };

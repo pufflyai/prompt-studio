@@ -1,14 +1,17 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { projectQueryFields, projectQueryMessage, validProjectQuery } from "../../project-query";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema, workspaceResponseSchema } from "../dto";
+import { toExtensionWorkspace } from "../extension-workspace";
 
 const getWorkspaceQuerySchema = z
   .object({
-    project_id: z.string(),
+    ...projectQueryFields,
     shorthand: z.string(),
   })
-  .strict();
+  .strict()
+  .refine(validProjectQuery, { message: projectQueryMessage });
 
 export const getWorkspaceRoute = createRoute({
   method: "get",
@@ -32,13 +35,13 @@ export const getWorkspaceRoute = createRoute({
 
 export const getWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof getWorkspaceRoute> => {
   return async (c) => {
-    const { project_id, shorthand } = c.req.valid("query");
-    const workspace = await deps.workspaceService.getByShorthand(project_id, shorthand);
+    const { projectId, project_id, shorthand } = c.req.valid("query");
+    const workspace = await deps.workspaceService.getByShorthand((projectId ?? project_id)!, shorthand);
 
     if (!workspace) {
       return c.json({ error: `Workspace not found: ${shorthand}` }, 404);
     }
 
-    return c.json(workspace, 200);
+    return c.json({ ...workspace, ...toExtensionWorkspace(workspace) }, 200);
   };
 };

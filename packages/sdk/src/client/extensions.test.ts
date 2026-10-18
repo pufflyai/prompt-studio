@@ -1,6 +1,31 @@
 import { expect, test } from "bun:test";
+import type { CommandOutcome } from "../extensions";
 import { createClient } from "./client";
 import { PstdioApiError } from "./request";
+
+test("command execution keeps legacy field access and complete rejection details", async () => {
+  const outcome = {
+    ok: false,
+    status: "rejected",
+    reason: "Changed",
+    code: "stale_revision",
+    data: { revision: 2 },
+    cause: { source: "storage" },
+  } satisfies CommandOutcome;
+  const client = createClient({
+    baseUrl: "http://host",
+    fetch: (async () =>
+      Response.json({
+        commandId: "save",
+        extensionId: "notes",
+        outcome,
+      })) as unknown as typeof fetch,
+  });
+  const response = await client.extensions.execute("save", { projectId: "project" });
+  expect(response.outcome.value).toBeUndefined();
+  expect(response.outcome.reason).toBe("Changed");
+  expect(response.outcome).toEqual(outcome);
+});
 
 test("sends catalog and multipart installs through the same endpoint", async () => {
   const calls: Request[] = [];

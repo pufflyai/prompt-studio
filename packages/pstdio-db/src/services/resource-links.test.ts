@@ -97,3 +97,44 @@ test("standalone workspace creation returns its committed deduplicated anchors",
     await connection.close();
   }
 });
+
+test("host link mutations require a project source and update its timestamp only when links change", async () => {
+  const { createWorkspacesDBService } = await import("./workspaces/workspaces");
+  const connection = await createDb({ path: ":memory:" });
+  try {
+    const projects = createProjectsDBService(connection.db);
+    const project = await projects.create({ name: "Source rules" });
+    const foreign = await projects.create({ name: "Foreign" });
+    const workspaces = createWorkspacesDBService(connection.db);
+    const workspace = await workspaces.createStandalone({ project_id: project.id });
+    const links = createResourceLinksDBService(connection.db);
+    const source = { projectId: project.id, extensionId: "pstdio", type: "workspace", id: workspace.id };
+    const target = { projectId: project.id, extensionId: "example.notes", type: "item", id: "one" };
+    await expect(links.add({ ...source, id: "missing" }, [target])).rejects.toThrow("not found");
+    await expect(
+      links.add({ ...source, projectId: foreign.id }, [{ ...target, projectId: foreign.id }]),
+    ).rejects.toThrow("not found");
+    await Bun.sleep(2);
+    expect(await links.add(source, [target])).toHaveLength(1);
+    const added = (await workspaces.get(workspace.id))!;
+    expect(added.updated_at).not.toBe(workspace.updated_at);
+    expect(await links.add(source, [target])).toEqual([]);
+    expect((await workspaces.get(workspace.id))!.updated_at).toBe(added.updated_at);
+    const { projectId: _projectId, ...legacyTarget } = target;
+    expect(await workspaces.addAnchors(workspace.id, [legacyTarget])).toBeNull();
+    expect((await workspaces.get(workspace.id))!.updated_at).toBe(added.updated_at);
+    await expect(links.add(source, [target, { ...target, id: "invalid", projectId: foreign.id }])).rejects.toThrow(
+      "another project",
+    );
+    expect((await links.list({ resource: source })).items).toHaveLength(1);
+    expect((await workspaces.get(workspace.id))!.updated_at).toBe(added.updated_at);
+    await Bun.sleep(2);
+    const validated = await links.find(source, [target]);
+    expect(await links.removeValidated(source, [target], validated)).toHaveLength(1);
+    expect((await workspaces.get(workspace.id))!.updated_at).not.toBe(added.updated_at);
+    await workspaces.softDelete(workspace.id);
+    await expect(links.add(source, [target])).rejects.toThrow("not found");
+  } finally {
+    await connection.close();
+  }
+});

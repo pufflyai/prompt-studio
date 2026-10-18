@@ -22,9 +22,13 @@ Install the SDK version that matches your Prompt Studio app, such as `bun add @p
 | `@pstdio/sdk/api` | HTTP request and response types |
 | `@pstdio/sdk/resources` | [Resource types](0002-resources.md) such as `Project`, `Workspace`, and `Session` |
 | `@pstdio/sdk/prompts` | `renderPrompt(template, data)` for Mustache prompt templates |
-| `@pstdio/sdk/hooks` | Hook context and payload types |
+| `@pstdio/sdk/hooks` | Deprecated filesystem-hook contexts; use typed hooks from `/extensions` |
 | `@pstdio/sdk/data` | Draft layout, frontmatter, and ID or name lookup helpers |
 | `@pstdio/sdk/testing` | Command contexts and in-memory storage, file, and resource adapters for extension tests |
+
+`requireRepoFiles` from `/data` is also deprecated in 0.44. Planner and Reports keep using it until
+the named extension file handle from PRD 0009 ships and they adopt its published SDK. The pure
+frontmatter, draft-layout, name-resolution and prompt-rendering helpers remain supported.
 
 Every entry except `@pstdio/sdk/extensions/react` works without React. That entry needs the optional peer dependencies `react` (19) and `@tanstack/react-query` (5). The type declarations include every type they reference, so they also type-check with `skipLibCheck: false`.
 

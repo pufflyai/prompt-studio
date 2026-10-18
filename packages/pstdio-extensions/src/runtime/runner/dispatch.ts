@@ -7,7 +7,8 @@ import type {
   ExtensionLoggerApi,
   Struct,
 } from "@pstdio/sdk/extensions";
-import { commandRefId, resolveEventReferenceId } from "@pstdio/sdk/extensions";
+import { commandRefId } from "@pstdio/sdk/extensions";
+import { resolveEventReferenceId } from "pstdio-api-contracts";
 import type { ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 import { createInvocationScope, type InvocationScope } from "./scope";
 import type { BuildEnvironmentInput, CommandRunnerHostDeps } from "./types";
@@ -54,7 +55,8 @@ export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher =>
       if (!ext) continue;
 
       // One delivery owns the host resources its handler creates.
-      const scope = createInvocationScope({ logger: input.logger });
+      const logger = input.deps.createLogger?.(sub.extensionId) ?? input.logger;
+      const scope = createInvocationScope({ logger });
       try {
         const ctx = await input.buildEventContext(
           {
@@ -78,7 +80,7 @@ export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher =>
           extensionId: sub.extensionId,
           metadata: { eventId },
         });
-        input.logger.warn(`Hook "${sub.id}" failed: ${message}`, { eventId });
+        logger.warn(`Hook "${sub.id}" failed: ${message}`, { eventId });
       } finally {
         await scope.close();
       }

@@ -12,14 +12,12 @@
       "!!**/build",
       "!!**/coverage",
       "!!**/dist",
-      "!!packages/sdk/api-report",
       "!!**/.nx",
       "bun.lock",
       "!!packages/pstdio-dashboard/chakra-config.json",
       "!!packages/e2e/playwright-report",
       "!!packages/e2e/test-results",
       "!!packages/pstdio-extensions/src/bridge/webview-runtime/runtime.bundle.js",
-      "!!extensions/pstdio-planner/vendor/collection-filter.js",
       "!!packages/pstdio-agents/src/providers/opencode/mocks/full-conversation.json"
     ]
   },

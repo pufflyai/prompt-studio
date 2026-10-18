@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { BoardView } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "../../commands/command-context.fixture";
 import { createTicketCommand } from "../../commands/create-ticket";
@@ -6,9 +7,101 @@ import { requestHumanCommand, reviewCommand } from "../../commands/review-reques
 import { putAttempt } from "../../data/attempt-storage";
 import { putTicket, statusesCollection, ticketsCollection } from "../../data/collections";
 import { DEFAULT_STATUSES } from "../../data/seed";
+import { createTicketTag } from "../../data/tag-operations";
+import { timelineBoard } from "../../data/ticket-board";
 import { createDeadlineCommand } from "./deadline-commands";
+import { registerGate } from "./gate-store";
 import { moveTicketCommand } from "./move-ticket";
 import { readPlanCommand } from "./read-plan";
+
+test("an invalid Track stops the snapshot before saved views can be initialized", async () => {
+  const storage = createMemoryStorage();
+  await createTicketTag({ storage, name: "Track", type: "multi_select" });
+  let viewReads = 0;
+  const [ctx] = makeCommandArgs({
+    storage,
+    params: {},
+    overrides: {
+      views: {
+        list: async () => {
+          viewReads++;
+          return { views: [], defaultViewId: "default" };
+        },
+      },
+    },
+  });
+  await expect(readPlanCommand.run(ctx, {})).rejects.toThrow();
+  expect(viewReads).toBe(0);
+});
+
+test("the timeline snapshot includes its saved views and their default", async () => {
+  const focused: BoardView = {
+    id: "focused",
+    boardId: "timeline-tickets",
+    title: "Focus",
+    builtIn: false,
+    settings: { viewMode: "board", columnGrouping: "status", rowGrouping: "none", displayProperties: [] },
+    filter: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Planned" }] },
+    sorts: [],
+  };
+  const savedViews = { views: [focused], defaultViewId: focused.id };
+  const [ctx] = makeCommandArgs({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      views: {
+        list: async (view) => {
+          expect(view).toEqual(timelineBoard);
+          return savedViews;
+        },
+      },
+    },
+  });
+  expect((await readPlanCommand.run(ctx, {})).savedViews).toEqual(savedViews);
+});
+
+test("the timeline carries gate instructions without copying ordinary ticket documents", async () => {
+  const storage = createMemoryStorage();
+  const [ctx] = makeCommandArgs({ storage, params: {} });
+  const ordinary = await createTicketCommand.run(ctx, {
+    content: `# Work\n\n${"Detailed ticket notes. ".repeat(1000)}`,
+  });
+  const gate = await createTicketCommand.run(ctx, { content: "# Review\n\nInspect the result." });
+  await registerGate(ctx, gate.id);
+  const rows = (await readPlanCommand.run(ctx, {})).sections.flatMap(({ rows }) => rows);
+  expect(rows.find(({ id }) => id === ordinary.id)?.instructions).toBe("");
+  expect(rows.find(({ id }) => id === gate.id)?.instructions).toBe(gate.content);
+});
+
+test("the plan reads one ticket snapshot without loading workspace session histories", async () => {
+  const storage = createMemoryStorage();
+  const [ctx] = makeCommandArgs({ storage, params: {} });
+  const ticket = await createTicketCommand.run(ctx, { title: "Visible work", statusId: "ready" });
+  let ticketReads = 0;
+  let sessionReads = 0;
+  const collection = storage.collection.bind(storage);
+  storage.collection = <T>(name: string) => {
+    const items = collection<T>(name);
+    return {
+      ...items,
+      list: async () => {
+        if (name === "tickets") ticketReads++;
+        return items.list();
+      },
+    };
+  };
+  ctx.workspaces.list = async () => [
+    { id: "workspace", anchors_json: [{ type: "ticket", id: ticket.id, label: ticket.shorthand }] } as never,
+  ];
+  ctx.sessions.query = async () => {
+    sessionReads++;
+    return { items: [], nextCursor: null };
+  };
+  const plan = await readPlanCommand.run(ctx, {});
+  expect(plan.ticketRows).toContainEqual(expect.objectContaining({ id: ticket.id }));
+  expect(ticketReads).toBe(1);
+  expect(sessionReads).toBe(0);
+});
 
 test("the plan query derives milestone ETA from saved complexity and observed attempt starts", async () => {
   const storage = createMemoryStorage();

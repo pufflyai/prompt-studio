@@ -1,6 +1,6 @@
 import { addResourceAnchorsSchema, removeResourceAnchorsSchema, resourceAnchorQuerySchema } from "pstdio-api-contracts";
 import type { ResourceAnchor, ResourceAnchorQuery, ResourceRef } from "pstdio-api-contracts/extension-kernel";
-import { publishResourceAnchorChanges, refreshLegacyAnchorSources } from "../../../services/resource-anchor-events";
+import { publishResourceAnchorChanges, refreshResourceAnchorSources } from "../../../services/resource-anchor-events";
 import type { ExtensionsRouteDeps } from "../deps";
 import { canonicalResource, createAnchorPolicy } from "./resource-link-policy";
 
@@ -16,7 +16,8 @@ export const createResourceLinksApi = (
   ) => {
     if (!items.length) return;
     publishResourceAnchorChanges(deps.eventBus, items, operation);
-    await refreshLegacyAnchorSources(deps.eventBus, items, {
+    await refreshResourceAnchorSources(deps.eventBus, items, {
+      project: deps.projectService.get,
       workspace: deps.workspaceService.get,
       session: deps.sessionService.get,
     });
@@ -56,6 +57,13 @@ export const createResourceLinksApi = (
         await publish(changed, "remove");
         return;
       }
+    },
+    queryAnchors: async (query: ResourceAnchorQuery) => {
+      const page = await deps.resourceLinksService.list({
+        ...resourceAnchorQuerySchema.parse(query),
+        resource: await canonical(query.resource),
+      });
+      return { ...page, nextCursor: page.nextCursor ?? null };
     },
     listAnchors: async (query: ResourceAnchorQuery) =>
       deps.resourceLinksService.list({

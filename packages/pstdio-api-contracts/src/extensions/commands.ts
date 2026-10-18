@@ -7,6 +7,10 @@ import {
 } from "./common";
 import { workbenchMenuTargetSchema } from "./targets";
 
+const commandParamDescriptorSchema = z
+  .object({ type: z.string(), description: localizableStringSchema.optional() })
+  .catchall(z.unknown());
+
 export const extensionCommandRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
@@ -23,10 +27,10 @@ export const extensionCommandRecordSchema = z.object({
       z.object({ kind: z.literal("remove"), resourceType: z.string(), idParam: z.string() }),
     ])
     .optional(),
-  params: z.record(z.string(), z.object({ type: z.string() }).catchall(z.unknown())).optional(),
+  params: z.record(z.string(), commandParamDescriptorSchema).optional(),
 });
 
-export const extensionParamObjectSchema = z.record(z.string(), z.object({ type: z.string() }).catchall(z.unknown()));
+export const extensionParamObjectSchema = z.record(z.string(), commandParamDescriptorSchema);
 
 export const extensionMiddlewareRecordSchema = z.object({
   id: z.string(),

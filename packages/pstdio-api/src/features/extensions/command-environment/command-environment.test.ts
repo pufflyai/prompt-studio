@@ -184,7 +184,7 @@ describe("createCommandEnvironment host primitives", () => {
       },
     );
 
-    await expect(env.workspaces.list()).resolves.toEqual([
+    await expect(env.workspaces.list()).resolves.toMatchObject([
       { id: "ws-1", project_id: "project-1", root_path: null },
       { id: "ws-2", project_id: "project-1", root_path: null },
     ]);
@@ -353,7 +353,7 @@ describe("createCommandEnvironment session scopes", () => {
     );
 
     await expect(sessions.get("session-foreign")).resolves.toBeNull();
-    await expect(sessions.listByWorkspace("workspace-foreign")).rejects.toThrow(
+    await expect(sessions.query({ workspaceId: "workspace-foreign" })).rejects.toThrow(
       "Workspace not found: workspace-foreign",
     );
     await expect(sessions.create({ title: "Forged", prompt: "x", workspaceId: "workspace-foreign" })).rejects.toThrow(
@@ -593,7 +593,7 @@ describe("createCommandEnvironment workspaces", () => {
       },
     );
 
-    await expect(env.workspaces.getByShorthand("PS-1_A1")).resolves.toEqual({
+    await expect(env.workspaces.getByShorthand("PS-1_A1")).resolves.toMatchObject({
       id: "ws-1",
       project_id: "project-1",
       root_path: null,
@@ -630,7 +630,6 @@ describe("createCommandEnvironment workspaces", () => {
               diff: false,
               merge: false,
               rebase: false,
-              archive: false,
               delete: false,
             },
             provider_error_json: null,

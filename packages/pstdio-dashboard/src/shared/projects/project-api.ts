@@ -1,13 +1,6 @@
-import type { Project as ProjectResponse } from "@pstdio/sdk/resources";
-import { apiRequest } from "@/lib/api";
-
-export type UpdateProjectDefaultsInput = {
-  name?: string;
-  default_agent_id?: string | null;
-  default_agent_model?: string | null;
-};
-
-export const getProjectDefaults = (projectId: string) => apiRequest<ProjectResponse>(`/v1/projects/${projectId}`);
-
+import type { UpdateProjectInput } from "@pstdio/sdk/api";
+import { getApiClient } from "@/lib/api";
+export type UpdateProjectDefaultsInput = UpdateProjectInput;
+export const getProjectDefaults = (projectId: string) => getApiClient().projects.get(projectId);
 export const updateProjectDefaults = (projectId: string, input: UpdateProjectDefaultsInput) =>
-  apiRequest<ProjectResponse>(`/v1/projects/${projectId}`, { method: "PATCH", body: input });
+  getApiClient().projects.update(projectId, input);

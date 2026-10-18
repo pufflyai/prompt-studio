@@ -1,5 +1,7 @@
+import type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
 import { guest } from "rimless";
 import type { HostApi, HostEventMessage, InitMessage, PropsUpdateMessage, ThemeUpdateMessage } from "../contract";
+import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
 import { createViewLifecycle } from "./view-lifecycle";
@@ -94,7 +96,7 @@ const start = async () => {
   installOpaqueOriginStorageFallbacks();
   acceptBridgeMessagesOnlyFromHost();
 
-  const propsStore = createPropsStore<unknown>(undefined);
+  const propsStore = createPropsStore<WebviewHostProps>(createWebviewHostProps());
   const hostEventListeners = new Map<string, Set<(payload: unknown) => void>>();
   const subscribeHostEvent = (scope: string, handler: (payload: unknown) => void) => {
     const handlers = hostEventListeners.get(scope) ?? new Set();
@@ -112,7 +114,12 @@ const start = async () => {
     const view = module.default ?? (module.mount ? (module as ExtensionViewModule) : undefined);
     if (!view?.mount) throw new Error("Extension module does not export a default view (defineExtensionView).");
 
-    const host = createGuestHost((request) => connection.remote.call(request), subscribeHostEvent, message.extensionId);
+    const host = createGuestHost(
+      (request) => connection.remote.call(request),
+      subscribeHostEvent,
+      message.extensionId,
+      propsStore,
+    );
     return await view.mount(ensureMount(), host, propsStore);
   });
   let keyboardForwarderInstalled = false;
@@ -133,17 +140,14 @@ const start = async () => {
               if (isEditableTarget(event.target) && !event.shiftKey) return;
 
               connection.remote
-                .call({
-                  method: "host.dispatchKeyboardEvent",
-                  params: {
-                    key: event.key,
-                    code: event.code,
-                    ctrlKey: event.ctrlKey,
-                    metaKey: event.metaKey,
-                    altKey: event.altKey,
-                    shiftKey: event.shiftKey,
-                    repeat: event.repeat,
-                  },
+                .dispatchKeyboardEvent({
+                  key: event.key,
+                  code: event.code,
+                  ctrlKey: event.ctrlKey,
+                  metaKey: event.metaKey,
+                  altKey: event.altKey,
+                  shiftKey: event.shiftKey,
+                  repeat: event.repeat,
                 })
                 .catch(() => {});
             },

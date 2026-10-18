@@ -7,7 +7,6 @@ import {
   extensionDataTableRendererRecordSchema,
   extensionKanbanRendererRecordSchema,
   kanbanBuiltInViews,
-  legacyOrderingFromSorts,
 } from "pstdio-api-contracts";
 import {
   type DataTableRendererQueryParams,
@@ -41,7 +40,6 @@ export const getBoards = async (deps: BoardViewsDeps, projectId: string) => {
       id: view.id,
       title: text(view.title, view.localId),
       extensionId: view.extensionId,
-      statuses: metadata.statuses,
       scope: { project_id: projectId, extension_instance_id: source.instance.id, board_id: view.localId },
     };
     const localized = <TSettings>(declared: { settings: TSettings; views: DeclaredView[] }) => ({
@@ -101,14 +99,12 @@ const titleField: BoardField = {
   sortable: true,
   displayable: false,
 };
-const statusesSchema = z.object({ statuses: z.array(z.object({ id: z.string(), label: z.string() })) });
 const resolveKanbanFields = async (deps: BoardViewsDeps, board: Extract<ResolvedBoard, { kind: "kanban" }>) => {
   const result = await runQuery(deps, board, board.body.queryHandlerId, {
     renderer: rendererOf(board),
-    settings: { ...board.settings, ordering: legacyOrderingFromSorts([]) },
+    settings: board.settings,
     filter: EMPTY_VIEW_FILTER,
     sorts: [],
-    filters: {},
   } satisfies KanbanRendererQueryParams);
   const rawAttributes = result && typeof result === "object" && "attributes" in result ? result.attributes : undefined;
   const attributes =
@@ -124,16 +120,6 @@ const resolveKanbanFields = async (deps: BoardViewsDeps, board: Extract<Resolved
           value: option.value,
           label: text(option.label, option.value),
         }));
-      if (attribute.type.kind === "status") {
-        const ref = attribute.type.statuses;
-        const status = board.statuses.find(
-          (status) => status.id === `${ref.extensionId ?? board.extensionId}.status.${ref.id}`,
-        );
-        if (!status) throw new BoardViewError("Board status provider is unavailable", 503);
-        options = statusesSchema
-          .parse(await runQuery(deps, board, status.queryHandlerId, {}))
-          .statuses.map((status) => ({ value: status.id, label: status.label }));
-      }
       return {
         id: attribute.id,
         label: text(attribute.label, attribute.id),

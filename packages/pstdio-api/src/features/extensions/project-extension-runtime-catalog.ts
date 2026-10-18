@@ -17,6 +17,7 @@ import {
   createExtensionSourceCache,
   type LoadableExtensionSource,
 } from "./project-extension-runtime-sources";
+import { createProjectRuntimeActivation } from "./project-runtime-activation";
 
 type ProjectState = {
   /** Bumped on every invalidation; a load may publish only if it still matches. */
@@ -291,6 +292,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
   return {
     get,
     getSourcesRuntime: sources.loadRuntime,
+    ...createProjectRuntimeActivation(get),
     invalidate,
     validateResourcePrefixes,
     subscribeInvalidation: (listener: (input: RuntimeInvalidationInput) => void) => {

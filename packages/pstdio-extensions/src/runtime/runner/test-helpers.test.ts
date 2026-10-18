@@ -6,7 +6,31 @@ import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
 
 export const makeStorage = () => ({ api: createMemoryStorage() });
 
-const createSessionResource = () => ({ type: "session" as const, id: "", title: "", status: "in_progress" as const });
+const createSessionResource = () => ({
+  type: "session" as const,
+  id: "",
+  title: "",
+  status: "in_progress" as const,
+  archived: false,
+  agent: null,
+  cwd: null,
+  usage: null,
+  lastSelectedModel: null,
+  workspaceId: null,
+  originalSessionId: null,
+  createdAt: "",
+  updatedAt: "",
+  lastRequestStarted: null,
+  lastRequestEnded: null,
+  last_selected_model: null,
+  workspace_id: null,
+  original_session_id: null,
+  created_at: "",
+  updated_at: "",
+  last_request_started: null,
+  last_request_ended: null,
+  anchors_json: [],
+});
 
 export const stubEnvironment = (
   storage: CommandRunnerEnvironment["storage"],
@@ -36,8 +60,6 @@ export const stubEnvironment = (
     sessions: {
       query: async () => ({ items: [], nextCursor: null }),
       get: async () => null,
-      list: async () => [],
-      listByWorkspace: async () => [],
       create: async () => createSessionResource(),
       followup: async () => {},
       getQueuedFollowUps: queuedRequestsRequireHost,
@@ -58,12 +80,13 @@ export const stubEnvironment = (
       create: async () => ({ id: "" }),
       resolve: async () => ({}) as never,
       cancel: async () => ({ id: "" }),
-      archive: async () => ({ id: "" }),
       removeWorktree: async () => ({ removed: true }),
       delete: async () => {},
     },
     activity: { record: async () => ({ id: "" }) },
     notify: {
+      setStatus: async () => null,
+      setStatusByKey: async () => [],
       toast: async () => {},
       action: async () => ({}) as never,
       resolve: async () => [],

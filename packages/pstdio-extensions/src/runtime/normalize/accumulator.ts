@@ -8,7 +8,6 @@ import type {
   RuntimeFileIconThemeRecord,
   RuntimeKeybindingRecord,
   RuntimePrivateHandlerRecord,
-  RuntimeStatusRecord,
   RuntimeThemeRecord,
   RuntimeTranslationRecord,
   RuntimeViewRecord,
@@ -27,7 +26,6 @@ export type RegistryIndex = {
   translationIds: Map<string, RuntimeTranslationRecord>;
   keybindingDedupe: Map<string, RuntimeKeybindingRecord>;
   viewIds: Map<string, RuntimeViewRecord>;
-  statusIds: Map<string, RuntimeStatusRecord>;
 };
 
 export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Accumulator => ({
@@ -48,7 +46,6 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   navigationTrees: [],
   pages: [],
   statusBarItems: [],
-  statuses: [],
   resourceKinds: [],
   resourceHierarchyProviders: [],
   activityItems: [],
@@ -79,7 +76,6 @@ export const createRegistryIndex = (): RegistryIndex => ({
   translationIds: new Map(),
   keybindingDedupe: new Map(),
   viewIds: new Map(),
-  statusIds: new Map(),
 });
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>

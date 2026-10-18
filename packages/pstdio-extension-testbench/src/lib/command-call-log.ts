@@ -1,4 +1,4 @@
-import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest, CommandExecutionResult } from "@pstdio/sdk/api";
 
 export const commandLogLimit = 100;
 
@@ -7,7 +7,7 @@ export type CommandCallLogEntry = {
   error?: string;
   id: string;
   request: CommandExecuteRequest;
-  response?: CommandExecuteResponse;
+  response?: CommandExecutionResult;
   status: "pending" | "success" | "error";
 };
 

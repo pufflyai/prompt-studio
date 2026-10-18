@@ -1,5 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { createSessionResponseSchema, type HarnessAttachment, type HarnessParams } from "pstdio-api-contracts";
+import { type HarnessAttachment, type HarnessParams, sessionCreateResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
@@ -8,6 +8,7 @@ import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
 import { resolveSessionCwd } from "../resolve-session-cwd";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
 import { createSessionHarnessOperation, HarnessOperationError } from "../session-harness-commands";
+import { toSessionResponse } from "../session-response";
 import { createSessionScheduler } from "../session-scheduler";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "./resolve-create-session";
 import { resolveCreateWorkspace } from "./resolve-create-workspace";
@@ -26,7 +27,7 @@ export const createSessionRoute = createRoute({
   responses: {
     201: {
       description: "Session created.",
-      content: { "application/json": { schema: createSessionResponseSchema } },
+      content: { "application/json": { schema: sessionCreateResponseSchema } },
     },
     400: {
       description: "No default agent is configured.",
@@ -130,7 +131,14 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
           onCreated,
           c.req.raw.signal,
         );
-        return c.json(session, 201);
+        return c.json(
+          {
+            ...session,
+            ...toSessionResponse(session, resolvedWorkspaceId),
+            ...("operation_result" in session ? { operationResult: session.operation_result } : {}),
+          },
+          201,
+        );
       }
       const session = await withResolvedSubmittingSessionAttachments(
         deps,
@@ -152,7 +160,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
             onCreated: onCreated,
           }),
       );
-      return c.json(session, 201);
+      return c.json({ ...session, ...toSessionResponse(session, resolvedWorkspaceId) }, 201);
     } catch (error) {
       const failure = creationFailure(error);
       return c.json({ error: failure.error }, failure.status);

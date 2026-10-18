@@ -1,7 +1,7 @@
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import type { WorkbenchCore } from "@pstdio/workbench";
 
-export const surfaceCommandOutcome = (workbench: WorkbenchCore, response: CommandExecuteResponse) => {
+export const surfaceCommandOutcome = (workbench: WorkbenchCore, response: CommandExecutionResult) => {
   const { outcome } = response;
   const show = (notice: Parameters<WorkbenchCore["notifications"]["show"]>[0]) =>
     workbench.notifications.show(notice, { source: "extension", ownerId: response.extensionId });

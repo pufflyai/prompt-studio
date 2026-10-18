@@ -15,6 +15,7 @@ import {
 import { submitChangeRequestCommand } from "./change-requests";
 import { makeCommandArgs } from "./command-context.fixture";
 import { runReviewCommand } from "./run-review";
+import { sessionQuery } from "./session-query.fixture";
 import { type ReviewFinding, submitReviewCommand } from "./submit-review";
 
 const actor = { type: "agent" as const, id: "agent-1", displayName: "Agent" };
@@ -93,9 +94,10 @@ const setup = async () => {
           run: async () => ({ exitCode: 0, stdout: `${headSha}\n`, stderr: "" }),
         },
         sessions: {
-          listByWorkspace: async () => [
-            { type: "session", id: "implementation-1", title: "Implementation", status: "completed" },
-          ],
+          query: sessionQuery(
+            async () => [],
+            async () => [{ type: "session", id: "implementation-1", title: "Implementation", status: "completed" }],
+          ),
           get: async (id: string) => ({
             id,
             title: id,

@@ -1,5 +1,5 @@
-import { resolvePageParams } from "@pstdio/sdk/extensions";
 import type { WorkbenchCore } from "@pstdio/workbench";
+import { resolvePageParams } from "pstdio-api-contracts";
 import { useEffect, useState } from "react";
 
 export const useWebviewPageProps = (workbench?: WorkbenchCore) => {
