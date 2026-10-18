@@ -144,7 +144,7 @@ export const closePageSlot = (input: {
   const { page, slot, instanceKey } = input;
   if (!isPageSlotClosable(slot)) throw new Error(`Page slot "${slot.id}" is fixed and cannot close`);
   const state =
-    instanceKey === "default"
+    slot.item.kind === "view"
       ? setStaticSlotOpen(input.state, slot.id, false)
       : removeResourceInstance(input.state, slot.id, instanceKey);
   if (slot.role === "auxiliary") return { kind: "stay", state };

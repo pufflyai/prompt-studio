@@ -123,6 +123,9 @@ const applyPageState = (
 ) => {
   const previousScope = input.layout.getPersistenceScope();
   const previous = input.registry.store.getState();
+  // Before the first page, the user may already have changed the current
+  // project's panel chrome. Those choices initialize its first mode.
+  const defaultLayout = !previous.activeModeId ? input.layout.getLayout() : input.layout.store.getInitialState().layout;
   const modeChanged = previous.activeModeId !== state.activeModeId || previous.projectId !== state.projectId;
   const modeLayout = state.activeModeId ? input.loadModeLayout?.(state.projectId, state.activeModeId) : undefined;
   const pageLayout = input.loadPageLayout?.(state);
@@ -147,12 +150,7 @@ const applyPageState = (
     const activation = pageActivations(state, latest, restoresMode);
     const layoutInput = {
       layout: restoresLayout
-        ? restoreModePanelLayout(
-            input.layout.getLayout(),
-            modeLayout,
-            input.layout.store.getInitialState().layout,
-            pageLayout,
-          )
+        ? restoreModePanelLayout(input.layout.getLayout(), modeLayout, defaultLayout, pageLayout)
         : input.layout.getLayout(),
       modeLayout,
       placements: bindPlacementsToActivePageLocation(latest),

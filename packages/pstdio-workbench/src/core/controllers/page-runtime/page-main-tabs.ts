@@ -6,21 +6,22 @@ import type {
 } from "../../registries/layout/layout-types";
 import { placementIdentityKey, reconcileOwnedPlacements } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
+import { ownsStaticPageInstance } from "../../registries/pages/page-state-key";
 
 type State = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
 
 const pagePlacementClosed = (widget: WorkbenchWidgetPlacement, next: State, previous: State) => {
   const identity = widget.placementIdentity;
   if (identity?.kind !== "page") return false;
-  const contains = (state: State["pageStates"][string] | undefined) =>
-    identity.instanceKey === "default"
-      ? state?.openStaticSlotIds.includes(identity.slotId)
-      : state?.resourceInstances[identity.slotId]?.some((instance) => instance.instanceKey === identity.instanceKey);
+  const contains = (key: string, state: State["pageStates"][string] | undefined) =>
+    (ownsStaticPageInstance(key, identity.pageId, identity.instanceKey) &&
+      state?.openStaticSlotIds.includes(identity.slotId)) ||
+    state?.resourceInstances[identity.slotId]?.some((instance) => instance.instanceKey === identity.instanceKey);
   return Object.entries(previous.pageStates).some(
     ([key, state]) =>
       (key === identity.pageId || key.startsWith(`${identity.pageId}|`)) &&
-      contains(state) &&
-      !contains(next.pageStates[key]),
+      contains(key, state) &&
+      !contains(key, next.pageStates[key]),
   );
 };
 

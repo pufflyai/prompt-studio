@@ -1,5 +1,6 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageRuntimeState } from "./page-registry-types";
+import { ownsStaticPageInstance } from "./page-state-key";
 
 export type PagePlacementEdit = { kind: "close" } | { kind: "retention"; open: "pin" | "preview" };
 
@@ -23,7 +24,7 @@ export const editPagePlacementStates = (
         {
           ...current,
           openStaticSlotIds:
-            edit.kind === "close" && identity.instanceKey === "default"
+            edit.kind === "close" && ownsStaticPageInstance(key, identity.pageId, identity.instanceKey)
               ? current.openStaticSlotIds.filter((id) => id !== identity.slotId)
               : current.openStaticSlotIds,
           resourceInstances: { ...current.resourceInstances, [identity.slotId]: remaining },

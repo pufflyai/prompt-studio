@@ -75,7 +75,8 @@ test("reload restores page-local editor collections and the latest shared panel"
     restored.layout.getLayout().regions.main.widgets.map((item) => [item.resource?.id, item.tabRetention]),
   ).toEqual([["readme", "persistent"]]);
   expect(restored.layout.getLayout().regions.side.widgets).toHaveLength(1);
-  expect(restored.layout.getLayout().regions.side.widgets[0]?.placementIdentity).toEqual(inspector.identity);
+  expect(restored.layout.getLayout().regions.side.widgets[0]?.resource).toEqual({ type: "workspace", id: "beta" });
+  expect(restored.layout.getLayout().regions.side.widgets[0]?.placementIdentity).not.toEqual(inspector.identity);
   await restored.navigation.openTarget(file("replacement", "preview"));
   expect(restored.layout.getLayout().regions.main.widgets.map((item) => item.resource?.id)).toEqual([
     "replacement",
@@ -100,7 +101,7 @@ test("restoring a location applies current fixed panel declarations to its cache
       viewId: "editor",
       closable: false,
       resource: { type: "workspace", id: "alpha" },
-      placementIdentity: { kind: "page", pageId: "workspace", slotId: "files", instanceKey: "default" },
+      placementIdentity: expect.objectContaining({ kind: "page", pageId: "workspace", slotId: "files" }),
     }),
   ]);
   restored.pageLocations.dispose();

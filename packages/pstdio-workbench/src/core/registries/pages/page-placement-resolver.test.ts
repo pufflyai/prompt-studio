@@ -23,6 +23,7 @@ test("resolves page panels from the current resource capabilities", () => {
     const placements = resolvePagePlacements({
       page,
       state: { openStaticSlotIds: [], resourceInstances: {} },
+      staticInstanceKey: "default",
       resource: { type: "workspace", id: "workspace", metadata: { supportsDiff } },
       sharedPlacements: [],
       resolvePagePlacement: (input) => input.viewId,
