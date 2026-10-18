@@ -2,7 +2,6 @@ import { Box, HStack, Icon, Menu, Text } from "@chakra-ui/react";
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { ListRow } from "@/components/list-row/list-row";
-import { Checkbox } from "@/components/primitives/checkbox";
 import type { SearchableMenuItem } from "./searchable-menu";
 
 interface SearchableMenuRowProps {
@@ -16,13 +15,7 @@ export const SearchableMenuRow = (props: SearchableMenuRowProps) => {
   let endContent: ReactNode = multiple ? (
     <HStack gap="xs">
       {item.secondaryLabel}
-      <Checkbox
-        checked={Boolean(item.isSelected)}
-        readOnly
-        pointerEvents="none"
-        size={item.variant === "compact" ? "xs" : "sm"}
-        inputProps={{ tabIndex: -1, "aria-hidden": true }}
-      />
+      {item.isSelected ? <Icon as={Check} boxSize="3.5" /> : null}
     </HStack>
   ) : undefined;
   if (!multiple && item.isSelected) endContent = <Icon as={Check} boxSize="3.5" />;
@@ -43,7 +36,6 @@ export const SearchableMenuRow = (props: SearchableMenuRowProps) => {
         disabled={item.isDisabled}
         tooltip={item.tooltipLabel}
         description={multiple ? undefined : item.secondaryLabel}
-        isSelected={!multiple && item.isSelected}
         label={
           multiple ? (
             <HStack minW="0" gap="xs">
@@ -78,7 +70,7 @@ export const SearchableMenuRow = (props: SearchableMenuRowProps) => {
       </Menu.CheckboxItem>
     );
   return (
-    <Menu.Item value={item.id} disabled={item.isDisabled} onClick={item.onSelect} asChild>
+    <Menu.Item value={item.id} disabled={item.isDisabled} onSelect={item.onSelect} asChild>
       {content}
     </Menu.Item>
   );

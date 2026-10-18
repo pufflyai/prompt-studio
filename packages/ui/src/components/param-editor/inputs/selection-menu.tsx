@@ -1,5 +1,5 @@
 import { Button, Flex, Icon, IconButton, Menu, Portal } from "@chakra-ui/react";
-import { Check, ChevronDown, Square, SquareCheck } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { ListRow } from "../../list-row/list-row";
 import { filterSearchableMenuItems, SearchableMenu, type SearchableMenuItem } from "../../overlays/searchable-menu";
@@ -36,12 +36,6 @@ export interface SelectionMenuProps {
   onToggle: (optionId: string) => void;
   onGroupChange?: (optionId: string) => void;
 }
-
-export const selectionIndicator = (multiSelect: boolean, selected: boolean) => {
-  if (multiSelect)
-    return <Icon as={selected ? SquareCheck : Square} boxSize="14px" color={selected ? "fg" : "fg.muted"} />;
-  return selected ? <Icon as={Check} boxSize="14px" color="fg" /> : null;
-};
 
 const selectionIconComponent = (option: SelectionMenuOption | undefined) =>
   option?.icon ? getIconComponent(option.icon) : undefined;
@@ -151,6 +145,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
           return [...filtered, { id: value, label: `Use "${value}"`, onSelect: () => onToggle(value) }];
         }}
         searchPlaceholder={searchPlaceholder}
+        multiple={multiSelect}
         closeOnSelect={!multiSelect}
         emptyState={
           <Menu.Item value="empty" disabled asChild>
@@ -206,20 +201,24 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
             {options.map((option) => {
               const selected = selectedIds.includes(option.id);
               return (
-                <Menu.Item key={option.id} value={option.id} disabled={option.disabled} asChild>
+                <Menu.Item
+                  key={option.id}
+                  value={option.id}
+                  disabled={option.disabled}
+                  onSelect={() => onToggle(option.id)}
+                  asChild
+                >
                   <ListRow
                     asChild
                     variant="full-width"
                     role={multiSelect ? "menuitemcheckbox" : "menuitemradio"}
                     aria-checked={selected}
-                    id={option.id}
                     label={option.name}
                     icon={selectionOptionIcon(option, "16px")}
                     tooltip={option.description}
                     disabled={option.disabled}
                     isSelected={selected}
-                    endContent={selectionIndicator(multiSelect, selected)}
-                    onActivate={() => onToggle(option.id)}
+                    endContent={selected ? <Icon as={Check} boxSize="3.5" color="fg" /> : undefined}
                   />
                 </Menu.Item>
               );

@@ -30,6 +30,22 @@ const createSessionFixture = async (baseUrl: string, projectId: string, authoriz
   return { workspace, session };
 };
 
+const verifyFloatingLauncher = async (page: Page) => {
+  const floatSide = page.getByRole("button", { name: "Float Side Panel", exact: true });
+  if (await floatSide.isVisible()) await floatSide.click();
+  else await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+  const floating = page.getByRole("dialog", { name: "Side Panel" });
+  const launcher = page.getByRole("button", { name: "Open Side Panel", exact: true, includeHidden: true });
+  await expect(launcher).toBeHidden();
+  await floating.getByRole("button", { name: "Close Side Panel" }).click();
+  await expect(launcher).toBeVisible();
+  await launcher.focus();
+  await page.keyboard.press("Enter");
+  await expect(floating).toBeVisible();
+  await expect(launcher).toBeHidden();
+  await floating.getByRole("button", { name: "Reattach Side Panel" }).click();
+};
+
 export const verifyPackagedSessionMenus = async (
   page: Page,
   baseUrl: string,
@@ -164,10 +180,7 @@ export const verifyPackagedSessionMenus = async (
     await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
   }
   await page.keyboard.press("Escape");
-  const floatSide = page.getByRole("button", { name: "Float Side Panel", exact: true });
-  if (await floatSide.isVisible()) await floatSide.click();
-  else await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
-  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  await verifyFloatingLauncher(page);
   await page
     .locator('[data-workbench-panel-header="side"]')
     .getByRole("tab", { selected: true })

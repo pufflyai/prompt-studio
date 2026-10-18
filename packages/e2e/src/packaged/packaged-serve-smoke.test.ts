@@ -89,6 +89,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
 // The paired session-menu browser check restores focus to its tab after Escape.
+// Its floating launcher hides while open, returns on close, and reopens with the keyboard.
 // It also opens a workspace's related session through the default-on preview policy and checks that it is unpinned.
 // Related openings preserve selected tabs; all new automatic previews close on page leave and empty panels collapse.
 // Manually opened Bottom panels and terminals stay visible across page navigation, retaining the terminal process.

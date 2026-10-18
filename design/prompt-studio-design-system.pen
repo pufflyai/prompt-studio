@@ -19401,7 +19401,7 @@
                       "type": "frame",
                       "id": "sgbRV",
                       "name": "cmp/SearchableMenuItem",
-                      "context": "Shared searchable menu row uses 14px icons by default and 12px icons for compact filter dropdowns. Multi-select values show independent checkboxes.",
+                      "context": "Menu icons and labels align left. Selection uses a far-right checkmark and no selected fill. Hover and keyboard focus remain separate from selection.",
                       "theme": {
                         "menu": "default"
                       },
@@ -19481,12 +19481,12 @@
                           "x": 0,
                           "y": 0,
                           "name": "End",
-                          "enabled": false,
+                          "enabled": "$menu-check-visible",
                           "width": 14,
                           "height": 14,
-                          "icon": "chevron-down",
+                          "icon": "check",
                           "library": "lucide",
-                          "fill": "$ds-fg-muted"
+                          "fill": "$ds-fg"
                         }
                       ]
                     },
@@ -189542,6 +189542,213 @@
           }
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "vA4o3",
+      "x": 50502,
+      "y": 0,
+      "name": "PS-752 · Shared menu selection",
+      "width": 700,
+      "fill": "$ds-bg-subtle",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "frame",
+          "id": "RQ35k",
+          "name": "light menu states",
+          "theme": {
+            "mode": "light"
+          },
+          "width": 300,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "uyISq",
+              "name": "Theme label",
+              "fill": "$ds-fg",
+              "content": "light · selection and hover",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "Q4mVDR",
+              "type": "ref",
+              "ref": "sgbRV",
+              "name": "default menu row",
+              "width": "fill_container",
+              "theme": {
+                "menu": "default"
+              },
+              "descendants": {
+                "UEgTp": {
+                  "icon": "git-branch"
+                },
+                "UTbhN": {
+                  "content": "default"
+                }
+              }
+            },
+            {
+              "id": "USR3D",
+              "type": "ref",
+              "ref": "sgbRV",
+              "name": "selected menu row",
+              "width": "fill_container",
+              "theme": {
+                "menu": "selected"
+              },
+              "descendants": {
+                "UEgTp": {
+                  "icon": "git-branch"
+                },
+                "UTbhN": {
+                  "content": "main"
+                }
+              }
+            },
+            {
+              "id": "cuuqy",
+              "type": "ref",
+              "ref": "sgbRV",
+              "name": "hover menu row",
+              "width": "fill_container",
+              "theme": {
+                "menu": "hover"
+              },
+              "descendants": {
+                "UEgTp": {
+                  "icon": "git-branch"
+                },
+                "UTbhN": {
+                  "content": "hover"
+                }
+              }
+            },
+            {
+              "id": "yRu08",
+              "type": "ref",
+              "ref": "sgbRV",
+              "name": "disabled menu row",
+              "width": "fill_container",
+              "theme": {
+                "menu": "disabled"
+              },
+              "descendants": {
+                "UEgTp": {
+                  "icon": "git-branch"
+                },
+                "UTbhN": {
+                  "content": "disabled"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "covTl",
+          "name": "dark menu states",
+          "theme": {
+            "mode": "dark"
+          },
+          "width": 300,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "Bay8L",
+              "name": "Theme label",
+              "fill": "$ds-fg",
+              "content": "dark · selection and hover",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "u58ZC0",
+              "type": "ref",
+              "ref": "sgbRV",
+              "name": "default menu row",
+              "width": "fill_container",
+              "theme": {
+                "menu": "default"
+              },
+              "descendants": {
+                "UEgTp": {
+                  "icon": "git-branch"
+                },
+                "UTbhN": {
+                  "content": "default"
+                }
+              }
+            },
+            {
+              "id": "fvYbH",
+              "type": "ref",
+              "ref": "sgbRV",
+              "name": "selected menu row",
+              "width": "fill_container",
+              "theme": {
+                "menu": "selected"
+              },
+              "descendants": {
+                "UEgTp": {
+                  "icon": "git-branch"
+                },
+                "UTbhN": {
+                  "content": "main"
+                }
+              }
+            },
+            {
+              "id": "w3k1y",
+              "type": "ref",
+              "ref": "sgbRV",
+              "name": "hover menu row",
+              "width": "fill_container",
+              "theme": {
+                "menu": "hover"
+              },
+              "descendants": {
+                "UEgTp": {
+                  "icon": "git-branch"
+                },
+                "UTbhN": {
+                  "content": "hover"
+                }
+              }
+            },
+            {
+              "id": "OU1nK",
+              "type": "ref",
+              "ref": "sgbRV",
+              "name": "disabled menu row",
+              "width": "fill_container",
+              "theme": {
+                "menu": "disabled"
+              },
+              "descendants": {
+                "UEgTp": {
+                  "icon": "git-branch"
+                },
+                "UTbhN": {
+                  "content": "disabled"
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
@@ -195393,7 +195600,7 @@
           }
         },
         {
-          "value": "$ds-menu-selected",
+          "value": "#00000000",
           "theme": {
             "menu": "selected"
           }
@@ -198896,6 +199103,35 @@
     "chat-user-preview-height": {
       "type": "number",
       "value": 128
+    },
+    "menu-check-visible": {
+      "type": "boolean",
+      "value": [
+        {
+          "value": false,
+          "theme": {
+            "menu": "default"
+          }
+        },
+        {
+          "value": false,
+          "theme": {
+            "menu": "hover"
+          }
+        },
+        {
+          "value": true,
+          "theme": {
+            "menu": "selected"
+          }
+        },
+        {
+          "value": false,
+          "theme": {
+            "menu": "disabled"
+          }
+        }
+      ]
     }
   },
   "fileToken": "5daee32e-f2e6-4f1b-a902-d5068ac252c1"

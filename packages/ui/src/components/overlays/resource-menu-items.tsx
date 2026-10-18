@@ -1,5 +1,5 @@
-import { Menu, Portal } from "@chakra-ui/react";
-import { ChevronRight } from "lucide-react";
+import { HStack, Icon, Menu, Portal } from "@chakra-ui/react";
+import { Check, ChevronRight } from "lucide-react";
 import { Fragment } from "react";
 import { ListRow } from "../list-row/list-row";
 import type { ResourceContextAction } from "./resource-context-menu";
@@ -26,16 +26,29 @@ const ResourceMenuItem = (props: { action: ResourceContextAction; onSelect: Reso
       </Menu.Root>
     );
   return (
-    <Menu.Item value={action.key} disabled={action.isDisabled} closeOnSelect={action.closeOnSelect} asChild>
+    <Menu.Item
+      value={action.key}
+      disabled={action.isDisabled}
+      closeOnSelect={action.closeOnSelect}
+      onSelect={() => onSelect(action)}
+      asChild
+    >
       <ListRow
         asChild
         variant="full-width"
         label={action.label}
         icon={action.icon}
-        endContent={action.endContent}
+        endContent={
+          action.isSelected ? (
+            <HStack gap="xs">
+              {action.endContent}
+              <Icon as={Check} boxSize="3.5" />
+            </HStack>
+          ) : (
+            action.endContent
+          )
+        }
         disabled={action.isDisabled}
-        isSelected={action.isSelected}
-        onActivate={() => onSelect(action)}
       />
     </Menu.Item>
   );

@@ -98,6 +98,7 @@ const LongVisibilityMenu = () => {
 };
 
 const meta: Meta<typeof ResourceContextMenu> = {
+  tags: ["menu-selection"],
   title: "Components/Overlays/Resource Context Menu",
   component: ResourceContextMenu,
   parameters: {
@@ -140,8 +141,12 @@ export const VisibilitySubmenu: Story = {
     await expect(canvas.getByText("Notes hidden")).toBeVisible();
     await userEvent.click(toggle);
     await expect(canvas.getByText("Notes shown")).toBeVisible();
-    await userEvent.keyboard("{Escape}{ArrowRight}");
-    await expect(toggle).toBeVisible();
+    await userEvent.keyboard("{Escape}{Escape}");
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    fireEvent.contextMenu(canvas.getByText("Right-click here"));
+    await waitFor(() => expect(screen.getByRole("menu")).toHaveFocus());
+    await userEvent.keyboard("{Home}{ArrowRight}");
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Notes", exact: true })).toBeVisible());
     await userEvent.keyboard("{Escape}{Escape}");
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   },
@@ -154,7 +159,7 @@ export const InlineAction: Story = {
     fireEvent.contextMenu(canvas.getByText("Right-click here"));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Toggle visibility" }));
     await expect(canvas.getByText("Hidden")).toBeVisible();
-    await expect(screen.getByRole("menu")).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("menu")).toBeVisible());
     await userEvent.click(screen.getByRole("menuitem", { name: "Rename inline" }));
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
     await expect(canvas.getByRole("textbox", { name: "Name" })).toHaveFocus();

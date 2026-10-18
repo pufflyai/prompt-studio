@@ -1,5 +1,5 @@
 import { Badge, Icon, Menu, Portal } from "@chakra-ui/react";
-import { Check, ChevronDown, Square, SquareCheck } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { ListRow } from "@/components/list-row/list-row";
 import { getIconComponent } from "@/components/primitives/icon-options";
 import type { AttributeBadge } from "./kanban-renderer-helpers";
@@ -20,11 +20,6 @@ const toggleMultiValue = (values: string[], optionValue: string) =>
   values.includes(optionValue) ? values.filter((value) => value !== optionValue) : [...values, optionValue];
 
 const getBadgeIconColor = (badge: AttributeBadge) => (badge.color ? `${badge.color}.fg` : "fg.muted");
-
-const selectionIcon = (input: { isMultiValue: boolean; isSelected: boolean }) => {
-  if (input.isMultiValue) return input.isSelected ? <SquareCheck size={14} /> : <Square size={14} />;
-  return input.isSelected ? <Check size={14} /> : null;
-};
 
 export const KanbanRendererAttributeBadge = (props: KanbanRendererAttributeBadgeProps) => {
   const { badge, onChange } = props;
@@ -103,7 +98,7 @@ export const KanbanRendererAttributeBadge = (props: KanbanRendererAttributeBadge
                     icon={<Icon as={getIconComponent(option.icon)} boxSize="16px" />}
                     iconColor={`${option.color ?? "gray"}.500`}
                     isSelected={isSelected}
-                    endContent={selectionIcon({ isMultiValue, isSelected })}
+                    endContent={isSelected ? <Icon as={Check} boxSize="3.5" /> : undefined}
                     onActivate={() => handleOptionChange(option.value)}
                     {...rowInteractionProps}
                   />

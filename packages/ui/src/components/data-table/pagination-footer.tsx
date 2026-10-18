@@ -1,5 +1,5 @@
 import { Button, Icon as ChakraIcon, Flex, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 import { NumberInputField, NumberInputRoot } from "@/components/primitives/number-input";
 import { ListRow } from "../list-row/list-row";
@@ -46,6 +46,7 @@ export function PaginationFooter(props: PaginationFooterProps) {
                         variant="full-width"
                         label={`${option}`}
                         isSelected={option === pageSize}
+                        endContent={option === pageSize ? <ChakraIcon as={Check} boxSize="3.5" /> : undefined}
                         onActivate={() => onPageSizeChange(option)}
                       />
                     </Menu.Item>

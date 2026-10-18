@@ -56,6 +56,7 @@ export default meta;
 type Story = StoryObj<typeof SearchableMenu>;
 
 export const BranchSelector: Story = {
+  tags: ["menu-selection"],
   render: () => (
     <SearchableMenu
       trigger={<Button variant="outline">Select branch</Button>}
@@ -90,6 +91,7 @@ export const BranchSelector: Story = {
 };
 
 export const SwitchableLists: Story = {
+  tags: ["menu-selection"],
   render: () => {
     const [selectedBranch, setSelectedBranch] = useState("main");
     const [selectedRepository, setSelectedRepository] = useState("prompt-studio");

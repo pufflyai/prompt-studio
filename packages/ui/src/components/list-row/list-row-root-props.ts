@@ -93,7 +93,7 @@ export const createListRowRootProps = (input: {
     py: input.verticalPadding,
     pl: input.paddingLeft,
     borderRadius: input.variant === "full-width" || input.variant === "collection" ? "0" : "xs",
-    ...createRowBackgroundProps({ ...input }),
+    ...(input.rowRole?.startsWith("menuitem") ? {} : createRowBackgroundProps(input)),
     cursor: input.variant === "empty-state" ? "default" : interactiveCursor,
     overflow: "hidden",
     textAlign: "left",

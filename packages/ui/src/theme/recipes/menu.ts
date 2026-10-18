@@ -19,7 +19,7 @@ export const menuSlotRecipe = defineSlotRecipe({
       h: "auto",
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between",
+      justifyContent: "flex-start",
       gap: "xs",
       px: "sm",
       py: "2xs",
@@ -40,18 +40,7 @@ export const menuSlotRecipe = defineSlotRecipe({
       _focusVisible: {
         bg: "bg.menu-item.focus",
       },
-      _checked: {
-        bg: "bg.menu-item.selected",
-        color: "fg",
-      },
-      _selected: {
-        bg: "bg.menu-item.selected",
-        color: "fg",
-      },
-      "&[aria-checked=true]": {
-        bg: "bg.menu-item.selected",
-        color: "fg",
-      },
+      "&[data-type]": { ps: "sm" },
       _disabled: {
         cursor: "not-allowed",
         color: "fg.muted",
@@ -59,11 +48,20 @@ export const menuSlotRecipe = defineSlotRecipe({
     },
 
     itemIndicator: {
+      boxSize: "3.5",
+      "& svg": { boxSize: "full" },
+      position: "static",
+      insetStart: "auto",
+      top: "auto",
+      transform: "none",
       color: "fg",
       marginInlineStart: "auto",
       order: 1,
       flexShrink: 0,
     },
+
+    itemText: { flex: "1", minWidth: "0", textAlign: "left" },
+    itemCommand: { marginInlineStart: "auto" },
 
     separator: {
       my: "0",
@@ -90,6 +88,10 @@ export const menuSlotRecipe = defineSlotRecipe({
     },
   },
   variants: {
+    size: {
+      sm: { item: { px: "sm" } },
+      md: { item: { px: "sm" } },
+    },
     variant: {
       panel: {
         content: {

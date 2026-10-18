@@ -50,3 +50,17 @@ Opening or dismissing it does not change whether the menu is open.
 An open menu attaches again as soon as its panel is wide enough. When space is
 short, menus that cannot be closed attach first, then open menus from left to
 right. Main, Secondary, and Side panel menus use the same rule.
+
+## Menu selection and the floating launcher
+
+Selection in shared menus uses a checkmark at the far right. Icons and labels stay
+together on the left. Selection has no background fill; pointer hover and keyboard
+focus keep their own feedback. Tree and navigation rows keep their selected backgrounds.
+Use `SearchableMenu` or resource actions with `isSelected` for shared selection rows.
+Native Chakra menu choices use `Menu.ItemText` and `Menu.ItemIndicator` with the shared recipe.
+
+The floating Side Panel hides its launcher while open and restores it when closed.
+The hidden launcher is inert and outside the accessibility tree. Panel content stays
+mounted while closed, so minimizing and reopening preserves drafts. See the
+[menu selection story](../../../packages/ui/src/components/overlays/menu-selection.stories.tsx)
+and [Side Panel stories](../../../packages/pstdio-workbench/src/examples/side-panel/side-panel.stories.tsx).
