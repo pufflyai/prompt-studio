@@ -61,8 +61,6 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
             aria-haspopup="menu"
             aria-expanded={behavior.open}
             aria-keyshortcuts={sortable ? "Alt+ArrowLeft Alt+ArrowRight Shift+F10" : "Shift+F10"}
-            data-drop-replace={Boolean(behavior.replacementStyle) || undefined}
-            layerStyle={behavior.replacementStyle}
             fontStyle={placement.tabRetention === "preview" ? "italic" : undefined}
             opacity={drag.isDragging ? 0.5 : undefined}
             w="full"
@@ -128,7 +126,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
 
 const TabDropIndicator = (props: { drop: ReturnType<typeof useRegionTab>["drop"] }) => {
   const { drop } = props;
-  if (!drop || drop.replacing) return null;
+  if (!drop) return null;
   return (
     <DropIndicator
       orientation="vertical"

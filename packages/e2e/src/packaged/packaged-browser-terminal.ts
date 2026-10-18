@@ -45,6 +45,25 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   await terminalInput.pressSequentially('printf "__packaged_%s__\\n" "$PSTDIO_PACKAGED_STATE"');
   await terminalInput.press("Enter");
   await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__packaged_retained__");
+  const destination = new URL(page.url());
+  destination.pathname = `/projects/${projectId}/sessions`;
+  destination.search = "";
+  await page.evaluate((url) => {
+    history.pushState(null, "", url);
+    dispatchEvent(new PopStateEvent("popstate"));
+  }, destination.href);
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Sessions");
+  await expect(terminalInput).toHaveCount(0);
+  await page.goBack();
+  await expect(terminalInput).toBeVisible();
+  expect(
+    await terminalInput.evaluate(
+      (element) => element === (window as Window & { retainedTerminalInput?: Element }).retainedTerminalInput,
+    ),
+  ).toBe(true);
+  await terminalInput.pressSequentially('printf "__page_%s__\\n" "$PSTDIO_PACKAGED_STATE"');
+  await terminalInput.press("Enter");
+  await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__page_retained__");
   const closed = socket.waitForEvent("close");
   await terminalInput.pressSequentially("exit");
   await terminalInput.press("Enter");

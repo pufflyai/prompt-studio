@@ -14,6 +14,7 @@ export interface OwnedPlacementOpenInput {
   resource?: ResourceRef;
   open?: PageOpenIntent;
   title?: string;
+  relatedSource?: string;
 }
 export interface OwnedPlacementLocationContext {
   modeId: string;

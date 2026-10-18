@@ -35,7 +35,7 @@ interface RenderedOwnedPlacement {
 }
 
 const bindsToLocation = (placement: WorkbenchOwnedWidgetPlacement) =>
-  placement.value.role === "sub-panel" && (placement.identity.kind === "page" || Boolean(placement.value.resourceKey));
+  placement.value.role === "sub-panel" && placement.identity.kind === "page";
 
 const resolveOwnerResourceKey = (
   desired: WorkbenchOwnedWidgetPlacement,
@@ -115,14 +115,16 @@ const restoreModeWidgets = (
   const ordered = restored.sort(
     (a, b) => (positions.get(a.widgetId) ?? order.length) - (positions.get(b.widgetId) ?? order.length),
   );
-  // Page snapshots own the mixed slots. Shared mode snapshots own the order
-  // of mode tabs occupying those slots, including edits made on another page.
-  const modePositions = new Map(saved.map((widget, index) => [widget.widgetId, index]));
-  const modes = ordered
-    .filter((widget) => widget.placementIdentity?.kind === "mode")
-    .sort((a, b) => (modePositions.get(a.widgetId) ?? saved.length) - (modePositions.get(b.widgetId) ?? saved.length));
-  let modeIndex = 0;
-  return ordered.map((widget) => (widget.placementIdentity?.kind === "mode" ? modes[modeIndex++]! : widget));
+  // Page snapshots own the mixed slots. Mode snapshots own the order of
+  // shared tabs occupying those slots, including edits made on another page.
+  const sharedPositions = new Map(saved.map((widget, index) => [widget.widgetId, index]));
+  const shared = ordered
+    .filter((widget) => widget.placementIdentity?.kind !== "page")
+    .sort(
+      (a, b) => (sharedPositions.get(a.widgetId) ?? saved.length) - (sharedPositions.get(b.widgetId) ?? saved.length),
+    );
+  let sharedIndex = 0;
+  return ordered.map((widget) => (widget.placementIdentity?.kind !== "page" ? shared[sharedIndex++]! : widget));
 };
 
 export const renderDesiredPlacements = (
@@ -221,23 +223,33 @@ const reconcileRegions = (
       const key = placementIdentityKey(entry.identity);
       if (entry.region === regionId && !placedKeys.has(key)) widgets.push(entry.placement);
     }
-    // Page caches omit mode tabs. Recover their shared selection from the mode's cache.
+    const tray = planTrayTabs(
+      widgets,
+      desired.find((entry) => entry.region === regionId && entry.placement.tabRetention === "preview")?.placement
+        .widgetId ?? region.activeWidgetId,
+    );
+    const selected = region.widgets.find((widget) => widget.widgetId === region.activeWidgetId);
+    // A selected preview keeps its slot when replaced; other selections stay put.
+    // Page caches omit mode tabs, so recover their shared selection from the mode's cache.
     const activeWidgetId =
-      [region.activeWidgetId, modeLayout?.regions[regionId].activeWidgetId].find((id) =>
-        widgets.some((placement) => placement.widgetId === id),
-      ) ?? widgets[0]?.widgetId;
+      [
+        region.activeWidgetId,
+        selected?.tabRetention === "preview"
+          ? tray.widgets.find((widget) => widget.tabRetention === "preview")?.widgetId
+          : undefined,
+        modeLayout?.regions[regionId].activeWidgetId,
+      ].find((id) => tray.widgets.some((placement) => placement.widgetId === id)) ?? tray.widgets[0]?.widgetId;
     const opensPreviouslyEmptyRegion =
       region.widgets.length === 0 && widgets.some((placement) => !placement.hiddenByDefault);
+    const closesEmptyPanel =
+      (regionId === "side" || regionId === "secondary") && region.widgets.length > 0 && widgets.length === 0;
     regions[regionId] = {
       ...region,
-      widgets: planTrayTabs(
-        widgets,
-        desired.find((entry) => entry.region === regionId && entry.placement.tabRetention === "preview")?.placement
-          .widgetId ?? activeWidgetId,
-      ).widgets,
+      widgets: tray.widgets,
       savedWidgetOrder: undefined,
       activeWidgetId,
       ...(docked.has(regionId) ? { visible: region.visible || opensPreviouslyEmptyRegion } : {}),
+      ...(closesEmptyPanel ? { visible: false } : {}),
     };
   }
   return { ...layout, regions };
@@ -288,7 +300,8 @@ const bindOwnedSubPanelsToLocation = (layout: WorkbenchLayout, desired: readonly
           if (placement.role !== "sub-panel" || !placement.placementIdentity) return placement;
           const desiredPlacement = desiredByKey.get(placementIdentityKey(placement.placementIdentity));
           if (!desiredPlacement) return placement;
-          if (desiredPlacement.identity.kind !== "page" && !desiredPlacement.placement.resourceKey) return placement;
+          // Shared resources own their content; visiting a page does not make it their owner.
+          if (desiredPlacement.identity.kind !== "page") return placement;
           return { ...placement, ownerResourceKey };
         }),
       },

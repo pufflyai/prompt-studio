@@ -77,3 +77,18 @@ test("a related Main document cannot replace the routed resource's breadcrumb ac
   const resourcePage = { ...page, resource: { kinds: [{ kind: "resource-kind" as const, id: "note" }] } };
   expect(resolvePageBreadcrumbPlacement(layout, resourcePage, { type: "note", id: "source" })).toBeUndefined();
 });
+
+test("a different document on the routed resource cannot replace its breadcrumb actions", () => {
+  const layout = createDefaultWorkbenchLayout();
+  const related = { ...tab("one"), resource: { type: "note", id: "one", metadata: { file: "other" } } };
+  layout.regions.main.widgets = [related];
+  layout.regions.main.activeWidgetId = related.widgetId;
+  const resourcePage = {
+    ...page,
+    resource: { kinds: [{ kind: "resource-kind" as const, id: "note" }] },
+    document: { metadataKey: "file" },
+  };
+  expect(
+    resolvePageBreadcrumbPlacement(layout, resourcePage, { type: "note", id: "one", metadata: { file: "source" } }),
+  ).toBeUndefined();
+});

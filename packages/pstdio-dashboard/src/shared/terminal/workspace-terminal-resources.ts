@@ -6,7 +6,7 @@ import {
   createDashboardWorkspaceOptions,
 } from "@/shared/workspaces/workspace-options";
 
-export const relatedTerminalResources = (ctx: WorkbenchModuleContext, source: ResourceRef) => {
+export const workspaceTerminalResources = (ctx: WorkbenchModuleContext, source: ResourceRef) => {
   if (source.extensionId !== "pstdio" || source.type !== "workspace") return [];
   if (!ctx.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)) return [];
   const projectId = getDashboardSelectedProjectId(ctx);

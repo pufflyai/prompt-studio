@@ -89,6 +89,8 @@ export interface WorkbenchPageRuntimeState {
 }
 
 export interface WorkbenchPageRegistryStoreState<Value> {
+  /** The runtime's committed result; consumers must not infer mode restoration from page caches. */
+  layoutActivation?: "open-page" | "restore-mode";
   pages: Readonly<Record<string, WorkbenchPageContribution>>;
   pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
   projectId?: string;

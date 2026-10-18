@@ -1,8 +1,9 @@
 import type { WorkbenchModuleContribution } from "@pstdio/workbench";
+import { WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { openDashboardTerminalSession } from "@/shared/terminal/api-terminal-session-opener";
+import { workspaceTerminalResources } from "@/shared/terminal/workspace-terminal-resources";
 import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
-import { relatedTerminalResources } from "./terminal-related-resources";
 
 /** Backs workbench terminal sessions with the API PTY transport. */
 export const createTerminalModule = () =>
@@ -13,8 +14,29 @@ export const createTerminalModule = () =>
       ctx.resources.registerProvider({
         id: "dashboard.terminals",
         kind: "terminal",
-        list: () => [],
-        related: (resource) => relatedTerminalResources(ctx, resource),
+        list: () => {
+          const projectId = getDashboardSelectedProjectId(ctx);
+          const existing = ctx.layout.listPanelInstances().flatMap((panel) =>
+            panel.viewId === WORKBENCH_TERMINAL_WIDGET_ID &&
+            panel.resource?.type === "terminal" &&
+            panel.resource.extensionId === "pstdio"
+              ? [
+                  {
+                    resource: panel.resource,
+                    target: {
+                      kind: "panel" as const,
+                      panel: { kind: "shell-placement" as const, id: WORKBENCH_TERMINAL_WIDGET_ID },
+                      resource: panel.resource,
+                    },
+                  },
+                ]
+              : [],
+          );
+          const available = createDashboardWorkspaceOptions(projectId).flatMap((workspace) =>
+            workspaceTerminalResources(ctx, { type: "workspace", id: workspace.id, projectId, extensionId: "pstdio" }),
+          );
+          return [...existing, ...available];
+        },
       });
       ctx.terminal.setSessionOpener((request) => {
         if (request.cwd) return openDashboardTerminalSession(request);

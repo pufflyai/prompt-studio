@@ -93,7 +93,7 @@ describe("owned placement layout reconciliation", () => {
     expect(next.regions.side.activeWidgetId).toBe("project-sessions");
     expect(next.activeWidgetId).toBe("project-sessions");
   });
-  test("binds declarative Sub Panels to the active Location", () => {
+  test("binds page Sub Panels while shared resource panels remain independent", () => {
     const board = owned(pageIdentity("workspaces", "content"), "main", 0, "board", "workspace-view");
     const initial = reconcileOwnedWidgetLayout({
       layout: createDefaultWorkbenchLayout(),
@@ -118,18 +118,21 @@ describe("owned placement layout reconciliation", () => {
       id: "terminal:one",
     };
     terminal.value.resourceKey = "terminal:one";
+    const tools = owned(pageIdentity("workspaces", "tools"), "side", 0, "tools", "tools-view");
     const workspaceLayout = reconcileOwnedWidgetLayout({
       layout: initial,
-      placements: [board, workspace, terminal],
+      placements: [board, workspace, terminal, tools],
       activate: [workspace.identity, terminal.identity],
     });
     const next = reconcileOwnedWidgetLayout({
       layout: workspaceLayout,
-      placements: [board, workspace, terminal],
+      placements: [board, workspace, terminal, tools],
       activate: [board.identity],
     });
-    expect(next.regions.secondary.widgets[0]).toMatchObject({
-      widgetId: "terminal",
+    expect(next.regions.secondary.widgets[0]?.resource).toEqual(terminal.value.resource);
+    expect(next.regions.secondary.widgets[0]).not.toHaveProperty("ownerResourceKey");
+    expect(next.regions.side.widgets[0]).toMatchObject({
+      widgetId: "tools",
       ownerResourceKey: "workspace:one",
     });
   });
@@ -269,7 +272,7 @@ describe("owned placement layout reconciliation lifecycle", () => {
     expect(next.activeLocationWidgetId).toBe("lab-content");
     expect(next.activeWidgetId).toBe("lab-content");
   });
-  test("keeps the region visibility preference when its final placement disappears", () => {
+  test("closes an auxiliary region when its final placement disappears", () => {
     const mode = owned(modeIdentity("sessions"), "side", 20, "project-sessions");
     const page = owned(pageIdentity("ticket", "emoji"), "side", 10, "ticket-emoji");
     const populated = reconcileOwnedWidgetLayout({ layout: createDefaultWorkbenchLayout(), placements: [mode, page] });
@@ -277,7 +280,7 @@ describe("owned placement layout reconciliation lifecycle", () => {
     const empty = reconcileOwnedWidgetLayout({ layout: modeOnly, placements: [] });
     expect(modeOnly.regions.side.visible).toBe(true);
     expect(empty.regions.side.widgets).toEqual([]);
-    expect(empty.regions.side.visible).toBe(true);
+    expect(empty.regions.side.visible).toBe(false);
   });
   test("does not reopen a user-collapsed region for an existing hidden foreign widget", () => {
     const layout = createDefaultWorkbenchLayout();

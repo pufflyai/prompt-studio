@@ -1,7 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
 export const expectPackagedQueuedSubmission = async (page: Page, sessionId: string) => {
-  const editor = page.getByTestId("content-editable").last();
+  const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
   const prompt = "Check the pending queue submission";
   const held = Promise.withResolvers<void>();
   const path = `**/v1/sessions/${sessionId}/follow-up`;
@@ -14,17 +14,18 @@ export const expectPackagedQueuedSubmission = async (page: Page, sessionId: stri
     });
   });
   await editor.fill(prompt);
-  await expect(page.getByTestId("send-message-button").last()).toBeEnabled();
-  await page.getByTestId("send-message-button").last().click();
+  const send = page.getByTestId("send-message-button").filter({ visible: true }).last();
+  await expect(send).toBeEnabled();
+  await send.click();
   try {
-    const row = page.locator("[data-queued-follow-up-id]").filter({ hasText: prompt });
+    const row = page.locator("[data-queued-follow-up-id]").filter({ hasText: prompt, visible: true });
     await expect(row).toBeVisible();
     await expect(row).toHaveAttribute("aria-busy", "true");
     await expect(row.getByRole("button", { name: `Edit queued message: ${prompt}` })).toBeDisabled();
     await expect(row.getByRole("button", { name: /Drag queued follow-up/ })).toBeDisabled();
     await expect(row.getByRole("button", { name: "Remove queued follow-up" })).toHaveCount(0);
     await expect(page.getByRole("log").getByText(prompt, { exact: true })).toHaveCount(0);
-    const rows = page.locator("[data-queued-follow-up-id]");
+    const rows = page.locator("[data-queued-follow-up-id]").filter({ visible: true });
     const first = await rows
       .nth(0)
       .getByRole("button", { name: /Edit queued message/ })
@@ -48,7 +49,7 @@ export const expectPackagedQueuedSubmission = async (page: Page, sessionId: stri
   } finally {
     held.resolve();
   }
-  await expect(page.getByText("Message not sent", { exact: true })).toBeVisible();
+  await expect(page.getByText("Message not sent", { exact: true }).filter({ visible: true })).toBeVisible();
   await page.getByRole("button", { name: "Dismiss", exact: true }).click();
   await expect(editor).toHaveText(prompt);
   await page.unroute(path);

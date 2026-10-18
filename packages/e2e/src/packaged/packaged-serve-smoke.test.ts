@@ -59,6 +59,7 @@ import { registerNotificationStatusSmokeTests } from "./packaged-notification-st
 // Real React Query subscriptions cover matching events, reconnect deduplication and unmount cleanup.
 // Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
+// The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
 // Planner covers timeline state, dependency recovery and Git conflicts in separate packaged cases.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
@@ -69,7 +70,7 @@ import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smok
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-smoke";
-// Resource links include owner batch-resolution commands and their public workbench metadata.
+// Resource links include owner batch-resolution and related-opening commands with public workbench metadata.
 // Includes resource path prefixes, owner resolver commands, and resolution through HTTP.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { registerResourcePageSmokeTests } from "./packaged-resource-pages-smoke";
@@ -89,6 +90,15 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
 // The paired session-menu browser check restores focus to its tab after Escape.
 // It also opens a workspace's related session through the default-on preview policy and checks that it is unpinned.
+// Related openings preserve selected tabs; all new automatic previews close on page leave and empty panels collapse.
+// Manually opened Bottom panels and terminals stay visible across page navigation, retaining the terminal process.
+// A terminal opened on a resource page can move into Main on its listing without losing visibility or shell state.
+// A page moved into Side/Bottom stays across page navigation and reload; moving it into Main scopes it to that page.
+// Related tabs select when revealing closed Side/Bottom panels; open panels keep their selection.
+// Related tabs are placed even when a remembered closure hides their panel; global tab selection remains stable.
+// Only automatically revealed panels close on leave; pinning or adding a manual tab keeps the panel open.
+// Closing manual Bottom elsewhere stays closed on Workspace return, without creating a terminal automatically.
+// Dropping a session preview pins it and keeps the destination terminal preview open and leftmost.
 // Unpinning a created session replaces the tray preview and keeps it leftmost.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
@@ -212,6 +222,7 @@ test(
   PACKAGED_TEST_TIMEOUT,
 );
 
+// Browser smoke also covers mode panel restoration and generic page-preview cleanup.
 registerPackagedShowcaseSmokeTests();
 registerPackagedPlannerSmokeTests();
 

@@ -29,13 +29,15 @@ const setup = () => {
   return { core, open };
 };
 
-test("removal selects another primary resource and finally its parent", () => {
+test("removing the routed resource returns to its parent and preserves other pages", () => {
   const { core, open } = setup();
   open("b");
   open("a");
   core.resources.removed(resource("a"));
-  expect(core.getPrimaryResource()?.id).toBe("b");
+  expect(core.pages.store.getState().activePageId).toBe("collection");
   core.resources.removed(resource("a"));
+  expect(core.pages.store.getState().activePageId).toBe("collection");
+  open("b");
   expect(core.getPrimaryResource()?.id).toBe("b");
   core.resources.removed(resource("b"));
   expect(core.pages.store.getState().activePageId).toBe("collection");
@@ -48,10 +50,13 @@ test("removal updates inactive page state without moving the active route", () =
   open("c", "other");
   core.resources.removed(resource("a"));
   expect(core.getPrimaryResource()?.id).toBe("c");
-  const instances = Object.values(core.pages.store.getState().pageStates.notes!.resourceInstances).flat();
-  expect(instances.map((instance) => instance.resource.id)).toEqual(["b"]);
+  const instances = () =>
+    Object.entries(core.pages.store.getState().pageStates)
+      .filter(([key]) => key.startsWith("notes|"))
+      .flatMap(([, state]) => Object.values(state.resourceInstances).flat());
+  expect(instances().map((instance) => instance.resource.id)).toEqual(["b"]);
   core.resources.removed({ ...resource("b"), projectId: "different" });
-  expect(Object.values(core.pages.store.getState().pageStates.notes!.resourceInstances).flat()).toHaveLength(1);
+  expect(instances()).toHaveLength(1);
 });
 
 test("an editor can retain its dirty placement while other bindings are removed", () => {

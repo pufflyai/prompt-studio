@@ -1,12 +1,12 @@
 import { expect, type Page } from "@playwright/test";
 import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
+import { verifyModePanelState } from "./packaged-mode-panel-state";
+import { verifyPageSessionTab } from "./packaged-page-session-tab";
+import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
+import { verifySharedPageTab } from "./packaged-shared-page-tab";
+import { verifyRetainedTerminalDrop } from "./packaged-tab-drop-pinning";
 
-export const verifyPackagedSessionMenus = async (
-  page: Page,
-  baseUrl: string,
-  projectId: string,
-  authorization: Record<string, string>,
-) => {
+const createSessionFixture = async (baseUrl: string, projectId: string, authorization: Record<string, string>) => {
   const workspacesResponse = await fetch(`${baseUrl}/v1/workspaces?project_id=${projectId}`, {
     headers: authorization,
   });
@@ -27,14 +27,24 @@ export const verifyPackagedSessionMenus = async (
   });
   expect(response.status).toBe(201);
   const session = (await response.json()) as { id: string };
+  return { workspace, session };
+};
+
+export const verifyPackagedSessionMenus = async (
+  page: Page,
+  baseUrl: string,
+  projectId: string,
+  authorization: Record<string, string>,
+) => {
+  const { workspace, session } = await createSessionFixture(baseUrl, projectId, authorization);
+  const hideBottom = page.getByRole("button", { name: "Hide Secondary Panel", exact: true });
+  if (await hideBottom.isVisible()) await hideBottom.click();
   const workspaceUrl = serializePageUrl({
     projectId,
     page: { id: "workspace", ref: workbenchPages.workspace, path: "workspace" },
     resource: { type: "workspace", id: workspace.id },
   });
   await page.goto(new URL(workspaceUrl, baseUrl).href);
-  const showSide = page.getByRole("button", { name: "Show Side Panel", exact: true });
-  if (await showSide.isVisible()) await showSide.click();
   const preview = page
     .locator('[data-workbench-panel-header="side"]')
     .getByRole("tab", { name: /Packaged session actions/ });
@@ -44,6 +54,26 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   expect(new URL(page.url()).pathname).toBe(new URL(workspaceUrl, baseUrl).pathname);
+  const leaveWorkspace = () =>
+    page
+      .getByRole("navigation", { name: "breadcrumb" })
+      .getByRole("button", { name: "Workspaces", exact: true })
+      .click();
+  const reopenWorkspace = () => page.goBack();
+  await leaveWorkspace();
+  await expect(preview).toBeHidden();
+  await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
+  await reopenWorkspace();
+  await expect(preview).toBeVisible();
+  await preview.focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
+  await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
+  await leaveWorkspace();
+  await reopenWorkspace();
+  await verifyClosedSidePreference(page, preview, leaveWorkspace, reopenWorkspace);
+  await preview.focus();
   await page.keyboard.press("ControlOrMeta+Alt+s");
   const sideTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
   await expect(sideTabs.filter({ hasText: "New session" })).toBeVisible();
@@ -63,6 +93,65 @@ export const verifyPackagedSessionMenus = async (
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
   await expect(page.getByRole("menu")).toHaveCount(0);
+  await verifyPageSessionTab(page, createdTab, leaveWorkspace, reopenWorkspace);
+  await verifySharedPageTab(page, createdTab, leaveWorkspace, reopenWorkspace);
+  const refresh = await fetch(`${baseUrl}/v1/sessions/${session.id}/title`, {
+    method: "PATCH",
+    headers: { ...authorization, "content-type": "application/json" },
+    body: JSON.stringify({ title: "Packaged session actions" }),
+  });
+  expect(refresh.ok).toBe(true);
+  await leaveWorkspace();
+  await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
+  await reopenWorkspace();
+  await expect(preview).toHaveCount(0);
+  await expect(createdTab).toHaveAttribute("aria-selected", "true");
+  await leaveWorkspace();
+  await reopenWorkspace();
+  await expect(preview).toHaveCount(0);
+  await expect(createdTab).toHaveAttribute("aria-selected", "true");
+  await leaveWorkspace();
+  await expect(preview).toBeHidden();
+  await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
+  await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+  await expect(createdTab).toBeVisible();
+  await reopenWorkspace();
+  const bottomHeader = page.locator('[data-workbench-panel-header="secondary"]');
+  await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
+  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  const terminalConnection = page.waitForEvent(
+    "websocket",
+    (socket) => new URL(socket.url()).pathname === "/v1/terminal",
+  );
+  await bottomHeader.getByRole("button", { name: "Add panel", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+  const terminalSocket = await terminalConnection;
+  const terminalWidgetId = await bottomHeader
+    .locator('[data-workbench-tab]:has([role="tab"][aria-selected="true"])')
+    .getAttribute("data-workbench-tab");
+  expect(terminalWidgetId).toBeTruthy();
+  const terminalTab = page.locator(`[data-workbench-tab=${JSON.stringify(terminalWidgetId)}]`).getByRole("tab");
+  const terminalInput = page.getByRole("textbox", { name: "Terminal input" }).filter({ visible: true });
+  await terminalInput.pressSequentially("export PSTDIO_NAVIGATION_STATE=retained");
+  await terminalInput.press("Enter");
+  await leaveWorkspace();
+  await expect(terminalTab).toBeVisible();
+  await expect(bottomHeader.getByRole("tab")).toHaveCount(1);
+  await verifyGlobalBottomState(page, terminalTab, reopenWorkspace, leaveWorkspace);
+  await verifyModePanelState(page, terminalTab);
+  await verifyRetainedTerminalDrop(page, terminalTab);
+  await terminalInput.pressSequentially('printf "__navigation_%s__\\n" "$PSTDIO_NAVIGATION_STATE"');
+  await terminalInput.press("Enter");
+  await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__navigation_retained__");
+  const terminalClosed = terminalSocket.waitForEvent("close");
+  await terminalTab.focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
+  await terminalClosed;
+  await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
+  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await reopenWorkspace();
+  await expect(page.getByRole("button", { name: "Hide Secondary Panel", exact: true })).toBeVisible();
   await page.goto(`${baseUrl}/projects/${projectId}/sessions`);
   const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
     name: "Packaged session actions",
@@ -75,7 +164,9 @@ export const verifyPackagedSessionMenus = async (
     await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
   }
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+  const floatSide = page.getByRole("button", { name: "Float Side Panel", exact: true });
+  if (await floatSide.isVisible()) await floatSide.click();
+  else await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   await page
     .locator('[data-workbench-panel-header="side"]')

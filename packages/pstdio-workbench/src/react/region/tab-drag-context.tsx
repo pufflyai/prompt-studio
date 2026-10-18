@@ -21,7 +21,6 @@ interface TabDrop {
   position: WorkbenchTabPosition;
   widgetId?: string;
   edge?: "before" | "after";
-  replacing?: { widgetId: string; label: string };
 }
 const TabDragContext = createContext<{ activeId?: string; drop?: TabDrop; destinations?: WorkbenchPanelRegion[] }>({});
 export const useTabDrag = () => useContext(TabDragContext);
@@ -57,17 +56,6 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
     let position: WorkbenchTabPosition = "end";
     if (widgetId) position = before ? { beforeWidgetId: widgetId } : { afterWidgetId: widgetId };
     const plan = planTrayDrop(widgets, placement, position);
-    const replaced = plan.replaced[0];
-    if (replaced)
-      return {
-        region,
-        position,
-        widgetId: replaced.widgetId,
-        replacing: {
-          widgetId: replaced.widgetId,
-          label: replaced.resource?.label ?? replaced.title ?? replaced.contributionId,
-        },
-      } satisfies TabDrop;
     const index = plan.widgets.findIndex((widget) => widget.widgetId === placement.widgetId);
     const next = plan.widgets[index + 1];
     const previous = plan.widgets[index - 1];
@@ -116,9 +104,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
           <DragOverlay dropAnimation={null}>
             {placement ? (
               <Box layerStyle="floatingBar" textStyle="label/XS/medium">
-                {drop?.replacing
-                  ? `Drop to replace ${drop.replacing.label}`
-                  : (placement.title ?? placement.resource?.label)}
+                {placement.title ?? placement.resource?.label}
               </Box>
             ) : null}
           </DragOverlay>
@@ -143,18 +129,11 @@ export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion }) 
       position="absolute"
       inset="0"
       zIndex="dropdown"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
       // Keep tab drag events out of iframes, including release over a disallowed
       // destination. Native file drops still reach the guest outside tab drags.
       pointerEvents={activeId ? "auto" : "none"}
       visibility={activeId ? "visible" : "hidden"}
       layerStyle={highlighted ? "tabDropZone" : undefined}
-      textStyle="label/XS/medium"
-    >
-      {highlighted && drop?.replacing ? `Drop to replace ${drop.replacing.label}` : null}
-      {highlighted && !drop?.widgetId && !drop?.replacing ? "Drop here to add a tab" : null}
-    </Box>
+    />
   );
 };

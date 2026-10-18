@@ -31,6 +31,24 @@ export const verifyPackagedCollectionBreadcrumb = async (
   await expect(breadcrumbs.getByText("Artifacts", { exact: true })).toBeVisible();
   await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
   expect(page.url()).toBe(libraryUrl);
+  const tab = (region: string) =>
+    page.locator(`[data-workbench-panel-header="${region}"]`).getByRole("tab", { name: title, exact: true });
+  await tab("main").focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
+  await expect(tab("secondary")).toBeVisible();
+  const sessions = new URL(libraryUrl);
+  sessions.pathname = `/projects/${projectId}/sessions`;
+  await page.evaluate((url) => {
+    history.pushState(null, "", url);
+    dispatchEvent(new PopStateEvent("popstate"));
+  }, sessions.href);
+  await expect(breadcrumbs).toContainText("Sessions");
+  await page.goBack();
+  await expect(tab("secondary")).toBeVisible();
+  await expect(tab("main")).toHaveCount(0);
+  await page.reload();
+  await expect(tab("secondary")).toBeVisible();
   await page.getByRole("button", { name: `Close ${title}`, exact: true }).click();
   await expect(breadcrumbs.getByText(title, { exact: true })).toHaveCount(0);
   await expect(breadcrumbs.getByText("Artifacts", { exact: true })).toBeVisible();

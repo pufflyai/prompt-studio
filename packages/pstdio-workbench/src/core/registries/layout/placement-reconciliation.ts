@@ -98,13 +98,7 @@ const collectPlacements = <Value>(input: ComposeOwnedPlacementsInput<Value>) => 
       placement.identity.kind === "mode" ? placement.identity.modeId : "invalid-mode-owner",
     ),
   );
-  const pageIds = new Set(
-    (input.page ?? []).map((placement) =>
-      placement.identity.kind === "page" ? placement.identity.pageId : "invalid-page-owner",
-    ),
-  );
   if (modeIds.size > 1) throw new Error("Mode placements must belong to one active mode");
-  if (pageIds.size > 1) throw new Error("Page placements must belong to one active page");
   return placements;
 };
 

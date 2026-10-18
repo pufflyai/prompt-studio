@@ -101,6 +101,7 @@ const placementFor = <Value>(input: {
 export const resolvePagePlacements = <Value>(input: {
   page: WorkbenchPageContribution;
   state: WorkbenchPageRuntimeState;
+  staticInstanceKey: string;
   resource?: ResourceRef;
   sharedPlacements: readonly ResolvedOwnedPlacement<Value>[];
   resolvePagePlacement(value: WorkbenchPagePlacementInput): Value;
@@ -108,7 +109,8 @@ export const resolvePagePlacements = <Value>(input: {
   const placements: ResolvedOwnedPlacement<Value>[] = [];
   for (const slot of pageSlots(input.page)) {
     if (slot.isAvailable && !slot.isAvailable(input.resource)) continue;
-    if (staticSlotOpen(slot, input.state)) placements.push(placementFor({ ...input, slot, instanceKey: "default" }));
+    if (staticSlotOpen(slot, input.state))
+      placements.push(placementFor({ ...input, slot, instanceKey: input.staticInstanceKey }));
     for (const instance of input.state.resourceInstances[slot.id] ?? []) {
       placements.push(placementFor({ ...input, slot, ...instance }));
     }
@@ -120,7 +122,7 @@ export const resolvePagePlacements = <Value>(input: {
     placements.push(
       placementFor({
         ...input,
-        instanceKey: "default",
+        instanceKey: input.staticInstanceKey,
         slot: {
           id: PAGE_MAIN_SLOT_ID,
           role: "primary",

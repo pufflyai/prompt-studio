@@ -30,7 +30,7 @@ test("one tray replaces previews across shell and mode owners without restoring 
   expect(ids(w, "side")).toEqual(["new", "kept"]);
   await w.navigation.openTarget(navigate("beta"));
   await w.navigation.openTarget(navigate("alpha"));
-  expect(ids(w, "side")).toEqual(["new", "kept"]);
+  expect(ids(w, "side")).toEqual(["kept"]);
 });
 
 test("preview is leftmost when opened, unpinned, or reordered beside pinned tabs", async () => {
@@ -50,7 +50,7 @@ test("preview is leftmost when opened, unpinned, or reordered beside pinned tabs
   expect(ids(w, "main")).toEqual(["b", "a"]);
 });
 
-test("dropping a preview replaces the destination preview across owners and keeps the route", async () => {
+test("dropping a preview pins it without replacing the destination preview and keeps the route", async () => {
   const w = harness();
   await w.navigation.openTarget(navigate("alpha"));
   await w.navigation.openTarget(openFile("kept"));
@@ -59,11 +59,13 @@ test("dropping a preview replaces the destination preview across owners and keep
   await w.navigation.openTarget({ kind: "panel", panel, resource: resource("moved"), open: "preview" });
   const location = w.pages.store.getState().location;
   w.movePanel(find(w, "moved").instanceId, "main", "end");
-  expect(ids(w, "main")).toEqual(["moved", "kept"]);
+  expect(ids(w, "main")).toEqual(["old", "kept", "moved"]);
+  expect(find(w, "moved")).toMatchObject({ pinned: true, tabRetention: "persistent" });
+  expect(find(w, "old").tabRetention).toBe("preview");
   expect(ids(w, "side")).toEqual([]);
   expect(w.pages.store.getState().location).toEqual(location);
   w.pinPlacement(find(w, "moved").placementIdentity!);
-  expect(ids(w, "main")).toEqual(["moved", "kept"]);
+  expect(ids(w, "main")).toEqual(["old", "kept", "moved"]);
   expect(ids(w, "side")).toEqual([]);
 });
 
@@ -93,7 +95,7 @@ test("a pinned drop preserves the destination preview and stays after it", async
   expect(ids(w, "main")).toEqual(["preview", "pinned"]);
 });
 
-test("a moved destination preview is forgotten by its original binding", async () => {
+test("moved previews stay pinned across navigation and restoration without reopening in their old tray", async () => {
   const saved = new Map();
   const w = harness(saved);
   await w.navigation.openTarget(navigate("alpha"));
@@ -101,17 +103,19 @@ test("a moved destination preview is forgotten by its original binding", async (
   w.movePanel(find(w, "old").instanceId, "main");
   await w.navigation.openTarget({ kind: "panel", panel, resource: resource("new"), open: "preview" });
   w.movePanel(find(w, "new").instanceId, "main");
-  expect(ids(w, "main")).toEqual(["new", "alpha"]);
+  expect(ids(w, "main")).toEqual(["alpha", "old", "new"]);
   expect(ids(w, "side")).toEqual([]);
   w.pinPlacement(find(w, "new").placementIdentity!);
-  expect(ids(w, "main")).toEqual(["new", "alpha"]);
+  expect(ids(w, "main")).toEqual(["alpha", "old", "new"]);
   await w.navigation.openTarget(navigate("beta"));
   await w.navigation.openTarget(navigate("alpha"));
-  expect(ids(w, "main")).toEqual(["new", "alpha"]);
+  expect(ids(w, "main")).toEqual(["alpha", "old", "new"]);
   expect(ids(w, "side")).toEqual([]);
   const restored = harness(saved);
   await restored.navigation.openTarget(navigate("alpha"));
-  expect(ids(restored, "main")).toEqual(["new", "alpha"]);
+  expect(ids(restored, "main")).toEqual(["alpha", "old", "new"]);
+  expect(find(restored, "old").tabRetention).toBe("persistent");
+  expect(find(restored, "new").tabRetention).toBe("persistent");
   expect(ids(restored, "side")).toEqual([]);
 });
 
@@ -131,6 +135,7 @@ test("refreshing routed metadata does not reopen a replaced primary preview", as
   await w.navigation.openTarget({ kind: "page", page, resource: resource("routed"), open: "preview" });
   await w.navigation.openTarget({ kind: "panel", panel, resource: resource("incoming"), open: "preview" });
   w.movePanel(find(w, "incoming").instanceId, "main");
+  w.pinPlacement(find(w, "incoming").placementIdentity!, false);
   expect(ids(w, "main")).toEqual(["incoming"]);
   w.pageLocations.replay({
     ...w.pages.store.getState().location!,
@@ -160,6 +165,7 @@ test("the last compound preview target wins in its actual tray", async () => {
   const moved = { kind: "panel", panel, resource: resource("moved"), open: "preview" } as const;
   await w.navigation.openTarget(moved);
   w.movePanel(find(w, "moved").instanceId, "main");
+  w.pinPlacement(find(w, "moved").placementIdentity!, false);
   await w.navigation.openTarget({ kind: "compound", targets: [openFile("new-file"), moved] });
   expect(ids(w, "main").filter((id) => id !== "alpha")).toEqual(["moved"]);
   expect(w.layout.getActivePanel()?.resource?.id).toBe("moved");

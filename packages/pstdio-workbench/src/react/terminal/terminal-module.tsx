@@ -5,8 +5,9 @@ import {
   type WorkbenchModuleContribution,
   workbenchPanelRegions,
 } from "../../core";
+import { pageContextChanged } from "../../core/controllers/page-runtime/page-main-tabs";
+import { departingPagePreviews } from "../../core/controllers/page-runtime/page-preview-lifetime";
 import { toPanelInstance } from "../../core/registries/layout/panel-api";
-import { terminalPlacementBindingId } from "./terminal-placement-binding";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
 // The host-owned terminal panel in the workbench `secondary` (bottom) region.
 // Exported so hosts can open or assert it directly.
@@ -28,32 +29,45 @@ const terminalPlacements = (layout: WorkbenchLayout) =>
 const terminalInstanceIds = (ctx: WorkbenchCoreContributionContext) =>
   new Set(terminalPlacements(ctx.layout.getLayout()).map((placement) => placement.widgetId));
 const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) => {
-  // A scope rotation temporarily removes every placement. Only an explicit tab
+  // Scope and mode changes hide placements temporarily. Only an explicit tab
   // close should end the PTY bound to that placement.
-  let changingScope = false;
-  const willChangeScope = ctx.layout.onWillChangePersistenceScope(() => {
-    changingScope = true;
-  });
-  const didChangeScope = ctx.layout.onDidChangePersistenceScope(() => {
-    changingScope = false;
-  });
+  let previousScope = ctx.layout.getPersistenceScope();
+  let previousMode = ctx.modes.getActiveModeId();
+  let previousPage = ctx.pages.store.getState();
   const unsubscribeLayout = ctx.layout.store.subscribe((state, previousState) => {
-    if (changingScope) return;
+    // Store notifications may be batched until after the scope events finish.
+    const scope = ctx.layout.getPersistenceScope();
+    const scopeChanged = scope !== previousScope;
+    previousScope = scope;
+    const mode = ctx.modes.getActiveModeId();
+    const modeChanged = mode !== previousMode;
+    previousMode = mode;
+    const page = ctx.pages.store.getState();
+    const closedPreviews = new Set(
+      departingPagePreviews(page, previousPage, previousState.layout).map((tab) => tab.widgetId),
+    );
+    const hiddenMain = new Set(
+      pageContextChanged(page, previousPage)
+        ? previousState.layout.regions.main.widgets
+            .filter((tab) => tab.tabRetention !== "preview")
+            .map((tab) => tab.widgetId)
+        : [],
+    );
+    previousPage = page;
+    if (modeChanged || ctx.modes.isTransitioning()) return;
     const currentIds = new Set(terminalPlacements(state.layout).map((placement) => placement.widgetId));
     const previousIds = terminalPlacements(previousState.layout).map((placement) => placement.widgetId);
-    const scope = ctx.layout.getPersistenceScope();
     for (const instanceId of previousIds) {
-      if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(terminalPlacementBindingId(scope, instanceId));
+      if (hiddenMain.has(instanceId)) continue;
+      if (scopeChanged && !closedPreviews.has(instanceId)) continue;
+      if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(instanceId);
     }
   });
   return {
     dispose() {
       unsubscribeLayout();
-      willChangeScope.dispose();
-      didChangeScope.dispose();
-      const scope = ctx.layout.getPersistenceScope();
       for (const instanceId of terminalInstanceIds(ctx)) {
-        void ctx.terminal.killBinding(terminalPlacementBindingId(scope, instanceId));
+        void ctx.terminal.killBinding(instanceId);
       }
     },
   };

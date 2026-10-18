@@ -15,6 +15,7 @@ import { registerWorkbenchExtensionKanbanRenderers } from "../contributions/kanb
 import { registerWorkbenchExtensionNavigationItems } from "../contributions/navigation-item-contributions";
 import { localizeParamSchema } from "../contributions/param-schema-localization";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
+import { registerResourceKinds } from "./resource-kind-contributions";
 import {
   createExtensionSlot,
   executeWorkbenchExtensionCommand,
@@ -169,15 +170,6 @@ const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContrib
   );
 const registerPages = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.pages.map((page) => input.workbench.pages.registerPage(page));
-const registerResourceKinds = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
-  input.metadata.resourceKinds.map((kind) =>
-    input.workbench.resources.registerKind({
-      kind: kind.id,
-      extensionId: kind.extensionId,
-      label: text(kind.label, kind.id),
-      icon: kind.icon ?? "FileText",
-    }),
-  );
 const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.modes.map((mode) =>
     input.workbench.modes.registerMode({

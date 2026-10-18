@@ -29,10 +29,10 @@ test("restores the selected primary instance after its presentation moves to Sid
   }));
   layout.regions.side.activeWidgetId = "one";
   layout.activeLocationWidgetId = "one";
-  expect(pageStateFromLayout(page, layout).activePrimaryInstanceKey).toBe("one");
+  expect(pageStateFromLayout(page, layout, undefined).activePrimaryInstanceKey).toBe("one");
 });
 
-test("restored single-resource pages keep their placement when selecting another resource", () => {
+test("restored single-resource pages give another resource its own placement", () => {
   const page: WorkbenchPageContribution = {
     id: "preview",
     ref: { kind: "page", extensionId: "test", id: "preview" },
@@ -52,14 +52,15 @@ test("restored single-resource pages keep their placement when selecting another
     },
   ];
   layout.activeLocationWidgetId = "preview";
-  const restored = pageStateFromLayout(page, layout);
+  const restored = pageStateFromLayout(page, layout, undefined);
   const next = openResourceSlot({
     slot: primarySlot(page)!,
     state: restored,
     target: { pageId: page.id, resource: { type: "animation", id: "next" } },
     resourceKey: (resource) => resource.id,
   });
-  expect(next.activePrimaryInstanceKey).toBe(restored.activePrimaryInstanceKey);
+  expect(next.activePrimaryInstanceKey).toBe("next");
+  expect(next.activePrimaryInstanceKey).not.toBe(restored.activePrimaryInstanceKey);
 });
 
 test("restoring a saved route preserves the replacement after its last primary preview closed", async () => {
@@ -132,6 +133,10 @@ test("restoring a saved route preserves the replacement after its last primary p
     open: "preview",
   });
   w.movePanel(w.layout.listPanelInstances("side")[0]!.instanceId, "main");
+  w.pinPlacement(
+    w.layout.listPanelInstances("main").find((panel) => panel.resource?.id === "incoming")!.placementIdentity!,
+    false,
+  );
   const restored = setup();
   expect(restored.pageLocations.boot("project").ok).toBe(true);
   expect(restored.layout.listPanelInstances("main").map((panel) => panel.resource?.id)).toEqual(["incoming"]);

@@ -38,7 +38,17 @@ export const expectPackagedChatHistory = async (page: Page, sessionId: string) =
     await page.getByRole("option", { name: "Idle connection", exact: true }).click();
     await expect(log.locator('[data-chat-message-list-item="response"]').first()).toBeAttached();
     await page.getByRole("option", { name: "Motion replay", exact: true }).click();
-    await expect(page.getByText(/^Step 30\./).first()).toBeVisible();
+    // Each resource page restores its existing view and reading position.
+    await expect
+      .poll(() =>
+        viewport.evaluate((element) => {
+          const user = element.querySelector('[data-chat-message-list-item="user"]')!;
+          return Math.abs(user.getBoundingClientRect().top - element.getBoundingClientRect().top);
+        }),
+      )
+      .toBeLessThan(20);
+    await page.getByRole("button", { name: "Scroll to latest message", exact: true }).click();
+    await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
     expect(historyReads).toBe(0);
   } finally {
     await page.unroute(route);
