@@ -44,6 +44,8 @@ Set `TreeNode.resource` to the subject of row actions. `target` remains the norm
 
 Resource-owned menu contributions also appear on resource tabs and resource breadcrumbs. The workbench resolves one ordered resource group for the explicit subject of each menu. Navigation-specific actions supplement that group; a row's menu path does not replace it. Parent breadcrumbs resolve their own resource actions. Tab controls, placement sections, and current-page actions remain separate groups.
 
+A view's custom tab controls belong only to the current breadcrumb with the same declared document reference. A parent resource breadcrumb never inherits those document controls, even when both references share a resource ID.
+
 A host resource kind can supply `resolve` and `subscribe` to read current state and notify menu consumers. This keeps an inactive tab's actions consistent with navigation after a status or capability change. Resource data stays with its owner; the workbench does not store another copy.
 
 Owner refreshes distinguish a resource's declared document selection. Two documents on the same resource resolve their own labels and metadata. Refreshing or activating one placement preserves the other placement's selected document.

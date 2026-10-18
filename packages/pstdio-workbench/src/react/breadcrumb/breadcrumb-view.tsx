@@ -1,5 +1,4 @@
 import { HStack, Text } from "@chakra-ui/react";
-import { resourceKey } from "@pstdio/sdk/extensions";
 import { Breadcrumb, type ResourceContextAction, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
@@ -10,6 +9,7 @@ import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
 import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { breadcrumbSnapshot } from "./breadcrumb-snapshot";
 
 interface WorkbenchBreadcrumbViewProps {
   workbench: WorkbenchCore;
@@ -79,7 +79,11 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   if (
     resource &&
     resolveResourcePreview(resource, changes) &&
-    !items.some((item) => item.resource && resourceKey(item.resource) === resourceKey(resource))
+    !crumbs.some(
+      (item) =>
+        item.resource &&
+        workbench.pages.resourceReferenceKey(item.resource) === workbench.pages.resourceReferenceKey(resource),
+    )
   ) {
     crumbs.push({
       title: snapshot.label ?? resource.label ?? resource.id,
@@ -94,7 +98,7 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
           ? createWorkbenchResourceMenu(
               workbench,
               item.resource,
-              resource && resourceKey(item.resource) === resourceKey(resource) ? snapshot : {},
+              breadcrumbSnapshot(item, crumbs.at(-1), resource, snapshot, workbench.pages.resourceReferenceKey),
             )
           : undefined,
       )}

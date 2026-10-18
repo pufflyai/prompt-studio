@@ -3,11 +3,7 @@ import type { ResourceRef, WorkbenchCore, WorkbenchTabMenuRow, WorkbenchTabSnaps
 import { WorkbenchIcon } from "./icon";
 import { runPlacementAction } from "./run-placement-action";
 
-const placementRowAction = (
-  workbench: WorkbenchCore,
-  row: WorkbenchTabMenuRow,
-  resource?: ResourceRef,
-): ResourceContextAction => {
+const placementRowAction = (workbench: WorkbenchCore, row: WorkbenchTabMenuRow, resource?: ResourceRef) => {
   const target = row.action?.kind === "navigation" ? row.action.target : row.action;
   return {
     key: row.id,
@@ -25,7 +21,7 @@ export const placementMenuActions = (
   workbench: WorkbenchCore,
   snapshot: WorkbenchTabSnapshot,
   resource?: ResourceRef,
-): ResourceContextAction[] =>
+) =>
   (snapshot.menu ?? []).flatMap((section) => {
     const group = { id: `placement:${section.id}`, label: section.label };
     const actions: ResourceContextAction[] = section.rows.map((row) => ({
