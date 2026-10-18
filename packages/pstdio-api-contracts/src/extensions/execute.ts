@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { NavigationTarget, Struct } from "../extension-kernel";
+import type { JsonValue, NavigationTarget, Struct } from "../extension-kernel";
+import { createCommandOutcomeSchema, validatedCommandOutcomeSchema } from "./command-outcome";
 import { commandSourceSchema, extensionSlotKindSchema, jsonObjectSchema } from "./common";
 import { navigationTargetSchema } from "./navigation-target-metadata";
 import { pageParamValueSchema } from "./page-params-schema";
@@ -58,30 +59,10 @@ export const dispatchExtensionEventBodySchema = z
   })
   .strict();
 
-const serializedErrorSchema = z.object({
-  name: z.string().optional(),
-  message: z.string(),
-  stack: z.string().optional(),
-});
-
-const commandNoticeSchema = z.object({
-  type: z.enum(["info", "success", "warning", "error"]),
-  title: z.string().optional(),
-  message: z.string(),
-  metadata: jsonObjectSchema.optional(),
-});
-
-const commandDiagnosticSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  severity: z.enum(["info", "warning", "error"]),
-  extensionId: z.string().optional(),
-  commandId: z.string().optional(),
-  metadata: jsonObjectSchema.optional(),
-});
+export { validatedCommandOutcomeSchema };
 
 const responseNavigationTargetSchema: z.ZodType<NavigationTarget> = navigationTargetSchema;
-
+/** @deprecated Use validatedCommandOutcomeSchema. */
 export const commandOutcomeSchema = z.object({
   ok: z.boolean(),
   status: z.enum(["success", "rejected", "error"]),
@@ -90,21 +71,51 @@ export const commandOutcomeSchema = z.object({
   code: z.string().optional(),
   reason: z.string().optional(),
   data: jsonObjectSchema.optional(),
-  error: serializedErrorSchema.optional(),
-  notices: z.array(commandNoticeSchema).optional(),
-  diagnostics: z.array(commandDiagnosticSchema).optional(),
+  error: z.object({ name: z.string().optional(), message: z.string(), stack: z.string().optional() }).optional(),
+  notices: z
+    .array(
+      z.object({
+        type: z.enum(["info", "success", "warning", "error"]),
+        title: z.string().optional(),
+        message: z.string(),
+        metadata: jsonObjectSchema.optional(),
+      }),
+    )
+    .optional(),
+  diagnostics: z
+    .array(
+      z.object({
+        code: z.string(),
+        message: z.string(),
+        severity: z.enum(["info", "warning", "error"]),
+        extensionId: z.string().optional(),
+        commandId: z.string().optional(),
+        metadata: jsonObjectSchema.optional(),
+      }),
+    )
+    .optional(),
 });
 
-export const commandExecuteResponseSchema = z.object({
+const responseFields = {
   commandId: z.string(),
   extensionId: z.string(),
   eventIds: z.array(z.string()).optional(),
+};
+/** @deprecated Use commandExecutionResultSchema. */
+export const commandExecuteResponseSchema = z.object({
+  ...responseFields,
   outcome: commandOutcomeSchema,
 });
+export const createCommandExecutionResultSchema = (jsonValue: z.ZodType<JsonValue>) =>
+  z.object({ ...responseFields, outcome: createCommandOutcomeSchema(jsonValue) });
+
+export const commandExecutionResultSchema = createCommandExecutionResultSchema(z.json());
 
 export type CommandExecuteRequest = z.infer<typeof commandExecuteRequestSchema>;
 export type CommandExecuteBody = z.infer<typeof commandExecuteBodySchema>;
+/** @deprecated Use CommandExecutionResult. */
 export type CommandExecuteResponse = z.infer<typeof commandExecuteResponseSchema>;
+export type CommandExecutionResult = z.infer<typeof commandExecutionResultSchema>;
 export type ExtensionRendererContext = z.infer<typeof extensionRendererContextSchema>;
 export type DispatchExtensionEventInput = {
   eventId: string;

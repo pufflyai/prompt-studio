@@ -1,6 +1,10 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
-import { type CommandExecuteBody, commandExecuteBodySchema, commandExecuteResponseSchema } from "pstdio-api-contracts";
+import {
+  type CommandExecuteBody,
+  commandExecuteBodySchema,
+  createCommandExecutionResultSchema,
+} from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -11,6 +15,9 @@ import {
 } from "../execute-project-extension-command";
 
 export { resolveCommandWorkspaceDir } from "../execute-project-extension-command";
+
+// OpenAPI owns schema references; the shared builder keeps HTTP validation identical to the kernel.
+const responseSchema = createCommandExecutionResultSchema(z.json().openapi("CommandJsonValue"));
 
 const errorSchema = z.object({
   error: z.string(),
@@ -37,7 +44,7 @@ export const executeExtensionCommandRoute = createRoute({
   responses: {
     200: {
       description: "Command executed.",
-      content: { "application/json": { schema: commandExecuteResponseSchema } },
+      content: { "application/json": { schema: responseSchema } },
     },
     404: {
       description: "Project or command not found.",
@@ -54,10 +61,13 @@ export const executeExtensionCommandHandler = (
     const body = (await c.req.json()) as CommandExecuteBody;
 
     try {
-      return c.json(
-        await executeProjectExtensionCommand(deps, { projectId, commandId, body, signal: c.req.raw.signal }),
-        200,
-      );
+      const response = await executeProjectExtensionCommand(deps, {
+        projectId,
+        commandId,
+        body,
+        signal: c.req.raw.signal,
+      });
+      return c.body(JSON.stringify(response), 200, { "Content-Type": "application/json" });
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
       if (error instanceof ExtensionCommandNotFoundError) {
@@ -70,5 +80,6 @@ export const executeExtensionCommandHandler = (
     }
   };
 
-  return handler as AppRouteHandler<typeof executeExtensionCommandRoute>;
+  // ADR 0079 isolates Hono's recursive JSON response type limit at this boundary.
+  return handler as unknown as AppRouteHandler<typeof executeExtensionCommandRoute>;
 };

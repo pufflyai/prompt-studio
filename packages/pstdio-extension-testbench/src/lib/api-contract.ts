@@ -1,6 +1,6 @@
 import type {
   CommandExecuteRequest,
-  CommandExecuteResponse,
+  CommandExecutionResult,
   LocalizableString,
   WorkbenchExtensionMetadata,
 } from "@pstdio/sdk/api";
@@ -94,4 +94,4 @@ export type ExtensionBenchCommandRequest = {
   request: CommandExecuteRequest;
 };
 
-export type ExtensionBenchCommandResponse = CommandExecuteResponse;
+export type ExtensionBenchCommandResponse = CommandExecutionResult;

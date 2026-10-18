@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { renderToString } from "react-dom/server";
@@ -54,11 +54,11 @@ const defaultExecuteCommand = async (commandId: string) =>
     commandId,
     extensionId: "lab",
     outcome: { ok: true, status: "success", value: null },
-  }) satisfies CommandExecuteResponse;
+  }) satisfies CommandExecutionResult;
 
 const createTestWorkbench = (
   bench: ExtensionBenchLoadResponse,
-  executeCommand: (commandId: string) => Promise<CommandExecuteResponse> = defaultExecuteCommand,
+  executeCommand: (commandId: string) => Promise<CommandExecutionResult> = defaultExecuteCommand,
 ) =>
   createPreviewWorkbench({
     bench,

@@ -2,6 +2,7 @@ export type {
   AddLocalExtensionFolderResponse,
   CommandExecuteRequest,
   CommandExecuteResponse,
+  CommandExecutionResult,
   ConfigureExtensionConnectionInput,
   ExtensionCommandPaletteContribution,
   ExtensionCommandPaletteResourceRecord,

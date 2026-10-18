@@ -1,4 +1,4 @@
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 
 export type ExtensionCommandNotification = {
   level: "info" | "success" | "warning" | "error";
@@ -7,13 +7,13 @@ export type ExtensionCommandNotification = {
   metadata: Record<string, unknown>;
 };
 
-const commandMetadata = (response: CommandExecuteResponse, metadata: Record<string, unknown> = {}) => ({
+const commandMetadata = (response: CommandExecutionResult, metadata: Record<string, unknown> = {}) => ({
   ...metadata,
   commandId: response.commandId,
   extensionId: response.extensionId,
 });
 
-export const collectExtensionCommandNotifications = (response: CommandExecuteResponse) => {
+export const collectExtensionCommandNotifications = (response: CommandExecutionResult) => {
   const { outcome } = response;
   const notifications: ExtensionCommandNotification[] = [];
 

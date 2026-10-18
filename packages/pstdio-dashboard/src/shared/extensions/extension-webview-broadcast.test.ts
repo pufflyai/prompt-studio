@@ -12,7 +12,7 @@ describe("extension event feed", () => {
         commandId: "lab.update",
         extensionId: "pstdio.lab",
         eventIds: ["tickets.changed", "tickets.changed", "files.changed"],
-        outcome: { ok: true, status: "success" },
+        outcome: { ok: true, status: "success", value: undefined },
       },
       { projectId: undefined },
     );
@@ -28,7 +28,7 @@ describe("extension event feed", () => {
         commandId: "lab.update",
         extensionId: "pstdio.lab",
         eventIds: ["tickets.changed"],
-        outcome: { ok: true, status: "success" },
+        outcome: { ok: true, status: "success", value: undefined },
       },
       { projectId: undefined },
     );
@@ -44,7 +44,7 @@ describe("extension event feed", () => {
         commandId: "planner.save-ticket-content",
         extensionId: "pstdio.planner",
         eventIds: ["tickets.changed"],
-        outcome: { ok: true, status: "success" },
+        outcome: { ok: true, status: "success", value: undefined },
       },
       {
         projectId: "project-1",

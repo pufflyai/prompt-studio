@@ -395,12 +395,16 @@ const stream = client.streams["logs.tail"]({ source: "build" }, { signal: contro
 for await (const line of stream) {
   appendLine(line);
 }
-const summary = await stream.result;
+const outcome = await stream.outcome;
+if (outcome.ok) showSummary(outcome.value);
+else showFailure(outcome);
 ```
 
-`client.streams` contains only commands with a stream declaration. It accepts the same parameters as `client.commands`, followed by an optional `{ signal }`. Each stream has one consumer. `result` resolves with the final value or rejects with the outcome reason and code.
+`client.streams` contains only commands with a stream declaration. It accepts the same parameters as `client.commands`, followed by an optional `{ signal }`. Each stream has one consumer. `outcome` always resolves with the complete final outcome, including rejection and transport failure. The chunk iterator closes normally on each terminal path. Use `getCommandValue(outcome)` when a value or `CommandOutcomeError` is more useful. The old `.result` promise is deprecated and keeps its value-or-throw behavior through 0.44.
 
-Call `stream.cancel()`, abort the signal, or break the loop to stop the command. Cancellation ends iteration and rejects `result` with `command_stream_cancelled`. Frame disconnect also cancels streams and plain command calls. Hidden mounted panels keep running. A lost connection ends the stream with `command_stream_disconnected`; start a new stream to reconnect.
+Call `stream.cancel()`, abort the signal, or break the loop to stop the command. Cancellation clears unread chunks, ends iteration and resolves an error outcome with `command_stream_cancelled`; it does not wait for a remote acknowledgement. Cancellation before start opens no subscription. Frame disconnect also cancels streams and plain command calls. Hidden mounted panels keep running. A lost connection resolves an error outcome with `command_stream_disconnected` and its original cause. It never retries the command.
+
+HTTP SDK callers use `client.extensions.streamCommand(projectId, commandId, input?, options?)` with the same chunks, outcome and cancellation rules. The old HTTP `extensions.stream` event iterator stays callable and is deprecated.
 
 The host allows 16 live streams per frame and 8 MiB of unread JSON per stream. Overflow ends the stream with `command_stream_overflow`. All command streams and session readers share one connection. Events remain invalidation signals; chunks go only to their caller.
 

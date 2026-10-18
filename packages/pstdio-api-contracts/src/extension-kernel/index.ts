@@ -62,6 +62,7 @@ export {
 export * from "./page-resource-codec";
 export * from "./page-url";
 export { commandRef, eventRef } from "./refs";
+export { serializeCommandError } from "./serialize-error";
 export { defineSlot } from "./slots";
 export { isFileSourcePosition } from "./source-position";
 export type * from "./types";

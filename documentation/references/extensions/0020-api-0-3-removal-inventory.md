@@ -16,7 +16,6 @@ in their owning PRs.
 | `/client` workspace/session `listActivity` | Their GET activity HTTP endpoints; use session queries for session history | None in repository source | None; HTTP paths stay available | 0.45 |
 | `/client` sessions `getConversationSources` | GET session conversation sources HTTP endpoint | None in repository source | None; HTTP path stays available | 0.45 |
 | `/client` skills `updatePreferences` | PUT project skill HTTP endpoint | None in repository source | None; HTTP path stays available | 0.45 |
-
 | `ctx.notify.resolve`, `ctx.notify.dismiss`, author `expired` | `setStatus` and `setStatusByKey` with `done` or `dismissed`; expiry stays host-owned | Planner, Reports and external consumers use the compatibility adapters until 0.45 adoption | None | 0.45 |
 | `notification.action`, `.resolve`, `.dismiss` bridge capabilities and parameter types | Invoke a command using `ctx.notify`; keep `notification.show` for toasts | Internal workbench fixture uses `.action`; no maintained extension callers | None | 0.45 |
 | HTTP notification `/read`, `/done`, `/dismiss`, `/snooze`, `/resolve-by-dedupe-key`; matching SDK methods | POST `/:id/status` and `/status-by-key`; SDK `setStatus` and `setStatusByKey` | CLI and dashboard compatibility callers; external consumers unknown | None | 0.45 |
@@ -25,6 +24,10 @@ in their owning PRs.
 | `ExtensionSessionSummary`, `ExtensionSessionResource` and returned snake-case session fields, `last_exit`, snake-case usage totals | `ExtensionSession` and camelCase fields | Planner, Reports, CLI and external callers retain aliases until adoption | No stored conversion; explicit host projection | 0.45 |
 | Snake-case `ExtensionWorkspace` fields and `anchors_json`; `CreateExtensionWorkspaceInput` | CamelCase workspace fields, `ExtensionWorkspaceCreateInput`, and `resources` for links | Planner, Reports and external callers | No stored conversion in this PR; stored provider data conversion stays separate | 0.45 |
 | `sessions.addAnchors`/`removeAnchors`, `workspaces.addAnchors`/`removeAnchors` | `resources.addAnchors`/`removeAnchors` with a host reference | Planner and external callers; creation anchors stay supported | No conversion; both paths use the same edge table and source transaction | 0.45 |
+| `commandOutcomeSchema`, `commandExecuteResponseSchema`, `CommandExecuteResponse` | `validatedCommandOutcomeSchema`, `commandExecutionResultSchema`, `CommandExecutionResult` | External schema consumers; legacy HTTP stream event type | None; preserve Zod object methods and old optional fields during 0.44 | 0.45 |
+| SDK `execute` compatibility return intersection | Canonical `CommandExecutionResult` alone | External SDK consumers may access optional fields without narrowing | None | 0.45 |
+| `unwrapCommandOutcome` | Check the outcome explicitly, or use `getCommandValue` and `CommandOutcomeError.outcome` | Compatibility consumers until extension adoption | None | 0.45 |
+| `createWebviewCommandStream`, `streamExtensionCommand`, `CommandStreamClientEvent`, SDK `extensions.stream`, `CommandStream.result` | Canonical chunk stream with `outcome` and `cancel`; SDK `extensions.streamCommand` | Legacy stream consumers; packaged parity test covers old and new | None | 0.45 |
 
 `host.dispatchKeyboardEvent` is private guest plumbing, outside the public capability union.
 Keyboard forwarding continues through the private runtime path and requires no declaration.

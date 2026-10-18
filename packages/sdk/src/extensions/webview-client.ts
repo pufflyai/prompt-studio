@@ -5,12 +5,12 @@ import type {
   ParamsOf,
   WebviewArtifactFile,
 } from "pstdio-api-contracts/extension-kernel";
-import { unwrapCommandOutcome } from "./command-outcome";
+import { getCommandValue } from "./command-outcome";
 import type { SettingsMap } from "./define-extension";
 import type { GuestHost } from "./define-extension-view";
 import { type ArtifactMountKey, artifactMountId } from "./webview-capabilities";
 import { createWebviewEventsClient, type WebviewEventsClient } from "./webview-events";
-import { type CommandStreamOptions, createWebviewCommandStream, type WebviewStreamsClient } from "./webview-streams";
+import { type CommandStreamOptions, openWebviewCommandStream, type WebviewStreamsClient } from "./webview-streams";
 
 // Command types derive from a record of `defineCommand` values (the extension's
 // exported commands map), not from `typeof extension`: `defineExtension` cannot keep
@@ -95,7 +95,7 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
       params,
       ...(options?.workspaceId ? { workspaceId: options.workspaceId } : {}),
     });
-    return unwrapCommandOutcome(response);
+    return getCommandValue(response.outcome);
   };
 
   // Command keys only exist at the type level, so property access builds the calls.
@@ -116,7 +116,7 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
         typeof key !== "string"
           ? undefined
           : (params?: JsonObject, streamOptions?: CommandStreamOptions) =>
-              createWebviewCommandStream(
+              openWebviewCommandStream(
                 host,
                 { commandId: `${extensionId}.command.${key}`, params, workspaceId: options?.workspaceId },
                 streamOptions,

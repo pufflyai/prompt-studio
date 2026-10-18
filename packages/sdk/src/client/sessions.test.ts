@@ -219,7 +219,7 @@ it("command streams and sessions share one connection and release independently"
   const response = {
     commandId: "logs",
     extensionId: "logs",
-    outcome: { ok: true, status: "success" as const, value: 2 },
+    outcome: { ok: true as const, status: "success" as const, value: 2 },
   };
   server.send("end", { subscription_id: command.body!.subscription_id, data: response });
   expect(await collecting).toEqual([

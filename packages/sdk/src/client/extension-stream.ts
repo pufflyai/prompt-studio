@@ -1,11 +1,20 @@
-import type { CommandExecuteRequest, CommandExecuteResponse, JsonValue } from "pstdio-api-contracts";
+import type {
+  CommandExecuteBody,
+  CommandExecuteRequest,
+  CommandExecuteResponse,
+  CommandExecutionResult,
+  JsonValue,
+} from "pstdio-api-contracts";
+import { createCommandStreamController } from "../internal/command-stream";
 import { createStreamBuffer, jsonBytes, streamError } from "../internal/stream-buffer";
 import type { createSessionStreamTransport } from "./session-stream";
 
+/** @deprecated Use CommandStream from @pstdio/sdk/extensions for chunks and a complete final outcome. */
 export type CommandStreamClientEvent =
   | { type: "data"; data: JsonValue }
   | { type: "end"; response: CommandExecuteResponse };
 
+/** @deprecated Use openExtensionCommandStream for chunks and a complete final outcome. */
 export const streamExtensionCommand = (
   transport: ReturnType<typeof createSessionStreamTransport>,
   commandId: string,
@@ -49,11 +58,37 @@ export const streamExtensionCommand = (
       },
       onError(error) {
         const code = (error as { code?: string })?.code ?? "command_stream_disconnected";
-        fail(streamError(code, error instanceof Error ? error.message : String(error)));
+        const message = error instanceof Error ? error.message : String(error);
+        fail(Object.assign(new Error(message, { cause: error }), { code }));
       },
     },
   );
   close = subscription.close;
   options?.signal?.addEventListener("abort", abort, { once: true });
   return buffer.iterable;
+};
+
+export const openExtensionCommandStream = (
+  transport: ReturnType<typeof createSessionStreamTransport>,
+  projectId: string,
+  commandId: string,
+  input: CommandExecuteBody = {},
+  options?: { signal?: AbortSignal },
+) => {
+  let close = () => {};
+  const controller = createCommandStreamController<JsonValue>({ options, onClose: () => close() });
+  if (controller.closed()) return controller.stream;
+  const subscription = transport.subscribe(
+    { command: { project_id: projectId, command_id: commandId, body: input } },
+    {
+      onEvent(event, data) {
+        if (event === "chunk") controller.push(data as JsonValue);
+        else if (event === "end") controller.complete((data as CommandExecutionResult).outcome);
+      },
+      onError: controller.fail,
+    },
+  );
+  close = subscription.close;
+  if (controller.closed()) close();
+  return controller.stream;
 };
