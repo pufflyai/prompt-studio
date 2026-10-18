@@ -4,4 +4,4 @@
 "pstdio": patch
 ---
 
-Show correct database ownership recovery and update shared resource inspectors during navigation.
+Show correct database ownership recovery, allow Retry as soon as recovery is visible, and update shared resource inspectors during navigation.
