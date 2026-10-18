@@ -116,7 +116,7 @@ Implemented: 2026-10-14. The sections above preserve the original PS-722 investi
 
 Planner assigns a moved ticket a numeric position between its active neighbors. It writes only changed records and returns a compact changed count. When no numeric gap remains, it rebalances the active order and still skips unchanged records. Hidden filtered rows keep their global order; archived tickets do not enter active ordering. The existing ticket-order write guard serializes ownership: a competing writer receives a busy error and can retry. Tests cover that retry, no-ops, filtered order, and rebalance.
 
-The public renderer adds `onMove`, which carries the complete column, row-group, and optional manual-order intent. Planner validates it before writing and emits one final content event. Sorted moves omit manual order. The old public reorder callback remains deprecated for the API transition. The extension API becomes 0.1.6. No database migration or duplicate persisted board state is added.
+The public renderer adds `onMove`, which carries the complete column, row-group, and optional manual-order intent. Planner validates it before writing and emits one final content event. Sorted moves omit manual order. The old public reorder callback was deprecated, then removed with the other deprecated APIs in extension API 0.2. The extension API becomes 0.1.6. No database migration or duplicate persisted board state is added.
 
 The shared read/mutation owner previews each move, serializes saves, rejects stale reads, and removes only a failed action from its pending journal. Later actions retain their full destination intent. Reconnecting the same query keeps this owner. The existing refresh path reconciles the saved state after pending actions settle.
 
@@ -166,7 +166,7 @@ The supplemental case keeps all 1,000 tickets and adds 20 attached text files (1
 
 The supplemental case proves functional behavior; it is not a separate latency benchmark. Planner queries still read full records and rebuild derived metadata. The smaller query count removes repeated work, but further read narrowing needs measurements for a representative project. Milestone-plus-ticket moves use the existing guarded plan storage and are a logical operation, not a new database transaction.
 
-SDK/host and Planner changes ship in separate PRs under the extension repository rules. The Planner PR waits for the SDK merge and published release, then needs its SDK dependency updated. No compatibility workaround was added.
+SDK/host and Planner changes ship in separate PRs under the extension repository rules. The host change (#1101) shipped in release 0.43.1 with extension API 0.1.6. No compatibility workaround was added.
 
 ### Retained implementation evidence
 

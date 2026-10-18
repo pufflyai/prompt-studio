@@ -1,8 +1,8 @@
 import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { commandRunner } from "./packaged-planner-helpers";
-import { expectIndependentPlannerViews } from "./packaged-planner-views-smoke";
 import { expectPackagedPlannerMoves } from "./packaged-planner-moves-smoke";
+import { expectIndependentPlannerViews } from "./packaged-planner-views-smoke";
 
 export async function expectPackagedPlannerTimeline(input: {
   baseUrl: string;
