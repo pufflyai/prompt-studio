@@ -10,6 +10,8 @@ export const createResourceContextActions = (
   items.map((entry) => ({
     key: entry.id,
     label: entry.label,
+    commandId: entry.commandId,
+    group: entry.group,
     icon: typeof entry.icon === "function" ? <Icon as={entry.icon} boxSize="16px" /> : entry.icon,
     endContent: entry.endContent,
     isDisabled: entry.disabled,

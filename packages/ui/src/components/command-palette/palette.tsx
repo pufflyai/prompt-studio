@@ -46,6 +46,7 @@ export type PaletteStateValue<T extends PaletteEntry, TValue> = TValue | ((state
 
 export interface PaletteProps<T extends PaletteEntry = PaletteEntry> {
   open: boolean;
+  label?: string;
   /** Fill the viewport, with a scrollable results area. */
   fullScreen?: boolean;
   /** Focus the dialog instead of opening a touch keyboard when false. */
@@ -55,7 +56,7 @@ export interface PaletteProps<T extends PaletteEntry = PaletteEntry> {
   initialActiveIndex?: number;
   mode?: string;
   modes?: PaletteMode[];
-  resetKey?: string;
+  resetKey?: unknown;
   inputIcon?: PaletteStateValue<T, ReactNode>;
   placeholder?: PaletteStateValue<T, string>;
   emptyLabel?: string;
@@ -83,6 +84,7 @@ const resolveStateValue = <T extends PaletteEntry, TValue>(
 export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
   const {
     open,
+    label = "Command palette",
     fullScreen = false,
     searchAutoFocus = true,
     entries,
@@ -234,23 +236,22 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
       runActiveEntry();
       return;
     }
-
-    if (event.key !== "Escape") return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    handleEscape();
   };
 
   return (
     <Dialog.Root
       open={open}
       initialFocusEl={() => (searchAutoFocus ? inputRef.current : contentRef.current)}
+      onEscapeKeyDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        handleEscape();
+      }}
       onOpenChange={(details) => !details.open && closePalette()}
     >
       <Dialog.Backdrop />
       <Dialog.Positioner css={styles.positioner}>
-        <Dialog.Content ref={contentRef} tabIndex={-1} css={styles.content} aria-label="Command palette">
+        <Dialog.Content ref={contentRef} tabIndex={-1} css={styles.content} aria-label={label}>
           <SearchModalContent
             searchValue={query}
             searchPlaceholder={resolvedPlaceholder}

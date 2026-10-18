@@ -52,6 +52,8 @@ The + control follows the scrolling tab group. Its choices include active panels
 
 Right-click, Shift+F10, the Context Menu key, and touch long-press open the same grouped tab menu. Normal clicks select. Preview and pinned tabs can appear in any order. Pin and Unpin change retention without changing position. Alt+Left and Alt+Right reorder the focused tab.
 
+Resource tabs begin with the same resource-owned action group as navigation and breadcrumbs. A placement's `tab` query adds independent custom groups, such as the Sessions controls. Each group has `rows` and can have a localized `label`. Session switching opens a separate resource search modal. Shared Tab controls follow these groups. Keep resource operations in resource menu slots so they are available on every surface.
+
 Placement identity and ownership stay the same when a tab moves. Mode arrangements persist within the project and mode; page arrangements persist within the page location. Reset layout restores the active page and shared mode defaults without deleting session or terminal data or clearing other page locations.
 
 A moved view keeps its tab tray even when it is the only view in its destination. This keeps the move and reset actions available. Returning it to its declared region restores that region's normal header policy. Page-owned Locations and their Sub Panels keep their owner lifecycle when they share a region with other scoped content. Primary changes reconcile each placement separately.

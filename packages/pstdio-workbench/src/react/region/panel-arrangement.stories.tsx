@@ -88,7 +88,7 @@ export const createArrangementWorkbench = (
               {
                 id: "new",
                 label: "New session",
-                icon: "PenBox",
+                icon: "MessageSquarePlus",
                 action: { kind: "command", commandId: "add-session" },
               },
             ],

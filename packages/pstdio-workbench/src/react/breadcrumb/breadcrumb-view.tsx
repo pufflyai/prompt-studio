@@ -1,14 +1,15 @@
 import { HStack, Text } from "@chakra-ui/react";
-import { resourceKey } from "@pstdio/sdk/extensions";
 import { Breadcrumb, type ResourceContextAction, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
 import { resolvePageActivePlacement } from "../../core/registries/pages/page-active-placement";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
+import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
+import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
-import { placementMenuActions } from "../shared/placement-menu-actions";
 import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { breadcrumbSnapshot } from "./breadcrumb-snapshot";
 
 interface WorkbenchBreadcrumbViewProps {
   workbench: WorkbenchCore;
@@ -66,6 +67,7 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
     resolvePageActivePlacement(state.layout, page),
   );
   const snapshot = usePlacementTab(placement, workbench);
+  useWorkbenchResourceActionResolver(workbench);
   if (items.length === 0) return null;
   const resource = placement?.resource;
   const crumbs = items.flatMap((item) => {
@@ -77,20 +79,28 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   if (
     resource &&
     resolveResourcePreview(resource, changes) &&
-    !items.some((item) => item.resource && resourceKey(item.resource) === resourceKey(resource))
+    !crumbs.some(
+      (item) =>
+        item.resource &&
+        workbench.pages.resourceReferenceKey(item.resource) === workbench.pages.resourceReferenceKey(resource),
+    )
   ) {
     crumbs.push({
       title: snapshot.label ?? resource.label ?? resource.id,
-      icon: snapshot.icon ?? workbench.resources.getKind(resource.type)?.icon,
+      icon: snapshot.icon ?? workbench.resources.getKind(resource.type, resource.extensionId)?.icon,
       resource,
     });
   }
-  const actions = placementMenuActions(workbench, snapshot);
-
   return (
     <Breadcrumb
       items={buildWorkbenchBreadcrumbItems(crumbs, (item) =>
-        resource && item.resource && resourceKey(item.resource) === resourceKey(resource) ? actions : undefined,
+        item.resource
+          ? createWorkbenchResourceMenu(
+              workbench,
+              item.resource,
+              breadcrumbSnapshot(item, crumbs.at(-1), resource, snapshot, workbench.pages.resourceReferenceKey),
+            )
+          : undefined,
       )}
       separator="/"
       separatorGap="xs"

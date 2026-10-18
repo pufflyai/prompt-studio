@@ -39,3 +39,23 @@ export const expectResourceMenuItems = async (page: Page, labels: string[]) => {
     await expect(page.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
   }
 };
+
+export const switchSession = async (page: Page, title: string) => {
+  await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "Switch session", exact: true });
+  await picker.getByRole("textbox").fill(title);
+  await picker
+    .getByRole("option")
+    .filter({ has: page.getByText(title, { exact: true }) })
+    .click();
+};
+
+export const openSessionSidePanel = async (page: Page, title: string) => {
+  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  await page
+    .locator('[data-workbench-panel-header="side"]')
+    .getByRole("tab", { selected: true })
+    .click({ button: "right" });
+  await switchSession(page, title);
+};

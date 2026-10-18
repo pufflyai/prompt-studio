@@ -18,7 +18,7 @@ const draftResource = {
   type: "session-draft",
   id: "story-preview",
   label: "New session",
-  icon: "PenBox",
+  icon: "MessageSquarePlus",
 };
 const emptyAttachments = { attachments: [], uploading: false };
 const drafts: DashboardSessionDraftPersistence = {

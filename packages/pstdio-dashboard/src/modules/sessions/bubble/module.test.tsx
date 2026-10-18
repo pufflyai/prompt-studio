@@ -46,9 +46,9 @@ test("opens the session supplied by a resource menu execution context", async ()
   expect(sessionPlacements(workbench).map((placement) => placement.resource?.id)).toEqual(["inactive"]);
 });
 
-describe("createSessionBubbleModule", () => {
+describe("switching session placements", () => {
   for (const retention of ["preview", "persistent"] as const) {
-    test(`replaces the originating ${retention} draft through its recent-session action`, async () => {
+    test(`replaces the originating ${retention} draft through its Switch session action`, async () => {
       const workbench = createWorkbench();
       workbench.registerModule(createSessionBubbleModule());
       await activateProjectPage(workbench);
@@ -71,10 +71,13 @@ describe("createSessionBubbleModule", () => {
         workbench.layout.listPanelInstances("side").find((panel) => panel.instanceId === origin.widgetId)!,
       );
       const action = snapshot
-        .menu!.find((group) => group.id === "recent")!
-        .rows.find((row) => row.id === "menu-session")!.action!;
+        .menu!.find((group) => group.id === "sessions")!
+        .rows.find((row) => row.id === "switch-session")!.action!;
       if (action.kind !== "command") throw new Error("Expected a session command");
       await workbench.commands.executeCommand(action.commandId, action.args);
+      const picker = workbench.commandPalette.store.getState().resourceSearch!;
+      const entry = picker.list("").find((entry) => entry.resource.id === "menu-session")!;
+      await entry.activate!(entry.resource);
       const after = sessionPlacements(workbench);
       expect(after).toHaveLength(2);
       expect(after[0]).toMatchObject({
@@ -88,7 +91,7 @@ describe("createSessionBubbleModule", () => {
     });
   }
   for (const retention of ["preview", "persistent"] as const) {
-    test(`replaces the originating ${retention} session through its recent-session action`, async () => {
+    test(`replaces the originating ${retention} session through its Switch session action`, async () => {
       const workbench = createWorkbench();
       workbench.registerModule(createSessionBubbleModule());
       await activateProjectPage(workbench);
@@ -111,10 +114,13 @@ describe("createSessionBubbleModule", () => {
         workbench.layout.listPanelInstances("side").find((panel) => panel.instanceId === origin.widgetId)!,
       );
       const action = snapshot
-        .menu!.find((group) => group.id === "recent")!
-        .rows.find((row) => row.id === "menu-session")!.action!;
+        .menu!.find((group) => group.id === "sessions")!
+        .rows.find((row) => row.id === "switch-session")!.action!;
       if (action.kind !== "command") throw new Error("Expected a session command");
       await workbench.commands.executeCommand(action.commandId, action.args);
+      const picker = workbench.commandPalette.store.getState().resourceSearch!;
+      const entry = picker.list("").find((entry) => entry.resource.id === "menu-session")!;
+      await entry.activate!(entry.resource);
       const after = sessionPlacements(workbench);
       expect(after).toHaveLength(2);
       expect(after[0]).toMatchObject({
@@ -143,7 +149,7 @@ describe("createSessionBubbleModule", () => {
       const snapshot = origin.tab!.getSnapshot!(
         workbench.layout.listPanelInstances("side").find((panel) => panel.instanceId === origin.widgetId)!,
       );
-      const action = snapshot.menu!.find((group) => group.id === "create")!.rows[0]!.action!;
+      const action = snapshot.menu!.find((group) => group.id === "sessions")!.rows[0]!.action!;
       if (action.kind !== "command") throw new Error("Expected a session command");
       await workbench.commands.executeCommand(action.commandId, action.args);
       const after = sessionPlacements(workbench);
@@ -157,6 +163,9 @@ describe("createSessionBubbleModule", () => {
       expect(workbench.layout.getLayout().regions.side.activeWidgetId).toBe(after[0]!.widgetId);
     });
   }
+});
+
+describe("createSessionBubbleModule", () => {
   test("declares the project Session Panel without opening it", () => {
     const workbench = createWorkbench();
     workbench.resources.registerKind({ kind: "workspace", label: "Workspace" });

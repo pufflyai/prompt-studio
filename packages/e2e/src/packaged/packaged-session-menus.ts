@@ -29,12 +29,41 @@ export const verifyPackagedSessionMenus = async (
   for (const name of ["Rename session", "Archive session", "Delete session"]) {
     await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
   }
-  await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  await page
+    .locator('[data-workbench-panel-header="side"]')
+    .getByRole("tab", { selected: true })
+    .click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "Switch session", exact: true });
+  await picker.getByRole("textbox").fill("Packaged session actions");
+  await expect(picker.getByRole("img", { name: "Session status: completed" })).toBeVisible();
+  for (const title of ["Packaged session actions updated", "Packaged session actions"]) {
+    const updated = await fetch(`${baseUrl}/v1/sessions/${session.id}/title`, {
+      method: "PATCH",
+      headers: { ...authorization, "content-type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    expect(updated.ok).toBe(true);
+    await expect(picker.getByRole("option")).toHaveText([title]);
+    await expect(picker.getByRole("textbox")).toHaveValue("Packaged session actions");
+  }
+  await picker.getByRole("textbox").press("Enter");
   await expect(
     page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
       name: /Packaged session actions/,
     }),
   ).toBeVisible();
+  await page
+    .locator('[data-workbench-panel-header="side"]')
+    .getByRole("tab", { name: /Packaged session actions/ })
+    .click({ button: "right" });
+  await expect(page.getByRole("group", { name: "Session", exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
   await row.click();
   await expect(page).toHaveURL(new RegExp(session.id));
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();

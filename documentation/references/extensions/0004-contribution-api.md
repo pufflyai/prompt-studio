@@ -188,6 +188,24 @@ Tree rows use `resource` as their action subject and `target` as their normal-cl
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
 any parameter dialog keep the clicked resource as their context, even when another resource is open.
 
+Declare resource operations once through a menu slot on the resource kind. The same contributions appear in navigation, tab, and breadcrumb resource menus. Owner-only slots keep their existing access rules; public slots accept other extensions' contributions. The host preserves the subject for visibility, parameters, confirmation, and execution. A command can have several distinct menu contributions with different parameters.
+
+Use `disabledWhen` with the same subject conditions as `when` to keep an unavailable action visible. Supply a localized `disabledReason` for its explanation. For example, `disabledWhen: { metadata: { writable: false } }` disables a note mutation when its owner reports read-only access. The command must still check current permissions before writing.
+
+### Custom menu sections
+
+Use placement `tab` presentation for view-specific navigation or controls. It supplements resource actions and does not choose the action subject. A group has `id`, an optional localized `label`, and `rows`. Tab controls follow custom groups; breadcrumbs add location actions instead.
+
+```ts
+menu: [{
+  id: "documents",
+  label: l10n("menus.documents", "Documents"),
+  rows: [newDocumentRow, switchDocumentRow, viewAllDocumentsRow],
+}]
+```
+
+Use custom rows for view-specific controls and navigation. Move resource operations to resource-owned slots rather than copying them into each menu.
+
 The host refreshes the tree after a section or row action runs. An action command calls
 `ctx.navigation.open(target)` to move the page, for example back to the ticket body after deleting an open
 document. The host applies explicit requests once after a successful command. Returned values remain data.
@@ -487,7 +505,7 @@ A level page without a declared parent, such as Notes, has nothing outside the l
 
 For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.
 
-Session commands contributed through `sessionSlots.headerPrimary` or `sessionSlots.headerOverflow` also appear in shared session resource menus. Session tree rows must set `resource` explicitly, even when `target.resource` already names the session. Visibility and execution use the clicked session; opening a different resource first is not required. Host session rows expose the existing Open session panel action without tab placement arguments.
+Session commands contributed through `sessionSlots.headerPrimary` or `sessionSlots.headerOverflow` also appear in shared session resource menus. Session tree rows must set `resource` explicitly, even when `target.resource` already names the session. Visibility and execution use the clicked session; opening a different resource first is not required. Open session panel remains a host command for other callers; it is not contributed to session item menus. Session tab and current-page breadcrumb menus add the Sessions group with New session, Switch session, and View all sessions. Switch session opens a scoped resource search modal.
 
 ## Queued conversation requests
 

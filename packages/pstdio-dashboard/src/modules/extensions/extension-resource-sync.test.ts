@@ -1,64 +1,98 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecutionResult } from "@pstdio/sdk/api";
+import { viewDataEvents } from "@pstdio/sdk/extensions";
 import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
-import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { watchOpenExtensionResource } from "./extension-resource-sync";
 
-const projectId = "extension-resource-sync";
-const extensionId = "acme.notes";
-const resolveCommand = `${extensionId}.command.resolve-note`;
-const page = { kind: "page" as const, extensionId, id: "note" };
-const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
-
-const openNoteWorkbench = (
-  resolve: (resource: ResourceRef) => Promise<ResourceRef | null> | ResourceRef | null,
-  batchResolver = false,
-) => {
-  const workbench = createWorkbench();
-  workbench.modes.registerMode({ id: "project", activate: () => undefined });
-  workbench.views.registerView({ id: "note", title: "Note", body: { kind: "react", render: () => null } });
-  workbench.pages.registerPage({
-    id: "note",
-    ref: page,
-    path: "note",
-    modeId: "project",
-    resource: { kinds: [{ kind: "resource-kind", id: "note" }] },
-    main: { kind: "panels", empty: { kind: "view", id: "note" } },
-    slots: [],
-  });
-  const resolved: ResourceRef[] = [];
-  watchOpenExtensionResource(workbench, {
-    projectId,
-    metadata: {
-      ...emptyDashboardExtensionMetadata,
-      resourceKinds: [
-        {
-          id: "note",
-          localId: "note",
-          extensionId,
-          resolveCommand,
-          ...(batchResolver ? { resolveManyCommand: `${extensionId}.command.resolve-links` } : {}),
-          menuSlots: [],
-        },
-      ],
-    },
-    executeCommand: async (_projectId, commandId, body) => {
-      const resource = (body as { resource: ResourceRef }).resource;
-      resolved.push(resource);
-      return {
-        commandId,
-        extensionId,
-        outcome: { ok: true, status: "success", value: await resolve(resource) },
-      } as CommandExecutionResult;
-    },
-  });
-  workbench.pageLocations.setProject(projectId);
-  const open = (resource: ResourceRef) => workbench.pageLocations.navigate({ kind: "page", page, resource });
-  return { workbench, open, resolved };
-};
+import { extensionId, openNoteWorkbench, page, projectId, settle } from "./extension-resource-sync.fixture";
 
 describe("open extension resource sync", () => {
+  test.each([
+    `${extensionId}.event.notes.changed`,
+    `${extensionId}.notes.changed`,
+    viewDataEvents.workspacesChanged.id,
+  ])("refreshes all placements after %s", async (eventId) => {
+    let writable = true;
+    const { workbench, open } = openNoteWorkbench((resource) => ({
+      ...resource,
+      label: writable ? "Original" : "Renamed",
+      metadata: { writable },
+    }));
+    const panel = { kind: "placement" as const, id: "notes", extensionId };
+    workbench.modePlacements.registerPlacement({
+      id: "notes",
+      ref: panel,
+      modeId: "project",
+      region: "side",
+      item: {
+        kind: "binding",
+        binding: {
+          kinds: [{ kind: "resource-kind", id: "note" }],
+          view: { kind: "view", id: "note" },
+          cardinality: "many",
+        },
+      },
+    });
+    const resource = { type: "note", id: "a", extensionId, projectId, label: "Original" };
+    open(resource);
+    workbench.modePlacements.openPlacement({ panel, resource, open: "pin" });
+    await settle();
+    const selected = workbench.layout.getLayout().activeWidgetId;
+    writable = false;
+    publishExtensionEvent({ id: eventId, projectId });
+    await settle();
+    const duplicate = workbench.layout.getLayout().regions.side.widgets[0]?.resource;
+    expect(duplicate).toMatchObject({ label: "Renamed", metadata: { writable: false } });
+    expect(workbench.layout.getLayout().activeWidgetId).toBe(selected);
+    expect(workbench.getPrimaryResource()?.id).toBe("a");
+  });
+  test.each([
+    false,
+    true,
+  ])("refreshes an inactive resource tab without selecting it (batch only: %s)", async (batchOnly) => {
+    let writable = true;
+    const { workbench, open } = openNoteWorkbench(
+      (resource) => ({ ...resource, metadata: { writable } }),
+      false,
+      batchOnly,
+    );
+    workbench.modePlacements.registerPlacement({
+      id: "notes",
+      ref: { kind: "placement", id: "notes", extensionId },
+      modeId: "project",
+      region: "side",
+      item: {
+        kind: "binding",
+        binding: {
+          kinds: [{ kind: "resource-kind", id: "note" }],
+          view: { kind: "view", id: "note" },
+          cardinality: "many",
+        },
+      },
+    });
+    open({ type: "note", id: "a", extensionId, projectId });
+    const panel = { kind: "placement" as const, id: "notes", extensionId };
+    workbench.modePlacements.openPlacement({
+      panel,
+      resource: { type: "note", id: "b", extensionId, projectId },
+      open: "pin",
+    });
+    workbench.modePlacements.openPlacement({
+      panel,
+      resource: { type: "note", id: "c", extensionId, projectId },
+      open: "pin",
+    });
+    await settle();
+    const selected = workbench.layout.getLayout().activeWidgetId;
+    writable = false;
+    publishExtensionEvent({ id: `${extensionId}.event.notes.changed`, projectId });
+    await settle();
+    const tab = workbench.layout.getLayout().regions.side.widgets.find((placement) => placement.resource?.id === "b");
+    expect(tab?.resource?.metadata).toMatchObject({ writable: false });
+    expect(workbench.layout.getLayout().activeWidgetId).toBe(selected);
+    expect(workbench.getPrimaryResource()?.id).toBe("a");
+  });
   test("shows the extension's current reference for the open resource", async () => {
     const { workbench, open, resolved } = openNoteWorkbench((resource) => ({
       ...resource,
@@ -146,7 +180,7 @@ test("same-kind open resources resolve through their own extension and refresh w
         id: "note",
         localId: "note",
         extensionId,
-        resolveCommand: extensionId + ".command.resolve",
+        resolveCommand: `${extensionId}.command.resolve`,
         menuSlots: [],
       })),
     },
@@ -168,9 +202,9 @@ test("same-kind open resources resolve through their own extension and refresh w
       resource: { type: "note", id: "same", projectId, extensionId },
     });
     await settle();
-    expect(workbench.getPrimaryResource()?.label).toBe(extensionId + ".command.resolve");
+    expect(workbench.getPrimaryResource()?.label).toBe(`${extensionId}.command.resolve`);
   }
-  expect(calls).toEqual(owners.map((owner) => owner + ".command.resolve"));
+  expect(calls).toEqual(owners.map((owner) => `${owner}.command.resolve`));
 });
 
 test("keeps the open-resource resolver when a kind also resolves linked-resource batches", async () => {

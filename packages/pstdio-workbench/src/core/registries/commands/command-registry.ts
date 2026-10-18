@@ -1,4 +1,4 @@
-import type { ContextKeyService } from "../../shared/context/context-key-service";
+import { type ContextKeyService, matchesContextExpression } from "../../shared/context/context-key-service";
 import {
   byContributionPriority,
   type ContributionMetadata,
@@ -7,7 +7,7 @@ import {
 } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
-import type { ResourceRef } from "../resources/resource-registry";
+import { type ResourceRef, scopeWorkbenchResourceContextValues } from "../resources/resource-registry";
 
 export interface WorkbenchCommandExecutionError {
   commandId: string;
@@ -74,8 +74,8 @@ export interface CommandHandler<TArgs = unknown, TResult = unknown> {
     onArgsChange?: (args: TArgs) => void,
   ): TArgs | Promise<TArgs>;
   execute(args: TArgs, context?: WorkbenchCommandExecutionContext): TResult | Promise<TResult>;
-  isEnabled?(args: TArgs): boolean;
-  isVisible?(args: TArgs): boolean;
+  isEnabled?(args: TArgs, context?: WorkbenchCommandExecutionContext): boolean;
+  isVisible?(args: TArgs, context?: WorkbenchCommandExecutionContext): boolean;
   isToggled?(args: TArgs): boolean;
 }
 
@@ -97,8 +97,8 @@ export interface CommandRegistry {
   ): Disposable;
   getCommand(id: string): RegisteredCommand | undefined;
   listCommands(): RegisteredCommand[];
-  isCommandEnabled(id: string, args?: unknown): boolean;
-  isCommandVisible(id: string, args?: unknown): boolean;
+  isCommandEnabled(id: string, args?: unknown, context?: WorkbenchCommandExecutionContext): boolean;
+  isCommandVisible(id: string, args?: unknown, context?: WorkbenchCommandExecutionContext): boolean;
   isCommandToggled(id: string, args?: unknown): boolean;
   prepareCommandArgs(
     id: string,
@@ -163,14 +163,16 @@ export const createCommandRegistry = (input: CreateCommandRegistryInput = {}): C
       return Object.values(store.getState().commands).sort(byContributionPriority);
     },
 
-    isCommandEnabled(id, args) {
-      return requireCommand(id).handler.isEnabled?.(args) ?? true;
+    isCommandEnabled(id, args, context) {
+      return requireCommand(id).handler.isEnabled?.(args, context) ?? true;
     },
 
-    isCommandVisible(id, args) {
+    isCommandVisible(id, args, context) {
       const record = requireCommand(id);
-      if (!input.context?.matches(record.command.when)) return false;
-      return record.handler.isVisible?.(args) ?? true;
+      const values = input.context?.snapshot() ?? {};
+      const scoped = context ? scopeWorkbenchResourceContextValues(values, context.resource) : values;
+      if (!matchesContextExpression(scoped, record.command.when)) return false;
+      return record.handler.isVisible?.(args, context) ?? true;
     },
 
     isCommandToggled(id, args) {
@@ -184,7 +186,7 @@ export const createCommandRegistry = (input: CreateCommandRegistryInput = {}): C
 
     async executeCommand(id, args, context) {
       const record = requireCommand(id);
-      if (record.handler.isEnabled?.(args) === false) {
+      if (record.handler.isEnabled?.(args, context) === false) {
         const error = new Error(`Command is disabled: ${id}`);
         emitError({ commandId: id, args, error });
         throw error;

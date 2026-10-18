@@ -7,6 +7,12 @@ import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-e
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { toDashboardExtensionResource } from "./extension-kanban-adapter";
+import {
+  isResourceRefreshEvent,
+  refreshWorkbenchResource,
+  watchExtensionPlacementResources,
+} from "./extension-placement-resource-sync";
+import { resolutionFromResult, resourceResolutionRequest } from "./extension-resource-resolution";
 
 interface WatchOpenExtensionResourceInput {
   executeCommand: ExecuteDashboardExtensionCommand;
@@ -21,21 +27,6 @@ const sameReference = (left: ResourceRef, right: ResourceRef) =>
   left.icon === right.icon &&
   left.shorthand === right.shorthand &&
   JSON.stringify(left.metadata ?? {}) === JSON.stringify(right.metadata ?? {});
-
-const resolutionFromResult = (
-  value: unknown,
-  input: {
-    batch: boolean;
-    identityOf(resource: ResourceRef | undefined): string | undefined;
-    open: ResourceRef;
-  },
-) => {
-  if (!input.batch) return { resource: value };
-  if (!Array.isArray(value)) return undefined;
-  return (value as ResourceResolution[]).find(
-    (entry) => entry?.resource && input.identityOf(entry.resource) === input.identityOf(input.open),
-  );
-};
 
 const ownerPageTarget = (input: {
   target?: ResourceResolution["target"];
@@ -129,6 +120,7 @@ export const watchOpenExtensionResource = (
       shorthand: resolved.shorthand,
       metadata: resolved.metadata,
     };
+    refreshWorkbenchResource(ctx, current);
     const location = ctx.pages.store.getState().location;
     const target = ownerPageTarget({
       target: resolution && "target" in resolution ? resolution.target : undefined,
@@ -157,11 +149,7 @@ export const watchOpenExtensionResource = (
       const response = await input.executeCommand(
         input.projectId,
         resolver.commandId,
-        {
-          resource: open,
-          source: "dashboard",
-          ...(resolver.batch ? { params: { resources: [open] } } : {}),
-        },
+        resourceResolutionRequest(input.projectId, open, resolver.batch),
         request.signal,
       );
       if (request.signal.aborted) return;
@@ -187,10 +175,12 @@ export const watchOpenExtensionResource = (
     const open = ctx.getPrimaryResource();
     const resolver = resolverOf(open);
     if (event.projectId !== input.projectId || !resolver) return;
-    if (event.id.startsWith(`${resolver.extensionId}.event.`)) void resolveOpenResource();
+    if (isResourceRefreshEvent(event.id, resolver.extensionId)) void resolveOpenResource();
   });
+  const placementResources = watchExtensionPlacementResources(ctx, input);
   return {
     dispose() {
+      placementResources.dispose();
       pending?.abort();
       primarySubscription.dispose();
       unsubscribePages();

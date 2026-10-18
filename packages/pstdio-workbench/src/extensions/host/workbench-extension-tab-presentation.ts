@@ -17,6 +17,24 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
 const navigationAction = (value: unknown, extensionId: string, projectId: string) =>
   isNavigationTarget(value) ? toWorkbenchNavigationTarget(value, { extensionId, projectId }) : undefined;
+const toRows = (value: unknown, extensionId: string, projectId: string) =>
+  Array.isArray(value)
+    ? value.flatMap((row) => {
+        if (!isRecord(row) || typeof row.id !== "string") return [];
+        const target = navigationAction(row.action, extensionId, projectId);
+        return [
+          {
+            id: row.id,
+            label: text(row.label as Parameters<typeof text>[0], row.id),
+            icon: typeof row.icon === "string" ? row.icon : undefined,
+            iconColor: typeof row.iconColor === "string" ? row.iconColor : undefined,
+            selected: row.selected === true,
+            disabled: row.disabled === true,
+            action: target ? { kind: "navigation" as const, target } : undefined,
+          },
+        ];
+      })
+    : [];
 const toSnapshot = (value: unknown, extensionId: string, projectId: string): WorkbenchTabSnapshot => {
   if (!isRecord(value)) return {};
   const indicator = isRecord(value.indicator)
@@ -32,21 +50,8 @@ const toSnapshot = (value: unknown, extensionId: string, projectId: string): Wor
         return [
           {
             id: candidate.id,
-            rows: candidate.rows.flatMap((row) => {
-              if (!isRecord(row) || typeof row.id !== "string") return [];
-              const target = navigationAction(row.action, extensionId, projectId);
-              return [
-                {
-                  id: row.id,
-                  label: text(row.label as Parameters<typeof text>[0], row.id),
-                  icon: typeof row.icon === "string" ? row.icon : undefined,
-                  iconColor: typeof row.iconColor === "string" ? row.iconColor : undefined,
-                  selected: row.selected === true,
-                  disabled: row.disabled === true,
-                  action: target ? { kind: "navigation" as const, target } : undefined,
-                },
-              ];
-            }),
+            label: text(candidate.label as Parameters<typeof text>[0]),
+            rows: toRows(candidate.rows, extensionId, projectId),
           },
         ];
       })

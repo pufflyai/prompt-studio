@@ -33,7 +33,9 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
     resolveTabIconName(
       placement,
       widget,
-      placement.resource ? workbench.resources.getKind(placement.resource.type)?.icon : undefined,
+      placement.resource
+        ? workbench.resources.getKind(placement.resource.type, placement.resource.extensionId)?.icon
+        : undefined,
     );
   const active = placement.widgetId === activeWidgetId;
   return (
