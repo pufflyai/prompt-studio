@@ -33,10 +33,36 @@ test("typed webview settings delete restores the fallback across reloads", async
     const frame = page.frameLocator('iframe[title="Settings fixture"]');
     await expect(frame.locator("output")).toHaveText("comfortable");
     await expect(frame.locator("#all")).toHaveText('{"density":"comfortable"}');
+    const hostProps = JSON.parse((await frame.locator("#props").textContent())!);
+    expect(hostProps).toMatchObject({ projectId: project.id, locale: "en", translations: "en" });
+    expect(hostProps.keys).toEqual(
+      expect.arrayContaining([
+        "projectId",
+        "themePreference",
+        "locale",
+        "resource",
+        "pageLocation",
+        "pageParams",
+        "translations",
+      ]),
+    );
+    await expect(frame.locator("#page")).toHaveText('{"tab":"overview"}');
+    await frame.getByRole("button", { name: "Update page", exact: true }).click();
+    await expect(frame.locator("#page")).toHaveText('{"tab":"files"}');
+    await frame.getByRole("button", { name: "Undeclared navigation", exact: true }).click();
+    await expect(frame.locator("#details")).toHaveText(
+      '{"code":"undeclared_webview_capability","data":{"capability":"navigation.open"}}',
+    );
     await frame.getByRole("button", { name: "Invalid setting", exact: true }).click();
     await expect(frame.locator("#validation")).toHaveText("Invalid parameters for extension.settings.set.");
+    const invalid = JSON.parse((await frame.locator("#details").textContent())!);
+    expect(invalid).toMatchObject({
+      code: "invalid_params",
+      data: { capability: "extension.settings.set", issues: [{ path: ["key"] }] },
+    });
     await expect(frame.locator("output")).toHaveText("comfortable");
     await frame.getByRole("button", { name: "Use compact", exact: true }).click();
+    await expect(frame.locator("#saved")).toHaveText("compact");
     await expect(frame.locator("output")).toHaveText("compact");
     await expect(frame.locator("#all")).toHaveText('{"density":"compact"}');
     await page.reload();

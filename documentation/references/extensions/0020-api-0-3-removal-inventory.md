@@ -36,6 +36,13 @@ in their owning PRs.
 | Planner `expectedAttemptState` parameter and `--expected-attempt-state` flag on submit-change-request and request-human | Ownership and `expectedRevision` for submission; ownership and existing `revision` guard for human requests | Reconcile/submit-review human handoffs and compatibility fixtures | None; retain the human-request state check through 0.44 | 0.45 |
 | HTTP workspace `provider_operation_kind: "archive"` value | `"delete"` for new operations | Historical workspace rows and external clients; no new archive operations | Convert stored operation kinds, provider capability JSON and archived provider states in the separate 0.45 conversion PR | 0.45 |
 
+| Render-context `page` and `files` helpers | `createWebviewClient(host).page` and `.files` | Existing extensions adopt after published 0.44 SDK | None | 0.45 |
+| `WebviewNotificationShowParams` and `notification.show` `{ level, title, message? }` | `CommandNotice`; `client.notify.toast({ type, title?, message })` | Existing extension toast callers | None | 0.45 |
+| Webview `lastCommand` props | `client.events.subscribe` or `useCommandQuery.refreshOn` | Extension Lab and Motion Lab | None | 0.45 |
+| `terminal.session`, `createTerminalSessionBridge`, `TerminalSessionBridge` and renderer `TerminalSessionAdapter` | Host terminal surface | No maintained extension callers | None | 0.45 |
+| `files.list` and `files.delete` capabilities and client methods | Extension commands and owned storage | No maintained extension callers | None | 0.45 |
+| Versioned capability declarations such as `clipboard.write@1` | Bare capability names | Existing manifests remain accepted through 0.44 | None | 0.45 |
+
 HTTP `capabilities.archive` was deprecated in stable 0.43.1 and removed by PS-805 in 0.44. It is
 not a new 0.44 deprecation and must not be restored.
 

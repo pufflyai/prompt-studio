@@ -191,7 +191,7 @@ describe("createWebviewClient settings", () => {
   });
 
   test("writes one setting by key", async () => {
-    const { host, calls } = createHost(() => undefined, "pstdio-planner");
+    const { host, calls } = createHost(() => ({ key: "board.columns", value: 5 }), "pstdio-planner");
     const client = createWebviewClient<typeof commands, typeof settings>(host);
 
     await client.settings.set("board.columns", 5);

@@ -44,7 +44,15 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       open: (target) =>
         workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId })),
     },
-    notifications: { show: (notice) => workbench.notifications.show(notice) },
+    notifications: {
+      show: (notice) =>
+        workbench.notifications.show({
+          level: notice.type,
+          metadata: notice.metadata,
+          title: notice.title ?? notice.message,
+          message: notice.title === undefined ? undefined : notice.message,
+        }),
+    },
     preferences: createWebviewPreferencesAdapter(input),
     terminal: workbench.terminal,
   } satisfies ExtensionWebviewHostAdapters;

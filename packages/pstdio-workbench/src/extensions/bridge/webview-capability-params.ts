@@ -61,11 +61,19 @@ const schemas = {
   "navigation.open": z.object({ target: z.custom<NavigationTarget>(isNavigationTarget, "Invalid navigation target.") }),
   "page.params.update": z.object({ params: z.record(z.string(), pageParamValueSchema.nullable()) }),
   "placement.close": empty,
-  "notification.show": z.object({
-    level: z.enum(["info", "success", "warning", "error"]),
-    title: z.string().optional(),
-    message: z.string().optional(),
-  }),
+  "notification.show": z.union([
+    z.object({
+      type: z.enum(["info", "success", "warning", "error"]),
+      title: z.string().optional(),
+      message: z.string(),
+      metadata: jsonObjectSchema.optional(),
+    }),
+    z.object({
+      level: z.enum(["info", "success", "warning", "error"]),
+      title: z.string().optional(),
+      message: z.string().optional(),
+    }),
+  ]),
   "notification.action": webviewNotificationActionParamsSchema,
   "notification.resolve": notificationIdentity,
   "notification.dismiss": notificationIdentity,

@@ -10,6 +10,7 @@ export default defineConfig({
     "packaged-planner-window.spec.ts",
     "packaged-native-settings.spec.ts",
     "packaged-settings-reset.spec.ts",
+    "packaged-command-query.spec.ts",
   ],
   timeout: 120_000,
   workers: 1,

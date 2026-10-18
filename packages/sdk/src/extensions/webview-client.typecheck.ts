@@ -1,9 +1,10 @@
 import type { WebviewArtifactFile } from "pstdio-api-contracts/extension-kernel";
 import { defineCommand } from "./define-command";
 import { defineArtifactMount } from "./define-contribution";
-import type { GuestHost } from "./define-extension-view";
+import type { ExtensionViewModule, ExtensionViewRenderContext, GuestHost } from "./define-extension-view";
 import { params } from "./params";
 import { createWebviewClient } from "./webview-client";
+import type { PropsStore } from "./webview-props-store";
 
 const readTicketStatuses = defineCommand({
   id: "ticket-status.read",
@@ -98,3 +99,28 @@ const bareClient = createWebviewClient<typeof commands>(host);
 
 // @ts-expect-error settings keys are untyped without a settings source
 bareClient.settings.get("counter.enabled");
+
+declare const hostProps: PropsStore<import("pstdio-api-contracts/extension-kernel").WebviewHostProps>;
+const customStore: PropsStore = { get: () => ({ custom: 1 }), subscribe: () => () => {} };
+declare const legacyModule: ExtensionViewModule;
+declare const element: HTMLElement;
+void legacyModule.mount(element, host, customStore);
+const legacyContext: ExtensionViewRenderContext = {
+  mount: element,
+  host,
+  propsStore: customStore,
+  files: client.files,
+  page: client.page,
+  locale: "en",
+  t: (key) => key,
+};
+void legacyContext;
+const currentLocale: string = hostProps.get().locale;
+const pageParams = hostProps.get().pageParams;
+const savedColumns: Promise<number> = client.settings.set("counter.step", 4);
+void [currentLocale, pageParams, savedColumns];
+client.navigation.open({ kind: "href", href: "https://example.com" });
+client.placement.close();
+client.notify.toast({ type: "info", message: "Ready" });
+// @ts-expect-error typed notices use type and message
+client.notify.toast({ level: "info", title: "Ready" });

@@ -78,7 +78,7 @@ export const StaticWebviewSurface = (props: {
 
 export const BridgedWebviewSurface = (props: {
   capabilities: ExtensionFrameProps["capabilities"];
-  extensionProps: unknown;
+  extensionProps: ExtensionFrameProps["props"];
   hostEvents?: ExtensionFrameProps["hostEvents"];
   theme: "dark" | "light";
   view: ExtensionFrameProps["view"];
