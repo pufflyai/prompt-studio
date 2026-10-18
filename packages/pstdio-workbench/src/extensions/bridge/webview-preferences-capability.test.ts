@@ -33,7 +33,7 @@ test("webview preferences isolate undeclared names while retaining deprecated re
   expect(await a["preferences.get"]({ name: "core.setting" })).toBe("shared");
   expect(warnings).toHaveLength(1);
   expect(() => a["preferences.set"]({ name: "lastRange", value: "a", scope: { scope: "default" } })).toThrow(
-    "preference_scope_read_only",
+    expect.objectContaining({ code: "preference_scope_read_only" }),
   );
 });
 

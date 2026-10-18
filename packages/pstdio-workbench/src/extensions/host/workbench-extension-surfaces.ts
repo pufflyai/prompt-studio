@@ -1,13 +1,12 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, PreferencePropertySchema, PreferenceScope, PreferenceValue } from "../../core";
 import {
-  type CreateBridgeWebviewHostCapabilities,
+  type CreateBridgeWebviewHostAdapters,
   getBridgeWebviewHostEventPublisher,
   renderBridgeWebviewFrame,
 } from "../bridge/bridge-webview-renderer";
-import { createExtensionWebviewHostCapabilities } from "../bridge/webview-command-capabilities";
+import { createWorkbenchExtensionWebviewAdapters } from "../bridge/webview-command-capabilities";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
 import type { InternalRegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 
@@ -19,34 +18,19 @@ const asPreferenceValue = (value: unknown): PreferenceValue | undefined =>
 
 const preferenceScope = (scope: "global" | "project"): PreferenceScope => (scope === "global" ? "user" : "project");
 
-const withHostCapabilityOverrides = (
-  createBase: CreateBridgeWebviewHostCapabilities,
-  createOverrides: CreateBridgeWebviewHostCapabilities | undefined,
-): CreateBridgeWebviewHostCapabilities => {
-  if (!createOverrides) return createBase;
-  return (context) =>
-    ({
-      ...createBase(context),
-      ...createOverrides(context),
-    }) satisfies HostCapabilityRegistry;
-};
-
-const createExtensionHostCapabilities = (
+const createExtensionHostAdapters = (
   input: InternalRegisterWorkbenchExtensionContributionsInput,
   slotKind: NonNullable<CommandExecuteRequest["slot"]>["kind"],
-) => {
-  const createBase =
-    input.createWebviewHostCapabilities ??
-    createExtensionWebviewHostCapabilities({
-      artifacts: input.webviewArtifacts,
-      executeCommand: input.executeCommand,
-      extensionIdForWebview: (webviewId) => input.metadata.panels.find((panel) => panel.id === webviewId)?.extensionId,
-      files: input.webviewFiles,
-      projectId: input.projectId,
-      slotKind,
-    });
-
-  return withHostCapabilityOverrides(createBase, input.createWebviewHostCapabilityOverrides);
+): CreateBridgeWebviewHostAdapters => {
+  const createBase = createWorkbenchExtensionWebviewAdapters({
+    artifacts: input.webviewArtifacts,
+    executeCommand: input.executeCommand,
+    extensionIdForWebview: (webviewId) => input.metadata.panels.find((panel) => panel.id === webviewId)?.extensionId,
+    files: input.webviewFiles,
+    projectId: input.projectId,
+    slotKind,
+  });
+  return (context) => ({ ...createBase(context), ...input.createWebviewHostAdapters?.(context) });
 };
 
 export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionContributionsInput) => {
@@ -75,7 +59,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
                   placement: renderInput.instance,
                   hostEvents: getBridgeWebviewHostEventPublisher(renderInput.workbench, renderInput.instance),
                 },
-                createHostCapabilities: createExtensionHostCapabilities(input, slotKind),
+                createHostAdapters: createExtensionHostAdapters(input, slotKind),
                 createProps:
                   input.createWebviewProps ?? (({ placement }) => ({ placement, resource: placement.resource })),
                 createTheme: input.createWebviewTheme,

@@ -5,7 +5,7 @@ export interface WebviewOwnedPreferences {
   set(name: string, value: PreferenceValue, scope: PreferenceScopeRef): Promise<void> | void;
 }
 
-export const createWebviewPreferencesCapabilities = (input: {
+export const createWebviewPreferencesAdapter = (input: {
   workbench: WorkbenchCore;
   extensionId?: string;
   ownedPreferences?: WebviewOwnedPreferences;
@@ -25,28 +25,20 @@ export const createWebviewPreferencesCapabilities = (input: {
     return Boolean(schema);
   };
   return {
-    "preferences.get": (params: unknown) => {
-      const { name, scope } = params as { name: string; scope?: PreferenceScopeRef };
+    get: (name: string, scope?: PreferenceScopeRef) => {
       if (registered(name)) return registry.getValue(name, scope);
       owner();
       return input.ownedPreferences?.get(name, scope) ?? registry.getOwnedValue(owner(), name, scope);
     },
-    "preferences.set": (params: unknown) => {
-      const {
-        name,
-        value,
-        scope = { scope: "user" },
-      } = params as { name: string; value: PreferenceValue; scope?: PreferenceScopeRef };
+    set: (name: string, value: PreferenceValue, scope: PreferenceScopeRef) => {
       if (scope.scope === "default") throw new Error("preference_scope_read_only");
       if (registered(name)) {
-        const stored = registry.setValue(name, value, scope);
-        return stored instanceof Promise ? stored.then(() => ({ name, value })) : { name, value };
+        return registry.setValue(name, value, scope);
       }
       owner();
-      const stored = input.ownedPreferences
+      return input.ownedPreferences
         ? input.ownedPreferences.set(name, value, scope)
         : registry.setOwnedValue(owner(), name, value, scope);
-      return stored instanceof Promise ? stored.then(() => ({ name, value })) : { name, value };
     },
   };
 };

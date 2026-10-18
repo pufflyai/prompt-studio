@@ -2,21 +2,6 @@ import type { ExtensionWebviewFileCapabilities } from "@pstdio/workbench/extensi
 
 type WebviewFileScope = { type: string; id?: string };
 
-type WebviewFileUploadParams = {
-  data: ArrayBuffer | Uint8Array;
-  mimeType?: string;
-  name: string;
-  scope?: WebviewFileScope;
-};
-
-type WebviewFileListParams = {
-  scope?: WebviewFileScope;
-};
-
-type WebviewFileDeleteParams = {
-  id: string;
-};
-
 type PreviewBlobRef = {
   id: string;
   name: string;
@@ -43,12 +28,11 @@ const toRef = (record: PreviewBlobRecord): PreviewBlobRef => ({
   url: record.url,
 });
 
-export const createPreviewWebviewFileHost = (): ExtensionWebviewFileCapabilities => {
+export const createPreviewWebviewFileHost = () => {
   const files = new Map<string, PreviewBlobRecord>();
 
   return {
-    upload(params) {
-      const input = params as WebviewFileUploadParams;
+    upload(input) {
       const data = toBytes(input.data);
       const id = crypto.randomUUID();
       const record = {
@@ -63,16 +47,14 @@ export const createPreviewWebviewFileHost = (): ExtensionWebviewFileCapabilities
       files.set(id, record);
       return toRef(record);
     },
-    list(params) {
-      const input = params as WebviewFileListParams;
+    list(input) {
       const requestedScope = scopeKey(input.scope);
       return {
         files: [...files.values()].filter((file) => scopeKey(file.scope) === requestedScope).map(toRef),
       };
     },
-    delete(params) {
-      const input = params as WebviewFileDeleteParams;
+    delete(input) {
       files.delete(input.id);
     },
-  };
+  } satisfies ExtensionWebviewFileCapabilities;
 };

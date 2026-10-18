@@ -1,8 +1,8 @@
 import type { CommandExecutionResult } from "@pstdio/sdk/api";
+import { getCommandValue } from "@pstdio/sdk/extensions";
 
 export const unwrapCommandValue = (result: unknown) => {
   const response = result as Partial<CommandExecutionResult> | undefined;
   if (!response?.outcome) return result;
-  if (response.outcome.status === "success") return response.outcome.value;
-  throw new Error(response.outcome.reason ?? response.outcome.error?.message ?? "Extension command failed.");
+  return getCommandValue(response.outcome);
 };
