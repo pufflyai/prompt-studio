@@ -225,7 +225,7 @@ test("Add opens an active mode panel in the chosen region and reset restores its
   expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
 });
 
-test("reset changes the active page and shared mode while preserving another page's choices", async () => {
+test("reset clears shared auxiliary tabs even when another page created them", async () => {
   const saved = new Map();
   const w = harness(saved);
   await w.navigation.openTarget(navigate("alpha"));
@@ -238,6 +238,6 @@ test("reset changes the active page and shared mode while preserving another pag
   w.resetLayout();
   expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
   await w.navigation.openTarget(navigate("alpha"));
-  expect(w.layout.getLayout().regions.secondary.widgets[0]?.widgetId).toBe(file.widgetId);
+  expect(w.layout.getLayout().regions.secondary.widgets).toEqual([]);
   expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
 });

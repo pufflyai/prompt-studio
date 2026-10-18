@@ -32,6 +32,6 @@ export const connectTrayPreviewRemoval = (input: ConnectWorkbenchPageRuntimeInpu
     );
     if (!removed.size) return;
     const pages = getWorkbenchPageRegistryInternals(input.registry);
-    pages.publish(removeTrayPreviews(state, state, pages.resources, removed), "removeReplacedTrayPreviews");
+    pages.publish(removeTrayPreviews(state, state, removed), "removeReplacedTrayPreviews");
   });
 };

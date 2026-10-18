@@ -15,15 +15,17 @@ export const restoreModePanelLayout = (
   );
   for (const region of Object.values(layout.regions)) {
     if (!getWorkbenchModePanelForRegion(region.id)) continue;
-    // Carried mode regions can replace a page's cached region. Restore that
-    // page's placements separately so their chosen destinations survive.
-    const currentPage = pageLayout.regions[region.id].widgets.filter((widget) =>
-      region.id === "main" ? !savedIds.has(widget.widgetId) : widget.placementIdentity?.kind === "page",
-    );
+    // Main comes from this page's cache. Auxiliary membership and order come
+    // from the mode, including tabs that were originally created by a page.
+    const currentPage =
+      region.id === "main" ? pageLayout.regions.main.widgets.filter((widget) => !savedIds.has(widget.widgetId)) : [];
     const restored = saved?.regions[region.id] ?? defaults.regions[region.id];
     regions[region.id] = {
       ...restored,
-      savedWidgetOrder: pageLayout.regions[region.id].savedWidgetOrder,
+      savedWidgetOrder:
+        region.id === "main"
+          ? pageLayout.regions.main.savedWidgetOrder
+          : saved?.regions[region.id].widgets.map((widget) => widget.widgetId),
       widgets: [...currentPage, ...(region.id === "main" ? [] : (saved?.regions[region.id].widgets ?? []))],
       activeWidgetId:
         region.id === "main"

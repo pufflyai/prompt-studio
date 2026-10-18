@@ -2,17 +2,14 @@ import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries
 import { indexCurrentOwnedPlacements, renderDesiredPlacements } from "../../registries/layout/owned-placement-layout";
 import { placementIdentityKey, reconcileOwnedPlacements } from "../../registries/layout/placement-reconciliation";
 import { planTrayTabs } from "../../registries/layout/tray-tabs";
-import { requirePageSlot } from "../../registries/pages/page-main";
-import type { WorkbenchPageRegistryStoreState, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
-import { closePageSlot } from "../../registries/pages/page-slot-lifecycle";
-import { pageStateKey } from "../../registries/pages/page-state-key";
+import { editPagePlacementStates } from "../../registries/pages/page-placement-state";
+import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 
 type State = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
 export const retainTrayPreviews = (
   state: State,
   previous: State,
   current: WorkbenchLayout,
-  resources: WorkbenchPageResourceCodec,
   modeLayout?: WorkbenchLayout,
 ) => {
   const rendered = renderDesiredPlacements(
@@ -40,31 +37,17 @@ export const retainTrayPreviews = (
     for (const widget of plan.replaced)
       if (widget.placementIdentity) removed.add(placementIdentityKey(widget.placementIdentity));
   }
-  return removeTrayPreviews(state, previous, resources, removed);
+  return removeTrayPreviews(state, previous, removed);
 };
 
-export const removeTrayPreviews = (
-  state: State,
-  previous: State,
-  resources: WorkbenchPageResourceCodec,
-  removed: ReadonlySet<string>,
-) => {
+export const removeTrayPreviews = (state: State, previous: State, removed: ReadonlySet<string>) => {
   if (!removed.size) return state;
   const placements = state.placements.filter((entry) => !removed.has(placementIdentityKey(entry.identity)));
-  const pageStates = { ...state.pageStates };
+  let pageStates = state.pageStates;
   for (const entry of state.placements) {
     const identity = entry.identity;
     if (identity.kind !== "page" || !removed.has(placementIdentityKey(identity))) continue;
-    const page = state.pages[identity.pageId]!;
-    const key = pageStateKey(page, state.location, resources);
-    const result = closePageSlot({
-      page,
-      slot: requirePageSlot(page, identity.slotId),
-      state: pageStates[key]!,
-      instanceKey: identity.instanceKey,
-    });
-    pageStates[key] =
-      result.kind === "parent" ? { ...result.state, activePrimaryInstanceKey: undefined } : result.state;
+    pageStates = editPagePlacementStates(pageStates, identity, { kind: "close" });
   }
   return {
     ...state,

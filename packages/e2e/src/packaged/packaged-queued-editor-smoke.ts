@@ -19,7 +19,7 @@ export const expectPackagedQueuedEditorCancellation = async (
     const resource = encodeURIComponent(`pstdio://extension-resource/session/${sessionId}`);
     logQueuedPhase("editor", "open session page");
     await page.goto(`${baseUrl}/projects/${projectId}/session?resource=${resource}`);
-    const editor = page.getByTestId("content-editable").last();
+    const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
     await expect(editor).toBeEditable();
     logQueuedPhase("editor", "pending submission and failure recovery");
     await expectPackagedQueuedSubmission(page, sessionId);

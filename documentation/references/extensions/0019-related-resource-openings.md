@@ -80,7 +80,7 @@ New previews replace the eligible preview in their requested tray and stay leftm
 
 Dragging and dropping an unpinned tab pins it, including a reorder within the same tray or a drop into an empty tray. The destination's existing preview stays open and leftmost. The moved tab uses the requested insertion position among pinned tabs. Moving through a tab's menu follows the same rule. Feedback shows the insertion marker and rounded tray outline. Cancelling a drag leaves the tab unpinned. A moved automatic preview is now a kept pinned tab, so source-page cleanup does not close it.
 
-Only page-owned slots bind their content to the current resource page. Shell and mode placements keep their own content identity. Their actual tray controls tab lifetime: Side and Bottom are shared within the mode, while Main belongs to the current page. Moving a tab into Main on Start or another supported page keeps it there for that page. It hides when leaving, even when pinned, and restores on revisit. Moving it back to Side or Bottom makes it shared again.
+The actual tray controls every tab's lifetime, including page-created tabs: Side and Bottom are shared within the mode, while Main belongs to the current page. Moving Tickets to Side keeps it visible when opening Project Timeline. Moving a tab into Main on Start or another supported page keeps it there for that page. It hides when leaving, even when pinned, and restores on revisit. Moving it back to Side or Bottom makes it shared again. Closing or changing a shared tab's pin state preserves the current route, even when another page created the tab.
 
 ## Panel policy and remembered choices
 

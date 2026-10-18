@@ -1,9 +1,14 @@
 import type { PageRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchLayout } from "../../registries/layout/layout-types";
+import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
 import { createWorkbench } from "../../workbench-core";
 
 export const pageRef = (id: string): PageRef => ({ kind: "page", extensionId: "test", id });
-export const modePanelFixture = (saved = new Map<string | undefined, WorkbenchLayout>(), scoped = true) => {
+export const modePanelFixture = (
+  saved = new Map<string | undefined, WorkbenchLayout>(),
+  scoped = true,
+  extraPages: WorkbenchPageContribution[] = [],
+) => {
   const w = createWorkbench({
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
@@ -67,6 +72,7 @@ export const modePanelFixture = (saved = new Map<string | undefined, WorkbenchLa
     });
   const ids = (region: "main" | "side" | "secondary") =>
     w.layout.listPanelInstances(region).flatMap((tab) => tab.resource?.id ?? []);
+  for (const page of extraPages) w.pages.registerPage(page);
   w.pageLocations.setProject("project");
   navigate("alpha");
   return { w, saved, navigate, open, ids };

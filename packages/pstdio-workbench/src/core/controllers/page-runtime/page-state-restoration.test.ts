@@ -32,7 +32,7 @@ test("restores the selected primary instance after its presentation moves to Sid
   expect(pageStateFromLayout(page, layout).activePrimaryInstanceKey).toBe("one");
 });
 
-test("restored single-resource pages keep their placement when selecting another resource", () => {
+test("restored single-resource pages give another resource its own placement", () => {
   const page: WorkbenchPageContribution = {
     id: "preview",
     ref: { kind: "page", extensionId: "test", id: "preview" },
@@ -59,7 +59,8 @@ test("restored single-resource pages keep their placement when selecting another
     target: { pageId: page.id, resource: { type: "animation", id: "next" } },
     resourceKey: (resource) => resource.id,
   });
-  expect(next.activePrimaryInstanceKey).toBe(restored.activePrimaryInstanceKey);
+  expect(next.activePrimaryInstanceKey).toBe("next");
+  expect(next.activePrimaryInstanceKey).not.toBe(restored.activePrimaryInstanceKey);
 });
 
 test("restoring a saved route preserves the replacement after its last primary preview closed", async () => {

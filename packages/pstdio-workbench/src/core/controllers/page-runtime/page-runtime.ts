@@ -143,22 +143,22 @@ const applyPageState = (
     const stored = input.registry.store.getState();
     const latest = stored === storeBeforeTransition ? state : stored;
     const restoredScope = source === "scope-restore" || input.layout.getPersistenceScope() !== previousScope;
+    const restoresLayout = modeChanged || restoredScope || pageContextChanged(state, previous);
     const activation = pageActivations(state, latest, restoresMode);
     const layoutInput = {
-      layout:
-        modeChanged || restoredScope || pageContextChanged(state, previous)
-          ? restoreModePanelLayout(
-              input.layout.getLayout(),
-              modeLayout,
-              input.layout.store.getInitialState().layout,
-              pageLayout,
-            )
-          : input.layout.getLayout(),
+      layout: restoresLayout
+        ? restoreModePanelLayout(
+            input.layout.getLayout(),
+            modeLayout,
+            input.layout.store.getInitialState().layout,
+            pageLayout,
+          )
+        : input.layout.getLayout(),
       modeLayout,
       placements: bindPlacementsToActivePageLocation(latest),
       activate: activation.map((placement) => placement.identity),
     };
-    const layout = reconcilePageLayout(layoutInput, latest, restoredScope);
+    const layout = reconcilePageLayout(layoutInput, latest, restoresLayout);
     const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
     input.layout.restoreLayout(mode ? applyModePanelAvailability(layout, panelsForMode(mode)) : layout);
     syncOwnedPanelMenus(input.layout);
@@ -181,27 +181,22 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
     (state) =>
       retainTrayPreviews(
         scopePageMainTabs({
-          state: closeDepartingPagePreviews(
-            state,
-            input.registry.store.getState(),
-            input.layout.getLayout(),
-            getWorkbenchPageRegistryInternals(input.registry).resources,
-          ),
+          state: closeDepartingPagePreviews(state, input.registry.store.getState(), input.layout.getLayout()),
           previous: input.registry.store.getState(),
           layout: input.layout.getLayout(),
           pageLayout: input.loadPageLayout?.(state),
           modeLayout: state.activeModeId ? input.loadModeLayout?.(state.projectId, state.activeModeId) : undefined,
-          isRegistered: (id) => Boolean(input.layout.getWidget(id)),
+          getWidget: input.layout.getWidget,
         }),
         input.registry.store.getState(),
         input.loadPageLayout?.(state) ?? input.layout.getLayout(),
-        getWorkbenchPageRegistryInternals(input.registry).resources,
         state.activeModeId ? input.loadModeLayout?.(state.projectId, state.activeModeId) : undefined,
       ),
   );
   const removedPreviews = connectTrayPreviewRemoval(input, () => applyingTransition);
   const scope = input.layout.onDidChangePersistenceScope(() => {
-    if (!applyingTransition) applyPageState(input, input.registry.store.getState(), "scope-restore");
+    const state = input.registry.store.getState();
+    if (!applyingTransition && state.activePageId) applyPageState(input, state, "scope-restore");
   });
   return createDisposable(() => {
     scope.dispose();

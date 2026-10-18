@@ -40,7 +40,10 @@ export const pageStateFromLayout = (
       if (!identity || !placement.resource || !resourceMatchesConstraint(binding, placement.resource)) return [];
       return [
         {
-          instanceKey: binding.cardinality === "one" ? SINGLE_RESOURCE_INSTANCE_KEY : identity.instanceKey,
+          instanceKey:
+            binding.cardinality === "one" && slot.role !== "primary"
+              ? SINGLE_RESOURCE_INSTANCE_KEY
+              : identity.instanceKey,
           resource: placement.resource,
           ...(placement.section ? { section: placement.section } : {}),
           ...(binding.cardinality === "many"

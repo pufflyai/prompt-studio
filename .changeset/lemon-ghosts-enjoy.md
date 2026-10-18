@@ -3,4 +3,4 @@
 "@pstdio/workbench": patch
 ---
 
-Restore each mode's panels and moved tab destinations, keep Main tabs on their own page, restore live tab behavior, and close unpinned tabs on page navigation.
+Restore each mode's panels and moved tabs, keep Main tabs on their page and Side/Bottom tabs across pages, restore live tab behavior, and close unpinned tabs on page navigation.

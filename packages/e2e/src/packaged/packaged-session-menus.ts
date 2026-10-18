@@ -3,6 +3,7 @@ import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
 import { verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";
 import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
+import { verifySharedPageTab } from "./packaged-shared-page-tab";
 import { verifyRetainedTerminalDrop } from "./packaged-tab-drop-pinning";
 
 const createSessionFixture = async (baseUrl: string, projectId: string, authorization: Record<string, string>) => {
@@ -93,6 +94,7 @@ export const verifyPackagedSessionMenus = async (
   await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
   await expect(page.getByRole("menu")).toHaveCount(0);
   await verifyPageSessionTab(page, createdTab, leaveWorkspace, reopenWorkspace);
+  await verifySharedPageTab(page, createdTab, leaveWorkspace, reopenWorkspace);
   const refresh = await fetch(`${baseUrl}/v1/sessions/${session.id}/title`, {
     method: "PATCH",
     headers: { ...authorization, "content-type": "application/json" },

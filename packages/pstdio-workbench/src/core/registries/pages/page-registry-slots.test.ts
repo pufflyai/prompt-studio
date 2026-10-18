@@ -56,10 +56,10 @@ describe("page primary slot lifecycle", () => {
     );
     activatePage(registry, { pageId: "bound", resource: { type: "ticket", id: "one" } });
     expect(activePagePlacements(registry, "$main").map((candidate) => candidate.identity.instanceKey)).toEqual([
-      "single",
+      "ticket:one",
     ]);
     expect(registry.store.getState().reconciliation.activate[0]?.identity).toEqual(
-      pageIdentity("bound", "$main", "single"),
+      pageIdentity("bound", "$main", "ticket:one"),
     );
     activatePage(registry, { pageId: "static" });
     expect(registry.store.getState().reconciliation.activate[0]?.identity).toEqual(
@@ -96,9 +96,9 @@ describe("page primary slot lifecycle", () => {
     const next = activePagePlacements(registry, "$main");
     expect(next).toHaveLength(1);
     expect(next[0]?.value.resource?.id).toBe("two");
-    expect(next[0]?.identity).toEqual(first.identity);
-    expect(registry.store.getState().reconciliation.remove).toEqual([]);
-    expect(registry.store.getState().reconciliation.add).toEqual([]);
+    expect(next[0]?.identity).not.toEqual(first.identity);
+    expect(registry.store.getState().reconciliation.remove).toEqual([first]);
+    expect(registry.store.getState().reconciliation.add).toEqual(next);
   });
   test("restores each routed resource's own Main instance and pin intent", () => {
     const registry = createRegistry();

@@ -2,32 +2,32 @@ import { expect, test } from "bun:test";
 import { modePanelFixture, pageRef } from "./mode-panel-state.fixture";
 
 const inspectorFixture = (cardinality: "one" | "many", saved?: Parameters<typeof modePanelFixture>[0]) => {
-  const s = modePanelFixture(saved);
-  s.w.pages.registerPage({
-    id: "inspector",
-    ref: pageRef("inspector"),
-    path: "inspector",
-    modeId: "alpha",
-    parentId: "alpha",
-    resource: { kinds: [{ kind: "resource-kind", id: "document" }] },
-    main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" },
-    slots: [
-      {
-        id: "detail",
-        region: "side",
-        openOn: "page-resource",
-        item: {
-          kind: "binding",
-          binding: {
-            kinds: [{ kind: "resource-kind", id: "document" }],
-            view: { kind: "view", id: "document" },
-            cardinality,
+  return modePanelFixture(saved, true, [
+    {
+      id: "inspector",
+      ref: pageRef("inspector"),
+      path: "inspector",
+      modeId: "alpha",
+      parentId: "alpha",
+      resource: { kinds: [{ kind: "resource-kind", id: "document" }] },
+      main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" },
+      slots: [
+        {
+          id: "detail",
+          region: "side",
+          openOn: "page-resource",
+          item: {
+            kind: "binding",
+            binding: {
+              kinds: [{ kind: "resource-kind", id: "document" }],
+              view: { kind: "view", id: "document" },
+              cardinality,
+            },
           },
         },
-      },
-    ],
-  });
-  return s;
+      ],
+    },
+  ]);
 };
 
 test.each([

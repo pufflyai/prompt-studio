@@ -109,24 +109,21 @@ describe("closing page resource panels", () => {
     expect(workbench.pageLocations.closePlacement(main.placementIdentity!).ok).toBe(true);
     expect(workbench.pages.store.getState().location).toEqual({ page: home });
   });
-  test("closing an inactive pinned resource keeps a manually closed reader closed", () => {
+  test("closing a shared resource from another page keeps a manually closed reader closed", () => {
     const workbench = createInbox("many");
-    for (const id of ["one", "two"]) {
-      expect(
-        workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "thread", id }, open: "pin" }).ok,
-      ).toBe(true);
-    }
+    const first = workbench.layout.getActivePanel("main")!;
+    workbench.movePanel(first.instanceId, "secondary");
+    expect(
+      workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "thread", id: "two" }, open: "pin" }).ok,
+    ).toBe(true);
     const placements = workbench.pages.store.getState().placements;
     const reader = placements.find((item) => item.identity.kind === "page" && item.identity.slotId === "reader")!;
-    const inactive = placements.find(
-      (item) => item.identity.kind === "page" && item.identity.slotId === "$main" && item.value.resource?.id === "one",
-    )!;
-    expect(workbench.pageLocations.closePlacement(reader.identity).ok).toBe(true);
-    expect(workbench.pageLocations.closePlacement(inactive.identity).ok).toBe(true);
+    workbench.closePlacement(reader.identity);
+    workbench.closePlacement(first.placementIdentity!);
     expect(workbench.pages.store.getState().location?.resource?.id).toBe("two");
     expect(workbench.layout.getLayout().regions.side.widgets.some((item) => item.viewId === "reader")).toBe(false);
   });
-  test("closing the selected pinned resource updates its reader to the remaining resource", () => {
+  test("closing the last current Main resource returns to its parent and keeps shared panels", () => {
     const workbench = createInbox("many");
     for (const id of ["one", "two"]) {
       expect(
@@ -139,17 +136,17 @@ describe("closing page resource panels", () => {
         (item) =>
           item.identity.kind === "page" && item.identity.slotId === "$main" && item.value.resource?.id === "two",
       )!;
+    const shared = workbench.layout.getLayout().regions.side.widgets.map((item) => item.widgetId);
     expect(workbench.pageLocations.closePlacement(selected.identity).ok).toBe(true);
-    expect(workbench.pages.store.getState().location?.resource?.id).toBe("one");
-    expect(
-      workbench.layout.getLayout().regions.side.widgets.find((item) => item.viewId === "reader")?.resource?.id,
-    ).toBe("one");
+    expect(workbench.pages.store.getState().location).toEqual({ page: home });
+    expect(workbench.layout.getLayout().regions.side.widgets.map((item) => item.widgetId)).toEqual(shared);
   });
-  test("removes resource page panels when navigating to the home page", () => {
+  test("keeps page-created auxiliary panels when navigating to the home page", () => {
     const workbench = createInbox();
+    const shared = workbench.layout.getLayout().regions.side.widgets.map((item) => item.widgetId);
     expect(workbench.pageLocations.navigate({ kind: "page", page: home }).ok).toBe(true);
     expect(workbench.pages.store.getState().location?.resource).toBeUndefined();
-    expect(workbench.layout.getLayout().regions.side.widgets).toEqual([]);
+    expect(workbench.layout.getLayout().regions.side.widgets.map((item) => item.widgetId)).toEqual(shared);
   });
   test("closes the reader without changing the route or reopening it when another panel closes", () => {
     const workbench = createInbox();
@@ -167,6 +164,7 @@ describe("closing page resource panels", () => {
     workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "thread", id: "two" } });
     expect(workbench.layout.getLayout().regions.side.widgets).toEqual([
       expect.objectContaining({ resource: expect.objectContaining({ id: "two" }) }),
+      expect.objectContaining({ viewId: "tools" }),
     ]);
   });
 });

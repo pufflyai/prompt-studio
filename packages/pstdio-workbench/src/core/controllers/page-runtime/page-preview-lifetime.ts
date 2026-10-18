@@ -1,10 +1,8 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
-import { requirePageSlot } from "../../registries/pages/page-main";
-import type { WorkbenchPageRegistryStoreState, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
-import { closePageSlot } from "../../registries/pages/page-slot-lifecycle";
-import { pageStateKey } from "../../registries/pages/page-state-key";
+import { editPagePlacementStates } from "../../registries/pages/page-placement-state";
+import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { removeTrayPreviews } from "./tray-preview-retention";
 
 type State = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
@@ -23,12 +21,7 @@ export const departingPagePreviews = (next: State, previous: State, layout: Work
   );
 };
 
-export const closeDepartingPagePreviews = (
-  state: State,
-  previous: State,
-  layout: WorkbenchLayout,
-  resources: WorkbenchPageResourceCodec,
-) => {
+export const closeDepartingPagePreviews = (state: State, previous: State, layout: WorkbenchLayout) => {
   const previews = departingPagePreviews(state, previous, layout);
   const removed = new Set(
     previews.flatMap((widget) => {
@@ -41,23 +34,12 @@ export const closeDepartingPagePreviews = (
         : [];
     }),
   );
-  const next = removeTrayPreviews(state, previous, resources, removed);
-  const pageStates = { ...next.pageStates };
+  const next = removeTrayPreviews(state, previous, removed);
+  let pageStates = next.pageStates;
   for (const widget of previews) {
     const identity = widget.placementIdentity;
     if (identity?.kind !== "page") continue;
-    const page = previous.pages[identity.pageId]!;
-    const key = pageStateKey(page, previous.location, resources);
-    const current = pageStates[key];
-    if (!current) continue;
-    const result = closePageSlot({
-      page,
-      slot: requirePageSlot(page, identity.slotId),
-      state: current,
-      instanceKey: identity.instanceKey,
-    });
-    pageStates[key] =
-      result.kind === "parent" ? { ...result.state, activePrimaryInstanceKey: undefined } : result.state;
+    pageStates = editPagePlacementStates(pageStates, identity, { kind: "close" });
   }
   return previews.length ? { ...next, pageStates } : next;
 };

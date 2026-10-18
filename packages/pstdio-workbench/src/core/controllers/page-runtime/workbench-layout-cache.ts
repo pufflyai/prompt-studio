@@ -37,10 +37,9 @@ const mainScope = (context: WorkbenchPagePersistenceScopeInput) =>
 
 const isModePlacement = (placement: WorkbenchWidgetPlacement, region: (typeof workbenchRegions)[number]) =>
   region !== "main" &&
-  (placement.placementIdentity?.kind === "mode" ||
-    (placement.placementIdentity?.kind !== "page" && Boolean(getWorkbenchModePanelForRegion(region))));
+  (placement.placementIdentity?.kind === "mode" || Boolean(getWorkbenchModePanelForRegion(region)));
 
-/** Shared panel choices belong to one project/mode. Page caches hold the page's own slots. */
+/** Main belongs to a page. Side and Bottom belong to one project/mode, regardless of their tabs' owners. */
 export const createWorkbenchLayoutCache = (
   input: createWorkbenchInput,
   getActiveMode: () => string | undefined = () => undefined,

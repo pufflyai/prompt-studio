@@ -55,7 +55,7 @@ const harness = (saved: Map<string | undefined, WorkbenchLayout>, fixedFiles = f
   return workbench;
 };
 
-test("reload restores editor collections and closed panels from each location's layout", async () => {
+test("reload restores page-local editor collections and the latest shared panel", async () => {
   const saved = new Map<string | undefined, WorkbenchLayout>();
   const first = harness(saved);
   await first.navigation.openTarget(target("alpha"));
@@ -64,7 +64,7 @@ test("reload restores editor collections and closed panels from each location's 
   const inspector = first.pages.store
     .getState()
     .placements.find((placement) => placement.identity.kind === "page" && placement.identity.slotId === "inspector")!;
-  first.pageLocations.closePlacement(inspector.identity);
+  first.closePlacement(inspector.identity);
   await first.navigation.openTarget(target("beta"));
   await first.navigation.openTarget(file("beta-file"));
   first.pageLocations.dispose();
@@ -74,7 +74,8 @@ test("reload restores editor collections and closed panels from each location's 
   expect(
     restored.layout.getLayout().regions.main.widgets.map((item) => [item.resource?.id, item.tabRetention]),
   ).toEqual([["readme", "persistent"]]);
-  expect(restored.layout.getLayout().regions.side.widgets).toHaveLength(0);
+  expect(restored.layout.getLayout().regions.side.widgets).toHaveLength(1);
+  expect(restored.layout.getLayout().regions.side.widgets[0]?.placementIdentity).toEqual(inspector.identity);
   await restored.navigation.openTarget(file("replacement", "preview"));
   expect(restored.layout.getLayout().regions.main.widgets.map((item) => item.resource?.id)).toEqual([
     "replacement",

@@ -1,6 +1,7 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { editSharedPagePlacement, isDetachedPagePlacement } from "./shared-page-placement";
 
 export const createPlacementPinController =
   (resolveCore: () => WorkbenchCore) =>
@@ -13,7 +14,9 @@ export const createPlacementPinController =
     if (!placement) throw new Error(`Placement is not open: ${key}`);
     const open = pinned ? "pin" : "preview";
     if (!placement.tabRetention || (placement.tabRetention === "persistent") === pinned) return;
-    if (identity.kind === "page") core.pages.pinPlacement(identity, open);
+    if (identity.kind === "page" && isDetachedPagePlacement(core, placement))
+      editSharedPagePlacement(core, placement, identity, { kind: "retention", open });
+    else if (identity.kind === "page") core.pages.pinPlacement(identity, open);
     else if (identity.kind === "mode") core.modePlacements.updatePlacement(identity, { open });
     else core.shellPlacements.updatePlacement(identity, { open });
   };
