@@ -6,6 +6,7 @@ export {
 } from "./scripted-bridge";
 export { Terminal, type TerminalProps } from "./terminal";
 export {
+  createTerminalThemeFromPreference,
   darkTerminalTheme,
   lightTerminalTheme,
   resolveTerminalTheme,

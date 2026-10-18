@@ -1,6 +1,6 @@
 import "./data-table.css";
 
-import { Flex } from "@chakra-ui/react";
+import { Box, Flex } from "@chakra-ui/react";
 import { getCoreRowModel, type RowSelectionState, useReactTable } from "@tanstack/react-table";
 import { useState } from "react";
 import { CollectionViewEmptyState } from "../collection-view/collection-view-empty-state";
@@ -111,7 +111,7 @@ const DatasetDataTable = (props: DataTableProps) => {
   const nothingShown = total > 0 && view.shownRows.length === 0 && Boolean(view.deferredSearch.trim());
 
   return (
-    <Flex direction="column" height="100%" width="100%">
+    <Flex direction="column" flex="1" minH="0" minW="0" height="100%" width="100%" overflow="hidden">
       <DataTableHeader
         itemLabel={props.itemLabel}
         view={view}
@@ -135,37 +135,40 @@ const DatasetDataTable = (props: DataTableProps) => {
           />
         }
       />
-      {props.contentPlaceholder ??
-        (nothingShown ? (
-          <CollectionViewEmptyState search={view.deferredSearch} onClearSearch={() => view.setSearch("")} />
-        ) : (
-          <DataTableGrid
-            table={table}
-            entries={page.entries}
-            collapsed={collapsed}
-            onToggleGroup={(key) =>
-              setCollapsed((current) => {
-                const next = new Set(current);
-                if (next.has(key)) next.delete(key);
-                else next.add(key);
-                return next;
-              })
-            }
-            settings={settings}
-            data={data}
-            fieldMenu={fieldMenu}
-            selectionActions={enableSelection ? selectionActions : undefined}
-            noBorder={noBorder}
-            fullWidth={fullWidth}
-            onRowClick={onRowClick}
-            isRowInteractive={isRowInteractive}
-            activeRowId={activeRowId}
-            columnDescriptions={columnDescriptions}
-            columnStats={columnStats}
-            enableRowActivation={enableRowActivation}
-            getCellContextMenuActions={getCellContextMenuActions}
-          />
-        ))}
+      {props.contentPlaceholder != null || nothingShown ? (
+        <Box flex="1" minH="0" overflow="auto">
+          {props.contentPlaceholder ?? (
+            <CollectionViewEmptyState search={view.deferredSearch} onClearSearch={() => view.setSearch("")} />
+          )}
+        </Box>
+      ) : (
+        <DataTableGrid
+          table={table}
+          entries={page.entries}
+          collapsed={collapsed}
+          onToggleGroup={(key) =>
+            setCollapsed((current) => {
+              const next = new Set(current);
+              if (next.has(key)) next.delete(key);
+              else next.add(key);
+              return next;
+            })
+          }
+          settings={settings}
+          data={data}
+          fieldMenu={fieldMenu}
+          selectionActions={enableSelection ? selectionActions : undefined}
+          noBorder={noBorder}
+          fullWidth={fullWidth}
+          onRowClick={onRowClick}
+          isRowInteractive={isRowInteractive}
+          activeRowId={activeRowId}
+          columnDescriptions={columnDescriptions}
+          columnStats={columnStats}
+          enableRowActivation={enableRowActivation}
+          getCellContextMenuActions={getCellContextMenuActions}
+        />
+      )}
       {page.pageCount > 1 ? (
         <PaginationFooter
           pageCount={page.pageCount}
