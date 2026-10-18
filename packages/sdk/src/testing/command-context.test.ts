@@ -23,6 +23,7 @@ test("contexts sharing storage query cross-owner links and committed removals", 
   expect((await art.resources.listAnchors({ resource: target, direction: "incoming" })).items).toHaveLength(1);
   await art.resources.removed(target);
   expect((await notes.resources.listAnchors({ resource: source })).items).toEqual([]);
+  expect(await notes.resources.queryAnchors({ resource: source })).toEqual({ items: [], nextCursor: null });
 });
 
 test("resource link memory pagination visits mixed-case identities once", async () => {

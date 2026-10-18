@@ -1,6 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { createRoute, z } from "@hono/zod-openapi";
 import {
+  sessionAttachmentSchema as legacySessionAttachmentSchema,
+  sessionAttachmentDetailsSchema,
+} from "pstdio-api-contracts";
+import {
   supportedSessionAttachmentExtensions,
   supportedSessionAttachmentMimeTypes,
 } from "pstdio-api-contracts/session-attachment-types";
@@ -33,16 +37,7 @@ const sessionAttachmentContentParamsSchema = sessionAttachmentParamsSchema
   })
   .strict();
 
-const sessionAttachmentSchema = z.object({
-  file_id: z.string(),
-  name: z.string(),
-  mime_type: z.string().nullable(),
-  size_bytes: z.number(),
-  hash: z.string().nullable(),
-  url: z.string(),
-  created_at: z.string(),
-  updated_at: z.string(),
-});
+const sessionAttachmentSchema = legacySessionAttachmentSchema.extend(sessionAttachmentDetailsSchema.shape);
 
 export const uploadSessionAttachmentRoute = createRoute({
   method: "post",

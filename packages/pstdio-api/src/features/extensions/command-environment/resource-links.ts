@@ -58,6 +58,13 @@ export const createResourceLinksApi = (
         return;
       }
     },
+    queryAnchors: async (query: ResourceAnchorQuery) => {
+      const page = await deps.resourceLinksService.list({
+        ...resourceAnchorQuerySchema.parse(query),
+        resource: await canonical(query.resource),
+      });
+      return { ...page, nextCursor: page.nextCursor ?? null };
+    },
     listAnchors: async (query: ResourceAnchorQuery) =>
       deps.resourceLinksService.list({
         ...resourceAnchorQuerySchema.parse(query),

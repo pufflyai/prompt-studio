@@ -43,6 +43,12 @@ in their owning PRs.
 | `files.list` and `files.delete` capabilities and client methods | Extension commands and owned storage | No maintained extension callers | None | 0.45 |
 | Versioned capability declarations such as `clipboard.write@1` | Bare capability names | Existing manifests remain accepted through 0.44 | None | 0.45 |
 
+| SDK projects/workspaces/skills `list`, views `list`/`boards`/`orphaned`, agents `info`/`models`, workspace `listProviders`; corresponding unpaged GET routes | Bounded `query`, `queryBoards`, `queryOrphaned`, `queryModels`, `queryProviders` | Dashboard, CLI and external consumers; Granite uses projects | None; retain old readers through 0.44 | 0.45 |
+| Workspace, notification and session create calls with project scope inside input | `create(projectId, input)` | Dashboard, CLI and external consumers | None | 0.45 |
+| Snake-case project, skill, activity, attachment and session transport fields and request keys; filesystem `parent_path`; query `project_id` and agent `project` | CamelCase details and inputs; `parentPath`; query `projectId` | Dashboard/CLI and external readers; response aliases retain parity | None; transport mapping only | 0.45 |
+| `CreateSessionInput`, `CreateSessionResponse`, `FollowUpInput`, `FollowUpDecision`, `FollowUpResponse`, `SessionAttachment` | `SessionCreateRequest`, `SessionCreateResponse`, `SessionFollowUpRequest`, `SessionFollowUpDecision`, `SessionFollowUpResponse`, `SessionAttachmentDetails` | SDK/API compatibility consumers; old source shapes remain constructible | None; transport aliases only | 0.45 |
+| Activity `events`/`next_cursor`, notification optional-cursor `list`, resources `listAnchors` and HTTP anchor `/query` | `items`/`nextCursor: string \| null`, notification `query`, resource `queryAnchors` and HTTP `/query-page` | Dashboard/CLI and extension link callers | None | 0.45 |
+
 HTTP `capabilities.archive` was deprecated in stable 0.43.1 and removed by PS-805 in 0.44. It is
 not a new 0.44 deprecation and must not be restored.
 

@@ -180,13 +180,16 @@ export const listWorkspaceFilesInputSchema = z.object({
 export const listWorkspaceActivityInputSchema = listActivityInputSchema;
 export const listWorkspaceActivityResponseSchema = listActivityResponseSchema;
 
+/** @deprecated Use ExtensionWorkspace. Legacy fields stay available through 0.44. */
 export type Workspace = z.infer<typeof workspaceSchema>;
 export type PublicWorkspaceCapabilities = z.infer<typeof workspaceCapabilitiesSchema>;
 export type WorkspaceExecutionKind = z.infer<typeof workspaceExecutionKindSchema>;
 export type WorkspaceProviderError = z.infer<typeof workspaceProviderErrorSchema>;
 export type PublicWorkspaceProviderRef = z.infer<typeof workspaceProviderRefSchema>;
 export type PublicWorkspaceProviderState = z.infer<typeof workspaceProviderStateSchema>;
+/** @deprecated Use ExtensionWorkspace. Legacy fields stay available through 0.44. */
 export type WorkspaceListItem = z.infer<typeof workspaceListItemSchema>;
+/** @deprecated Use ExtensionWorkspaceCreateInput with projectId first. Legacy fields stay available through 0.44. */
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceInputSchema>;
 export type RenameWorkspaceInput = z.infer<typeof renameWorkspaceInputSchema>;
 export type RemoveWorktreeResponse = z.infer<typeof removeWorktreeResponseSchema>;
@@ -194,6 +197,7 @@ export type WorkspaceFileEntry = z.infer<typeof workspaceFileEntrySchema>;
 export type WorkspaceFilesResponse = z.infer<typeof workspaceFilesResponseSchema>;
 export type WorkspaceFileContent = z.infer<typeof workspaceFileContentSchema>;
 export type WriteWorkspaceFileInput = z.infer<typeof writeWorkspaceFileInputSchema>;
+/** @deprecated Use WorkspaceEntryMoveInput. Legacy fields stay available through 0.44. */
 export type MoveWorkspaceEntryInput = z.infer<typeof moveWorkspaceEntryInputSchema>;
 export type ListWorkspaceFilesInput = z.infer<typeof listWorkspaceFilesInputSchema>;
 export type ListWorkspaceActivityInput = z.infer<typeof listWorkspaceActivityInputSchema>;
@@ -207,3 +211,6 @@ export const workspaceProviderDescriptorSchema = z.object({
   params: extensionParamObjectSchema,
 });
 export type WorkspaceProviderDescriptor = z.infer<typeof workspaceProviderDescriptorSchema>;
+
+export const workspaceEntryMoveInputSchema = z.object({ destinationPath: z.string().min(1) });
+export type WorkspaceEntryMoveInput = z.infer<typeof workspaceEntryMoveInputSchema>;

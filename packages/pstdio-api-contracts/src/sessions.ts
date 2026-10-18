@@ -93,10 +93,23 @@ export const sessionSchema = z.object({
   updated_at: z.string(),
 });
 
+export const sessionDetailsSchema = extensionSessionSchema.extend({
+  projectId: z.string().nullable(),
+  agentSessionId: z.string().nullable(),
+  sessionFileId: z.string().nullable(),
+  params: harnessParamsInputSchema.nullable(),
+});
+export type SessionDetails = z.infer<typeof sessionDetailsSchema>;
+
 export const createSessionResponseSchema = sessionSchema.extend(extensionSessionSchema.shape).extend({
   operation_result: harnessOperationResponseSchema.optional(),
 });
+/** @deprecated Use SessionCreateResponse for canonical response fields. */
 export type CreateSessionResponse = z.infer<typeof createSessionResponseSchema>;
+export const sessionCreateResponseSchema = createSessionResponseSchema.extend(sessionDetailsSchema.shape).extend({
+  operationResult: harnessOperationResponseSchema.optional(),
+});
+export type SessionCreateResponse = z.infer<typeof sessionCreateResponseSchema>;
 
 export const sessionAttachmentSchema = z.object({
   file_id: z.string(),
@@ -188,17 +201,69 @@ export const listSessionActivityInputSchema = listActivityInputSchema;
 export const listSessionActivityResponseSchema = listActivityResponseSchema;
 
 export type SessionStatus = z.infer<typeof sessionStatusSchema>;
+/** @deprecated Use SessionDetails or ExtensionSession. Legacy fields stay available through 0.44. */
 export type Session = z.infer<typeof sessionSchema>;
 export type ResolveSessionIdInput = z.infer<typeof resolveSessionIdInputSchema>;
 export type ResolveSessionIdResponse = z.infer<typeof resolveSessionIdResponseSchema>;
+/** @deprecated Use SessionCreateRequest with projectId first. Legacy fields stay available through 0.44. */
 export type CreateSessionInput = z.infer<typeof createSessionInputSchema>;
+/** @deprecated Use SessionFollowUpRequest. Legacy fields stay available through 0.44. */
 export type FollowUpInput = z.infer<typeof followUpInputSchema>;
 export type HarnessParamsInput = z.infer<typeof harnessParamsInputSchema>;
+/** @deprecated Use SessionAttachmentDetails. Legacy fields stay available through 0.44. */
 export type SessionAttachment = z.infer<typeof sessionAttachmentSchema>;
 export type SessionAttachmentRef = z.infer<typeof sessionAttachmentRefSchema>;
 export type ApprovalInput = z.infer<typeof approvalInputSchema>;
 export type SessionConversationResponse = z.infer<typeof sessionConversationResponseSchema>;
 export type ListSessionActivityInput = z.infer<typeof listSessionActivityInputSchema>;
 export type ListSessionActivityResponse = z.infer<typeof listSessionActivityResponseSchema>;
+/** @deprecated Use SessionFollowUpDecision for canonical fields. */
 export type FollowUpDecision = z.infer<typeof followUpDecisionSchema>;
+/** @deprecated Use SessionFollowUpResponse for canonical fields. */
 export type FollowUpResponse = z.infer<typeof followUpResponseSchema>;
+
+export const sessionCreateRequestSchema = createSessionInputSchema
+  .omit({ project_id: true, workspace_id: true, original_session_id: true, attachments: true })
+  .extend({
+    attachments: z.array(z.object({ fileId: z.string().min(1) })).optional(),
+    projectId: z.string().min(1),
+    workspaceId: z.string().optional(),
+    originalSessionId: z.string().optional(),
+  });
+export type SessionCreateRequest = z.infer<typeof sessionCreateRequestSchema>;
+
+export const sessionAttachmentDetailsSchema = sessionAttachmentSchema
+  .omit({ file_id: true, mime_type: true, size_bytes: true, created_at: true, updated_at: true })
+  .extend({
+    fileId: z.string(),
+    mimeType: z.string().nullable(),
+    sizeBytes: z.number(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  });
+export type SessionAttachmentDetails = z.infer<typeof sessionAttachmentDetailsSchema>;
+export const sessionFollowUpRequestSchema = followUpInputSchema
+  .omit({
+    question_response: true,
+    summary_from_session_id: true,
+    summary_format: true,
+    summary_role: true,
+    attachments: true,
+  })
+  .extend({
+    questionResponse: questionResponseSchema.optional(),
+    summaryFromSessionId: z.string().optional(),
+    summaryFormat: z.enum(["brief", "detailed"]).optional(),
+    summaryRole: z.enum(["assistant", "all"]).optional(),
+    attachments: z.array(z.object({ fileId: z.string().min(1) })).optional(),
+  });
+export type SessionFollowUpRequest = z.infer<typeof sessionFollowUpRequestSchema>;
+export const sessionFollowUpDecisionSchema = z.union([
+  z.object({ status: z.literal("dispatched") }),
+  z.object({ status: z.literal("queued"), queuePosition: z.number().int() }),
+]);
+export type SessionFollowUpDecision = z.infer<typeof sessionFollowUpDecisionSchema>;
+export const sessionFollowUpResponseSchema = followUpResponseSchema
+  .extend(sessionDetailsSchema.shape)
+  .extend({ followUp: sessionFollowUpDecisionSchema });
+export type SessionFollowUpResponse = z.infer<typeof sessionFollowUpResponseSchema>;

@@ -42,6 +42,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   const getByShorthand = raw.getByShorthand;
   const getDefault = raw.getDefault;
   const list = raw.list;
+  const query = raw.query;
   const listForProviderReconciliation = raw.listForProviderReconciliation;
 
   // --- mutations (orchestrated) ---
@@ -144,6 +145,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
       emitOrLog("set", id, await raw.attachInitialProvider(id, input)),
     findByPath: raw.findByPath,
     list,
+    query,
     listForProviderReconciliation,
     create,
     createStandalone,

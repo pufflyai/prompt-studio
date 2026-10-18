@@ -1,15 +1,20 @@
 import { z } from "@hono/zod-openapi";
 import { agentAvailabilityTypeSchema, agentInfoSchema, agentModelSchema } from "pstdio-api-contracts";
 
-export const checkAgentAvailabilityQuerySchema = z
+export const agentProjectQuerySchema = z
   .object({
-    agent: z
-      .string()
-      .min(1)
-      .openapi({ description: "Harness id (e.g. pstdio.harness-claude-code.harness.claude-code)" }),
-    project: z.string().min(1).optional().openapi({ description: "Only consider harnesses enabled for this project" }),
+    projectId: z.string().min(1).optional(),
+    /** @deprecated Use projectId. */
+    project: z.string().min(1).optional(),
   })
-  .strict();
+  .strict()
+  .refine((input) => !input.projectId || !input.project || input.projectId === input.project, {
+    message: "projectId and legacy project must match.",
+  });
+
+export const checkAgentAvailabilityQuerySchema = agentProjectQuerySchema.safeExtend({
+  agent: z.string().min(1).openapi({ description: "Harness ID" }),
+});
 
 export const availabilitySchema = z.object({
   type: z.enum(agentAvailabilityTypeSchema.options).openapi({ description: "Whether the agent is installed" }),

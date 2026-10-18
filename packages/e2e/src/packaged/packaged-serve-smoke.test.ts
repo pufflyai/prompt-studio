@@ -72,6 +72,7 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 // Resource links include owner batch-resolution commands and their public workbench metadata.
 // Includes resource path prefixes, owner resolver commands, and resolution through HTTP.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
+import { registerResourcePageSmokeTests } from "./packaged-resource-pages-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
@@ -256,3 +257,5 @@ registerStorageMigrationSmokeTests();
 registerWorkspaceCapabilitiesSmokeTests();
 
 registerPageParamsSmokeTests();
+
+registerResourcePageSmokeTests();

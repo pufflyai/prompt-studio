@@ -1,6 +1,8 @@
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, not, or, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { board_default_views, board_views } from "../../db/schemas.pg";
+import { type PageQuery, pageBoundary, pageLimit, queryPage } from "../query-page";
+import { queryBoardViews } from "./board-view-query";
 
 type BoardScope = Pick<typeof board_views.$inferSelect, "project_id" | "extension_instance_id" | "board_id">;
 type ViewInput = Pick<typeof board_views.$inferSelect, "title" | "settings" | "filter" | "sorts">;
@@ -29,13 +31,41 @@ export const createBoardViewsDBService = (db: DbClient) => {
       .where(scopeWhere(board_views, scope))
       .orderBy(asc(board_views.sort_order), asc(board_views.created_at), asc(board_views.id));
   const listProject = (projectId: string) => db.select().from(board_views).where(eq(board_views.project_id, projectId));
+  const queryOrphaned = async (
+    projectId: string,
+    input: PageQuery,
+    enabledInstances: string[],
+    boards: BoardScope[],
+  ) => {
+    const scope = `orphaned-views:${projectId}`;
+    const boundary = pageBoundary(input.cursor, scope);
+    const limit = pageLimit(input);
+    const rows = await db
+      .select()
+      .from(board_views)
+      .where(
+        and(
+          eq(board_views.project_id, projectId),
+          enabledInstances.length ? inArray(board_views.extension_instance_id, enabledInstances) : sql`false`,
+          boards.length ? not(or(...boards.map((board) => scopeWhere(board_views, board)))!) : undefined,
+          boundary ? gt(board_views.id, boundary) : undefined,
+        ),
+      )
+      .orderBy(asc(board_views.id))
+      .limit(limit + 1);
+    return queryPage(rows, limit, scope);
+  };
   const get = async (projectId: string, id: string) =>
     (await db.select().from(board_views).where(viewWhere(projectId, id)))[0] ?? null;
   const getDefault = async (scope: BoardScope) =>
     (await db.select().from(board_default_views).where(scopeWhere(board_default_views, scope)))[0] ?? null;
   const initialize = (scope: BoardScope, views: ViewInput[], defaultIndex: number) =>
     db.transaction(async (tx) => {
-      const existing = await tx.select().from(board_views).where(scopeWhere(board_views, scope));
+      const existing = await tx
+        .select({ id: board_views.id })
+        .from(board_views)
+        .where(scopeWhere(board_views, scope))
+        .limit(1);
       if (existing.length) return [];
       const now = new Date().toISOString();
       const rows = await tx
@@ -163,7 +193,9 @@ export const createBoardViewsDBService = (db: DbClient) => {
     });
   return {
     list,
+    query: (scope: BoardScope, input?: PageQuery) => queryBoardViews(db, scope, input),
     listProject,
+    queryOrphaned,
     get,
     getDefault,
     initialize,

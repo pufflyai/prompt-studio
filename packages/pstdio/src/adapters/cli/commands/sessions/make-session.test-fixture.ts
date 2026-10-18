@@ -23,6 +23,10 @@ export const makeSession = (overrides: Partial<Session> = {}) => {
   };
   return {
     ...row,
+    projectId: row.project_id,
+    agentSessionId: row.agent_session_id,
+    sessionFileId: row.session_file_id,
+    params: row.params_json,
     lastSelectedModel: row.last_selected_model,
     workspaceId: row.workspace_id ?? null,
     originalSessionId: row.original_session_id,

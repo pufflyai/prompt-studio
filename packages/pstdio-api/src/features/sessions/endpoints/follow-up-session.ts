@@ -1,5 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import type { HarnessAttachment, HarnessParams } from "pstdio-api-contracts";
+import type { FollowUpDecision, HarnessAttachment, HarnessParams } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { composeSummary } from "../compose-summary";
 import type { SessionsRouteDeps } from "../deps";
@@ -8,6 +8,7 @@ import { getSessionMessages } from "../get-session-messages";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
 import { questionReplyRejection, replyToLiveSessionQuestion } from "../live-question-reply";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
+import { toSessionResponse } from "../session-response";
 import { createSessionScheduler } from "../session-scheduler";
 import { updateExistingDispatchSelection } from "../session-scheduler-internals";
 
@@ -99,6 +100,11 @@ const followUpError = (error: unknown) => {
   return { error: error instanceof Error ? error.message : String(error) };
 };
 
+const toCanonicalDecision = (decision: FollowUpDecision) => {
+  if (decision.status === "queued") return { status: decision.status, queuePosition: decision.queue_position };
+  return decision;
+};
+
 export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof followUpSessionRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
@@ -122,7 +128,17 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
         switchingAgent: Boolean(input.agent && input.agent !== session.agent),
       });
       const current = (await deps.sessionService.get(id)) ?? session;
-      return c.json({ ...current, follow_up: { status: "dispatched" as const } }, 200);
+      return c.json(
+        {
+          ...toSessionResponse(
+            current,
+            (await deps.workspaceSessionService.getWorkspaceBySessionId(current.id))?.id ?? null,
+          ),
+          followUp: { status: "dispatched" as const },
+          follow_up: { status: "dispatched" as const },
+        },
+        200,
+      );
     }
 
     const prompt = await buildFollowUpPrompt(input, deps);
@@ -152,7 +168,17 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
       if (!result) {
         return c.json({ error: `Session not found: ${id}` }, 404);
       }
-      return c.json({ ...result, follow_up: decision }, 200);
+      return c.json(
+        {
+          ...toSessionResponse(
+            result,
+            (await deps.workspaceSessionService.getWorkspaceBySessionId(result.id))?.id ?? null,
+          ),
+          followUp: toCanonicalDecision(decision),
+          follow_up: decision,
+        },
+        200,
+      );
     } catch (error) {
       return c.json(followUpError(error), 400);
     }

@@ -1,9 +1,29 @@
 import { z } from "@hono/zod-openapi";
-import { createProjectInputSchema, projectSchema, updateProjectInputSchema } from "pstdio-api-contracts";
+import {
+  createProjectInputSchema,
+  projectCreateRequestSchema,
+  projectDetailsSchema,
+  projectSchema,
+  projectUpdateRequestSchema,
+  updateProjectInputSchema,
+} from "pstdio-api-contracts";
 
-export const projectResponseSchema = projectSchema;
-export const createProjectBodySchema = createProjectInputSchema.strict();
-export const updateProjectBodySchema = updateProjectInputSchema;
+export const projectResponseSchema = projectSchema.extend(projectDetailsSchema.shape);
+export const createProjectBodySchema = z.union([
+  createProjectInputSchema.strict(),
+  projectCreateRequestSchema.strict().transform(({ initialWorkspace, ...input }) => ({
+    ...input,
+    initial_workspace: { provider_id: initialWorkspace.providerId, params: initialWorkspace.params },
+  })),
+]);
+export const updateProjectBodySchema = z.union([
+  projectUpdateRequestSchema.transform(({ defaultAgentId, defaultAgentModel, ...input }) => ({
+    ...input,
+    default_agent_id: defaultAgentId,
+    default_agent_model: defaultAgentModel,
+  })),
+  updateProjectInputSchema.strict(),
+]);
 export const notFoundResponseSchema = z.object({ error: z.string() });
 
 type ProjectRecord = {
@@ -18,7 +38,13 @@ type ProjectRecord = {
   deleted_at: string | null;
 };
 
-export const toProjectResponse = (project: ProjectRecord): z.infer<typeof projectResponseSchema> => ({
+export const toProjectResponse = (project: ProjectRecord) => ({
+  defaultAgentId: project.default_agent_id,
+  defaultAgentModel: project.default_agent_model,
+  startupScript: project.startup_script,
+  createdAt: project.created_at,
+  updatedAt: project.updated_at,
+  deletedAt: project.deleted_at,
   id: project.id,
   name: project.name,
   shorthand: project.shorthand,

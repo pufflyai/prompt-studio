@@ -4,9 +4,10 @@ import type { ProjectsRouteDeps } from "../deps";
 import { projectResponseSchema, toProjectResponse } from "../dto";
 
 export const listProjectsRoute = createRoute({
+  deprecated: true,
   method: "get",
   path: "/projects",
-  description: "List all projects.",
+  description: "Deprecated: use GET /v1/projects/query.",
   tags: ["Projects"],
 
   request: {

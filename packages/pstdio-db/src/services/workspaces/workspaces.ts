@@ -15,6 +15,7 @@ import {
 } from "./provider-operations";
 import { renameWorkspace } from "./rename-workspace";
 import { attachInitialProvider, findByPath } from "./workspace-location";
+import { createWorkspaceQuery } from "./workspace-query";
 import {
   buildWorkspaceRecord,
   type CreateInput,
@@ -229,6 +230,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
     findByPath: (rootPath: string) => findByPath(db, rootPath),
     get,
     list,
+    query: createWorkspaceQuery(db),
     listForProviderReconciliation,
     getByShorthand,
     softDelete,

@@ -10,7 +10,10 @@ export const createFilesystemClient = (request: RequestFn) => ({
     request<{ currentPath: string; entries: DirectoryEntry[] }>(
       `/v1/filesystem/list${path ? `?path=${encodeURIComponent(path)}` : ""}`,
     ),
-  createDirectory: (input: { parent_path: string; name: string }) =>
-    request<{ path: string }>("/v1/filesystem/directories", { method: "POST", body: input }),
+  createDirectory: (
+    input:
+      | { parentPath: string; name: string }
+      | { /** @deprecated Use parentPath. */ parent_path: string; name: string },
+  ) => request<{ path: string }>("/v1/filesystem/directories", { method: "POST", body: input }),
 });
 export type FilesystemClient = ReturnType<typeof createFilesystemClient>;

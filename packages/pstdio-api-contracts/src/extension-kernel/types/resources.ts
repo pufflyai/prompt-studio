@@ -1,3 +1,4 @@
+import type { Page } from "../../pagination";
 import type { JsonObject } from "./json";
 import type { NavigationTarget } from "./navigation-target";
 
@@ -32,6 +33,7 @@ export interface ResourceAnchorQuery {
   limit?: number;
 }
 
+/** @deprecated Use ResourceAnchorQueryPage for a required nullable cursor. */
 export interface ResourceAnchorPage {
   items: Array<{ source: ResourceRef; target: ResourceAnchor }>;
   nextCursor?: string;
@@ -53,9 +55,13 @@ export interface ResourceAnchorValidationInput {
 
 export type ResourceAnchorValidationResult = { allowed: true } | { allowed: false; reason: string };
 
+export type ResourceAnchorQueryPage = Page<ResourceAnchorPage["items"][number]>;
+
 export interface ExtensionResourcesApi {
   addAnchors(resource: ResourceRef, anchors: ResourceAnchor[]): Promise<void>;
   removeAnchors(resource: ResourceRef, refs: ResourceRef[]): Promise<void>;
+  queryAnchors(input: ResourceAnchorQuery): Promise<ResourceAnchorQueryPage>;
+  /** @deprecated Use queryAnchors for a required nullable cursor. */
   listAnchors(input: ResourceAnchorQuery): Promise<ResourceAnchorPage>;
   /** Publish a committed removal to clients displaying this project resource. */
   removed(resource: ResourceRef): Promise<void>;

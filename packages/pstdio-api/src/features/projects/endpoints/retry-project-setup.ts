@@ -1,6 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { initialWorkspaceSchema, workspaceSchema } from "pstdio-api-contracts";
+import { initialWorkspaceSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
+import { workspaceResponseSchema } from "../../workspaces/dto";
+import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import type { ProjectsRouteDeps } from "../deps";
 import { retryProjectExtensions } from "../project-extension-setup";
 import { initializeProjectWorkspace, withFolderCreation } from "../project-folder";
@@ -16,7 +18,7 @@ export const retryProjectSetupRoute = createRoute({
   responses: {
     200: {
       description: "Current initial workspace setup result.",
-      content: { "application/json": { schema: workspaceSchema } },
+      content: { "application/json": { schema: workspaceResponseSchema } },
     },
     404: { description: "Project not found.", content: { "application/json": { schema: errorSchema } } },
     409: {
@@ -41,6 +43,6 @@ export const retryProjectSetupHandler =
         initialWorkspaceSchema.parse({ provider_id: home.provider_id, params: home.provider_params_json }),
         () => retryProjectExtensions(deps, id),
       );
-      return c.json(workspace, 200);
+      return c.json({ ...workspace, ...toExtensionWorkspace(workspace) }, 200);
     });
   };
