@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { CommandOutcome, NavigationTarget } from "../extension-kernel";
+import type { CommandOutcome, JsonValue, NavigationTarget } from "../extension-kernel";
 import { serializableJsonObjectSchema } from "./common";
 import { navigationTargetSchema } from "./navigation-target-metadata";
 
@@ -17,39 +17,43 @@ const diagnostic = z.object({
   commandId: z.string().optional(),
   metadata: serializableJsonObjectSchema.optional(),
 });
-export const commandJsonValueSchema = z.json();
+export const createCommandOutcomeSchema = (jsonValue: z.ZodType<JsonValue>) => {
+  const error = z.object({
+    name: z.string().optional(),
+    message: z.string(),
+    stack: z.string().optional(),
+    cause: jsonValue.optional(),
+  });
+  const annotations = {
+    notices: z.array(notice).optional(),
+    diagnostics: z.array(diagnostic).optional(),
+  };
+  const failure = {
+    ...annotations,
+    ok: z.literal(false),
+    code: z.string().optional(),
+    reason: z.string(),
+    data: serializableJsonObjectSchema.optional(),
+    cause: jsonValue.optional(),
+    error: error.optional(),
+  };
+  const navigation: z.ZodType<NavigationTarget> = navigationTargetSchema;
 
-const error = z.object({
-  name: z.string().optional(),
-  message: z.string(),
-  stack: z.string().optional(),
-  cause: commandJsonValueSchema.optional(),
-});
-const annotations = {
-  notices: z.array(notice).optional(),
-  diagnostics: z.array(diagnostic).optional(),
-};
-const failure = {
-  ...annotations,
-  ok: z.literal(false),
-  code: z.string().optional(),
-  reason: z.string(),
-  data: serializableJsonObjectSchema.optional(),
-  cause: commandJsonValueSchema.optional(),
-  error: error.optional(),
-};
-const navigation: z.ZodType<NavigationTarget> = navigationTargetSchema;
+  const outcome: z.ZodType<CommandOutcome> = z.discriminatedUnion("status", [
+    z
+      .object({
+        ...annotations,
+        ok: z.literal(true),
+        status: z.literal("success"),
+        value: z.unknown().optional(),
+        navigationRequests: z.array(navigation).optional(),
+      })
+      .transform((outcome) => ({ ...outcome, value: outcome.value })),
+    z.object({ ...failure, status: z.literal("rejected") }),
+    z.object({ ...failure, status: z.literal("error") }),
+  ]);
 
-export const validatedCommandOutcomeSchema: z.ZodType<CommandOutcome> = z.discriminatedUnion("status", [
-  z
-    .object({
-      ...annotations,
-      ok: z.literal(true),
-      status: z.literal("success"),
-      value: z.unknown().optional(),
-      navigationRequests: z.array(navigation).optional(),
-    })
-    .transform((outcome) => ({ ...outcome, value: outcome.value })),
-  z.object({ ...failure, status: z.literal("rejected") }),
-  z.object({ ...failure, status: z.literal("error") }),
-]);
+  return outcome;
+};
+
+export const validatedCommandOutcomeSchema = createCommandOutcomeSchema(z.json());

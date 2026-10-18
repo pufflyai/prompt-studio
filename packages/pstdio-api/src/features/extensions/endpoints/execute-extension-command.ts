@@ -3,8 +3,7 @@ import type { Context } from "hono";
 import {
   type CommandExecuteBody,
   commandExecuteBodySchema,
-  commandExecutionResultSchema,
-  commandJsonValueSchema,
+  createCommandExecutionResultSchema,
 } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
@@ -17,8 +16,8 @@ import {
 
 export { resolveCommandWorkspaceDir } from "../execute-project-extension-command";
 
-// Name the recursive JSON schema so OpenAPI emits references instead of expanding it forever.
-commandJsonValueSchema.openapi("CommandJsonValue");
+// OpenAPI owns schema references; the shared builder keeps HTTP validation identical to the kernel.
+const responseSchema = createCommandExecutionResultSchema(z.json().openapi("CommandJsonValue"));
 
 const errorSchema = z.object({
   error: z.string(),
@@ -45,7 +44,7 @@ export const executeExtensionCommandRoute = createRoute({
   responses: {
     200: {
       description: "Command executed.",
-      content: { "application/json": { schema: commandExecutionResultSchema } },
+      content: { "application/json": { schema: responseSchema } },
     },
     404: {
       description: "Project or command not found.",

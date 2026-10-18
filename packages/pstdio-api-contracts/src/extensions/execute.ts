@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { NavigationTarget, Struct } from "../extension-kernel";
-import { validatedCommandOutcomeSchema } from "./command-outcome";
+import type { JsonValue, NavigationTarget, Struct } from "../extension-kernel";
+import { createCommandOutcomeSchema, validatedCommandOutcomeSchema } from "./command-outcome";
 import { commandSourceSchema, extensionSlotKindSchema, jsonObjectSchema } from "./common";
 import { navigationTargetSchema } from "./navigation-target-metadata";
 import { pageParamValueSchema } from "./page-params-schema";
@@ -59,7 +59,6 @@ export const dispatchExtensionEventBodySchema = z
   })
   .strict();
 
-export { commandJsonValueSchema } from "./command-outcome";
 export { validatedCommandOutcomeSchema };
 
 const responseNavigationTargetSchema: z.ZodType<NavigationTarget> = navigationTargetSchema;
@@ -107,10 +106,10 @@ export const commandExecuteResponseSchema = z.object({
   ...responseFields,
   outcome: commandOutcomeSchema,
 });
-export const commandExecutionResultSchema = z.object({
-  ...responseFields,
-  outcome: validatedCommandOutcomeSchema,
-});
+export const createCommandExecutionResultSchema = (jsonValue: z.ZodType<JsonValue>) =>
+  z.object({ ...responseFields, outcome: createCommandOutcomeSchema(jsonValue) });
+
+export const commandExecutionResultSchema = createCommandExecutionResultSchema(z.json());
 
 export type CommandExecuteRequest = z.infer<typeof commandExecuteRequestSchema>;
 export type CommandExecuteBody = z.infer<typeof commandExecuteBodySchema>;
