@@ -39,9 +39,10 @@ import { pullTicketCommand } from "./pull-ticket";
 import { queryTicketsCommand } from "./query-tickets";
 import { readTicketAttachmentCommand } from "./read-ticket-attachment";
 import { readTicketsCommand } from "./read-tickets";
-import { listAttemptsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
+import { listAttemptsCommand, listVariantsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
 import { refinementPolicyCommand } from "./refinement-policy";
 import { reorderTicketCommand } from "./reorder-ticket";
+import { repairAttemptCommand } from "./repair-attempt";
 import { resolveTicketPathCommand } from "./resolve-ticket-path";
 import {
   cancelReviewRequestCommand,
@@ -57,6 +58,7 @@ import { saveTicketCommand } from "./save-ticket";
 import { saveTicketContentCommand } from "./save-ticket-content";
 import { setTicketAttributeCommand } from "./set-ticket-attribute";
 import { submitReviewCommand } from "./submit-review";
+import { submitRevisionCommand } from "./submit-revision";
 import {
   deleteTemplateCommand,
   listTemplatesCommand,
@@ -108,12 +110,19 @@ import {
 import { unarchiveTicketCommand } from "./unarchive-ticket";
 import { updateStackCommand } from "./update-stack";
 import { updateTicketCommand } from "./update-ticket";
+import { readWorkflowStatusesCommand, saveWorkflowStatusesCommand } from "./workflow-statuses";
 import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
   ticketRelatedOpeningsCommand,
   resolveTicketPathCommand,
+  updateStackCommand,
+  submitRevisionCommand,
+  listVariantsCommand,
+  repairAttemptCommand,
+  readWorkflowStatusesCommand,
+  saveWorkflowStatusesCommand,
   autoBuildCommand,
   autoBuildCandidatesCommand,
   autoBuildDispatchCommand,

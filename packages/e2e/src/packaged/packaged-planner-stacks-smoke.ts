@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { runTestCommand } from "../scripts/run-test-command";
+import { configurePlannerWorkflow } from "./packaged-planner-helpers";
 
 const git = async (path: string, ...args: string[]) => {
   const started = Date.now();
@@ -57,6 +58,7 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
     expect(response.outcome.status).toBe("success");
     return response.outcome.value;
   };
+  await configurePlannerWorkflow(execute);
   const stop = async (id: string) => {
     for (let check = 0; check < 100; check++) {
       if ((await request(`/sessions/${id}`)).status === "completed") return;

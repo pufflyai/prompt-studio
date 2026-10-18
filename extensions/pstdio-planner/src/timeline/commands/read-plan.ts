@@ -11,6 +11,7 @@ import {
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
 import { timelineBoard } from "../../data/ticket-board";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import { sortedBySortOrder } from "../../utils/sort";
 import { buildPlan } from "../model/build-plan";
 import { resolvePlan } from "../model/resolve-plan";
@@ -27,15 +28,18 @@ export const readPlanCommand = defineCommand({
   title: "Read execution plan",
   cli: { description: "Print the execution order, deadlines, blockers, and risk as JSON." },
   async run(ctx) {
-    const [{ tickets, requests }, { statuses }, { tags }, stored, gates, attempts, workspaces] = await Promise.all([
-      readTicketSnapshot(ctx.storage),
-      readTicketStatuses(ctx.storage),
-      readTicketTags(ctx.storage),
-      readStoredPlan(ctx.storage),
-      readGates(ctx),
-      listAttempts(ctx.storage),
-      ctx.workspaces.list(),
-    ]);
+    const [{ tickets, requests }, { statuses }, { tags }, stored, gates, attempts, workspaces, selections] =
+      await Promise.all([
+        readTicketSnapshot(ctx.storage),
+        readTicketStatuses(ctx.storage),
+        readTicketTags(ctx.storage),
+        readStoredPlan(ctx.storage),
+        readGates(ctx),
+        listAttempts(ctx.storage),
+        ctx.workspaces.list(),
+        readWorkflowStatuses(ctx),
+      ]);
+    const workflow = usableWorkflowStatuses(selections);
     const active = sortedBySortOrder(tickets.filter((ticket) => !ticket.archived));
     const plan = buildPlan({
       tickets: active,
@@ -44,8 +48,9 @@ export const readPlanCommand = defineCommand({
       requests,
       gates,
       attempts,
+      workflow,
       track: await readTrack(ctx, tags),
-      plan: resolvePlan(stored, active, statuses),
+      plan: resolvePlan(stored, active, statuses, workflow),
       now: Date.now(),
       today: localToday(),
     });

@@ -253,9 +253,9 @@ describe("pstdio planner workspace contributions", () => {
       },
     ]);
   });
-  test("run-review only exposes workspace and harness options", () => {
+  test("run-review exposes workspace, revision, and harness options", () => {
     const runReview = command("run-review");
-    expect(Object.keys(runReview?.params ?? {}).sort()).toEqual(["harness", "workspaceId"]);
+    expect(Object.keys(runReview?.params ?? {}).sort()).toEqual(["expectedRevision", "harness", "workspaceId"]);
     expect(runReview?.params?.workspaceId).toMatchObject({ required: false });
   });
   test("opens the Tickets list and ticket detail as separate pages", async () => {

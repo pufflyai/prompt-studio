@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
-import { commandRunner } from "./packaged-planner-helpers";
+import { commandRunner, configurePlannerWorkflow } from "./packaged-planner-helpers";
 import { expectPackagedPlannerMoves } from "./packaged-planner-moves-smoke";
 import { expectIndependentPlannerViews } from "./packaged-planner-views-smoke";
 
@@ -38,8 +38,9 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(planningNavigation[1]?.group).toBe(planningNavigation[0]?.group);
   expect(planningNavigation.every((item) => item.icon)).toBe(true);
   const execute = commandRunner(input);
+  await configurePlannerWorkflow(execute);
   await expectIndependentPlannerViews({ ...input, execute });
-  await expectImplementationStatus(execute);
+  await expectAgentOwnedStatus(execute);
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
   const result = await execute("timeline.ticket.create", {
     content: "# Timeline smoke ticket\n\nShared Planner body",
@@ -80,6 +81,19 @@ export async function expectPackagedPlannerTimeline(input: {
     expect.objectContaining({ id: blocked.ticket.id, state: "blocked", flags: expect.arrayContaining(["blocked"]) }),
   );
   await execute("update-ticket", { id: result.ticket.id, status: "Done" });
+  // Only this ticket carries the tag, so the saved scope follows it after it is reopened.
+  await execute("update-ticket", { id: result.ticket.id, tags: ["Urgent"] });
+  const { revision } = await execute("auto-build.configure", { enabled: true, prompt: "Finish the preview." });
+  await execute("auto-build.scope", { revision, queries: [{ tags: ["Urgent"] }] });
+  expect(await execute("auto-build.read", {})).toMatchObject({ completed: true });
+  await execute("update-ticket", {
+    id: result.ticket.id,
+    status: "Todo",
+    blockedReason: "Hold dispatch during completion validation",
+  });
+  expect(await execute("auto-build.read", {})).toMatchObject({ completed: false });
+  await execute("auto-build.configure", { enabled: false });
+  await execute("update-ticket", { id: result.ticket.id, status: "Done", blockedReason: "" });
   const availablePlan = await execute("timeline.plan.read", {});
   const available = availablePlan.sections.flatMap(
     (section: { rows: { id: string; flags: string[] }[] }) => section.rows,
@@ -112,7 +126,7 @@ async function expectSharedMilestoneProperties(execute: Execute, ticketId: strin
 type Execute = ReturnType<typeof commandRunner>;
 const reviewNeeded = "default-human-requested-true";
 
-async function expectImplementationStatus(execute: Execute) {
+async function expectAgentOwnedStatus(execute: Execute) {
   const ticket = await execute("create-ticket", { content: "# Live implementation status", status: "Todo" });
   await execute("implement-ticket", {
     id: ticket.id,
@@ -120,11 +134,11 @@ async function expectImplementationStatus(execute: Execute) {
   });
   const plan = await execute("timeline.plan.read", {});
   expect(plan.sections.flatMap((section: { rows: unknown[] }) => section.rows)).toContainEqual(
-    expect.objectContaining({ id: ticket.id, status: expect.objectContaining({ name: "In Progress" }) }),
+    expect.objectContaining({ id: ticket.id, status: expect.objectContaining({ name: "Todo" }) }),
   );
   const query = await execute("query-tickets", {});
   expect(query.rows).toContainEqual(
-    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ status: "in-progress" }) }),
+    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ status: ticket.statusId }) }),
   );
 }
 

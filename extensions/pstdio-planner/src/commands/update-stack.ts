@@ -28,7 +28,6 @@ export async function readStackRepair(ctx: CommandContext, attempt: AttemptRecor
   if (await attemptEventsCollection(ctx.storage).get(eventId)) return null;
   const { readiness } = await loadAttemptDependencies(ctx, attempt.ticketId, {
     base: attempt.base.headSha,
-    dependencyReview: "submitted",
   });
   if (readiness.decision === "wait") return null;
   const base =

@@ -25,11 +25,11 @@ Open **Settings → Project Planner → Ticket status** to add, rename, recolor,
 
 When you delete a status, its tickets move to the default status.
 
-### Status changes that Planner makes
+### Who changes a ticket's status
 
-Planner moves a ticket by itself while agents work on it. The ticket goes to In Progress while an agent implements it, to In Review while its work waits for or gets a review, and to Blocked when every attempt is blocked. Planner never moves a ticket to Done. You decide when the work is delivered. See [Attempts](0002-attempts.md#how-planner-sets-the-ticket-status) for the full rules.
+The implementation agent keeps its ticket's status current while it works, and you can change it at any time. Planner does not move tickets when attempts start, sessions stop, or reviews finish. See [Attempts](0002-attempts.md#who-sets-the-ticket-status).
 
-Planner finds these statuses by name. If you rename In Progress, In Review, or Blocked, Planner can no longer move tickets into it. If you rename Done, Planner no longer treats the tickets in it as finished.
+Planner does not find statuses by name. Choose which statuses count as completed, blocked, and active, and the status after merge, in Planner's workflow settings: open **Settings → Project → Extensions**, select **Project Planner**, and use its **Settings** tab. Selections use status IDs, so you can rename or reorder columns freely.
 
 ## Tags
 

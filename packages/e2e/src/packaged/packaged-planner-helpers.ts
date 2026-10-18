@@ -77,3 +77,17 @@ export async function withPackagedPlanner(check: (input: PackagedPlanner) => Pro
     phase("cleanup complete");
   }
 }
+
+// Planner assigns no workflow meaning to status names, so packaged projects choose their seeded statuses by ID.
+export async function configurePlannerWorkflow(execute: ReturnType<typeof commandRunner>) {
+  const { statuses } = (await execute("ticket-status.read", {})) as { statuses: { id: string; name: string }[] };
+  const statusId = (name: string) => statuses.find((status) => status.name === name)!.id;
+  const selections = {
+    completedStatusIds: [statusId("Done")],
+    blockedStatusIds: [statusId("Blocked")],
+    activeStatusIds: [statusId("In Progress")],
+    mergeTargetStatusId: statusId("Done"),
+  };
+  await execute("workflow-statuses.save", { selections });
+  return { selections, statusId };
+}

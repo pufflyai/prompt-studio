@@ -115,13 +115,12 @@ test("the plan query derives milestone ETA from saved complexity and observed at
   await moveTicketCommand.run(ctx, { ticket: open.id, deadline: deadline.id });
   const startedAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
   await putAttempt(storage, {
-    schemaVersion: 1,
+    schemaVersion: 2,
     workspaceId: "owner-workspace",
     workspaceShorthand: "WS-1",
     ticketId: done.id,
     ticketShorthand: done.shorthand,
     implementationSessionId: "owner",
-    state: "approved",
     base: { workspaceId: null, headSha: "base" },
     revisions: [],
     blocker: null,
@@ -144,7 +143,24 @@ test("uses Planner's configured status identities for progress, completion, and 
     await statusesCollection(storage).put(`project-${status.id}`, { ...status, id: `project-${status.id}` });
   }
   await statusesCollection(storage).put("project-wip", { ...DEFAULT_STATUSES[2]!, id: "project-wip", name: "WIP" });
-  const [ctx] = makeCommandArgs({ storage, params: {} });
+  const [ctx] = makeCommandArgs({
+    storage,
+    params: {},
+    overrides: {
+      settings: {
+        all: async () => ({
+          "workflow.statuses": {
+            completedStatusIds: ["project-done"],
+            blockedStatusIds: ["project-blocked"],
+            activeStatusIds: ["project-in-progress", "project-wip"],
+            mergeTargetStatusId: "project-done",
+          },
+        }),
+      },
+    },
+  });
+  for (const status of await statusesCollection(storage).list())
+    await statusesCollection(storage).put(status.id, { ...status, name: `Renamed ${status.id}` });
   const completed = await createTicketCommand.run(ctx, {
     content: "# Finished prerequisite",
     statusId: "project-done",
@@ -170,17 +186,19 @@ test("uses Planner's configured status identities for progress, completion, and 
   expect(rows.find((row) => row.id === completed.id)).toMatchObject({
     done: true,
     state: "done",
-    status: { name: "Done" },
+    status: { name: "Renamed project-done" },
   });
   expect(rows.find((row) => row.id === progress.id)).toMatchObject({
     state: "in-progress",
     dependsOn: [{ id: completed.id, done: true }],
   });
   expect(rows.find((row) => row.id === blocked.id)).toMatchObject({
-    state: "blocked",
     flags: expect.arrayContaining(["blocked"]),
   });
-  expect(rows.find((row) => row.id === wip.id)).toMatchObject({ state: "in-progress", status: { name: "WIP" } });
+  expect(rows.find((row) => row.id === wip.id)).toMatchObject({
+    state: "in-progress",
+    status: { name: "Renamed project-wip" },
+  });
 });
 
 test("preserves the configured status presentation independently of review state", async () => {
@@ -225,7 +243,6 @@ test("waiting for prerequisites is distinct from a blocker on otherwise availabl
     expect(row.flags).not.toContain("blocked");
   }
   expect(rows.find((row) => row.id === availableBlocker.id)).toMatchObject({
-    state: "blocked",
     flags: expect.arrayContaining(["blocked"]),
   });
   expect(plan.sections[0]!.counts.blocked).toBe(1);
@@ -234,7 +251,6 @@ test("waiting for prerequisites is distinct from a blocker on otherwise availabl
   const available = (await readPlanCommand.run(ctx, {})).sections.flatMap((section) => section.rows);
   expect(available.find((row) => row.id === waiting.id)?.flags).not.toContain("waiting");
   expect(available.find((row) => row.id === deferredBlocker.id)).toMatchObject({
-    state: "blocked",
     flags: expect.arrayContaining(["blocked"]),
   });
 });

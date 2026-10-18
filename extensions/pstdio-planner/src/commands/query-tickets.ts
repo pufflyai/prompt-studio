@@ -1,10 +1,11 @@
 import type { ExtensionContextBase, ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { runTicketsQuery } from "../data/query";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { loadLatestWorkspaceSessions } from "../data/workspace-sessions";
 
 export const queryTickets = async (
-  ctx: Pick<ExtensionContextBase, "projectId" | "sessions" | "storage" | "workspaces">,
+  ctx: Pick<ExtensionContextBase, "projectId" | "sessions" | "storage" | "workspaces" | "settings">,
   input: { filter?: ViewFilterGroup },
 ) => {
   const workspaces = await ctx.workspaces.list();
@@ -12,6 +13,7 @@ export const queryTickets = async (
   return runTicketsQuery({
     storage: ctx.storage,
     projectId: ctx.projectId,
+    workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
     filter: input.filter,
     workspaces,
     workspaceSessions: await loadLatestWorkspaceSessions(ctx.sessions, workspaces),

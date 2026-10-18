@@ -22,7 +22,7 @@ pst extensions add pstdio-reports
 - **Auto Build** to let a supervisor assign valid project tickets using your prompt and ignore filters. See [Auto Build](docs/0007-auto-build.md).
 - A **Tickets** board in the project sidebar, and a page for each ticket. See [Dashboard](docs/0003-dashboard.md).
 - Statuses and tags for each project. See [Tags and statuses](docs/0001-tags-and-statuses.md).
-- Managed attempts: an agent works on a ticket in its own Git worktree, and a second agent reviews the result. See [Attempts](docs/0002-attempts.md).
+- Managed attempts: an agent works on a ticket in its own Git worktree, keeps the ticket status current, and reuses that workspace for corrections. An extra review is optional. See [Attempts](docs/0002-attempts.md).
 - Review requests: tasks and decisions that ask a person for input and set Review Needed until they are answered. See [Review requests](docs/0006-review-requests.md).
 - The `pst tickets`, `pst statuses`, and `pst tags` commands. See [CLI](docs/0004-cli.md).
 - Skills that teach agents to work with tickets: `create-ticket`, `create-proposal`, `create-sub-tickets`, `refine-ticket`, and `implement-ticket`.
@@ -53,7 +53,7 @@ The supervisor ends its turn between checks and resumes when more work can run. 
 
 Auto build leaves gates, blocked work, open human requests, and existing attempts for review. Agents that get stuck use Planner's **Request human input** action so the timeline shows Review Needed.
 
-The options apply only to the current project. Adversarial review and Open PR are on by default. Projects without a local Git folder can still set the review and pull request options. Turning off Adversarial review does not change the managed reviews described in [Attempts](docs/0002-attempts.md).
+The options apply only to the current project. Adversarial review and Open PR are on by default. Projects without a local Git folder can still set the review and pull request options. Turning off Adversarial review does not change the optional managed reviews described in [Attempts](docs/0002-attempts.md).
 
 The skill reads these options with `pst pstdio-planner implementation-policy` and follows them without asking. Instructions you give for a specific task take precedence.
 

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { putAttempt, readAttempt } from "../data/attempt-storage";
+import { appendAttemptEvent, putAttempt, readAttempt } from "../data/attempt-storage";
 import { ticketsCollection } from "../data/collections";
 import { listTicketReviewRequests } from "../data/review-request-storage";
 import { loadAttemptReadiness } from "./attempt-readiness";
@@ -36,7 +36,6 @@ async function independentDependencies(conflict = false) {
       workspaceId: ticketId!,
       ticketId: ticketId!,
       ticketShorthand: ticketId!,
-      state: "review_ready",
       revisions: [
         {
           revision: 1,
@@ -109,7 +108,18 @@ test("the owner can reconcile conflicting dependencies and submit without a huma
 test("conflicting dependency branches start a managed implementation owner", async () => {
   const f = await independentDependencies(true);
   try {
-    await putAttempt(f.storage, { ...f.attempt, state: "abandoned" });
+    await appendAttemptEvent(f.storage, {
+      workspaceId: f.attempt.workspaceId,
+      revision: null,
+      type: "attempt_abandoned",
+      actor: { type: "human", id: "user", displayName: "User" },
+      sessionId: null,
+      reportId: null,
+      reviewId: null,
+      threadId: null,
+      commitSha: null,
+      metadata: {},
+    });
     f.ctx.workspaces.create = async () => ({ id: "new-child", workspace_shorthand: "Child_A2" }) as never;
     f.ctx.sessions.create = async () => ({ id: "new-owner", title: "Resolve code", status: "queued" }) as never;
     const started = await runAttemptCommand.run(f.ctx, { ticket: "Child" });
@@ -129,7 +139,7 @@ test("a combined base preserves delivered target code alongside an unmerged depe
   const f = await independentDependencies();
   try {
     await f.git("update-ref", "refs/heads/main", f.left);
-    const { readiness } = await loadAttemptReadiness(f.ctx, "Child", { base: "main", dependencyReview: "submitted" });
+    const { readiness } = await loadAttemptReadiness(f.ctx, "Child", { base: "main" });
     expect(readiness).toMatchObject({ decision: "ready", mode: "stacked", baseHeadSha: f.left, baseWorkspaceId: null });
     if (readiness.decision !== "ready") throw new Error("Expected a dependency base");
     const base = await prepareDependencyBase(f.ctx, readiness);

@@ -79,7 +79,7 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     const updated = await execute("auto-build.configure", {
       enabled: true,
       prompt: "Choose changed work.",
-      blockOnReview: false,
+      requireMergedDependencies: false,
     });
     expect((await completedSupervisor(resumed.last_request_started)).id).toBe(session.id);
     const changed = await request(`/sessions/${session.id}/conversation`);
@@ -92,7 +92,10 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     expect(text).toContain("auto-build scope");
     expect(text).not.toContain(updated.prompt);
     expect(text.length).toBeLessThan(prompts[0].length / 4);
-    expect(await execute("auto-build.read")).toMatchObject({ prompt: updated.prompt, blockOnReview: false });
+    expect(await execute("auto-build.read")).toMatchObject({
+      prompt: updated.prompt,
+      requireMergedDependencies: false,
+    });
     await execute("auto-build.configure", { enabled: false });
     const restartedBrief = "Start a fresh packaged Auto Build run.";
     await execute("auto-build.configure", { enabled: true, prompt: restartedBrief });

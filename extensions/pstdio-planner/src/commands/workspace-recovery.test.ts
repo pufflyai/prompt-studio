@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import { attemptSelectionsCollection, listAttempts, putAttempt, readAttempt } from "../data/attempt-storage";
 import { putTicket } from "../data/collections";
 import { fixture } from "./auto-build.fixture";
@@ -12,7 +13,7 @@ async function lostWorkspace(source = "revision") {
   const ticket = await f.ticket("Recover previous implementation");
   const old = await runAttemptCommand.run(f.ctx, { ticket: ticket.id });
   const previous = {
-    ...old.attempt,
+    ...old.variant,
     revisions: [
       {
         revision: 1,
@@ -87,10 +88,8 @@ test.each([
   const replacement = await readAttempt(f.storage, "workspace-2");
   expect(replacement?.base.headSha).toBe("main-sha");
   expect(replacement?.revisions).toEqual([]);
-  expect(await readAttempt(f.storage, f.old.workspace.id)).toMatchObject({
-    state: "abandoned",
-    revisions: f.previous.revisions,
-  });
+  expect(await readAttempt(f.storage, f.old.workspace.id)).toMatchObject({ revisions: f.previous.revisions });
+  expect(await readRetiredWorkspaceIds(f.storage)).toContain(f.old.workspace.id);
   expect(await attemptSelectionsCollection(f.storage).get(f.ticket.id)).toMatchObject({ workspaceId: "workspace-2" });
   expect(f.created[0]?.originalSessionId).toBe(source === "missing owner" ? undefined : f.old.session.id);
   expect(f.created[0]?.prompt).toContain("https://github.com/acme/tools/pull/1");

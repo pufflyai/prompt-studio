@@ -1,4 +1,5 @@
 import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions";
+import { PlannerStorageUpgradeBusy } from "../data/attempt-upgrade";
 import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { readSessionHistory } from "../data/session-history";
@@ -66,6 +67,7 @@ async function wakeSupervisor(ctx: CommandContext) {
     await saveAutoBuildSupervisor(ctx, { ...supervisor, sessionId: supervisorId, lastWake: snapshot });
     return { prompted: true, sessionId: supervisorId };
   } catch (error) {
+    if (error instanceof PlannerStorageUpgradeBusy) return { prompted: false, reason: error.message };
     await pauseAutoBuildMode(ctx, mode);
     throw error;
   }

@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { putAttempt } from "../data/attempt-storage";
 import { readTicketsWithReviewState, ticketsCollection } from "../data/collections";
 import { runTicketsQuery } from "../data/query";
@@ -35,7 +34,7 @@ const setup = async () => {
   return { storage, ctx, ticket };
 };
 
-test("a legacy flag cannot ask for input, block launch, or freeze attempt rollup", async () => {
+test("a legacy flag cannot ask for input, block launch", async () => {
   const { storage, ctx, ticket } = await setup();
   await ticketsCollection(storage).put(ticket.id, { ...ticket, tagIds: [flag] });
   const plan = await readPlanCommand.run(ctx, {});
@@ -46,13 +45,13 @@ test("a legacy flag cannot ask for input, block launch, or freeze attempt rollup
   expect(board.rows[0]!.attributes?.["default-human-requested"]).toEqual([]);
   expect((await loadAttemptReadiness(ctx, ticket.id, {})).readiness.decision).toBe("ready");
   await putAttempt(storage, {
-    schemaVersion: 1,
+    schemaVersion: 2,
     workspaceId: "work",
     workspaceShorthand: "T-1_A1",
     ticketId: ticket.id,
     ticketShorthand: ticket.shorthand,
     implementationSessionId: "chat",
-    state: "implementing",
+
     base: { workspaceId: null, headSha: "main" },
     revisions: [],
     implementationDisconnectRetries: 0,
@@ -61,7 +60,7 @@ test("a legacy flag cannot ask for input, block launch, or freeze attempt rollup
     createdAt: ticket.createdAt,
     updatedAt: ticket.updatedAt,
   });
-  expect((await rollUpAttemptTicket(ctx, ticket.id)).statusId).toBe("in-progress");
+  expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("ready");
 });
 
 test("unreadable requests block launch and dependent work without a flag", async () => {

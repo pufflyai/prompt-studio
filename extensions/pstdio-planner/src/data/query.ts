@@ -24,11 +24,13 @@ import {
 } from "./mappers";
 import { readTicketReviewRequests, withReviewNeededFlag } from "./review-request-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
+import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "./workflow-statuses";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
 interface TicketsQueryInput {
   storage: ExtensionStorageApi;
   projectId: string;
+  workflow?: WorkflowStatusSelections;
   filter?: ViewFilterGroup;
   workspaces?: ExtensionWorkspace[];
   workspaceSessions?: TicketWorkspaceSessionLookup;
@@ -40,6 +42,7 @@ export const runTicketsQuery = async ({
   storage,
   projectId,
   filter,
+  workflow = emptyWorkflowStatuses(),
   workspaces = [],
   workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
@@ -62,7 +65,8 @@ export const runTicketsQuery = async ({
       tags,
       statuses,
       requests,
-      plan: resolvePlan(storedPlan, activeTickets, statuses),
+      workflow,
+      plan: resolvePlan(storedPlan, activeTickets, statuses, workflow),
       today: new Intl.DateTimeFormat("en-CA").format(new Date()),
     }),
   );

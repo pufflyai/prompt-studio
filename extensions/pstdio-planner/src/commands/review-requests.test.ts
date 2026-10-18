@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandSource } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { putAttempt, readAttempt } from "../data/attempt-storage";
 import { putTicket, tagsCollection, ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
@@ -281,13 +280,13 @@ describe("attempt handoffs", () => {
     const flags = await tagsCollection(fixture.storage).get("default-human-requested");
     await tagsCollection(fixture.storage).put("default-human-requested", { ...flags!, name: "Interruptions" });
     await putAttempt(fixture.storage, {
-      schemaVersion: 1,
+      schemaVersion: 2,
       workspaceId: "workspace-1",
       workspaceShorthand: "PS-1_A1",
       ticketId: "ps-1",
       ticketShorthand: "PS-1",
       implementationSessionId: "implementation-1",
-      state: "approved",
+
       base: { workspaceId: null, headSha: "base-sha" },
       revisions: [
         {
@@ -342,24 +341,22 @@ describe("attempt handoffs", () => {
     expect(await flagged()).toBe(true);
   });
 
-  test("a changed attempt refuses the handoff before writing", async () => {
+  test("a changed revision refuses the handoff before writing", async () => {
     const { context, created } = await setupAttempt();
 
-    await expect(
-      requestHumanCommand.run(context("automation"), { ...handoff, expectedAttemptState: "blocked" } as never),
-    ).rejects.toThrow("Attempt state changed");
+    await expect(requestHumanCommand.run(context("automation"), { ...handoff, revision: 2 } as never)).rejects.toThrow(
+      "Attempt revision changed",
+    );
     expect(created).toHaveLength(0);
   });
 
-  test("an open request marks the attempt ticket Blocked even when its flag write was lost", async () => {
+  test("human requests preserve the chosen ticket status when a variant records evidence", async () => {
     const { storage, context } = await setupAttempt();
     await requestHumanCommand.run(context("automation"), handoff as never);
     await putTicket(storage, { ...ticket("ps-1"), tagIds: [] });
     const attempt = (await readAttempt(storage, "workspace-1"))!;
-    await putAttempt(storage, { ...attempt, state: "implementing" });
+    await putAttempt(storage, { ...attempt, updatedAt: new Date().toISOString() });
 
-    await rollUpAttemptTicket(context(), "ps-1");
-
-    expect((await ticketsCollection(storage).get("ps-1"))?.statusId).toBe("blocked");
+    expect((await ticketsCollection(storage).get("ps-1"))?.statusId).toBe("in-review");
   });
 });

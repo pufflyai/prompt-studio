@@ -10,14 +10,13 @@ import { reconcileAttemptCommand } from "./reconcile-attempt";
 import { runReviewCommand } from "./run-review";
 import { sessionQuery } from "./session-query.fixture";
 
-const baseAttempt = (state: AttemptRecord["state"]): AttemptRecord => ({
-  schemaVersion: 1,
+const baseAttempt = (_legacyPhase: string): AttemptRecord => ({
+  schemaVersion: 2,
   workspaceId: "workspace-1",
   workspaceShorthand: "PS-1_A1",
   ticketId: "ticket-1",
   ticketShorthand: "PS-1",
   implementationSessionId: "implementation-1",
-  state,
   base: { workspaceId: null, headSha: "base-sha" },
   revisions: [],
   implementationDisconnectRetries: 0,
@@ -53,6 +52,7 @@ const setup = async (attempt: AttemptRecord, statuses: Record<string, string>) =
       invocationId: "reconcile-1",
       sessions: {
         get: async (id: string) => ({ id, title: id, status: statuses[id] ?? "completed", anchors_json: [] }),
+        query: sessionQuery(async () => []),
         followup: async (input: unknown) => {
           followups.push(input);
         },

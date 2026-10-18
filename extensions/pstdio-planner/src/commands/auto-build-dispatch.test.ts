@@ -31,7 +31,8 @@ test("candidates include unattended In Progress and exclude default ignore statu
     instructions: "Choose scope",
     request: { kind: "task" },
   });
-  const orphan = await createTicketCommand.run(ctx, { title: "Unattended", statusId: "in-progress" });
+  const orphan = await ticket("Unattended");
+  await putTicket(storage, { ...orphan, statusId: "in-progress" });
   const ready = await ticket("Ready");
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([orphan.id, ready.id]);
 });

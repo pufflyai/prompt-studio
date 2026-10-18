@@ -21,6 +21,11 @@ import { expectPackagedWorkspaceSelection } from "./packaged-workspace-selection
 
 // The macOS Intel release runner can spend over a minute extracting and loading all bundled core extensions.
 const CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT = 120_000;
+const settingsWebview = (metadata: WorkbenchExtensionMetadata) => {
+  const panelViews = new Set(metadata.settingsPanels.map((panel) => `${panel.view.extensionId}.view.${panel.view.id}`));
+  const view = metadata.views.find((view) => panelViews.has(view.id) && view.body.kind === "webview");
+  return view?.body.kind === "webview" ? view.body.webview : undefined;
+};
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
 const CORE_DEFAULT_EXTENSION_NAMES = [
   "harness-claude-code",
@@ -265,12 +270,7 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
             headers: runtimeAuthorization(started.descriptor),
           });
           await expectTemplateStorage(metadata, started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
-          const settingsPanel = metadata.settingsPanels.find((panel) => panel.view);
-          const settingsViewId = settingsPanel
-            ? `${settingsPanel.view.extensionId}.view.${settingsPanel.view.id}`
-            : undefined;
-          const settingsView = metadata.views.find((view) => view.id === settingsViewId);
-          const webview = settingsView?.body.kind === "webview" ? settingsView.body.webview : undefined;
+          const webview = settingsWebview(metadata);
           expect(webview?.runtimeUrl).toBeTruthy();
 
           const runtimeRes = await fetch(`${started.baseUrl}${webview!.runtimeUrl}`, {

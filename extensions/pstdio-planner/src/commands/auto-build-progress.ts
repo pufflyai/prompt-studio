@@ -1,4 +1,5 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
+import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import { readAttempt } from "../data/attempt-storage";
 import { autoBuildDispatches } from "../data/auto-build-dispatches";
 import { type AutoBuildMode, pauseAutoBuildMode } from "../data/auto-build-mode";
@@ -28,10 +29,12 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
       };
       const lastPromptAt = timestamp(session.lastRequestStarted);
       const dispatches = await autoBuildDispatches(ctx, session.id).list();
+      const retired = dispatches.length ? await readRetiredWorkspaceIds(ctx.storage) : new Set<string>();
       const progress = await Promise.all(
         dispatches.map(async ({ workspaceId, dispatchedAt }) => {
+          if (retired.has(workspaceId)) return;
           const attempt = await readAttempt(ctx.storage, workspaceId);
-          if (!attempt || attempt.state === "abandoned") return;
+          if (!attempt) return;
           const [ticket, worker] = await Promise.all([
             ticketsCollection(ctx.storage).get(attempt.ticketId),
             ctx.sessions.get(attempt.implementationSessionId),

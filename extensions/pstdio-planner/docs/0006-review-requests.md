@@ -18,7 +18,7 @@ Attempt handoffs ask one required text question with the ID `result`. Its answer
 1. `request-human` saves the request, links a chat session, and sets Review Needed. A request from an attempt reuses the attempt's session when that session owns the work. Otherwise Planner starts a new chat for the ticket.
 2. A person or an agent answers with `review` or cancels with `review-requests cancel`. Schedules, automations, and event handlers cannot do either.
 3. Each request gets exactly one outcome: an answer or a cancellation. If two answers race, the first one wins and the other caller sees the saved outcome.
-4. When no open request is left on the ticket, Planner clears Review Needed. Managed attempt tickets refresh their status: stopped implementations become Todo, and running implementations become In Progress. Open or unreadable requests keep managed tickets Blocked.
+4. When no open request is left on the ticket, Planner clears Review Needed. Planner does not change the ticket status; the implementation agent updates it when it continues.
 
 Requests do not change after they are saved. To correct one, cancel it and create a new request. Answers to one request never close another open request.
 

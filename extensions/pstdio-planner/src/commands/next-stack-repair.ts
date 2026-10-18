@@ -8,8 +8,9 @@ export async function readSelectedStackRepair(
   ticketId: string,
   attempts: AttemptRecord[],
   selections: TicketAttemptSelection[],
+  retired: Set<string>,
 ) {
-  const existing = attempts.filter((attempt) => attempt.ticketId === ticketId && attempt.state !== "abandoned");
+  const existing = attempts.filter((attempt) => attempt.ticketId === ticketId && !retired.has(attempt.workspaceId));
   const selection = selections.find((selection) => selection.ticketId === ticketId);
   let chosen: AttemptRecord | undefined;
   if (selection) chosen = existing.find(({ workspaceId }) => workspaceId === selection.workspaceId);

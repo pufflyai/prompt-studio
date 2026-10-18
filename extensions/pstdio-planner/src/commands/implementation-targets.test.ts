@@ -96,7 +96,7 @@ describe("project implementation target branches", () => {
   test("lists no branches but keeps workflow options for non-Git project folders", async () => {
     const { ctx } = await setup(false);
     expect(await implementationTargetsCommand.run(ctx, {})).toEqual([]);
-    expect(await implementationPolicyCommand.run(ctx, {})).toEqual({
+    expect(await implementationPolicyCommand.run(ctx, {})).toMatchObject({
       adversarialReview: true,
       openPr: true,
       defaultTargetBranch: null,

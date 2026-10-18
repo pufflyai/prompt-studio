@@ -1,11 +1,21 @@
-import { Box, Button, Popover, Portal, Separator, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage } from "@pstdio/ui";
+import { Button, Popover, Portal, Separator, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { AlertMessage, installPrismGlobal } from "@pstdio/ui";
+import { psTheme } from "@pstdio/ui/theme";
 import { Pause, Play } from "lucide-react";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
+import type { AutoBuildFormProps } from "./auto-build-form";
+import { AutoBuildIndicator, resolveAutoBuildIndicatorStatus } from "./auto-build-indicator";
 import { type AutoBuildSession, AutoBuildSessionRow } from "./auto-build-session-row";
+
+// The prompt editor loads only when someone opens the configuration.
+const AutoBuildForm = lazy(async () => {
+  await installPrismGlobal();
+  return import("./auto-build-form").then((module) => ({ default: module.AutoBuildForm }));
+});
 
 interface AutoBuildButtonProps {
   enabled: boolean;
+  completed?: boolean;
   supervisor?: AutoBuildSession | null;
   sessions: AutoBuildSession[];
   running: number;
@@ -13,7 +23,7 @@ interface AutoBuildButtonProps {
   error?: string;
   stuck?: boolean;
   disabled?: boolean;
-  onConfigure: () => void;
+  configuration?: Omit<AutoBuildFormProps, "onClose" | "t">;
   onTurnOff: () => Promise<boolean>;
   onOpenSession: (session: AutoBuildSession) => void;
   t: (key: string, fallback?: string) => string;
@@ -22,6 +32,7 @@ interface AutoBuildButtonProps {
 export function AutoBuildButton(props: AutoBuildButtonProps) {
   const {
     enabled,
+    completed,
     supervisor,
     sessions,
     running,
@@ -29,103 +40,116 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
     error,
     stuck,
     disabled,
-    onConfigure,
+    configuration,
     onTurnOff,
     onOpenSession,
     t,
   } = props;
-  const [open, setOpen] = useState(false);
-  const failed = supervisor?.status === "failed" || Boolean(error);
+  const [content, setContent] = useState<"configuration" | "sessions" | null>(null);
+  const panel = useSlotRecipe({ recipe: psTheme.getSlotRecipe("popover") })({ variant: "panel" });
+  const failed = (!completed && supervisor?.status === "failed") || Boolean(error);
   const inspectable = enabled || failed;
-  let activity = "waiting";
-  let color = "fg.warning";
-  if (failed) {
-    activity = "error";
-    color = "fg.error";
-  } else if (running > 0) {
-    activity = "running";
-    color = "fg.success";
-  }
+  const changeOpen = (open: boolean) => {
+    if (disabled) return;
+    if (!open) {
+      setContent(null);
+      return;
+    }
+    setContent(inspectable ? "sessions" : "configuration");
+  };
+  const status = resolveAutoBuildIndicatorStatus({
+    enabled,
+    completed,
+    failed,
+    stuck,
+    supervisorStatus: supervisor?.status,
+    running,
+  });
+  const activity = status?.replaceAll("_", " ") ?? "off";
   const stop = async () => {
-    if (await onTurnOff()) setOpen(false);
+    if (await onTurnOff()) setContent(null);
   };
   return (
     <Popover.Root
-      size="xs"
-      open={open && inspectable}
-      onOpenChange={({ open }) => setOpen(inspectable && open)}
+      lazyMount
+      unmountOnExit
+      open={content !== null}
+      onOpenChange={({ open }) => changeOpen(open)}
       positioning={{ placement: "bottom-end" }}
     >
       <Popover.Trigger asChild>
         <Button
           aria-label={t("timeline.autoBuild.start", "Auto Build")}
           aria-description={enabled || failed ? `Auto Build ${activity}` : undefined}
-          size="2xs"
+          size="xs"
           variant="outline"
           disabled={disabled}
-          onClick={() => {
-            if (!inspectable) onConfigure();
-          }}
         >
-          {enabled || failed ? (
-            <Box
-              role="img"
-              aria-label={`Auto Build ${activity}`}
-              data-activity={activity}
-              boxSize="status-dot"
-              rounded="full"
-              bg={color}
-              flexShrink="0"
-            />
-          ) : (
-            <Play />
-          )}
+          {status ? <AutoBuildIndicator status={status} label={`Auto Build ${activity}`} /> : <Play />}
           {t("timeline.autoBuild.start", "Auto Build")}
         </Button>
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
           <Popover.Content
-            aria-label="Auto Build sessions"
-            width="sm"
+            aria-label="Auto Build"
+            css={panel.content}
             maxW="calc(100vw - 2 * var(--chakra-spacing-xs))"
           >
-            <Popover.Header display="flex" alignItems="center" justifyContent="space-between" gap="xs">
-              <Popover.Title textStyle="label/S/medium" whiteSpace="nowrap">
-                {t("timeline.autoBuild.sessions", "Running ticket sessions")} ({running}/{capacity})
-              </Popover.Title>
-              {enabled ? (
-                <Button size="2xs" variant="outline" disabled={disabled} onClick={() => void stop()}>
-                  <Pause />
-                  {t("timeline.autoBuild.stop", "Stop Auto Build")}
-                </Button>
-              ) : (
-                <Button
-                  size="2xs"
-                  variant="outline"
-                  disabled={disabled}
-                  onClick={() => {
-                    setOpen(false);
-                    onConfigure();
-                  }}
+            {content === "sessions" ? (
+              <>
+                <Popover.Header
+                  css={panel.header}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  gap="xs"
                 >
-                  <Play />
-                  {t("timeline.autoBuild.start", "Auto Build")}
-                </Button>
-              )}
-            </Popover.Header>
-            <Popover.Body>
-              <AutoBuildSessions
-                enabled={enabled}
-                supervisor={supervisor}
-                sessions={sessions}
-                failed={failed}
-                error={error}
-                stuck={stuck}
-                onOpenSession={onOpenSession}
-                t={t}
-              />
-            </Popover.Body>
+                  <Popover.Title css={panel.title} whiteSpace="nowrap">
+                    {t("timeline.autoBuild.start", "Auto Build")}
+                  </Popover.Title>
+                  {enabled ? (
+                    <Button size="sm" variant="outline" disabled={disabled} onClick={() => void stop()}>
+                      <Pause />
+                      {t("timeline.autoBuild.stop", "Stop")}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={disabled}
+                      onClick={() => {
+                        setContent("configuration");
+                      }}
+                    >
+                      <Play />
+                      {t("timeline.autoBuild.start", "Auto Build")}
+                    </Button>
+                  )}
+                </Popover.Header>
+                <Separator />
+                <Popover.Body css={panel.body}>
+                  <AutoBuildSessions
+                    enabled={enabled}
+                    completed={completed}
+                    supervisor={supervisor}
+                    sessions={sessions}
+                    failed={failed}
+                    error={error}
+                    stuck={stuck}
+                    running={running}
+                    capacity={capacity}
+                    onOpenSession={onOpenSession}
+                    t={t}
+                  />
+                </Popover.Body>
+              </>
+            ) : null}
+            {content === "configuration" && configuration ? (
+              <Suspense fallback={null}>
+                <AutoBuildForm {...configuration} onClose={() => setContent(null)} t={t} />
+              </Suspense>
+            ) : null}
           </Popover.Content>
         </Popover.Positioner>
       </Portal>
@@ -136,16 +160,25 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
 interface AutoBuildSessionsProps
   extends Pick<
     AutoBuildButtonProps,
-    "enabled" | "supervisor" | "sessions" | "error" | "stuck" | "onOpenSession" | "t"
+    | "enabled"
+    | "completed"
+    | "supervisor"
+    | "sessions"
+    | "running"
+    | "capacity"
+    | "error"
+    | "stuck"
+    | "onOpenSession"
+    | "t"
   > {
   failed: boolean;
 }
 function AutoBuildSessions(props: AutoBuildSessionsProps) {
-  const { enabled, supervisor, sessions, failed, error, stuck, onOpenSession, t } = props;
+  const { enabled, completed, supervisor, sessions, running, capacity, failed, error, stuck, onOpenSession, t } = props;
   const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
   return (
-    <Stack gap="xs">
-      {failed || stuck || supervisor?.status === "awaiting_input" ? (
+    <Stack gap="md">
+      {failed || (!completed && (stuck || supervisor?.status === "awaiting_input")) ? (
         <AlertMessage
           role="alert"
           status={failed ? "error" : "warning"}
@@ -160,31 +193,31 @@ function AutoBuildSessions(props: AutoBuildSessionsProps) {
           }
         />
       ) : null}
-      {supervisor ? (
-        <AutoBuildSessionRow
-          session={supervisor}
-          label={t("timeline.autoBuild.supervisor", "Supervisor")}
-          statusLabel={
-            enabled && !supervisorActive && !failed ? t("timeline.autoBuild.sleeping", "sleeping") : undefined
-          }
-          onOpen={onOpenSession}
-        />
-      ) : (
-        <Text textStyle="paragraph/S/regular">
-          {enabled
-            ? t("timeline.autoBuild.sleeping", "sleeping")
-            : t("timeline.autoBuild.noSupervisor", "No supervisor session")}
-        </Text>
-      )}
-      <Separator />
       <Stack gap="2xs">
-        {sessions.map((session) => (
+        <Text textStyle="label/2XS/medium" color="fg.muted" textTransform="uppercase">
+          {t("timeline.autoBuild.sessions", "Ongoing sessions")}
+        </Text>
+        {supervisor ? (
           <AutoBuildSessionRow
-            key={session.id}
-            session={session}
-            label={t("timeline.autoBuild.ticketSession", "Ticket session")}
+            session={supervisor}
+            sleeping={enabled && !completed && !supervisorActive && !failed}
             onOpen={onOpenSession}
           />
+        ) : (
+          <Text textStyle="paragraph/S/regular">
+            {enabled
+              ? t("timeline.autoBuild.sleeping", "sleeping")
+              : t("timeline.autoBuild.noSupervisor", "No supervisor session")}
+          </Text>
+        )}
+      </Stack>
+      <Text textStyle="label/XS" color="fg.muted">
+        {t("timeline.autoBuild.running", "Running")} · {running} {t("timeline.autoBuild.capacity", "of")} {capacity}{" "}
+        {t("timeline.autoBuild.agents", "agents")}
+      </Text>
+      <Stack gap="2xs">
+        {sessions.map((session) => (
+          <AutoBuildSessionRow key={session.id} session={session} onOpen={onOpenSession} />
         ))}
         {sessions.length === 0 ? (
           <Text textStyle="label/XS" color="fg.muted">

@@ -4,7 +4,6 @@ import {
   appendAttemptEvent,
   attemptEventsCollection,
   attemptSelectionsCollection,
-  putAttempt,
   readAttempt,
 } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
@@ -106,7 +105,6 @@ export async function finishWorkspaceRecovery(ctx: CommandContext, old: AttemptR
     commitSha: null,
     metadata: { previousWorkspaceId: old.workspaceId, reason: "workspace-recovery" },
   });
-  await putAttempt(ctx.storage, { ...old, state: "abandoned", updatedAt: new Date().toISOString() });
   await appendAttemptEvent(ctx.storage, {
     workspaceId: old.workspaceId,
     revision: old.revisions.at(-1)?.revision ?? null,

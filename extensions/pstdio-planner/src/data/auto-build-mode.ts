@@ -1,5 +1,4 @@
 import { type ExtensionContextBase, eventRef, type ViewFilterGroup } from "@pstdio/sdk/extensions";
-import { seedDefaultStatuses } from "./seed";
 import { withWriteGuard } from "./write-guard";
 
 export interface AutoBuildMode {
@@ -7,32 +6,29 @@ export interface AutoBuildMode {
   enabled: boolean;
   prompt: string;
   ignore: ViewFilterGroup;
+  /** @deprecated Use requireMergedDependencies. Review evidence is optional. */
   blockOnReview: boolean;
+  eligible: ViewFilterGroup;
+  requireMergedDependencies: boolean;
 }
 
 export const autoBuildChanged = eventRef({ extensionId: "pstdio.pstdio-planner", id: "auto-build.changed" });
 
-export const defaultAutoBuildIgnore = async (ctx: Pick<ExtensionContextBase, "storage">) => ({
+export const defaultAutoBuildIgnore = async (_ctx: Pick<ExtensionContextBase, "storage">) => ({
   conjunction: "and" as const,
-  rules: [
-    {
-      attributeId: "status",
-      condition: "is-any-of" as const,
-      value: (await seedDefaultStatuses(ctx.storage))
-        .filter(({ name }) => ["backlog", "done"].includes(name.trim().toLowerCase()))
-        .map(({ id }) => id),
-    },
-  ],
+  rules: [],
 });
 
 export const readAutoBuildMode = async (ctx: Pick<ExtensionContextBase, "storage">) => {
   const mode = await ctx.storage.get<AutoBuildMode>("auto-build");
   return {
     revision: mode?.revision ?? "",
-    enabled: Boolean(mode?.enabled && mode.prompt),
+    enabled: Boolean(mode?.enabled && mode.prompt && mode.eligible),
     prompt: mode?.prompt ?? "",
     ignore: mode?.ignore ?? (await defaultAutoBuildIgnore(ctx)),
-    blockOnReview: mode?.blockOnReview ?? true,
+    blockOnReview: mode?.blockOnReview ?? false,
+    eligible: mode?.eligible ?? { conjunction: "and" as const, rules: [] },
+    requireMergedDependencies: mode?.requireMergedDependencies ?? false,
   };
 };
 

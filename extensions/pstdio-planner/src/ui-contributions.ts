@@ -33,6 +33,7 @@ import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
 import { timelineViewSchema } from "./timeline/commands/view-schema";
 import { planChanged } from "./timeline/contracts";
+import { queryWorkflowSettings, saveWorkflowSettings } from "./views/workflow-settings";
 
 export { ticketResourceKind } from "./resource-kinds";
 
@@ -92,6 +93,16 @@ export const createPlannerUi = (baseUrl: string) => {
       kind: "webview",
       entry: packageAsset("./src/views/status-settings-panel.tsx", baseUrl),
       capabilities: ["commands.execute"],
+    },
+  });
+  const workflowSettings = defineView({
+    id: "workflow-settings",
+    title: "Planner workflow",
+    body: {
+      kind: "controls",
+      query: queryWorkflowSettings,
+      onValueChange: (ctx, input) => saveWorkflowSettings(ctx, input.values),
+      refreshEvents: [plannerTicketsChanged],
     },
   });
   const requests = defineView({
@@ -215,7 +226,17 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [statusSettings, tickets, timelineTickets, editor, files, properties, tagSettings, requests],
+    views: [
+      statusSettings,
+      tickets,
+      timelineTickets,
+      editor,
+      files,
+      properties,
+      tagSettings,
+      requests,
+      workflowSettings,
+    ],
     pages: [ticketsPage, ticketDetailPage, requestsPage],
     viewMenus: [
       defineViewMenu({
@@ -251,6 +272,11 @@ export const createPlannerUi = (baseUrl: string) => {
         view: statusSettings.ref,
         slot: workbenchSlots.projectSettings,
         section: settingsSection.ref,
+      }),
+      defineSettingsPanel({
+        id: "workflow-settings",
+        view: workflowSettings.ref,
+        slot: workbenchSlots.extensionSettings,
       }),
       defineSettingsPanel({
         id: "ticket-tags",
