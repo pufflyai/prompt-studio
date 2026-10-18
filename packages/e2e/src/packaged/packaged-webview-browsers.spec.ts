@@ -189,12 +189,12 @@ test.describe("packaged extension webviews", () => {
 
           await page.reload();
           await expect(settingsFrame.getByRole("spinbutton")).toHaveValue("7");
-          await page.keyboard.press("Escape");
+          await page.getByRole("button", { name: "Close Lab (project)", exact: true }).click();
           await expect(page.getByRole("dialog")).toHaveCount(0);
           await page.getByRole("option", { name: "Settings", exact: true }).click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
           await expect(settingsFrame.getByRole("spinbutton")).toHaveValue("7");
-          await page.keyboard.press("Escape");
+          await page.getByRole("button", { name: "Close Lab (project)", exact: true }).click();
           await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
           await expect(frame.getByText("1", { exact: true })).toBeVisible();
           await frame.getByRole("button", { name: "Increment", exact: true }).click();
