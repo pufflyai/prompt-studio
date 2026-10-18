@@ -22,11 +22,7 @@ const ownsPlacement = (
     .some((region) =>
       region.widgets.some((placement) => placement.placementIdentity && matches(placement.placementIdentity)),
     );
-export const activateModePlacementInstance = (
-  core: WorkbenchCore,
-  identity: PlacementIdentity,
-  region?: WorkbenchPanelRegion,
-) => {
+export const activateModePlacementInstance = (core: WorkbenchCore, identity: PlacementIdentity) => {
   const instance = Object.values(core.layout.getLayout().regions)
     .flatMap((region) => region.widgets)
     .find(
@@ -35,8 +31,7 @@ export const activateModePlacementInstance = (
         placementIdentityKey(candidate.placementIdentity) === placementIdentityKey(identity),
     );
   if (instance) {
-    if (region) core.movePanel(instance.widgetId, region);
-    else core.layout.activatePanel(instance.widgetId);
+    core.layout.activatePanel(instance.widgetId);
   }
 };
 interface AddablePanelInput {
@@ -46,23 +41,27 @@ interface AddablePanelInput {
   resource?: ResourceRef;
 }
 type AddPanel = (panelId: string, open: WorkbenchCompositionAddablePanel["open"]) => void;
-const openPlacementAddTarget = (
-  core: WorkbenchCore,
-  target: NavigationTarget,
-  panelId: string,
-  region: WorkbenchPanelRegion,
-) =>
-  runUserAction(core, "Add panel", async () => {
-    if (target.kind === "command") {
-      await core.commands.executeCommand(contributionRefId(target.target.command), target.target.params, {
-        source: "panel-add",
-      });
-    } else {
-      await core.navigation.openTarget(target);
+const openPlacementAddTarget = async (core: WorkbenchCore, target: NavigationTarget, region: WorkbenchPanelRegion) => {
+  if (target.kind === "command") {
+    await core.commands.executeCommand(contributionRefId(target.target.command), target.target.params, {
+      source: "panel-add",
+      region,
+    });
+  } else {
+    if (target.kind === "panel") {
+      await core.navigation.openTarget({ ...target, region });
+      return;
     }
-    const active = core.layout.getActivePanel();
-    if (active?.panelId === panelId) core.movePanel(active.instanceId, region);
-  });
+    if (target.kind === "compound") {
+      await core.navigation.openTarget({
+        ...target,
+        targets: target.targets.map((item) => (item.kind === "panel" ? { ...item, region } : item)),
+      });
+      return;
+    }
+    await core.navigation.openTarget(target);
+  }
+};
 const canAddItem = (core: WorkbenchCore, item: WorkbenchOwnedPlacementItem, resource: ResourceRef | undefined) => {
   if (item.kind !== "binding") return true;
   const target = item.binding.add;
@@ -88,18 +87,14 @@ const addShellPanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddP
     if ((!multiple && isOpen) || !canAddItem(core, placement.item, input.resource)) continue;
     add(shellPlacementContributionId(placement.id), (resource) => {
       if (placement.item.kind === "binding" && placement.item.binding.add) {
-        return openPlacementAddTarget(
-          core,
-          placement.item.binding.add,
-          shellPlacementContributionId(placement.id),
-          input.region,
-        );
+        return openPlacementAddTarget(core, placement.item.binding.add, input.region);
       }
       const identity = core.shellPlacements.openPlacement({
         placementId: placement.id,
+        region: input.region,
         ...(placement.item.kind === "binding" && resource ? { resource, open: "pin" } : {}),
       });
-      activateModePlacementInstance(core, identity, input.region);
+      activateModePlacementInstance(core, identity);
     });
   }
 };
@@ -116,18 +111,14 @@ const addModePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
     if ((!multiple && isOpen) || !canAddItem(core, placement.item, input.resource)) continue;
     add(modePlacementContributionId(placement.id), (resource) => {
       if (placement.item.kind === "binding" && placement.item.binding.add) {
-        return openPlacementAddTarget(
-          core,
-          placement.item.binding.add,
-          modePlacementContributionId(placement.id),
-          input.region,
-        );
+        return openPlacementAddTarget(core, placement.item.binding.add, input.region);
       }
       const identity = core.modePlacements.openPlacement({
         panel: placement.ref,
+        region: input.region,
         ...(placement.item.kind === "binding" && resource ? { resource, open: "pin" } : {}),
       });
-      activateModePlacementInstance(core, identity, input.region);
+      activateModePlacementInstance(core, identity);
     });
   }
 };
@@ -148,17 +139,13 @@ const addPagePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
     if ((!multiple && isOpen) || !canAddItem(core, slot.item, input.resource)) continue;
     add(pagePlacementContributionId(page.id, slot.id), (resource) => {
       if (slot.item.kind === "binding" && slot.item.binding.add) {
-        return openPlacementAddTarget(
-          core,
-          slot.item.binding.add,
-          pagePlacementContributionId(page.id, slot.id),
-          input.region,
-        );
+        return openPlacementAddTarget(core, slot.item.binding.add, input.region);
       }
       core.pages.openSlot({
         pageId: page.id,
         slotId: slot.id,
-        ...(resource ? { resource: resource } : {}),
+        region: input.region,
+        ...(slot.item.kind === "binding" && resource ? { resource } : {}),
         ...(multiple ? { open: "pin" } : {}),
       });
       const opened = Object.values(core.layout.getLayout().regions)
@@ -168,7 +155,7 @@ const addPagePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
             p.widgetId === core.layout.getLayout().activeWidgetId &&
             p.contributionId === pagePlacementContributionId(page.id, slot.id),
         );
-      if (opened) core.movePanel(opened.widgetId, input.region);
+      if (opened?.placementIdentity) activateModePlacementInstance(core, opened.placementIdentity);
     });
   }
 };
@@ -176,7 +163,13 @@ export const createOwnedAddablePanels = (core: WorkbenchCore, input: AddablePane
   const addable: WorkbenchCompositionAddablePanel[] = [];
   const add = (panelId: string, open: WorkbenchCompositionAddablePanel["open"]) => {
     const contribution = core.layout.getWidget(panelId);
-    if (contribution) addable.push({ panelId, region: input.region, contribution, open });
+    if (contribution)
+      addable.push({
+        panelId,
+        region: input.region,
+        contribution,
+        open: (resource) => runUserAction(core, "Add panel", () => open?.(resource)),
+      });
   };
   addShellPanels(core, input, add);
   addModePanels(core, input, add);

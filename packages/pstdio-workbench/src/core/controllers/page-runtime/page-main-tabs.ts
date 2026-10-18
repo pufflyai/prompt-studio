@@ -179,6 +179,7 @@ export const scopePageMainTabs = (input: PageTabsInput) => {
     reconciliation: reconcileOwnedPlacements({
       current: previous.placements,
       desired: placements,
+      destinations: state.reconciliation.destinations,
       activate: state.reconciliation.activate
         .filter((entry) =>
           placements.some(

@@ -10,7 +10,7 @@ import type {
   WorkbenchWidgetPlacement,
   WorkbenchWidgetRole,
 } from "../layout/layout-types";
-import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
+import type { PlacementDestination, ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchViewMenuRegistry } from "../view-menus/view-menu-registry";
 import { registerWorkbenchViewPlacement, type WorkbenchPlacementPresentation } from "../views/view-placement";
@@ -41,6 +41,8 @@ export interface WorkbenchShellPlacementContribution extends WorkbenchPlacementP
 }
 export interface OpenWorkbenchShellPlacementInput {
   placementId: string;
+  /** Explicit destination for this open. Omit to keep an existing tab's placement. */
+  region?: WorkbenchRegion;
   resource?: ResourceRef;
   open?: PageOpenIntent;
   title?: string;
@@ -103,9 +105,9 @@ export const createWorkbenchShellPlacementRegistry = (input: {
   let state = createOwnedPlacementState();
   const listeners = new Set<() => void>();
   const label = "Shell placement";
-  let runtime: (() => void) | undefined;
-  const emitChange = () => {
-    runtime?.();
+  let runtime: ((destination?: PlacementDestination) => void) | undefined;
+  const emitChange = (destination?: PlacementDestination) => {
+    runtime?.(destination);
     for (const listener of listeners)
       notifyWorkbenchChange(listener, () => runWorkbenchEffect("shell placement subscriber", listener));
   };
@@ -274,7 +276,7 @@ export const createWorkbenchShellPlacementRegistry = (input: {
     openPlacement(target) {
       const prepared = preparation.open(target);
       preparation.apply(prepared.state);
-      preparation.publish();
+      preparation.publish(target.region ? { identity: prepared.identity, region: target.region } : undefined);
       if (target.activate !== false)
         input.activatePanel(
           `workbench.shell.${encodeURIComponent(target.placementId)}.${encodeURIComponent(prepared.identity.instanceKey)}`,

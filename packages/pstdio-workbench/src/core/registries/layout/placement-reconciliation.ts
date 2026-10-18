@@ -1,6 +1,11 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { type WorkbenchRegion, workbenchRegions } from "./layout-types";
 
+export interface PlacementDestination {
+  identity: PlacementIdentity;
+  region: WorkbenchRegion;
+}
+
 export interface ResolvedOwnedPlacement<Value = unknown> {
   identity: PlacementIdentity;
   region: WorkbenchRegion;
@@ -28,6 +33,7 @@ export interface OwnedPlacementUpdate<Value> {
 }
 
 export interface OwnedPlacementReconciliation<Value> {
+  destinations?: readonly PlacementDestination[];
   add: readonly ResolvedOwnedPlacement<Value>[];
   retain: readonly ResolvedOwnedPlacement<Value>[];
   update: readonly OwnedPlacementUpdate<Value>[];
@@ -36,6 +42,7 @@ export interface OwnedPlacementReconciliation<Value> {
 }
 
 export interface ReconcileOwnedPlacementsInput<Value> {
+  destinations?: readonly PlacementDestination[];
   current: readonly ResolvedOwnedPlacement<Value>[];
   desired: readonly ResolvedOwnedPlacement<Value>[];
   activate?: readonly PlacementIdentity[];
@@ -184,5 +191,12 @@ export const reconcileOwnedPlacements = <Value>(
   update.sort((left, right) => comparePlacementIdentity(left.desired, right.desired));
   activate.sort(comparePlacementIdentity);
   remove.sort(comparePlacementIdentity);
-  return { add, retain, update, activate, remove };
+  return {
+    add,
+    retain,
+    update,
+    activate,
+    remove,
+    ...(input.destinations?.length ? { destinations: input.destinations } : {}),
+  };
 };

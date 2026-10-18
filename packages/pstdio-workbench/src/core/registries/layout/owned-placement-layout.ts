@@ -11,7 +11,12 @@ import {
   type WorkbenchWidgetPlacement,
   workbenchRegions,
 } from "./layout-types";
-import { composeOwnedPlacements, placementIdentityKey, type ResolvedOwnedPlacement } from "./placement-reconciliation";
+import {
+  composeOwnedPlacements,
+  type PlacementDestination,
+  placementIdentityKey,
+  type ResolvedOwnedPlacement,
+} from "./placement-reconciliation";
 import { planTrayTabs } from "./tray-tabs";
 
 export type WorkbenchOwnedWidgetPlacement = ResolvedOwnedPlacement<WorkbenchWidgetPlacement>;
@@ -21,6 +26,7 @@ export interface ReconcileOwnedWidgetLayoutInput {
   modeLayout?: WorkbenchLayout;
   placements: readonly WorkbenchOwnedWidgetPlacement[];
   activate?: readonly PlacementIdentity[];
+  destinations?: readonly PlacementDestination[];
 }
 
 export interface ApplyOwnedWidgetLayoutReconciliationInput extends ReconcileOwnedWidgetLayoutInput {
@@ -136,6 +142,9 @@ export const renderDesiredPlacements = (
   const currentWidgetOwners = indexCurrentWidgetOwners(input.layout);
   const saved = input.modeLayout ? indexCurrentOwnedPlacements(input.modeLayout) : new Map();
   const desiredWidgetIds = new Set<string>();
+  const destinations = new Map(
+    input.destinations?.map((destination) => [placementIdentityKey(destination.identity), destination.region]),
+  );
 
   const ordered = composeOwnedPlacements({
     shell: input.placements.filter((placement) => placement.identity.kind === "shell"),
@@ -164,7 +173,7 @@ export const renderDesiredPlacements = (
     const ownerResourceKey = resolveOwnerResourceKey(desired, exact?.placement, transfer?.[1].placement);
     rendered.push({
       identity: desired.identity,
-      region: exact?.region ?? desired.region,
+      region: destinations.get(key) ?? exact?.region ?? desired.region,
       placement: {
         ...desired.value,
         widgetId,

@@ -3,6 +3,7 @@ import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import {
   composeOwnedPlacements,
   type OwnedPlacementReconciliation,
+  type PlacementDestination,
   type ResolvedOwnedPlacement,
 } from "../layout/placement-reconciliation";
 import type {
@@ -27,6 +28,7 @@ export interface PageRegistryCommitInput<Value> {
   activeModeId?: string;
   modePlacements?: readonly ResolvedOwnedPlacement<Value>[];
   activate?: readonly PlacementIdentity[];
+  destinations?: readonly PlacementDestination[];
   action: string;
 }
 
@@ -56,6 +58,7 @@ export const resolveModePlacementSet = <Value>(input: {
 };
 
 export const refreshActiveModePlacements = <Value>(input: {
+  destination?: PlacementDestination;
   state: WorkbenchPageRegistryStoreState<Value>;
   registryInput: CreateWorkbenchPageRegistryInput<Value>;
   commit(next: PageRegistryCommitInput<Value>): void;
@@ -69,11 +72,13 @@ export const refreshActiveModePlacements = <Value>(input: {
     activePageId: input.state.activePageId,
     activeModeId: modeId,
     modePlacements: input.registryInput.resolveModePlacements(modeId),
+    destinations: input.destination ? [input.destination] : undefined,
     action: "refreshModePlacements",
   });
 };
 
 export const refreshShellPlacements = <Value>(input: {
+  destination?: PlacementDestination;
   state: WorkbenchPageRegistryStoreState<Value>;
   commit(next: PageRegistryCommitInput<Value>): void;
 }) => {
@@ -83,6 +88,7 @@ export const refreshShellPlacements = <Value>(input: {
     location: input.state.location,
     activePageId: input.state.activePageId,
     activeModeId: input.state.activeModeId,
+    destinations: input.destination ? [input.destination] : undefined,
     action: "refreshShellPlacements",
   });
 };

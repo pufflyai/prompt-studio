@@ -1,5 +1,5 @@
 import { activateModePlacementInstance } from "./controllers/composition/owned-addable-panels";
-import { prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
+import { panelModeId, prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import {
   createNavigationRegistry,
@@ -39,6 +39,7 @@ const openPageSlotTarget = (core: WorkbenchCore, target: NavigationTargetPanel, 
   core.pages.openSlot({
     pageId: page.id,
     slotId: panel.id,
+    region: target.region,
     ...(target.resource ? { resource: target.resource } : {}),
     ...(target.open ? { open: target.open } : {}),
   });
@@ -62,6 +63,7 @@ const openModePlacementTarget = (core: WorkbenchCore, target: NavigationTargetPa
   }
   const identity = core.modePlacements.openPlacement({
     panel,
+    region: target.region,
     ...(target.resource ? { resource: target.resource } : {}),
     ...(target.open ? { open: target.open } : {}),
   });
@@ -74,6 +76,7 @@ const openShellPlacementTarget = (core: WorkbenchCore, target: NavigationTargetS
   if (!placement) throw new Error(`Unknown shell placement: ${target.panel.id}`);
   const identity = core.shellPlacements.openPlacement({
     placementId: target.panel.id,
+    region: target.region,
     ...(target.resource ? { resource: target.resource } : {}),
     ...(target.open ? { open: target.open } : {}),
     ...(target.title ? { title: target.title } : {}),
@@ -83,6 +86,7 @@ const openShellPlacementTarget = (core: WorkbenchCore, target: NavigationTargetS
 };
 
 const openCorePanelTarget = (core: WorkbenchCore, target: NavigationTargetPanel) => {
+  panelModeId(core, target);
   const panel = target.panel;
   if (panel.kind === "shell-placement") {
     openShellPlacementTarget(core, { ...target, panel });
@@ -109,7 +113,8 @@ export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =
           if (!result.ok) throw new Error(result.diagnostic.message);
           return result;
         },
-        executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
+        executeCommand: (commandId, args, region) =>
+          core.commands.executeCommand(commandId, args, region ? { region, source: "panel-add" } : undefined),
         openHref: (href) => globalThis.open(href, "_blank", "noopener,noreferrer"),
       };
     },
