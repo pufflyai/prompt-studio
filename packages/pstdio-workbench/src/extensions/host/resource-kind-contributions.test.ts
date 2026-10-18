@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { CommandResponse } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../core";
 import { emptyWorkbenchExtensionMetadata } from "../contributions/extension-contributions";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
@@ -12,7 +13,9 @@ const setup = (value: unknown) => {
     projectId: "project",
     executeCommand: (commandId, body, signal) => {
       calls.push({ commandId, body, signal });
-      return { outcome: { status: "success", value, navigationRequests: [{ kind: "href", href: "/ignored" }] } };
+      return {
+        outcome: { ok: true, status: "success", value, navigationRequests: [{ kind: "href", href: "/ignored" }] },
+      } satisfies CommandResponse;
     },
     metadata: {
       ...emptyWorkbenchExtensionMetadata,
