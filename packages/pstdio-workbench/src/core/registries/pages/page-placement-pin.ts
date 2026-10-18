@@ -24,12 +24,9 @@ export const pinPagePlacement = <Value>(
         ...current,
         resourceInstances: {
           ...current.resourceInstances,
-          [identity.slotId]: instances
-            .filter(
-              (instance) =>
-                open !== "preview" || instance.open === "pin" || instance.instanceKey === identity.instanceKey,
-            )
-            .map((instance) => (instance.instanceKey === identity.instanceKey ? { ...instance, open } : instance)),
+          [identity.slotId]: instances.map((instance) =>
+            instance.instanceKey === identity.instanceKey ? { ...instance, open } : instance,
+          ),
         },
       },
     },

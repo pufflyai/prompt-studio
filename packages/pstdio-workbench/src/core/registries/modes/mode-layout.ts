@@ -96,28 +96,13 @@ export const restoreUnscopedModeLayout = (
   current: WorkbenchLayout,
   saved: WorkbenchLayout | undefined,
   panels: readonly WorkbenchPanelRegion[],
+  defaults: WorkbenchLayout,
 ) => {
   if (!saved) {
-    const regions = { ...current.regions };
-    for (const regionId of allModeRegions) {
-      const region = regions[regionId];
-      const widgets = region.widgets.filter((placement) => placement.role !== "content");
-      regions[regionId] = {
-        ...region,
-        widgets,
-        activeWidgetId: widgets.some((placement) => placement.widgetId === region.activeWidgetId)
-          ? region.activeWidgetId
-          : undefined,
-      };
-    }
-    const withoutModeContent = { ...current, regions };
-    return applyModePanelAvailability(
-      {
-        ...withActivePlacement(withoutModeContent, [placementById(withoutModeContent, current.activeWidgetId)]),
-        activeLocationWidgetId: placementById(withoutModeContent, current.activeLocationWidgetId)?.widgetId,
-      },
-      panels,
-    );
+    const cleared = clearRegions(current, allModeRegions);
+    const regions = { ...cleared.regions };
+    for (const regionId of allModeRegions) regions[regionId] = defaults.regions[regionId];
+    return applyModePanelAvailability({ ...cleared, regions }, panels);
   }
 
   const regions = { ...current.regions };

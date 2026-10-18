@@ -4,6 +4,8 @@ Manage saved conversations from the session breadcrumb or its row in the Session
 
 This page describes the session menu from the release after 0.43.x. In 0.43.x, you can rename a session from its breadcrumb and archive it with `pst sessions archive --id <session-id>`. Release 0.43.x cannot delete a session.
 
+Choosing **New session** opens its composer. Opening a ticket or workspace previews its latest related session as an unpinned tab. This follows the shared **Open related resources** setting in Appearance, which is on by default. Turn it off to open related sessions only when you choose them. Creating a session from the UI opens it in either setting.
+
 ## Open session actions
 
 Select a session, then open the arrow beside its name in the breadcrumb. You can also right-click its navigation row, press Shift+F10 or the Context Menu key, or use the row's touch menu.

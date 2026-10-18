@@ -1,7 +1,9 @@
 import type { ResourceAnchor, ResourceAnchorPage, ResourceAnchorQuery, ResourceRef } from "@pstdio/sdk/extensions";
+import type { NavigationTarget } from "../../core";
 
 export interface ResourceLinkCandidate {
   resource: ResourceRef;
+  target?: NavigationTarget;
   description?: string;
   open?: () => void | Promise<void>;
 }

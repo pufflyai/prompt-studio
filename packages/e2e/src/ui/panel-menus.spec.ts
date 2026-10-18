@@ -2,6 +2,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
+import { switchSession } from "./helpers/resource-actions";
 
 const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
   await tab.click({ button: "right" });
@@ -135,36 +136,29 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   await expect(menu.getByRole("menuitem").first()).toContainText("New session");
   await expect(menu.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Reset layout", exact: true })).toBeVisible();
-  await expect(menu.getByRole("separator")).toHaveCount(3);
+  await expect(menu.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
+  await expect(menu.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
+  await expect(newSession.locator("svg")).toHaveClass(/lucide-message-square-plus/);
   await expect(viewAllSessions.locator("svg")).toHaveClass(/lucide-arrow-up-right/);
 
-  await menu.getByRole("menuitem", { name: "First context session" }).click();
+  await switchSession(page, "First context session");
   await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();
   await expect(sessionTabs).toHaveCount(2);
 
   await openTabCustomMenu(sideHeader.getByRole("tab", { name: /First context session/ }));
-  await page
-    .getByRole("menu", { name: "First context session context menu" })
-    .getByRole("menuitem", { name: "Second context session" })
-    .click();
+  await switchSession(page, "Second context session");
   await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toBeVisible();
   await expect(sessionTabs).toHaveCount(2);
 
   await openTabCustomMenu(sideHeader.getByRole("tab", { name: /New session/ }));
-  await page
-    .getByRole("menu", { name: "New session context menu" })
-    .getByRole("menuitem", { name: "First context session" })
-    .click();
+  await switchSession(page, "First context session");
   await expect(sessionTabs).toHaveCount(2);
   await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toBeVisible();
   await expect(sideHeader.getByRole("tab", { name: /New session/ })).toHaveCount(0);
   await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();
 
   await openTabCustomMenu(sideHeader.getByRole("tab", { name: /First context session/ }));
-  await page
-    .getByRole("menu", { name: "First context session context menu" })
-    .getByRole("menuitem", { name: "Second context session" })
-    .click();
+  await switchSession(page, "Second context session");
   await expect(sessionTabs).toHaveCount(2);
   await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toHaveAttribute(
     "aria-selected",
@@ -215,7 +209,7 @@ test("switches a pinned Session tab in place from its menu", async ({ page, requ
   const pinned = sideHeader.locator(`[role="tab"]:not([id="${previewId}"])`);
   for (const title of ["First context session", "Second context session"]) {
     await openTabCustomMenu(pinned);
-    await page.getByRole("menu").getByRole("menuitem", { name: title, exact: true }).click();
+    await switchSession(page, title);
     await expect(sessionTabs).toHaveCount(2);
     await expect(pinned).toHaveText(title);
     await expect(pinned).toHaveAttribute("aria-selected", "true");

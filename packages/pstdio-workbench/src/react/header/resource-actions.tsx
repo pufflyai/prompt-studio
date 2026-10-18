@@ -1,11 +1,11 @@
 import { IconButton } from "@chakra-ui/react";
 import { ResourceActionMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
-import { resolvePageActivePlacement } from "../../core/registries/pages/page-active-placement";
+import { resolvePageBreadcrumbPlacement } from "../../core/registries/pages/page-active-placement";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { createWorkbenchLocationActions, useWorkbenchResourceActionResolver } from "../menus/resource-actions";
+import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
-import { placementMenuActions } from "../shared/placement-menu-actions";
 import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 export const WorkbenchBreadcrumbActions = (props: { workbench: WorkbenchCore }) => {
@@ -15,30 +15,24 @@ export const WorkbenchBreadcrumbActions = (props: { workbench: WorkbenchCore }) 
   const page = useWorkbenchStore(workbench.pages.store, (state) =>
     state.activePageId ? state.pages[state.activePageId] : undefined,
   );
+  const routedResource = useWorkbenchStore(workbench.pages.store, (state) => state.location?.resource);
   const placement = useWorkbenchStore(workbench.layout.store, (state) =>
-    resolvePageActivePlacement(state.layout, page),
+    resolvePageBreadcrumbPlacement(state.layout, page, routedResource),
   );
   const snapshot = usePlacementTab(placement, workbench);
-  const resolveActions = useWorkbenchResourceActionResolver(workbench);
-  const contributed = placementMenuActions(workbench, snapshot);
-  const subject = contributed.length ? placement?.resource : (items.at(-1)?.resource ?? placement?.resource);
+  useWorkbenchResourceActionResolver(workbench);
+  const subject = placement?.resource ?? items.at(-1)?.resource;
   const resource = subject ? resolveResourcePreview(subject, changes) : undefined;
-  const resolved = resource ? resolveActions(resource) : [];
-  const commandIds = new Set(resolved.map((action) => action.commandId));
-  const keys = new Set(resolved.map((action) => action.key));
-  const resourceActions = [
-    ...resolved,
-    ...contributed.filter(
-      (action) => !keys.has(action.key) && (!action.commandId || !commandIds.has(action.commandId)),
-    ),
+  const resourceActions = createWorkbenchResourceMenu(workbench, resource, snapshot);
+  const actions = [
+    ...resourceActions,
+    ...createWorkbenchLocationActions(workbench, resource).map((action) => ({
+      ...action,
+      group: { id: "location", label: "Location" },
+    })),
   ];
-  const [firstLocationAction, ...locationActions] = createWorkbenchLocationActions(workbench, resource);
-  const actions = firstLocationAction
-    ? [...resourceActions, { ...firstLocationAction, separatorBefore: resourceActions.length > 0 }, ...locationActions]
-    : resourceActions;
   if (items.length === 0 || actions.length === 0) return null;
-  const resourceLabel =
-    (contributed.length ? snapshot.label : undefined) ?? resource?.label ?? resource?.id ?? resource?.type;
+  const resourceLabel = snapshot.label ?? resource?.label ?? resource?.id ?? resource?.type;
   const label = resource ? `Actions for ${resourceLabel}` : "Page actions";
   return (
     <ResourceActionMenu actions={actions} positioning={{ placement: "bottom-start" }}>

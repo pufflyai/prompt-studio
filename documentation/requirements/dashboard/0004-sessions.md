@@ -129,7 +129,9 @@ The [sessions module](../../../packages/pstdio-dashboard/src/modules/sessions/mo
 - **Expected evidence**: Session selection, new-session creation from the composer, follow-up messaging, approval handling, download, and archive actions are all present.
 - **Where to find artifacts**: `packages/pstdio-dashboard/src/modules/sessions/`
 
-Choosing New session from a session tab menu replaces that tab with an empty draft. The + button opens an additional tab. Selecting a recent session from a tab menu shows it in that tab, whether the tab holds a draft or a session. The menu never opens another tab. The tab keeps its position and retention. Selecting a session that is already open in another tab focuses that tab. Visible tab status indicators update from synchronized session state, including inactive tabs.
+Choosing New session from a session tab menu replaces that tab with an empty draft. The + button opens an additional tab. Selecting a session from a tab menu shows it in that tab, whether the tab holds a draft or a session. The menu never opens another tab. The tab keeps its position and retention. Selecting a session that is already open in another tab focuses that tab. Visible tab status indicators update from synchronized session state, including inactive tabs.
+
+Session menus begin with resource-owned actions such as Rename, Archive, and Delete. Navigation, tab, and breadcrumb resource menus use the same action definitions and lifecycle guards. The Sessions section contains New session, Switch session, and View all sessions. Switch session opens a resource search modal using the command palette component. It searches titles across the full visible project history, ordered by last activity. Sessions are already synced; the palette virtualizes rows so long histories render on demand without a fixed recent-session limit. Results show the same status icon and semantic color as Session tabs, with an accessible status label. Live session updates refresh the indicators without clearing search. Selecting a result replaces the invoking tab. Drafts keep the Sessions section without saved-session management actions. The current Session page's breadcrumb reuses this section and adds page actions instead of Tab controls. Open session panel remains a command for other callers and is not a session item action.
 
 ## Delivery record
 
@@ -138,7 +140,7 @@ Checked on 2026-10-18 against main commit `45580feb`. The newest stable release 
 | Field | Record |
 | --- | --- |
 | Status | Released for the core list, chat, queue, approval, and draft flows. Live provider behavior is not proven by automated tests. |
-| Implementation | `packages/pstdio-dashboard/src/modules/sessions/`. Recent changes include durable queued requests and steering (#958), visible queued follow-ups (#1045), shared session actions (#1100), and bounded chat rendering (#1113). |
-| Availability | #958 shipped in `pstdio@0.42.0` and #1045 in `pstdio@0.43.1`. #1100 and #1113 are in the nightly only. |
+| Implementation | `packages/pstdio-dashboard/src/modules/sessions/`. Recent changes include durable queued requests and steering (#958), visible queued follow-ups (#1045), shared session actions (#1100), bounded chat rendering (#1113), and resource-owned menus with searchable session history (#1120). |
+| Availability | #958 shipped in `pstdio@0.42.0` and #1045 in `pstdio@0.43.1`. #1100 and #1113 are in the nightly only. #1120 is on `main` only. |
 | Remaining work | Validate real authenticated sessions, follow-ups, steering, and approvals for each supported provider. This is W6 in the [documentation reliability plan](../platform/0013-documentation-and-skills-reliability.md#w6-close-acceptance-and-usability-gaps). |
 | Evidence | Playwright specs that use the `workbench-fixture` fake harness, for example `session-live-follow-ups.spec.ts`, `session-chat-state.spec.ts`, and `session-panel-restore.spec.ts`, run in the full CI stage on `main`. The provider specs `session-follow-up-ordering-{codex,claude,opencode}.spec.ts` skip unless `E2E_AGENTS` is set, and no CI workflow sets it. None of these were rerun for this record. |

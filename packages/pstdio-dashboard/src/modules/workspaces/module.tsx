@@ -3,6 +3,7 @@ import { type CreateWorkspaceCommandParams, resourceKey, workbenchPages } from "
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { lazy, Suspense } from "react";
+import { subscribeCollections } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
@@ -19,7 +20,8 @@ import { WorkspaceSummary } from "./components/workspace-summary";
 import { resourceMetadataString } from "./resource-metadata";
 import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
 import { registerWorkspaceSidenavContributions } from "./workspace-navigation";
-import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
+import { workspaceRelatedOpenings } from "./workspace-related-openings";
+import { registerWorkspaceResourceActions } from "./workspace-resource-actions";
 import { watchOpenWorkspaceResource } from "./workspace-resource-sync";
 
 const WorkspaceDiffsPanel = lazy(() =>
@@ -195,7 +197,6 @@ const syncActiveWorkspacePage = (ctx: WorkbenchModuleContext) => {
   if (state.activePageId !== workbenchPages.workspace.id || state.location?.resource?.type !== "workspace") return;
   const resource = ctx.getPrimaryResource();
   if (!resource) return;
-  ensureWorkspaceTerminalResource(ctx, resource);
   updateDashboardSidenav(ctx, { selectedNode: null });
   if (resourceMetadataString(resource, "workspaceView") !== "files") return;
   const files = ctx.layout
@@ -211,8 +212,18 @@ export const createWorkspacesModule = () =>
     activate(ctx) {
       ctx.resources.registerKind({
         kind: "workspace",
+        extensionId: "pstdio",
+        relatedOpenings: (resource, signal) => workspaceRelatedOpenings(ctx, resource, signal),
         label: "Workspace",
         icon: dashboardViews.workspaces.icon,
+        resolve: (resource) =>
+          createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).find(
+            (workspace) => workspace.id === resource.id,
+          )?.resource ?? resource,
+        subscribe: (listener) =>
+          subscribeCollections((change) => {
+            if (!change || change.table === "workspaces") listener();
+          }),
       });
       ctx.resources.registerProvider({
         id: "dashboard-workbench.workspaces",
@@ -220,6 +231,7 @@ export const createWorkspacesModule = () =>
         list: () =>
           createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).map((workspace) => ({
             resource: workspace.resource,
+            target: { kind: "page", page: workbenchPages.workspace, resource: workspace.resource },
             searchText: [workspace.title, workspace.shorthand, workspace.branch].filter(Boolean).join(" "),
             group: "Workspaces",
             activate: () => openWorkspacesPage(ctx, workspace.resource),

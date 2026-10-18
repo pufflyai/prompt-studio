@@ -2,6 +2,17 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbenchCommandPaletteController } from "./command-palette-controller";
 
 describe("createWorkbenchCommandPaletteController", () => {
+  test("keeps a resource search scoped to its opener and clears it on close or normal open", () => {
+    const controller = createWorkbenchCommandPaletteController();
+    const resourceSearch = { label: "Switch session", placeholder: "Search sessions", list: () => [] };
+    controller.open({ resourceSearch });
+    expect(controller.store.getState().resourceSearch).toBe(resourceSearch);
+    controller.close();
+    expect(controller.store.getState().resourceSearch).toBeNull();
+    controller.open({ resourceSearch });
+    controller.open();
+    expect(controller.store.getState().resourceSearch).toBeNull();
+  });
   test("opens and closes through domain methods and exposes store state", () => {
     const controller = createWorkbenchCommandPaletteController();
 
@@ -12,6 +23,7 @@ describe("createWorkbenchCommandPaletteController", () => {
       initialQuery: "",
       paramsRequest: null,
       confirmation: null,
+      resourceSearch: null,
     });
 
     controller.open();
@@ -23,6 +35,7 @@ describe("createWorkbenchCommandPaletteController", () => {
       initialQuery: "",
       paramsRequest: null,
       confirmation: null,
+      resourceSearch: null,
     });
 
     controller.close();
@@ -47,6 +60,7 @@ describe("createWorkbenchCommandPaletteController", () => {
       initialQuery: "",
       paramsRequest: null,
       confirmation: null,
+      resourceSearch: null,
     });
   });
 

@@ -1,8 +1,7 @@
-import { chakra, Menu, Portal, useMenu } from "@chakra-ui/react";
-import { ChevronRight } from "lucide-react";
-import { type ComponentProps, Fragment, type ReactElement, type ReactNode, useRef } from "react";
-import { ListRow } from "@/components/list-row/list-row";
+import { chakra, Menu, Portal, useMenu, useMenuContext } from "@chakra-ui/react";
+import { type ComponentProps, type ReactElement, type ReactNode, useRef } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { ResourceMenuItems } from "./resource-menu-items";
 
 type MenuRootProps = ComponentProps<typeof Menu.Root>;
 
@@ -10,6 +9,8 @@ export interface ResourceContextAction {
   key: string;
   label: string;
   commandId?: string;
+  group?: { id: string; label?: string };
+  isSelected?: boolean;
   onClick?: () => Promise<void> | void;
   /** Nested actions, opened by hover or the arrow keys. */
   items?: ResourceContextAction[];
@@ -49,6 +50,7 @@ const ResourceMenuContent = (props: {
   onSelect: (action: ResourceContextAction) => void;
 }) => {
   const { actions, contentBackground, contentMinWidth, onSelect } = props;
+  const menu = useMenuContext();
 
   return (
     <Portal>
@@ -56,47 +58,7 @@ const ResourceMenuContent = (props: {
         {/* Long menus, such as Sidenav customization, scroll inside the space left in the viewport. */}
         <Menu.Content minW={contentMinWidth} bg={contentBackground} maxH="var(--available-height)">
           <ScrollArea flex="1" minH="0" viewportProps={{ overscrollBehavior: "contain", tabIndex: -1 }}>
-            {actions.map((action) => (
-              <Fragment key={action.key}>
-                {action.separatorBefore ? <Menu.Separator /> : null}
-                {action.items && !action.isDisabled ? (
-                  <Menu.Root positioning={{ placement: "right-start", gutter: 2 }} closeOnSelect={false}>
-                    <Menu.TriggerItem asChild>
-                      <ListRow
-                        asChild
-                        variant="full-width"
-                        label={action.label}
-                        icon={action.icon}
-                        endContent={<ChevronRight size={14} />}
-                      />
-                    </Menu.TriggerItem>
-                    <ResourceMenuContent
-                      actions={action.items}
-                      contentMinWidth={contentMinWidth}
-                      contentBackground={contentBackground}
-                      onSelect={onSelect}
-                    />
-                  </Menu.Root>
-                ) : (
-                  <Menu.Item
-                    value={action.key}
-                    disabled={action.isDisabled}
-                    closeOnSelect={action.closeOnSelect}
-                    asChild
-                  >
-                    <ListRow
-                      asChild
-                      variant="full-width"
-                      label={action.label}
-                      icon={action.icon}
-                      endContent={action.items ? <ChevronRight size={14} /> : action.endContent}
-                      disabled={action.isDisabled}
-                      onActivate={() => onSelect(action)}
-                    />
-                  </Menu.Item>
-                )}
-              </Fragment>
-            ))}
+            {menu.open ? <ResourceMenuItems actions={actions} onSelect={onSelect} /> : null}
           </ScrollArea>
         </Menu.Content>
       </Menu.Positioner>

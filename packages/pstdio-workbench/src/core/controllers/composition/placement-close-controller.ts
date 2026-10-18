@@ -1,6 +1,7 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { editSharedPagePlacement, isDetachedPagePlacement } from "./shared-page-placement";
 
 export const createPlacementCloseController = (resolveCore: () => WorkbenchCore) => (identity: PlacementIdentity) => {
   const core = resolveCore();
@@ -11,6 +12,10 @@ export const createPlacementCloseController = (resolveCore: () => WorkbenchCore)
   if (!placement) throw new Error(`Placement is not open: ${key}`);
   if (!placement.closable) throw new Error(`Placement is fixed and cannot close: ${key}`);
   if (identity.kind === "page") {
+    if (isDetachedPagePlacement(core, placement)) {
+      editSharedPagePlacement(core, placement, identity, { kind: "close" });
+      return;
+    }
     const result = core.pageLocations.closePlacement(identity);
     if (!result.ok) throw new Error(result.diagnostic.message);
     return;

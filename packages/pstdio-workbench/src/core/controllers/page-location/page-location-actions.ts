@@ -1,6 +1,7 @@
 import type { NavigationTargetPage, PageLocation, PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { isWorkbenchProjectUrl, normalizePageParams } from "pstdio-api-contracts";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
+import type { createWorkbenchEvent } from "../../shared/workbench-event";
 import type {
   CreateWorkbenchPageLocationControllerInput,
   ResolvedPageLocation,
@@ -14,6 +15,7 @@ import type {
 interface PageLocationControllerActionsInput<Value> {
   input: CreateWorkbenchPageLocationControllerInput<Value>;
   historyStore: WorkbenchStore<WorkbenchPageLocationHistoryState>;
+  navigation: ReturnType<typeof createWorkbenchEvent<PageLocation>>;
   clearProject(projectId: string | undefined): void;
   resetHistory(): void;
   rootLevelTarget(): ResolvedPageLocation;
@@ -22,6 +24,7 @@ interface PageLocationControllerActionsInput<Value> {
   normalizeTarget(target: NavigationTargetPage): ResolvedPageLocation;
   normalizeStored(location: PageLocation): ResolvedPageLocation;
   locationsEqual(left: PageLocation | undefined, right: PageLocation | undefined): boolean;
+  replay(projectId: string, resolved: ResolvedPageLocation): WorkbenchPageNavigationResult;
   commit(
     projectId: string,
     resolved: ResolvedPageLocation,
@@ -48,8 +51,14 @@ export const createPageLocationControllerActions = <Value>(
   actions: PageLocationControllerActionsInput<Value>,
 ): WorkbenchPageLocationController => {
   const { input } = actions;
+  const { navigation } = actions;
+  const navigated = (result: WorkbenchPageNavigationResult) => {
+    if (result.ok) navigation.notify(result.location);
+    return result;
+  };
   return {
     historyStore: actions.historyStore,
+    onDidNavigate: navigation.subscribe,
     removeResource: actions.removeResource,
     setProject(projectId) {
       if (input.registry.store.getState().projectId === projectId) return;
@@ -87,7 +96,7 @@ export const createPageLocationControllerActions = <Value>(
         const history = actions.locationsEqual(input.registry.store.getState().location, resolved.location)
           ? "none"
           : "push";
-        return actions.commit(projectId, resolved, history, "navigatePageLocation");
+        return navigated(actions.commit(projectId, resolved, history, "navigatePageLocation"));
       } catch (error) {
         return actions.fail("navigation", error);
       }
@@ -114,7 +123,7 @@ export const createPageLocationControllerActions = <Value>(
       const projectId = input.registry.store.getState().projectId;
       if (!projectId) return actions.fail("history", new Error("Cannot replay a page before a project is active"));
       try {
-        return actions.commit(projectId, actions.normalizeStored(location), "replace", "replayWorkbenchPageHistory");
+        return actions.replay(projectId, actions.normalizeStored(location));
       } catch (error) {
         return actions.fail("history", error);
       }
@@ -125,11 +134,13 @@ export const createPageLocationControllerActions = <Value>(
         return actions.fail("navigation", new Error("The active page does not have a parent location"));
       }
       try {
-        return actions.commit(
-          current.projectId,
-          actions.normalizeStored(current.location.parent),
-          "replace",
-          "navigateToParentPageLocation",
+        return navigated(
+          actions.commit(
+            current.projectId,
+            actions.normalizeStored(current.location.parent),
+            "replace",
+            "navigateToParentPageLocation",
+          ),
         );
       } catch (error) {
         return actions.fail("navigation", error);
@@ -143,7 +154,7 @@ export const createPageLocationControllerActions = <Value>(
       try {
         const resolved = actions.rootLevelTarget();
         const history = actions.locationsEqual(current.location, resolved.location) ? "none" : "push";
-        return actions.commit(current.projectId, resolved, history, "navigateToRootLevelPageLocation");
+        return navigated(actions.commit(current.projectId, resolved, history, "navigateToRootLevelPageLocation"));
       } catch (error) {
         return actions.fail("navigation", error);
       }

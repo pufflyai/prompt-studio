@@ -114,7 +114,7 @@ describe("owned placement composition", () => {
     );
   });
 
-  test("rejects placements from more than one active mode or page", () => {
+  test("keeps one mode while composing tabs created by different pages", () => {
     const projectMode = placement(modeIdentity("sessions"), "side", "project");
     const sessionsMode = placement(
       { kind: "mode", modeId: "pstdio.host.mode.sessions", placementId: "header", instanceKey: "default" },
@@ -127,9 +127,7 @@ describe("owned placement composition", () => {
     expect(() => composeOwnedPlacements({ shell: [], mode: [projectMode, sessionsMode], page: [] })).toThrow(
       "Mode placements must belong to one active mode",
     );
-    expect(() => composeOwnedPlacements({ shell: [], mode: [], page: [ticketPage, ticketsPage] })).toThrow(
-      "Page placements must belong to one active page",
-    );
+    expect(composeOwnedPlacements({ shell: [], page: [ticketPage, ticketsPage] }).placements).toHaveLength(2);
   });
 
   test("rejects non-finite order values", () => {

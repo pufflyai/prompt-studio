@@ -21,9 +21,11 @@ import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { verifyPackagedCollectionBreadcrumb } from "./packaged-collection-breadcrumb";
+import { verifyPackagedDocumentState } from "./packaged-document-state";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPackagedNoteHeadings } from "./packaged-note-headings";
 import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
+import { verifyPackagedPreviewSelection } from "./packaged-preview-selection";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { verifyPackagedSessionMenus } from "./packaged-session-menus";
 import { verifyPackagedShortcutReference } from "./packaged-shortcut-reference";
@@ -206,6 +208,7 @@ test.describe("packaged extension webviews", () => {
               project.id,
               runtimeAuthorization(started.descriptor),
             );
+            await verifyPackagedPreviewSelection(page, project.id, started.descriptor);
             await verifyPackagedPanelMenuTabs(page, started.baseUrl, project.id);
             await verifyPackagedCollectionBreadcrumb(
               page,
@@ -214,6 +217,7 @@ test.describe("packaged extension webviews", () => {
               projectFolder,
               runtimeAuthorization(started.descriptor),
             );
+            await verifyPackagedDocumentState(page, started.baseUrl, project.id);
             await page.goto(`${started.baseUrl}/projects/${project.id}/workspaces`);
             const sidenav = page.locator('[data-workbench-region="sidenav"]');
             await verifyTreeGroups(page, sidenav, sidenav.getByRole("option", { name: "Search", exact: true }));

@@ -1,7 +1,7 @@
 import type { WorkbenchPagePersistenceScopeInput } from "@pstdio/workbench";
 import { defaultPageResourceCodec } from "@pstdio/workbench";
 
-const projectOwnedRegions = [
+const modeOwnedRegions = [
   "nav",
   "activity",
   "sidenav",
@@ -9,6 +9,10 @@ const projectOwnedRegions = [
   "side-left-menu",
   "side",
   "side-right-menu",
+  "secondary-header",
+  "secondary-left-menu",
+  "secondary",
+  "secondary-right-menu",
   "status",
 ] as const;
 // The bare project scope is only a loading step before a page applies. Its saved
@@ -22,8 +26,6 @@ export const resolveDashboardPersistenceScope = (input: WorkbenchPagePersistence
       ? `project/${projectId}/mode/${modeId}/${resource ? `resource/${defaultPageResourceCodec.toUri(resource)}` : `page/${pageId}`}`
       : `project/${projectId}`;
   const current = pageScopeMatch(currentScope);
-  const sameMode = current?.[2] === modeId;
-  const carryRegions =
-    current?.[1] === projectId ? projectOwnedRegions.filter((region) => sameMode || !/^side(?:-|$)/.test(region)) : [];
+  const carryRegions = current?.[1] === projectId && current?.[2] === modeId ? modeOwnedRegions : [];
   return { scope, carryRegions };
 };

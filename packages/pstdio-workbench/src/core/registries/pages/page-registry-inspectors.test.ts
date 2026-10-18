@@ -50,7 +50,7 @@ describe("page inspector lifecycle", () => {
     activatePage(registry, { pageId: "compare", resource: file });
     registry.openSlot({ pageId: "compare", slotId: "right", resource: file });
     expect(registry.store.getState().placements.map((candidate) => candidate.identity)).toEqual([
-      pageIdentity("compare", "$main", "single"),
+      pageIdentity("compare", "$main", "file:same"),
       pageIdentity("compare", "right", "single"),
     ]);
   });
@@ -101,11 +101,11 @@ describe("page inspector lifecycle", () => {
     });
     activatePage(registry, { pageId: "ticket", resource: { type: "ticket", id: "PS-326" } });
     expect(registry.store.getState().placements.map((candidate) => candidate.identity)).toEqual([
-      pageIdentity("ticket", "$main", "single"),
+      pageIdentity("ticket", "$main", "ticket:PS-326"),
       pageIdentity("ticket", "files", "single"),
     ]);
     expect(registry.store.getState().reconciliation.activate.map((candidate) => candidate.identity)).toEqual([
-      pageIdentity("ticket", "$main", "single"),
+      pageIdentity("ticket", "$main", "ticket:PS-326"),
       pageIdentity("ticket", "files", "single"),
     ]);
   });

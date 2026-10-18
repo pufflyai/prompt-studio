@@ -8,6 +8,7 @@ import {
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import { applyModePanelAvailability, panelsForMode } from "../../registries/modes/mode-layout";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
@@ -28,8 +29,16 @@ import type { WorkbenchViewMenuRegistry } from "../../registries/view-menus/view
 import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../../registries/views/view-placement";
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable } from "../../shared/disposable";
+import { restoreModePanelLayout } from "./mode-panel-layout";
+import { pageContextChanged, scopePageMainTabs } from "./page-main-tabs";
+import { closeDepartingPagePreviews, departingPagePreviews } from "./page-preview-lifetime";
+import { connectTrayPreviewRemoval } from "./tray-preview-removal";
+import { retainTrayPreviews } from "./tray-preview-retention";
 export interface ConnectWorkbenchPageRuntimeInput {
+  loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
+  saveModeLayout?(projectId: string | undefined, modeId: string, layout: WorkbenchLayout): void;
+  savePageMain?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>, layout: WorkbenchLayout): void;
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
@@ -60,10 +69,51 @@ const bindPlacementsToActivePageLocation = (state: WorkbenchPageRegistryStoreSta
   const ownerResourceKey = resourceKey(state.location?.resource);
   if (!ownerResourceKey) return state.placements;
   return state.placements.map((placement) =>
-    placement.value.role === "sub-panel" && (placement.identity.kind === "page" || Boolean(placement.value.resourceKey))
+    placement.value.role === "sub-panel" && placement.identity.kind === "page"
       ? { ...placement, value: { ...placement.value, ownerResourceKey } }
       : placement,
   );
+};
+const isModeReturn = (
+  previous: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  next: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  modeChanged: boolean,
+  saved: WorkbenchLayout | undefined,
+) => Boolean(previous.activeModeId && previous.projectId === next.projectId && modeChanged && saved);
+const reconcilePageLayout = (
+  input: Parameters<typeof reconcileOwnedWidgetLayout>[0],
+  state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  restoredScope: boolean,
+) => {
+  // A restored cache needs the complete owned set; a delta belongs to the previous scope.
+  if (restoredScope) return reconcileOwnedWidgetLayout(input);
+  return applyOwnedWidgetLayoutReconciliation({
+    ...input,
+    remove: state.reconciliation.remove.map((placement) => placement.identity),
+  });
+};
+const pageActivations = (
+  state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  latest: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  restoresMode: boolean,
+) => {
+  if (restoresMode) return [];
+  return latest.reconciliation.activate.length > 0 ? latest.reconciliation.activate : state.reconciliation.activate;
+};
+const revealPagePlacements = (
+  input: ConnectWorkbenchPageRuntimeInput,
+  layout: WorkbenchLayout,
+  placements: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>["reconciliation"]["activate"],
+) => {
+  for (const placement of placements) {
+    const key = placementIdentityKey(placement.identity);
+    const region = Object.values(layout.regions).find((region) =>
+      region.widgets.some(
+        (widget) => widget.placementIdentity && placementIdentityKey(widget.placementIdentity) === key,
+      ),
+    );
+    if (region) input.revealRegion?.(region.id);
+  }
 };
 const applyPageState = (
   input: ConnectWorkbenchPageRuntimeInput,
@@ -72,6 +122,21 @@ const applyPageState = (
   storeBeforeTransition = input.registry.store.getState(),
 ) => {
   const previousScope = input.layout.getPersistenceScope();
+  const previous = input.registry.store.getState();
+  // Before the first page, the user may already have changed the current
+  // project's panel chrome. Those choices initialize its first mode.
+  const defaultLayout = !previous.activeModeId ? input.layout.getLayout() : input.layout.store.getInitialState().layout;
+  const modeChanged = previous.activeModeId !== state.activeModeId || previous.projectId !== state.projectId;
+  const modeLayout = state.activeModeId ? input.loadModeLayout?.(state.projectId, state.activeModeId) : undefined;
+  const pageLayout = input.loadPageLayout?.(state);
+  const restoresMode = isModeReturn(previous, state, modeChanged, modeLayout);
+  if (source === "transition") {
+    if (modeChanged && previous.activeModeId)
+      input.saveModeLayout?.(previous.projectId, previous.activeModeId, input.layout.getLayout());
+    for (const preview of departingPagePreviews(state, previous, input.layout.getLayout()))
+      input.layout.removeWidgetPlacement(preview.widgetId);
+    if (pageContextChanged(state, previous)) input.savePageMain?.(previous, input.layout.getLayout());
+  }
   activateWorkbenchPageMode(input.modes, state.activeModeId, () => {
     // Scope listeners must apply the destination mode's panel policy to its saved layout.
     if (source === "transition") input.beforeApply?.(state);
@@ -80,47 +145,60 @@ const applyPageState = (
     // overwrite those declarative changes with the snapshot that began it.
     const stored = input.registry.store.getState();
     const latest = stored === storeBeforeTransition ? state : stored;
-    const activation =
-      latest.reconciliation.activate.length > 0 ? latest.reconciliation.activate : state.reconciliation.activate;
+    const restoredScope = source === "scope-restore" || input.layout.getPersistenceScope() !== previousScope;
+    const restoresLayout = modeChanged || restoredScope || pageContextChanged(state, previous);
+    const activation = pageActivations(state, latest, restoresMode);
     const layoutInput = {
-      layout: input.layout.getLayout(),
-      modeLayout: latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined,
+      layout: restoresLayout
+        ? restoreModePanelLayout(input.layout.getLayout(), modeLayout, defaultLayout, pageLayout)
+        : input.layout.getLayout(),
+      modeLayout,
       placements: bindPlacementsToActivePageLocation(latest),
       activate: activation.map((placement) => placement.identity),
     };
-    let layout: ReturnType<typeof reconcileOwnedWidgetLayout>;
-    // A restored cache needs the complete owned set; a delta belongs to the previous scope.
-    if (source === "scope-restore" || input.layout.getPersistenceScope() !== previousScope) {
-      layout = reconcileOwnedWidgetLayout(layoutInput);
-    } else {
-      layout = applyOwnedWidgetLayoutReconciliation({
-        ...layoutInput,
-        remove: latest.reconciliation.remove.map((placement) => placement.identity),
-      });
-    }
-    input.layout.restoreLayout(layout);
+    const layout = reconcilePageLayout(layoutInput, latest, restoresLayout);
+    const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
+    input.layout.restoreLayout(mode ? applyModePanelAvailability(layout, panelsForMode(mode)) : layout);
     syncOwnedPanelMenus(input.layout);
-    if (source === "transition") {
-      for (const placement of activation) input.revealRegion?.(placement.region);
-    }
+    if (source === "transition") revealPagePlacements(input, layout, activation);
   });
+  return restoresMode ? ("restore-mode" as const) : ("open-page" as const);
 };
 export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeInput) => {
   let applyingTransition = false;
-  const runtime = getWorkbenchPageRegistryInternals(input.registry).connectRuntime((state) => {
-    const storeBeforeTransition = input.registry.store.getState();
-    applyingTransition = true;
-    try {
-      applyPageState(input, state, "transition", storeBeforeTransition);
-    } finally {
-      applyingTransition = false;
-    }
-  });
+  const runtime = getWorkbenchPageRegistryInternals(input.registry).connectRuntime(
+    (state) => {
+      const storeBeforeTransition = input.registry.store.getState();
+      applyingTransition = true;
+      try {
+        return applyPageState(input, state, "transition", storeBeforeTransition);
+      } finally {
+        applyingTransition = false;
+      }
+    },
+    (state) =>
+      retainTrayPreviews(
+        scopePageMainTabs({
+          state: closeDepartingPagePreviews(state, input.registry.store.getState(), input.layout.getLayout()),
+          previous: input.registry.store.getState(),
+          layout: input.layout.getLayout(),
+          pageLayout: input.loadPageLayout?.(state),
+          modeLayout: state.activeModeId ? input.loadModeLayout?.(state.projectId, state.activeModeId) : undefined,
+          getWidget: input.layout.getWidget,
+        }),
+        input.registry.store.getState(),
+        input.loadPageLayout?.(state) ?? input.layout.getLayout(),
+        state.activeModeId ? input.loadModeLayout?.(state.projectId, state.activeModeId) : undefined,
+      ),
+  );
+  const removedPreviews = connectTrayPreviewRemoval(input, () => applyingTransition);
   const scope = input.layout.onDidChangePersistenceScope(() => {
-    if (!applyingTransition) applyPageState(input, input.registry.store.getState(), "scope-restore");
+    const state = input.registry.store.getState();
+    if (!applyingTransition && state.activePageId) applyPageState(input, state, "scope-restore");
   });
   return createDisposable(() => {
     scope.dispose();
+    removedPreviews();
     runtime.dispose();
   });
 };
@@ -153,7 +231,10 @@ const toWidgetPlacement = (
   };
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
+  loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
   loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
+  saveModeLayout?: ConnectWorkbenchPageRuntimeInput["saveModeLayout"];
+  savePageMain?: ConnectWorkbenchPageRuntimeInput["savePageMain"];
   restorePageState?: CreateWorkbenchPageRegistryInput<WorkbenchWidgetPlacement>["restorePageState"];
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
@@ -203,7 +284,10 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     },
   });
   connectWorkbenchPageRuntime({
+    loadPageLayout: input.loadPageLayout,
     loadModeLayout: input.loadModeLayout,
+    saveModeLayout: input.saveModeLayout,
+    savePageMain: input.savePageMain,
     beforeApply: (state) => {
       input.beforeApply?.(state);
       const shell = getOwnedPlacementPreparation(input.shellPlacements);

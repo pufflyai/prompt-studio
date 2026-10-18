@@ -97,3 +97,25 @@ test("keeps an owner batch resolver and rejects a foreign batch resolver", () =>
   ]);
   expect(runtime.diagnostics).toHaveLength(1);
 });
+
+test("qualifies related opening commands and accepts only the defining owner's command", () => {
+  const valid = defineResourceKind({ id: "note", relatedOpenings: resolveNote.ref });
+  const foreign = defineResourceKind({
+    id: "foreign-note",
+    relatedOpenings: commandRef({ extensionId: "pstdio.other", id: "resolve-note" }),
+  });
+  const missing = defineResourceKind({ id: "missing-note", relatedOpenings: { kind: "command", id: "missing" } });
+  const runtime = normalizeExtensionSources([
+    source("notes", defineExtension({ commands: [resolveNote], resourceKinds: [valid, foreign, missing] })),
+    source("other", defineExtension({ commands: [resolveNote] })),
+  ]);
+  expect(runtime.resourceKinds.map((kind) => kind.relatedOpeningsCommandId)).toEqual([
+    "pstdio.notes.command.resolve-note",
+    undefined,
+    undefined,
+  ]);
+  expect(runtime.diagnostics.map((entry) => entry.code)).toEqual([
+    "extension_resource_kind_resolver_invalid",
+    "extension_resource_kind_resolver_invalid",
+  ]);
+});

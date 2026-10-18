@@ -88,7 +88,7 @@ export const createArrangementWorkbench = (
               {
                 id: "new",
                 label: "New session",
-                icon: "PenBox",
+                icon: "MessageSquarePlus",
                 action: { kind: "command", commandId: "add-session" },
               },
             ],
@@ -155,7 +155,9 @@ export const DisallowedWebviewDestination: Story = {
 };
 export const Crowded: Story = { args: { workbench: createArrangementWorkbench(true) } };
 const secondaryWorkbench = createArrangementWorkbench();
-const secondarySession = secondaryWorkbench.layout.getLayout().regions.side.widgets.at(-1)!;
+const secondarySession = secondaryWorkbench.layout
+  .getLayout()
+  .regions.side.widgets.find((widget) => widget.tabRetention === "preview")!;
 secondaryWorkbench.movePanel(secondarySession.widgetId, "secondary");
 export const SecondarySession: Story = { args: { workbench: secondaryWorkbench } };
 const movedPageWorkbench = createArrangementWorkbench();
@@ -176,3 +178,16 @@ terminalWorkbench.shellPlacements.openPlacement({
 });
 terminalWorkbench.shell.setRegionOpen("secondary", true);
 export const TerminalIcons: Story = { args: { workbench: terminalWorkbench } };
+
+const previewInsertionWorkbench = createArrangementWorkbench();
+const draggedPreview = previewInsertionWorkbench.layout
+  .getLayout()
+  .regions.side.widgets.find((widget) => widget.tabRetention === "preview")!;
+previewInsertionWorkbench.movePanel(draggedPreview.widgetId, "secondary");
+void previewInsertionWorkbench.navigation.openTarget({
+  kind: "panel",
+  panel: { kind: "placement", extensionId: "storybook", id: "sessions" },
+  resource: { type: "session", id: "kept-preview", label: "Unpinned session to keep" },
+  open: "preview",
+});
+export const PreviewInsertion: Story = { args: { workbench: previewInsertionWorkbench } };

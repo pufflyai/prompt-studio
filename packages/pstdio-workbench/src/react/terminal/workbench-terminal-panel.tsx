@@ -4,7 +4,6 @@ import { Terminal, type TerminalBridge } from "@pstdio/ui/terminal";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ResourceRef, WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { terminalPlacementBindingId } from "./terminal-placement-binding";
 
 interface ControllerTerminalBridgeOptions {
   getBindingId?: () => string | undefined;
@@ -74,8 +73,7 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   }, [placement]);
   const [bridge] = useState(() =>
     createControllerTerminalBridge(workbench.terminal, {
-      getBindingId: () =>
-        terminalPlacementBindingId(workbench.layout.getPersistenceScope(), placementRef.current.instanceId),
+      getBindingId: () => placementRef.current.instanceId,
       getResource: () => placementRef.current.resource,
       getTitle: () => placementRef.current.title,
     }),

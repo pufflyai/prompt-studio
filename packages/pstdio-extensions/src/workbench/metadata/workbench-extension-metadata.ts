@@ -1,7 +1,7 @@
 import type { ExtensionKeybindingRecord, ExtensionMenuContribution, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ContributionKind, ContributionRef, WhenExpression } from "@pstdio/sdk/extensions";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
-import { serializeWhenExpression } from "../../runtime/normalize/references";
+import { resourceKindReferences, serializeWhenExpression } from "../../runtime/normalize/references";
 import { toSettingDefinitionRecord } from "../../runtime/normalize/settings";
 import type { ExtensionRuntime } from "../../types/runtime";
 import {
@@ -50,8 +50,8 @@ const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
   params: command.params as WorkbenchExtensionMetadata["commands"][number]["params"],
 });
 
-const toMenuContributions = (commands: ExtensionRuntime["commands"]): ExtensionMenuContribution[] =>
-  commands.flatMap((command) =>
+const toMenuContributions = (runtime: ExtensionRuntime): ExtensionMenuContribution[] =>
+  runtime.commands.flatMap((command) =>
     command.menus.map((menu, index) => ({
       id: `${command.id}.menu.${index}`,
       extensionId: command.extensionId,
@@ -63,7 +63,17 @@ const toMenuContributions = (commands: ExtensionRuntime["commands"]): ExtensionM
       icon: menu.icon,
       presentation: menu.presentation,
       params: menu.params as Record<string, unknown> | undefined,
-      when: serializeWhenExpression(menu.when, command.extensionId) as ExtensionMenuContribution["when"],
+      when: serializeWhenExpression(
+        menu.when,
+        command.extensionId,
+        resourceKindReferences(runtime.resourceKinds),
+      ) as ExtensionMenuContribution["when"],
+      disabledWhen: serializeWhenExpression(
+        menu.disabledWhen,
+        command.extensionId,
+        resourceKindReferences(runtime.resourceKinds),
+      ) as ExtensionMenuContribution["disabledWhen"],
+      disabledReason: menu.disabledReason,
     })),
   );
 
@@ -121,7 +131,7 @@ export const createWorkbenchExtensionMetadata = (
 ): WorkbenchExtensionMetadata => ({
   extensions: input.runtime.extensions.map(toExtensionRecord),
   commands: input.runtime.commands.map(toCommandRecord),
-  menuContributions: toMenuContributions(input.runtime.commands),
+  menuContributions: toMenuContributions(input.runtime),
   commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands).map((contribution) => ({
     ...contribution,
     when: serializeWhenExpression(
@@ -172,6 +182,7 @@ export const createWorkbenchExtensionMetadata = (
     icon: record.contribution.icon,
     resolveCommand: record.resolveCommandId,
     resolveManyCommand: record.resolveManyCommandId,
+    relatedOpeningsCommand: record.relatedOpeningsCommandId,
     paths: record.paths,
     menuSlots: Object.entries(record.contribution.menuSlots ?? {}).map(([id, slot]) => ({
       id,

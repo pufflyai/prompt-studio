@@ -11,6 +11,7 @@ import {
   defineResourceKind,
   defineView,
   packageAsset,
+  resourceMenuSlotRef,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import type { LoadedExtensionSource } from "../../runtime/loader";
@@ -32,6 +33,30 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
   definition,
 });
 describe("createWorkbenchExtensionMetadata", () => {
+  test("preserves resource action availability through normalized metadata", () => {
+    const note = defineResourceKind({
+      id: "note",
+      menuSlots: [{ id: "actions", placement: "context-menu", access: "owner" }],
+    });
+    const rename = defineCommand({
+      id: "rename",
+      title: "Rename",
+      menus: [
+        {
+          slot: resourceMenuSlotRef(note.ref, "actions"),
+          disabledWhen: { resourceType: [note.ref], metadata: { writable: false } },
+          disabledReason: "Notes are read-only.",
+        },
+      ],
+      run() {},
+    });
+    const runtime = normalizeExtensionSources([source(defineExtension({ commands: [rename], resourceKinds: [note] }))]);
+    const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
+    expect(metadata.menuContributions[0]).toMatchObject({
+      disabledWhen: { resourceType: ["note"], metadata: { writable: false } },
+      disabledReason: "Notes are read-only.",
+    });
+  });
   test("preserves opt-in resource mutations through command metadata", () => {
     const resourceMutation = { kind: "rename" as const, resourceType: "note", idParam: "noteId", labelParam: "title" };
     const rename = defineCommand({ id: "rename", title: "Rename note", resourceMutation, async run() {} });
@@ -57,12 +82,13 @@ describe("createWorkbenchExtensionMetadata", () => {
   });
   test("publishes the resource kind resolver as a qualified command id", () => {
     const resolveNote = defineCommand({ id: "resolve-note", title: "Resolve note", async run() {} });
-    const note = defineResourceKind({ id: "note", resolve: resolveNote.ref });
+    const note = defineResourceKind({ id: "note", resolve: resolveNote.ref, relatedOpenings: resolveNote.ref });
     const runtime = normalizeExtensionSources([
       source(defineExtension({ commands: [resolveNote], resourceKinds: [note] })),
     ]);
     const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
     expect(metadata.resourceKinds[0]?.resolveCommand).toBe("pstdio.lab.command.resolve-note");
+    expect(metadata.resourceKinds[0]?.relatedOpeningsCommand).toBe("pstdio.lab.command.resolve-note");
   });
   test("publishes named connection settings metadata without credentials", () => {
     const connection = defineConnection({

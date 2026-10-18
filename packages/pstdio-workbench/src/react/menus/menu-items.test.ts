@@ -4,6 +4,27 @@ import { listWorkbenchMenuItems, listWorkbenchMenuItemsFromState } from "./menu-
 
 const menuPath = ["workbench", "top", "actions"] as const satisfies MenuPath;
 describe("listWorkbenchMenuItems", () => {
+  test("uses shared availability and explanations for a header's explicit resource", () => {
+    const workbench = createWorkbench();
+    workbench.commands.registerCommand(
+      { id: "rename", label: "Rename" },
+      {
+        execute() {},
+        isVisible: (_args, context) => context?.resource?.id === "b",
+        isEnabled: (_args, context) => context?.resource?.id === "b",
+      },
+    );
+    workbench.layout.registerMenuItem(menuPath, {
+      commandId: "rename",
+      disabledWhen: 'workbench.resource.metadata.writable == "false"',
+      disabledReason: "Read-only.",
+    });
+    expect(
+      listWorkbenchMenuItems(workbench, menuPath, {
+        resource: { type: "note", id: "b", metadata: { writable: false } },
+      }),
+    ).toMatchObject([{ label: "Rename", disabled: true, description: "Read-only." }]);
+  });
   test("resolves workbench region tab leading actions", () => {
     const workbench = createWorkbench();
     workbench.commands.registerCommand(
@@ -50,7 +71,7 @@ describe("listWorkbenchMenuItems", () => {
     });
     expect(listWorkbenchMenuItems(workbench, menuPath)).toEqual([
       {
-        id: "project.download:0",
+        id: workbench.layout.listMenuItems(menuPath)[0].id,
         commandId: "project.download",
         label: "Download",
         icon: "Download",

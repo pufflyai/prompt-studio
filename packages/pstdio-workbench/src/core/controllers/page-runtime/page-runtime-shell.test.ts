@@ -114,7 +114,7 @@ test("applies a shell Sub Panel opened after a scoped page becomes active", asyn
   expect(workbench.layout.getLayout().regions.secondary.widgets).toEqual([
     expect.objectContaining({
       resource: { type: "terminal", id: "terminal://workspace-1" },
-      ownerResourceKey: resourceKey({ type: "workspace", id: "workspace-1" }),
     }),
   ]);
+  expect(workbench.layout.getLayout().regions.secondary.widgets[0]).not.toHaveProperty("ownerResourceKey");
 });

@@ -1,7 +1,7 @@
 import { Box, Text } from "@chakra-ui/react";
 import type { PageRef } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   createWorkbench,
   type WorkbenchPageSlot,
@@ -304,6 +304,13 @@ export const MultipleItems: Story = {
   args: { workbench: createPanelWorkbench({ multiple: true, closable: true }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const first = await canvas.findByRole("tab", { name: "side first" });
+    first.focus();
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+    await expect(await body.findByRole("menu", { name: "side first context menu" })).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(first).toHaveFocus());
     for (const region of workbenchPanelRegions) {
       await userEvent.click(await canvas.findByRole("tab", { name: `${region} second` }));
       await expect(await canvas.findByText(`${region}.second content`)).toBeVisible();

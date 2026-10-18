@@ -4,7 +4,7 @@ import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
@@ -18,7 +18,7 @@ const draftResource = {
   type: "session-draft",
   id: "story-preview",
   label: "New session",
-  icon: "PenBox",
+  icon: "MessageSquarePlus",
 };
 const emptyAttachments = { attachments: [], uploading: false };
 const drafts: DashboardSessionDraftPersistence = {
@@ -79,10 +79,11 @@ export const OpenFromBubble: Story = {
   args: { initiallyClosed: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const screen = within(canvasElement.ownerDocument.body);
     await userEvent.click(await canvas.findByRole("button", { name: "Open Side Panel" }));
-    await expect(await canvas.findByRole("tab", { name: "New session" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Close Side Panel" }));
+    await waitFor(async () => expect(await screen.findByRole("tab", { name: /New session/ })).toBeVisible());
+    await userEvent.click(screen.getByRole("button", { name: "Close Side Panel" }));
     await userEvent.click(await canvas.findByRole("button", { name: "Open Side Panel" }));
-    await expect(canvas.getAllByRole("tab", { name: "New session" })).toHaveLength(1);
+    await expect(screen.getAllByRole("tab", { name: /New session/ })).toHaveLength(1);
   },
 };

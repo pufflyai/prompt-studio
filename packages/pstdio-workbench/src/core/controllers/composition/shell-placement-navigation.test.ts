@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { harness, navigate, resource } from "./placement-lifecycle-test-support";
 
-test("compound navigation opens a shell panel in its destination scope and restores each scope", async () => {
+test("compound navigation keeps pinned shell panels shared between pages in one mode", async () => {
   const w = harness();
   w.shellPlacements.registerPlacement({
     id: "shell",
@@ -24,10 +24,10 @@ test("compound navigation opens a shell panel in its destination scope and resto
   await w.navigation.openTarget({ kind: "compound", targets: [navigate("alpha"), open("alpha-terminal")] });
   await w.navigation.openTarget({ kind: "compound", targets: [navigate("beta"), open("beta-terminal")] });
   const opened = () => w.shellPlacements.resolvePlacements().map((p) => p.value.resource?.id);
-  expect(opened()).toEqual(["beta-terminal"]);
+  expect(opened()).toEqual(["alpha-terminal", "beta-terminal"]);
   expect(w.pages.store.getState().location?.resource?.id).toBe("beta");
   await w.navigation.openTarget(navigate("alpha"));
-  expect(opened()).toEqual(["alpha-terminal"]);
+  expect(opened()).toEqual(["alpha-terminal", "beta-terminal"]);
   await w.navigation.openTarget(navigate("beta"));
-  expect(opened()).toEqual(["beta-terminal"]);
+  expect(opened()).toEqual(["alpha-terminal", "beta-terminal"]);
 });

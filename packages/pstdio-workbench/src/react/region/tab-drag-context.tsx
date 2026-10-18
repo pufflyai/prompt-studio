@@ -14,6 +14,8 @@ import { createContext, type ReactNode, useContext, useId, useState } from "reac
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchTabPosition } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
 
+import { planTrayDrop } from "../../core/registries/layout/tray-tabs";
+
 interface TabDrop {
   region: WorkbenchPanelRegion;
   position: WorkbenchTabPosition;
@@ -43,15 +45,25 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
       !workbench.getPanelDestinations(String(event.active.id)).includes(data.region)
     )
       return undefined;
+    const layout = workbench.layout.getLayout();
+    const placement = findPlacementByWidgetId(layout, String(event.active.id))?.placement;
+    if (!placement) return undefined;
+    const region = data.region as WorkbenchPanelRegion;
+    const widgets = layout.regions[region].widgets;
     const widgetId = data.widgetId as string | undefined;
-    if (!widgetId) return { region: data.region, position: "end" } satisfies TabDrop;
     const rect = event.active.rect.current.translated;
     const before = rect && event.over && rect.left + rect.width / 2 < event.over.rect.left + event.over.rect.width / 2;
+    let position: WorkbenchTabPosition = "end";
+    if (widgetId) position = before ? { beforeWidgetId: widgetId } : { afterWidgetId: widgetId };
+    const plan = planTrayDrop(widgets, placement, position);
+    const index = plan.widgets.findIndex((widget) => widget.widgetId === placement.widgetId);
+    const next = plan.widgets[index + 1];
+    const previous = plan.widgets[index - 1];
     return {
-      region: data.region,
-      widgetId,
-      edge: before ? "before" : "after",
-      position: before ? { beforeWidgetId: widgetId } : { afterWidgetId: widgetId },
+      region,
+      position,
+      widgetId: next?.widgetId ?? previous?.widgetId,
+      edge: next ? "before" : "after",
     } satisfies TabDrop;
   };
   const placement = activeId ? findPlacementByWidgetId(workbench.layout.getLayout(), activeId)?.placement : undefined;
@@ -117,17 +129,11 @@ export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion }) 
       position="absolute"
       inset="0"
       zIndex="dropdown"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
       // Keep tab drag events out of iframes, including release over a disallowed
       // destination. Native file drops still reach the guest outside tab drags.
       pointerEvents={activeId ? "auto" : "none"}
       visibility={activeId ? "visible" : "hidden"}
       layerStyle={highlighted ? "tabDropZone" : undefined}
-      textStyle="label/XS/medium"
-    >
-      {highlighted && !drop?.widgetId ? "Drop here to add a tab" : null}
-    </Box>
+    />
   );
 };

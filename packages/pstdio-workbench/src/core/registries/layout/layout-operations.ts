@@ -167,7 +167,12 @@ export const closeWidgetInLayout = (layout: WorkbenchLayout, widgetId: string) =
     widgets[found.index] ??
     widgets[found.index - 1];
   const activeWidgetId = closingEffectiveActive ? nextActivePlacement?.widgetId : region.activeWidgetId;
-  const nextRegion = { ...region, widgets, activeWidgetId };
+  const nextRegion = {
+    ...region,
+    widgets,
+    activeWidgetId,
+    visible: widgets.length === 0 && (region.id === "side" || region.id === "secondary") ? false : region.visible,
+  };
   let activeLocationWidgetId = layout.activeLocationWidgetId;
   if (layout.activeWidgetId === widgetId && nextActivePlacement?.role === "location") {
     activeLocationWidgetId = nextActivePlacement.widgetId;
@@ -222,20 +227,7 @@ export const activateInLayout = (
   const region = layout.regions[regionId];
   if (isLocationPlacement(placement)) {
     const selections = layout.locationSubPanelSelections?.[locationWorkspaceKey(placement)] ?? {};
-    const regions = Object.fromEntries(
-      Object.entries(layout.regions).map(([id, panel]) => [
-        id,
-        {
-          ...panel,
-          widgets: panel.widgets.map((candidate) => {
-            if (!placement.resource || candidate.widgetId === placement.widgetId) return candidate;
-            if (candidate.ownerResourceKey !== placement.resourceKey) return candidate;
-            if (candidate.resourceKey !== placement.resourceKey) return candidate;
-            return { ...candidate, resource: placement.resource };
-          }),
-        },
-      ]),
-    ) as WorkbenchLayout["regions"];
+    const regions = { ...layout.regions };
     for (const panelRegion of workbenchPanelRegions) {
       const panel = regions[panelRegion];
       const selectedId = selections[panelRegion];
@@ -248,7 +240,7 @@ export const activateInLayout = (
       regions[panelRegion] = {
         ...panel,
         activeWidgetId:
-          panelRegion === "side" && panelRegion !== regionId
+          (panelRegion === "side" || panelRegion === "secondary") && panelRegion !== regionId
             ? panel.activeWidgetId
             : (selected?.widgetId ?? (panelRegion === regionId ? placement.widgetId : undefined)),
       };
@@ -262,9 +254,7 @@ export const activateInLayout = (
     };
   }
   const withSelection =
-    placement.role === "sub-panel" &&
-    regionId !== "side" &&
-    workbenchPanelRegions.includes(regionId as WorkbenchPanelRegion)
+    placement.role === "sub-panel" && regionId === "main"
       ? setLocationSubPanelSelection(
           layout,
           getActiveLocationPlacement(layout),

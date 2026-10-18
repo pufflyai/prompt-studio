@@ -1,4 +1,5 @@
-import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
+import type { PlacementIdentity, RelatedResourceOpenings, ResourceRef } from "@pstdio/sdk/extensions";
+import type { NavigationTarget } from "../navigation/navigation-registry";
 import { createResourcePreview } from "./resource-preview";
 
 export type { ResourceRef } from "@pstdio/sdk/extensions";
@@ -80,12 +81,22 @@ export const getWorkbenchSelectionResourceKeys = (resource: ResourceRef | undefi
 };
 export interface ResourceKindContribution {
   kind: string;
+  extensionId?: string;
+  relatedOpenings?(
+    resource: ResourceRef,
+    signal: AbortSignal,
+  ): RelatedResourceOpenings | Promise<RelatedResourceOpenings>;
   label: string;
   icon?: string;
+  /** Read current owner data without storing a second copy in the workbench. */
+  resolve?(resource: ResourceRef): ResourceRef | undefined;
+  subscribe?(listener: () => void): Disposable | (() => void);
 }
 export interface RegisteredResourceKind extends ResourceKindContribution, RegisteredContributionMetadata {}
 export interface ResourceBrowseEntry {
   resource: ResourceRef;
+  indicator?: { icon: string; color?: string; label?: string };
+  target?: NavigationTarget;
   searchText?: string;
   description?: string;
   group?: string;
@@ -101,6 +112,8 @@ export interface ResourceProvider {
   id: string;
   kind: string;
   list(query: string, context: ResourceListContext): readonly ResourceBrowseEntry[];
+  /** Direct relationships in the owner's recent-first order. */
+  related?(resource: ResourceRef): readonly ResourceBrowseEntry[];
 }
 export interface ResourceRegistryStoreState {
   kinds: Record<string, RegisteredResourceKind>;
@@ -113,11 +126,12 @@ export interface ResourceRegistry {
   onWillRemove(listener: (resource: ResourceRef) => readonly PlacementIdentity[]): Disposable;
   store: WorkbenchStore<ResourceRegistryStoreState>;
   registerKind(kind: ResourceKindContribution, metadata?: ContributionMetadata): Disposable;
-  getKind(kind: string): RegisteredResourceKind | undefined;
+  getKind(kind: string, extensionId?: string): RegisteredResourceKind | undefined;
   listKinds(): RegisteredResourceKind[];
   registerProvider(provider: ResourceProvider): Disposable;
   listProviders(): ResourceProvider[];
   listResources(query: string): readonly ResourceBrowseEntry[];
+  listRelatedResources(resource: ResourceRef): readonly ResourceBrowseEntry[];
   registerHierarchyProvider(provider: ResourceHierarchyProvider): Disposable;
   listHierarchyProviders(): ResolvedResourceHierarchyProvider[];
   walkHierarchy(resource: ResourceRef | undefined): WorkbenchHierarchyNode[];
@@ -156,21 +170,24 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
     },
     registerKind(kind, metadata) {
       const snapshot = store.getState();
-      if (snapshot.kinds[kind.kind]) throw new Error(`Resource kind already registered: ${kind.kind}`);
+      const key = kind.extensionId ? `${kind.extensionId}:${kind.kind}` : kind.kind;
+      if (snapshot.kinds[key]) throw new Error(`Resource kind already registered: ${key}`);
       const record: RegisteredResourceKind = {
         ...normalizeContributionMetadata(metadata),
         ...kind,
       };
-      store.setState({ ...snapshot, kinds: { ...snapshot.kinds, [kind.kind]: record } }, false, "registerKind");
+      store.setState({ ...snapshot, kinds: { ...snapshot.kinds, [key]: record } }, false, "registerKind");
       return createDisposable(() => {
         const current = store.getState();
-        if (current.kinds[kind.kind] !== record) return;
-        const { [kind.kind]: _removed, ...rest } = current.kinds;
+        if (current.kinds[key] !== record) return;
+        const { [key]: _removed, ...rest } = current.kinds;
         store.setState({ ...current, kinds: rest }, false, "unregisterKind");
       });
     },
-    getKind(kind) {
-      return store.getState().kinds[kind];
+    getKind(kind, extensionId) {
+      const kinds = store.getState().kinds;
+      if (extensionId) return kinds[`${extensionId}:${kind}`] ?? kinds[kind];
+      return kinds[kind] ?? Object.values(kinds).find((candidate) => candidate.kind === kind);
     },
     listKinds() {
       return Object.values(store.getState().kinds).sort(byContributionPriority);
@@ -200,6 +217,9 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
         entries.push(...provider.list(query, context));
       }
       return entries;
+    },
+    listRelatedResources(resource) {
+      return Object.values(store.getState().providers).flatMap((provider) => provider.related?.(resource) ?? []);
     },
     registerHierarchyProvider(provider) {
       const snapshot = store.getState();

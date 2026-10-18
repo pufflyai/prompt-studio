@@ -96,7 +96,9 @@ export interface ExtensionSessionQuery {
   status?: SessionStatus[];
   agent?: string;
   workspaceId?: string;
-  anchor?: Pick<ResourceRef, "type" | "id">;
+  anchor?: Pick<ResourceRef, "type" | "id" | "extensionId" | "projectId">;
+  /** Default created. Both orders use id descending to break ties. */
+  orderBy?: "created" | "lastActivity";
   /** Inclusive ISO timestamp bounds. */
   createdFrom?: string;
   createdTo?: string;
@@ -108,7 +110,7 @@ export interface ExtensionSessionQuery {
 }
 
 export interface ExtensionSessionPage {
-  /** Newest first: created_at descending, then id descending. */
+  /** Newest first by the requested order, then id descending. */
   items: (ExtensionSession & ExtensionSessionSummary)[];
   nextCursor: string | null;
 }

@@ -19,6 +19,7 @@ export interface WorkbenchExtensionMenuSlotConfig {
   menuPath: MenuPath;
   group?: string;
   overflowLabel?: string;
+  resourceGroup?: { id: string; label: string };
 }
 
 export type WorkbenchExtensionMenuWhenBuilder = (contribution: ExtensionMenuContribution) => string | undefined;
@@ -89,20 +90,25 @@ const createMenuItem = (input: {
   index: number;
   slot: WorkbenchExtensionMenuSlotConfig;
   when?: string;
+  disabledWhen?: string;
   resolveString: WorkbenchExtensionStringResolver;
 }) => {
-  const { commandId, contribution, index, resolveString, slot, when } = input;
+  const { commandId, contribution, index, resolveString, slot, when, disabledWhen } = input;
 
   return {
     commandId,
+    id: contribution.id,
     sourceCommandId: contribution.commandId,
     label: resolveString(contribution.label, contribution.extensionId),
     icon: contribution.icon,
     group: slot.group ?? contribution.group,
+    resourceGroup: slot.resourceGroup,
     args: contribution.params,
     overflowLabel: slot.overflowLabel,
     order: contributionOrder(contribution, index),
     when,
+    disabledWhen,
+    disabledReason: resolveString(contribution.disabledReason, contribution.extensionId),
   } satisfies MenuItem;
 };
 
@@ -161,6 +167,7 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
         id: commandId,
         label: resolveString(contribution.label, contribution.extensionId),
         category: contribution.group,
+        resourceMutation: command?.resourceMutation,
         description: command ? resolveString(command.description, command.extensionId) : undefined,
         icon: contribution.icon,
         params: localizeParamSchema(
@@ -177,6 +184,9 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
         resolveString,
         slot,
         when: createWhenExpression?.(contribution),
+        disabledWhen: contribution.disabledWhen
+          ? createWhenExpression?.({ ...contribution, when: contribution.disabledWhen })
+          : undefined,
       }),
       menuPath: slot.menuPath,
       targetCommandId: contribution.commandId,

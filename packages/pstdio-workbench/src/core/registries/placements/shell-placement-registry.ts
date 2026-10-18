@@ -44,6 +44,9 @@ export interface OpenWorkbenchShellPlacementInput {
   resource?: ResourceRef;
   open?: PageOpenIntent;
   title?: string;
+  relatedSource?: string;
+  /** Leave the current tab and global focus selected when opening in the background. */
+  activate?: boolean;
 }
 export interface WorkbenchShellPlacementRegistry {
   registerPlacement(placement: WorkbenchShellPlacementContribution): Disposable;
@@ -89,6 +92,8 @@ export const createWorkbenchShellPlacementRegistry = (input: {
   activatePanel(instanceId: string): unknown;
   getLayout(): WorkbenchLayout;
   getScope?(): string | undefined;
+  getContext?(): OwnedPlacementLocationContext | undefined;
+  isChangingPage?(): boolean;
   resolveScope?(context: OwnedPlacementLocationContext): string | undefined;
   loadLayout?(context: OwnedPlacementLocationContext): WorkbenchLayout | undefined;
   enteredWithPersistedLayout(): boolean;
@@ -120,6 +125,7 @@ export const createWorkbenchShellPlacementRegistry = (input: {
     });
   };
   input.onDidChangePersistenceScope(() => {
+    if (input.isChangingPage?.()) return;
     for (const placement of placements.values()) restorePlacement(placement);
     notifyWorkbenchChange(placements, emitChange);
   });
@@ -129,6 +135,7 @@ export const createWorkbenchShellPlacementRegistry = (input: {
     resource?: ResourceRef,
     open?: PageOpenIntent,
     title?: string,
+    relatedSource?: string,
   ): ResolvedOwnedPlacement<WorkbenchWidgetPlacement> => {
     const panel = input.getPanel(shellPlacementContributionId(placement.id));
     if (!panel) throw new Error(`Workbench shell placement is not registered: ${placement.id}`);
@@ -137,18 +144,21 @@ export const createWorkbenchShellPlacementRegistry = (input: {
       identity,
       region: placement.region,
       order: placement.order ?? 0,
-      value: createPlacement(
-        `workbench.shell.${encodeURIComponent(placement.id)}.${encodeURIComponent(instanceKey)}`,
-        panel,
-        {
-          viewId: placementItemViewId(placement.item),
-          role: roleForRegion(placement.region),
-          closable: staticPlacementClosable(placement.item),
-          ...(resource ? { resource } : {}),
-          ...(title ? { title } : {}),
-          ...tabState(open),
-        },
-      ),
+      value: {
+        ...createPlacement(
+          `workbench.shell.${encodeURIComponent(placement.id)}.${encodeURIComponent(instanceKey)}`,
+          panel,
+          {
+            viewId: placementItemViewId(placement.item),
+            role: roleForRegion(placement.region),
+            closable: staticPlacementClosable(placement.item),
+            ...(resource ? { resource } : {}),
+            ...(title ? { title } : {}),
+            ...tabState(open),
+          },
+        ),
+        ...(relatedSource ? { relatedSource } : {}),
+      },
     };
   };
   const preparation: OwnedPlacementPreparation = {
@@ -160,6 +170,18 @@ export const createWorkbenchShellPlacementRegistry = (input: {
     },
     getState: () => state,
     restore(context, current = state, previousContext) {
+      if (input.getContext) {
+        const previous = previousContext ?? input.getContext();
+        if (previous?.modeId === context.modeId && previous?.projectId === context.projectId) return current;
+        const saved = input.loadLayout?.(context);
+        if (!saved) return createOwnedPlacementState();
+        return restoreOwnedPlacementState({
+          state: createOwnedPlacementState(),
+          declarations: [...placements.values()],
+          saved: Object.values(saved.regions).flatMap((region) => region.widgets),
+          owns: (identity) => identity.kind === "shell",
+        });
+      }
       if (!input.resolveScope) return current;
       const scope = input.resolveScope(context);
       const previousScope = previousContext ? input.resolveScope(previousContext) : input.getScope?.();
@@ -203,7 +225,14 @@ export const createWorkbenchShellPlacementRegistry = (input: {
           return isStaticPlacementOpen(placement.item, current, placement.id) ? [resolve(placement, "default")] : [];
         }
         return (current.resourceInstances.get(placement.id) ?? []).map((instance) =>
-          resolve(placement, instance.instanceKey, instance.resource, instance.open, instance.title),
+          resolve(
+            placement,
+            instance.instanceKey,
+            instance.resource,
+            instance.open,
+            instance.title,
+            instance.relatedSource,
+          ),
         );
       });
     },
@@ -246,9 +275,10 @@ export const createWorkbenchShellPlacementRegistry = (input: {
       const prepared = preparation.open(target);
       preparation.apply(prepared.state);
       preparation.publish();
-      input.activatePanel(
-        `workbench.shell.${encodeURIComponent(target.placementId)}.${encodeURIComponent(prepared.identity.instanceKey)}`,
-      );
+      if (target.activate !== false)
+        input.activatePanel(
+          `workbench.shell.${encodeURIComponent(target.placementId)}.${encodeURIComponent(prepared.identity.instanceKey)}`,
+        );
       return prepared.identity;
     },
 

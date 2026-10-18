@@ -50,11 +50,13 @@ export const expectPackagedQueuedEditRecovery = async (
     const resource = encodeURIComponent(`pstdio://extension-resource/session/${session.id}`);
     logQueuedPhase(scenario, "open queued editor");
     await page.goto(`${baseUrl}/projects/${projectId}/session?resource=${resource}`);
-    const editor = page.getByTestId("content-editable").last();
+    const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
+    const view = page.locator("[data-workbench-instance]").filter({ has: editor });
     await expect(editor).toBeEditable();
+    await expect(view).toHaveCount(1);
     if (scenario === "occupied") {
       await editor.fill("Independent draft");
-      await page
+      await view
         .locator('input[type="file"]')
         .last()
         .setInputFiles({
@@ -69,13 +71,17 @@ export const expectPackagedQueuedEditRecovery = async (
     const cancel = page.getByRole("button", { name: "Cancel", exact: true });
     expect(await cancel.evaluate((element) => element.nextElementSibling?.textContent)).toBe("Update");
     await page.getByRole("button", { name: "Select model", exact: true }).click();
-    await page.getByTestId("workspace-agent-model-options").getByText("two", { exact: true }).click();
+    await page
+      .getByTestId("workspace-agent-model-options")
+      .filter({ visible: true })
+      .getByText("two", { exact: true })
+      .click();
     await page.getByRole("button", { name: "thinking: High", exact: true }).click();
     await page.getByRole("menuitemradio", { name: "Low", exact: true }).click();
     const editUpload = page.waitForResponse(
       (response) => response.url().endsWith("/session-attachments") && response.request().method() === "POST",
     );
-    await page
+    await view
       .locator('input[type="file"]')
       .last()
       .setInputFiles({ name: "edited-context.txt", mimeType: "text/plain", buffer: Buffer.from("Edited context") });

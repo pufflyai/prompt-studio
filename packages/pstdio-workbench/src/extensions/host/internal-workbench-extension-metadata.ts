@@ -78,6 +78,7 @@ export interface InternalWorkbenchExtensionMetadata {
   panels: InternalWorkbenchExtensionPanel[];
   resourceKinds: Array<{
     id: string;
+    relatedOpeningsCommand?: string;
     extensionId: string;
     label?: WorkbenchExtensionMetadata["resourceKinds"][number]["label"];
     icon?: string;

@@ -1,8 +1,8 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { createWorkbench } from "../../core";
+import { createWorkbench, resourceContextMenuPath } from "../../core";
 import { PaletteParamsDialog } from "../command-palette/palette-params-dialog";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { RegionTabMenu } from "./region-tab-menu";
@@ -10,7 +10,8 @@ import { RegionTabMenu } from "./region-tab-menu";
 const NoteTabActions = () => {
   const [result, setResult] = useState("No action run");
   const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const triggerId = useId();
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0, triggerId });
   const [workbench] = useState(() => {
     const instance = createWorkbench();
     const noteId = { type: "text" as const, label: "Note", required: true, resolvedFrom: "resource" as const };
@@ -31,13 +32,20 @@ const NoteTabActions = () => {
       { id: "delete", label: "Delete", params: { noteId } },
       { execute: (args) => setResult(`Deleted ${(args as { noteId: string }).noteId}`) },
     );
+    instance.resources.registerKind({ kind: "note", label: "Note" });
+    instance.layout.registerMenuItem(resourceContextMenuPath("note"), {
+      commandId: "rename",
+      args: { title: "Existing title" },
+    });
+    instance.layout.registerMenuItem(resourceContextMenuPath("note"), { commandId: "delete" });
     return instance;
   });
   return (
     <Stack>
       <Button
+        id={triggerId}
         onClick={(event) => {
-          setAnchor(event.currentTarget.getBoundingClientRect().toJSON());
+          setAnchor({ ...event.currentTarget.getBoundingClientRect().toJSON(), triggerId });
           setOpen(true);
         }}
       >
@@ -50,38 +58,12 @@ const NoteTabActions = () => {
         open={open}
         setOpen={setOpen}
         workbench={workbench}
-        placement={{ widgetId: "note-1", contributionId: "note-slot" }}
-        groups={[
-          {
-            id: "note",
-            rows: [
-              {
-                id: "rename",
-                label: "Rename note",
-                action: {
-                  kind: "navigation",
-                  target: {
-                    kind: "command",
-                    commandId: "rename",
-                    args: { noteId: "note-1", title: "Existing title" },
-                  },
-                },
-              },
-              {
-                id: "delete",
-                label: "Delete",
-                action: {
-                  kind: "navigation",
-                  target: {
-                    kind: "command",
-                    commandId: "delete",
-                    args: { noteId: "note-1" },
-                  },
-                },
-              },
-            ],
-          },
-        ]}
+        placement={{
+          widgetId: "note-1",
+          contributionId: "note-slot",
+          resource: { type: "note", id: "note-1", label: "Existing title" },
+        }}
+        groups={[]}
       />
       <PaletteParamsDialog workbench={workbench} />
     </Stack>

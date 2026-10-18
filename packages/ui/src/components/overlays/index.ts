@@ -11,6 +11,7 @@ export type { FolderPickerEntry, FolderPickerProps } from "./folder-picker-dialo
 export { FolderPicker, FolderPickerDialog } from "./folder-picker-dialog";
 export type { ResourceActionMenuProps, ResourceContextAction } from "./resource-context-menu";
 export { ResourceActionMenu, ResourceContextMenu } from "./resource-context-menu";
+export { ResourceMenuItems } from "./resource-menu-items";
 export type { SearchModalContentProps } from "./search-modal-content";
 export { SearchModalContent } from "./search-modal-content";
 export type { SearchableMenuItem, SearchableMenuParentList } from "./searchable-menu";

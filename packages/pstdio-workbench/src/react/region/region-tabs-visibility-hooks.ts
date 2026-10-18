@@ -48,7 +48,7 @@ export const isPlacementEligibleForRegion = (
   const widget = workbench.layout.getWidget(placement.contributionId);
   return widget
     ? isWorkbenchPanelPlacementVisible(widget, resource, modeId, placement, {
-        ignoreResourceLocation: region === "side",
+        ignoreResourceLocation: region === "side" || region === "secondary",
         location: getActiveWorkbenchLocationPanel(workbench.layout.getLayout()),
       })
     : false;

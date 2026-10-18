@@ -1,10 +1,11 @@
-import type { GuestHost, PropsStore } from "@pstdio/sdk/extensions";
+import type { GuestHost, PageLocation, PropsStore } from "@pstdio/sdk/extensions";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 
 export interface LabHostProps {
   locale?: string;
   projectId?: string;
   themePreference?: string;
+  pageLocation?: PageLocation;
   resource?: {
     id: string;
     label?: string;

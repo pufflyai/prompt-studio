@@ -139,7 +139,7 @@ describe("createWorkbenchPageRegistry transitions", () => {
       "shell:project-navigation:default",
       "page:ticket:$main:ticket:PS-326",
       "mode:project:shared:default",
-      "page:ticket:emoji:default",
+      expect.stringMatching(/^page:ticket:emoji:/),
     ]);
     expect(state.placements.filter((candidate) => candidate.value.startsWith("shared"))).toHaveLength(2);
   });
@@ -154,7 +154,7 @@ describe("createWorkbenchPageRegistry transitions", () => {
     );
     expect(reconciliation.remove.map((candidate) => identityKey(candidate.identity))).toEqual([
       "page:ticket:$main:ticket:PS-326",
-      "page:ticket:emoji:default",
+      expect.stringMatching(/^page:ticket:emoji:/),
     ]);
     expect(reconciliation.add.map((candidate) => identityKey(candidate.identity))).toEqual([
       "page:tickets:$main:default",

@@ -1,6 +1,10 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { getSharedStorybookBaseUrl } from "../scripts/storybook-server";
-import { createResourceActionsProject, prepareResourceActionsDashboard } from "./helpers/resource-actions";
+import {
+  createResourceActionsProject,
+  openSessionSidePanel,
+  prepareResourceActionsDashboard,
+} from "./helpers/resource-actions";
 
 const createSession = async (request: APIRequestContext, projectId: string, title: string) => {
   const response = await request.post("/v1/sessions", {
@@ -78,7 +82,7 @@ test("shared session actions rename another row without changing the selected se
   await page.goto(`/projects/${project.id}/sessions`);
   await row(page, a.title).click();
   await breadcrumbMenu(page);
-  for (const name of ["Open session panel", "Rename session", "Archive session", "Delete session", "Copy link"])
+  for (const name of ["Rename session", "Archive session", "Delete session", "Copy link"])
     await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await row(page, "Other conversation").focus();
@@ -150,8 +154,7 @@ test("delete confirms, keeps a failed session usable, closes only its views, and
   const b = await createSession(request, project.id, "Delete this");
   await prepareResourceActionsDashboard(page, project.id);
   await page.goto(`/projects/${project.id}/sessions`);
-  await row(page, a.title).click({ button: "right" });
-  await menuItem(page, "Open session panel").click();
+  await openSessionSidePanel(page, a.title);
   await row(page, b.title).click();
   await breadcrumbMenu(page);
   await menuItem(page, "Delete session").click();

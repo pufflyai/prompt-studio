@@ -334,20 +334,23 @@ describe("mode panel layouts", () => {
     registry.setActiveMode("project");
     expect(log).toEqual(["enter:project", "leave:project", "enter:project"]);
   });
-  test("preserves Location-owned Sub Panels when switching modes", () => {
-    const layout = createLayoutModel();
-    layout.registerWidget({
-      id: "sessions.chat",
-      title: "Session",
-      region: "side",
-      rendererId: "sessions.chat",
-    });
-    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
-    registry.registerMode({ id: "project", panels: ["main", "secondary", "side"], activate: () => undefined });
-    registry.registerMode({ id: "sessions", panels: ["main", "secondary", "side"], activate: () => undefined });
-    registry.setActiveMode("project");
-    layout.openWidget("sessions.chat", { role: "sub-panel" });
-    registry.setActiveMode("sessions");
-    expect(layout.getLayout().regions.side.widgets).toHaveLength(1);
+});
+
+test("hides Location-owned Sub Panels in another mode and restores them on return", () => {
+  const layout = createLayoutModel();
+  layout.registerWidget({
+    id: "sessions.chat",
+    title: "Session",
+    region: "side",
+    rendererId: "sessions.chat",
   });
+  const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
+  registry.registerMode({ id: "project", panels: ["main", "secondary", "side"], activate: () => undefined });
+  registry.registerMode({ id: "sessions", panels: ["main", "secondary", "side"], activate: () => undefined });
+  registry.setActiveMode("project");
+  layout.openWidget("sessions.chat", { role: "sub-panel" });
+  registry.setActiveMode("sessions");
+  expect(layout.getLayout().regions.side.widgets).toHaveLength(0);
+  registry.setActiveMode("project");
+  expect(layout.getLayout().regions.side.widgets).toHaveLength(1);
 });

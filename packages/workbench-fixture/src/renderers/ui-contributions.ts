@@ -16,6 +16,7 @@ import {
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import { createGlassLabArtifactCommand } from "../commands/glass-lab-artifacts-command";
+import { createDocumentLayoutPages } from "./document-layout";
 import { createLabViews } from "./lab-views";
 export const labMode = defineMode({
   id: "lab",
@@ -163,7 +164,13 @@ export const createLabUi = (baseUrl: string) => {
       }),
     ],
     placements,
-    pages: [labPageContribution, labModePageContribution, faultyPageContribution, camerasPageContribution],
+    pages: [
+      labPageContribution,
+      labModePageContribution,
+      faultyPageContribution,
+      camerasPageContribution,
+      ...createDocumentLayoutPages(labPageContribution.ref, glassLabArtifactKind.ref, overview.ref, labPage.ref),
+    ],
     navigationItems: [
       defineNavigationItem({
         id: "lab",

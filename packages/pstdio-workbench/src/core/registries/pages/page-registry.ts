@@ -1,4 +1,5 @@
 import { validatePageParamDefinitions } from "pstdio-api-contracts";
+import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { createDisposable } from "../../shared/disposable";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { composeOwnedPlacements, reconcileOwnedPlacements } from "../layout/placement-reconciliation";
@@ -19,6 +20,7 @@ import type {
   WorkbenchPageRegistryStoreState,
   WorkbenchPageResourceCodec,
 } from "./page-registry-types";
+import { refreshPageResources, refreshResourceLocation } from "./page-resource-refresh";
 import { pageStateKey } from "./page-state-key";
 
 export type {
@@ -44,16 +46,23 @@ export const createWorkbenchPageRegistry = <Value>(
   const resourceKey = (resource: Parameters<WorkbenchPageResourceCodec["toUri"]>[0]) =>
     input.resources.toUri(normalizeResource(resource));
   const store = createPageRegistryStore(input);
-  let runtime: ((state: WorkbenchPageRegistryStoreState<Value>) => void) | undefined;
+  let runtime:
+    | ((state: WorkbenchPageRegistryStoreState<Value>) => WorkbenchPageRegistryStoreState<Value>["layoutActivation"])
+    | undefined;
+  let normalizeState:
+    | ((state: WorkbenchPageRegistryStoreState<Value>) => WorkbenchPageRegistryStoreState<Value>)
+    | undefined;
   let publishingState: WorkbenchPageRegistryStoreState<Value> | undefined;
 
   const publishState = (state: WorkbenchPageRegistryStoreState<Value>, action: string) =>
     batchWorkbenchChanges(() => {
+      state = normalizeState?.(state) ?? state;
       const storeBeforeRuntime = store.getState();
       const previousPublishingState = publishingState;
       publishingState = state;
       try {
-        runtime?.(state);
+        const layoutActivation = runtime?.(state);
+        state = { ...state, layoutActivation: layoutActivation || undefined };
       } finally {
         publishingState = previousPublishingState;
       }
@@ -97,6 +106,31 @@ export const createWorkbenchPageRegistry = <Value>(
       return Object.values(store.getState().pages).sort((left, right) => left.id.localeCompare(right.id));
     },
 
+    resourceReferenceKey(resource) {
+      const normalized = normalizeResource(resource);
+      const keys = new Set(
+        Object.values(store.getState().pages).flatMap((page) =>
+          page.document && page.resource && resourceMatchesConstraint(page.resource, normalized)
+            ? [page.document.metadataKey]
+            : [],
+        ),
+      );
+      return JSON.stringify([
+        resourceKey(normalized),
+        [...keys].sort().map((key) => [key, normalized.metadata?.[key] ?? null]),
+      ]);
+    },
+
+    refreshResource(resource) {
+      const state = store.getState();
+      commit({
+        ...state,
+        location: refreshResourceLocation(state.location, resource, registry.resourceReferenceKey),
+        pageStates: refreshPageResources(state.pageStates, resource, registry.resourceReferenceKey),
+        action: "refreshPageResource",
+      });
+    },
+
     pinPlacement(identity, open) {
       commit({ ...pinPagePlacement(store.getState(), identity, input.resources, open), action: "pinPagePlacement" });
     },
@@ -112,17 +146,22 @@ export const createWorkbenchPageRegistry = <Value>(
     publish: publishState,
     onDidCommit: (listener) => createDisposable(store.api.subscribe(listener)),
     getPublishingState: () => publishingState ?? store.getState(),
-    connectRuntime(apply) {
+    connectRuntime(apply, normalize) {
       if (runtime) throw new Error("Workbench page registry already has a runtime");
       runtime = apply;
+      normalizeState = normalize;
       try {
-        apply(store.getState());
+        publishState(store.getState(), "connectPageRuntime");
       } catch (error) {
         runtime = undefined;
+        normalizeState = undefined;
         throw error;
       }
       return createDisposable(() => {
-        if (runtime === apply) runtime = undefined;
+        if (runtime === apply) {
+          runtime = undefined;
+          normalizeState = undefined;
+        }
       });
     },
     refreshModePlacements() {

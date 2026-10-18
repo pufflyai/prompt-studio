@@ -33,7 +33,9 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
     resolveTabIconName(
       placement,
       widget,
-      placement.resource ? workbench.resources.getKind(placement.resource.type)?.icon : undefined,
+      placement.resource
+        ? workbench.resources.getKind(placement.resource.type, placement.resource.extensionId)?.icon
+        : undefined,
     );
   const active = placement.widgetId === activeWidgetId;
   return (
@@ -107,13 +109,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
             ) : null}
           </Tabs.Trigger>
         </Tooltip>
-        {drop ? (
-          <DropIndicator
-            orientation="vertical"
-            left={drop.edge === "before" ? "0" : undefined}
-            right={drop.edge === "after" ? "0" : undefined}
-          />
-        ) : null}
+        <TabDropIndicator drop={drop} />
       </Box>
       <RegionTabMenu
         anchor={behavior.anchor}
@@ -125,5 +121,17 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         workbench={workbench}
       />
     </>
+  );
+};
+
+const TabDropIndicator = (props: { drop: ReturnType<typeof useRegionTab>["drop"] }) => {
+  const { drop } = props;
+  if (!drop) return null;
+  return (
+    <DropIndicator
+      orientation="vertical"
+      left={drop.edge === "before" ? "0" : undefined}
+      right={drop.edge === "after" ? "0" : undefined}
+    />
   );
 };

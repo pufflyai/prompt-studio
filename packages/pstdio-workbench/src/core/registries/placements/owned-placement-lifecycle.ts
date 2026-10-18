@@ -14,6 +14,7 @@ export interface OwnedResourceInstance {
   resource: ResourceRef;
   open?: PageOpenIntent;
   title?: string;
+  relatedSource?: string;
 }
 export interface OwnedPlacementState {
   staticOverrides: Map<string, StaticPlacementOverride>;
@@ -73,9 +74,7 @@ const retainResourceInstances = (
   if (item.binding.cardinality === "one") return [next];
   const existing = current.find((candidate) => candidate.instanceKey === next.instanceKey);
   const open: PageOpenIntent = existing?.open === "pin" || next.open === "pin" ? "pin" : "preview";
-  const retained = current.filter(
-    (candidate) => candidate.instanceKey !== next.instanceKey && (open === "pin" || candidate.open === "pin"),
-  );
+  const retained = current.filter((candidate) => candidate.instanceKey !== next.instanceKey);
   return [...retained, { ...next, open }];
 };
 // An instance keeps the key it opened with while updates change its resource, so an open
@@ -97,6 +96,7 @@ export const openResourcePlacement = (input: {
   resource?: ResourceRef;
   open?: PageOpenIntent;
   title?: string;
+  relatedSource?: string;
 }) => {
   const { id, item, label, state } = input;
   if (item.kind !== "binding") throw new Error(`${label} "${id}" is not resource-backed`);
@@ -114,6 +114,7 @@ export const openResourcePlacement = (input: {
     resource: input.resource,
     ...(item.binding.cardinality === "many" ? { open: input.open ?? ("preview" as const) } : {}),
     ...(input.title ? { title: input.title } : {}),
+    ...(input.relatedSource && input.open !== "pin" ? { relatedSource: input.relatedSource } : {}),
   };
   state.resourceInstances.set(id, retainResourceInstances(item, current, instance));
   return instance.instanceKey;
@@ -153,20 +154,19 @@ export const updateResourcePlacementInstance = (input: {
   const instances = state.resourceInstances.get(id) ?? [];
   state.resourceInstances.set(
     id,
-    instances
-      .filter(
-        (instance) => input.open !== "preview" || instance.open === "pin" || instance.instanceKey === input.instanceKey,
-      )
-      .map((instance) =>
-        instance.instanceKey === input.instanceKey
-          ? {
-              ...instance,
-              ...(input.open ? { open: input.open } : {}),
-              ...(input.resource ? { resource: input.resource } : {}),
-              ...(input.title === undefined ? {} : { title: input.title }),
-            }
-          : instance,
-      ),
+    instances.map((instance) =>
+      instance.instanceKey === input.instanceKey
+        ? {
+            ...instance,
+            ...(input.open ? { open: input.open } : {}),
+            ...(input.open || (input.resource && resourceKey(input.resource) !== resourceKey(instance.resource))
+              ? { relatedSource: undefined }
+              : {}),
+            ...(input.resource ? { resource: input.resource } : {}),
+            ...(input.title === undefined ? {} : { title: input.title }),
+          }
+        : instance,
+    ),
   );
 };
 export const clearOwnedPlacementState = (state: OwnedPlacementState, id: string) => {

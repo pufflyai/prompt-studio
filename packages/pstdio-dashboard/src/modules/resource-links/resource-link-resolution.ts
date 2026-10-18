@@ -7,6 +7,12 @@ import { executeExtensionCommand } from "@/shared/extensions/api";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
+const qualifiedResourceTarget = (value: unknown, source: ResourceRef) => {
+  if (!isNavigationTarget(value)) return;
+  const target = qualifyNavigationTarget(value, source.extensionId!, source.projectId);
+  if (target.kind === "page" || target.kind === "panel" || target.kind === "compound") return target;
+};
+
 export const resolveOwnerBatch = async (input: {
   resources: ResourceRef[];
   resolve(): Promise<unknown>;
@@ -34,18 +40,11 @@ export const resolveOwnerBatch = async (input: {
     };
     const original = requested.get(resourceKey(canonical));
     if (!original) continue;
-    const target =
-      item.target &&
-      isNavigationTarget(item.target) &&
-      (item.target.kind === "page" || item.target.kind === "panel" || item.target.kind === "compound")
-        ? qualifyNavigationTarget(item.target, source.extensionId!, source.projectId)
-        : undefined;
+    const target = qualifiedResourceTarget(item.target, source);
     resolved.push({
+      target: target ? toWorkbenchNavigationTarget(target) : undefined,
       resource: { ...original, label: resource.label, icon: resource.icon, shorthand: resource.shorthand },
-      open:
-        target && (target.kind === "page" || target.kind === "panel" || target.kind === "compound")
-          ? () => input.navigate(target)
-          : undefined,
+      open: target ? () => input.navigate(target) : undefined,
     });
   }
   return resolved;
@@ -74,6 +73,7 @@ export const resolveLinkedResources = async (
       if (entry)
         candidates.push({
           resource: entry.resource,
+          target: entry.target,
           open: entry.activate
             ? async () => {
                 await entry.activate!(entry.resource);
@@ -110,6 +110,10 @@ export const resolveLinkedResources = async (
         },
       }),
     ),
+  );
+  const hostOrder = new Map([...host.keys()].map((key, index) => [key, index]));
+  candidates.sort(
+    (left, right) => hostOrder.get(resourceKey(left.resource))! - hostOrder.get(resourceKey(right.resource))!,
   );
   return [...candidates, ...owners.flat()];
 };

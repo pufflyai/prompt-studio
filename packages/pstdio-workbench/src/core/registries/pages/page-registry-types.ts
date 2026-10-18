@@ -89,6 +89,8 @@ export interface WorkbenchPageRuntimeState {
 }
 
 export interface WorkbenchPageRegistryStoreState<Value> {
+  /** The runtime's committed result; consumers must not infer mode restoration from page caches. */
+  layoutActivation?: "open-page" | "restore-mode";
   pages: Readonly<Record<string, WorkbenchPageContribution>>;
   pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
   projectId?: string;
@@ -129,6 +131,8 @@ export interface WorkbenchPageRegistry<Value> {
   registerPage(page: WorkbenchPageContribution): { dispose(): void };
   getPage(pageId: string): WorkbenchPageContribution | undefined;
   listPages(): WorkbenchPageContribution[];
+  resourceReferenceKey(resource: ResourceRef): string;
+  refreshResource(resource: ResourceRef): void;
   pinPlacement(identity: PlacementIdentity, open?: PageOpenIntent): void;
   openSlot(input: WorkbenchPageSlotOpenInput): void;
 }
