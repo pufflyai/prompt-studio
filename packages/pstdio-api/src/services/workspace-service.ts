@@ -5,7 +5,7 @@ import { apiLogger } from "../lib/logger";
 import {
   publishCreatedResourceAnchors,
   publishResourceAnchorChanges,
-  refreshLegacyAnchorSources,
+  refreshResourceAnchorSources,
 } from "./resource-anchor-events";
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<ReturnType<typeof createWorkspacesDBService>["get"]>>>;
@@ -101,7 +101,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     if (!deleted) return;
     const { changes, workspace } = deleted;
     publishResourceAnchorChanges(deps.eventBus, changes, "remove");
-    await refreshLegacyAnchorSources(deps.eventBus, changes, { workspace: raw.get, session: deps.sessionsDb.get });
+    await refreshResourceAnchorSources(deps.eventBus, changes, { workspace: raw.get, session: deps.sessionsDb.get });
     deps.eventBus.emit("workspaces", "delete", { id });
     deps.onDeleted?.(workspace);
   };

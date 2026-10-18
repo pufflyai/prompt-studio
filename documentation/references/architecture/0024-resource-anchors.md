@@ -6,6 +6,11 @@ Resource anchors are directed links in one project. Endpoint identity is project
 
 `ctx.resources.addAnchors(resource, anchors)` adds a batch atomically. Repeating the same pair and details does nothing; changing its role or details updates the edge. Omitted role means `context`; other roles are `primary`, `source`, and `result`.
 
+Host source rows must exist in the current project. Mutations lock that row and update its timestamp
+in the same transaction, only when an edge changes. Missing, deleted and foreign host sources are
+refused. Generic and deprecated session/workspace methods share this rule. Identity fields repeated
+in legacy details do not make an otherwise identical link count as changed.
+
 `ctx.resources.removeAnchors(resource, refs)` removes an atomic batch. Missing edges are no-ops. Owner validators receive the operation, canonical endpoints and role before an explicit change. They return `{ allowed: true }` or `{ allowed: false, reason }`. Declare the command with `defineResourceKind({ id, validateAnchors: command.ref })`. Validators must belong to the resource owner and cannot mutate links through their context.
 
 `ctx.resources.listAnchors({ resource, direction?, role?, cursor?, limit? })` returns `{ items: [{ source, target }], nextCursor? }`. Default direction is `outgoing`; `incoming` and `both` read the same edges. The limit defaults to 50 and is between 1 and 100. Batches contain at most 100 refs. Queries use canonical endpoint ordering; cursors are opaque. Continue with the same resource, direction and role. Queries do not resolve content and keep working with unavailable refs.
@@ -32,7 +37,7 @@ The CLI uses the SDK client. `--project-id` defaults to the current project's co
 
 ## Storage and lifecycle
 
-`resource_anchors` has one composite key for project and both endpoints. Its primary index supports outgoing queries; a reverse index supports incoming queries. Reference details and role are stored once. The migration backfills known workspace/session anchors and drops the old columns. Legacy `anchors_json` read fields are computed from indexed outgoing edges. Legacy methods remain during the ordered rollout.
+`resource_anchors` has one composite key for project and both endpoints. Its primary index supports outgoing queries; a reverse index supports incoming queries. Dedicated columns own endpoint identity and role. Details preserve labels and metadata; repeated identity fields in legacy details do not affect equality. The migration backfills known workspace/session anchors and drops the old columns. Legacy `anchors_json` read fields are computed from indexed outgoing edges. Legacy methods remain during the ordered rollout.
 
 After a real committed change the host publishes `resource_anchor_events` with `{ id, projectId, operation, items }`. Consumers refresh views for both source and target. Legacy workspace/session rows also refresh. Resource creation writes initial links in its transaction. Workspace deletion removes both directions in its transaction. Project deletion cascades. `ctx.resources.removed(ref)` cleans up links before publishing the committed removal fact and skips validators.
 
