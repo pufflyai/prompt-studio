@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import type { NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
@@ -73,7 +73,7 @@ const setup = (resolve: (resource: ResourceRef) => Promise<NavigationTargetPage>
         commandId,
         extensionId,
         outcome: { ok: true, status: "success", value: [{ resource: target.resource, target }] },
-      } as CommandExecuteResponse;
+      } as CommandExecutionResult;
     },
   });
   workbench.pageLocations.setProject(projectId);

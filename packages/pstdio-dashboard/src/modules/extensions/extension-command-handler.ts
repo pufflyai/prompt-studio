@@ -1,4 +1,4 @@
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import {
   type CommandFilesParamValue,
@@ -14,7 +14,7 @@ export type ExecuteDashboardExtensionCommand = (
   commandId: string,
   body: Omit<import("@pstdio/sdk/api").CommandExecuteRequest, "projectId">,
   signal?: AbortSignal,
-) => Promise<CommandExecuteResponse>;
+) => Promise<CommandExecutionResult>;
 
 export type UploadDashboardExtensionCommandFile = (
   projectId: string,
@@ -113,7 +113,7 @@ const refreshSessionTrees = (ctx: WorkbenchModuleContext) => {
 export const openSessionCommandResult = async (
   ctx: WorkbenchModuleContext,
   projectId: string,
-  response: CommandExecuteResponse,
+  response: CommandExecutionResult,
 ) => {
   if (!response.outcome.ok) return;
 

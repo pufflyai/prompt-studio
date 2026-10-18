@@ -120,6 +120,7 @@ describe("createExtensionTestbenchApi", () => {
         ),
       );
 
+      if (!response.outcome.ok) throw new Error(response.outcome.reason);
       const sections = response.outcome.value as Array<{ id: string; nodes: Array<{ id: string }> }>;
       const workspaces = sections.find((section) => section.id === "workspaces");
       expect(workspaces?.nodes.map((node) => node.id)).toEqual(["workspace-ws-preview-1", "workspace-ws-preview-2"]);

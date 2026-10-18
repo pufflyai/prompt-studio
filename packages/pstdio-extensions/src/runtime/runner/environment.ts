@@ -1,4 +1,5 @@
 import type { CommandNotice, CommandOutcome } from "@pstdio/sdk/extensions";
+import { validatedCommandOutcomeSchema } from "pstdio-api-contracts";
 import { serializeError } from "./internals";
 import type { CommandRunnerEnvironment, CommandRunnerHostDeps } from "./types";
 
@@ -13,8 +14,11 @@ export const collectNotices = (env: CommandRunnerEnvironment, notices: CommandNo
   },
 });
 
-export const withNotices = <TOutcome extends CommandOutcome>(outcome: TOutcome, notices: CommandNotice[]) =>
-  notices.length > 0 ? ({ ...outcome, notices } as TOutcome) : outcome;
+export const withNotices = <TOutcome extends CommandOutcome>(outcome: TOutcome, notices: CommandNotice[]) => {
+  const result = notices.length > 0 ? { ...outcome, notices: [...(outcome.notices ?? []), ...notices] } : outcome;
+  validatedCommandOutcomeSchema.parse(result);
+  return result;
+};
 
 export const createEnvironmentCache = (
   deps: CommandRunnerHostDeps,

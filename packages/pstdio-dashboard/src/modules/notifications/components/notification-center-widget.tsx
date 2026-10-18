@@ -1,5 +1,5 @@
 import { Text } from "@chakra-ui/react";
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { NotificationCenter, type NotificationCenterAction, type NotificationCenterItem } from "@pstdio/ui";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
@@ -82,7 +82,7 @@ const showError = (input: WorkbenchPanelRenderInput, title: string, error: unkno
 
 export const surfaceNotificationCommandResponse = (
   input: Pick<WorkbenchPanelRenderInput, "workbench">,
-  response: CommandExecuteResponse,
+  response: CommandExecutionResult,
   projectId: string,
   owner = getRuntimeCollections(),
 ) => {

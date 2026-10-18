@@ -61,7 +61,7 @@ export {
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
 export { SDK_VERSION } from "../version";
-export { type CommandResponse, unwrapCommandOutcome } from "./command-outcome";
+export { CommandOutcomeError, type CommandResponse, getCommandValue, unwrapCommandOutcome } from "./command-outcome";
 export { commandRefId, contributionRefId } from "./contribution-reference";
 export { defineCommand, defineHook, defineMiddleware, streamOf } from "./define-command";
 export {

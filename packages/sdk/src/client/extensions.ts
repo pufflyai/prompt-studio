@@ -1,6 +1,8 @@
 import type {
+  CommandExecuteBody,
   CommandExecuteRequest,
   CommandExecuteResponse,
+  CommandExecutionResult,
   ConfigureExtensionConnectionInput,
   DispatchExtensionEventInput,
   EnableInstalledExtensionRequest,
@@ -9,15 +11,17 @@ import type {
   ExtensionDiagnosticsResponse,
   InstallExtensionRequest,
   InstallExtensionResponse,
+  JsonValue,
   ListExtensionAppearanceResponse,
   ListExtensionCommandsResponse,
   ListExtensionConnectionsResponse,
   ListProjectExtensionsResponse,
   UpgradeProjectExtensionResponse,
 } from "pstdio-api-contracts";
+import type { CommandStream } from "../extensions/command-stream";
 import { createExtensionControlsClient } from "./extension-controls";
 import { createExtensionManagementClient } from "./extension-management";
-import { type CommandStreamClientEvent, streamExtensionCommand } from "./extension-stream";
+import { type CommandStreamClientEvent, openExtensionCommandStream, streamExtensionCommand } from "./extension-stream";
 import type { RequestFn } from "./request";
 import type { createSessionStreamTransport } from "./session-stream";
 
@@ -29,6 +33,13 @@ export type ExtensionClient = ReturnType<typeof createExtensionControlsClient> &
       options?: { signal?: AbortSignal },
     ): Promise<InstallExtensionResponse>;
     diagnostics(projectId: string, options?: { scope?: "user" | "repo" }): Promise<ExtensionDiagnosticsResponse>;
+    streamCommand(
+      projectId: string,
+      commandId: string,
+      input?: CommandExecuteBody,
+      options?: { signal?: AbortSignal },
+    ): CommandStream<JsonValue>;
+    /** @deprecated Use streamCommand for chunks and a complete final outcome. */
     stream(
       commandId: string,
       input: CommandExecuteRequest,
@@ -56,7 +67,7 @@ export type ExtensionClient = ReturnType<typeof createExtensionControlsClient> &
       commandId: string,
       request: CommandExecuteRequest,
       options?: { signal?: AbortSignal },
-    ): Promise<CommandExecuteResponse>;
+    ): Promise<CommandExecutionResult & CommandExecuteResponse>;
     dispatchEvent(projectId: string, input: DispatchExtensionEventInput): Promise<void>;
   };
 
@@ -75,6 +86,8 @@ export const createExtensionClient = (
   diagnostics: (projectId, options) =>
     request(`/v1/projects/${projectId}/extensions/diagnostics${options?.scope ? `?scope=${options.scope}` : ""}`),
   stream: (commandId, input, options) => streamExtensionCommand(streams, commandId, input, options),
+  streamCommand: (projectId, commandId, input, options) =>
+    openExtensionCommandStream(streams, projectId, commandId, input, options),
   enableInstalled: (projectId, installName, body) =>
     request(`/v1/projects/${projectId}/extensions/installed/${encodeURIComponent(installName)}/enable`, {
       method: "POST",

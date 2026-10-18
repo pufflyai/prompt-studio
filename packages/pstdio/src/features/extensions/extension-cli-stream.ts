@@ -4,21 +4,20 @@ import type { ExtensionClient } from "@pstdio/sdk/client";
 export const printExtensionCommandStream = async (input: {
   commandId: string;
   request: CommandExecuteRequest;
-  stream: ExtensionClient["stream"];
+  streamCommand: ExtensionClient["streamCommand"];
   log: (line: string) => void;
 }) => {
   const controller = new AbortController();
   const interrupt = () => controller.abort();
   process.on("SIGINT", interrupt);
   try {
-    for await (const event of input.stream(input.commandId, input.request, { signal: controller.signal })) {
-      if (event.type === "data") input.log(JSON.stringify(event));
-      else {
-        input.log(JSON.stringify({ type: "end", outcome: event.response.outcome }));
-        return event.response.outcome.ok ? 0 : 1;
-      }
-    }
-    return controller.signal.aborted ? 130 : 1;
+    const { projectId, ...request } = input.request;
+    const stream = input.streamCommand(projectId, input.commandId, request, { signal: controller.signal });
+    for await (const data of stream) input.log(JSON.stringify({ type: "data", data }));
+    const outcome = await stream.outcome;
+    input.log(JSON.stringify({ type: "end", outcome }));
+    if (controller.signal.aborted) return 130;
+    return outcome.ok ? 0 : 1;
   } catch (error) {
     const code = controller.signal.aborted
       ? "command_stream_cancelled"

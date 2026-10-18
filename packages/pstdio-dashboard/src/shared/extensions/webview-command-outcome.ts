@@ -1,4 +1,4 @@
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { collectExtensionCommandNotifications } from "./command-outcome";
 
 interface CommandNotice {
@@ -8,7 +8,7 @@ interface CommandNotice {
 }
 
 export const surfaceWebviewCommandOutcome = (
-  response: CommandExecuteResponse,
+  response: CommandExecutionResult,
   show: (notice: CommandNotice) => unknown,
 ) => {
   for (const notification of collectExtensionCommandNotifications(response)) {

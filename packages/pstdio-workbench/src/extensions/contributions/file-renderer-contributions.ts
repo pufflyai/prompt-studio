@@ -1,4 +1,4 @@
-import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest, CommandExecutionResult } from "@pstdio/sdk/api";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type {
@@ -69,7 +69,7 @@ const revisionFromValue = (value: unknown) => {
 };
 export const fileRendererRefreshEnvelopeFromCommand = (
   body: CommandExecuteRequest,
-  response: CommandExecuteResponse,
+  response: CommandExecutionResult,
 ): FileRendererRefreshEnvelope | undefined => {
   const metadata = body.metadata;
   const origin = metadata?.fileRendererOrigin;
@@ -83,7 +83,7 @@ export const fileRendererRefreshEnvelopeFromCommand = (
     return undefined;
   }
   const resourceKey = metadata?.fileRendererResourceKey;
-  const revision = revisionFromValue(response.outcome.value);
+  const revision = response.outcome.ok ? revisionFromValue(response.outcome.value) : undefined;
   return {
     origin: {
       rendererId: candidate.rendererId,

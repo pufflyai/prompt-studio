@@ -163,20 +163,19 @@ Connection requests must use a relative path. The host rejects undeclared method
 
 Harnesses that can use a remote execution target set `cwdRequirement: "optional"`. Their start, resume, reattach, and message inputs receive `workspace.executionTarget`. A remote target contains the provider id and its opaque provider reference. It does not contain a local path.
 
-Command outcomes must be transport-safe:
+Command outcomes are a validated union. `ok: true` requires `status: "success"`; rejection and
+error outcomes have `ok: false`. Both failure variants carry `code?`, `reason`, `data?`, `cause?`,
+`error?`, `diagnostics?` and `notices?`. Serialized errors keep nested causes. Notices and diagnostics
+also apply to successful outcomes. The kernel, HTTP and webview use this same contract.
 
-```ts
-type CommandOutcome<T = unknown> =
-  | { ok: true; status: "success"; value: T }
-  | { ok: false; status: "rejected"; code?: string; reason: string }
-  | {
-      ok: false;
-      status: "error";
-      code?: string;
-      reason: string;
-      error?: SerializedError;
-    };
-```
+A recoverable rejection, such as `stale_revision`, keeps its data on every path. Commands inspect
+`ctx.commands.execute(...).status`. The SDK HTTP client returns `{ commandId, extensionId, outcome }`.
+Webview `client.commands` returns the value or throws `CommandOutcomeError`; read its `outcome`
+for the complete rejection. `getCommandValue(outcome)` provides the same throwing behavior.
+
+In 0.44, `unwrapCommandOutcome` is deprecated; use `getCommandValue` or check the outcome explicitly.
+The SDK `execute` result retains the old optional fields for source compatibility during that
+release. New code narrows `outcome.ok` or `outcome.status` before reading variant-specific fields.
 
 ## Middlewares And Hooks
 

@@ -1,4 +1,4 @@
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import type { FileRendererRefreshEnvelope } from "@pstdio/workbench";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { createRuntimeFeed, createRuntimeState } from "@/lib/sync/runtime-state";
@@ -6,7 +6,7 @@ import { createRuntimeFeed, createRuntimeState } from "@/lib/sync/runtime-state"
 export interface ExtensionCommandEvent {
   commandId: string;
   extensionId: string;
-  outcome: CommandExecuteResponse["outcome"];
+  outcome: CommandExecutionResult["outcome"];
   tick: number;
 }
 
@@ -26,7 +26,7 @@ export const subscribeToExtensionEventReset = resetFeed.subscribe;
 export const publishExtensionEventReset = (owner = getRuntimeCollections()) => resetFeed.publish(undefined, owner);
 
 export const publishExtensionCommandEvent = (
-  response: CommandExecuteResponse,
+  response: CommandExecutionResult,
   envelope: Omit<ExtensionRefreshEvent, "id"> & { projectId: string | undefined },
   owner = getRuntimeCollections(),
 ) => {

@@ -41,36 +41,45 @@ const tail = defineCommand({ id: "tail", title: "Tail", cli: true, stream: strea
 const progress = defineCommand({ id: "progress", title: "Progress", cli: true, stream: streamOf(), async run(ctx) {
   for (let i=1; i<=3; i++) await ctx.stream.write({ done: i, total: 3 }); return { total: 3 };
 } });
+const reject = defineCommand({ id: "reject", title: "Reject", cli: true, stream: streamOf(), run: () => "unreachable" });
+const guard = { id: "guard", ref: { kind: "middleware", id: "guard" }, command: reject.ref, run: ctx => ctx.commands.reject({
+  code: "stale_revision", reason: "Changed", data: { expectedRevision: 1, actualRevision: 2 }, cause: { source: "storage" },
+  notices: [{ type: "warning", message: "Reload" }], diagnostics: [{ code: "conflict", message: "Changed", severity: "warning" }]
+}) };
 const plain = defineCommand({ id: "plain", title: "Plain", run: wait });
 const state = defineCommand({ id: "state", title: "State", run: () => ({ active, cancelled }) });
 const view = defineView({ id: "live", title: "Stream fixture", body: { kind: "webview", entry: packageAsset("./view.ts", import.meta.url), capabilities: ["commands.stream", "commands.execute"] } });
 const page = definePage({ id: "live", title: "Live", path: "live", mode: workbenchModes.project, main: { kind: "view", view: view.ref, cardinality: "one" }, slots: [] });
-export default defineExtension({ commands: [tail, progress, plain, state], views: [view], pages: [page] });
+export default defineExtension({ commands: [tail, progress, reject, plain, state], middlewares: [guard], views: [view], pages: [page] });
 `,
   );
   writeFileSync(
     join(source, "view.ts"),
     `
-import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions";
+import { createWebviewClient, defineExtensionView, getCommandValue } from "@pstdio/sdk/extensions";
 export default defineExtensionView({ render({ mount, host }) {
   const client = createWebviewClient(host);
-  mount.innerHTML = '<button id="start">Start streams</button><button id="stop">Stop streams</button><button id="plain">Plain command</button><button id="progress">Progress</button><output id="state">Idle</output>';
+  mount.innerHTML = '<button id="start">Start streams</button><button id="stop">Stop streams</button><button id="plain">Plain command</button><button id="progress">Progress</button><button id="reject">Reject</button><output id="state">Idle</output>';
   const output = mount.querySelector('output');
   let streams = [];
   mount.querySelector('#start').onclick = () => {
     let count = 0;
     streams = Array.from({ length: 10 }, () => client.streams.tail());
     for (const stream of streams) {
-      stream.result.catch(() => {});
       void (async () => { for await (const line of stream) { output.textContent = 'Live ' + (++count); } })();
     }
   };
   mount.querySelector('#stop').onclick = async () => { await Promise.all(streams.map(stream => stream.cancel())); output.textContent = 'Stopped'; };
   mount.querySelector('#plain').onclick = () => { output.textContent = 'Plain started'; void client.commands.plain().catch(() => {}); };
+  mount.querySelector('#reject').onclick = async () => {
+    const stream = client.streams.reject();
+    for await (const chunk of stream) {}
+    output.textContent = JSON.stringify(await stream.outcome);
+  };
   mount.querySelector('#progress').onclick = async () => {
     const stream = client.streams.progress(); const chunks = [];
     for await (const chunk of stream) chunks.push(chunk.done);
-    output.textContent = JSON.stringify({ chunks, result: await stream.result });
+    output.textContent = JSON.stringify({ chunks, result: getCommandValue(await stream.outcome) });
   };
 } });
 `,

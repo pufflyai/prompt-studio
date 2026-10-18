@@ -1,14 +1,22 @@
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import type { CommandStreamClientEvent, ExtensionClient } from "@pstdio/sdk/client";
 import type { CommandOutcome, WebviewCommandsStreamParams } from "@pstdio/sdk/extensions";
+import { commandExecutionResultSchema } from "pstdio-api-contracts";
+import { serializeCommandError } from "pstdio-api-contracts/extension-kernel";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 
 const errorOutcome = (code: string, reason = code): CommandOutcome => ({ ok: false, status: "error", code, reason });
-const failureOutcome = (error: unknown) =>
-  errorOutcome(
-    (error as { code?: string })?.code ?? "command_stream_disconnected",
-    error instanceof Error ? error.message : String(error),
-  );
+const failureOutcome = (error: unknown) => {
+  const serialized = serializeCommandError(error);
+  return {
+    ok: false,
+    status: "error",
+    code: (error as { code?: string })?.code ?? "command_stream_disconnected",
+    reason: serialized.message,
+    error: serialized,
+    ...(serialized.cause !== undefined ? { cause: serialized.cause } : {}),
+  } satisfies CommandOutcome;
+};
 const fail = (code: string) => Object.assign(new Error(code), { code });
 const MAX_STREAMS = 16;
 const MAX_UNREAD_BYTES = 8 * 1024 * 1024;
@@ -26,7 +34,7 @@ export const withFrameSignal = async <T>(hostEvents: HostEventPublisher, run: (s
 interface StreamCapabilityDeps {
   projectId: string;
   stream: ExtensionClient["stream"];
-  publish(response: CommandExecuteResponse): void;
+  publish(response: CommandExecutionResult): void;
 }
 
 /** State belongs to a frame, across React renders and bridge reconnects. */
@@ -61,8 +69,9 @@ export const createCommandStreamCapability = (hostEvents: HostEventPublisher) =>
       const { operation: _, streamId: _streamId, commandId, ...body } = input;
       const receive = (event: CommandStreamClientEvent) => {
         if (event.type === "end") {
-          deps.publish(event.response);
-          finish(event.response.outcome as CommandOutcome);
+          const response = commandExecutionResultSchema.parse(event.response);
+          deps.publish(response);
+          finish(response.outcome);
           return;
         }
         state.unread += new TextEncoder().encode(JSON.stringify(event.data)).byteLength;

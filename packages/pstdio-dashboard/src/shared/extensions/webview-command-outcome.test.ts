@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { surfaceWebviewCommandOutcome } from "./webview-command-outcome";
 
 describe("webview command reports", () => {
@@ -17,7 +17,7 @@ describe("webview command reports", () => {
             reason: "Cannot save",
             notices: [{ type: "info", message: "Check your folder" }],
           },
-        } as CommandExecuteResponse,
+        } as CommandExecutionResult,
         (notice) => notices.push(notice),
       );
       expect(notices).toEqual([

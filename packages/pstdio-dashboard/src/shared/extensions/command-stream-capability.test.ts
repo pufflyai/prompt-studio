@@ -2,6 +2,35 @@ import { expect, test } from "bun:test";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { createCommandStreamCapability, withFrameSignal } from "./command-stream-capability";
 
+test("stream disconnects preserve their original transport cause", async () => {
+  const events = createHostEventPublisher();
+  const ended = Promise.withResolvers<unknown>();
+  events.bind((event) => ended.resolve(event.payload));
+  const capability = createCommandStreamCapability(events);
+  await capability(
+    { operation: "start", streamId: "s1", commandId: "logs" },
+    {
+      projectId: "p1",
+      publish: () => {},
+      async *stream() {
+        yield* [];
+        throw new Error("Socket lost", { cause: { source: "transport", retryable: false } });
+      },
+    },
+  );
+  expect(await ended.promise).toMatchObject({
+    type: "end",
+    outcome: {
+      ok: false,
+      status: "error",
+      code: "command_stream_disconnected",
+      reason: "Socket lost",
+      cause: { source: "transport", retryable: false },
+      error: { name: "Error", message: "Socket lost", cause: { source: "transport", retryable: false } },
+    },
+  });
+});
+
 test("disconnect aborts plain commands", async () => {
   const events = createHostEventPublisher();
   const pending = withFrameSignal(events, async (signal) => {

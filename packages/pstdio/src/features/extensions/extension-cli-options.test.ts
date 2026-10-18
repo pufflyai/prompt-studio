@@ -40,7 +40,11 @@ test("routes explicit empty text values through global CLI options", async () =>
       resolveProjectId: (_cwd, projectId) => ({ projectId: projectId!, root: "/repo" }),
       execute: async (_id, request) => {
         calls.push(request);
-        return { commandId: command.id, extensionId: command.extensionId, outcome: { ok: true, status: "success" } };
+        return {
+          commandId: command.id,
+          extensionId: command.extensionId,
+          outcome: { ok: true, status: "success", value: undefined },
+        };
       },
       log: () => {},
     },
