@@ -57,6 +57,14 @@ test("namespace overrides preserve the remaining host methods and settings", asy
   expect(() => ctx.logger.warn("A warning")).not.toThrow();
 });
 
+test("commands use the storage the test owns", async () => {
+  const storage = createMemoryStorage();
+  const override = createMemoryStorage();
+
+  expect(makeCommandContext({ storage, params: {} }).storage).toBe(storage);
+  expect(makeCommandContext({ storage, params: {}, overrides: { storage: override } }).storage).toBe(override);
+});
+
 test("workspace and session anchor writes use the shared resource links", async () => {
   const storage = createMemoryStorage();
   const ctx = makeCommandContext({ storage, params: {} });
