@@ -102,5 +102,12 @@ export const getExtensionCatalog = () => {
   return catalogPromise;
 };
 
+export class ExtensionNotInCatalogError extends Error {
+  constructor(installName: string) {
+    super(`Extension "${installName}" is not in the extension catalog. Install it from its folder instead.`);
+    this.name = "ExtensionNotInCatalogError";
+  }
+}
+
 export const findExtensionCatalogEntry = async (installName: string) =>
   (await getExtensionCatalog()).extensions.find((entry) => entry.installName === installName);
