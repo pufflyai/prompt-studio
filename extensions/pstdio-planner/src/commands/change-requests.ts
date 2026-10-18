@@ -1,5 +1,5 @@
 import type { ParamsOf } from "@pstdio/sdk/extensions";
-import { type CommandContext, commandRef, defineCommand, params } from "@pstdio/sdk/extensions";
+import { type CommandContext, commandRef, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { appendRevision } from "../data/attempt-state";
@@ -88,6 +88,10 @@ const submissionParams = {
   changeRequestReportId: params.text({ required: true }),
   /** @deprecated Ownership and expectedRevision replace the attempt-state gate. */
   expectedAttemptState: params.select({
+    description: l10n(
+      "attempts.expectedAttemptState.deprecated",
+      "Deprecated in 0.44. Use ownership checks and expectedRevision. Removed in 0.45.",
+    ),
     options: [
       { label: "Implementing", value: "implementing" },
       { label: "Changes requested", value: "changes_requested" },
