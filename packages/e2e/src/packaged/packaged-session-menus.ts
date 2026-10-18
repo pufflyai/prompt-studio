@@ -164,7 +164,9 @@ export const verifyPackagedSessionMenus = async (
     await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
   }
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+  const floatSide = page.getByRole("button", { name: "Float Side Panel", exact: true });
+  if (await floatSide.isVisible()) await floatSide.click();
+  else await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   await page
     .locator('[data-workbench-panel-header="side"]')
