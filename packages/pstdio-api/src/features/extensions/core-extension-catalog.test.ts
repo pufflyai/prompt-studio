@@ -138,6 +138,7 @@ describe("core extension catalog", () => {
     const coreExtensionSkill = await coreExtensionSkillRes.json();
     expect(coreExtensionSkill.files.map((file: { path: string }) => file.path).sort()).toEqual([
       "SKILL.md",
+      "references/client-contracts.md",
       "references/examples.md",
       "references/examples/commands.ts",
       "references/examples/controls.ts",
