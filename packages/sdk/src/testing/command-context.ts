@@ -5,7 +5,6 @@ import { createMemoryResources } from "./memory-resources";
 
 type ContextNamespace =
   | "project"
-  | "storage"
   | "resources"
   | "views"
   | "navigation"
@@ -67,7 +66,9 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     ...base,
     ...overrides,
     project: { ...base.project, ...overrides?.project },
-    storage: { ...base.storage, ...overrides?.storage },
+    // Storage is the caller's stateful object, not a namespace of defaults. Copying it would hide
+    // later fault injection and break identity-keyed caches, so an override replaces it whole.
+    storage: overrides?.storage ?? base.storage,
     resources: { ...base.resources, ...overrides?.resources },
     views: { ...base.views, ...overrides?.views },
     navigation: { ...base.navigation, ...overrides?.navigation },
