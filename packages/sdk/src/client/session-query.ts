@@ -13,12 +13,15 @@ const encodeQuery = (input: ExtensionSessionQuery) => {
     "cursor",
     "limit",
     "includeArchived",
+    "orderBy",
   ] as const) {
     if (input[key] !== undefined) params.set(key, String(input[key]));
   }
   if (input.anchor) {
     params.set("anchorType", input.anchor.type);
     params.set("anchorId", input.anchor.id);
+    if (input.anchor.extensionId !== undefined) params.set("anchorExtensionId", input.anchor.extensionId);
+    if (input.anchor.projectId !== undefined) params.set("anchorProjectId", input.anchor.projectId);
   }
   const query = params.toString();
   return query ? `?${query}` : "";

@@ -138,3 +138,45 @@ test("session readers omit a linked workspace owned by another project", async (
   expect(await commands.get(session.id)).toMatchObject({ workspaceId: null, workspace_id: null });
   expect(await client.sessions.get(session.id)).toMatchObject({ workspaceId: null, workspace_id: null });
 });
+
+test("HTTP and SDK queries preserve owner-qualified anchors and latest activity across pages", async () => {
+  const project = await handle.deps.projectService.create({ name: "Qualified session query" });
+  const anchor = { type: "drawing", id: "same/#?", extensionId: "example.drawings", projectId: project.id };
+  const rows = [];
+  for (const title of ["Older active", "Newer", "Other owner"])
+    rows.push(await handle.deps.sessionService.create({ project_id: project.id, title, agent: "worker" }));
+  await handle.deps.sessionService.addAnchors(rows[0].id, [anchor]);
+  await handle.deps.sessionService.addAnchors(rows[1].id, [anchor]);
+  await handle.deps.sessionService.addAnchors(rows[2].id, [{ ...anchor, extensionId: "other.drawings" }]);
+  await handle.deps.sessionService.update(rows[0].id, { last_request_started: "2030-01-01T00:00:00.000Z" });
+  const input = { anchor, orderBy: "lastActivity" as const, limit: 1 };
+  const api = createSessionsApi(handle.deps, { projectId: project.id, project: { ...project, shorthand: "P" } });
+  const expected = await api.query(input);
+  expect(expected.items.map((row) => row.id)).toEqual([rows[0].id]);
+  expect(await client.sessions.query(project.id, input)).toEqual(expected);
+  const actual = [];
+  for await (const row of client.sessions.iterate(project.id, input)) actual.push(row.id);
+  expect(actual).toEqual([rows[0].id, rows[1].id]);
+  expect(
+    await client.sessions.query(project.id, { ...input, anchor: { ...anchor, projectId: "another-project" } }),
+  ).toEqual({ items: [], nextCursor: null });
+  const query = new URLSearchParams({
+    orderBy: "lastActivity",
+    anchorType: anchor.type,
+    anchorId: anchor.id,
+    anchorExtensionId: anchor.extensionId,
+    anchorProjectId: anchor.projectId,
+    limit: "1",
+  });
+  const response = await fetch(`${server.url}v1/projects/${project.id}/sessions?${query}`);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual(expected);
+});
+
+test("HTTP session queries reject incomplete anchors and unsupported sort orders", async () => {
+  const project = await handle.deps.projectService.create({ name: "Invalid query filters" });
+  for (const query of ["anchorExtensionId=example", "anchorProjectId=project", "anchorType=drawing", "orderBy=title"]) {
+    const response = await fetch(`${server.url}v1/projects/${project.id}/sessions?${query}`);
+    expect(response.status).toBe(400);
+  }
+});

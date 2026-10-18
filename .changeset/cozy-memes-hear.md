@@ -5,4 +5,4 @@
 "pstdio": minor
 ---
 
-Add resource-owned related tabs with shared panel state within each mode, remembered closures, temporary automatic reveal, and pin-on-drop retention
+Add resource-owned related tabs with mode-scoped panels, remembered closures, temporary automatic reveal, pin-on-drop retention, and qualified activity-ordered session queries

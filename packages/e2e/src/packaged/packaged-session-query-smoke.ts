@@ -40,7 +40,7 @@ export const registerSessionQuerySmokeTests = () => {
             resume() { throw new Error("Not used by this smoke test"); }
           }],
           commands: [{ id: "read", ref: { kind: "command", id: "read" }, title: "Read sessions",
-            run(ctx, params) { return ctx.sessions.query({ cursor: params?.cursor, orderBy: params?.orderBy, agent: "test.session-query.harness.worker", status: ["completed"] }); }
+            run(ctx, params) { return ctx.sessions.query({ cursor: params?.cursor, orderBy: params?.orderBy, anchor: params?.anchor, agent: "test.session-query.harness.worker", status: ["completed"] }); }
           }, {id:"inspect",ref:{kind:"command",id:"inspect"},title:"Inspect execution",run(ctx,params){return ctx.sessions.get(params.sessionId);}},
           {id:"workspace",ref:{kind:"command",id:"workspace"},title:"Read workspace",run(ctx){return ctx.workspaces.getDefault();}},
           {id:"continue",ref:{kind:"command",id:"continue"},title:"Guarded continuation",async run(ctx,params){try{await ctx.sessions.followup({sessionId:params.sessionId,prompt:"Automatic continuation",expectedRun:params.expectedRun});return {accepted:true};}catch(error){return {accepted:false,error:error.message};}}}]
@@ -73,7 +73,9 @@ export const registerSessionQuerySmokeTests = () => {
         sourceRef: null,
         version: null,
       });
+      const anchor = { type: "project", id: project.id, extensionId: "pstdio", projectId: project.id };
       const session = await request("/sessions", {
+        anchors: [anchor],
         project_id: project.id,
         title: "Usage",
         prompt: "run",
@@ -94,9 +96,21 @@ export const registerSessionQuerySmokeTests = () => {
         nextCursor: null,
       });
       const client = createClient({ baseUrl: runtime.baseUrl, token: runtime.descriptor.token });
-      const filter = { agent: "test.session-query.harness.worker", status: ["completed"] as const };
+      const filter = {
+        agent: "test.session-query.harness.worker",
+        status: ["completed"] as const,
+        anchor,
+        orderBy: "lastActivity" as const,
+      };
       const paged = await client.sessions.query(project.id, { ...filter, status: [...filter.status] });
       expect(paged).toEqual(page);
+      expect(
+        await client.sessions.query(project.id, {
+          ...filter,
+          status: [...filter.status],
+          anchor: { ...anchor, extensionId: "other" },
+        }),
+      ).toEqual({ items: [], nextCursor: null });
       const iterated = [];
       for await (const item of client.sessions.iterate(project.id, { ...filter, status: [...filter.status] })) {
         iterated.push(item);
@@ -108,7 +122,7 @@ export const registerSessionQuerySmokeTests = () => {
       );
       const restarted = await request(commandPath, { source: "api", params: { cursor } });
       expect(restarted.outcome.value).toEqual(page);
-      const active = await request(commandPath, { source: "api", params: { orderBy: "lastActivity" } });
+      const active = await request(commandPath, { source: "api", params: { orderBy: "lastActivity", anchor } });
       expect(active.outcome.value).toEqual(page);
       const rows = await request(
         `/sessions?project_id=${project.id}&created_from=${encodeURIComponent(session.created_at)}`,

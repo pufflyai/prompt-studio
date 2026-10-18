@@ -136,7 +136,10 @@ Pass `{ signal }` as the third argument to cancel a query or stop iteration, inc
 The unpaged `list` method and `GET /v1/sessions` are deprecated through 0.44.
 
 The paged HTTP route is `GET /v1/projects/:projectId/sessions`. It uses camelCase query names,
-comma-separated statuses, and paired `anchorType`/`anchorId` fields. Cursors keep their creation-time
+comma-separated statuses, and paired `anchorType`/`anchorId` fields. `anchorExtensionId` and
+`anchorProjectId` qualify the anchor. Both require its type and ID. `orderBy` accepts `created`
+(the default) or `lastActivity`; the SDK uses the same `orderBy` and nested `anchor` fields as
+`ctx.sessions.query`. Cursors keep their chosen sort timestamp
 and ID position when newer rows arrive. Rows archived during paging are skipped unless `includeArchived` is true.
 
 ## Workspaces

@@ -24,11 +24,19 @@ const querySchema = z
     limit: z.coerce.number().optional(),
     anchorType: z.string().optional(),
     anchorId: z.string().optional(),
+    anchorExtensionId: z.string().optional(),
+    anchorProjectId: z.string().optional(),
+    orderBy: z.enum(["created", "lastActivity"]).optional(),
   })
   .strict()
-  .refine((input) => (input.anchorType !== undefined) === (input.anchorId !== undefined), {
-    message: "Provide both anchorType and anchorId",
-  });
+  .refine(
+    (input) =>
+      (input.anchorType !== undefined && input.anchorId !== undefined) ||
+      [input.anchorType, input.anchorId, input.anchorExtensionId, input.anchorProjectId].every(
+        (value) => value === undefined,
+      ),
+    { message: "Provide both anchorType and anchorId with anchor qualifiers" },
+  );
 const summarySchema = sessionSchema
   .pick({
     id: true,
@@ -50,7 +58,8 @@ export const querySessionsRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/sessions",
   tags: ["Sessions"],
-  description: "Query sessions, newest first. Status accepts a comma-separated list; an empty list matches nothing.",
+  description:
+    "Query sessions by creation or latest activity, newest first. Status accepts a comma-separated list; an empty list matches nothing.",
   request: { params: z.object({ projectId: z.string() }), query: querySchema },
   responses: {
     200: {
@@ -73,7 +82,7 @@ export const querySessionsRoute = createRoute({
 export const querySessionsHandler = (deps: SessionsRouteDeps) => {
   const handler: AppRouteHandler<typeof querySessionsRoute> = async (c) => {
     const { projectId } = c.req.valid("param");
-    const { anchorType, anchorId, ...input } = c.req.valid("query");
+    const { anchorType, anchorId, anchorExtensionId, anchorProjectId, ...input } = c.req.valid("query");
     try {
       return c.json(
         await queryExtensionSessions(
@@ -81,7 +90,10 @@ export const querySessionsHandler = (deps: SessionsRouteDeps) => {
           projectId,
           {
             ...input,
-            anchor: anchorType !== undefined && anchorId !== undefined ? { type: anchorType, id: anchorId } : undefined,
+            anchor:
+              anchorType !== undefined && anchorId !== undefined
+                ? { type: anchorType, id: anchorId, extensionId: anchorExtensionId, projectId: anchorProjectId }
+                : undefined,
           },
           c.req.raw.signal,
         ),
