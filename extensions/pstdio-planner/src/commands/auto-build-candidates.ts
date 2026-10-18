@@ -1,4 +1,4 @@
-import { type CommandContext, defineCommand } from "@pstdio/sdk/extensions";
+import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions";
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readNextTickets } from "./next-tickets";
 
@@ -14,6 +14,10 @@ export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBui
 export const autoBuildCandidatesCommand = defineCommand({
   id: "auto-build.candidates",
   title: "Read Auto Build candidates",
+  description: l10n(
+    "autoBuild.candidates.deprecated",
+    "Deprecated in 0.44. Use pst tickets next for scoped work and waiting reasons. Removed in 0.45.",
+  ),
   cli: true,
   async run(ctx) {
     const mode = await readAutoBuildMode(ctx);

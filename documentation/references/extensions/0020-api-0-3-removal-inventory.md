@@ -32,6 +32,8 @@ in their owning PRs.
 | `unwrapCommandOutcome` | Check the outcome explicitly, or use `getCommandValue` and `CommandOutcomeError.outcome` | Compatibility consumers until extension adoption | None | 0.45 |
 | `createWebviewCommandStream`, `streamExtensionCommand`, `CommandStreamClientEvent`, SDK `extensions.stream`, `CommandStream.result` | Canonical chunk stream with `outcome` and `cancel`; SDK `extensions.streamCommand` | Legacy stream consumers; packaged parity test covers old and new | None | 0.45 |
 | Cross-extension registered preference names in `preferences.get`/`set` | Caller-owned names or supported core preferences | External callers unknown; compatibility access warns during 0.44 | None; keep owner values and core preferences | 0.45 |
+| Planner public `auto-build candidates` command | `pst tickets next` | Compatibility tests and external CLI callers; internal candidate reader remains an implementation detail | None | 0.45 |
+| Planner `expectedAttemptState` parameter and `--expected-attempt-state` flag on submit-change-request and request-human | Ownership and `expectedRevision` for submission; ownership and existing `revision` guard for human requests | Reconcile/submit-review human handoffs and compatibility fixtures | None; retain the human-request state check through 0.44 | 0.45 |
 | HTTP workspace `provider_operation_kind: "archive"` value | `"delete"` for new operations | Historical workspace rows and external clients; no new archive operations | Convert stored operation kinds, provider capability JSON and archived provider states in the separate 0.45 conversion PR | 0.45 |
 
 HTTP `capabilities.archive` was deprecated in stable 0.43.1 and removed by PS-805 in 0.44. It is

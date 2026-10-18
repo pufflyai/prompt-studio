@@ -21,6 +21,7 @@ export interface CreateReviewRequestInput {
   revision?: number;
   sessionId?: string;
   expectedTicketStatusId?: string;
+  /** @deprecated Use workspace ownership and revision. Removed in 0.45. */
   expectedAttemptState?: AttemptState;
 }
 

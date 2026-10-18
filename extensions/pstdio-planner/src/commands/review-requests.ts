@@ -1,5 +1,5 @@
 // Expose Planner's review requests to people, agents, the timeline, and attempt workflows.
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import type { AttemptState } from "../data/attempt-types";
 import { findTicket } from "../data/resolve";
 import { type CreateReviewRequestInput, createReviewRequest } from "../data/review-request-create";
@@ -43,7 +43,12 @@ export const requestHumanCommand = defineCommand({
     revision: params.number(),
     sessionId: params.text(),
     expectedTicketStatusId: params.text(),
+    /** @deprecated Use the workspace owner and revision guard. Removed in 0.45. */
     expectedAttemptState: params.select({
+      description: l10n(
+        "reviewRequests.expectedAttemptState.deprecated",
+        "Deprecated in 0.44. Use the workspace owner and revision guard. Removed in 0.45.",
+      ),
       options: attemptStates.map((state) => ({ label: state, value: state })),
     }),
   },
