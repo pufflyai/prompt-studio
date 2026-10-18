@@ -53,6 +53,8 @@ export interface ChatPanelProps extends ChatLinkProps {
   /** Attachment controls shown only while editing a message draft. */
   attachmentActions?: ReactNode;
   composerHeader?: ReactNode;
+  /** Replaces the composer and its controls while ChatPanel retains the draft state. */
+  composerFallback?: ReactNode;
   attachedResources?: string[];
   onClearAttachments?: () => void;
   attachmentList?: ReactNode;
@@ -115,6 +117,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     actions,
     attachmentActions,
     composerHeader,
+    composerFallback,
     attachedResources,
     onClearAttachments,
     attachmentList,
@@ -236,6 +239,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
                 actions={actions}
                 attachmentActions={attachmentActions}
                 composerHeader={composerHeader}
+                composerFallback={composerFallback}
                 attachedResources={attachedResources}
                 attachmentList={attachmentList}
                 chatInputAutoFocus={chatInputAutoFocus}

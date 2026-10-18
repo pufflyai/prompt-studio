@@ -190579,6 +190579,51 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "h0xIOn",
+      "x": 50458,
+      "y": 0,
+      "name": "Session · Harness unavailable",
+      "context": "A single shared warning row replaces the composer and its controls when a successful project availability check finds no available harness. Drafts are retained. Active runs keep Stop in the alert action slot.",
+      "width": 896,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 32,
+      "children": [
+        {
+          "id": "OhR2H",
+          "type": "ref",
+          "ref": "So6vB",
+          "name": "No available harness composer replacement",
+          "width": "fill_container",
+          "theme": {
+            "status": "warning"
+          },
+          "layout": "horizontal",
+          "descendants": {
+            "sAoE1": {
+              "icon": "triangle-alert"
+            },
+            "R8clK": {
+              "layout": "vertical"
+            },
+            "GL4gS": {
+              "content": "No agent available"
+            },
+            "B8etL": {
+              "enabled": false,
+              "width": 0,
+              "textGrowth": "auto"
+            },
+            "dJT4D": {
+              "enabled": false
+            }
+          }
+        }
+      ]
     }
   ],
   "themes": {

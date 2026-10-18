@@ -21,6 +21,7 @@ export interface ChatPanelComposerProps {
   /** Attachment controls shown only while editing a message draft. */
   attachmentActions?: ReactNode;
   composerHeader?: ReactNode;
+  composerFallback?: ReactNode;
   attachedResources?: string[];
   attachmentList?: ReactNode;
   chatInputAutoFocus: boolean;
@@ -56,6 +57,7 @@ export interface ChatPanelComposerProps {
 export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   const {
     composerHeader,
+    composerFallback,
     chatInputQuestionPrompt,
     composerDecision,
     hasWorkspaceHub,
@@ -72,6 +74,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   } = props;
   const styles = useSlotRecipe({ recipe: queuedFollowUpRecipe })();
   const composerStyles = useSlotRecipe({ recipe: chatComposerRecipe })({ workspace: hasWorkspaceHub });
+  if (composerFallback) return <Box p="xs">{composerFallback}</Box>;
   const hasQueuedFollowUps = queuedFollowUps.length > 0;
 
   const editing = queuedComposer.isEditing && !chatInputQuestionPrompt && !composerDecision;

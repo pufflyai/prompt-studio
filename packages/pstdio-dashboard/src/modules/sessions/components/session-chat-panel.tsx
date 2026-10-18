@@ -32,6 +32,7 @@ import type { HarnessParamValues } from "./harness-param-values";
 import { useSessionLinks } from "./session-chat-links";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";
+import { SessionHarnessUnavailable } from "./session-harness-unavailable";
 import { SessionQueuedChatPanel } from "./session-queued-chat-panel";
 import { useCommandComposer } from "./use-command-composer";
 import { usePendingSessionFollowUp } from "./use-pending-session-follow-up";
@@ -109,7 +110,9 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     setHarnessParamOverrides,
   } = useSessionModelSelection(view, projectId);
   const draftAttachments = useSessionDraftAttachments(projectId, view.draftKey, drafts);
-  const { data: agents = [] } = useAgents(projectId);
+  const { data: agents = [], isSuccess: availabilityChecked } = useAgents(projectId);
+  const noHarnessAvailable =
+    Boolean(projectId) && availabilityChecked && !agents.some((agent) => agent.availability.type === "INSTALLED");
   const canSubmit = canSubmitSessionMessage({
     agentOptions: agents.map((agent) => ({ value: agent.id, disabled: agent.availability.type === "NOT_FOUND" })),
     selectedAgent,
@@ -195,6 +198,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     chatDraft.change("");
     draftAttachments.clearSubmittedAttachments();
   });
+  const interrupt = sessionId && canInterrupt ? () => stopSession.mutate(sessionId) : undefined;
 
   return (
     // The widget host sizes itself to its content, so the chat panel is pinned
@@ -247,6 +251,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             onChatInputChange={chatDraft.change}
             chatInputCommands={commandComposer.suggestions}
             composerDecision={decision}
+            composerFallback={noHarnessAvailable ? <SessionHarnessUnavailable onInterrupt={interrupt} /> : undefined}
             attachedResources={attachedResources}
             projectId={projectId}
             sessionId={sessionId}
@@ -284,7 +289,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               />
             }
             onSubmitMessage={submit}
-            onInterrupt={sessionId && canInterrupt ? () => stopSession.mutate(sessionId) : undefined}
+            onInterrupt={interrupt}
           />
         </Box>
       </Box>
