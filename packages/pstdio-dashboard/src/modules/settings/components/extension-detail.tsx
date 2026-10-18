@@ -84,11 +84,20 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
   return (
     <Stack gap="md" paddingBottom="lg" data-testid="extension-detail">
       <Stack gap="md" paddingX="lg" paddingTop="lg">
-        <HStack>
+        <HStack justifyContent="space-between">
           <Button variant="ghost" size="2xs" onClick={onBack} data-testid="extension-detail-back">
             <ArrowLeft size={12} />
             {t("projectSettings.extensionsPanel.detail.back")}
           </Button>
+          {unavailableHarnesses.length > 0 && (
+            <ExtensionHealthPopover
+              extension={extension}
+              diagnostics={diagnostics}
+              unavailableHarnesses={unavailableHarnesses}
+              upgrading={upgrading}
+              onUpgrade={onUpgrade}
+            />
+          )}
         </HStack>
 
         <HStack gap="md" alignItems="center">
@@ -112,15 +121,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
             </Text>
           </Stack>
-          {unavailableHarnesses.length > 0 && (
-            <ExtensionHealthPopover
-              extension={extension}
-              diagnostics={diagnostics}
-              unavailableHarnesses={unavailableHarnesses}
-              upgrading={upgrading}
-              onUpgrade={onUpgrade}
-            />
-          )}
           {extension.canUpgrade && (
             <Button
               variant="primary"
