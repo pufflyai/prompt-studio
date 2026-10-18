@@ -1,5 +1,96 @@
 # pstdio
 
+## 0.44.0
+
+_2026-10-18_
+
+### Minor Changes
+
+- 64aff9e: Move allocated files to publisher-isolated extension storage in extension API 0.2.
+- e0d2a76: Add resource-owned related tabs with mode-scoped panels, remembered closures, temporary automatic reveal, pin-on-drop retention, and qualified activity-ordered session queries
+- 6e404ed: Export the chat question form controls and state hook from `@pstdio/ui/chat-ui` so other views can ask questions with the same tabs and choices.
+- 6655795: Add extension-owned data migration versions and scoped access to retained legacy records.
+- e2b23f5: Add typed page params and persist extension-owned webview preferences on the server.
+- 25c534b: Open related resources with a default-on Appearance setting, keep one leftmost preview per tray, and show preview replacement while dragging.
+- 45580fe: Synchronize extension storage and declared artifact files transparently across enrolled environments.
+- 39d5ddf: Add durable grouped storage with guarded saves, retained conflicts, and public SDK access.
+- 26bb359: Add stable workbench bindings and isolate local runtime identities, connections, and caches.
+- bc13b78: Add resumable verified asset storage with streaming uploads and retained immutable versions.
+- 452aeb8: Allow reordering saved views in Kanban boards and data tables with drag and keyboard controls.
+- 7572b09: Repair extension logging, lifecycle events, webview context, test helpers, and notification snoozing; remove APIs deprecated in 0.43.1 with replacements listed in the extension API 0.2.0 migration guide.
+
+### Patch Changes
+
+- 8b1511f: Fix long user message collapsing with a taller borderless preview, a smooth fade above the solid footer, and shared scrolling for expanded messages.
+- 56e1228: Keep typed folder paths when directory loading finishes.
+- 0abbc68: Record project setup and extension installation phases in runtime diagnostics.
+- e1ce734: Keep the app responsive while copying, relocating and cleaning up extension updates.
+- d6c34a7: Unify notification status changes across extension commands and HTTP clients.
+- 2135a51: Add authenticated relay requests, streamed asset ranges, and revocable change subscriptions.
+- 25b1747: Keep Monaco code and diff editors in sync with the app color mode.
+- 191998c: Show command group help without the runtime, reject unknown subcommands, deliver complete piped output, accept `.` in `pst extensions add`, and name the target and versions in `pst extensions check`, which now says "this pst provides" for source checks.
+- 191998c: `pst close` now returns once the runtime stops, even in a container whose init process never reaps it.
+- afe5fe6: Add typed webview settings deletion to restore declared fallbacks.
+- adc2df3: Create tabs directly in the chosen panel without disturbing other panels.
+- 8fe8702: Preserve empty CLI option values so ticket blockers and other text fields can be cleared.
+- cfcd7b9: Align menu labels and selection checkmarks while preserving hover and keyboard focus.
+- 191998c: Stop the dashboard from opening a sync collection for the removed templates table.
+- fe37abf: Translate localized extension parameter guidance in CLI help.
+- 25c534b: Keep page context stable and restore tab menu focus.
+- bcb38f8: Add linked count badges and restore document breadcrumb ancestry through owner resource resolution.
+- a86ca88: Reuse completed session history and load active conversations from one authoritative stream.
+- 49f752b: Keep table rows still while statistics load so clicks open the intended resource.
+- c606207: Preserve resolved ancestry and validate replay cursors for shared storage.
+- d9b060f: Record harness detection phases and distinguish deadline expiry from provider errors.
+- a86ca88: Bound chat responses within long turns, keep user context sticky during scrolling, and avoid redundant rich message updates.
+- d3a0941: Keep extension configuration, drafts, prototypes, tickets, reports, and backups in extension-storage.
+- ea4a560: Share resource actions across navigation, tabs, and breadcrumbs and add a searchable session picker with live status indicators.
+- 3e37198: Share camelCase session and workspace fields across commands and SDK clients.
+- fb0c413: Show full tab titles on hover and keyboard focus.
+- 31693f4: Deprecate filesystem hook contexts and the repository file guard while retaining pure helpers.
+- a08ac05: Fix ticket column scroll height, align scrollbars with the column edge, and retain card content while dragging.
+- 0abbc68: Wait for Windows process cleanup and report only surviving target process IDs.
+- 3157d46: Let resource owners open claimed file paths and show resource bubbles in rich messages.
+- e419d9d: Add virtual board rendering, complete move callbacks, and schema-only view refresh.
+- eb26d78: Show correct database ownership recovery and allow Retry as soon as recovery is visible. Wait for the first workbench load before showing quit confirmation, and update shared resource inspectors during navigation.
+- ec972ab: Recover desktop automatically once when its local backend exits, including backends started by the CLI.
+- 191998c: Keep edited and user-owned files in agent skill folders: workspace sync now changes only files Prompt Studio wrote and nobody edited, `pst agents setup` and `install-skills` keep existing skill folders, and `pst agents install-skills --force` replaces them.
+- 191998c: Installing an extension no longer restarts unchanged agent harnesses, so `pst agents list` keeps working while an install finishes.
+- fc9a05f: Keep the storage passed to `makeCommandContext` so tests that patch it or pass a whole storage override reach the command again.
+- fd40e73: Rename Planner to Project Planner and group ticket status and tag settings with a status icon.
+- e0d2a76: Restore each mode's panels and moved tabs, keep Main tabs on their page and Side/Bottom tabs across pages, restore live tab behavior, and close unpinned tabs on page navigation.
+- d5acfdd: Keep the right-click menu on list rows that also show a tooltip.
+- a87809d: Deprecate historical workspace archive operations in favor of delete.
+- 19c042b: Preserve complete command outcomes and share cancellable chunk streams across webviews, SDK and CLI.
+- 83a7e7a: Use one webview host capability factory across dashboard, workbench, and testbench.
+- 79073eb: Connect native storage to the relay and add a two-dashboard local setup.
+- 191998c: Linking a resource whose kind no enabled extension declares now says so, instead of reporting an ambiguous owner.
+- 0b86513: Add labeled resource menu sections and disabled action contracts.
+- 6ed0c40: Preserve current webview build failures when Reload changes the source registration.
+- fc1a846: Remove resting borders from tabs and chat composers while preserving the input focus highlight, align main and side chat insets, and match the workspace shell to the selected tab background without a header gap.
+- 45580fe: Preserve paragraph heading formatting across saved and synchronized notes.
+- a145162: Avoid fetching installed default extensions again during project setup.
+- 1dc235f: Keep navigation visible without load-error notices in the nav panel.
+- 759265f: Add paged session queries and cancellable SDK iteration.
+- be6e8ed: Make resource link mutations atomic and consistent across extension APIs.
+- ea4a560: Prevent stale placement refreshes from overwriting the active resource.
+- 310e039: Fix Linux runtime descriptor leaks, OpenCode worker cleanup, and startup readiness.
+- 4b3c6cb: Expose execution exit evidence and guard automatic session continuation against changed runs.
+- 121db2c: Use typed dashboard requests and report the supported public SDK surface.
+- 1ec80dd: Keep startup waiting with progress and a 20-second notice, wait for cleanup on Quit, and hide project search below eight projects.
+- cf0dd46: Add typed webview clients, shared host context, structured errors and event-driven query refresh.
+- 0325001: Add shared session rename, archive, and guarded deletion actions with synced navigation and public SDK support.
+- f85d388: Share concurrent extension loads until their bundle build finishes.
+- 9354c6a: Repair dependency readiness and workspace recovery, reduce Timeline startup work, and keep its controls visible with a skeleton while loading.
+- 0ea0e49: Add paged resource queries and camelCase client contracts with 0.44 compatibility aliases.
+- bee67a9: Align extra theme contrast and interaction colors, support application color roles in theme assets, and add a development-only component comparison Storybook.
+- 83d67ff: Let extension tree rows show a tooltip anywhere on the row with the new `tooltip` field, such as a file's full path.
+- 0a2adf3: Keep data table controls pinned while rows scroll and apply the selected theme to host terminals.
+- 4b3c6cb: Place native extension controls in their Settings tab, save rapid edits in order, preserve status colors, and validate resource links against the enabled extension owner.
+- 2ff0b7b: Define versioned synchronization contracts and reusable isolated protocol conformance cases.
+- c02abd6: Keep Escape available to cancel project tab drags while tooltips are visible.
+- e0d2a76: Keep shared resource tabs visible when moved into Main after leaving a resource page.
+
 ## 0.43.1
 
 _2026-10-13_
