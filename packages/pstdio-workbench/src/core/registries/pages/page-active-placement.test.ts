@@ -12,12 +12,13 @@ const page: WorkbenchPageContribution = {
   main: { kind: "panels", empty: { kind: "view", id: "empty" } },
   slots: [],
 };
-const tab = (id: string): WorkbenchWidgetPlacement => ({
-  widgetId: id,
-  contributionId: id,
-  resource: { type: "note", id },
-  placementIdentity: { kind: "page", pageId: "notes", slotId: "notes", instanceKey: id },
-});
+const tab = (id: string) =>
+  ({
+    widgetId: id,
+    contributionId: id,
+    resource: { type: "note", id },
+    placementIdentity: { kind: "page", pageId: "notes", slotId: "notes", instanceKey: id },
+  }) satisfies WorkbenchWidgetPlacement;
 
 test("page document selection stays with Main when an auxiliary panel has focus", () => {
   const layout = createDefaultWorkbenchLayout();
