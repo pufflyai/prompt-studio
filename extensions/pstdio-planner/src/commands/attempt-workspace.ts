@@ -1,5 +1,6 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { readAttempt } from "../data/attempt-storage";
+import { readSessionHistory } from "../data/session-history";
 import { isLiveSession } from "./auto-build-sessions";
 import { workspaceHead } from "./change-requests";
 import { requireReadyWorkspace, resolveTicketAnchor } from "./ticket-actions";
@@ -22,7 +23,7 @@ export async function adoptDraftWorkspace(
     await requireReadyWorkspace(ctx, workspace);
     if (await readAttempt(ctx.storage, workspaceId))
       throw new Error("This workspace already has a managed attempt. Resume its existing owner.");
-    if ((await ctx.sessions.listByWorkspace(workspaceId)).some(isLiveSession))
+    if ((await readSessionHistory(ctx.sessions, { workspaceId })).some(isLiveSession))
       throw new Error("Another session is using this workspace. Wait for its handoff.");
     return workspace;
   };

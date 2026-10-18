@@ -66,10 +66,13 @@ test.each([
   const ready = await result.ticket("Available work");
   const owner = { ...started.session, status: "completed" as const };
   result.ctx.sessions.get = async () => owner;
-  result.ctx.sessions.listByWorkspace = async () => {
-    if (scenario === "missing metadata") throw new Error("Workspace not found");
-    return [owner];
-  };
+  result.ctx.sessions.query = sessionQuery(
+    async () => [],
+    async () => {
+      if (scenario === "missing metadata") throw new Error("Workspace not found");
+      return [owner];
+    },
+  );
   result.ctx.workspaces.get = async () =>
     (scenario === "missing metadata"
       ? null

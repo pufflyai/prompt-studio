@@ -5,6 +5,7 @@ import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { nextTicketsCommand } from "./next-tickets";
 import { runAttemptCommand } from "./run-attempt";
+import { sessionQuery } from "./session-query.fixture";
 
 async function lostWorkspace(source = "revision") {
   const f = await fixture();
@@ -41,7 +42,7 @@ async function lostWorkspace(source = "revision") {
     ],
   });
   f.ctx.sessions.get = async (id) => (source === "missing owner" ? null : { ...old.session, id, status: "completed" });
-  f.ctx.sessions.listByWorkspace = async () => [];
+  f.ctx.sessions.query = sessionQuery(async () => []);
   f.ctx.workspaces.get = async () =>
     source === "branch"
       ? ({
