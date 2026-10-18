@@ -50,6 +50,11 @@ export const checkObjectStorage = async (config: ObjectConfig) => {
     let length = 0;
     for await (const chunk of checkedBytes(await objects.get(keys[0], etag), asset)) length += chunk.byteLength;
     assert.equal(length, bytes.byteLength);
+    const offset = 5 * 1024 * 1024 + 3;
+    const suffix = await objects.range(keys[0], etag, asset, offset);
+    const received = new Uint8Array(await new Response(suffix).arrayBuffer());
+    assert.deepEqual(received, bytes.subarray(offset));
+    await assert.rejects(objects.range(keys[0], '"different-etag"', asset, offset));
 
     const abandoned = await objects.begin(keys[1], asset);
     pending.set(keys[1], abandoned);
@@ -66,6 +71,7 @@ export const checkObjectStorage = async (config: ObjectConfig) => {
       resumedIdentity: true,
       verifiedStream: true,
       conditionalRead: true,
+      immutableRange: true,
       cancellation: true,
       emptyObject: true,
     };

@@ -7,6 +7,17 @@ services:
     environment:
       RELAY_HOST: 0.0.0.0
       RELAY_PORT: "8080"
+      DATABASE_URL: postgres://relay_owner:relay_owner_fixture_only@postgres:5432/relay_owner
+      S3_ENDPOINT: http://objects:9000
+      S3_BUCKET: relay-test
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: relay_test_access
+      S3_SECRET_ACCESS_KEY: relay_test_secret_key
+      RELAY_ACCESS_TRUST_FILE: /access-trust/trust.json
+      RELAY_RECOVERY_KEY_FILE: /recovery/key
+    volumes:
+      - access-trust:/access-trust:ro
+      - recovery-key:/recovery:ro
     healthcheck:
       test: ["CMD", "bun", "-e", "const r = await fetch('http://127.0.0.1:8080/health'); if (!r.ok) process.exit(1)"]
       interval: 1s
@@ -62,18 +73,96 @@ services:
     profiles: ["test"]
     environment:
       RELAY_URL: http://relay:8080
-      DATABASE_URL: postgres://relay_test:relay_test_password@postgres:5432/relay_test
+      DATABASE_URL: postgres://relay_owner:relay_owner_fixture_only@postgres:5432/relay_owner
+      MANAGER_DATABASE_URL: postgres://manager_owner:manager_owner_fixture_only@postgres:5432/manager_owner
+      MANAGER_ORIGIN: https://authority:8443
+      NODE_EXTRA_CA_CERTS: /tls-public/authority-cert.pem
+      RELAY_ACCESS_TRUST_FILE: /access-trust/trust.json
+      RELAY_RECOVERY_KEY_FILE: /recovery/key
       S3_ENDPOINT: http://objects:9000
       S3_BUCKET: relay-test
       S3_REGION: us-east-1
       S3_ACCESS_KEY_ID: relay_test_access
       S3_SECRET_ACCESS_KEY: relay_test_secret_key
+    volumes:
+      - fixture-data:/fixture:ro
+      - access-trust:/access-trust:ro
+      - tls-public:/tls-public:ro
+      - recovery-key:/recovery:ro
+
+  tls:
+    build:
+      context: ../..
+      dockerfile: infra/relay/Dockerfile
+      target: tls-fixture
+    profiles: ["test"]
+    volumes:
+      - tls-private:/tls-private
+      - tls-public:/tls-public
+
+  initialize:
+    build:
+      context: ../..
+      dockerfile: infra/relay/Dockerfile
+      target: fixture
+    profiles: ["test"]
+    environment:
+      FIXTURE_ADMIN_URL: postgres://relay_test:relay_test_password@postgres:5432/relay_test
+      DATABASE_URL: postgres://relay_owner:relay_owner_fixture_only@postgres:5432/relay_owner
+      MANAGER_DATABASE_URL: postgres://manager_owner:manager_owner_fixture_only@postgres:5432/manager_owner
+      S3_ENDPOINT: http://objects:9000
+      S3_BUCKET: relay-test
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: relay_test_access
+      S3_SECRET_ACCESS_KEY: relay_test_secret_key
+    volumes:
+      - fixture-data:/fixture
+      - access-trust:/access-trust
+      - recovery-key:/recovery
+
+  authority:
+    build:
+      context: ../..
+      dockerfile: infra/relay/Dockerfile
+      target: fixture
+    command: ["bun", "manager.js"]
+    environment:
+      DATABASE_URL: postgres://manager_owner:manager_owner_fixture_only@postgres:5432/manager_owner
+      MANAGER_ORIGIN: https://authority:8443
+      RELAY_AUDIENCE: https://relay.fixture.test
+      BETTER_AUTH_SECRET: owned-bundled-manager-fixture-secret-0123456789
+      GOOGLE_CLIENT_ID: owned-fixture-client
+      GOOGLE_CLIENT_SECRET: owned-fixture-secret
+      SESSION_LIFETIME_SECONDS: "120"
+      SESSION_UPDATE_AGE_SECONDS: "60"
+      ACCESS_LIFETIME_SECONDS: "5"
+      MANAGER_HOST: 0.0.0.0
+      MANAGER_PORT: "8443"
+      MANAGER_TLS_CERT: /tls-public/authority-cert.pem
+      MANAGER_TLS_KEY: /tls-private/authority-key.pem
+      NODE_EXTRA_CA_CERTS: /tls-public/authority-cert.pem
+    volumes:
+      - tls-private:/tls-private:ro
+      - tls-public:/tls-public:ro
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('https://authority:8443/health'); if (!r.ok) process.exit(1)"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
 
 volumes:
   postgres-data:
   objects-data:
   objects-logs:
+  fixture-data:
+  access-trust:
+  tls-private:
+  tls-public:
+  recovery-key:
 
 networks:
   default:
     internal: true
+    ipam:
+      config:
+        - subnet: ${RELAY_TEST_SUBNET:-10.254.237.0/24}

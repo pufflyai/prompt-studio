@@ -401,6 +401,7 @@
         "@aws-sdk/client-s3": "3.1152.0",
         "drizzle-orm": "^0.45.2",
         "pg": "^8.20.0",
+        "pstdio-account-manager": "workspace:*",
         "pstdio-sync": "workspace:*",
         "pstdio-sync-contracts": "workspace:*",
       },

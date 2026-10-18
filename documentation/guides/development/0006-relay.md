@@ -1,6 +1,6 @@
 # Relay development
 
-The private `pstdio-relay` workspace under `infra/relay/` owns transactional PostgreSQL storage and verified S3 assets for shared extension groups. Its network listener serves liveness only. Authenticated transport, account management, live provider validation, and deployment remain separate work.
+The private `pstdio-relay` workspace under `infra/relay/` owns transactional PostgreSQL storage and verified S3 assets for shared extension groups. It serves authenticated HTTP and finite native WebSocket subscriptions. Public browser onboarding, the reusable local network adapter, live provider validation, and deployment remain separate work.
 
 ## Build and check
 
@@ -30,7 +30,7 @@ Schema changes start in `infra/relay/src/storage/schema.ts` or `src/assets/schem
 bun run --cwd infra/relay db:generate
 ```
 
-Never edit generated SQL by hand. Operators call `migrateRelayStorage(databaseUrl, migrationsFolder)` before opening storage; the runtime image includes the generated `drizzle/` directory. The health listener does not run migrations or claim storage readiness.
+Never edit generated SQL by hand. Operators call `migrateRelayStorage(databaseUrl, migrationsFolder)` before opening storage; the runtime image includes the generated `drizzle/` directory. The service does not run migrations or claim storage readiness through liveness.
 
 Run the focused real PostgreSQL checks and the shared cases with real local stores:
 
@@ -54,11 +54,11 @@ The internal API is:
 | `writePart(scope, uploadId, number, input)` | Stream one numbered part with its SHA-256, length and optional abort signal. An acknowledged part is not uploaded again. A failed part can resume only with its original descriptor. |
 | `finish(scope, uploadId)` | Complete the object, stream its durable bytes through a full SHA-256 and length check, then commit its verified mapping and upload receipt together. |
 | `complete(scope, asset)` | Check a verified mapping and the current object length and ETag before group publication. |
-| `read(scope, asset)` | Return the declared metadata and a verifying byte stream. The consumer must reach the end before treating the download as verified. |
+| `read(scope, asset, offset = 0, signal?)` | Stream the full object with digest verification, or request an immutable S3 suffix with exact ETag/range/remaining-length checks. An offset at the end returns an empty stream. The receiver verifies the complete assembled asset. |
 | `cancel(scope, uploadId)` | Persist cancellation, interrupt the active transfer across owners, drain its writer, and remove only its unfinished object and multipart parts. Repeating cancellation finishes interrupted cleanup. |
 | `close()` | Stop admitting work, interrupt active and queued upload operations, drain them, and close this owner's connections. Completed bytes and resumable progress remain durable. |
 
-Upload IDs and asset mappings are scoped by account, workbench and extension. Scope values are not permission: future authenticated callers must derive them from trusted grants. Object keys contain hashes of scope and upload identity. Each upload has its own key, so a retry cannot overwrite another upload's verified bytes. Credentials stay in the service configuration and never enter references, snapshots or extension APIs.
+Upload IDs and asset mappings are scoped by account, workbench and extension. The network service derives account and environment identity from locally verified finite access claims before each operation. Object keys contain hashes of scope and upload identity. Each upload has its own key, so a retry cannot overwrite another upload's verified bytes. Credentials stay in the service configuration and never enter references, snapshots or extension APIs.
 
 The producer hashes each durable source range before opening its part stream. It need not buffer that range. The service streams with backpressure and checks the part's actual hash and length as well as the provider checksum. Part size follows S3's minimum size, maximum part size and 10,000-part limit; there is no smaller product quota. The final part can be short. Zero-byte assets use an empty object and the same final verification boundary.
 
@@ -83,7 +83,7 @@ This starts disposable PostgreSQL and RustFS. It checks scoped reads, multipart 
 
 ## Provider contract
 
-The reusable `src/assets/objects.contract.ts` probe checks the exact S3 operations used by the adapter: multipart creation/listing/recovery, streamed parts, completion, full reads, conditional ETag reads, empty objects, abort, part-list verification and deletion. It creates random keys under `relay-storage-contract/` and deletes only those probe keys and uploads. The local `test:assets` command runs it against RustFS.
+The reusable `src/assets/objects.contract.ts` probe checks the exact S3 operations used by the adapter: multipart creation/listing/recovery, streamed parts, completion, full reads, conditional ETag reads, immutable byte ranges, empty objects, abort, part-list verification and deletion. It creates random keys under `relay-storage-contract/` and deletes only those probe keys and uploads. The local `test:assets` command runs it against RustFS.
 
 Probe cleanup discovers uploads for every owned key, including lost creation responses. It attempts every key and object deletion even if another cleanup step fails, and reports both the original failure and cleanup failures. A permission failure can still leave temporary data; the error identifies the probe key for later authorized cleanup.
 
@@ -96,6 +96,42 @@ bun run --cwd infra/relay test:objects
 Required variables are `RELAY_CONTRACT_ENDPOINT`, `RELAY_CONTRACT_BUCKET`, `RELAY_CONTRACT_REGION`, `RELAY_CONTRACT_ACCESS_KEY_ID`, and `RELAY_CONTRACT_SECRET_ACCESS_KEY`. Supply secrets through the environment, not command arguments or committed files. The probe does not create a bucket or change policy. The service needs object read/write/delete, multipart list/abort/part-list access, and bucket listing so missing objects can return 404. Provider access rules must be validated separately.
 
 No live Spaces endpoint, bucket or credentials are configured here. RustFS success does not establish Spaces compatibility. Unsupported provider operations must fail this probe; do not silently replace required behavior.
+
+
+## Authenticated HTTP and subscriptions
+
+Use `relayPath({ workbenchId, extensionId }, operation)` from `pstdio-sync-contracts`. Paths are `/v1/workbenches/~<encoded-id>/extensions/~<encoded-id>/<operation>`. The prefix keeps opaque dot identities from becoming traversal segments. Account identity and credentials never enter URLs. Native clients send `Authorization: Bearer <environment-token>`. The scheme is case-insensitive; credential bytes stay exact. URL queries are rejected.
+
+Every protected operation verifies a signed environment access token locally against trusted manager public keys, issuer and relay audience. The verified account/workbench/environment scopes the existing data owners. A submitted mutation must already contain exactly that scope and environment; the relay rejects mismatches without rewriting its fingerprint. Only initialized published scopes exist. No network initialization, restore, administrative issuance, Google login or arbitrary revision setter is exposed.
+
+| Operation | Method and input | Result |
+| --- | --- | --- |
+| `snapshot` | GET | Existing strict snapshot |
+| `submit` | POST existing sealed mutation | Durable receipt, including pending/conflict outcomes |
+| `recover` | POST `{ mutation, proof }` for an exact previously stored operation | Normal publication outcome after current authorization and relay proof verification; the original environment and operation ID stay unchanged |
+| `replay` | POST checkpoint | Strict replay result or snapshot-required boundary |
+| `assets/begin` | POST `{ uploadId, asset }` | Asset, part size, completion and acknowledged part number/hash/length; no object key or provider receipt |
+| `assets/part` | PUT byte stream | Empty JSON acknowledgment |
+| `assets/finish` | POST `{ uploadId }` | Fully verified asset |
+| `assets/cancel` | POST `{ uploadId }` | Empty JSON acknowledgment after cancellation drains |
+| `assets/read` | POST `{ asset, offset }` | HTTP 200 with streamed bytes and explicit x-pstdio-offset / x-pstdio-byte-length metadata |
+| `changes` | GET with native WebSocket upgrade | Strict `{ protocolVersion: 1, type: "ready" | "changed" }` hints |
+
+A part supplies `x-pstdio-upload-id` (encodeURIComponent of its ID), `x-pstdio-part-number`, `x-pstdio-sha256` and exact `Content-Length`. Its body streams to the existing multipart owner with request cancellation. The listener accepts the existing S3 maximum part size; it does not buffer that body. Begin returns only acknowledged parts, so a dropped part retries the same immutable descriptor. Explicit cancellation removes unfinished bytes after the writer drains. Cleanup of an existing scoped upload uses the asset owner directly after current authorization; it does not repeat a content checkpoint that could block cancellation behind unrelated content reads.
+
+Suffix reads issue a real S3 Range with If-Match. The adapter validates returned status, ETag, media type, Content-Range and remaining length, then checks the streamed suffix length. The POST response uses 200 and explicit x-pstdio-offset / x-pstdio-byte-length metadata, with chunked framing when needed. It does not advertise GET Range semantics; see [HTTP range handling](https://www.rfc-editor.org/rfc/rfc9110.html#section-14.2). No large prefix is downloaded merely to skip it. A suffix cannot prove the full SHA-256: the receiving local store must verify the complete assembled file before publication. Full reads retain full digest checks.
+
+A dedicated PostgreSQL connection commits LISTEN before the initial scope read and socket readiness. Data-owner transactions emit only the scope fingerprint when receipts, conflicts, publication revision or restore change. Notifications arrive after commit and carry no content. They are hints; durable snapshots/replay remain truth. Subscribe before initial synchronization and resynchronize after reconnect. See [NOTIFY](https://www.postgresql.org/docs/16/sql-notify.html) and the [LISTEN setup race](https://www.postgresql.org/docs/16/sql-listen.html).
+
+An unchanged pending retry checks its dependencies again but produces no new hint. Pending operations can advance when their dependencies or assets become available without creating a request loop while they remain blocked.
+
+Network receipts include `recoveryProof` for their exact immutable operation, including pending and conflicting ancestors. Snapshots and replay include the same evidence after a lost response. Journals retain it independently of the current accepted snapshot. The `recover` route accepts a foreign environment's original operation only with this evidence and current account/workbench authority, then repeats normal validation and publication. An ordinary `submit` still requires the authenticated author environment. See [ADR 0080](../../adrs/0080-authenticate-relay-operation-recovery.md).
+
+Subscriptions retain the verified access expiry and close with1008 at that deadline, including while content reads are locked. Ready and changed hints check the same deadline. Revocation, replacement and account disable deny future manager renewal; issued tokens remain usable until expiry. Manager outages do not interrupt unexpired access. There are no per-request, hint or idle manager calls. Hints coalesce through one dirty bit and a scheduled delivery; a slow consumer closes1013. Listener loss closes1011 and requires a fresh listener owner plus resynchronization. Already authorized HTTP operations may finish.
+
+Responses use no-store and sanitized errors. Missing/invalid credentials return 401 with a generic Bearer challenge; identity mismatch returns 403, malformed input 400, method mismatch 405 with Allow, unavailable subscription 503, and rejected content operations 409. Missing assets return 404. Unsupported routes return 404.
+
+Run `bun run --cwd infra/relay test:transport` for real HTTP, native WebSockets, separate authority/content roles, overlapping account identities, multipart disconnect/resume/cancel, committed hints, idle expiry under content locks, manager outage, restore and failure coverage. It uses the existing conformance runner's disposable PostgreSQL/RustFS stack on default subnet 10.254.236.0/24. Run these fixtures sequentially. It adds no test allowance or reduced workload.
 
 ## Run the isolated smoke check
 
@@ -110,9 +146,9 @@ This command builds the Docker runtime and smoke images, starts PostgreSQL and R
 - The production S3 adapter streams the completed asset back with matching metadata, digest and length, and retains completed bytes when cancellation is repeated.
 - Docker stop sends SIGTERM and the relay exits with code 0.
 
-These checks exercise production persistence and object streaming against RustFS. They do not prove authenticated network synchronization, live provider compatibility, backups, initial download readiness, or the parent's fixed workload and cost gates.
+The same run initializes separate manager and relay roles and serves the actual bundled Better Auth manager over owned fixture HTTPS. Its initializer writes public signing trust to a separate read-only relay volume. A separately bundled client receives only the relay URL, scope and issued access token. It exercises HTTP uploads, verified offset reads, grouped submit/retry/replay, metadata-only WebSocket hints, idle access expiry and subsequent request denial. An operator process revokes the renewal grant and proves renewal denial. The original storage workload and12-reader/10-backend shutdown workload remain intact. No source mount or runtime install is used. These checks do not prove live provider compatibility, public onboarding, the complete local replication adapter, backups, or the parent's fixed workload and cost gates.
 
-Each run prints a unique `pstdio-relay-test-<uuid>` Compose project name. Its containers, network, and three named data/log volumes belong only to that run. The stack uses fixed test credentials, an internal network, no published host ports, and no host or home-directory mounts. It cannot use the local Prompt Studio database. `infra/local/` remains the separate local application stack.
+Each run prints a unique `pstdio-relay-test-<uuid>` Compose project name. Its containers, network, and owned data/log and fixture volumes belong only to that run. The stack uses fixed test credentials, an internal network, no published host ports, and no host or home-directory mounts. It cannot use the local Prompt Studio database. `infra/local/` remains the separate local application stack.
 
 The runner removes containers, volumes, and the network after success, failure, SIGINT, or SIGTERM. Images and the Docker build cache remain for later runs. If the runner is forcibly killed or the Docker daemon stops, replace the name below with the one printed by that run and clean it up:
 
@@ -128,14 +164,17 @@ Build from the repository root:
 
 ```sh
 docker build -f infra/relay/Dockerfile -t pstdio-relay:local .
-docker run --rm -p 127.0.0.1:8080:8080 pstdio-relay:local
 ```
 
-The final image contains Bun, the built listener and storage library, and generated migrations. It needs no developer checkout, dependency install, mounted files, or cloud credentials to serve liveness. Storage callers supply their own connection and object port. It runs as the unprivileged `bun` user.
+The final runtime target contains Bun, the built service/storage library and generated relay migrations. It runs as the unprivileged bun user, without a source checkout or runtime install. Operator tooling must apply migrations and initialize published scopes before use. The default build remains this production target; test-only authority code, private keys and fixture initialization exist only in separate smoke stages.
 
-`RELAY_HOST` and `RELAY_PORT` select the listener. Source execution defaults to `127.0.0.1:8080`; the image defaults to `0.0.0.0:8080`. The port must be an integer from 0 to 65535; 0 asks the operating system to choose a free port. SIGINT and SIGTERM stop accepting connections and let active requests finish. `/health` is liveness only, not a storage-readiness or authentication endpoint. Other routes return 404.
+Trusted deployment settings supply `DATABASE_URL` for the relay role; `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`; and `RELAY_ACCESS_TRUST_FILE`, a JSON file with manager `issuer`, relay `audience` and public Ed25519 `jwks`. Keys come from the manager's `/api/auth/jwks` endpoint through an operator-controlled update. Key rotation must distribute new public keys before issuing access with them and retain old public keys through their tokens' expiry. Relay receives no manager database, signing secret, renewal grant or private service credential. Configuration errors discard sensitive original errors and causes.
 
-The isolated smoke image reads `RELAY_URL`, `DATABASE_URL`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY` from the test Compose file. These configure the production libraries inside the disposable smoke; they are not listener routes or production defaults. RustFS is a local S3-compatible fixture. See [AWS multipart ownership](https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html), [multipart limits](https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html), [checksum semantics](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity-upload.html), and the [RustFS container documentation](https://docs.rustfs.com/en/installation/container/docker).
+`RELAY_RECOVERY_KEY_FILE` supplies a separate immutable 32-byte recovery key shared by relay replicas. Preserve and back it up outside content snapshots; content restore must not replace it. The service refuses a missing or malformed key and never generates one on startup. Losing or changing it leaves older recovery incomplete. The Docker fixture initializes one key atomically in its owned private volume, independently of public signing trust. No key bytes enter receipt bodies or clients.
+
+`RELAY_HOST` and `RELAY_PORT` select the listener. Source defaults to 127.0.0.1:8080; the image defaults to 0.0.0.0:8080. Port 0 selects a free port. Supply deployment configuration through the environment/secret manager when running the image. SIGINT/SIGTERM stop HTTP admission and storage work concurrently. Content operations own cancellable client leases; request disconnection or shutdown cancels the current PostgreSQL backend through a separate same-role control connection before destroying its lease. Pending and late acquisitions are also released. Shutdown drains the control connection after its cancellations, so neither a saturated content pool nor an external table lock retains owned queries. Already authorized operations may finish; revocation affects renewal, and access has its original finite expiry. GET /health is liveness only. The public relay HTTPS ingress, manager login routing, key rotation and live role/network isolation still need deployment validation.
+
+The smoke generates HTTPS trust inside each run's owned volumes, so cached images contain no expiring certificate. Only the generator and authority receive the private-key volume; only the manager receives TLS private keys; the relay receives signing public trust read-only, and the smoke receives only the TLS public certificate. All TLS volumes are removed with the run. It uses separate manager/relay roles, no host ports and no source mounts. Its default isolated subnet is 10.254.237.0/24; `RELAY_TEST_SUBNET` may select another inspected unused subnet. Other projects' networks are never removed. RustFS success is not live Spaces proof. See [S3 GetObject ranges](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html), [multipart limits](https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html) and [checksum semantics](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity-upload.html).
 
 ## Infrastructure boundary
 

@@ -3,7 +3,7 @@
 // intentional architecture changes — update the docs when this map changes.
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-account-manager": ["pstdio-sync-contracts"],
-  "pstdio-relay": ["pstdio-sync", "pstdio-sync-contracts"],
+  "pstdio-relay": ["pstdio-account-manager", "pstdio-sync", "pstdio-sync-contracts"],
   "pstdio-api-contracts": ["pstdio-sync-contracts"],
   "pstdio-sync-contracts": [],
   "pstdio-sync": ["pstdio-sync-contracts"],
