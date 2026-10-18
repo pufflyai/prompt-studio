@@ -3,7 +3,7 @@ import type { WorkbenchLayout } from "../../registries/layout/layout-types";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
 import { createWorkbench } from "../../workbench-core";
 
-export const pageRef = (id: string): PageRef => ({ kind: "page", extensionId: "test", id });
+export const pageRef = (id: string) => ({ kind: "page", extensionId: "test", id }) satisfies PageRef;
 export const modePanelFixture = (
   saved = new Map<string | undefined, WorkbenchLayout>(),
   scoped = true,

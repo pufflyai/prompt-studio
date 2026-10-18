@@ -111,7 +111,7 @@ Automatic placement, reveal, cleanup, metadata refresh and extension teardown do
 
 ## Navigation and cleanup
 
-Navigating to a different page or resource within the same mode closes **all unpinned tabs in every tray**, including Main. This covers automatic, pre-existing, manually opened, reopened and repurposed previews. Pinned Side/Bottom tabs remain visible within the mode. Pinned Main tabs hide and restore only on their page. Selecting a tab, refreshing metadata, changing a document position, or reselecting the same page does not count as leaving it. Dragging a preview pins it; its destination controls whether it is page-local or shared. Closing the last tab closes its panel.
+Navigating to a different page, resource or declared document within the same mode closes **all unpinned tabs in every tray**, including Main. This covers automatic, pre-existing, manually opened, reopened and repurposed previews. Pinned Side/Bottom tabs remain visible within the mode. Pinned Main tabs hide and restore only on their page. Selecting a tab, refreshing metadata, changing a document position, or reselecting the same page does not count as leaving it. Dragging a preview pins it; its destination controls whether it is page-local or shared. Closing the last tab closes its panel.
 
 Panel visibility has its own lifetime. The visit owns a panel only if it changed that panel from closed to open automatically. Leaving restores it to closed, even if older tabs remain. Explicit tab or visibility edits hand the panel back to the user's layout in this mode. Adding a related tab to an already open panel does not take ownership of its visibility.
 
@@ -126,3 +126,5 @@ Saved-route boot places current related previews too, respecting remembered clos
 Pass the source's full `ResourceRef` as `anchor` to filter by owner, kind, ID, and project. Use `limit: 1` to select the most recent matching session.
 
 The API is additive. Follow [API versioning](0014-api-versioning.md) and publish SDK support before independently released extensions adopt it.
+
+A declared document also owns its related-opening visit and pending lookups. Leaving that document releases its temporary panel reveals, even when a retained pin remains in the panel and the next document returns no openings. Section and source-position changes stay in the same visit. Closing or pinning a different document moved into Main edits that tab’s owner without changing the current document.

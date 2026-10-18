@@ -1,8 +1,9 @@
-import { type PlacementIdentity, resourceKey } from "@pstdio/sdk/extensions";
+import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { placementIdentityKey, reconcileOwnedPlacements } from "../../registries/layout/placement-reconciliation";
 import { editPagePlacementStates, type PagePlacementEdit } from "../../registries/pages/page-placement-state";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
+import { pageResourceContextKey } from "../../registries/pages/page-resource-context";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
 
@@ -14,7 +15,8 @@ export const isDetachedPagePlacement = (core: WorkbenchCore, placement: Workbenc
     !core.layout.getLayout().regions.main.widgets.includes(placement) ||
     identity.pageId !== state.activePageId ||
     (Boolean(state.pages[identity.pageId]?.resource) &&
-      resourceKey(placement.resource) !== resourceKey(state.location?.resource))
+      pageResourceContextKey(state.pages[identity.pageId], placement.resource) !==
+        pageResourceContextKey(state.pages[identity.pageId], state.location?.resource))
   );
 };
 

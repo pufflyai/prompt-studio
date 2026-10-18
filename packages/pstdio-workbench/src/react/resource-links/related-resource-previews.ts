@@ -32,14 +32,15 @@ export const registerRelatedResourcePreviews = (
   const abortAll = () => {
     for (const { controller } of pending.values()) controller.abort();
   };
+  const requestKey = (sourceKey: string | undefined) => JSON.stringify([relatedResourcePageKey(ctx), sourceKey]);
   const cancelOtherSelections = (selectedKey?: string) => {
     const source = ctx.pages.store.getState().location?.resource;
     const pageResource = source && canonicalize(source);
     for (const [key, { controller }] of pending) {
-      if (key === selectedKey) continue;
+      if (selectedKey && key === requestKey(selectedKey)) continue;
       // A manual panel selection must not discard the routed page's declaration
       // lookup: its result still determines which user choices belong to the page.
-      if (key !== resourceKey(pageResource)) controller.abort();
+      if (key !== requestKey(resourceKey(pageResource))) controller.abort();
     }
   };
   let openingPreviews = false;
@@ -52,8 +53,12 @@ export const registerRelatedResourcePreviews = (
     controller: AbortController,
     present: boolean,
   ) => {
+    const pageKey = relatedResourcePageKey(ctx);
     const current = () =>
-      !controller.signal.aborted && enabled() && ctx.resources.getKind(resource.type, resource.extensionId) === owner;
+      !controller.signal.aborted &&
+      enabled() &&
+      relatedResourcePageKey(ctx) === pageKey &&
+      ctx.resources.getKind(resource.type, resource.extensionId) === owner;
     try {
       const entries = await owner.relatedOpenings!(resource, controller.signal);
       if (!current()) return;
@@ -97,7 +102,7 @@ export const registerRelatedResourcePreviews = (
       if (!enabled()) abortAll();
       return Promise.resolve();
     }
-    const key = resourceKey(resource);
+    const key = requestKey(resourceKey(resource));
     const existing = pending.get(key);
     if (existing?.owner === owner && !existing.controller.signal.aborted) {
       return existing.promise;

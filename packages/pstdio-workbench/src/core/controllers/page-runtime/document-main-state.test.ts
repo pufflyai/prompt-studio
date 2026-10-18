@@ -118,3 +118,26 @@ test("another document's view moved into Main restores without reopening the sou
     }),
   ]);
 });
+
+test.each(["close", "pin"] as const)("%s targets a foreign document moved into the current Main", (action) => {
+  const s = fixture(undefined, action === "pin" ? "many" : undefined);
+  s.navigateDocument("b");
+  const b = s.w.layout.listPanelInstances("main")[0]!;
+  s.w.movePanel(b.instanceId, "side");
+  s.navigateDocument("a", undefined, action === "pin" ? "pin" : undefined);
+  const a = s.w.layout.listPanelInstances("main")[0]!;
+  s.w.movePanel(b.instanceId, "main");
+  if (action === "close") s.w.closePlacement(b.placementIdentity!);
+  else {
+    s.w.pinPlacement(b.placementIdentity!, false);
+    expect(s.w.layout.listPanelInstances("main").find((tab) => tab.instanceId === b.instanceId)?.tabRetention).toBe(
+      "preview",
+    );
+    s.w.pinPlacement(b.placementIdentity!, true);
+  }
+  expect(s.w.pages.store.getState().location?.resource?.metadata?.file).toBe("a");
+  expect(s.w.layout.listPanelInstances("main").some((tab) => tab.instanceId === a.instanceId)).toBe(true);
+  s.navigate("alpha-list");
+  s.navigateDocument("a", undefined, action === "pin" ? "pin" : undefined);
+  expect(s.w.layout.listPanelInstances("main").some((tab) => tab.instanceId === a.instanceId)).toBe(true);
+});
