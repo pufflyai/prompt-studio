@@ -52,6 +52,8 @@ pst update-channel stable
 pst update-channel        # prints the current channel
 ```
 
+`pst update-channel` reads and saves the setting through the Prompt Studio runtime, so it needs the runtime running. It does not work when auto-start is turned off and no runtime is running.
+
 The choice belongs to this computer. The app never installs an older version. If you switch from Nightly back to Stable, the app keeps the nightly build until a newer stable release is out. Windows always follows Stable.
 
 ## Install only the command-line tool
@@ -67,7 +69,7 @@ The package installs two names for the same command: `pst` and `pstdio`.
 
 The package's `pst` launcher is a small Node.js script that starts the Prompt Studio binary for your platform, so Node.js must also be on your `PATH`. If `pst --version` prints `env: node: No such file or directory`, install Node.js, or use the desktop app, which includes `pst`.
 
-To follow nightly builds of the command-line tool, install `pstdio@nightly` instead. Each nightly GitHub release also has an `install.sh` that installs that nightly.
+To follow nightly builds of the command-line tool, install `pstdio@nightly` instead. Each GitHub release, stable or nightly, also has an `install.sh` that installs that release.
 
 ## Start Prompt Studio
 

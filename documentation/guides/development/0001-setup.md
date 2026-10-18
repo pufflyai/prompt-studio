@@ -132,7 +132,7 @@ The launcher mounts each host login file only when it exists, and prints a `Not 
 
 **Codex.** Run `codex login` on the host. The container mounts `~/.codex/auth.json` when it exists. The seeded project uses Codex but does not pick a model. Sessions start with the model Codex marks as the default for your account. A ChatGPT account can use only the models Codex lists for it.
 
-**OpenCode.** Run `opencode auth login` on the host. The container mounts `~/.local/share/opencode/auth.json` and `~/.local/share/opencode/mcp-auth.json` when they exist. The free `opencode/*` models need no provider login.
+**OpenCode.** Run `opencode auth login` on the host. The container mounts `~/.local/share/opencode/auth.json` and `~/.local/share/opencode/mcp-auth.json` when they exist. The free `opencode/*` models need no provider login. An expired OpenCode Zen key in a mounted `auth.json` still breaks them: the turn fails with "This API key has expired". Run `opencode auth login` again on the host, or remove that entry.
 
 **Claude Code.** On macOS, Claude Code keeps its login in the Keychain, which the Linux container cannot read. Create a long-lived token on the host with `claude setup-token`, then export it in the shell that starts the stack:
 

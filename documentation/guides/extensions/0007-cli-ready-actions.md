@@ -42,7 +42,7 @@ pst bookmarks add --help
 pst bookmarks list --json
 ```
 
-Top-level help lists the project's enabled extension namespaces when run in a linked project folder with a reachable runtime. Otherwise, it shows only core commands. Namespace help lists command paths. Command help identifies the provider and shows flags and examples. An extension may also declare shorter aliases; help lists them. An agent should read the help before inventing a command name or flag.
+Top-level help lists the project's enabled extension namespaces when run in a linked project folder with a reachable runtime. Otherwise, it shows only core commands. Right after the app starts, extensions may still be loading, and help shows only core commands without saying so. Wait until the extension's tools appear in the dashboard, then run `pst --help` again. Namespace help lists command paths. Command help identifies the provider and shows flags and examples. An extension may also declare shorter aliases; help lists them. An agent should read the help before inventing a command name or flag.
 
 From another folder, target the project explicitly:
 
