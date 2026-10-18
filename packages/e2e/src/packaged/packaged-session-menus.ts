@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
+import { verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
 import { verifyRetainedTerminalDrop } from "./packaged-tab-drop-pinning";
 
@@ -34,6 +35,8 @@ export const verifyPackagedSessionMenus = async (
   authorization: Record<string, string>,
 ) => {
   const { workspace, session } = await createSessionFixture(baseUrl, projectId, authorization);
+  const hideBottom = page.getByRole("button", { name: "Hide Secondary Panel", exact: true });
+  if (await hideBottom.isVisible()) await hideBottom.click();
   const workspaceUrl = serializePageUrl({
     projectId,
     page: { id: "workspace", ref: workbenchPages.workspace, path: "workspace" },
@@ -131,6 +134,7 @@ export const verifyPackagedSessionMenus = async (
   await expect(terminalTab).toBeVisible();
   await expect(bottomHeader.getByRole("tab")).toHaveCount(1);
   await verifyGlobalBottomState(page, terminalTab, reopenWorkspace, leaveWorkspace);
+  await verifyModePanelState(page, terminalTab);
   await verifyRetainedTerminalDrop(page, terminalTab);
   await terminalInput.pressSequentially('printf "__navigation_%s__\\n" "$PSTDIO_NAVIGATION_STATE"');
   await terminalInput.press("Enter");

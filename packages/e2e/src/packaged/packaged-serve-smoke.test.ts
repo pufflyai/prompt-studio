@@ -220,6 +220,7 @@ test(
   PACKAGED_TEST_TIMEOUT,
 );
 
+// Browser smoke also covers mode panel restoration and generic page-preview cleanup.
 registerPackagedShowcaseSmokeTests();
 registerPackagedPlannerSmokeTests();
 

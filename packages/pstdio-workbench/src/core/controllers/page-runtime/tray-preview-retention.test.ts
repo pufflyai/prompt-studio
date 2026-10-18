@@ -30,7 +30,7 @@ test("one tray replaces previews across shell and mode owners without restoring 
   expect(ids(w, "side")).toEqual(["new", "kept"]);
   await w.navigation.openTarget(navigate("beta"));
   await w.navigation.openTarget(navigate("alpha"));
-  expect(ids(w, "side")).toEqual(["new", "kept"]);
+  expect(ids(w, "side")).toEqual(["kept"]);
 });
 
 test("preview is leftmost when opened, unpinned, or reordered beside pinned tabs", async () => {

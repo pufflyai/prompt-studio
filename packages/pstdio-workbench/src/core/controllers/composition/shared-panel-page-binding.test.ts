@@ -47,7 +47,7 @@ for (const owner of ["shell", "mode"] as const) {
     await w.navigation.openTarget(navigate("alpha"));
     if (owner === "shell")
       w.shellPlacements.openPlacement({ placementId: declaration.id, resource: resource("kept"), open: "pin" });
-    else w.modePlacements.openPlacement({ panel: ref, resource: resource("kept"), open: "preview" });
+    else w.modePlacements.openPlacement({ panel: ref, resource: resource("kept"), open: "pin" });
     const original = w.layout.listPanelInstances(region)[0]!;
     await w.navigation.openTarget({ kind: "page", page: page("home") });
     w.movePanel(original.instanceId, "main");

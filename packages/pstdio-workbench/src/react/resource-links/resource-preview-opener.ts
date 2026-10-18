@@ -6,6 +6,7 @@ import type {
   WorkbenchModuleContext,
   WorkbenchRegion,
 } from "../../core";
+import { isWorkbenchModePanelAvailable } from "../../core/registries/modes/mode-layout";
 import { resourceMatchesConstraint } from "../../core/shared/contributions/reference-id";
 import { createRelatedPanelLifetime } from "./related-panel-lifetime";
 import { relatedResourcePageKey } from "./related-resource-page-key";
@@ -140,6 +141,14 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
     if (!resource) return false;
     const existing = findOpenResource(ctx, resource);
     const region = existing?.region ?? options.region;
+    const modeId = ctx.modes.getActiveModeId();
+    if (
+      !isWorkbenchModePanelAvailable(
+        modeId ? ctx.modes.getMode(modeId) : undefined,
+        region as "main" | "side" | "secondary",
+      )
+    )
+      return false;
     // Capture visibility before placement reconciliation can reveal the panel.
     const closed = (region === "side" || region === "secondary") && !ctx.shell.getRegionState(region).open;
     if (!existing && !present(target, resource, source, options)) return false;
@@ -164,24 +173,8 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
   });
   return {
     open,
-    closePagePreviews(sourceKey: string) {
-      return panels.run(() => {
-        // Only tabs this opener created belong to the page's temporary context.
-        // Existing tabs and tabs the user repurposed do not belong to this page.
-        const previews = Object.values(ctx.layout.getLayout().regions)
-          .flatMap((region) => region.widgets)
-          .filter((panel) => panel.relatedSource === sourceKey && panel.tabRetention === "preview");
-        for (const preview of previews) {
-          // Closing one placement can reconcile the other outgoing tabs away.
-          const panel = Object.values(ctx.layout.getLayout().regions)
-            .flatMap((region) => region.widgets)
-            .find((panel) => panel.widgetId === preview.widgetId);
-          if (panel?.relatedSource === sourceKey && panel.tabRetention === "preview" && panel.placementIdentity)
-            ctx.closePlacement(panel.placementIdentity);
-        }
-        panels.leave(sourceKey);
-        return previews.map((panel) => panel.widgetId);
-      });
+    leavePage(sourceKey: string) {
+      panels.run(() => panels.leave(sourceKey));
     },
     dispose() {
       panels.dispose();

@@ -40,3 +40,14 @@ test("closing the last unowned tab closes its auxiliary panel", () => {
     expect(w.shell.getRegionState(region).open).toBe(false);
   }
 });
+
+test.each(["side", "secondary"] as const)("moving the final tab out of %s closes the empty panel", (region) => {
+  const w = createWorkbench();
+  w.layout.registerWidget({ id: "notes", rendererId: "notes", region, title: "Notes", closable: true });
+  const panel = w.layout.openPanel("notes");
+  w.shell.setRegionOpen(region, true);
+  w.movePanel(panel.instanceId, "main");
+  expect(w.layout.listPanelInstances(region)).toEqual([]);
+  expect(w.shell.getRegionState(region).open).toBe(false);
+  expect(w.layout.getActivePanel("main")?.instanceId).toBe(panel.instanceId);
+});

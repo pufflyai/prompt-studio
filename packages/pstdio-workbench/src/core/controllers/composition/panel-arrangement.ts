@@ -4,13 +4,21 @@ import {
   removeLocationSubPanelSelection,
   selectRegionActiveWidget,
 } from "../../registries/layout/layout-operations";
-import type { WorkbenchPanelRegion, WorkbenchTabPosition } from "../../registries/layout/layout-types";
+import type {
+  WorkbenchPanelRegion,
+  WorkbenchRegion,
+  WorkbenchRegionState,
+  WorkbenchTabPosition,
+} from "../../registries/layout/layout-types";
 import { workbenchPanelRegions } from "../../registries/layout/layout-types";
 import { planTrayDrop } from "../../registries/layout/tray-tabs";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { panelDestinations } from "./panel-destinations";
+
+const keepSourceVisible = (source: WorkbenchRegionState, region: WorkbenchRegion, tabCount: number) =>
+  source.visible && (tabCount > 0 || region === "main");
 
 export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
   getPanelDestinations(instanceId: string) {
@@ -44,6 +52,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
           [found.regionId]: {
             ...source,
             widgets: remaining,
+            visible: keepSourceVisible(source, found.regionId, remaining.length),
             activeWidgetId:
               source.activeWidgetId === instanceId
                 ? (remaining[found.index] ?? remaining[found.index - 1])?.widgetId

@@ -57,8 +57,9 @@ export const verifyPackagedPreviewSelection = async (page: Page, projectId: stri
       .getByRole("region", { name: "Side Panel", exact: true })
       .getByRole("button", { name: "Open workspace", exact: true })
       .click();
-    await expect(header.getByRole("tab", { name: /Selection replacement/ })).toHaveAttribute("aria-selected", "true");
-    await expect(kept).toHaveAttribute("aria-selected", "false");
+    // Leaving the page closes the old preview before the destination places its related tab.
+    await expect(header.getByRole("tab", { name: /Selection replacement/ })).toHaveAttribute("aria-selected", "false");
+    await expect(kept).toHaveAttribute("aria-selected", "true");
     await expect(old).toHaveCount(0);
     await expect(header.getByRole("tab")).toHaveCount(2);
   } finally {

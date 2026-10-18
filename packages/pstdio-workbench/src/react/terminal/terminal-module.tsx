@@ -5,6 +5,7 @@ import {
   type WorkbenchModuleContribution,
   workbenchPanelRegions,
 } from "../../core";
+import { departingPagePreviews } from "../../core/controllers/page-runtime/page-preview-lifetime";
 import { toPanelInstance } from "../../core/registries/layout/panel-api";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
 // The host-owned terminal panel in the workbench `secondary` (bottom) region.
@@ -27,18 +28,29 @@ const terminalPlacements = (layout: WorkbenchLayout) =>
 const terminalInstanceIds = (ctx: WorkbenchCoreContributionContext) =>
   new Set(terminalPlacements(ctx.layout.getLayout()).map((placement) => placement.widgetId));
 const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) => {
-  // A scope rotation temporarily removes every placement. Only an explicit tab
+  // Scope and mode changes hide placements temporarily. Only an explicit tab
   // close should end the PTY bound to that placement.
   let previousScope = ctx.layout.getPersistenceScope();
+  let previousMode = ctx.modes.getActiveModeId();
+  let previousPage = ctx.pages.store.getState();
   const unsubscribeLayout = ctx.layout.store.subscribe((state, previousState) => {
     // Store notifications may be batched until after the scope events finish.
     const scope = ctx.layout.getPersistenceScope();
     const scopeChanged = scope !== previousScope;
     previousScope = scope;
-    if (scopeChanged) return;
+    const mode = ctx.modes.getActiveModeId();
+    const modeChanged = mode !== previousMode;
+    previousMode = mode;
+    const page = ctx.pages.store.getState();
+    const closedPreviews = new Set(
+      departingPagePreviews(page, previousPage, previousState.layout).map((tab) => tab.widgetId),
+    );
+    previousPage = page;
+    if (modeChanged || ctx.modes.isTransitioning()) return;
     const currentIds = new Set(terminalPlacements(state.layout).map((placement) => placement.widgetId));
     const previousIds = terminalPlacements(previousState.layout).map((placement) => placement.widgetId);
     for (const instanceId of previousIds) {
+      if (scopeChanged && !closedPreviews.has(instanceId)) continue;
       if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(instanceId);
     }
   });

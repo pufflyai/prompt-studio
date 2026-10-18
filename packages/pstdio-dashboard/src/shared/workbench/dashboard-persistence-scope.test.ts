@@ -45,18 +45,14 @@ describe("dashboard persistence scope", () => {
       carryRegions: [],
     });
   });
-  test("keeps project panel state when switching modes", () => {
+  test("restores the destination mode instead of carrying the outgoing mode's panels", () => {
     const result = resolveDashboardPersistenceScope({
       currentScope: "project/project-1/mode/project/page/start",
       modeId: "kiln",
       pageId: "kiln",
       projectId: "project-1",
     });
-    expect(result.carryRegions).toContain("sidenav");
-    expect(result.carryRegions).toContain("side");
-    expect(result.carryRegions).toContain("side-header");
-    expect(result.carryRegions).toContain("secondary");
-    expect(result.carryRegions).toContain("secondary-header");
+    expect(result.carryRegions).toEqual([]);
   });
   test("restores a page's own saved chrome when entering from the project root scope", () => {
     const result = resolveDashboardPersistenceScope({

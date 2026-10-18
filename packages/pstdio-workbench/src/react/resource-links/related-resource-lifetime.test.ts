@@ -115,7 +115,7 @@ test("leaving the source page retains a related preview the user pinned", async 
   s.controller.dispose();
 });
 
-test("leaving the source page does not close a manually opened related preview", async () => {
+test("leaving the source page closes a manually opened related preview", async () => {
   const s = setup([opening("related")]);
   leavePage(s);
   registerTray(s);
@@ -127,14 +127,14 @@ test("leaving the source page does not close a manually opened related preview",
   s.workbench.pageLocations.navigate(s.target(s.source));
   await s.controller.open(s.source);
   leavePage(s);
-  expect(s.workbench.layout.listPanelInstances("side")[0]?.resource?.id).toBe("related");
+  expect(s.workbench.layout.listPanelInstances("side")).toEqual([]);
   s.controller.dispose();
 });
 
 test.each([
   "shell",
   "mode",
-] as const)("replacing an automatic %s tab keeps its new resource on page leave", async (kind) => {
+] as const)("replacing an automatic %s preview still closes it on page leave", async (kind) => {
   const s = setup([opening("related")]);
   const binding = {
     view: { kind: "view", id: "document" },
@@ -167,7 +167,7 @@ test.each([
   else s.workbench.modePlacements.updatePlacement(identity, update);
   expect(s.workbench.layout.listPanelInstances("side")[0]?.instanceId).toBe(before.instanceId);
   leavePage(s);
-  expect(s.workbench.layout.listPanelInstances("side")[0]?.resource?.id).toBe("manual-replacement");
+  expect(s.workbench.layout.listPanelInstances("side")).toEqual([]);
   s.controller.dispose();
 });
 
@@ -190,7 +190,7 @@ test("refreshing an automatic target's metadata keeps its page lifetime", async 
   s.controller.dispose();
 });
 
-test("a manually reopened tab no longer belongs to the automatic page lifetime", async () => {
+test("a manually reopened preview closes on page leave", async () => {
   const s = setup([opening("related")]);
   await s.controller.open(s.source);
   const panel = s.workbench.layout.listPanelInstances("side")[0]!;
@@ -203,7 +203,7 @@ test("a manually reopened tab no longer belongs to the automatic page lifetime",
     open: "preview",
   });
   leavePage(s);
-  expect(s.workbench.layout.listPanelInstances("side")[0]?.resource?.id).toBe("related");
+  expect(s.workbench.layout.listPanelInstances("side")).toEqual([]);
   s.controller.dispose();
 });
 

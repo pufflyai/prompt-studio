@@ -36,7 +36,7 @@ const setup = () => {
 test.each(["side", "secondary"] as const)("a manually opened %s panel stays open across pages", (region) => {
   const { workbench, navigate } = setup();
   workbench.shell.setRegionOpen(region, true);
-  for (const page of ["ticket", "other", "tickets", "workspace"]) {
+  for (const page of ["ticket", "tickets", "workspace"]) {
     navigate(page);
     expect(workbench.shell.getRegionState(region).open).toBe(true);
   }
@@ -46,7 +46,7 @@ test("a manually added terminal stays open across workspace, ticket and tickets 
   const { workbench, navigate } = setup();
   workbench.registerModule(createWorkbenchTerminalModule());
   const terminal = openWorkbenchTerminal(workbench);
-  for (const page of ["ticket", "other", "tickets", "workspace"]) {
+  for (const page of ["ticket", "tickets", "workspace"]) {
     navigate(page);
     expect(workbench.layout.getActivePanel("secondary")?.instanceId).toBe(terminal.instanceId);
     expect(workbench.shell.getRegionState("secondary").open).toBe(true);
@@ -86,7 +86,7 @@ test.each([
   const identity = workbench.shellPlacements.openPlacement({
     placementId: "manual",
     resource: { type: "document", id: "manual" },
-    open: "preview",
+    open: "pin",
   });
   workbench.shell.setRegionOpen(region, true);
   const tab = workbench.layout.getActivePanel(region)!;

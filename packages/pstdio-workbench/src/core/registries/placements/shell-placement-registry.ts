@@ -92,6 +92,8 @@ export const createWorkbenchShellPlacementRegistry = (input: {
   activatePanel(instanceId: string): unknown;
   getLayout(): WorkbenchLayout;
   getScope?(): string | undefined;
+  getContext?(): OwnedPlacementLocationContext | undefined;
+  isChangingPage?(): boolean;
   resolveScope?(context: OwnedPlacementLocationContext): string | undefined;
   loadLayout?(context: OwnedPlacementLocationContext): WorkbenchLayout | undefined;
   enteredWithPersistedLayout(): boolean;
@@ -123,6 +125,7 @@ export const createWorkbenchShellPlacementRegistry = (input: {
     });
   };
   input.onDidChangePersistenceScope(() => {
+    if (input.isChangingPage?.()) return;
     for (const placement of placements.values()) restorePlacement(placement);
     notifyWorkbenchChange(placements, emitChange);
   });
@@ -167,6 +170,18 @@ export const createWorkbenchShellPlacementRegistry = (input: {
     },
     getState: () => state,
     restore(context, current = state, previousContext) {
+      if (input.getContext) {
+        const previous = previousContext ?? input.getContext();
+        if (previous?.modeId === context.modeId && previous?.projectId === context.projectId) return current;
+        const saved = input.loadLayout?.(context);
+        if (!saved) return createOwnedPlacementState();
+        return restoreOwnedPlacementState({
+          state: createOwnedPlacementState(),
+          declarations: [...placements.values()],
+          saved: Object.values(saved.regions).flatMap((region) => region.widgets),
+          owns: (identity) => identity.kind === "shell",
+        });
+      }
       if (!input.resolveScope) return current;
       const scope = input.resolveScope(context);
       const previousScope = previousContext ? input.resolveScope(previousContext) : input.getScope?.();

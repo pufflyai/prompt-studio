@@ -21,6 +21,7 @@ import {
   loadWorkbenchLocationLayout,
 } from "./controllers/page-runtime/page-state-restoration";
 import { createWorkbenchLayoutCache } from "./controllers/page-runtime/workbench-layout-cache";
+import { connectModeLayoutCache, createShellLayoutContext } from "./controllers/page-runtime/workbench-layout-context";
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
 import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
 import { createWorkbenchSidePanelController } from "./controllers/side-panel/side-panel-controller";
@@ -106,11 +107,12 @@ const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefi
 };
 
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
+  let core: WorkbenchCore;
   const context = createContextKeyService();
   const commands = createCommandRegistry({ context });
   const renderers = createCoreRenderers(input);
 
-  const layoutCache = createWorkbenchLayoutCache(input);
+  const layoutCache = createWorkbenchLayoutCache(input, () => core?.pages.store.getState().activeModeId);
   const cachedInput = { ...input, persistence: undefined, layoutPersistence: layoutCache.layout };
   const locationAwareLayout = createLayoutModel({
     defaultRegionVisibility: {
@@ -159,6 +161,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     activatePanel: layout.activatePanel,
     getLayout: layout.getLayout,
     getScope: layout.getPersistenceScope,
+    ...createShellLayoutContext(() => core),
     resolveScope: input.resolvePagePersistenceScope
       ? (context) =>
           input.resolvePagePersistenceScope!({
@@ -168,6 +171,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
           }).scope
       : undefined,
     loadLayout: (context) =>
+      layoutCache.readMode(context.projectId, context.modeId) ??
       loadWorkbenchLocationLayout(cachedInput, { ...context, resource: context.location?.resource }, layout),
     enteredWithPersistedLayout: layout.enteredWithPersistedLayout,
     onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
@@ -190,8 +194,6 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     getPrimary: () => core.getPrimaryResource(),
     resolveView: views.getView,
   });
-
-  let core: WorkbenchCore;
 
   const modes = createWorkbenchModeRegistry({
     establishLocation,
@@ -221,6 +223,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
         resource: state.location?.resource,
       }),
     loadModeLayout: layoutCache.readMode,
+    saveModeLayout: layoutCache.saveMode,
     beforeApply: createPagePersistenceScopeHandler(input, layout, panelMenuState),
     restorePageState: createPageStateRestorer(cachedInput),
 
@@ -330,10 +333,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
   setWorkbenchRenderers(core, renderers);
   registerArrangementCommands(core);
-  layout.store.subscribe(() => {
-    const state = pages.store.getState();
-    if (state.activeModeId) layoutCache.saveMode(state.projectId, state.activeModeId, layout.getLayout());
-  });
+  connectModeLayoutCache(core, layoutCache);
   const breadcrumbSources = { breadcrumbs, locations: pageLocations, pages, navigationTrees, modes };
   connectWorkbenchPageBreadcrumbs({ ...breadcrumbSources, resources: pageResources });
   connectWorkbenchCoreState(core, input);

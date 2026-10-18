@@ -295,8 +295,7 @@ test("a new URL opens related resources but reloading its saved location keeps c
   s.forgetSavedLocation();
   s.workbench.pageLocations.clearProject();
   s.workbench.pageLocations.boot("project");
-  await Promise.resolve();
-  await Promise.resolve();
+  await Bun.sleep(0);
   expect(s.reads()).toBe(1);
   const preview = s.workbench.layout.listPanelInstances("side")[0]!;
   s.workbench.closePlacement(preview.placementIdentity!);

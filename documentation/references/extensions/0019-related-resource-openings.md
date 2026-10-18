@@ -90,7 +90,7 @@ Tab placement, tab selection and panel visibility are separate. These rules appl
 2. Each tray has one replaceable unpinned tab, always leftmost. Replacing its content also replaces its selected content when that preview was selected. Pins remain open.
 3. An open populated panel keeps its selected tab and keyboard focus. A newly revealed or empty panel selects the related tab. Remembering a resource chooses which related tab to place; it does not override another selected tab.
 4. Closing the last tab closes its panel. Manually closing the last tab also remembers that panel as closed for this resource page.
-5. Side and Bottom visibility, selection and manual tabs are global within the project. Page-owned panels are the following temporary overrides.
+5. Side and Bottom visibility, sizes, selection and kept tabs are shared only within the current project and mode. Each mode has its own saved state. Page-owned panels are the following temporary overrides.
 
 | Event | Visibility |
 | --- | --- |
@@ -98,8 +98,8 @@ Tab placement, tab selection and panel visibility are separate. These rules appl
 | Enter a page whose panel was manually closed on a previous visit | Place or update the related tab while keeping its panel closed. |
 | Leave a page that automatically revealed a closed panel | Close that panel. Keep any pre-existing tabs in it. |
 | Leave a page whose panel was already open | Keep it open, unless closing its last automatic tab makes it empty. |
-| Pin the related tab, move it, add a manual tab, replace a resource manually, or explicitly reopen the panel | Keep the user's panel state and kept tabs when leaving. |
-| Close a panel on another page | Change global visibility. Do not record a closure for the resource page that is being revisited. Its own automatic-opening rule may reveal it. |
+| Pin the related tab, move it, add a manual tab, replace a resource manually, or explicitly reopen the panel | Keep the user's panel state and pinned tabs when leaving. Any tab still unpinned closes on page navigation. |
+| Close a panel on another page | Change visibility within the current mode. Do not record a closure for the resource page that is being revisited. Its own automatic-opening rule may reveal it. |
 
 Only destinations in the current owner's automatic results have resource-page choices. The page remembers the last resource chosen in that destination and explicit visibility changes. Closing its final tab retains the last resource choice, so the next visit can place that preview hidden. Manually reopening the panel clears its closed override. Choosing an older session on a Ticket changes its next session preview; an existing selected pin can still remain in front.
 
@@ -111,11 +111,11 @@ Automatic placement, reveal, cleanup, metadata refresh and extension teardown do
 
 ## Navigation and cleanup
 
-Leaving the source page closes each unpinned tab newly added automatically for that page. Pre-existing tabs, pins and manually opened, reopened or repurposed tabs remain. Selecting a new automatic preview or refreshing its metadata does not extend its lifetime. A dragged preview becomes pinned and remains. Closing the last tab closes its panel.
+Navigating to a different page or resource within the same mode closes **all unpinned tabs in every tray**, including Main. This covers automatic, pre-existing, manually opened, reopened and repurposed previews. Pinned tabs remain. Selecting a tab, refreshing metadata, changing a document position, or reselecting the same page does not count as leaving it. Dragging a preview pins it, so it remains. Closing the last tab closes its panel.
 
-Panel visibility has its own lifetime. The visit owns a panel only if it changed that panel from closed to open automatically. Leaving restores it to closed, even if older tabs remain. Explicit tab or visibility edits hand the panel back to the user's global layout. Adding a related tab to an already open panel does not take ownership of its visibility.
+Panel visibility has its own lifetime. The visit owns a panel only if it changed that panel from closed to open automatically. Leaving restores it to closed, even if older tabs remain. Explicit tab or visibility edits hand the panel back to the user's layout in this mode. Adding a related tab to an already open panel does not take ownership of its visibility.
 
-Manual tabs and terminal processes follow the project across page and mode navigation and browser history. Closing a terminal tab ends its process. Each mode still controls which regions it supports; panel state does not carry into another project. Both auxiliary trays keep their global selection when Main changes, including manual tabs opened on resource-free listings.
+Switching modes suspends the outgoing mode instead of applying page-leave cleanup. Hide its tabs and panels while preserving their pin state, selected tabs, visibility, sizes and running terminals. A mode with no panels shows none. Returning to a mode restores it as left, including unpinned tabs and manually closed panels; it does not replay automatic defaults over the saved selection. A later page change within that mode closes its previews. Each project and mode is independent. Pinned manual terminals remain across page navigation within their mode. Closing a terminal tab ends its process.
 
 Saved-route boot places current related previews too, respecting remembered closures and global selection. It does not reveal a panel that this resource page remembers as manually closed. Restoring the same layout or refreshing metadata does not independently evaluate the owner again. Kinds without a command open nothing automatically. Manual links and normal target resolvers remain available.
 

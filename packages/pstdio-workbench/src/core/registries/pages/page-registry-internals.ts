@@ -36,7 +36,9 @@ export interface WorkbenchPageRegistryInternals<Value> {
   onDidCommit(listener: () => void): Disposable;
   getPublishingState(): WorkbenchPageRegistryStoreState<Value>;
   connectRuntime(
-    apply: (state: WorkbenchPageRegistryStoreState<Value>) => void,
+    apply: (
+      state: WorkbenchPageRegistryStoreState<Value>,
+    ) => WorkbenchPageRegistryStoreState<Value>["layoutActivation"],
     normalize?: (state: WorkbenchPageRegistryStoreState<Value>) => WorkbenchPageRegistryStoreState<Value>,
   ): Disposable;
   activateLocation(input: WorkbenchPageLocationCommitInput): void;

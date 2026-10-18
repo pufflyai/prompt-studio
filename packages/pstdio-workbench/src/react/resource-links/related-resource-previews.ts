@@ -1,6 +1,6 @@
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { NavigationTarget, RegisteredResourceKind, WorkbenchModuleContext } from "../../core";
-import { relatedResourcePageKey } from "./related-resource-page-key";
+import { relatedResourcePageKey, relatedResourceStateKey } from "./related-resource-page-key";
 import { createRelatedResourcePreferences } from "./related-resource-preferences";
 import type { WorkbenchResourceLinksOptions } from "./resource-links-module";
 import { createResourcePreviewOpener } from "./resource-preview-opener";
@@ -46,7 +46,12 @@ export const registerRelatedResourcePreviews = (
   let disposed = false;
   const preferences = createRelatedResourcePreferences(ctx, canonicalize);
   const enabled = () => ctx.preferences.getValue(openRelatedResourcesPreference) !== false;
-  const load = async (resource: ResourceRef, owner: RegisteredResourceKind, controller: AbortController) => {
+  const load = async (
+    resource: ResourceRef,
+    owner: RegisteredResourceKind,
+    controller: AbortController,
+    present: boolean,
+  ) => {
     const current = () =>
       !controller.signal.aborted && enabled() && ctx.resources.getKind(resource.type, resource.extensionId) === owner;
     try {
@@ -61,6 +66,7 @@ export const registerRelatedResourcePreviews = (
             resourceKey(entry.resource) !== resourceKey(resource),
         ),
       );
+      if (!present) return;
       if (!openings.length) return;
       const resolved = await options.createService(resource).resolve(
         openings.map((entry) => entry.resource),
@@ -83,7 +89,7 @@ export const registerRelatedResourcePreviews = (
       if (current()) console.warn("Could not open related resources", error);
     }
   };
-  const open = (source: ResourceRef) => {
+  const open = (source: ResourceRef, present = true) => {
     const resource = canonicalize(source);
     const owner = resource && ctx.resources.getKind(resource.type, resource.extensionId);
     cancelOtherSelections(resourceKey(resource));
@@ -99,7 +105,7 @@ export const registerRelatedResourcePreviews = (
     existing?.controller.abort();
     preferences.enter(resource);
     const controller = new AbortController();
-    const promise = load(resource, owner, controller).finally(() => {
+    const promise = load(resource, owner, controller, present).finally(() => {
       if (pending.get(key)?.controller === controller) pending.delete(key);
     });
     pending.set(key, { owner, controller, promise });
@@ -108,29 +114,35 @@ export const registerRelatedResourcePreviews = (
   const primary = ctx.pageLocations.onDidNavigate((location) => {
     if (openingPreviews) return;
     if (location.resource) {
-      preferences.enter(location.resource);
-      void open(location.resource);
+      const resource = location.resource;
+      const key = relatedResourcePageKey(ctx);
+      void Promise.resolve().then(() => {
+        if (!disposed && relatedResourcePageKey(ctx) === key) void open(resource);
+      });
     } else cancelOtherSelections();
   });
-  const primaryState = ctx.pages.store.subscribeSelector(
-    () => relatedResourcePageKey(ctx),
-    (key, previousKey) => {
-      if (openingPreviews) return;
-      preferences.run(() => opener.closePagePreviews(previousKey));
-      const resource = ctx.pages.store.getState().location?.resource;
-      cancelOtherSelections(resourceKey(resource));
-      // Evaluate after the new page layout settles, including saved-route boot.
-      if (resource) {
-        preferences.enter(resource);
-        void Promise.resolve().then(() => {
-          if (!disposed && relatedResourcePageKey(ctx) === key) void open(resource);
-        });
-      }
-    },
-  );
+  const primaryState = ctx.pages.store.subscribe((state, previous) => {
+    const key = relatedResourceStateKey(state);
+    const previousKey = relatedResourceStateKey(previous);
+    if (key === previousKey && state.activeModeId === previous.activeModeId) return;
+    if (openingPreviews) return;
+    const modeChanged = state.activeModeId !== previous.activeModeId || state.projectId !== previous.projectId;
+    if (!modeChanged) preferences.run(() => opener.leavePage(previousKey));
+    const resource = ctx.pages.store.getState().location?.resource;
+    cancelOtherSelections(resourceKey(resource));
+    // Evaluate after the new page layout settles, including saved-route boot.
+    if (resource) {
+      const restoresMode = state.layoutActivation === "restore-mode";
+      void Promise.resolve().then(() => {
+        if (!disposed && relatedResourcePageKey(ctx) === key) void open(resource, !restoresMode);
+      });
+    }
+  });
   const navigation = ctx.navigation.onDidOpenTarget((target) => {
     if (openingPreviews) return;
     const resource = targetResource(target);
+    const routed = ctx.pages.store.getState().location?.resource;
+    if (resource && routed && resourceKey(canonicalize(resource)) === resourceKey(canonicalize(routed))) return;
     if (resource) void open(resource);
     else if (target.kind === "page" || target.kind === "panel" || target.kind === "compound") abortAll();
   });
@@ -161,13 +173,6 @@ export const registerRelatedResourcePreviews = (
     },
   );
   const scope = ctx.layout.onWillChangePersistenceScope(() => {
-    if (!openingPreviews) {
-      // The registry has prepared the incoming page; clear the outgoing rendered
-      // tabs too before the scope switch writes its saved layout.
-      preferences.run(() => {
-        for (const id of opener.closePagePreviews(relatedResourcePageKey(ctx))) ctx.layout.removeWidgetPlacement(id);
-      });
-    }
     abortAll();
   });
   return {

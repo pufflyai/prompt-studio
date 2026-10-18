@@ -46,7 +46,9 @@ export const createWorkbenchPageRegistry = <Value>(
   const resourceKey = (resource: Parameters<WorkbenchPageResourceCodec["toUri"]>[0]) =>
     input.resources.toUri(normalizeResource(resource));
   const store = createPageRegistryStore(input);
-  let runtime: ((state: WorkbenchPageRegistryStoreState<Value>) => void) | undefined;
+  let runtime:
+    | ((state: WorkbenchPageRegistryStoreState<Value>) => WorkbenchPageRegistryStoreState<Value>["layoutActivation"])
+    | undefined;
   let normalizeState:
     | ((state: WorkbenchPageRegistryStoreState<Value>) => WorkbenchPageRegistryStoreState<Value>)
     | undefined;
@@ -59,7 +61,8 @@ export const createWorkbenchPageRegistry = <Value>(
       const previousPublishingState = publishingState;
       publishingState = state;
       try {
-        runtime?.(state);
+        const layoutActivation = runtime?.(state);
+        state = { ...state, layoutActivation: layoutActivation || undefined };
       } finally {
         publishingState = previousPublishingState;
       }

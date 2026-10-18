@@ -73,10 +73,7 @@ test("reload restores editor collections and closed panels from each location's 
   await restored.navigation.openTarget(target("alpha"));
   expect(
     restored.layout.getLayout().regions.main.widgets.map((item) => [item.resource?.id, item.tabRetention]),
-  ).toEqual([
-    ["notes", "preview"],
-    ["readme", "persistent"],
-  ]);
+  ).toEqual([["readme", "persistent"]]);
   expect(restored.layout.getLayout().regions.side.widgets).toHaveLength(0);
   await restored.navigation.openTarget(file("replacement", "preview"));
   expect(restored.layout.getLayout().regions.main.widgets.map((item) => item.resource?.id)).toEqual([

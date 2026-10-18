@@ -1,6 +1,8 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
 const dragTab = async (page: Page, tab: Locator, target: Locator, region: "main" | "side" | "secondary") => {
+  await target.click({ trial: true });
+  await tab.click({ trial: true });
   const start = (await tab.boundingBox())!;
   const end = (await target.boundingBox())!;
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
@@ -51,7 +53,7 @@ export const verifyTabDropPinning = async (page: Page, preview: Locator) => {
   await page.keyboard.press("Escape");
   const showSide = page.getByRole("button", { name: "Show Side Panel", exact: true });
   if (await showSide.isVisible()) await showSide.click();
-  await dragTab(page, moved, page.locator('[data-workbench-panel-header="side"]'), "side");
+  await dragTab(page, moved, page.locator('[data-workbench-panel="side"]:visible'), "side");
   await expect(preview).toBeVisible();
   await preview.focus();
   await page.keyboard.press("Shift+F10");
