@@ -26,6 +26,7 @@ import {
   pendingQueuedFollowUpsHandler,
   pendingQueuedFollowUpsRoute,
 } from "./endpoints/pending-queued-follow-ups";
+import { querySessionsHandler, querySessionsRoute } from "./endpoints/query-sessions";
 import {
   deleteQueuedFollowUpHandler,
   deleteQueuedFollowUpRoute,
@@ -57,6 +58,7 @@ import { createSessionStreamConnections } from "./session-stream-connections";
 
 export const createSessionRoutes = (deps: SessionsRouteDeps & ExtensionsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.openapi(querySessionsRoute, querySessionsHandler(deps));
   const streamConnections = createSessionStreamConnections();
   routes.openapi(draftHarnessCommandsRoute, draftHarnessCommandsHandler(deps));
 

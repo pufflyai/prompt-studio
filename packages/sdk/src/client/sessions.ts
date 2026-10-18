@@ -24,9 +24,11 @@ import type {
 } from "pstdio-api-contracts";
 import type { Session } from "../resources";
 import type { ClientOptions, RequestFn } from "./request";
+import { createSessionQueryClient } from "./session-query";
 import { createSessionStreamTransport } from "./session-stream";
 import type { SseEvent } from "./sse";
 
+/** @deprecated Use ExtensionSessionQuery from @pstdio/sdk/extensions with query or iterate. */
 export type ListSessionsInput = {
   status?: string;
   agent?: string;
@@ -39,11 +41,12 @@ export type ListSessionsInput = {
   anchorId?: string;
 };
 
-export type SessionClient = {
+export type SessionClient = ReturnType<typeof createSessionQueryClient> & {
   getDraftHarnessCommands(
     input: DraftHarnessCommandInput,
     signal?: AbortSignal,
   ): Promise<HarnessCommandState & { harnessId: string }>;
+  /** @deprecated Use query for one page or iterate for all matching sessions. */
   list(projectId: string, input?: ListSessionsInput): Promise<Session[]>;
   get(sessionId: string): Promise<Session>;
   getHarnessCommands(sessionId: string, signal?: AbortSignal): Promise<HarnessCommandState & { harnessId: string }>;
@@ -161,6 +164,7 @@ export const createSessionClient = (
   streams = createSessionStreamTransport(request, clientOptions),
 ): SessionClient => {
   return {
+    ...createSessionQueryClient(request),
     getDraftHarnessCommands: (input, signal) =>
       request("/v1/sessions/harness-command-state", { method: "POST", body: input, signal }),
     listActivity: (sessionId, input = {}) => {
@@ -222,7 +226,10 @@ export const createSessionClient = (
       new Promise<void>((resolve, reject) => {
         const subscription = streams.subscribe(sessionId, {
           onEvent: (event, data) => {
-            onEvent({ event, data: JSON.stringify(data) });
+            onEvent({
+              event,
+              data: JSON.stringify(data),
+            });
             if (event === "end") resolve();
           },
           onError: reject,

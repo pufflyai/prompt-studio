@@ -3,6 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION, type ExtensionSessionPage } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -91,6 +92,16 @@ export const registerSessionQuerySmokeTests = () => {
         items: [{ id: session.id, agent: "test.session-query.harness.worker", usage }],
         nextCursor: null,
       });
+      const client = createClient({ baseUrl: runtime.baseUrl, token: runtime.descriptor.token });
+      const filter = { agent: "test.session-query.harness.worker", status: ["completed"] as const };
+      const paged = await client.sessions.query(project.id, { ...filter, status: [...filter.status] });
+      expect(paged).toEqual(page);
+      const iterated = [];
+      for await (const item of client.sessions.iterate(project.id, { ...filter, status: [...filter.status] })) {
+        iterated.push(item);
+      }
+      expect(iterated).toEqual(page?.items);
+      expect(await client.sessions.query(project.id, { status: [] })).toEqual({ items: [], nextCursor: null });
       const cursor = Buffer.from(JSON.stringify({ projectId: project.id, createdAt: "", id: "" })).toString(
         "base64url",
       );
