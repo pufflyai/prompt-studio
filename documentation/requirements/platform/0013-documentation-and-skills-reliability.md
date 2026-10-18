@@ -1,8 +1,8 @@
 # PRD: Reliable documentation and extension authoring
 
-Status: Proposed. This document is the implementation handoff; it does not deliver the fixes.
+Status: Partly delivered in source on #1188, unreleased. Open findings are listed in the [findings register](#findings-register).
 Proposed: 2026-10-18.
-Owner: Assign one coordinating implementer and the workstream owners below before implementation.
+Owner: Coordinating implementer of #1188; each open finding names its owner role.
 
 ## Goal and scope
 
@@ -10,7 +10,7 @@ A person or agent can follow the public instructions, build a working extension,
 
 Complete the public documentation, internal documentation, skill, runtime, environment, and validation work below. Reading List and Reading Shelf are experiment extensions, not proposed core features. Follow the [mission](../../../MISSION.md), [repository rules](../../../AGENTS.md), and [documentation guide](../../guides/0001-documentation.md).
 
-This PR contains the plan only. Previous audit edits were local and uncommitted; they are not dependencies of this handoff and must not be assumed present in another checkout. Reimplement or selectively reconcile those corrections against current source. Do not publish docs, release packages, or mark requirements delivered merely by merging this plan.
+#1188 first added this plan, then implemented it on the same branch. The earlier local audit edits were not reused; every correction was made again against current source. Merging #1188 does not release packages or deploy the public docs; see R36.
 
 ## Evidence baseline and limits
 
@@ -18,7 +18,7 @@ The audit ran on 2026-10-18 against [77fa5d81](https://github.com/pufflyai/promp
 
 This plan starts from [45580feb](https://github.com/pufflyai/prompt-studio/commit/45580febf10d6f879cd6acb3962a0d2856ca20be). Since the audit, #1146, #1163, #1164, #1165, and #1169 added account authority, authenticated relay transport, native runtime connections, and transparent data/view sync. Recheck all affected claims. In particular, do not copy the audit's earlier “cloud sync remains proposed” conclusion onto newer code.
 
-The evidence below was recorded by the audit. It has not been rerun by this plan-only PR. Private local logs are not required to implement this plan; record new reproducible evidence with the implementation PRs.
+The table below is the audit's own record. New evidence from the implementation is in the [delivery record](#delivery-record) and the [findings register](#findings-register).
 
 | Area | What the audit established | Limit |
 | --- | --- | --- |
@@ -34,6 +34,80 @@ The evidence below was recorded by the audit. It has not been rerun by this plan
 The baseline agent built **Reading List**; the retest built **Reading Shelf**. Both supported a native table, add form, mark read, All/Unread filtering, delete, reload persistence, live UI/CLI updates, and separation across two real projects. Baseline tests passed 4 tests/19 assertions; retest passed 4 tests/17 assertions, plus TypeScript.
 
 Each author had fresh context, a disposable author container, copied read-only skills, public packages/docs, and no application checkout. They shared one disposable app host. Versions were mixed, briefs differed slightly, and only one agent ran per condition. Do not claim a causal speed improvement or complete host isolation. The baseline broadened its API range without testing an older host; the retest retained the required API range. Inspecting public SDK declarations for exact types is expected, not itself a failure.
+
+## Delivery record
+
+Implemented on branch `chore/docs-and-skills-remediation-plan` (#1188) and validated on 2026-10-18 on macOS arm64 with Bun 1.4.2 and Docker 29.7.2, plus Linux containers where noted. Nothing here is released yet: the stable release is 0.43.1 with extension API 0.1.6. Public pages describe `main` and label what 0.43.x lacks with "the release after 0.43.x".
+
+| Workstream | State | Main changes | Evidence |
+| --- | --- | --- | --- |
+| W1 | Delivered in source | Skill install contract in the [installer](../../../packages/pstdio/src/features/skills/install-skills.ts) and [workspace sync](../../../packages/pstdio-extensions/src/artifacts/workspace-sync-dir.ts); register below | Installer, setup, sync, and e2e tests; real-folder run of install, reinstall, edit, and `--force` |
+| W2 | Delivered in source | Public guides and references, PRD delivery records, architecture and development guides, bundled skills | SDK reference names all 15 client groups; links and routes checked; stable 0.43.1 CLI runs |
+| W3 | Delivered in source | [Version explanation](../../references/extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions), [Bookmarks example](../../../infra/local/extensions/bookmarks), skill routing index, release checklist in [PRD 0005](0005-versioning-and-releases.md) | Walkthrough run verbatim on 0.43.1 and on a `main` stack, CLI and UI |
+| W4 | Delivered in source | Bare-group help, complete piped output ([ADR 0081](../../adrs/0081-temporary-cli-console-stream-binding.md)), `extensions add .`, check target and version labels, zombie-aware runtime close, harness listing across installs | Failing-first tests for each; packaged lifecycle runs in Linux containers without init |
+| W5 | Delivered in source, one decision open | Packaged browser provisioning, CA and credential handling, named volumes, proxy bypass for fixtures, [trial isolation](../../guides/development/0001-setup.md) | Clean browser path runs; conformance, storage, assets, transport, relay, and account suites with and without a simulated proxy |
+| W6 | Partly delivered | Resource-link CLI journey, undeclared-kind error, cookbook and automation guide fixes, navigation group ownership | Isolated stack runs with the CLI and scripted Playwright; real Codex session; signed macOS 0.43.1 app checked |
+| W7 | Delivered in source | `verify:docs-links`, `verify:sdk-reference`, `verify:docs-snippets` in `static_checks`; weekly external links; ownership rules in the [documentation guide](../../guides/0001-documentation.md#documentation-checks) | Detection shown for a broken exported link, a missing asset, a missing SDK method, and a drifted snippet |
+| W8 | Partly delivered | One fresh-agent trial (create an extension) with the packaged skills, a local build of the public docs, and the stable 0.43.1 CLI in a throwaway home | Every requirement passed through the CLI; the UI was not opened; trials 2 to 4 were not run (R49) |
+
+## Findings register
+
+States: fixed and verified, open, blocked, accepted limit. "Fixed" means fixed in source on this branch and covered by the listed evidence; it does not mean released.
+
+| ID | Finding | State | Owner | Closure evidence or next step |
+| --- | --- | --- | --- | --- |
+| R01 | Installer rewrote same-name skills despite the PRD | Fixed and verified | CLI maintainers | `install-skills.test.ts`, `setup.test.ts`, `src/cli/agents.test.ts` |
+| R02 | Workspace sync overwrote unowned and edited skill files | Fixed and verified | Runtime maintainers | `workspace-files-mount.test.ts`, `workspace-files.test.ts` |
+| R03 | Kept skill files are reported only in the host log at `warn` level | Open | Product owner | Decide whether a visible notice is needed |
+| R04 | `syncDir` doc comment in `pstdio-api-contracts` predates the ownership rule | Open | SDK maintainers | Update in a separate SDK PR (the separation check forbids it here) |
+| R05 | Packaged auto-start and close hit 60 s under a non-reaping PID 1 | Fixed and verified | Runtime maintainers | `process-liveness.test.ts`; Linux no-init runs at about 1.8 s; [lesson 0017](../../lessons-learned/0017-unreaped-processes-look-alive.md) |
+| R06 | Zombies still collect under a non-reaping PID 1 | Accepted limit | Runtime maintainers | Run containers with an init process, as CI does |
+| R07 | "Harness has been disposed" after installs | Fixed and verified | Runtime maintainers | `agent-listing-during-install.test.ts` |
+| R08 | A listing can still fail once if the listed harness's own source changes mid-request | Open | Runtime maintainers | Decide whether retired handles should finish in-flight reads |
+| R09 | Piped `--json` output stopped at 64 KiB | Fixed and verified (temporary) | CLI maintainers | `piped-output.test.ts`; remove per ADR 0081 when Bun drains `console` writes |
+| R10 | Bare command groups failed without the API | Fixed and verified | CLI maintainers | `src/cli/feedback.test.ts` |
+| R11 | `pst extensions add .` was read as a catalog name | Fixed and verified | CLI maintainers | `extensions-add-paths.test.ts`, `add.test.ts` |
+| R12 | Checks did not say what was checked or whose versions were compared | Fixed and verified | CLI maintainers | `check.test.ts`, `package-manifest-api-versions.test.ts`, runtime `check.test.ts` |
+| R13 | The host's own app and extension API versions are not reported | Open | SDK and runtime maintainers | Add `host` versions to the diagnostics contract in an SDK PR |
+| R14 | Source and installed checks use different inner JSON shapes | Accepted limit | CLI maintainers | Both shapes are documented; unify when the source check can call the host checker |
+| R15 | Packaged tests launched a browser the installer does not provision | Fixed and verified | Developer tooling | Clean `PLAYWRIGHT_BROWSERS_PATH` runs; CI installs `--no-shell` only |
+| R16 | Isolated stack needed image edits behind a managed proxy and CA | Fixed and verified | Developer tooling | `NODE_EXTRA_CA_CERTS` build context, tested with a test CA |
+| R17 | Missing login files became empty folders on the host | Fixed and verified | Developer tooling | `isolated-host-files.test.ts` |
+| R18 | `--down` left unnamed `node_modules` volumes behind | Fixed and verified | Developer tooling | Start, recreate, and down leave zero volumes |
+| R19 | Cold first `dev:isolated` start outlasts the 90 s readiness wait | Blocked on approval | Developer tooling | Measured 171 s and 176 s; needs an approved readiness rule |
+| R20 | API requests stall while default extensions install | Open | Runtime maintainers | Requests should answer or fail clearly during installs |
+| R21 | Sync fixture readiness failed behind a proxy (HTTP 403) | Fixed and verified | Developer tooling | `NO_PROXY` for fixture hosts; suites pass behind a simulated proxy |
+| R22 | Public docs omitted linked-project and Git prerequisites, SDK methods, and release labels | Fixed and verified | Documentation maintainers | `verify:docs-links`, `verify:sdk-reference`, stable CLI runs |
+| R23 | Authoring skill duplicated a 509-line API copy without decision routing | Fixed and verified | Extension maintainers | Routing index and exported-folder link checks |
+| R24 | Seven Planner, Reports, and Artifacts skills had no central references | Fixed and verified | First-party extension owners | Public URL and anchor checks |
+| R25 | PRDs did not separate implementation, release, and acceptance | Fixed and verified | Documentation maintainers | Delivery records in each PRD |
+| R26 | Dashboard synced a removed `templates` table | Fixed and verified | Dashboard maintainers | Dashboard sync tests |
+| R27 | `local-example` tests never ran | Fixed and verified | Developer tooling | `test` script added |
+| R28 | The npm `pst` launcher needs Node.js | Accepted limit | CLI packaging | Documented in the [install guide](../../guides/getting-started/0001-install.md#install-only-the-command-line-tool) |
+| R29 | Extension API moved 0.1.3 to 0.1.6 between 0.43.0 and 0.43.1 | Open | SDK maintainers | Confirm whether the one-step rule applied then, and fix the check or the rule |
+| R30 | Sync cascade deletes may miss a child created mid-delete | Open (hypothesis) | API maintainers | Add a race test |
+| R31 | No recorded two-environment sync journey or conflict UI | Open | Platform owner | Record a two-dashboard browser journey |
+| R32 | Planner resource-link adoption and path opening | Blocked on release | Planner owner | #1156 needs a stable SDK with `paths` |
+| R33 | Dead GitHub Actions run links in ADRs 0032 and 0039 | Fixed | Documentation maintainers | Runs replaced with plain IDs |
+| R34 | `signInBrowser` may leave runtimes after a failed sign-in | Open (suspected) | e2e maintainers | Force a failure and check for leftover processes |
+| R35 | Docker address pools exhausted by many stacks | Accepted limit | Each stack owner | Documented in the setup guide |
+| R36 | Release, docs deploy, and post-release verification | Open | Release owner | Happens after merge through the normal release workflow |
+| R37 | Resource links have no dashboard entry point; the "Related resources" command has no menu or palette placement | Open | Workbench and dashboard maintainers | Place the command and pass the search, link, open, and unlink journey in Playwright |
+| R38 | Linking to an undeclared resource kind reported "ambiguous" | Fixed and verified | Platform API | `resource-link-policy.test.ts`; live stack message |
+| R39 | Codex runs with `approvalPolicy: "never"`, so approvals cannot be tested | Open | harness-codex owner | Decide and document the approval policy |
+| R40 | Real OpenCode and Claude Code sessions not run (expired OpenCode key; no Claude credential in the container) | Blocked | Machine owner | Renew credentials, then rerun one short session each. Codex passed a first turn and a follow-up |
+| R41 | Windows and Linux desktop installs and update channels not validated natively | Blocked | Release maintainers | Run on each platform. macOS 0.43.1 app signature, notarization, and CLI checksum were verified |
+| R42 | Section-header actions are skipped by Tab; long-press opens no menu on board cards | Open | UI library | Fix in `packages/ui` with stories and Playwright |
+| R43 | `pst --help` shows only core commands while extensions still load, without saying so | Open | CLI maintainers | Show a loading note; documented in [CLI-ready actions](../../guides/extensions/0007-cli-ready-actions.md) for now |
+| R44 | Opening a ticket URL directly shows "Ticket" and the raw ID | Open | Planner and workbench maintainers | Resolve the label on direct load |
+| R45 | A restarted dev stack served a stale workbench build | Open | Developer tooling | Find the cause |
+| R46 | Docs site checks at 1280 and 390 px, the smoke-check guide, and the screenshot in CLI-ready actions not verified | Open | Documentation maintainers | Run the checks and recapture if needed |
+| R47 | Equal navigation group labels from different extensions show twice | Open (design decision) | Design | Ownership is documented in [navigation](../../references/workbench/0004-navigation.md); decide whether to show the owner |
+| R48 | Fresh-agent extension trial | Fixed and verified (CLI only) | Independent validator | Reading List built from the packaged skills on 0.43.1; all CLI requirements passed |
+| R49 | Fresh-agent trials for editing an extension, first-party skills, and version mismatch | Open | Independent validator | Run them with the packaged skills after merge |
+| R50 | In a project created before the install, a user-scope extension's CLI commands ran before it was turned on there | Open (unconfirmed) | Runtime maintainers | Reproduce, then decide whether CLI calls must respect project enablement |
+| R51 | `pst <extension> <command> --help` does not mark required options | Open | CLI maintainers | Mark required options in extension command help |
+| R52 | Data tables cannot open a form from a row action, and the walkthrough has no edit flow | Open | Extension maintainers | Document the toolbar edit pattern or add a row form |
 
 ## Delivery order and ownership
 
@@ -211,11 +285,11 @@ Use [packaged auto-start tests](../../../packages/e2e/src/packaged/packaged.test
 
 ## Implementation handoff checklist
 
-- [ ] Rebaseline every finding; assign owners, tickets, dependencies, and closure checks.
-- [ ] Resolve skill replacement semantics before aligning the docs and installer.
-- [ ] Complete public/internal/skill corrections and release-aware canonical references.
-- [ ] Repair reproduced runtime issues and make isolated validation repeatable.
-- [ ] Close acceptance gaps or record explicitly accepted limits with owned follow-ups.
-- [ ] Add maintained drift checks and ownership guidance.
-- [ ] Pass final fresh-agent trials with packaged skills and separate hosts.
-- [ ] Pass applicable CI on the latest implementation commits, then record release/deployment and post-release verification separately.
+- [x] Rebaseline every finding; assign owners, dependencies, and closure checks. See the [findings register](#findings-register).
+- [x] Resolve skill replacement semantics before aligning the docs and installer.
+- [x] Complete public/internal/skill corrections and release-aware canonical references.
+- [x] Repair reproduced runtime issues and make isolated validation repeatable. R19 waits for a timeout approval.
+- [ ] Close acceptance gaps or record explicitly accepted limits with owned follow-ups. Remaining gaps are R37 to R47.
+- [x] Add maintained drift checks and ownership guidance.
+- [ ] Pass final fresh-agent trials with packaged skills and separate hosts. One of four trials ran (R48, R49).
+- [ ] Pass applicable CI on the latest implementation commits, then record release/deployment and post-release verification separately (R36).

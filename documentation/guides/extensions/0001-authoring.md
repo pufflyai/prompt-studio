@@ -11,7 +11,7 @@ Every code block on this page is a complete file from the [maintained Bookmarks 
 | Part | Version | How to check |
 | --- | --- | --- |
 | Prompt Studio (`pst`) | 0.43.1 | `pst --version` |
-| Extension API | 0.1.6 | `pst extensions check` prints `Extension API: 0.1.6` |
+| Extension API | 0.1.6 | `pst extensions check`, run in a linked project without a path, prints `Extension API: 0.1.6` |
 | `@pstdio/sdk` | 0.43.1 | The `package.json` below pins it |
 
 The extension API is the contract between your extension and Prompt Studio. It has its own version, separate from the app and the SDK package. See [App, SDK, and extension API versions](../../references/extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
@@ -384,7 +384,7 @@ Installed extension:
 
 In the release after 0.43.x, `pst extensions add .` also works from inside a linked project. On 0.43.1, always give the full path.
 
-`pst` copies the source into Prompt Studio's extension folder, installs its dependencies, checks it, and turns it on for this project. The copy under `.pstdio/extensions` is not your source. Edit `~/bookmarks`, then install again.
+`pst` copies the source into Prompt Studio's extension folder, installs its dependencies, checks it, and turns it on for this project. The copy at the `Source:` path, under `<home>/.pstdio/extensions/`, is not your source. Edit `~/bookmarks`, then install again.
 
 If something goes wrong:
 
@@ -463,11 +463,10 @@ Create a second project and look at its bookmarks:
 mkdir -p ~/other-tools
 cd ~/other-tools
 pst projects create
-pst extensions add ~/bookmarks --force
 pst bookmarks list
 ```
 
-The last command prints `[]`. The second project has its own storage, so the bookmarks from `~/my-tools` do not appear. A bookmark added here does not appear in `~/my-tools`. In the dashboard, switch projects with the arrow next to the project name.
+A project you create after an install starts with every installed extension turned on, so you do not install Bookmarks again. In a project that existed before the install, turn Bookmarks on in **Settings → Extensions**. The last command prints `[]`. The second project has its own storage, so the bookmarks from `~/my-tools` do not appear. A bookmark added here does not appear in `~/my-tools`. In the dashboard, switch projects with the arrow next to the project name.
 
 ## 10. Check the extension
 
@@ -479,7 +478,7 @@ pst extensions check ~/bookmarks
 
 It prints `Errors: 0` and lists the four commands with their CLI paths. If it reports `extension_import_failed` with `Could not resolve: "@pstdio/sdk/extensions"`, run `bun install` in `~/bookmarks` first. It reports invalid IDs, missing references, unknown icons, and features your Prompt Studio does not support. Run `pst extensions check` without a path to check every installed extension.
 
-To test the commands without Prompt Studio, copy [`extension.test.ts`](../../../infra/local/extensions/bookmarks/extension.test.ts) from the example into `~/bookmarks` and run `bun test`. It uses `@pstdio/sdk/testing`, which provides storage that lives in memory.
+To test the commands without Prompt Studio, copy [`extension.test.ts`](../../../infra/local/extensions/bookmarks/extension.test.ts) from the example into `~/bookmarks` and run `bun test`. It uses `@pstdio/sdk/testing`: each test calls a command's `run` with `makeCommandArgs({ storage: createMemoryStorage(), params })`, so the storage lives in memory.
 
 [Smoke checks](0006-smoke-checks.md) explains `pst extensions test`, which opens your pages in a real browser and reports errors.
 
