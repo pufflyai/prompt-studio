@@ -53,7 +53,7 @@ export const ActiveRun: Story = {
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: /^Stop session$/ }));
     await expect(args.onInterrupt).toHaveBeenCalledOnce();
-    await userEvent.click(canvas.getByRole("button", { name: /^Extensions$/ }));
+    await userEvent.click(canvas.getByRole("button", { name: /^Browse extensions$/ }));
     await expect(args.onReviewExtensions).toHaveBeenCalledOnce();
   },
 };

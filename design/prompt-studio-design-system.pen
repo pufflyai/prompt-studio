@@ -190586,7 +190586,7 @@
       "x": 50458,
       "y": 0,
       "name": "Session · Harness unavailable",
-      "context": "Keep the shared workspace container and header visible. A compact alert and Extensions action replace only the message input and its toolbar. Active runs also keep Stop.",
+      "context": "Keep the shared workspace container and header visible. A compact alert and Browse extensions action replace only the message input and its toolbar. Active runs also keep Stop.",
       "width": 896,
       "fill": "$ds-bg",
       "layout": "vertical",
@@ -190633,7 +190633,7 @@
                   "enabled": true
                 },
                 "x7Usi7/Hf4GT": {
-                  "content": "Extensions"
+                  "content": "Browse extensions"
                 },
                 "dqGb1": {
                   "enabled": false

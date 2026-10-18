@@ -18,7 +18,7 @@ export const SessionHarnessUnavailable = (props: SessionHarnessUnavailableProps)
       endElement={
         <HStack gap="2xs">
           <Button size="2xs" variant="outline" onClick={onReviewExtensions}>
-            Extensions
+            Browse extensions
           </Button>
           {onInterrupt ? (
             <IconButton size="2xs" variant="ghost" aria-label="Stop session" onClick={onInterrupt}>
