@@ -22,6 +22,9 @@ Runnable examples live in the workbench's Storybook stories under `packages/pstd
 
 ## Tabs
 
+Adding a tab keeps other empty panels open. Closing or moving the last existing
+tab out of Side or Bottom closes that panel.
+
 Hover over a tab or focus it with the keyboard to see its full title in a tooltip.
 The tooltip appears below the tab after 300 ms.
 

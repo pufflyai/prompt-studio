@@ -100,6 +100,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Closing manual Bottom elsewhere stays closed on Workspace return, without creating a terminal automatically.
 // Dropping a session preview pins it and keeps the destination terminal preview open and leftmost.
 // Unpinning a created session replaces the tray preview and keeps it leftmost.
+// Adding Terminal in Side or Session in Bottom keeps the other empty panel open.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 
