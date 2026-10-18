@@ -17,8 +17,6 @@ The first project does need the `git` command and an internet connection. Prompt
 
 The picker shows folders on the machine running Prompt Studio. The path in this example is `/workspace`; choose the folder where you want your own tools and files to live.
 
-On Windows, use the drive menu beside the path to switch to another drive, such as `D:`. Then browse to your folder and choose **Open folder**. If a drive becomes unavailable, choose another drive or use **Home**. You can also type a full folder path, including a network share. macOS and Linux show mounted disks as folders and do not have a drive menu.
-
 ## Open a folder from the terminal
 
 Run `pst projects create` inside the folder:
