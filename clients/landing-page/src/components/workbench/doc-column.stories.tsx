@@ -49,6 +49,26 @@ export const TermsOfService: Story = {
   args: { pageKey: "/terms/", children: <DocHtml html={TERMS_HTML} /> },
 };
 
+export const HeadingLinks: Story = {
+  args: {
+    pageKey: "/heading-links/",
+    children: (
+      <DocHtml
+        html={`
+<h1 id="install">Install<a href="#install" data-heading-link aria-label="Link to Install"></a></h1>
+<p>Each heading has a section link that can be opened or copied.</p>
+<h2 id="desktop">Desktop app<a href="#desktop" data-heading-link aria-label="Link to Desktop app"></a></h2>
+<p>Install the desktop app for your computer.</p>
+<h2 id="cli">Command-line tool<a href="#cli" data-heading-link aria-label="Link to Command-line tool"></a></h2>
+<p>Install the CLI with Bun.</p>
+<h3 id="check">Check <code>pst</code><a href="#check" data-heading-link aria-label="Link to Check pst"></a></h3>
+<p>Run <code>pst --version</code>.</p>
+`}
+      />
+    ),
+  },
+};
+
 const THEMED_MEDIA_HTML = `
 <h1>Theme-specific media</h1>
 <p>The article shows one image and hides the inactive image's paragraph.</p>
