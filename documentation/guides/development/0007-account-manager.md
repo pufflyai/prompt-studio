@@ -6,9 +6,9 @@ The private account manager owns durable account and environment authority separ
 
 `infra/account-manager/` is a private Bun workspace. `createAccountManager(databaseUrl)` receives a separate manager PostgreSQL connection from the trusted manager process. Run `migrateAccountManager(databaseUrl, migrationsFolder)` with its generated migrations before opening authority operations. The manager and relay use separate databases and roles on the shared PostgreSQL server.
 
-This is an internal data owner. It starts no listener and does not verify Google ID tokens or authenticate public callers. The future Google/session service must verify sign-in and current ownership before invoking these methods. Never expose lifecycle or issuance methods directly to untrusted bodies, and never send the manager connection to extensions or local execution contexts. Supplying a Google subject or account ID is not proof of permission.
+The data owner's lifecycle methods remain internal. `createManagerAuthentication(config)` embeds Better Auth 1.7.10 for Google sign-in, persisted human sessions and signing keys. `createManagerHandler(auth, origin)` serves auth and scoped issuance/management. Never expose private lifecycle methods directly to untrusted bodies or send the manager connection to extensions or native clients. A supplied Google subject or account ID is not permission.
 
-The component implements part of PS-735. Google sign-in, public manager endpoints, relay transport, active subscription closure, deployed role configuration, backups and production recovery remain later work. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
+The component implements part of PS-735. Live Google configuration, relay integration, deployed role/network isolation, backups and production recovery remain separate proof. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
 
 ## Internal operations
 
@@ -30,7 +30,27 @@ Every mutating account intent has a stable `requestId` and `accountId`. Keep the
 
 A lost issuance response does not make plaintext recoverable. Read the same request's metadata and submit a fresh authenticated replacement naming its credential ID. Do not create a second plaintext copy or silently reuse an uncertain secret. The data owner defines no hidden credential lifetime or product quota; the trusted issuance intent supplies expiry under the later service's policy.
 
-Future relay handlers must use the identity returned by `authorize`, then validate their published extension context. A successful check does not authorize a connection forever. Current operation checks and revocation delivery to active subscriptions belong to the later transport integration.
+The manager uses current product authority for renewal. Ordinary relay requests instead use finite signed access through the database-free `pstdio-account-manager/access` export. They validate signature, issuer/audience, product type, expiry and exact scope. Revocation denies renewal; issued access remains usable until its expiry. Subscriptions must close or validly renew by then. No manager-per-request/hint call or idle revocation polling is required.
+
+## Better Auth and HTTP
+
+Better Auth owns `/api/auth/*`, including Google sign-in/callback, sessions, sign-out and public JWKS. The generic human `/token` route is disabled. Product access comes only from current environment renewal authority. Account linking is disabled, so matching email cannot transfer a Google provider identity. Product management maps the stable Google subject to a known account and checks its current session/account inside the mutation transaction.
+
+| Route | Caller and result |
+| --- | --- |
+| POST /v1/environment-access | Bearer renewal credential plus JSON workbenchId; returns finite token and expiresAt. |
+| GET /v1/accounts/:accountId/environments | Current library session; returns safe grant metadata. |
+| POST /v1/accounts/:accountId/environments | Current session and exact trusted Origin; registers a finite grant. |
+| POST /v1/accounts/:accountId/environments/replace | Current session and Origin; atomically replaces a named grant. |
+| POST /v1/accounts/:accountId/environments/revoke | Current session and Origin; revokes the requested environment. |
+
+Management bodies use the existing registration/replacement/revocation fields without accountId; account comes from the authenticated path. Unknown provider identities receive no product account or permissions. Operator provisioning remains private, so this service adds no public signup/cardinality flow. Errors discard sensitive causes and responses use no-store.
+
+The Bun listener requires DATABASE_URL, MANAGER_ORIGIN, RELAY_AUDIENCE, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_LIFETIME_SECONDS, SESSION_UPDATE_AGE_SECONDS and ACCESS_LIFETIME_SECONDS. Lifetimes are positive explicit policy, with update age below session lifetime. Origins use HTTPS. MANAGER_HOST/PORT select the listener; optional paired MANAGER_TLS_CERT/KEY paths supply TLS when it terminates in this process. A trusted HTTPS ingress can terminate TLS instead. Configure Google's callback for the trusted origin's /api/auth/callback/google path.
+
+Build the production image with `docker build -f infra/account-manager/Dockerfile .`. Apply generated migrations through operator tooling first. The slim runtime needs no source mount or dependency install. Never put secrets in command arguments, URLs or logs.
+
+The independent verifier receives only issuer, audience and a public JWKS. It imports no manager database or signing configuration. Keep public keys available for all unexpired access they cover. The library persists signing material outside content; deploying or rotating trust is an operator responsibility. See [Google configuration](https://better-auth.com/docs/authentication/google), [JWT/session separation](https://better-auth.com/docs/plugins/jwt) and [Drizzle integration](https://better-auth.com/docs/adapters/drizzle).
 
 ## Recovery
 
@@ -44,7 +64,7 @@ Restore receipts live outside account snapshots. Existence records committed com
 
 Restore inserts account, workbench and receipt history in bounded SQL batches inside that same transaction. Snapshot size does not change the atomic recovery boundary. Credential lookups and updates use the account/environment index rather than scanning every account's grants.
 
-This snapshot is private operator data. It contains account identities and request metadata even though it excludes credential material. It is not encrypted backup tooling or a public content export. Future manager session credentials must also participate in recovery invalidation.
+This snapshot is private operator data. It contains account identities and request metadata, excludes credentials and library signing keys, and is not encrypted backup tooling or a public content export. Owned restore deletes library sessions and pending verifications, preserves provider identity/signing material and denies fresh renewal until reconciliation. Already issued access retains its expiry; preserve public verification trust accordingly. A complete stale database/key backup recovery remains a separate validation gate.
 
 ## Validate in Docker
 
@@ -57,7 +77,9 @@ bun run --cwd infra/account-manager lint
 bun run --cwd infra/account-manager build
 ```
 
-The isolated command starts its own PostgreSQL container, creates distinct manager and relay roles/databases, runs the real-store tests, then builds and runs `Dockerfile.smoke`. That smoke imports the actual bundled `authority.js` and uses the copied generated migrations without a developer checkout or dependency install in its runtime image. It checks restart, duplicate issuance, revocation, restore invalidation and restore retry.
+The isolated command starts its own PostgreSQL container, creates distinct manager and relay roles/databases, runs real-store tests, then builds and runs `Dockerfile.smoke`. It checks stable provider mapping with actual Better Auth verification against an owned HTTP key fixture, sessions/logout, renewal/revocation/expiry, scope, recovery and the original authority workload. The Google fixture routes only public-key transport to an owned server; it is not live Google evidence.
+
+The smoke imports the actual bundled authority, starts the actual bundled HTTPS manager with run-owned TLS, and runs a separately bundled verifier with an empty environment. No manager DB or secret enters that verifier. Issuance, denied renewal after revocation, retained unexpired access during manager outage and clean shutdown are proved without source mounts or runtime installs. Only the smoke image includes OpenSSL for fresh fixture certificates; the production image stays slim.
 
 The Linux isolated infrastructure CI job runs the source suite and built image explicitly, alongside the relay checks. Manager changes select that job. Cross-platform package checks still build and lint this private owner; it has no ordinary `test` target that would launch Linux containers from Windows. Existing allowances and workloads remain unchanged. For a focused source file, append its path to `test:isolated`, such as `src/recovery.test.ts`; the built smoke still follows a passing source run.
 

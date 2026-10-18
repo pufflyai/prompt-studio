@@ -10,10 +10,11 @@ import {
   type ReplacementInput,
   type RevokeInput,
   reconciliationSchema,
-  revokeSchema,
 } from "./contracts";
+import { digestCredential } from "./credential";
 import { connectManager } from "./database";
-import { digestCredential, registerCredential, replaceCredential } from "./grants";
+import { listEnvironments } from "./environments";
+import { registerCredential, replaceCredential, revokeCredentials } from "./grants";
 import { captureManager, restoreManager } from "./recovery";
 import { executeRequest } from "./requests";
 import { accounts, credentials } from "./schema";
@@ -47,20 +48,7 @@ export const createAccountManager = (databaseUrl: string) => {
       return replaceCredential(connection.db, input);
     },
     async revoke(input: RevokeInput) {
-      const intent = revokeSchema.parse(input);
-      await executeRequest(connection.db, intent, "revoke", intent, async (transaction) => {
-        await transaction
-          .update(credentials)
-          .set({ revokedAt: sql`clock_timestamp()` })
-          .where(
-            and(
-              eq(credentials.accountId, intent.accountId),
-              eq(credentials.environmentId, intent.environmentId),
-              isNull(credentials.revokedAt),
-            ),
-          );
-        return {};
-      });
+      await revokeCredentials(connection.db, input);
     },
     async disable(input: AccountRequest) {
       const intent = accountRequestSchema.parse(input);
@@ -94,22 +82,7 @@ export const createAccountManager = (databaseUrl: string) => {
     restore: (requestId: string, input: unknown) => restoreManager(connection.db, requestId, input),
     async environments(accountId: string) {
       identitySchema.parse(accountId);
-      const rows = await connection.db
-        .select({
-          id: credentials.id,
-          accountId: credentials.accountId,
-          environmentId: credentials.environmentId,
-          workbenchId: credentials.workbenchId,
-          expiresAt: credentials.expiresAt,
-          revokedAt: credentials.revokedAt,
-        })
-        .from(credentials)
-        .where(eq(credentials.accountId, accountId));
-      return rows.map((row) => ({
-        ...row,
-        expiresAt: row.expiresAt.toISOString(),
-        revokedAt: row.revokedAt?.toISOString() ?? null,
-      }));
+      return listEnvironments(connection.db, accountId);
     },
     async authorize(token: string, workbenchId: string) {
       identitySchema.parse(workbenchId);
