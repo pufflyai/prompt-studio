@@ -35,14 +35,12 @@ in their owning PRs.
 | Planner public `auto-build candidates` command | `pst tickets next` | Compatibility tests and external CLI callers; internal candidate reader remains an implementation detail | None | 0.45 |
 | Planner `expectedAttemptState` parameter and `--expected-attempt-state` flag on submit-change-request and request-human | Ownership and `expectedRevision` for submission; ownership and existing `revision` guard for human requests | Reconcile/submit-review human handoffs and compatibility fixtures | None; retain the human-request state check through 0.44 | 0.45 |
 | HTTP workspace `provider_operation_kind: "archive"` value | `"delete"` for new operations | Historical workspace rows and external clients; no new archive operations | Convert stored operation kinds, provider capability JSON and archived provider states in the separate 0.45 conversion PR | 0.45 |
-
 | Render-context `page` and `files` helpers | `createWebviewClient(host).page` and `.files` | Existing extensions adopt after published 0.44 SDK | None | 0.45 |
 | `WebviewNotificationShowParams` and `notification.show` `{ level, title, message? }` | `CommandNotice`; `client.notify.toast({ type, title?, message })` | Existing extension toast callers | None | 0.45 |
 | Webview `lastCommand` props | `client.events.subscribe` or `useCommandQuery.refreshOn` | Extension Lab and Motion Lab | None | 0.45 |
 | `terminal.session`, `createTerminalSessionBridge`, `TerminalSessionBridge` and renderer `TerminalSessionAdapter` | Host terminal surface | No maintained extension callers | None | 0.45 |
 | `files.list` and `files.delete` capabilities and client methods | Extension commands and owned storage | No maintained extension callers | None | 0.45 |
 | Versioned capability declarations such as `clipboard.write@1` | Bare capability names | Existing manifests remain accepted through 0.44 | None | 0.45 |
-
 | SDK projects/workspaces/skills `list`, views `list`/`boards`/`orphaned`, agents `info`/`models`, workspace `listProviders`; corresponding unpaged GET routes | Bounded `query`, `queryBoards`, `queryOrphaned`, `queryModels`, `queryProviders` | Dashboard, CLI and external consumers; Granite uses projects | None; retain old readers through 0.44 | 0.45 |
 | Workspace, notification and session create calls with project scope inside input | `create(projectId, input)` | Dashboard, CLI and external consumers | None | 0.45 |
 | Snake-case project, skill, activity, attachment and session transport fields and request keys; filesystem `parent_path`; query `project_id` and agent `project` | CamelCase details and inputs; `parentPath`; query `projectId` | Dashboard/CLI and external readers; response aliases retain parity | None; transport mapping only | 0.45 |
