@@ -84,7 +84,7 @@ export const RetainedQueuedEdit: Story = {
     await expect(editable(canvasElement)).not.toBeInTheDocument();
     await userEvent.click(toggle);
     await expect(editable(canvasElement)).toHaveTextContent(edit!);
-    await userEvent.click(canvas.getByRole("button", { name: "Cancel", exact: true }));
+    await userEvent.click(canvas.getByRole("button", { name: /^Cancel$/ }));
     await expect(editable(canvasElement)).toHaveTextContent("Keep this unsent draft.");
   },
 };

@@ -1,6 +1,6 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { AgentInfo } from "@/shared/agents/agent-types";
+import type { AgentInfo } from "pstdio-api-contracts";
 import { createDashboardResource } from "@/shared/app/resources";
 import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
 import type { RecentProjectResource } from "@/shared/recents/recent-project-resources";

@@ -1,7 +1,7 @@
 import { Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import { TriangleAlert } from "lucide-react";
-import type { AgentInfo } from "@/shared/agents/agent-types";
+import type { AgentInfo } from "pstdio-api-contracts";
 
 interface StartHarnessStatusProps {
   agents: AgentInfo[];

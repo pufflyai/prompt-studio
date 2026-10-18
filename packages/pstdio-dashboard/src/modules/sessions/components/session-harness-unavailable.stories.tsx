@@ -39,7 +39,7 @@ export const ActiveRun: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Stop session", exact: true }));
+    await userEvent.click(canvas.getByRole("button", { name: /^Stop session$/ }));
     await expect(args.onInterrupt).toHaveBeenCalledOnce();
   },
 };

@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { AgentInfo } from "@/shared/agents/agent-types";
+import type { AgentInfo } from "pstdio-api-contracts";
 import { StartHarnessStatus } from "./start-harness-status";
 
 const remoteHelper: AgentInfo = {
