@@ -10,6 +10,7 @@ interface CanvasAnchor {
 // Newly mounted cards replace estimated heights. Keep the same visible point while geometry settles.
 export function useCanvasAnchor(ref: RefObject<HTMLDivElement | null>) {
   const pending = useRef<CanvasAnchor | undefined>(undefined);
+  const bottomScrollTop = useRef<number | undefined>(undefined);
   const capture = useEffectEvent(() => {
     const viewport = ref.current;
     if (!viewport || pending.current) return;
@@ -24,7 +25,11 @@ export function useCanvasAnchor(ref: RefObject<HTMLDivElement | null>) {
       card,
       top: card?.getBoundingClientRect().top ?? 0,
       scrollTop: viewport.scrollTop,
-      bottom: viewport.scrollTop > 0 && viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop <= 1,
+      // Mounted cards can extend overflow before their measured heights reach the canvas geometry.
+      bottom:
+        viewport.scrollTop > 0 &&
+        (viewport.scrollTop === bottomScrollTop.current ||
+          viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop <= 1),
     };
   });
   useLayoutEffect(() => {
@@ -34,9 +39,13 @@ export function useCanvasAnchor(ref: RefObject<HTMLDivElement | null>) {
     if (!anchor || !viewport) return;
     if (anchor.bottom) {
       viewport.scrollTop = viewport.scrollHeight;
-    } else if (anchor.card?.isConnected) {
-      const shift = anchor.card.getBoundingClientRect().top - anchor.top + viewport.scrollTop - anchor.scrollTop;
-      viewport.scrollTop += shift;
+      bottomScrollTop.current = viewport.scrollTop;
+    } else {
+      bottomScrollTop.current = undefined;
+      if (anchor.card?.isConnected) {
+        const shift = anchor.card.getBoundingClientRect().top - anchor.top + viewport.scrollTop - anchor.scrollTop;
+        viewport.scrollTop += shift;
+      }
     }
   });
   return capture;

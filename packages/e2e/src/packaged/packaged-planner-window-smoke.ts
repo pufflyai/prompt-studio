@@ -27,6 +27,9 @@ export async function expectPlannerWindow(timeline: FrameLocator, execute: Execu
   await viewport.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
   const last = timeline.locator(`[data-ticket="${tickets.at(-1)!.id}"]`);
   await expect(last).toBeInViewport();
+  await expect
+    .poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop))
+    .toBeLessThanOrEqual(1);
   await expect(first).toBeAttached();
   await expect.poll(() => cards.count()).toBeLessThan(tickets.length / 2);
   console.info("Timeline window", { tickets: tickets.length, initialCards, finalCards: await cards.count() });
