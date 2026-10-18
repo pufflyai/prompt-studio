@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
-import type { ExtensionSessionQuery, ExtensionSessionSummary } from "@pstdio/sdk/extensions";
+import type { ExtensionSessionQuery } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandContext } from "./command-context.fixture";
+import { sessionRecord } from "./session-record.fixture";
 import { ticketRelatedOpeningsCommand } from "./ticket-related-openings";
 
-const session: ExtensionSessionSummary = {
+const session = sessionRecord({
   id: "latest",
   title: "Latest work",
   status: "completed",
@@ -19,7 +20,7 @@ const session: ExtensionSessionSummary = {
   last_request_ended: null,
   anchors_json: [],
   usage: null,
-};
+});
 
 test("ticket opening selects its latest non-archived linked session as a Side preview", async () => {
   const queries: (ExtensionSessionQuery | undefined)[] = [];
