@@ -22,9 +22,11 @@ Use ticket filters for Status, Milestone, Milestone date, Milestone progress, an
 
 Each milestone shows its estimated time remaining to the left of its progress bar. The bar counts completed tickets. The ETA weights tickets by the configured Complexity options, ordered from simplest to most complex: 1, 2, 3, and so on. A ticket without a complexity uses the middle weight. Projects without complexity options use equal weights.
 
-Planner measures completed complexity against elapsed time since the milestone's first recorded attempt started. It applies that observed pace to the remaining complexity. Parallel work and waiting are already included in the elapsed time. Hover or focus the ETA to see its basis. Filters do not change the full milestone estimate.
+Planner measures completed complexity across active project tickets against elapsed time since the project's first recorded attempt started. It applies that observed pace to the remaining complexity in each milestone, including milestones that have not started. Parallel work and waiting are already included in the elapsed time. Hover or focus the ETA to see its basis.
 
-`ETA —` means there is not yet a completed ticket and a recorded start to measure. Completed milestones show `Done`. Unscheduled work has no milestone ETA. The estimate reflects past pace; it is not a promised deadline. The plan CLI returns the same derived ETA without storing another workflow state.
+Saved view filters and search update each milestone's ETA, progress, and review-requested count to include only matching tickets. Opening the review queue also includes only those tickets. Hiding completed tickets does not discard the completed work used to measure the project's pace. Collapsing a milestone or track does not change its totals.
+
+`ETA —` means the project does not yet have a completed ticket and a recorded start to measure, or the milestone is empty. Completed milestones show `Done`. Unscheduled work has no milestone ETA. The estimate reflects past pace; it is not a promised deadline. The plan CLI returns the unfiltered derived ETA without storing another workflow state.
 
 ## Auto Build
 

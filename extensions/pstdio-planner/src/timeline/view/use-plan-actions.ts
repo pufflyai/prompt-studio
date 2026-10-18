@@ -31,7 +31,7 @@ export function usePlanActions({
   const open = (target: NavigationTarget) => void host.call("navigation.open", { target });
   const [reviewDeadline, setReviewDeadline] = useState<{ id: string | null }>();
   const review = reviewDeadline
-    ? reviewQueue(plan?.sections.find(({ deadline }) => (deadline?.id ?? null) === reviewDeadline.id)?.rows ?? [])
+    ? reviewQueue(sections.find(({ section }) => (section.deadline?.id ?? null) === reviewDeadline.id)?.rows ?? [])
     : undefined;
   const viewProps: Omit<PlanViewProps, "today"> = {
     sections,
@@ -50,7 +50,7 @@ export function usePlanActions({
     onRedate: (deadline, date) => client.commands["timeline.deadline.update"]({ deadline, date }),
     onRenameTrack: (track, name) => client.commands["timeline.track.rename"]({ track, name }),
     onReview: (deadlineId) => {
-      const rows = plan?.sections.find(({ deadline }) => (deadline?.id ?? null) === deadlineId)?.rows ?? [];
+      const rows = sections.find(({ section }) => (section.deadline?.id ?? null) === deadlineId)?.rows ?? [];
       const queue = reviewQueue(rows);
       setReviewDeadline({ id: deadlineId });
       setSelectedId(queue[0]);

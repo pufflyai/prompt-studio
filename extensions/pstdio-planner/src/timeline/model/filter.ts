@@ -1,4 +1,13 @@
-import type { PlanSection } from "../contracts";
+import type { Plan, PlanSection } from "../contracts";
+import { summarizeSection } from "./section-summary";
+
+export function filterSections(plan: Plan, visibleTicketIds: ReadonlySet<string>) {
+  return plan.sections.flatMap((section) => {
+    const rows = section.rows.filter((row) => visibleTicketIds.has(row.id));
+    if (section.rows.length > 0 && rows.length === 0) return [];
+    return [summarizeSection({ ...section, rows }, plan.tags, plan.pace)];
+  });
+}
 
 // An empty deadline has nothing finished, so it is never complete.
 export const isComplete = (section: PlanSection) =>
