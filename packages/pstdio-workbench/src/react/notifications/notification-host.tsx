@@ -3,8 +3,6 @@ import { toaster } from "@pstdio/ui";
 import { useEffect, useRef } from "react";
 import type { RegisteredWorkbenchNotification, WorkbenchCore, WorkbenchNotificationAction } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
-import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { WorkbenchSystemErrors } from "./system-errors";
 
 // System errors belong to the status bar. Action errors belong to their view.
 // Other notifications use the shared toaster rendered once by the shell.
@@ -20,29 +18,6 @@ const executeNotificationAction = (input: { action: WorkbenchNotificationAction;
 export const WorkbenchNotificationHost = (props: WorkbenchNotificationHostProps) => {
   const { workbench } = props;
   const shownNotificationIds = useRef(new Set<string>());
-  const notifications = useWorkbenchStore(workbench.notifications.store, (state) => state.notifications);
-  const hasSystemErrors = Object.values(notifications).some(
-    (notice) => notice.level === "error" && !notice.inlineTarget,
-  );
-
-  useEffect(() => {
-    if (!hasSystemErrors) return;
-    const id = "workbench.system-errors";
-    const view = workbench.views.registerView({
-      id,
-      title: "System errors",
-      body: {
-        kind: "react",
-        render: () => <WorkbenchSystemErrors workbench={workbench} />,
-      },
-    });
-    const item = workbench.statusBar.registerItem({ id, viewId: id, slot: "trailing" });
-    return () => {
-      item.dispose();
-      view.dispose();
-    };
-  }, [workbench, hasSystemErrors]);
-
   useEffect(() => {
     const showNotification = (notification: RegisteredWorkbenchNotification) => {
       if (notification.level === "error" || notification.inlineTarget) {

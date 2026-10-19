@@ -4,4 +4,4 @@
 "@pstdio/ui": patch
 ---
 
-Show system errors in a scrollable status-bar popover and keep action failures local.
+Keep system errors accessible in a scrollable, left-aligned status-bar widget, wrap long errors, and keep action failures local.
