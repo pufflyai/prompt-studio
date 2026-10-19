@@ -15,7 +15,8 @@
     "format": "biome check --write .",
     "test": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun src/test-utils/run-api-tests.ts",
     "test:coverage": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun src/test-utils/run-api-tests.ts --coverage",
-    "test:conformance": "SYNC_TEST_ENTRY=../pstdio-api/src/services/shared-files/checkpoint-handlers.integration.ts SYNC_TEST_SUBNET=10.254.230.0/24 bun ../pstdio-sync-contracts/scripts/isolated.ts"
+    "test:conformance": "SYNC_TEST_ENTRY=../pstdio-api/src/services/shared-files/checkpoint-handlers.integration.ts SYNC_TEST_SUBNET=10.254.230.0/24 bun ../pstdio-sync-contracts/scripts/isolated.ts",
+    "test:publications": "SYNC_TEST_ENTRY=../pstdio-api/src/features/extensions/publication/publication.integration.ts bun ../pstdio-sync-contracts/scripts/isolated.ts"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.2",

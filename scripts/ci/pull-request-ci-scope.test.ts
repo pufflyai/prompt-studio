@@ -205,3 +205,13 @@ test("local storage changes select production relay conformance", () => {
     pullRequest(["packages/pstdio-db/src/services/extension-storage/grouped-storage.ts"], [], ["pstdio-db"]),
   ).toHaveProperty("relaySmoke", true);
 });
+
+test("native extension publication changes run the isolated publication checks", () => {
+  expect(
+    pullRequest(["packages/pstdio-api/src/features/extensions/publication/activate.ts"], [], ["pstdio-api"]),
+  ).toHaveProperty("relaySmoke", true);
+  expect(pullRequest(["packages/pstdio-api/src/services/relay/publications.ts"], [], ["pstdio-api"])).toHaveProperty(
+    "relaySmoke",
+    true,
+  );
+});
