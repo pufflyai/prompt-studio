@@ -1,0 +1,1 @@
+ALTER TABLE "extension_storage_owners" ADD COLUMN "revision" uuid DEFAULT gen_random_uuid() NOT NULL;

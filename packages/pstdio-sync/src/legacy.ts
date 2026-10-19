@@ -31,6 +31,7 @@ export const createLegacyRecordStorage = (input: {
     );
 
   const namespaceApi = (namespace: string[]) => {
+    const current = legacyNamespaceStorage(createRecordStorage(input).records, namespace);
     const read = (records: ReturnType<typeof legacyNamespaceStorage>, id: string) => records.read(id);
     const replace = async (
       records: ReturnType<typeof legacyNamespaceStorage>,
@@ -53,11 +54,10 @@ export const createLegacyRecordStorage = (input: {
     };
     return {
       get: (id: string) =>
-        within(namespace, async (records) => {
-          const record = await read(records, id);
+        current.read(id).then((record) => {
           return record.exists && !record.deleted ? record.value : undefined;
         }),
-      list: () => within(namespace, (records) => records.list()),
+      list: () => current.list(),
       set: (id: string, value: Json) => within(namespace, (records) => replace(records, id, value)),
       createIfAbsent: (id: string, value: Json) =>
         within(namespace, async (records) => {

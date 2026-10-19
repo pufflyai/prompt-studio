@@ -3,7 +3,7 @@ import { encodeText } from "./encoding";
 import { completedOperations } from "./journal";
 import { applyRecordChange, blankRecord, publicRecord, recordConflict } from "./records";
 import { resolutionProblem, retainAfterResolution } from "./resolution-preflight";
-import type { GroupedState, JournalEntry, LocalOperation } from "./types";
+import type { GroupedState, JournalEntry, LocalOperation, StorageOwner } from "./types";
 
 const receiptOutcome = (state: GroupedState, receipt: Receipt) => {
   if (receipt.status === "accepted")
@@ -167,21 +167,38 @@ const projectOperation = async (view: Projection, state: GroupedState, entry: Jo
   view.outcomes.set(mutation.operationId, localOutcome(state, entry));
 };
 
-export const projectGroups = async (state: GroupedState, environmentId: string) => {
-  const view = acceptedProjection(state);
-  for (const entry of state.journal) await projectOperation(view, state, entry, environmentId);
+const projectedRecords = (view: Projection, owner: StorageOwner) => {
   const read = (recordId: string) => ({
     ...publicRecord(view.records.get(recordId) ?? blankRecord(recordId)),
-    revision: encodeText(
-      JSON.stringify({ owner: state.owner, recordId, operations: view.operations.get(recordId) ?? [] }),
-    ),
+    revision: encodeText(JSON.stringify({ owner, recordId, operations: view.operations.get(recordId) ?? [] })),
   });
   return {
     read,
+    source: view,
     records: view.records,
     operations: view.operations,
     outcomes: view.outcomes,
     conflicts: [...view.conflicts.values()],
     completed: view.completed,
   };
+};
+
+export const projectGroups = async (state: GroupedState, environmentId: string) => {
+  const view = acceptedProjection(state);
+  for (const entry of state.journal) await projectOperation(view, state, entry, environmentId);
+  return projectedRecords(view, state.owner);
+};
+
+export type RecordProjection = ReturnType<typeof projectedRecords>;
+
+export const appendGroups = async (
+  current: RecordProjection,
+  state: GroupedState,
+  environmentId: string,
+  entries: JournalEntry[],
+) => {
+  // Issued views stay immutable, including when the transaction later rolls back.
+  const view = structuredClone(current.source);
+  for (const entry of structuredClone(entries)) await projectOperation(view, state, entry, environmentId);
+  return projectedRecords(view, state.owner);
 };
