@@ -1,35 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { type ExtensionWorkspace, worktreeEvents } from "pstdio-api-contracts/extension-kernel";
 import type { AppRouteHandler } from "../../../types";
-import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
 import type { WorkspacesRouteDeps } from "../deps";
-import {
-  assertWorkspaceDeleteAllowed,
-  deleteProviderBackedWorkspace,
-  finalizeWorkspaceDelete,
-} from "../workspace-provider-lifecycle";
-
-type WorkspaceRecord = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
-
-const toWorkspaceEventPayload = (workspace: WorkspaceRecord) => {
-  const { anchors_json: _anchors, ...payload } = workspace;
-  return payload as ExtensionWorkspace;
-};
-
-const releaseWorkspaceBackingResource = async (deps: WorkspacesRouteDeps, workspace: WorkspaceRecord) => {
-  assertWorkspaceDeleteAllowed(workspace);
-  return deleteProviderBackedWorkspace(deps, workspace);
-};
-
-const fireWorkspaceRemovedEvent = (deps: WorkspacesRouteDeps, workspace: WorkspaceRecord) => {
-  if (!workspace.root_path) return;
-  fireExtensionEventAsync(deps, workspace.project_id, worktreeEvents.removed, {
-    projectId: workspace.project_id,
-    worktreePath: workspace.root_path,
-    workspace: toWorkspaceEventPayload(workspace),
-    workspaceId: workspace.id,
-  });
-};
+import { deleteWorkspace } from "../workspace-deletion";
 
 export const deleteWorkspaceRoute = createRoute({
   method: "delete",
@@ -64,19 +36,14 @@ export const deleteWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
 
     // The provider must release its backing resource before the row disappears;
     // a failed provider delete keeps the row so the operation can be retried.
-    let removed = false;
     if (workspace) {
       try {
-        removed = await releaseWorkspaceBackingResource(deps, workspace);
+        await deleteWorkspace(deps, workspace);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return c.json({ error: message }, 409);
       }
     }
-
-    if (workspace) await finalizeWorkspaceDelete(deps, workspace);
-
-    if (workspace && removed) fireWorkspaceRemovedEvent(deps, workspace);
 
     return c.json({ deleted: true }, 200);
   };
