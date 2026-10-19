@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { publishedExtensionsId } from "pstdio-sync-contracts";
+import { automationsId, publishedExtensionsId } from "pstdio-sync-contracts";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { discoveryPeer } from "./discovery-peer.fixture";
@@ -88,12 +88,15 @@ test("workbench enrollment discovers all enabled extensions and follows enable, 
       }),
     );
     runtime = await startRelayRuntime({ path, environment: app.deps.environmentService, deps: app.deps });
-    await waitFor(() => JSON.stringify(wire.connected()) === JSON.stringify(["example.first", publishedExtensionsId]));
-    expect(wire.connected()).toEqual(["example.first", publishedExtensionsId]);
+    await waitFor(
+      () =>
+        JSON.stringify(wire.connected()) === JSON.stringify(["example.first", automationsId, publishedExtensionsId]),
+    );
+    expect(wire.connected()).toEqual(["example.first", automationsId, publishedExtensionsId]);
     expect(wire.snapshots.get(JSON.stringify([projectId, "example.first"]))?.publishedRevision).toBe("a".repeat(64));
     await enable("second");
-    await waitFor(() => wire.connected().length === 3);
-    expect(wire.connected()).toEqual(["example.first", "example.second", publishedExtensionsId]);
+    await waitFor(() => wire.connected().length === 4);
+    expect(wire.connected()).toEqual(["example.first", "example.second", automationsId, publishedExtensionsId]);
     const before = wire.opened.length;
     app.deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "source_changed" });
     await waitFor(() => wire.opened.length > before);
@@ -104,8 +107,11 @@ test("workbench enrollment discovers all enabled extensions and follows enable, 
       body: JSON.stringify({ enabled: false }),
     });
     app.deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "enablement_changed" });
-    await waitFor(() => JSON.stringify(wire.connected()) === JSON.stringify(["example.second", publishedExtensionsId]));
-    expect(wire.connected()).toEqual(["example.second", publishedExtensionsId]);
+    await waitFor(
+      () =>
+        JSON.stringify(wire.connected()) === JSON.stringify(["example.second", automationsId, publishedExtensionsId]),
+    );
+    expect(wire.connected()).toEqual(["example.second", automationsId, publishedExtensionsId]);
   } finally {
     await runtime?.close();
     await wire.peer.stop(true);

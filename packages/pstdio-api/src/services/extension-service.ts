@@ -3,7 +3,7 @@ import type {
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
-import { publishedExtensionsId } from "pstdio-sync-contracts";
+import { automationRunsId, automationsId, publishedExtensionsId } from "pstdio-sync-contracts";
 import type {
   checkExtensionSource,
   hashExtensionSource,
@@ -111,7 +111,8 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   const registerInstalledSource = async (input: RegisterInstalledSourceInput) => {
-    if (input.extensionId === publishedExtensionsId) throw new Error("Reserved platform extension identity");
+    if ([publishedExtensionsId, automationsId, automationRunsId].includes(input.extensionId))
+      throw new Error("Reserved platform extension identity");
     const existing = await findInstalledSourceForRegistration(deps.installedExtensionSourcesService, input);
     const values = registrationValues(input, existing);
 

@@ -358,3 +358,8 @@ It uses three real local stores with disposable PostgreSQL and object storage th
 the independent reference relay. Production relay catalog validation and handler revision
 selection run in `infra/relay/src/storage/extension-publications.integration.ts` through
 `bun run --cwd infra/relay test:storage`. These checks do not claim a deployed release.
+
+## Synchronized schedule execution
+
+See [synchronized automations](0027-synchronized-automations.md) for exact targets,
+local run identities, skipped occurrences, and pending disable delivery.

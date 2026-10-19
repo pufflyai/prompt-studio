@@ -2,7 +2,7 @@
 name: pstdio
 description: Use Prompt Studio and its pst CLI. Covers project setup, .pstdio/config.json, agent setup, commands, extensions, and troubleshooting. Use for Prompt Studio questions, requests to configure a project or agent, or when the shell cannot find the pst command.
 metadata:
-  version: 0.0.9
+  version: 0.0.10
 ---
 
 # Prompt Studio
@@ -115,6 +115,13 @@ Extensions add commands, hooks, schedules, templates, skills, agent harnesses, w
 - `pst extensions check` checks installed extensions on the host; `pst extensions check <source>` checks a local source folder.
 - `pst extensions update [name]` applies host-managed updates.
 - To build or change an extension, use the `create-pstdio-extension` skill.
+
+For synchronized schedules, run `pst extensions automations --help` first. On the target runtime,
+assign a full schedule ID with `assign <schedule-id> --workspace-id <id>`. Use `list` to read its
+revision and delivery status, then `enable` or `disable` with `--expected-revision`. `pending`
+means the target has not acknowledged that choice; relay acceptance does not prove delivery.
+There is no fallback or retargeting. `runs` reads local history, including skipped occurrences.
+See [Synchronized schedules](https://prompt.studio/docs/references/cli/synchronized-schedules/).
 
 See [Add tools](https://prompt.studio/docs/guides/getting-started/add-tools/).
 

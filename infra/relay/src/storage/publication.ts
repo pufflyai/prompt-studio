@@ -1,9 +1,11 @@
 import { and, eq, inArray } from "drizzle-orm";
 import {
   type Asset,
+  automationsId,
   type Mutation,
   publishedExtensionsId,
   type Scope,
+  validateAutomationRecord,
   validatePublicationRecord,
 } from "pstdio-sync-contracts";
 import { loadCandidate, stageCandidate } from "./candidate";
@@ -70,6 +72,14 @@ export const publishGroup = async (
   }
   if (owner.scope.extensionId === publishedExtensionsId)
     for (const record of candidate.records.values()) validatePublicationRecord(record);
+  if (owner.scope.extensionId === automationsId)
+    for (const record of candidate.records.values())
+      validateAutomationRecord(
+        record,
+        state.records.get(record.recordId),
+        mutation.environmentId,
+        owner.scope.workbenchId,
+      );
   for (const record of candidate.records.values())
     await transaction
       .insert(relayRecords)

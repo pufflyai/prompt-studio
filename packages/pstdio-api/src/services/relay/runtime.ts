@@ -1,11 +1,12 @@
 import { readFile } from "node:fs/promises";
 import type { createEnvironmentDBService } from "pstdio-db";
 import { createRelayAccess, relayOrigin } from "pstdio-sync/relay";
-import { identitySchema } from "pstdio-sync-contracts";
+import { automationsId, identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
+import { startSharedAutomations } from "./automations";
 import { startRelayExtension } from "./extension-owner";
 import { startPublishedExtensions } from "./publications";
 
@@ -57,6 +58,12 @@ export const startRelayRuntime = async (input: {
     publications.set(
       id,
       await startPublishedExtensions({ config, deps, signal: controller.signal, access: access.get(id)! }),
+    );
+  const automations = new Map<string, Awaited<ReturnType<typeof startSharedAutomations>>>();
+  for (const [id, config] of workbenches)
+    automations.set(
+      id,
+      await startSharedAutomations({ config, deps, signal: controller.signal, access: access.get(id)! }),
     );
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
@@ -128,6 +135,10 @@ export const startRelayRuntime = async (input: {
   };
   const stopStorage = deps.extensionStorageService.watch((owner) => {
     if (!workbenches.has(owner.workbenchId)) return;
+    if (owner.extensionId === automationsId) {
+      automations.get(owner.workbenchId)?.wake();
+      return;
+    }
     if (owner.extensionId === publishedExtensionsId) {
       publications.get(owner.workbenchId)?.wake();
       return;
@@ -152,6 +163,7 @@ export const startRelayRuntime = async (input: {
       controller.abort();
       for (const connection of connections.values()) connection.close();
       await running;
+      await Promise.all([...automations.values()].map((connection) => connection.done));
       await Promise.all([...publications.values()].map((connection) => connection.done));
       await Promise.all([...connections.values()].map((connection) => connection.done));
     },
