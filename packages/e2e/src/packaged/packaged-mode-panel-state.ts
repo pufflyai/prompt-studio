@@ -9,7 +9,6 @@ const tabAction = async (page: Page, tab: Locator, name: string) => {
 
 export const verifyModePanelState = async (page: Page, terminal: Locator) => {
   const bottom = page.locator('[data-workbench-panel="secondary"]:visible');
-  let checkedModeSession = false;
   const modeRoundTrip = async () => {
     const previous = page.url();
     const destination = new URL(previous);
@@ -24,18 +23,6 @@ export const verifyModePanelState = async (page: Page, terminal: Locator) => {
     await expect(terminal).toBeHidden();
     const status = page.frameLocator('iframe[title="Lab status"]:visible');
     await expect(status.getByText("Extension Lab", { exact: true })).toBeVisible();
-    if (!checkedModeSession) {
-      await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
-      const floating = page.getByTestId("workbench-side-panel-floating");
-      const composer = floating.locator('[data-testid="content-editable"][contenteditable="true"]');
-      await expect(composer).toBeVisible();
-      await composer.fill("Keep this extension mode draft after reload");
-      const sessionTab = floating.getByRole("tab", { selected: true });
-      await tabAction(page, sessionTab, "Pin tab");
-      await page.reload();
-      await expect(composer).toHaveText("Keep this extension mode draft after reload");
-      checkedModeSession = true;
-    }
     await page.goBack();
     await expect(page).toHaveURL(previous);
   };
@@ -67,4 +54,23 @@ export const verifyModePanelState = async (page: Page, terminal: Locator) => {
   await expect(terminal).toBeVisible();
   await page.goBack();
   await expect(header.getByRole("tab")).toHaveCount(1);
+};
+
+export const verifyExtensionModeSessionRestore = async (page: Page, projectId: string) => {
+  const previous = page.url();
+  await page.goto(new URL(`/projects/${projectId}/extensions/pstdio.workbench-fixture/lab-mode`, previous).href);
+  await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();
+  const hideSide = page
+    .getByRole("group", { name: "Panel controls" })
+    .getByRole("button", { name: "Hide Side Panel", exact: true });
+  if (await hideSide.isVisible()) await hideSide.click();
+  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+  const floating = page.getByTestId("workbench-side-panel-floating");
+  const composer = floating.locator('[data-testid="content-editable"][contenteditable="true"]:visible');
+  await expect(composer).toBeVisible();
+  await composer.fill("Keep this extension mode draft after reload");
+  await tabAction(page, floating.getByRole("tab", { selected: true }), "Pin tab");
+  await page.reload();
+  await expect(composer).toHaveText("Keep this extension mode draft after reload");
+  await page.goto(previous);
 };

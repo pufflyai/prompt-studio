@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
-import { verifyModePanelState } from "./packaged-mode-panel-state";
+import { verifyExtensionModeSessionRestore, verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";
 import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
 import { verifySharedPageTab } from "./packaged-shared-page-tab";
@@ -233,4 +233,5 @@ export const verifyPackagedSessionMenus = async (
   await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions$`));
   const deleted = await fetch(`${baseUrl}/v1/sessions/${session.id}`, { headers: authorization });
   expect(deleted.status).toBe(404);
+  await verifyExtensionModeSessionRestore(page, projectId);
 };
