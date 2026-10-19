@@ -3,7 +3,9 @@
   "ignoreExportsUsedInFile": true,
   "ignoreBinaries": ["gh", "wait", "version"],
   "ignoreIssues": {
-    "packages/pstdio/src/adapters/cli/commands/{close,inbox,logs,performance,update-channel}.ts": ["exports"],
+    "packages/pstdio/src/adapters/cli/commands/{close,inbox,login,logout,logs,performance,update-channel}.ts": [
+      "exports"
+    ],
     "packages/pstdio/src/adapters/cli/commands/notifications/list.ts": ["exports"],
     "packages/pstdio-api/src/features/extensions/extension-webviews.ts": ["types"],
     "packages/pstdio-api/src/features/extensions/repo-extensions.ts": ["types"],
