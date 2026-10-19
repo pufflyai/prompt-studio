@@ -205,8 +205,9 @@ anything.
 ### Extensions and automations
 
 - R43. The extensions a cloud project uses, with their versions, sync with the project,
-  so every device runs the same code for it. Local development changes to extension
-  code stay local.
+  so every device runs the same code for it. A local override, such as a repo-local copy
+  someone is editing, never syncs its code. Data it writes syncs like any project data,
+  but its data migrations do not run: migrations run only from the synced version.
 - R44. Extension data migrations give the same result when two devices run them. Records
   a migration creates get their IDs from R50, so both devices create the same records
   instead of duplicates. A device with an older version of an extension can read that
@@ -346,7 +347,3 @@ These defaults were chosen on 2026-10-19 so the phase tickets could be refined. 
 - A device uploads a new latest state when the updates after the current one exceed 1 MiB or 1,000 updates.
 - A cloud project's data downloads without a local folder. The device asks for a folder, and offers to clone the project's git remote, the first time something needs files.
 - Cloud devices run in the user's own cloud account from the released runtime image. Prompt Studio does not host or bill them in phase 2.
-
-## Open questions
-
-- Does data written by a local development version of an extension sync?
