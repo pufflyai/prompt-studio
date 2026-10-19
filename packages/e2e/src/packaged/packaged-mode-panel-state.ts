@@ -9,6 +9,7 @@ const tabAction = async (page: Page, tab: Locator, name: string) => {
 
 export const verifyModePanelState = async (page: Page, terminal: Locator) => {
   const bottom = page.locator('[data-workbench-panel="secondary"]:visible');
+  let checkedModeSession = false;
   const modeRoundTrip = async () => {
     const previous = page.url();
     const destination = new URL(previous);
@@ -21,6 +22,18 @@ export const verifyModePanelState = async (page: Page, terminal: Locator) => {
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();
     await expect(bottom).toHaveCount(0);
     await expect(terminal).toBeHidden();
+    if (!checkedModeSession) {
+      await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+      const floating = page.getByTestId("workbench-side-panel-floating");
+      const composer = floating.locator('[data-testid="content-editable"][contenteditable="true"]');
+      await expect(composer).toBeVisible();
+      await composer.fill("Keep this extension mode draft after reload");
+      const sessionTab = floating.getByRole("tab", { selected: true });
+      await tabAction(page, sessionTab, "Pin tab");
+      await page.reload();
+      await expect(composer).toHaveText("Keep this extension mode draft after reload");
+      checkedModeSession = true;
+    }
     await page.goBack();
     await expect(page).toHaveURL(previous);
   };

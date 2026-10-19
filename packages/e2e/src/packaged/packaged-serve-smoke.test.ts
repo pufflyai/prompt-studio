@@ -229,7 +229,7 @@ test(
   PACKAGED_TEST_TIMEOUT,
 );
 
-// Browser smoke also covers mode panel restoration and generic page-preview cleanup.
+// Browser smoke also covers mode panel restoration, extension-mode session reload, and generic page-preview cleanup.
 // Showcase resource checks include resolving an unknown Artifact without a failed command.
 registerPackagedShowcaseSmokeTests();
 registerPackagedPlannerSmokeTests();
