@@ -34,7 +34,7 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner px="md">
-          <Dialog.Content minH="0" minW="0">
+          <Dialog.Content minH="0" minW="0" maxH="calc(100dvh - var(--chakra-spacing-md) * 2)">
             <Dialog.Header flexShrink={0}>
               <Dialog.Title>Active work is still running</Dialog.Title>
             </Dialog.Header>
