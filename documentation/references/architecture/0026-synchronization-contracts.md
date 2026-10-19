@@ -250,7 +250,7 @@ operations. The service copies the derived view and appended payloads so issued
 views stay immutable. Copying this derived state still costs work during writes;
 only replay is limited to the appended operations. The new view becomes available
 after the transaction commits. Failed transactions publish no cache changes.
-Acceptance changes and accepted-state replacement discard old projections. This
+Frozen writer-position changes, acceptance changes and accepted-state replacement discard old projections. This
 also covers epoch, snapshot frontier and document-generation changes represented
 by a replacement snapshot, even when checkpoint counters do not change. Any
 future history compaction must update the owner token in its storage transaction.
@@ -264,17 +264,21 @@ retained history; this cache does not implement history compaction.
 
 ## Replay, snapshots, retention and restore
 
-The current protocol 1 owners use checkpoints of `(epoch, sequence)`, whole-group
-replay, and retained receipts. Replay cursors outside the retained range or epoch
+Production host and relay owners use protocol 2 checkpoints of `(epoch, sequence)`,
+whole-group replay, and immutable retry receipts. PS-815 supplies their paired
+cutover. Replay cursors outside the retained range, epoch or stream generation
 require snapshots. A content restore starts a fresh epoch and never restores grants.
-Local reconnect preserves newer accepted and pending work and their source bytes.
+A bound host preserves its local records, pending proposals and source bytes and
+reports that resynchronization is required. PS-782 owns restore reconciliation.
 These owners do not implement production compaction yet.
 
-PS-808 replaces permanent receipt retention with the
-[covered checkpoint contract](0027-covered-checkpoints.md). Protocol 2 snapshots
+PS-808 defines the [covered checkpoint contract](0027-covered-checkpoints.md).
+Production protocol 2 snapshots
 carry current records, required tombstones, explicit retained branches, document
-generations, writer floors, and outstanding receipts. Coverage requires durable
-installation by every enrolled environment and an independent verified backup.
+generations, writer floors, and outstanding receipts. PS-815 persists authenticated
+environment installation evidence and consistent capture pins. The covered cut
+stays zero until verified backup and retirement evidence is available. Advancing
+coverage requires durable installation by every enrolled environment and an independent verified backup.
 Offline environments, active recovery, retained ancestry, and in-flight publication
 or capture restrict the cut. There is no time-based expiry.
 
@@ -285,15 +289,15 @@ and publishes one shared fresh CRDT seed. Deletion follows committed retirement 
 rechecks reachability under the publication boundary. Backup manifests own independent
 copies; restore starts a new epoch and preserves newer local recovery proposals.
 
-The isolated reference proves these rules; PS-776, PS-780, PS-781, and PS-782 own
-production editing, backups, compaction, and restore. Do not apply protocol 2 deletion
-rules to protocol 1 production data before the paired host/relay cutover. There is no
-mixed-client fallback or historical conversion in this alpha redesign.
+The isolated reference proves retirement and deletion rules; PS-776, PS-780,
+PS-781, and PS-782 own production editing, backups, compaction, and restore
+reconciliation. The production protocol 2 foundation performs no retirement or
+deletion. There is no mixed-client fallback or historical conversion in this alpha redesign.
 
 ## Compatibility
 
 Peers advertise supported wire versions, supported features and required features.
-Release labels are diagnostic and do not select a protocol. Negotiate version 1 only
+Release labels are diagnostic and do not select a protocol. Negotiate version 2 only
 when both support it and every required feature is supported in both directions.
 Optional features are ignored unless required; unknown mandatory structure and
 unknown envelope fields are rejected. This contract does not claim future version
@@ -301,8 +305,8 @@ support merely because two peers advertise the same unknown number.
 
 An unsupported result is actionable and recoverable. Keep the original durable
 journal and bytes, do not send or rewrite queued envelopes, and retry after a local
-runtime or relay update. Schema evolution needs a separately versioned decoder and
-compatibility evidence before enabling a new wire version.
+runtime or relay update. This paired alpha cutover rejects protocol 1. Any later
+wire version needs explicit schemas and compatibility evidence before it is enabled.
 
 ## Executable evidence
 

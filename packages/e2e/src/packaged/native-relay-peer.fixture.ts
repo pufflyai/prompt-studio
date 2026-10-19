@@ -1,11 +1,13 @@
 import {
   canonicalJson,
   coverageAckSchema,
+  type Mutation,
   type RelayOperation,
   relayRecoverySchema,
   relayRoute,
   type Snapshot,
   snapshotFingerprint,
+  validateMutation,
 } from "pstdio-sync-contracts";
 
 const readAsset = async (request: Request, bytes: Uint8Array | undefined) => {
@@ -25,6 +27,7 @@ export const createNativeRelayPeer = (
   bytes?: Uint8Array,
   onRecovery?: (operationId: string) => void,
   onSnapshot?: (snapshot: Snapshot) => void,
+  onSubmit?: (mutation: Mutation) => Response,
 ) => {
   const retained = structuredClone(snapshot);
   const recover = async (request: Request) => {
@@ -63,6 +66,8 @@ export const createNativeRelayPeer = (
       }
       case "recover":
         return recover(request);
+      case "submit":
+        return onSubmit?.(await validateMutation(await request.json())) ?? new Response(null, { status: 404 });
       default:
         return new Response(null, { status: 404 });
     }
