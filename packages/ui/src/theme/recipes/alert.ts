@@ -37,6 +37,8 @@ export const alertSlotRecipe = defineSlotRecipe({
     },
   },
   variants: {
+    status: { info: {}, success: {}, warning: {}, error: {}, neutral: {} },
+    variant: { subtle: {}, surface: {}, outline: {}, solid: {} },
     size: {
       sm: { root: rootDensity },
       md: { root: rootDensity },
