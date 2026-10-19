@@ -47,5 +47,9 @@
   "timeline.autoBuild.cancel": "Cancelar",
   "timeline.autoBuild.description": "Un supervisor usa tu indicación para asignar tickets válidos sin asignar cuando hay capacidad disponible. Espera entre comprobaciones y continúa cuando puede iniciar más trabajo.",
   "timeline.autoBuild.documentation": "Documentación de Auto Build",
-  "views.workflowSettings.title": "Flujo de trabajo del planificador"
+  "views.workflowSettings.title": "Flujo de trabajo del planificador",
+  "timeline.autoBuild.about": "Acerca de Auto Build",
+  "timeline.autoBuild.supervisorModel": "Modelo del supervisor",
+  "timeline.autoBuild.defaultModel": "Predeterminado del proyecto",
+  "commands.autoBuild.selectModel": "Modelo del supervisor"
 }

@@ -1,27 +1,24 @@
-import { Button, Popover, Stack, Text, useRecipe, useSlotRecipe } from "@chakra-ui/react";
-import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
-import { Checkbox } from "@pstdio/ui";
+import { Button, Dialog, HStack, Stack, Text, useRecipe } from "@chakra-ui/react";
+import type { ExtensionHarnessInput, ViewFilterGroup } from "@pstdio/sdk/extensions";
+import { Checkbox, ScrollArea } from "@pstdio/ui";
 import { CollectionFilter } from "@pstdio/ui/collection-view";
 import { buildFilterCategories } from "@pstdio/ui/kanban-renderer";
 import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { psTheme } from "@pstdio/ui/theme";
+import { ChevronDown, Cpu } from "lucide-react";
 import { useState } from "react";
 import type { timelineQueryData } from "./timeline-query";
 
 export interface AutoBuildFormProps {
   prompt: string;
   eligible: ViewFilterGroup;
-  ignore: ViewFilterGroup;
+  supervisorModel?: ExtensionHarnessInput;
+  onSelectModel: () => void;
   requireMergedDependencies: boolean;
   data: ReturnType<typeof timelineQueryData>;
   saving: boolean;
   error?: string;
-  onEnable: (
-    prompt: string,
-    ignore: ViewFilterGroup,
-    requireMergedDependencies: boolean,
-    eligible: ViewFilterGroup,
-  ) => Promise<boolean>;
+  onEnable: (prompt: string, requireMergedDependencies: boolean, eligible: ViewFilterGroup) => Promise<boolean>;
   onClose: () => void;
   t: (key: string, fallback?: string) => string;
 }
@@ -30,7 +27,8 @@ export function AutoBuildForm(props: AutoBuildFormProps) {
   const {
     prompt: initialPrompt,
     eligible: initialEligible,
-    ignore: initialIgnore,
+    supervisorModel,
+    onSelectModel,
     requireMergedDependencies: initialRequireMerged,
     data,
     saving,
@@ -41,65 +39,68 @@ export function AutoBuildForm(props: AutoBuildFormProps) {
   } = props;
   const [prompt, setPrompt] = useState(initialPrompt);
   const [eligible, setEligible] = useState(initialEligible);
-  const [ignore, setIgnore] = useState(initialIgnore);
   const [requireMergedDependencies, setRequireMerged] = useState(initialRequireMerged);
-  const categories = buildFilterCategories(data.attributes, data.rows);
   const button = useRecipe({ recipe: psTheme.getRecipe("button") });
-  const panel = useSlotRecipe({ recipe: psTheme.getSlotRecipe("popover") })({ variant: "panel" });
-  const filters = [
-    {
-      id: "eligible",
-      label: t("timeline.autoBuild.eligible", "Eligible tickets"),
-      value: eligible,
-      change: setEligible,
-    },
-    { id: "ignore", label: t("timeline.autoBuild.ignore", "Ignore tickets"), value: ignore, change: setIgnore },
-  ];
+  const categories = buildFilterCategories(data.attributes, data.rows);
+  const eligibleLabel = t("timeline.autoBuild.eligible", "Eligible tickets");
   const save = async () => {
-    if (await onEnable(prompt, ignore, requireMergedDependencies, eligible)) onClose();
+    if (await onEnable(prompt, requireMergedDependencies, eligible)) onClose();
   };
   return (
     <>
-      <Popover.Header css={panel.header}>
-        <Popover.Title css={panel.title}>{t("timeline.autoBuild.start", "Auto Build")}</Popover.Title>
-      </Popover.Header>
-      <Popover.Body css={panel.body}>
-        <Stack gap="md">
-          <LazyMarkdownEditor
-            autoFocus
-            defaultState={prompt}
-            isEditable={!saving}
-            placeholder={t("timeline.autoBuild.prompt", "Describe the work to build…")}
-            onChange={setPrompt}
-          />
-          {filters.map(({ id, label, value, change }) => (
-            <Stack key={id} gap="xs" role="group" aria-label={label}>
-              <Text textStyle="label/S/medium">{label}</Text>
+      <Dialog.Body flex="1" minH="0" p="0">
+        <ScrollArea h="full" contentProps={{ px: "lg", py: "md" }}>
+          <Stack gap="md">
+            <HStack justifyContent="space-between" gap="md">
+              <Text textStyle="label/S/medium">{t("timeline.autoBuild.supervisorModel", "Supervisor model")}</Text>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={saving}
+                onClick={onSelectModel}
+                aria-label={t("timeline.autoBuild.supervisorModel", "Supervisor model")}
+              >
+                <Cpu />
+                {supervisorModel?.model ??
+                  supervisorModel?.harnessId.split(".").at(-1) ??
+                  t("timeline.autoBuild.defaultModel", "Project default")}
+                <ChevronDown />
+              </Button>
+            </HStack>
+            <LazyMarkdownEditor
+              autoFocus
+              defaultState={prompt}
+              isEditable={!saving}
+              placeholder={t("timeline.autoBuild.prompt", "Describe the work to build…")}
+              onChange={setPrompt}
+            />
+            <Stack gap="xs" role="group" aria-label={eligibleLabel}>
+              <Text textStyle="label/S/medium">{eligibleLabel}</Text>
               <CollectionFilter
-                filter={value}
-                onFilterChange={(filter) => !saving && change(filter)}
+                filter={eligible}
+                onFilterChange={(filter) => !saving && setEligible(filter)}
                 itemLabel="Ticket"
                 fields={data.attributes}
                 optionsFor={(field) => categories.find(({ id }) => id === field.id)?.options ?? []}
               />
             </Stack>
-          ))}
-          <Checkbox
-            size="sm"
-            checked={requireMergedDependencies}
-            disabled={saving}
-            onCheckedChange={({ checked }) => setRequireMerged(checked === true)}
-          >
-            {t("timeline.autoBuild.requireMerged", "Require merged dependencies")}
-          </Checkbox>
-          {error ? (
-            <Text role="alert" color="fg.error">
-              {error}
-            </Text>
-          ) : null}
-        </Stack>
-      </Popover.Body>
-      <Popover.Footer css={panel.footer} display="flex" justifyContent="flex-end" gap="xs">
+            <Checkbox
+              size="sm"
+              checked={requireMergedDependencies}
+              disabled={saving}
+              onCheckedChange={({ checked }) => setRequireMerged(checked === true)}
+            >
+              {t("timeline.autoBuild.requireMerged", "Require merged dependencies")}
+            </Checkbox>
+            {error ? (
+              <Text role="alert" color="fg.error">
+                {error}
+              </Text>
+            ) : null}
+          </Stack>
+        </ScrollArea>
+      </Dialog.Body>
+      <Dialog.Footer>
         <Button size="sm" variant="outline" onClick={onClose} disabled={saving}>
           {t("timeline.autoBuild.cancel", "Cancel")}
         </Button>
@@ -112,7 +113,7 @@ export function AutoBuildForm(props: AutoBuildFormProps) {
         >
           {t("timeline.autoBuild.start", "Auto Build")}
         </Button>
-      </Popover.Footer>
+      </Dialog.Footer>
     </>
   );
 }

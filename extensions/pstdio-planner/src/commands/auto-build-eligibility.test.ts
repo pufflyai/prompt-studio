@@ -5,14 +5,17 @@ import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand } from "./auto-build-mode";
 import { nextTicketsCommand } from "./next-tickets";
 
-test("eligible ticket filters narrow work queries and dispatch while ignore filters take precedence", async () => {
+test("eligible ticket filters narrow work queries and dispatch", async () => {
   const { ctx, ticket } = await fixture();
   const addition = await ticket("Calculator addition");
   await ticket("Calculator subtraction");
   const greeting = await ticket("Welcome message");
   const eligible = {
     conjunction: "and" as const,
-    rules: [{ attributeId: "title", condition: "contains" as const, value: "Calculator" }],
+    rules: [
+      { attributeId: "title", condition: "contains" as const, value: "Calculator" },
+      { attributeId: "title", condition: "does-not-contain" as const, value: "subtraction" },
+    ],
     groups: [
       {
         conjunction: "or" as const,
@@ -23,7 +26,6 @@ test("eligible ticket filters narrow work queries and dispatch while ignore filt
   const mode = await configureAutoBuildCommand.run(ctx, {
     enabled: true,
     eligible,
-    ignore: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "subtraction" }] },
   });
   expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toEqual([addition.id]);
   expect(await autoBuildDispatchCommand.run(ctx, { ticket: greeting.id, revision: mode.revision })).toMatchObject({
@@ -41,7 +43,6 @@ test("empty eligibility allows valid unfinished tickets while completed tickets 
   await configureAutoBuildCommand.run(ctx, {
     enabled: true,
     eligible: { conjunction: "and", rules: [] },
-    ignore: { conjunction: "and", rules: [] },
   });
   expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toEqual([backlog.id]);
 });

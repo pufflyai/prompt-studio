@@ -20,7 +20,6 @@ export function useAutoBuild(client: PlanClient) {
   const configure = async (
     enabled: boolean,
     prompt?: string,
-    ignore?: ViewFilterGroup,
     requireMergedDependencies?: boolean,
     eligible?: ViewFilterGroup,
   ) => {
@@ -30,7 +29,6 @@ export function useAutoBuild(client: PlanClient) {
       const saved = await client.commands["auto-build.configure"]({
         enabled,
         prompt,
-        ignore,
         requireMergedDependencies,
         eligible,
       });
@@ -45,6 +43,6 @@ export function useAutoBuild(client: PlanClient) {
       setSaving(false);
     }
   };
-  // Saved run failures belong to the status popover, not a new configuration attempt.
+  // Saved run failures belong to the activity dialog, not a new configuration attempt.
   return { mode, saving, error, configure };
 }

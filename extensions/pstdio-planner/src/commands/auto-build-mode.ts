@@ -69,13 +69,13 @@ export const configureAutoBuildCommand = defineCommand({
   params: {
     enabled: params.boolean({ required: true }),
     prompt: params.longText(),
-    ignore: params.json<ViewFilterGroup>(),
+    supervisorModel: params.harness({ label: l10n("timeline.autoBuild.supervisorModel", "Supervisor model") }),
     eligible: params.json<ViewFilterGroup>(),
     requireMergedDependencies: params.boolean({ label: "Require merged dependencies" }),
     // @deprecated Use requireMergedDependencies.
     blockOnReview: params.boolean({ label: "Block on review" }),
   },
-  async run(ctx, { enabled, prompt, ignore, blockOnReview, eligible, requireMergedDependencies }) {
+  async run(ctx, { enabled, prompt, supervisorModel, blockOnReview, eligible, requireMergedDependencies }) {
     const configure = () =>
       withWriteGuard(ctx, "auto-build-mode", async () => {
         const current = await readAutoBuildMode(ctx);
@@ -90,7 +90,7 @@ export const configureAutoBuildCommand = defineCommand({
           enabled,
           prompt: nextPrompt,
           eligible: nextEligible,
-          ignore: ignore ?? current.ignore,
+          supervisorModel: supervisorModel ?? current.supervisorModel,
           blockOnReview: blockOnReview ?? current.blockOnReview,
           requireMergedDependencies: requireMergedDependencies ?? current.requireMergedDependencies,
         });

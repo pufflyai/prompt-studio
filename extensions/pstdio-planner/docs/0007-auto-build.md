@@ -4,19 +4,21 @@ Auto Build uses a supervisor to assign valid, unassigned tickets using your prom
 
 ## Start Auto Build
 
-Open **Project Timeline** and click **Auto Build**. Describe how the supervisor should choose work. Then set **Eligible tickets** and **Ignore tickets** below the prompt and click the primary **Auto Build** button.
+Open **Project Timeline** and click **Auto Build**. In the modal, describe how the supervisor should choose work, set **Eligible tickets**, and click the primary **Auto Build** button. The question mark next to the title opens an explanation and a documentation link.
+
+Click **Supervisor model** to open the native model picker used by Run attempt. Choose a harness, model, and its run options, then confirm. This choice saves immediately for the next supervisor conversation. Worker sessions still use the project default agent. Stop and start Auto Build to use a different model for an existing supervisor.
 
 Starting Auto Build immediately queues a check. The first check starts the supervisor as soon as it finds eligible work; the supervisor then queries its full scope before launching tickets. The queued startup status stays available while that check runs.
 
 For example: “Prioritize small independent tickets for the next release. Leave design decisions for me.”
 
-![Auto Build form with a supervisor prompt and ignore filters.](../../../documentation/images/auto-build-confirmation.png)
+![Auto Build modal with a supervisor model, prompt, and eligible ticket filters.](../../../documentation/images/auto-build-confirmation.png)
 
-Both filter lists use the same filter button, picker, and bubbles as Tickets, including status, title, other ticket properties, and And/Or groups. Status options keep their icons, colors, and IDs across renames. Empty eligibility includes every valid unfinished ticket. Ignore filters take precedence. Tickets in a completed status are always excluded. Eligibility governs new work only: a started ticket can continue after its agent changes the ticket status. An incomplete eligible filter, or one that uses a removed field, blocks new work until you fix it.
+The eligibility filter uses the same filter button, picker, and bubbles as Tickets, including status, title, other ticket properties, and And/Or groups. Status options keep their icons, colors, and IDs across renames. Empty eligibility includes every valid unfinished ticket. Use negative conditions such as **does not contain** to exclude tickets. Tickets in a completed status are always excluded. Eligibility governs new work only: a started ticket can continue after its agent changes the ticket status. An incomplete eligible filter, or one that uses a removed field, blocks new work until you fix it.
 
 Choose which statuses count as completed, blocked, and active, and the optional status after merge, in Planner's workflow settings. Open **Settings → Project → Extensions**, select **Project Planner**, and use its **Settings** tab. Each choice saves immediately. No status name or default column has a built-in meaning. Empty selections turn off only the matching feature.
 
-The selected timeline view, search, and display filters only affect what you see. The supervisor uses your prompt to select its work scope. Its saved scope and both filter lists apply to wake checks, work queries, and dispatch.
+The selected timeline view, search, and display filters only affect what you see. The supervisor uses your prompt to select its work scope. Its saved scope and eligibility filters apply to wake checks, work queries, and dispatch.
 
 **Require merged dependencies** is off by default. While it is off, dependent tickets can start on the selected or only submitted revision of each prerequisite, without a review verdict. Planner combines their submitted commits without merging into the delivery target, and the implementing agent stacks its changes on top. If that combination conflicts, the owner reconciles the code in its assigned workspace before continuing. Turn it on to wait until prerequisite code, including verified squash merges, is in the selected target. Missing revisions, running replacement work, and ambiguous attempts still prevent a launch. Code conflicts do not create human review requests. Ask for human input only when features, concepts, requirements, plans, or architecture conflict and the existing instructions cannot resolve them.
 
@@ -40,17 +42,17 @@ Implementation follows the project's Planner settings, including adversarial rev
 
 ## Inspect or stop Auto Build
 
-The header button always says **Auto Build**. It shows a Play icon when Auto Build is stopped without an error. While Auto Build is on, or after an error, it shows a colored status indicator: the session spinner while work runs, a blue moon while the supervisor sleeps, a red mark if the supervisor fails, and a green check when the run is complete. A run is complete when every ticket in the supervisor's saved scope has a completed status. Reopening one of those tickets clears the check. Click the button to open a compact popover with a separate supervisor row and running ticket sessions. Each row uses the normal session status icon and color. The popover shows used capacity and its limit. Click a session to inspect it.
+The header button always says **Auto Build**. It shows a Play icon when Auto Build is stopped without an error. While Auto Build is on, or after an error, it shows a colored status indicator: the session spinner while work runs, a blue moon while the supervisor sleeps, a red mark if the supervisor fails, and a green check when the run is complete. A run is complete when every ticket in the supervisor's saved scope has a completed status. Reopening one of those tickets clears the check. Click the button to open a modal with a separate supervisor row and running ticket sessions. Each row uses the normal session status icon and color. The modal shows used capacity and its limit. Click a session to inspect it.
 
-Click the small **Stop Auto Build** button with the pause icon in the popover header to prevent future supervisor prompts and automatic dispatches. Running sessions continue. Stopping does not cancel their work or discard changes. Starting again creates a fresh supervisor conversation and leaves the previous conversation available in session history.
+Click the small **Stop Auto Build** button with the pause icon in the modal footer to prevent future supervisor prompts and automatic dispatches. Running sessions continue. Stopping does not cancel their work or discard changes. Starting again creates a fresh supervisor conversation and leaves the previous conversation available in session history.
 
-Auto Build keeps working when you close the timeline and resumes its checks after restarting Prompt Studio. Starting it again preserves your prompt, both filter lists, and the merged-dependencies choice. A run saved before eligible filters existed stays stopped until you configure it.
+Auto Build keeps working when you close the timeline and resumes its checks after restarting Prompt Studio. Starting it again preserves your prompt, supervisor model, eligibility filters, and the merged-dependencies choice. A run saved before eligible filters existed stays stopped until you configure it.
 
 ## When work needs attention
 
-If the supervisor cannot start or resume, Auto Build turns off. Its header indicator turns red, and its popover shows the error. The saved failure does not appear as a timeline error or in a new start form. Resolve the problem and start it again. Existing attempts remain available.
+If the supervisor cannot start or resume, Auto Build turns off. Its header indicator turns red, and its modal shows the error. The saved failure does not appear as a timeline error or in a new start form. Resolve the problem and start it again. Existing attempts remain available.
 
-The popover shows a small banner when the supervisor fails or needs input, all running ticket sessions need input, or no work can run because of dependencies, blockers, or review requests. A finished board does not show a blocker banner.
+The modal shows a small banner when the supervisor fails or needs input, all running ticket sessions need input, or no work can run because of dependencies, blockers, or review requests. A finished board does not show a blocker banner.
 
 If an implementation needs help, answer every open [review request](0006-review-requests.md). The supervisor can then resume that attempt in the same workspace and session when capacity is available, with your answers included.
 
@@ -64,7 +66,7 @@ An unfinished implementation whose session completed, was cancelled, or failed c
 
 Submitted work is also offered as a `repair` action when its PR has a merge conflict, its CI failed, or its PR head differs from the submitted revision. The owner repairs it in the same workspace and submits the new HEAD. Old review or CI results do not count for a new HEAD. Unavailable evidence stays a visible blocker. Waiting tickets include the current owner's state and next action. Submitted work is offered as `update-stack` when its workspace has an unrecorded HEAD, its required base differs from the latest revision, or it lacks the current selected dependency base. The supervisor follows up with the existing implementation owner. It does not create another attempt or change an old review verdict.
 
-If nothing starts, check the eligible and ignore filters, prerequisites, default agent, and in-progress limit. The supervisor can also leave valid tickets unassigned when they do not match your prompt.
+If nothing starts, check the eligibility filters, prerequisites, default agent, and in-progress limit. The supervisor can also leave valid tickets unassigned when they do not match your prompt.
 
 ## Agent commands
 
@@ -72,6 +74,7 @@ The supervisor uses public Planner commands:
 
 ```sh
 pst pstdio-planner auto-build read
+pst pstdio-planner auto-build select-model --supervisor-model '{"harnessId":"<harness>","model":"<model>"}'
 pst pstdio-planner auto-build scope --revision <mode-revision> --queries '[{"track":"Workbench"}]'
 pst tickets next --track Workbench
 pst tickets panel --id PS-123
@@ -80,6 +83,6 @@ pst pstdio-planner auto-build dispatch --ticket PS-123 --revision <mode-revision
 
 The scope command saves the work selection for the current mode revision and returns fresh matching work. Use `[{}]` for the whole project. Scope fields combine within each query; the queries combine as alternatives. Set eligibility filters here, rather than temporary priorities. The `next` query reports the current mode revision, launchable `tickets`, `waiting` tickets with reasons and dependency IDs, and capacity. It is read-only and works while Auto Build is off. While Auto Build is on, its filters narrow the saved scope. Prerequisites in other tracks still apply. Unless **Require merged dependencies** is on, submitted dependency revisions remain valid stack bases. Actively running implementation owners still block new children. The query exposes repair in an existing workspace instead of leaving the track with no actionable work. The implementation owner reconciles conflicting dependency code through `update-stack`.
 
-Dispatch rechecks the mode, eligible and ignore filters, assignments, prerequisites, exact heads, and capacity before launching, resuming, or repairing work. Use the revision from the latest query. An earlier revision cannot dispatch work after Auto Build is stopped or restarted. The old `pst pstdio-planner auto-build candidates` command is deprecated in favor of `pst tickets next` and remains available through 0.44. Its CLI help names the replacement; it is removed in 0.45.
+Dispatch rechecks the mode, eligibility filters, assignments, prerequisites, exact heads, and capacity before launching, resuming, or repairing work. Use the revision from the latest query. An earlier revision cannot dispatch work after Auto Build is stopped or restarted. The old `pst pstdio-planner auto-build candidates` command is deprecated in favor of `pst tickets next` and remains available through 0.44. Its CLI help names the replacement; it is removed in 0.45.
 
 For work that must build on a feature branch, pass the same `--base <branch>` to `tickets next` and `auto-build dispatch`. This selects the root dependency base for that launch without changing project settings. To continue a linked manual draft, also pass `--workspace-id <id>` to dispatch. Planner preserves its branch and files, requires no managed attempt or active session in that workspace, and tells its new owner to commit the draft and integrate the required base before continuing. Submission still verifies actual Git ancestry. Existing managed attempts keep their owner, workspace, and recorded base; dispatch them without overrides and use `update-stack --base <branch>` in that owner session when the required target changes.

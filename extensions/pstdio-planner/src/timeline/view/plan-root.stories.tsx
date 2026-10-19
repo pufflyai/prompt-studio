@@ -38,7 +38,6 @@ function TimelineStory(props: { failConfigure?: boolean; loading?: "tickets" | "
         value = {
           enabled: false,
           prompt: "Choose small independent tickets.",
-          ignore: { conjunction: "and", rules: [] },
           eligible: { conjunction: "and", rules: [] },
           requireMergedDependencies: false,
           sessions: [],
@@ -94,8 +93,8 @@ export const SavedAutoBuildFailure: Story = {
     expect(page.queryByRole("alert")).toBeNull();
     await userEvent.click(button);
     expect(await page.findByRole("alert")).toHaveTextContent(backgroundFailure);
-    const popover = page.getByRole("dialog");
-    await userEvent.click(within(popover).getByRole("button", { name: "Auto Build" }));
+    const dialog = page.getByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Auto Build" }));
     await page.findByRole("dialog", { name: "Auto Build" });
     expect(page.queryByRole("alert")).toBeNull();
   },

@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
-import { defaultAutoBuildIgnore } from "../data/auto-build-mode";
-import { putTicket, ticketsCollection } from "../data/collections";
+import { putTicket } from "../data/collections";
 import { fixture } from "./auto-build.fixture";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { autoBuildScopeCommand } from "./auto-build-scope";
@@ -18,22 +17,20 @@ test("a new project starts stopped with empty ticket filters", async () => {
     enabled: false,
     prompt: "",
     eligible: { conjunction: "and", rules: [] },
-    ignore: await defaultAutoBuildIgnore(ctx),
   });
 });
 
-test("saves the prompt and ignore filter across stopping and restarting", async () => {
+test("saves the prompt and eligible filter across stopping and restarting", async () => {
   const { ctx, ticket } = await fixture();
   await ticket("Configure statuses");
-  const ignore = {
+  const eligible = {
     conjunction: "and" as const,
-    rules: [{ attributeId: "title", condition: "contains" as const, value: "Postpone" }],
+    rules: [{ attributeId: "title", condition: "does-not-contain" as const, value: "Postpone" }],
   };
   const first = await configureAutoBuildCommand.run(ctx, {
     enabled: true,
     prompt: "Focus on the release.",
-    ignore,
-    eligible: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready"] }] },
+    eligible,
   });
   await configureAutoBuildCommand.run(ctx, { enabled: false });
   const restarted = await configureAutoBuildCommand.run(ctx, { enabled: true });
@@ -41,7 +38,7 @@ test("saves the prompt and ignore filter across stopping and restarting", async 
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({
     enabled: true,
     prompt: "Focus on the release.",
-    ignore,
+    eligible,
   });
 });
 

@@ -47,5 +47,9 @@
   "timeline.autoBuild.cancel": "취소",
   "timeline.autoBuild.description": "감독 에이전트는 입력한 지침에 따라 여유가 생기면 유효한 미할당 티켓을 할당합니다. 확인 사이에는 대기하고 더 많은 작업을 시작할 수 있으면 재개합니다.",
   "timeline.autoBuild.documentation": "Auto Build 문서",
-  "views.workflowSettings.title": "플래너 워크플로"
+  "views.workflowSettings.title": "플래너 워크플로",
+  "timeline.autoBuild.about": "Auto Build 정보",
+  "timeline.autoBuild.supervisorModel": "감독자 모델",
+  "timeline.autoBuild.defaultModel": "프로젝트 기본값",
+  "commands.autoBuild.selectModel": "감독자 모델"
 }

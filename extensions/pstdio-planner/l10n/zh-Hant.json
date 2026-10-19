@@ -47,5 +47,9 @@
   "timeline.autoBuild.cancel": "取消",
   "timeline.autoBuild.description": "監督代理會依照你的提示，在有可用容量時指派有效且未指派的工單。它會在檢查之間等待，並在可以開始更多工作時恢復。",
   "timeline.autoBuild.documentation": "Auto Build 文件",
-  "views.workflowSettings.title": "規劃器工作流程"
+  "views.workflowSettings.title": "規劃器工作流程",
+  "timeline.autoBuild.about": "關於 Auto Build",
+  "timeline.autoBuild.supervisorModel": "監督者模型",
+  "timeline.autoBuild.defaultModel": "專案預設模型",
+  "commands.autoBuild.selectModel": "監督者模型"
 }

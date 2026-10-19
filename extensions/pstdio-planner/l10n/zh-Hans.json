@@ -47,5 +47,9 @@
   "timeline.autoBuild.cancel": "取消",
   "timeline.autoBuild.description": "监督代理会按照你的提示，在有可用容量时分配有效且未分配的工单。它会在检查之间等待，并在可以开始更多工作时恢复。",
   "timeline.autoBuild.documentation": "Auto Build 文档",
-  "views.workflowSettings.title": "规划器工作流"
+  "views.workflowSettings.title": "规划器工作流",
+  "timeline.autoBuild.about": "关于 Auto Build",
+  "timeline.autoBuild.supervisorModel": "监督者模型",
+  "timeline.autoBuild.defaultModel": "项目默认模型",
+  "commands.autoBuild.selectModel": "监督者模型"
 }

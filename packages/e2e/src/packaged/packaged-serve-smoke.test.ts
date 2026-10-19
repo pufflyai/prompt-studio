@@ -65,7 +65,7 @@ import { registerNotificationStatusSmokeTests } from "./packaged-notification-st
 // Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
-// Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
+// Planner covers supervisor model choices, timeline state, board moves, missing folders/Git metadata, and dependency recovery.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";

@@ -1,4 +1,4 @@
-import { commandRef } from "@pstdio/sdk/extensions";
+import { commandRef, type ExtensionHarnessInput } from "@pstdio/sdk/extensions";
 
 export interface PlannerTicket {
   id: string;
@@ -78,6 +78,10 @@ const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "pst
 // This module owns the planner's public command contract. Consumers import these
 // references instead of repeating the planner identity or command ids.
 export const planner = {
+  selectAutoBuildModel: plannerCommand<
+    { supervisorModel?: Pick<ExtensionHarnessInput, keyof ExtensionHarnessInput> },
+    unknown
+  >("auto-build.select-model"),
   automationPolicy: plannerCommand<Record<string, never>, { maxInProgress: number }>("automation-policy"),
   readTickets: plannerCommand<Record<string, never>, PlannerTicket[]>("read-tickets"),
   readStatuses: plannerCommand<Record<string, never>, { statuses: PlannerStatus[] }>("ticket-status.read"),

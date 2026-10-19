@@ -30,19 +30,16 @@ export function readAutoBuildFilter(filter: ViewFilterGroup, fields: AttributeDe
   };
 }
 
-export function readAutoBuildTicketFilters(
+export function readAutoBuildEligibility(
   eligible: ViewFilterGroup,
-  ignore: ViewFilterGroup,
   rows: KanbanRendererRow[],
   fields: AttributeDescriptor[],
 ) {
   const eligibility = readAutoBuildFilter(eligible, fields);
-  const ignored = readAutoBuildFilter(ignore, fields).filter;
   return {
     eligible: new Set(
       (eligibility.filter ? filterRowsByView(rows, eligibility.filter, fields) : rows).map(({ id }) => id),
     ),
-    ignored: new Set(ignored ? filterRowsByView(rows, ignored, fields).map(({ id }) => id) : []),
     configurationError: eligibility.complete ? null : "Complete or remove invalid eligible ticket filters.",
   };
 }

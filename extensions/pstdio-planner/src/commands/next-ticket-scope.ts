@@ -1,5 +1,5 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
-import { readAutoBuildTicketFilters } from "../data/auto-build-filter";
+import { readAutoBuildEligibility } from "../data/auto-build-filter";
 import type { AutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import type { StoredTicket } from "../data/types";
@@ -18,17 +18,12 @@ interface ScopedWorkInput {
   started: Set<string>;
 }
 
-// The supervisor's saved queries bound the work. Eligibility applies to new work; ignore filters apply to all of it.
+// The supervisor's saved queries bound the work. Eligibility applies to new work.
 export async function selectScopedWork(ctx: CommandContext, input: ScopedWorkInput) {
   const { plan, tickets, mode } = input;
   const byId = new Map(tickets.map((ticket) => [ticket.id, ticket]));
   const data = timelineQueryData(plan, (_key, fallback) => fallback ?? _key);
-  const { eligible, ignored, configurationError } = readAutoBuildTicketFilters(
-    mode.eligible,
-    mode.ignore,
-    data.rows,
-    data.attributes,
-  );
+  const { eligible, configurationError } = readAutoBuildEligibility(mode.eligible, data.rows, data.attributes);
   const supervisor = await readAutoBuildSupervisor(ctx);
   const savedScope =
     input.scope ?? (supervisor.scope?.revision === mode.revision ? supervisor.scope.queries : undefined);
@@ -37,9 +32,7 @@ export async function selectScopedWork(ctx: CommandContext, input: ScopedWorkInp
   const queryIds = new Set(inQueries.map(({ id }) => id));
   // Started work stays in scope after its agent moves it out of the eligible statuses.
   const scoped = inQueries.filter(
-    (row) =>
-      !byId.get(row.id)?.draft &&
-      (isCompleted(row) || ((eligible.has(row.id) || input.started.has(row.id)) && !ignored.has(row.id))),
+    (row) => !byId.get(row.id)?.draft && (isCompleted(row) || eligible.has(row.id) || input.started.has(row.id)),
   );
   // Completion is derived, so reopening a scoped ticket clears it.
   const completed = Boolean(savedScope) && scoped.length > 0 && scoped.every(isCompleted);
@@ -47,7 +40,6 @@ export async function selectScopedWork(ctx: CommandContext, input: ScopedWorkInp
     (row) =>
       queryIds.has(row.id) &&
       (input.started.has(row.id) || (!configurationError && eligible.has(row.id))) &&
-      !ignored.has(row.id) &&
       !byId.get(row.id)?.draft &&
       !isCompleted(row),
   );

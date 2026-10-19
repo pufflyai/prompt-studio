@@ -192,7 +192,7 @@ test("a changed dependency head prevents dispatching a stale combined base", asy
   expect((await listAttempts(result.storage)).filter(({ ticketId }) => ticketId === child.id)).toHaveLength(0);
 });
 
-test("next tickets respects saved ignore rules, draft state and live assignments", async () => {
+test("next tickets respects eligibility, draft state and live assignments", async () => {
   const { ctx, storage, ticket } = await trackFixture();
   const ignored = await ticket("Ignored");
   await putTicket(storage, { ...ignored, statusId: "backlog" });

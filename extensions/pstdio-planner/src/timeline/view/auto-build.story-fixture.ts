@@ -6,7 +6,7 @@ export const autoBuildStoryConfiguration: Omit<AutoBuildFormProps, "onClose" | "
   requireMergedDependencies: false,
   eligible: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready"] }] },
   prompt: "Implement the calculator feature.",
-  ignore: { conjunction: "and", rules: [] },
+  onSelectModel: () => {},
   data: {
     rows: [],
     attributes: [

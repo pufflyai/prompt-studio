@@ -1,11 +1,16 @@
-import { type ExtensionContextBase, eventRef, type ViewFilterGroup } from "@pstdio/sdk/extensions";
+import {
+  type ExtensionContextBase,
+  type ExtensionHarnessInput,
+  eventRef,
+  type ViewFilterGroup,
+} from "@pstdio/sdk/extensions";
 import { withWriteGuard } from "./write-guard";
 
 export interface AutoBuildMode {
   revision: string;
   enabled: boolean;
   prompt: string;
-  ignore: ViewFilterGroup;
+  supervisorModel?: ExtensionHarnessInput;
   /** @deprecated Use requireMergedDependencies. Review evidence is optional. */
   blockOnReview: boolean;
   eligible: ViewFilterGroup;
@@ -14,18 +19,13 @@ export interface AutoBuildMode {
 
 export const autoBuildChanged = eventRef({ extensionId: "pstdio.pstdio-planner", id: "auto-build.changed" });
 
-export const defaultAutoBuildIgnore = async (_ctx: Pick<ExtensionContextBase, "storage">) => ({
-  conjunction: "and" as const,
-  rules: [],
-});
-
 export const readAutoBuildMode = async (ctx: Pick<ExtensionContextBase, "storage">) => {
   const mode = await ctx.storage.get<AutoBuildMode>("auto-build");
   return {
     revision: mode?.revision ?? "",
     enabled: Boolean(mode?.enabled && mode.prompt && mode.eligible),
     prompt: mode?.prompt ?? "",
-    ignore: mode?.ignore ?? (await defaultAutoBuildIgnore(ctx)),
+    supervisorModel: mode?.supervisorModel,
     blockOnReview: mode?.blockOnReview ?? false,
     eligible: mode?.eligible ?? { conjunction: "and" as const, rules: [] },
     requireMergedDependencies: mode?.requireMergedDependencies ?? false,

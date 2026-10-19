@@ -80,10 +80,6 @@ export async function fixture(limit = 2) {
       rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready", "in-progress"] }],
     },
     prompt: "Implement relevant tickets.",
-    ignore: {
-      conjunction: "and",
-      rules: [{ attributeId: "status", condition: "is-any-of", value: ["backlog", "done"] }],
-    },
   });
   const ticket = (title: string, dependsOn: string[] = []) =>
     createTicketCommand.run(ctx, { title, statusId: "ready", dependsOn });

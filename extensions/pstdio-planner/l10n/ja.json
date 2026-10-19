@@ -47,5 +47,9 @@
   "timeline.autoBuild.cancel": "キャンセル",
   "timeline.autoBuild.description": "スーパーバイザーはあなたの指示に従い、空きができると有効な未割り当てチケットを割り当てます。確認の間は待機し、作業を開始できるようになると再開します。",
   "timeline.autoBuild.documentation": "Auto Build のドキュメント",
-  "views.workflowSettings.title": "プランナーのワークフロー"
+  "views.workflowSettings.title": "プランナーのワークフロー",
+  "timeline.autoBuild.about": "Auto Build について",
+  "timeline.autoBuild.supervisorModel": "スーパーバイザーのモデル",
+  "timeline.autoBuild.defaultModel": "プロジェクトの既定値",
+  "commands.autoBuild.selectModel": "スーパーバイザーのモデル"
 }
