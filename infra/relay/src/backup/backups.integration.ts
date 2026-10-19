@@ -100,7 +100,7 @@ test("older retained backups reconstruct content after losing the live database 
       .capture.references.some((ref) => ref.asset.sha256 === populated.asset.sha256),
   ).toBe(true);
   await f.removeLive();
-  await f.pool.query("TRUNCATE relay_scopes CASCADE");
+  await f.pool.query("TRUNCATE relay_scopes, relay_asset_uploads, relay_asset_parts, relay_verified_assets CASCADE");
   const restored = await catalog.open(older);
   const seen = new Set<string>();
   for (const entry of restored.manifests) {
