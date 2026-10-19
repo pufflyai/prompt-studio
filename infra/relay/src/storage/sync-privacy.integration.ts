@@ -25,17 +25,17 @@ const fileBytes = new TextEncoder().encode(`\x89PNG plaintext marker ${crypto.ra
 test("a dump of relay storage contains no plaintext from a seeded project", async () => {
   const { sync } = fixture.open();
   const device = { accountId: randomId("account"), deviceId: randomId("device") };
-  const projectId = randomId("project");
-  const address = { projectId, spaceOwner: null, documentId: randomId("doc") };
-  const blob = { projectId, spaceOwner: null, blobId: randomId("blob") };
+  const projectKey = randomId("project");
+  const address = { projectKey, spaceOwner: null, documentId: randomId("doc") };
+  const blob = { projectKey, spaceOwner: null, blobId: randomId("blob") };
   const sealedFile = await encrypt(fileBytes);
   await sync.blobs.begin(blob, device, { sha256: sha256(sealedFile), byteLength: sealedFile.length });
-  await sync.blobs.writePart(blob, device, 1, {
+  await sync.blobs.writePart(blob, 1, {
     sha256: sha256(sealedFile),
     byteLength: sealedFile.length,
     body: body(sealedFile),
   });
-  await sync.blobs.finish(blob, device);
+  await sync.blobs.finish(blob);
   const record = { extension: secrets.extension, title: secrets.title, body: secrets.record, file: secrets.fileName };
   await sync.documents.appendUpdate(address, device, {
     updateId: randomId("update"),
@@ -58,7 +58,7 @@ test("a dump of relay storage contains no plaintext from a seeded project", asyn
 
   const rows = (await fixture.rows()).join("\n");
   const objects = Buffer.concat([...(await fixture.objects()).values()]);
-  expect(rows).toContain(projectId);
+  expect(rows).toContain(projectKey);
   expect(objects.byteLength).toBeGreaterThan(sealedFile.length);
   for (const secret of Object.values(secrets)) {
     expect(rows).not.toContain(secret);

@@ -191,6 +191,31 @@ test("only the owner's devices reach a personal space, and only project devices 
   }
 });
 
+test("projects of different accounts with the same ID stay separate", async () => {
+  const projectId = `shared-${crypto.randomUUID()}`;
+  const relay = await open({ workbenchId: projectId });
+  const other = await fixture.context({ workbenchId: projectId });
+  try {
+    const listener = relay.connect(other.token);
+    expect(await listener.next()).toMatchObject({ type: "ready" });
+    const route = (documentId: string, operation: "updates" | "read") =>
+      ({ kind: "document", projectId, spaceOwner: null, documentId, operation }) as const;
+    const update = { updateId: randomId("update"), payload: encode(new Uint8Array([5])), blobIds: [] };
+    const first = randomId("doc");
+    await relay.post(route(first, "updates"), update);
+    const read = await relay.post(route(first, "read"), { after: 0 }, other.token);
+    expect(await read.json()).toMatchObject({ status: "updates", lastSequence: 0, updates: [] });
+    const second = randomId("doc");
+    const written = await relay.post(route(second, "updates"), update, other.token);
+    expect(await written.json()).toEqual({ sequence: 1, duplicate: false });
+    // The other account's device hears only about its own project, never about the first write.
+    expect(await listener.next()).toMatchObject({ type: "changed", documentId: second, lastSequence: 1 });
+    listener.socket.close();
+  } finally {
+    await Promise.all([relay.close(), other.close()]);
+  }
+});
+
 test("live messages reach the project's other devices and are never stored", async () => {
   const relay = await open();
   try {

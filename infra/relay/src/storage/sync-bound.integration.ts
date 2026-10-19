@@ -9,18 +9,20 @@ afterAll(() => fixture.close());
 // not depend on the count, so this check runs ten small cycles within the default test allowance.
 const updatesPerState = 10;
 const cycles = 10;
+const updateBytes = 120;
 
-test("document storage stays below twice its latest state after every compaction (R23)", async () => {
-  const { sync } = fixture.open({ gracePeriodMs: 0 });
-  const address = { projectId: randomId("project"), spaceOwner: null, documentId: randomId("doc") };
+test("document storage stays below twice its latest state plus the grace-period copy (R23)", async () => {
+  // The default seven-day grace period: nothing expires during the test.
+  const { sync } = fixture.open();
+  const address = { projectKey: randomId("project"), spaceOwner: null, documentId: randomId("doc") };
   const device = { accountId: randomId("account"), deviceId: randomId("device") };
-  let stateId: string | null = null;
+  let previous = { stateId: null as string | null, bytes: 0 };
   for (let cycle = 1; cycle <= cycles; cycle++) {
     await Promise.all(
       Array.from({ length: updatesPerState }, () =>
         sync.documents.appendUpdate(address, device, {
           updateId: randomId("update"),
-          payload: encode(crypto.getRandomValues(new Uint8Array(120))),
+          payload: encode(crypto.getRandomValues(new Uint8Array(updateBytes))),
           blobIds: [],
         }),
       ),
@@ -29,16 +31,20 @@ test("document storage stays below twice its latest state after every compaction
     const payload = crypto.getRandomValues(new Uint8Array(4 * 1024 + cycle));
     const replaced = await sync.documents.replaceState(address, device, {
       stateId: randomId("state"),
-      baseStateId: stateId,
+      baseStateId: previous.stateId,
       through: cycle * updatesPerState,
       payload: encode(payload),
       summary: encode(new Uint8Array(16)),
       blobIds: [],
     });
-    stateId = replaced.state.stateId;
+    // Cleanup removes the bytes of rows the new state made unnecessary.
     await sync.cleanup();
+    // The grace-period copy is the replaced state and the updates after it: together they rebuild the
+    // document if the new state turns out broken (R20).
+    const graceCopy = previous.bytes + updatesPerState * updateBytes;
     const stored = await fixture.storedBytes();
-    expect(stored).toBeGreaterThanOrEqual(payload.byteLength);
-    expect(stored).toBeLessThan(2 * payload.byteLength);
+    expect(stored).toBeGreaterThanOrEqual(payload.byteLength + graceCopy);
+    expect(stored - graceCopy).toBeLessThan(2 * payload.byteLength);
+    previous = { stateId: replaced.state.stateId, bytes: payload.byteLength };
   }
 });

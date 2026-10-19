@@ -6,7 +6,8 @@ import {
   syncProtocolVersion,
   syncRoute,
 } from "pstdio-sync-contracts/protocol";
-import { SyncRejection } from "../storage/accounts";
+import { projectKey, SyncRejection } from "../storage/accounts";
+import { verifyBearer } from "./authorization";
 import type { RelayOwners } from "./owners";
 import { relayResponse } from "./responses";
 import type { RelaySocket } from "./sockets";
@@ -34,17 +35,6 @@ const failures: Record<SyncRoute["kind"], Parameters<ReportFailure>[0]> = {
   live: "sync_subscription_failed",
 };
 
-const authorize = async (owners: RelayOwners, request: Request, projectId: string) => {
-  const token = /^Bearer[ \t]+(\S+)[ \t]*$/i.exec(request.headers.get("authorization") ?? "")?.[1];
-  if (!token) return null;
-  try {
-    const identity = await owners.verifyAccess(token);
-    return identity.workbenchId === projectId ? identity : null;
-  } catch {
-    return null;
-  }
-};
-
 /** The blind sync protocol (PRD 0014). Every request names its protocol version and is checked from metadata alone. */
 export const handleSyncRequest = async (
   owners: RelayOwners,
@@ -68,7 +58,7 @@ export const handleSyncRequest = async (
     );
   const method = methodFor(route);
   if (request.method !== method) return syncFailure(405, "method-not-allowed", { allow: method });
-  const identity = await authorize(owners, request, route.projectId);
+  const identity = await verifyBearer(owners, request, route.projectId);
   if (!identity) return syncFailure(401, "unauthorized", { "www-authenticate": 'Bearer realm="relay"' });
   // Phase 1 has one user per account. Team accounts (phase 3) add a user claim for personal spaces.
   if (route.kind !== "live" && route.spaceOwner !== null && route.spaceOwner !== identity.accountId)
@@ -76,7 +66,7 @@ export const handleSyncRequest = async (
   if (!owners.allow(identity.environmentId)) return syncFailure(429, "rate-limited", { "retry-after": "1" });
   if (route.kind === "live") {
     const socket = owners.live.connect({
-      projectId: route.projectId,
+      projectKey: projectKey(identity.accountId, route.projectId),
       accountId: identity.accountId,
       deviceId: identity.environmentId,
       expiresAt: identity.expiresAt,

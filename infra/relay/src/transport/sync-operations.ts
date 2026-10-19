@@ -8,7 +8,7 @@ import {
   updateEnvelopeSchema,
 } from "pstdio-sync-contracts/protocol";
 import type { z } from "zod";
-import { rejection, type SyncCaller } from "../storage/accounts";
+import { projectKey, rejection, type SyncCaller } from "../storage/accounts";
 import type { RelayOwners } from "./owners";
 import { relayResponse } from "./responses";
 
@@ -56,40 +56,43 @@ export const handleSyncOperation = async (
   const { documents, blobs } = owners.sync;
   const { limits } = owners;
   const signal = request.signal;
-  if (route.kind === "document") {
+  const space = { projectKey: projectKey(caller.accountId, route.projectId), spaceOwner: route.spaceOwner };
+  if (route.kind === "document" || route.kind === "state") {
+    const address = { ...space, documentId: route.documentId };
+    if (route.kind === "state") {
+      const state = await documents.readState(address, route.stateId, signal);
+      if (!state) throw rejection(404, "not-found");
+      return bytes(state.body, { "pstdio-byte-length": String(state.state.byteLength) });
+    }
     if (route.operation === "updates") {
       const envelope = await readJson(request, updateEnvelopeSchema, jsonBound(limits.maxUpdateBytes));
-      return relayResponse(await documents.appendUpdate(route, caller, envelope, signal));
+      return relayResponse(await documents.appendUpdate(address, caller, envelope, signal));
     }
     if (route.operation === "state") {
       const bound = jsonBound(limits.maxStateBytes + limits.maxSummaryBytes);
       const envelope = await readJson(request, stateEnvelopeSchema, bound);
-      return relayResponse(await documents.replaceState(route, caller, envelope, signal));
+      return relayResponse(await documents.replaceState(address, caller, envelope, signal));
     }
     const { after } = await readJson(request, readRequestSchema, jsonBound(0));
-    return relayResponse(await documents.read(route, caller, after, signal));
+    return relayResponse(await documents.read(address, after, signal));
   }
-  if (route.kind === "state") {
-    const state = await documents.readState(route, caller, route.stateId, signal);
-    if (!state) throw rejection(404, "not-found");
-    return bytes(state.body, { "pstdio-byte-length": String(state.state.byteLength) });
-  }
+  const address = { ...space, blobId: route.blobId };
   if (route.kind === "part") {
     const sha256 = fingerprintSchema.safeParse(request.headers.get("pstdio-sha256"));
     const byteLength = Number(request.headers.get("content-length"));
     if (!sha256.success || !request.body || !Number.isSafeInteger(byteLength)) throw rejection(400, "invalid-request");
-    await blobs.writePart(route, caller, route.number, { sha256: sha256.data, byteLength, body: request.body, signal });
+    await blobs.writePart(address, route.number, { sha256: sha256.data, byteLength, body: request.body, signal });
     return relayResponse({});
   }
-  if (route.operation === "begin")
-    return relayResponse(
-      await blobs.begin(route, caller, await readJson(request, blobBeginSchema, jsonBound(0)), signal),
-    );
+  if (route.operation === "begin") {
+    const input = await readJson(request, blobBeginSchema, jsonBound(0));
+    return relayResponse(await blobs.begin(address, caller, input, signal));
+  }
   if (route.operation === "finish") {
-    await blobs.finish(route, caller, signal);
+    await blobs.finish(address, signal);
     return relayResponse({});
   }
   const { offset } = await readJson(request, blobReadSchema, jsonBound(0));
-  const blob = await blobs.read(route, caller, offset, signal);
+  const blob = await blobs.read(address, offset, signal);
   return bytes(blob.body, { "pstdio-offset": String(offset), "pstdio-byte-length": String(blob.byteLength - offset) });
 };

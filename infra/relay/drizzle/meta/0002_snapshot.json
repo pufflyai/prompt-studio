@@ -1,5 +1,5 @@
 {
-  "id": "6591ebd3-ca90-41a7-bb5e-5b165865f14e",
+  "id": "5d3bb3fb-e4c7-41c3-8bff-01ecb5e18b05",
   "prevId": "f9f0a6ad-b2c2-4b9d-ba7b-1e3c6e041bf6",
   "version": "7",
   "dialect": "postgresql",
@@ -330,8 +330,8 @@
       "name": "relay_sync_blobs",
       "schema": "",
       "columns": {
-        "projectId": {
-          "name": "projectId",
+        "projectKey": {
+          "name": "projectKey",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -377,24 +377,30 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "lastUsedAt": {
+          "name": "lastUsedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "relay_sync_blobs_projectId_relay_sync_projects_projectId_fk": {
-          "name": "relay_sync_blobs_projectId_relay_sync_projects_projectId_fk",
+        "relay_sync_blobs_projectKey_relay_sync_projects_projectKey_fk": {
+          "name": "relay_sync_blobs_projectKey_relay_sync_projects_projectKey_fk",
           "tableFrom": "relay_sync_blobs",
           "tableTo": "relay_sync_projects",
-          "columnsFrom": ["projectId"],
-          "columnsTo": ["projectId"],
+          "columnsFrom": ["projectKey"],
+          "columnsTo": ["projectKey"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
-        "relay_sync_blobs_projectId_blobId_pk": {
-          "name": "relay_sync_blobs_projectId_blobId_pk",
-          "columns": ["projectId", "blobId"]
+        "relay_sync_blobs_projectKey_blobId_pk": {
+          "name": "relay_sync_blobs_projectKey_blobId_pk",
+          "columns": ["projectKey", "blobId"]
         }
       },
       "uniqueConstraints": {},
@@ -406,8 +412,8 @@
       "name": "relay_sync_documents",
       "schema": "",
       "columns": {
-        "projectId": {
-          "name": "projectId",
+        "projectKey": {
+          "name": "projectKey",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -439,20 +445,20 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "relay_sync_documents_projectId_relay_sync_projects_projectId_fk": {
-          "name": "relay_sync_documents_projectId_relay_sync_projects_projectId_fk",
+        "relay_sync_documents_projectKey_relay_sync_projects_projectKey_fk": {
+          "name": "relay_sync_documents_projectKey_relay_sync_projects_projectKey_fk",
           "tableFrom": "relay_sync_documents",
           "tableTo": "relay_sync_projects",
-          "columnsFrom": ["projectId"],
-          "columnsTo": ["projectId"],
+          "columnsFrom": ["projectKey"],
+          "columnsTo": ["projectKey"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
-        "relay_sync_documents_projectId_documentId_pk": {
-          "name": "relay_sync_documents_projectId_documentId_pk",
-          "columns": ["projectId", "documentId"]
+        "relay_sync_documents_projectKey_documentId_pk": {
+          "name": "relay_sync_documents_projectKey_documentId_pk",
+          "columns": ["projectKey", "documentId"]
         }
       },
       "uniqueConstraints": {},
@@ -483,8 +489,8 @@
       "name": "relay_sync_projects",
       "schema": "",
       "columns": {
-        "projectId": {
-          "name": "projectId",
+        "projectKey": {
+          "name": "projectKey",
           "type": "text",
           "primaryKey": true,
           "notNull": true
@@ -530,8 +536,8 @@
       "name": "relay_sync_states",
       "schema": "",
       "columns": {
-        "projectId": {
-          "name": "projectId",
+        "projectKey": {
+          "name": "projectKey",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -604,6 +610,21 @@
         }
       },
       "indexes": {
+        "relay_sync_states_object": {
+          "name": "relay_sync_states_object",
+          "columns": [
+            {
+              "expression": "objectKey",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "relay_sync_states_replaced": {
           "name": "relay_sync_states_replaced",
           "columns": [
@@ -637,9 +658,9 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "relay_sync_states_projectId_documentId_stateId_pk": {
-          "name": "relay_sync_states_projectId_documentId_stateId_pk",
-          "columns": ["projectId", "documentId", "stateId"]
+        "relay_sync_states_projectKey_documentId_stateId_pk": {
+          "name": "relay_sync_states_projectKey_documentId_stateId_pk",
+          "columns": ["projectKey", "documentId", "stateId"]
         }
       },
       "uniqueConstraints": {},
@@ -651,8 +672,8 @@
       "name": "relay_sync_updates",
       "schema": "",
       "columns": {
-        "projectId": {
-          "name": "projectId",
+        "projectKey": {
+          "name": "projectKey",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -717,7 +738,7 @@
           "name": "relay_sync_updates_identity",
           "columns": [
             {
-              "expression": "projectId",
+              "expression": "projectKey",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -730,6 +751,21 @@
             },
             {
               "expression": "updateId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "relay_sync_updates_object": {
+          "name": "relay_sync_updates_object",
+          "columns": [
+            {
+              "expression": "objectKey",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -773,9 +809,9 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "relay_sync_updates_projectId_documentId_sequence_pk": {
-          "name": "relay_sync_updates_projectId_documentId_sequence_pk",
-          "columns": ["projectId", "documentId", "sequence"]
+        "relay_sync_updates_projectKey_documentId_sequence_pk": {
+          "name": "relay_sync_updates_projectKey_documentId_sequence_pk",
+          "columns": ["projectKey", "documentId", "sequence"]
         }
       },
       "uniqueConstraints": {},

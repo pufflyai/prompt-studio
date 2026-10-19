@@ -6,6 +6,6 @@ import { z } from "zod";
 // blobs with equal ciphertext never share a verified mapping that removing one of them would break.
 export const assetOwnerSchema = z.union([
   scopeSchema,
-  z.strictObject({ projectId: z.string().min(1), blobId: syncIdSchema }),
+  z.strictObject({ projectKey: z.string().min(1), blobId: syncIdSchema }),
 ]);
 export type AssetOwner = z.infer<typeof assetOwnerSchema>;

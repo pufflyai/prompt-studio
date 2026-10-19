@@ -1,20 +1,20 @@
 import { and, eq, ne } from "drizzle-orm";
 import type { BlobBegin } from "pstdio-sync-contracts/protocol";
 import type { createRelayAssets } from "../assets/assets";
-import type { PartInput } from "../assets/streams";
+import { multipartSize, type PartInput } from "../assets/streams";
 import type { RelayLimits } from "../limits";
-import { admitWrite, checkProject, rejection, requireQuota, type SyncCaller } from "./accounts";
+import { admitWrite, rejection, requireQuota, type SyncCaller } from "./accounts";
 import type { connectRelay } from "./database";
 import { syncBlobs } from "./document-schema";
 
 /** One encrypted blob. Its ID is random; a null space owner marks the project's shared space. */
 export interface BlobAddress {
-  projectId: string;
+  projectKey: string;
   spaceOwner: string | null;
   blobId: string;
 }
 
-export const blobOwner = ({ projectId, blobId }: { projectId: string; blobId: string }) => ({ projectId, blobId });
+export const blobOwner = ({ projectKey, blobId }: { projectKey: string; blobId: string }) => ({ projectKey, blobId });
 export const blobAsset = (blob: { sha256: string; byteLength: number }) => ({
   sha256: blob.sha256,
   byteLength: blob.byteLength,
@@ -22,28 +22,34 @@ export const blobAsset = (blob: { sha256: string; byteLength: number }) => ({
   mediaType: "application/octet-stream",
 });
 
+const blobWhere = (address: BlobAddress) =>
+  and(eq(syncBlobs.projectKey, address.projectKey), eq(syncBlobs.blobId, address.blobId));
+
 /** Encrypted files. Uploads resume part by part through the verified asset owner (R25). */
 export const createSyncBlobs = (
   connection: ReturnType<typeof connectRelay>,
   assets: ReturnType<typeof createRelayAssets>,
   limits: RelayLimits,
 ) => {
-  const find = (address: BlobAddress, caller: SyncCaller, signal?: AbortSignal) =>
+  const find = (address: BlobAddress, signal?: AbortSignal) =>
     connection.run(async (db) => {
-      await checkProject(db, address.projectId, caller.accountId);
       const [blob] = await db
         .select()
         .from(syncBlobs)
-        .where(
-          and(
-            eq(syncBlobs.projectId, address.projectId),
-            eq(syncBlobs.blobId, address.blobId),
-            ne(syncBlobs.status, "deleting"),
-          ),
-        );
+        .where(and(blobWhere(address), ne(syncBlobs.status, "deleting")));
       if (!blob || blob.spaceOwner !== address.spaceOwner) throw rejection(404, "not-found");
       return blob;
     }, signal);
+  const uploadStatus = async (address: BlobAddress, blob: typeof syncBlobs.$inferSelect) => {
+    const status = await assets.begin(blobOwner(address), address.blobId, blobAsset(blob));
+    return {
+      partSize: status.partSize,
+      completed: status.completed,
+      parts: status.parts
+        .filter((part) => part.etag !== null)
+        .map(({ number, sha256, byteLength }) => ({ number, sha256, byteLength })),
+    };
+  };
 
   return {
     async begin(address: BlobAddress, caller: SyncCaller, input: BlobBegin, signal?: AbortSignal) {
@@ -52,59 +58,49 @@ export const createSyncBlobs = (
       await connection.run(
         (db) =>
           db.transaction(async (transaction) => {
-            await admitWrite(transaction, address.projectId, caller.accountId, now);
+            await admitWrite(transaction, address.projectKey, caller.accountId, now);
             const created = await transaction
               .insert(syncBlobs)
-              .values({
-                projectId: address.projectId,
-                blobId: address.blobId,
-                spaceOwner: address.spaceOwner,
-                sha256: input.sha256,
-                byteLength: input.byteLength,
-                status: "open",
-                createdAt: now,
-              })
+              .values({ ...address, ...input, status: "open", createdAt: now })
               .onConflictDoNothing()
               .returning();
             if (created.length) await requireQuota(transaction, caller.accountId, 0, limits.accountQuotaBytes);
           }),
         signal,
       );
-      const blob = await find(address, caller, signal);
+      const blob = await find(address, signal);
       if (blob.sha256 !== input.sha256 || blob.byteLength !== input.byteLength) throw rejection(400, "invalid-request");
-      const status = await assets.begin(blobOwner(address), address.blobId, blobAsset(blob));
-      return {
-        partSize: status.partSize,
-        completed: status.completed,
-        parts: status.parts
-          .filter((part) => part.etag !== null)
-          .map(({ number, sha256, byteLength }) => ({ number, sha256, byteLength })),
-      };
+      return uploadStatus(address, blob);
     },
-    async writePart(address: BlobAddress, caller: SyncCaller, number: number, input: PartInput) {
-      await find(address, caller, input.signal);
+    async writePart(address: BlobAddress, number: number, input: PartInput) {
+      const blob = await find(address, input.signal);
+      // A part sent again after the upload finished is already stored.
+      if (blob.status === "completed") return;
+      const partSize = multipartSize(blob.byteLength);
+      if (input.byteLength !== Math.min(partSize, blob.byteLength - (number - 1) * partSize))
+        throw rejection(400, "invalid-request");
       await assets.writePart(blobOwner(address), address.blobId, number, input);
     },
-    async finish(address: BlobAddress, caller: SyncCaller, signal?: AbortSignal) {
-      await find(address, caller, signal);
+    async finish(address: BlobAddress, signal?: AbortSignal) {
+      const blob = await find(address, signal);
+      if (blob.status === "completed") return;
+      const status = await uploadStatus(address, blob);
+      if (status.parts.length !== Math.ceil(blob.byteLength / status.partSize)) throw rejection(400, "invalid-request");
       await assets.finish(blobOwner(address), address.blobId);
-      await connection.run(
+      const completed = await connection.run(
         (db) =>
           db
             .update(syncBlobs)
             .set({ status: "completed", completedAt: new Date() })
-            .where(
-              and(
-                eq(syncBlobs.projectId, address.projectId),
-                eq(syncBlobs.blobId, address.blobId),
-                eq(syncBlobs.status, "open"),
-              ),
-            ),
+            .where(and(blobWhere(address), eq(syncBlobs.status, "open")))
+            .returning(),
         signal,
       );
+      // Another request finished it first, or cleanup removed the unfinished upload after its grace period.
+      if (!completed.length && (await find(address, signal)).status !== "completed") throw rejection(404, "not-found");
     },
-    async read(address: BlobAddress, caller: SyncCaller, offset: number, signal?: AbortSignal) {
-      const blob = await find(address, caller, signal);
+    async read(address: BlobAddress, offset: number, signal?: AbortSignal) {
+      const blob = await find(address, signal);
       if (blob.status !== "completed") throw rejection(404, "not-found");
       if (offset > blob.byteLength) throw rejection(400, "invalid-request");
       const result = await assets.read(blobOwner(address), blobAsset(blob), offset, signal);

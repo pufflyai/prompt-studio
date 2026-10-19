@@ -1,15 +1,18 @@
-// Entries for devices whose bucket refilled are dropped once the map grows this large.
+// Entries for devices whose bucket refilled are dropped once the map grows this large, at most once a second.
 const pruneAt = 10_000;
 
 /** Per-device token buckets for requests and live messages (R28). */
 export const createRateLimit = (perSecond: number, burst: number, now = () => Date.now()) => {
   const buckets = new Map<string, { tokens: number; at: number }>();
+  let prunedAt = Number.NEGATIVE_INFINITY;
   const refill = (bucket: { tokens: number; at: number }, time: number) =>
     Math.min(burst, bucket.tokens + ((time - bucket.at) / 1000) * perSecond);
   return (key: string) => {
     const time = now();
-    if (buckets.size >= pruneAt)
+    if (buckets.size >= pruneAt && time - prunedAt >= 1000) {
+      prunedAt = time;
       for (const [entry, bucket] of buckets) if (refill(bucket, time) >= burst) buckets.delete(entry);
+    }
     const previous = buckets.get(key);
     const tokens = previous ? refill(previous, time) : burst;
     const allowed = tokens >= 1;

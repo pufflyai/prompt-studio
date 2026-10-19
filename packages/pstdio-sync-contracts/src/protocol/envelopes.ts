@@ -10,6 +10,7 @@ const byteLengthSchema = sequenceSchema;
 export const payloadSchema = z.base64();
 const blobIdsSchema = z
   .array(syncIdSchema)
+  .max(100_000)
   .refine((ids) => new Set(ids).size === ids.length, "Blob IDs must be unique");
 const spaceOwnerSchema = identitySchema.nullable();
 

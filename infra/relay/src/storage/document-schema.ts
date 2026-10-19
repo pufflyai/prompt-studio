@@ -1,11 +1,13 @@
 import { bigint, index, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
-// Every column is routing or storage metadata (PRD 0014 R9). Encrypted payloads live in object storage.
+// Every column is routing or storage metadata (PRD 0014 R9), except each latest state's small encrypted
+// summary. Update, latest-state and blob bytes live in object storage.
 
 export const syncProjects = pgTable(
   "relay_sync_projects",
   {
-    projectId: text().primaryKey(),
+    // A hash of the account and project IDs. Project IDs are unique only within one account.
+    projectKey: text().primaryKey(),
     // The account whose storage quota this project uses.
     accountId: text().notNull(),
     createdAt: timestamp({ withTimezone: true, mode: "date" }).notNull(),
@@ -16,22 +18,22 @@ export const syncProjects = pgTable(
 export const syncDocuments = pgTable(
   "relay_sync_documents",
   {
-    projectId: text()
+    projectKey: text()
       .notNull()
-      .references(() => syncProjects.projectId, { onDelete: "cascade" }),
+      .references(() => syncProjects.projectKey, { onDelete: "cascade" }),
     documentId: text().notNull(),
     // Null for the project's shared documents.
     spaceOwner: text(),
     lastSequence: bigint({ mode: "number" }).notNull(),
     stateId: text(),
   },
-  (table) => [primaryKey({ columns: [table.projectId, table.documentId] })],
+  (table) => [primaryKey({ columns: [table.projectKey, table.documentId] })],
 );
 
 export const syncUpdates = pgTable(
   "relay_sync_updates",
   {
-    projectId: text().notNull(),
+    projectKey: text().notNull(),
     documentId: text().notNull(),
     sequence: bigint({ mode: "number" }).notNull(),
     updateId: text().notNull(),
@@ -44,8 +46,9 @@ export const syncUpdates = pgTable(
     coveredAt: timestamp({ withTimezone: true, mode: "date" }),
   },
   (table) => [
-    primaryKey({ columns: [table.projectId, table.documentId, table.sequence] }),
-    uniqueIndex("relay_sync_updates_identity").on(table.projectId, table.documentId, table.updateId),
+    primaryKey({ columns: [table.projectKey, table.documentId, table.sequence] }),
+    uniqueIndex("relay_sync_updates_identity").on(table.projectKey, table.documentId, table.updateId),
+    uniqueIndex("relay_sync_updates_object").on(table.objectKey),
     index("relay_sync_updates_covered").on(table.coveredAt),
     index("relay_sync_updates_blobs").using("gin", table.blobIds),
   ],
@@ -54,7 +57,7 @@ export const syncUpdates = pgTable(
 export const syncStates = pgTable(
   "relay_sync_states",
   {
-    projectId: text().notNull(),
+    projectKey: text().notNull(),
     documentId: text().notNull(),
     stateId: text().notNull(),
     baseStateId: text(),
@@ -66,11 +69,12 @@ export const syncStates = pgTable(
     blobIds: text().array().notNull(),
     deviceId: text().notNull(),
     createdAt: timestamp({ withTimezone: true, mode: "date" }).notNull(),
-    // Set when a newer latest state replaces this one. Removed after the grace period.
+    // Set when a newer latest state replaces this one. Removed after the grace period or when the next state arrives.
     replacedAt: timestamp({ withTimezone: true, mode: "date" }),
   },
   (table) => [
-    primaryKey({ columns: [table.projectId, table.documentId, table.stateId] }),
+    primaryKey({ columns: [table.projectKey, table.documentId, table.stateId] }),
+    uniqueIndex("relay_sync_states_object").on(table.objectKey),
     index("relay_sync_states_replaced").on(table.replacedAt),
     index("relay_sync_states_blobs").using("gin", table.blobIds),
   ],
@@ -79,9 +83,9 @@ export const syncStates = pgTable(
 export const syncBlobs = pgTable(
   "relay_sync_blobs",
   {
-    projectId: text()
+    projectKey: text()
       .notNull()
-      .references(() => syncProjects.projectId, { onDelete: "cascade" }),
+      .references(() => syncProjects.projectKey, { onDelete: "cascade" }),
     blobId: text().notNull(),
     spaceOwner: text(),
     sha256: text().notNull(),
@@ -89,11 +93,13 @@ export const syncBlobs = pgTable(
     status: text({ enum: ["open", "completed", "deleting"] }).notNull(),
     createdAt: timestamp({ withTimezone: true, mode: "date" }).notNull(),
     completedAt: timestamp({ withTimezone: true, mode: "date" }),
+    // Set when a stored update or latest state that listed this blob is removed.
+    lastUsedAt: timestamp({ withTimezone: true, mode: "date" }),
   },
-  (table) => [primaryKey({ columns: [table.projectId, table.blobId] })],
+  (table) => [primaryKey({ columns: [table.projectKey, table.blobId] })],
 );
 
-// Payload objects whose rows are gone. Cleanup deletes them from object storage, then the row.
+// Payload objects that may have lost their row. Cleanup deletes those no row points at.
 export const syncObjectDeletions = pgTable("relay_sync_object_deletions", {
   objectKey: text().primaryKey(),
 });

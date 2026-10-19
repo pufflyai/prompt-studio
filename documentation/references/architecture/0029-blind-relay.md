@@ -11,7 +11,8 @@ clients to the new protocol. PS-824 then removes the grouped relay.
 
 ## Protocol
 
-The protocol lives in `pstdio-sync-contracts/protocol`. It has no imports besides Zod.
+The protocol lives in `pstdio-sync-contracts/protocol`. It uses Zod and the package's shared
+identity and SHA-256 schemas.
 
 | Message | Fields |
 | --- | --- |
@@ -28,7 +29,8 @@ must not derive them from names.
 Every request sends `pstdio-sync-protocol: 1` and `Authorization: Bearer <access token>`. A
 different version gets HTTP 426 with `error: "protocol-unsupported"`, the supported versions and
 a message that tells the person to update (R29). The token's workbench must be the project in
-the path. A personal-space path must name the token's account.
+the path. A personal-space path must name the token's account. Blob ID lists hold at most
+100,000 IDs.
 
 | Route under `/sync/projects/~<project>[/spaces/~<owner>]` | Method | Result |
 | --- | --- | --- |
@@ -55,33 +57,41 @@ the last update it includes. The relay accepts it only if that base is still cur
 devices cannot replace each other's work (R18). A retry of the current state succeeds again.
 
 Reading returns the current latest state's metadata, including its encrypted summary, and up
-to 1,000 updates or 8 MiB after `after`. Read again while `more` is true. When cleanup already
+to 1,000 updates or 8 MiB after `after`. Read again while `more` is true. When the relay already
 removed updates the client still needs, the read answers `state-required`, and the client
 downloads the latest state and reads the updates after its `through`.
 
 ## Grace period and cleanup
 
-Accepting a latest state marks the previous one as replaced and the updates it includes as
-covered. Both stay readable for the grace period (R20). Cleanup then deletes them.
+Accepting a latest state keeps the state it replaces, and the updates after that state, for the
+grace period (R20). A device that has the replaced state can still catch up with updates, and a
+broken upload can be repaired from that copy. Anything older is already inside the replaced
+state, so the relay removes it at once. Cleanup removes the replaced state and its updates when
+the grace period ends.
 
-A blob stays while any stored update or latest state lists it. Replaced states and covered
-updates are still stored during the grace period, so a blob they used stays at least that long
-after its last use. An offline device's edit that uses the blob within the grace period is
-accepted (R21). Unfinished uploads are removed after the grace period too.
-
-After cleanup a document holds its latest state and the updates after it. Clients upload a new
-state after a fixed number of updates, so storage stays below twice the latest state, plus the
+So a document holds its latest state, the updates after it, and one grace-period copy: the
+replaced state and the updates after it. Clients upload a new state once the updates after the
+latest one pass a size limit, so storage stays below twice the latest state plus the
 grace-period copy (R23).
 
-The relay runs cleanup every hour. Cleanup is safe to repeat and to run on several replicas.
+A blob stays while any stored update or latest state lists it. When the last such row goes, the
+blob's grace period starts. An offline device's edit that uses the blob within that time is
+accepted (R21). Unfinished uploads are removed after the grace period too.
+
+The relay runs cleanup when it starts and then every hour. Cleanup is safe to repeat and to run
+on several replicas.
 
 ## Storage
 
 PostgreSQL keeps metadata, sequence numbers and the replace-only-if-current check
-(`infra/relay/src/storage/document-schema.ts`). Object storage keeps every encrypted byte (R47).
+(`infra/relay/src/storage/document-schema.ts`). It also keeps each latest state's encrypted
+summary, at most 64 KiB, so clients can compare it without a download. Object storage keeps the
+update, latest-state and blob bytes (R47).
+
 Update and state objects get a new random key on each write, so a retry or a lost race never
-overwrites stored bytes. When a row goes away, its object key moves to a deletion queue in the
-same transaction; cleanup deletes the object and then the queue row.
+overwrites stored bytes. When a row goes away, or a write is refused or ignored, its object key
+goes to a deletion queue. Cleanup deletes a queued object only when no row points at it. A write
+whose commit reply was lost may have stored its row, and its bytes stay.
 
 Blobs reuse the verified multipart asset owner in `infra/relay/src/assets`. Each blob is its own
 asset owner, so two blobs with equal ciphertext never share stored bytes.
@@ -109,9 +119,10 @@ Over a size limit returns 413, over the quota 507 and over the rate 429.
 
 ## Access
 
-The first write to a project binds it to the writing account. Tokens of other accounts get 403
-for that project. Phase 1 has one user per account, so a personal space owner is an account ID.
-Team accounts (PS-829) add a user claim to access tokens.
+Project IDs are unique only within one account. The relay keys every project by a hash of the
+token's account and project IDs, so two accounts that use the same project ID never share
+documents, blobs or live traffic. Phase 1 has one user per account, so a personal space owner
+is an account ID. Team accounts (PS-829) add a user claim to access tokens.
 
 ## Live traffic
 
@@ -132,4 +143,4 @@ bodies, IDs and errors never reach logs or reports.
 
 - A crash between storing bytes and committing their row leaves an object that cleanup does not
   find.
-- Quota checks sum the account's stored bytes on every write.
+- Quota checks sum the account's stored bytes on every write. Summaries are not counted.

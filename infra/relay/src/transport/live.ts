@@ -7,7 +7,7 @@ import type { RateLimit } from "./rate-limit";
 type Socket = Pick<ServerWebSocket, "send" | "close">;
 
 export interface LiveIdentity {
-  projectId: string;
+  projectKey: string;
   accountId: string;
   deviceId: string;
   expiresAt: string;
@@ -43,16 +43,16 @@ const parseLiveMessage = (data: string | Buffer, identity: LiveIdentity, limits:
 export const createLiveHub = (limits: RelayLimits, allow: RateLimit) => {
   const projects = new Map<string, Set<LiveConnection>>();
   const deliver = (
-    projectId: string,
+    projectKey: string,
     message: LiveServerMessage & { spaceOwner: string | null },
     from?: LiveConnection,
   ) => {
-    for (const connection of projects.get(projectId) ?? [])
+    for (const connection of projects.get(projectKey) ?? [])
       if (connection !== from && canRead(connection, message.spaceOwner)) connection.send(message);
   };
   return {
-    changed({ projectId, spaceOwner, documentId, lastSequence, stateId }: DocumentChange) {
-      deliver(projectId, { type: "changed", spaceOwner, documentId, lastSequence, stateId });
+    changed({ projectKey, spaceOwner, documentId, lastSequence, stateId }: DocumentChange) {
+      deliver(projectKey, { type: "changed", spaceOwner, documentId, lastSequence, stateId });
     },
     connect(identity: LiveIdentity) {
       let socket: Socket | undefined;
@@ -62,9 +62,9 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit) => {
         if (stopped) return;
         stopped = true;
         clearTimeout(timer);
-        const members = projects.get(identity.projectId);
+        const members = projects.get(identity.projectKey);
         members?.delete(connection);
-        if (members?.size === 0) projects.delete(identity.projectId);
+        if (members?.size === 0) projects.delete(identity.projectKey);
         socket?.close(code, code === 1008 ? "Live message refused" : "Live connection ended");
       };
       const connection: LiveConnection = {
@@ -85,9 +85,9 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit) => {
         open(connected: Socket) {
           socket = connected;
           if (stopped) return connected.close(1011, "Live connection ended");
-          const members = projects.get(identity.projectId) ?? new Set();
+          const members = projects.get(identity.projectKey) ?? new Set();
           members.add(connection);
-          projects.set(identity.projectId, members);
+          projects.set(identity.projectKey, members);
           scheduleExpiry();
           connection.send({ type: "ready", protocolVersion: syncProtocolVersion });
         },
@@ -97,7 +97,7 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit) => {
           const parsed = parseLiveMessage(data, identity, limits);
           if (typeof parsed === "number") return close(parsed);
           if (!allow(identity.deviceId)) return close(1013);
-          deliver(identity.projectId, { type: "live", deviceId: identity.deviceId, ...parsed }, connection);
+          deliver(identity.projectKey, { type: "live", deviceId: identity.deviceId, ...parsed }, connection);
         },
         close,
       };

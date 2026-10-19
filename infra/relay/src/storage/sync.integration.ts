@@ -9,7 +9,7 @@ afterAll(() => fixture.close());
 const day = 24 * 60 * 60 * 1000;
 const later = (ms: number) => new Date(Date.now() + ms);
 const document = (spaceOwner: string | null = null) => ({
-  projectId: randomId("project"),
+  projectKey: randomId("project"),
   spaceOwner,
   documentId: randomId("doc"),
 });
@@ -27,6 +27,8 @@ const state = (baseStateId: string | null, through: number, bytes = new Uint8Arr
   summary: encode(new Uint8Array([through])),
   blobIds,
 });
+const bytesOf = async (body: ReadableStream<Uint8Array> | undefined) =>
+  new Uint8Array(await new Response(body).arrayBuffer());
 const rejected = async (action: Promise<unknown>) => {
   const error = await action.then(
     () => null,
@@ -50,8 +52,14 @@ test("an update ID the relay already stored is ignored", async () => {
     { sequence: 1, duplicate: true },
     { sequence: 1, duplicate: true },
   ]);
-  const read = await sync.documents.read(address, device, 0);
+  const read = await sync.documents.read(address, 0);
   expect(read.status === "updates" && read.updates.map((entry) => entry.payload)).toEqual([first.payload]);
+  // Bytes of the ignored copies are queued and removed; the stored update keeps its bytes.
+  await sync.cleanup();
+  expect(await sync.documents.read(address, 0)).toMatchObject({
+    status: "updates",
+    updates: [{ payload: first.payload }],
+  });
 });
 
 test("a latest state built on a replaced state is rejected", async () => {
@@ -69,56 +77,61 @@ test("a latest state built on a replaced state is rejected", async () => {
   expect(stale.body).toMatchObject({ error: "stale-state", state: { stateId: winner.stateId, through: 2 } });
   // A retry of the accepted state after a lost response succeeds without a second copy.
   expect((await sync.documents.replaceState(address, device, winner)).state.stateId).toBe(winner.stateId);
-  const read = await sync.documents.read(address, device, 2);
+  const read = await sync.documents.read(address, 2);
   expect(read).toMatchObject({ status: "updates", state: { stateId: winner.stateId }, lastSequence: 2, updates: [] });
 });
 
-test("a device that missed removed updates is asked to download the latest state", async () => {
+test("only the replaced latest state and the updates after it stay for the grace period", async () => {
   const { sync } = fixture.open({ gracePeriodMs: day });
   const address = document();
   const device = caller();
-  for (let index = 0; index < 3; index++) await sync.documents.appendUpdate(address, device, update());
-  const current = (await sync.documents.replaceState(address, device, state(null, 2))).state;
-  expect((await sync.documents.read(address, device, 0)).status).toBe("updates");
-  await sync.cleanup(later(2 * day));
-  expect(await sync.documents.read(address, device, 0)).toMatchObject({
+  for (let index = 0; index < 2; index++) await sync.documents.appendUpdate(address, device, update());
+  const first = (await sync.documents.replaceState(address, device, state(null, 1))).state;
+  await sync.documents.appendUpdate(address, device, update());
+  const second = (await sync.documents.replaceState(address, device, state(first.stateId, 3, new Uint8Array(32))))
+    .state;
+  await sync.documents.appendUpdate(address, device, update());
+  const third = (await sync.documents.replaceState(address, device, state(second.stateId, 4))).state;
+  expect(await sync.documents.readState(address, first.stateId)).toBeNull();
+  expect(await bytesOf((await sync.documents.readState(address, second.stateId))?.body)).toEqual(new Uint8Array(32));
+  // A device that has the replaced state can still catch up with updates.
+  const tail = await sync.documents.read(address, 3);
+  expect(tail.status === "updates" && tail.updates.map((entry) => entry.sequence)).toEqual([4]);
+  // A device further behind downloads the latest state.
+  expect(await sync.documents.read(address, 0)).toMatchObject({
     status: "state-required",
-    state: { stateId: current.stateId },
+    state: { stateId: third.stateId },
   });
-  const tail = await sync.documents.read(address, device, 2);
-  expect(tail.status === "updates" && tail.updates.map((entry) => entry.sequence)).toEqual([3]);
-  const downloaded = await sync.documents.readState(address, device, current.stateId);
-  expect(new Uint8Array(await new Response(downloaded!.body).arrayBuffer())).toEqual(new Uint8Array(64));
+  await sync.cleanup(later(2 * day));
+  expect(await sync.documents.readState(address, second.stateId)).toBeNull();
+  expect(await sync.documents.read(address, 3)).toMatchObject({ status: "state-required" });
+  expect(await sync.documents.read(address, 4)).toMatchObject({ status: "updates", updates: [] });
 });
 
-test("a blob an update used survives the grace period after release, then is removed", async () => {
+test("a blob stays for the grace period after its last use, then is removed", async () => {
   const { sync } = fixture.open({ gracePeriodMs: day });
   const address = document();
   const device = caller();
   const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const blob = { projectId: address.projectId, spaceOwner: null, blobId: randomId("blob") };
+  const blob = { projectKey: address.projectKey, spaceOwner: null, blobId: randomId("blob") };
   const missing = await rejected(sync.documents.appendUpdate(address, device, update(undefined, [blob.blobId])));
   expect(missing.body).toEqual({ error: "missing-blobs", blobIds: [blob.blobId] });
   await sync.blobs.begin(blob, device, { sha256: sha256(bytes), byteLength: bytes.length });
-  await sync.blobs.writePart(blob, device, 1, { sha256: sha256(bytes), byteLength: bytes.length, body: body(bytes) });
-  await sync.blobs.finish(blob, device);
+  await sync.blobs.writePart(blob, 1, { sha256: sha256(bytes), byteLength: bytes.length, body: body(bytes) });
+  await sync.blobs.finish(blob);
   await sync.documents.appendUpdate(address, device, update(undefined, [blob.blobId]));
-  // A new latest state no longer uses the blob, but the covered update keeps it for the grace period.
-  await sync.documents.replaceState(address, device, state(null, 1));
+  // A new latest state no longer uses the blob, but the update it covers keeps it for the grace period.
+  const first = (await sync.documents.replaceState(address, device, state(null, 1))).state;
   await sync.cleanup(later(day / 2));
-  const read = await sync.blobs.read(blob, device, 0);
-  expect(new Uint8Array(await new Response(read.body).arrayBuffer())).toEqual(bytes);
+  expect(await bytesOf((await sync.blobs.read(blob, 0)).body)).toEqual(bytes);
   // An offline device's edit that uses the blob within the grace period is accepted.
   await sync.documents.appendUpdate(address, device, update(undefined, [blob.blobId]));
+  await sync.documents.replaceState(address, device, state(first.stateId, 2));
   await sync.cleanup(later(2 * day));
-  expect((await sync.blobs.read(blob, device, 0)).byteLength).toBe(32);
-  await sync.documents.replaceState(
-    address,
-    device,
-    state((await sync.documents.read(address, device, 2)).state!.stateId, 2),
-  );
+  // Its last update was removed just now, so the blob stays one more grace period.
+  expect((await sync.blobs.read(blob, 0)).byteLength).toBe(32);
   await sync.cleanup(later(4 * day));
-  expect((await rejected(sync.blobs.read(blob, device, 0))).status).toBe(404);
+  expect((await rejected(sync.blobs.read(blob, 0))).status).toBe(404);
 });
 
 test("a personal-space document is invisible from the project space", async () => {
@@ -127,15 +140,8 @@ test("a personal-space document is invisible from the project space", async () =
   const personal = document(owner.accountId);
   await sync.documents.appendUpdate(personal, owner, update());
   const shared = { ...personal, spaceOwner: null };
-  expect((await rejected(sync.documents.read(shared, owner, 0))).status).toBe(404);
+  expect((await rejected(sync.documents.read(shared, 0))).status).toBe(404);
   expect((await rejected(sync.documents.appendUpdate(shared, owner, update()))).status).toBe(404);
-});
-
-test("another account cannot write to a project", async () => {
-  const { sync } = fixture.open();
-  const address = document();
-  await sync.documents.appendUpdate(address, caller(), update());
-  expect((await rejected(sync.documents.appendUpdate(address, caller(), update()))).status).toBe(403);
 });
 
 test("size limits and the account quota are enforced from metadata", async () => {

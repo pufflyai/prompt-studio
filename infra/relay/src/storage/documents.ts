@@ -1,8 +1,16 @@
-import { and, eq, isNull, lte } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lte } from "drizzle-orm";
 import type { StateEnvelope, UpdateEnvelope } from "pstdio-sync-contracts/protocol";
 import type { RelayLimits } from "../limits";
-import { admitWrite, rejection, requireBlobs, requireQuota, type SyncCaller, SyncRejection } from "./accounts";
-import type { connectRelay, RelayDatabase, RelayTransaction } from "./database";
+import {
+  admitWrite,
+  rejection,
+  releaseRows,
+  requireBlobs,
+  requireQuota,
+  type SyncCaller,
+  SyncRejection,
+} from "./accounts";
+import type { connectRelay, RelayTransaction } from "./database";
 import { type DocumentAddress, documentWhere, stateWhere, updateWhere } from "./document-address";
 import { createDocumentReads, stateInfo } from "./document-reads";
 import { syncDocuments, syncObjectDeletions, syncStates, syncUpdates } from "./document-schema";
@@ -23,7 +31,7 @@ export interface SyncDocumentsOptions {
   changed: (change: DocumentChange) => void;
 }
 
-const pick = ({ projectId, spaceOwner, documentId }: DocumentAddress) => ({ projectId, spaceOwner, documentId });
+const pick = ({ projectKey, spaceOwner, documentId }: DocumentAddress) => ({ projectKey, spaceOwner, documentId });
 
 const decode = (payload: string, limit: number) => {
   const bytes = Buffer.from(payload, "base64");
@@ -34,13 +42,7 @@ const decode = (payload: string, limit: number) => {
 const lockDocument = async (transaction: RelayTransaction, address: DocumentAddress) => {
   await transaction
     .insert(syncDocuments)
-    .values({
-      projectId: address.projectId,
-      documentId: address.documentId,
-      spaceOwner: address.spaceOwner,
-      lastSequence: 0,
-      stateId: null,
-    })
+    .values({ ...pick(address), lastSequence: 0, stateId: null })
     .onConflictDoNothing();
   const [document] = await transaction.select().from(syncDocuments).where(documentWhere(address)).for("update");
   // A document stays in the space it was created in. Another space cannot see or write it.
@@ -48,18 +50,61 @@ const lockDocument = async (transaction: RelayTransaction, address: DocumentAddr
   return document!;
 };
 
-const findUpdate = async (db: RelayDatabase | RelayTransaction, address: DocumentAddress, updateId: string) =>
-  (
-    await db
-      .select()
-      .from(syncUpdates)
-      .where(and(updateWhere(address), eq(syncUpdates.updateId, updateId)))
-  )[0];
+/** Returns the current latest state, or refuses a new one that was not built on it (R18). */
+const requireReplaceable = async (
+  transaction: RelayTransaction,
+  address: DocumentAddress,
+  document: typeof syncDocuments.$inferSelect,
+  envelope: StateEnvelope,
+) => {
+  const [current] = document.stateId
+    ? await transaction.select().from(syncStates).where(stateWhere(address, document.stateId))
+    : [];
+  // A retry after a lost response finds its own state already current.
+  if (current && current.stateId === envelope.stateId) return { current, retry: true };
+  if (document.stateId !== envelope.baseStateId)
+    throw new SyncRejection(409, { error: "stale-state", state: current ? stateInfo(current) : null });
+  const [reused] = await transaction.select().from(syncStates).where(stateWhere(address, envelope.stateId));
+  if (reused || envelope.through < (current?.through ?? 0) || envelope.through > document.lastSequence)
+    throw rejection(400, "invalid-request");
+  return { current, retry: false };
+};
+
+/**
+ * Keeps only the state a new one replaces, and the updates after it, for the grace period (R20, R23).
+ * Older copies are already inside that state, so they go now.
+ */
+const retire = async (
+  transaction: RelayTransaction,
+  address: DocumentAddress,
+  current: typeof syncStates.$inferSelect | undefined,
+  through: number,
+  now: Date,
+) => {
+  if (current) {
+    const document = and(eq(syncStates.projectKey, address.projectKey), eq(syncStates.documentId, address.documentId));
+    const states = await transaction
+      .delete(syncStates)
+      .where(and(document, isNotNull(syncStates.replacedAt)))
+      .returning({ objectKey: syncStates.objectKey, blobIds: syncStates.blobIds });
+    const updates = await transaction
+      .delete(syncUpdates)
+      .where(and(updateWhere(address), lte(syncUpdates.sequence, current.through)))
+      .returning({ objectKey: syncUpdates.objectKey, blobIds: syncUpdates.blobIds });
+    await releaseRows(transaction, address.projectKey, [...states, ...updates], now);
+    await transaction.update(syncStates).set({ replacedAt: now }).where(stateWhere(address, current.stateId));
+  }
+  await transaction
+    .update(syncUpdates)
+    .set({ coveredAt: now })
+    .where(and(updateWhere(address), lte(syncUpdates.sequence, through), isNull(syncUpdates.coveredAt)));
+};
 
 export const createSyncDocuments = ({ connection, payloads, limits, changed }: SyncDocumentsOptions) => {
+  // Cleanup deletes queued bytes only when no row points at them, so a commit whose reply was lost is safe.
   const forget = (objectKey: string) =>
     connection.run((db) => db.insert(syncObjectDeletions).values({ objectKey }).onConflictDoNothing()).catch(() => {});
-  // Bytes go to object storage first. A row only points at complete bytes; unused bytes are queued for deletion.
+  // Bytes go to object storage first, so a row only ever points at complete bytes.
   const store = async <T extends { stored: boolean }>(
     objectKey: string,
     bytes: Uint8Array,
@@ -84,20 +129,21 @@ export const createSyncDocuments = ({ connection, payloads, limits, changed }: S
     /** Appends an encrypted update. An update ID the document already has is ignored (R27). */
     async appendUpdate(address: DocumentAddress, caller: SyncCaller, envelope: UpdateEnvelope, signal?: AbortSignal) {
       const bytes = decode(envelope.payload, limits.maxUpdateBytes);
-      const stored = await connection.run((db) => findUpdate(db, address, envelope.updateId), signal);
-      if (stored) return { sequence: stored.sequence, duplicate: true };
       const now = new Date();
-      const objectKey = payloads.key(address.projectId, address.documentId, "updates");
+      const objectKey = payloads.key(address.projectKey, address.documentId, "updates");
       const result = await store(objectKey, bytes, signal, async (transaction) => {
-        await admitWrite(transaction, address.projectId, caller.accountId, now);
+        await admitWrite(transaction, address.projectKey, caller.accountId, now);
         const document = await lockDocument(transaction, address);
-        const duplicate = await findUpdate(transaction, address, envelope.updateId);
+        const [duplicate] = await transaction
+          .select()
+          .from(syncUpdates)
+          .where(and(updateWhere(address), eq(syncUpdates.updateId, envelope.updateId)));
         if (duplicate) return { stored: false, sequence: duplicate.sequence, stateId: document.stateId };
-        await requireBlobs(transaction, address.projectId, envelope.blobIds);
+        await requireBlobs(transaction, address.projectKey, envelope.blobIds);
         await requireQuota(transaction, caller.accountId, bytes.byteLength, limits.accountQuotaBytes);
         const sequence = document.lastSequence + 1;
         await transaction.insert(syncUpdates).values({
-          projectId: address.projectId,
+          projectKey: address.projectKey,
           documentId: address.documentId,
           sequence,
           updateId: envelope.updateId,
@@ -114,33 +160,23 @@ export const createSyncDocuments = ({ connection, payloads, limits, changed }: S
       return { sequence: result.sequence, duplicate: !result.stored };
     },
 
-    /**
-     * Replaces the latest state only when the client built it on the current one (R18). The previous
-     * state and the updates the new one includes stay for the grace period (R20).
-     */
+    /** Replaces the latest state only when the client built it on the current one (R18). */
     async replaceState(address: DocumentAddress, caller: SyncCaller, envelope: StateEnvelope, signal?: AbortSignal) {
       const bytes = decode(envelope.payload, limits.maxStateBytes);
       decode(envelope.summary, limits.maxSummaryBytes);
       const now = new Date();
-      const objectKey = payloads.key(address.projectId, address.documentId, "states");
+      const objectKey = payloads.key(address.projectKey, address.documentId, "states");
       const result = await store(objectKey, bytes, signal, async (transaction) => {
-        await admitWrite(transaction, address.projectId, caller.accountId, now);
+        await admitWrite(transaction, address.projectKey, caller.accountId, now);
         const document = await lockDocument(transaction, address);
-        const current = document.stateId
-          ? (await transaction.select().from(syncStates).where(stateWhere(address, document.stateId)))[0]!
-          : null;
-        // A retry after a lost response finds its own state already current.
-        if (current && current.stateId === envelope.stateId) return { stored: false, state: current, document };
-        if (document.stateId !== envelope.baseStateId)
-          throw new SyncRejection(409, { error: "stale-state", state: current && stateInfo(current) });
-        if (envelope.through < (current?.through ?? 0) || envelope.through > document.lastSequence)
-          throw rejection(400, "invalid-request");
-        await requireBlobs(transaction, address.projectId, envelope.blobIds);
+        const { current, retry } = await requireReplaceable(transaction, address, document, envelope);
+        if (retry) return { stored: false, state: current!, document };
+        await requireBlobs(transaction, address.projectKey, envelope.blobIds);
         await requireQuota(transaction, caller.accountId, bytes.byteLength, limits.accountQuotaBytes);
         const [state] = await transaction
           .insert(syncStates)
           .values({
-            projectId: address.projectId,
+            projectKey: address.projectKey,
             documentId: address.documentId,
             stateId: envelope.stateId,
             baseStateId: envelope.baseStateId,
@@ -153,12 +189,7 @@ export const createSyncDocuments = ({ connection, payloads, limits, changed }: S
             createdAt: now,
           })
           .returning();
-        if (current)
-          await transaction.update(syncStates).set({ replacedAt: now }).where(stateWhere(address, current.stateId));
-        await transaction
-          .update(syncUpdates)
-          .set({ coveredAt: now })
-          .where(and(updateWhere(address), lte(syncUpdates.sequence, envelope.through), isNull(syncUpdates.coveredAt)));
+        await retire(transaction, address, current, envelope.through, now);
         await transaction.update(syncDocuments).set({ stateId: envelope.stateId }).where(documentWhere(address));
         return { stored: true, state: state!, document };
       });

@@ -9,16 +9,32 @@ import type { PayloadObjects } from "./payloads";
 
 const batchSize = 500;
 
-// A blob is unused when no stored update or latest state lists it. Replaced states and covered updates
-// stay stored for the grace period, so a blob they used also stays at least that long (R21).
+// A blob is unused when no stored update or latest state lists it and its last use is older than the
+// grace period (R21). Unfinished uploads expire after the grace period too.
 const unusedBlob = (cutoff: Date) => sql`(
   (b."status" = 'open' AND b."createdAt" <= ${cutoff})
-  OR (b."status" = 'completed' AND b."completedAt" <= ${cutoff}
+  OR (b."status" = 'completed' AND coalesce(b."lastUsedAt", b."completedAt") <= ${cutoff}
     AND NOT EXISTS (SELECT 1 FROM relay_sync_updates u
-      WHERE u."projectId" = b."projectId" AND u."blobIds" @> ARRAY[b."blobId"])
+      WHERE u."projectKey" = b."projectKey" AND u."blobIds" @> ARRAY[b."blobId"])
     AND NOT EXISTS (SELECT 1 FROM relay_sync_states s
-      WHERE s."projectId" = b."projectId" AND s."blobIds" @> ARRAY[b."blobId"]))
+      WHERE s."projectKey" = b."projectKey" AND s."blobIds" @> ARRAY[b."blobId"]))
 )`;
+
+// Removes expired rows, queues their bytes and starts the grace period of the blobs they listed, in one statement.
+const expire = (
+  table: "relay_sync_updates" | "relay_sync_states",
+  column: "coveredAt" | "replacedAt",
+  cutoff: Date,
+  now: Date,
+) => sql`
+  WITH gone AS (
+    DELETE FROM ${sql.identifier(table)} WHERE ${sql.identifier(column)} <= ${cutoff}
+    RETURNING "projectKey", "objectKey", "blobIds"
+  ), queued AS (
+    INSERT INTO relay_sync_object_deletions SELECT "objectKey" FROM gone ON CONFLICT DO NOTHING
+  )
+  UPDATE relay_sync_blobs b SET "lastUsedAt" = ${now} FROM gone
+  WHERE b."projectKey" = gone."projectKey" AND gone."blobIds" @> ARRAY[b."blobId"]`;
 
 export interface SyncCleanupOptions {
   connection: ReturnType<typeof connectRelay>;
@@ -34,27 +50,14 @@ export const cleanupSync = async (
   signal?: AbortSignal,
 ) => {
   const cutoff = new Date(now.getTime() - limits.gracePeriodMs);
-  // Rows and their deletion entries commit together, so no payload object loses its last reference.
-  await connection.run(
-    (db) =>
-      db.execute(sql`
-        WITH gone AS (DELETE FROM relay_sync_updates WHERE "coveredAt" <= ${cutoff} RETURNING "objectKey")
-        INSERT INTO relay_sync_object_deletions SELECT "objectKey" FROM gone ON CONFLICT DO NOTHING`),
-    signal,
-  );
-  await connection.run(
-    (db) =>
-      db.execute(sql`
-        WITH gone AS (DELETE FROM relay_sync_states WHERE "replacedAt" <= ${cutoff} RETURNING "objectKey")
-        INSERT INTO relay_sync_object_deletions SELECT "objectKey" FROM gone ON CONFLICT DO NOTHING`),
-    signal,
-  );
+  await connection.run((db) => db.execute(expire("relay_sync_updates", "coveredAt", cutoff, now)), signal);
+  await connection.run((db) => db.execute(expire("relay_sync_states", "replacedAt", cutoff, now)), signal);
 
   const accounts = await connection.run(
     (db) =>
       db.execute<{ accountId: string }>(sql`
         SELECT DISTINCT p."accountId" FROM relay_sync_blobs b
-        JOIN relay_sync_projects p ON p."projectId" = b."projectId" WHERE ${unusedBlob(cutoff)}`),
+        JOIN relay_sync_projects p ON p."projectKey" = b."projectKey" WHERE ${unusedBlob(cutoff)}`),
     signal,
   );
   // Writes that add blob references hold the same account lock, so no update can start using a blob
@@ -66,7 +69,7 @@ export const cleanupSync = async (
           await lockAccount(transaction, accountId);
           await transaction.execute(sql`
             UPDATE relay_sync_blobs b SET "status" = 'deleting' FROM relay_sync_projects p
-            WHERE p."projectId" = b."projectId" AND p."accountId" = ${accountId} AND ${unusedBlob(cutoff)}`);
+            WHERE p."projectKey" = b."projectKey" AND p."accountId" = ${accountId} AND ${unusedBlob(cutoff)}`);
         }),
       signal,
     );
@@ -78,7 +81,7 @@ export const cleanupSync = async (
     await assets.remove(blobOwner(blob), blob.blobId);
     await connection.run(
       (db) =>
-        db.delete(syncBlobs).where(and(eq(syncBlobs.projectId, blob.projectId), eq(syncBlobs.blobId, blob.blobId))),
+        db.delete(syncBlobs).where(and(eq(syncBlobs.projectKey, blob.projectKey), eq(syncBlobs.blobId, blob.blobId))),
       signal,
     );
   }
@@ -86,7 +89,16 @@ export const cleanupSync = async (
   while (true) {
     const keys = await connection.run((db) => db.select().from(syncObjectDeletions).limit(batchSize), signal);
     for (const { objectKey } of keys) {
-      await payloads.remove(objectKey, signal);
+      // A write whose commit reply was lost queues its key even though its row may exist.
+      // Keys are random and used once, so a key without a row never gains one later.
+      const referenced = await connection.run(
+        (db) =>
+          db.execute<{ referenced: boolean }>(sql`
+            SELECT EXISTS (SELECT 1 FROM relay_sync_updates WHERE "objectKey" = ${objectKey})
+              OR EXISTS (SELECT 1 FROM relay_sync_states WHERE "objectKey" = ${objectKey}) AS referenced`),
+        signal,
+      );
+      if (!referenced.rows[0]!.referenced) await payloads.remove(objectKey, signal);
       await connection.run(
         (db) => db.delete(syncObjectDeletions).where(eq(syncObjectDeletions.objectKey, objectKey)),
         signal,
@@ -96,7 +108,7 @@ export const cleanupSync = async (
   }
 };
 
-/** Runs cleanup on an interval, one run at a time. Stopping interrupts the current run. */
+/** Runs cleanup now and then on an interval, one run at a time. Stopping interrupts the current run. */
 export const scheduleSyncCleanup = (
   run: (signal: AbortSignal) => Promise<void>,
   intervalMs: number,
@@ -104,7 +116,7 @@ export const scheduleSyncCleanup = (
 ) => {
   const controller = new AbortController();
   let running: Promise<void> | undefined;
-  const timer = setInterval(() => {
+  const start = () => {
     running ??= run(controller.signal)
       .catch(() => {
         if (!controller.signal.aborted) failed();
@@ -112,7 +124,9 @@ export const scheduleSyncCleanup = (
       .finally(() => {
         running = undefined;
       });
-  }, intervalMs);
+  };
+  const timer = setInterval(start, intervalMs);
+  start();
   return async () => {
     clearInterval(timer);
     controller.abort();

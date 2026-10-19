@@ -1,7 +1,7 @@
 import { and, asc, count, gt } from "drizzle-orm";
 import type { ReadResult, StateInfo } from "pstdio-sync-contracts/protocol";
 import type { RelayLimits } from "../limits";
-import { checkProject, rejection, type SyncCaller } from "./accounts";
+import { rejection } from "./accounts";
 import type { connectRelay } from "./database";
 import { type DocumentAddress, documentWhere, stateWhere, updateWhere } from "./document-address";
 import { syncDocuments, syncStates, syncUpdates } from "./document-schema";
@@ -39,12 +39,11 @@ export const createDocumentReads = (
   payloads: PayloadObjects,
   limits: RelayLimits,
 ) => {
-  const snapshot = (address: DocumentAddress, caller: SyncCaller, after: number, signal?: AbortSignal) =>
+  const snapshot = (address: DocumentAddress, after: number, signal?: AbortSignal) =>
     connection.run(
       (db) =>
         db.transaction(
           async (transaction) => {
-            await checkProject(transaction, address.projectId, caller.accountId);
             const [document] = await transaction.select().from(syncDocuments).where(documentWhere(address));
             if (document && document.spaceOwner !== address.spaceOwner) throw rejection(404, "not-found");
             const lastSequence = document?.lastSequence ?? 0;
@@ -73,8 +72,8 @@ export const createDocumentReads = (
 
   return {
     /** Returns the latest state's metadata and the updates after `after`, or asks for the latest state. */
-    async read(address: DocumentAddress, caller: SyncCaller, after: number, signal?: AbortSignal) {
-      const { state, lastSequence, rows } = await snapshot(address, caller, after, signal);
+    async read(address: DocumentAddress, after: number, signal?: AbortSignal) {
+      const { state, lastSequence, rows } = await snapshot(address, after, signal);
       const required: ReadResult = { status: "state-required", state, lastSequence };
       if (!rows) return required;
       let bytes = 0;
@@ -106,9 +105,8 @@ export const createDocumentReads = (
     },
 
     /** Streams one latest state's encrypted bytes. Replaced states stay readable for the grace period. */
-    async readState(address: DocumentAddress, caller: SyncCaller, stateId: string, signal?: AbortSignal) {
+    async readState(address: DocumentAddress, stateId: string, signal?: AbortSignal) {
       const row = await connection.run(async (db) => {
-        await checkProject(db, address.projectId, caller.accountId);
         const [document] = await db
           .select({ spaceOwner: syncDocuments.spaceOwner })
           .from(syncDocuments)
