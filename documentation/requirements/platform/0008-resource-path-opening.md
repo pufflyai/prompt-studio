@@ -1,6 +1,6 @@
 # Resource path opening and rich message bubbles
 
-Status: Partly delivered. Host, SDK, and message UI support is merged and published only in a nightly. Planner adoption waits for a stable SDK release. See the [delivery record](#delivery-record).
+Status: Partly delivered. Host, SDK, and message UI support is published in 0.44.0. Planner, Notes, and Artifacts adoption is in review. See the [delivery record](#delivery-record).
 
 ## Product need
 
@@ -114,17 +114,20 @@ host supplies plumbing without taking ownership of extension content or navigati
 
 ## Delivery record
 
-Checked on 2026-10-18 against main commit `45580feb`. The newest stable release is `pstdio@0.43.1`. The newest nightly, `pstdio@0.44.0-nightly.20261018030230`, was built from `77fa5d81`.
+Checked on 2026-10-19 against main commit `2527821f`. The newest stable release is `pstdio@0.44.0`.
 
 | Part | State | Record |
 | --- | --- | --- |
 | Host path claims and resolution | Delivered in source | #1155, merged 2026-10-17. Longest whole-segment matching, owner and project qualification, and fallback live in `packages/pstdio-dashboard/src/modules/sessions/chat/resource-path-resolution.ts` and `session-link-handler.ts`. Metadata normalization lives in `packages/pstdio-extensions/src/runtime/normalize/`. |
-| SDK and metadata schema | Delivered in source | `paths` on `ResourceKindDefinition` and the metadata schema, as listed under Schema above. Published in `@pstdio/sdk@0.44.0-nightly.20261018030230` only. No stable SDK contains it. |
+| SDK and metadata schema | Delivered in source | `paths` on `ResourceKindDefinition` and the metadata schema, as listed under Schema above. Published in `@pstdio/sdk@0.44.0`. |
 | Message UI | Delivered in source | Resource bubbles and prose path detection in `packages/ui/src/components/chat-ui/links/` and `packages/ui/src/components/rich-text/shared/`. |
 | Packaged contract | Delivered in source | `packages/e2e/src/packaged/packaged-resource-links-smoke.ts` loads an independent fixture declaration and calls its resolver through the command API. |
-| Planner declarations and resolver | Open | Draft #1156 adds them and is labeled `waiting-for-release`. Its last `published_extensions` run failed because the published SDK it resolved has no `paths`. |
+| Planner declarations and resolver | In review | #1156 adds them and passes `published_extensions` against 0.44.0. It finds a ticket by shorthand without reading every ticket. |
+| Notes and Artifacts declarations and resolvers | In review | #1240 claims note `content.md` files and artifact snapshot files. |
 | Guards and legacy cleanup | Not in scope here | Planner guards and the removal of old anchor methods belong to [general resource linking](0006-resource-linking.md#delivery-record). |
 
-Acceptance 3, 4, 6, and 7 have unit or packaged test coverage. That is not an end-to-end user journey. Acceptance 1, 2, and 5 need Planner adoption, so no ticket journey has passed yet.
+Acceptance 3, 4, 6, and 7 have unit or packaged test coverage. That is not an end-to-end user journey. On 2026-10-19, a manual Playwright check in an isolated dev stack with #1156 and #1240 applied opened a ticket draft path, a note path, and an artifact snapshot path from a session message, each with its owner label and icon. It did not cover saved ticket documents or a conversation in another workspace.
+
+A claimed path with a line number, such as `.../documents/<note-id>/content.md:3`, used to fail with "Page location has an invalid source position", because the host added the position to every page target. Since #1242 (PS-835), the host applies a position only to pages that open a document, and other pages open without it.
 
 Evidence: unit tests, passed locally on 2026-10-18: `resource-path-resolution.test.ts` (owner resolution, icon override, longest prefix, fallback, foreign identity rejection, compound targets, source positions). Message UI tests such as `chat-text-link-transform.test.ts` and the packaged smoke run in CI and were not rerun here.

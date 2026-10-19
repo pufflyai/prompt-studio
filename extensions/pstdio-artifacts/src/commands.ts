@@ -1,6 +1,6 @@
 import { isAbsolute, relative } from "node:path";
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
-import { deleteResource, renameResource, resolveResource } from "./artifact-actions";
+import { deleteResource, renameResource, resolvePath, resolveResource } from "./artifact-actions";
 import { serviceFor } from "./artifact-context";
 import { removeArtifact, renameArtifact } from "./artifact-mutations";
 import { HTML_LIMIT_BYTES } from "./artifacts";
@@ -113,4 +113,5 @@ export const commands = {
   "rename-resource": renameResource,
   "delete-resource": deleteResource,
   "resolve-resource": resolveResource,
+  "resolve-path": resolvePath,
 };

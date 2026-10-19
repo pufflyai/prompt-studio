@@ -2,6 +2,7 @@ import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { serviceFor } from "./artifact-context";
 import { removeArtifact, renameArtifact } from "./artifact-mutations";
 import { artifactUrl } from "./contracts";
+import { sitesPath } from "./mounts";
 import { artifactActionsSlot } from "./resource-kinds";
 
 const artifactParam = params.text({ required: true, resolvedFrom: "resource" });
@@ -10,6 +11,17 @@ export const resolveResource = defineCommand({
   title: l10n("commands.resolve", "Resolve artifact"),
   params: { artifactId: artifactParam },
   run: (ctx, input) => serviceFor(ctx).resolve(input.artifactId),
+});
+
+export const resolvePath = defineCommand({
+  id: "resolve-path",
+  title: l10n("commands.resolvePath", "Resolve artifact path"),
+  params: { path: params.text({ required: true }), workspaceId: params.text({ required: true }) },
+  async run(ctx, input) {
+    const name = input.path.startsWith(sitesPath) ? input.path.slice(sitesPath.length) : "";
+    const revisionId = /^([^/]+)\.html$/.exec(name)?.[1];
+    return revisionId ? serviceFor(ctx).resolveRevision(revisionId) : null;
+  },
 });
 
 export const renameResource = defineCommand({

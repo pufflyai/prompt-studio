@@ -1,5 +1,4 @@
 import {
-  defineArtifactMount,
   definePage,
   defineView,
   type ExtensionContextBase,
@@ -10,6 +9,7 @@ import {
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { notesFileAccess } from "./file-access";
+import { documents } from "./mounts";
 import { note } from "./resource-kinds";
 
 export { note } from "./resource-kinds";
@@ -19,12 +19,6 @@ import { noteExists, readNote, readNoteTitle, writeNote } from "./notes";
 export const notesChanged = eventRef<{ noteId?: string }>({
   extensionId: "pstdio.pstdio-notes",
   id: "notes.changed",
-});
-
-export const documents = defineArtifactMount({
-  id: "documents",
-  path: "documents",
-  label: l10n("mounts.documents", "Notes"),
 });
 
 /** Notes belong to the default project workspace through the host artifact mount. */
