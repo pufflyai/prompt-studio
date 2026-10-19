@@ -16,6 +16,12 @@ The selected timeline view, search, and display filters only affect what you see
 
 **Block on review** is on by default. Turn it off to let dependent tickets start while their prerequisites are in review. Planner combines their submitted commits without merging into the delivery target, and the implementing agent stacks its changes on top. If that combination conflicts, the owner reconciles the code in its assigned workspace before continuing. Missing revisions, requested changes, and ambiguous attempts still prevent a launch. Code conflicts do not create human review requests. Ask for human input only when features, concepts, requirements, plans, or architecture conflict and the existing instructions cannot resolve them.
 
+## Concurrent settings saves
+
+Planner saves Auto Build settings with the public grouped-storage API from `@pstdio/sdk` 0.44.0 and requires host API 0.2.0. Starting a new run saves the settings and clears the old supervisor state together.
+
+The `auto-build.configure` command returns a `storageOutcome`. If another caller changed either record, the platform retains the complete competing proposal and returns `conflict`. Planner does not send a settings-change event or wake the supervisor for that proposal. Without a relay, a successful save returns `saved-locally`; it does not claim a relay acknowledgment. See [record storage](../../../documentation/references/sdk/0004-storage.md) for conflict inspection and resolution.
+
 ## How the supervisor works
 
 Planner checks every three minutes and also checks when tickets change or a worker session finishes. When relevant work changes and valid work can run, Planner starts or resumes the supervisor session. A new session receives your prompt and the Auto Build instructions once. Later wakes are short messages asking it to query current work. An hourly reminder explains that progress has stalled. Worker failures, freed capacity, submitted revisions, and answered requests can change the available work. The supervisor's own dispatches are already known to it. Its completion event does not wake it again.

@@ -4,6 +4,7 @@ import { dismissReviewCommand } from "./attempt-history";
 import { loadAttemptDependencies } from "./attempt-readiness";
 import { submitChangeRequestCommand } from "./change-requests";
 import { reconcileAttemptCommand } from "./reconcile-attempt";
+import { createSessionResource } from "./session.fixture";
 import { sessionQuery } from "./session-query.fixture";
 import { expectProcessFailure, stackSubmissionFixture } from "./stack-submission.fixture";
 
@@ -134,7 +135,7 @@ test("active replacement work cannot provide a dependency revision", async () =>
         },
       ],
     });
-    f.ctx.sessions.get = async (id) => ({ type: "session", id, title: id, status: "in_progress" });
+    f.ctx.sessions.get = async (id) => createSessionResource({ id, title: id, status: "in_progress" });
     const result = await loadAttemptDependencies(f.ctx, "Child", { dependencyReview: "submitted" });
     expect(result.readiness).toMatchObject({
       decision: "wait",

@@ -4,9 +4,9 @@ Save related records together, keep the revision a caller read, and retain compe
 
 ## Availability
 
-`ctx.storage.records`, `ctx.storage.assets`, `ctx.storage.migrate`, and `ctx.storage.readLegacy` are on `main` and in `0.44.0-nightly` builds. They ship in the release after 0.43.x. `@pstdio/sdk` 0.43.1 and the 0.43.1 app do not have them. In 0.43.1, `get`, `set`, `delete`, and `collection` are the supported storage methods and are not deprecated.
+`ctx.storage.records`, `ctx.storage.assets`, `ctx.storage.migrate`, and `ctx.storage.readLegacy` are available in the published `@pstdio/sdk` 0.44.0 release and require host API 0.2.0. The [published package](https://registry.npmjs.org/@pstdio/sdk/-/sdk-0.44.0.tgz) includes their declarations. `@pstdio/sdk` 0.43.1 and the 0.43.1 app do not have them. In 0.43.1, `get`, `set`, `delete`, and `collection` are the supported storage methods and are not deprecated.
 
-An extension that uses these methods needs a Prompt Studio app from that release. Updating `@pstdio/sdk` alone gives you the types but not the host methods. See [App, SDK, and extension API versions](../extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
+An extension that uses these methods needs a Prompt Studio 0.44.0 app or later. Updating `@pstdio/sdk` alone gives you the types but not the host methods. See [App, SDK, and extension API versions](../extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
 
 ## Ownership and durability
 

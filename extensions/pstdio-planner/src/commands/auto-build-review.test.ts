@@ -6,6 +6,7 @@ import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { runAttemptCommand } from "./run-attempt";
+import { createSessionResource } from "./session.fixture";
 
 async function reviewDependency() {
   const { ctx, storage, ticket } = await fixture();
@@ -28,7 +29,7 @@ async function reviewDependency() {
     ],
   });
   await putTicket(storage, { ...parent, statusId: "in-review" });
-  ctx.sessions.get = async (id) => ({ type: "session", id, title: "Parent", status: "completed" });
+  ctx.sessions.get = async (id) => createSessionResource({ id, title: "Parent", status: "completed" });
   return { ctx, storage, parent, child, started };
 }
 

@@ -5,6 +5,7 @@ import { putAttempt } from "../data/attempt-storage";
 import { createTicketWorkspaceLookup } from "../data/mappers";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
+import { createSessionResource } from "./session.fixture";
 import { sessionQuery } from "./session-query.fixture";
 import { linkTicketCommand, unlinkTicketCommand } from "./ticket-links";
 import { ticketWorkspacesCommand } from "./ticket-workspaces";
@@ -15,7 +16,7 @@ const setup = async () => {
     ["One", "Two"].map((title) => createTicketCommand.run(...makeCommandArgs({ storage, params: { title } }))),
   );
   const workspace: ExtensionWorkspace = { id: "workspace", workspace_shorthand: "WS-1", anchors_json: [] };
-  const session = { id: "session", title: "Session", status: "completed", anchors_json: [] as ResourceAnchor[] };
+  const session = createSessionResource({ id: "session", title: "Session", status: "completed", anchors_json: [] });
   const anchorsApi = (resource: { id: string; anchors_json?: ResourceAnchor[] }) => ({
     addAnchors: async (_id: string, anchors: ResourceAnchor[]) => {
       resource.anchors_json = [

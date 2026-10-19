@@ -5,15 +5,17 @@ import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicket } from "../data/types";
 import { commandParamsFor, makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { implementTicketCommand } from "./implement-ticket";
+import { createSessionResource as sessionResource } from "./session.fixture";
 import { sessionQuery } from "./session-query.fixture";
 import { ticketWorkspacesCommand, ticketWorktreesListCommand } from "./ticket-workspaces";
 
-const createSessionResource = () => ({
-  type: "session" as const,
-  id: "s1",
-  title: "Implement ticket: T-1",
-  status: "in_progress" as const,
-});
+const createSessionResource = () =>
+  sessionResource({
+    type: "session" as const,
+    id: "s1",
+    title: "Implement ticket: T-1",
+    status: "in_progress" as const,
+  });
 
 const seedTicket = async (storage: ReturnType<typeof createMemoryStorage>, overrides: Partial<StoredTicket> = {}) => {
   const now = new Date().toISOString();

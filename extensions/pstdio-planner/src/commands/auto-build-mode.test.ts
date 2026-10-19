@@ -63,3 +63,49 @@ test("concurrent mode saves retain both callers and return the platform conflict
   ).toBe("saved-locally");
   expect(await storage.get("auto-build")).toMatchObject({ prompt: "Second caller", enabled: false });
 });
+
+test("a competing supervisor save retains the whole start proposal without waking or emitting a change", async () => {
+  const { ctx, storage } = await fixture();
+  await configureAutoBuildCommand.run(ctx, { enabled: false });
+  await storage.set("auto-build-supervisor", { sessionId: "previous-supervisor" });
+  const events: unknown[] = [];
+  const wakes: unknown[] = [];
+  const emit = ctx.events.emit;
+  ctx.events.emit = async (...args) => {
+    events.push(args);
+    return emit(...args);
+  };
+  ctx.automation.enqueue = async (input) => {
+    wakes.push(input);
+    return {} as never;
+  };
+  const supervisorId = storage.records.id("auto-build-supervisor");
+  const read = storage.records.read;
+  storage.records.read = async (...args) => {
+    const observed = await read(...args);
+    if (args[0] === supervisorId) {
+      storage.records.read = read;
+      await storage.set("auto-build-supervisor", { sessionId: "concurrent-supervisor" });
+    }
+    return observed;
+  };
+  const result = await configureAutoBuildCommand.run(ctx, { enabled: true, prompt: "Start a fresh run" });
+  expect(result.storageOutcome.status).toBe("conflict");
+  expect(await storage.get("auto-build")).toMatchObject({ enabled: false });
+  expect(await storage.get<{ sessionId: string }>("auto-build-supervisor")).toEqual({
+    sessionId: "concurrent-supervisor",
+  });
+  expect(events).toEqual([]);
+  expect(wakes).toEqual([]);
+  if (result.storageOutcome.status !== "conflict") throw new Error("Expected retained start proposal");
+  const inspected = await storage.records.inspect(result.storageOutcome.conflictId);
+  expect(inspected.alternatives[0].records).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        recordId: storage.records.id("auto-build"),
+        value: expect.objectContaining({ enabled: true, prompt: "Start a fresh run" }),
+      }),
+      expect.objectContaining({ recordId: supervisorId, value: {} }),
+    ]),
+  );
+});

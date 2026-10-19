@@ -2,19 +2,21 @@ import { expect, test } from "bun:test";
 import { fixture } from "./auto-build.fixture";
 import { requestHumanCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
+import { createSessionResource } from "./session.fixture";
 
 async function ownedWork() {
   const f = await fixture();
   const ticket = await f.ticket("Repair the stack");
   const attempt = await runAttemptCommand.run(f.ctx, { ticket: ticket.id });
   const followups: string[] = [];
-  f.ctx.sessions.get = async (id) => ({
-    type: "session",
-    id,
-    title: "Owner",
-    status: "completed",
-    anchors_json: [{ type: "planner-attempt", id: attempt.workspace.id }],
-  });
+  f.ctx.sessions.get = async (id) =>
+    createSessionResource({
+      type: "session",
+      id,
+      title: "Owner",
+      status: "completed",
+      anchors_json: [{ type: "planner-attempt", id: attempt.workspace.id }],
+    });
   f.ctx.sessions.create = async () => {
     throw new Error("Do not replace the owning session.");
   };

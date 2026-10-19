@@ -42,9 +42,4 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
 export const makeCommandArgs = <TParams extends Record<string, unknown>>(input: CommandContextInput<TParams>) =>
   [makeCommandContext(input), input.params] as const;
 
-export const createSessionResource = () => ({
-  type: "session" as const,
-  id: "session-1",
-  title: "Session",
-  status: "in_progress" as const,
-});
+export { createSessionResource } from "./session.fixture";
