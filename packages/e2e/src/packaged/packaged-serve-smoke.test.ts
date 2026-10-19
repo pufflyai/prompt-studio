@@ -61,6 +61,7 @@ import { registerNotificationStatusSmokeTests } from "./packaged-notification-st
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
 // Planner covers timeline state, dependency recovery and Git conflicts in separate packaged cases.
+// Its browser smoke also checks immediate ticket property edits while persistence is held open.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
