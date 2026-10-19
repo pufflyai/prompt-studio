@@ -227,7 +227,7 @@ Phase 1 builds the project and personal key split (R13) from the start, so phase
 | Public storage API (`storage.records`, `storage.assets`) | Released in 0.44 | Breaking change, see below. |
 | Local identity | One environment ID per runtime | Keep. The environment ID becomes the device ID on login. |
 | Redacted failure reporting (PS-785) | Merged | Keep (R11). |
-| Native editor collaboration (PS-776) | A Yjs markdown editor with shared cursors in `packages/ui` (`collaborative-markdown-editor`). Native file editors are not wired to it yet. | Keep the component. Connect native editors to the new CRDT documents and live presence (R31). Drop the checkpoint and receipt dependencies. |
+| Native editor collaboration (PS-776) | An unused Yjs editor component in `packages/ui` (`collaborative-markdown-editor`) with no Markdown support and a `y-websocket` provider. Native file editors are not shared. | Delete the unused component. Bind native Markdown editors to one shared text document per file, with live cursors and presence (R31). Drop the checkpoint and receipt dependencies. |
 
 ### Storage API change
 
@@ -282,14 +282,17 @@ Phase 1 is done when:
 
 Phases 2 and 3 get their own acceptance in their tickets.
 
+## Decisions made during ticket refinement
+
+These defaults were chosen on 2026-10-19 so the phase tickets could be refined. The owner can change them.
+
+- A record deleted on one device while another device edits it stays deleted.
+- Planner renumbers duplicate ticket numbers after offline edits, using a rule based on ticket IDs, not clocks (PS-830).
+- The grace period for previous latest states and unused blobs is 7 days, set by the operator.
+- A device uploads a new latest state when the updates after the current one exceed 1 MiB or 1,000 updates.
+- A cloud project's data downloads without a local folder. The device asks for a folder, and offers to clone the project's git remote, the first time something needs files.
+- Cloud devices run in the user's own cloud account from the released runtime image. Prompt Studio does not host or bill them in phase 2.
+
 ## Open questions
 
-- How do extensions with sequential IDs, such as Planner ticket numbers, avoid
-  duplicates after offline edits?
-- When one device deletes a record while another edits it, which wins? Proposed: the
-  record stays deleted.
-- How long is the grace period for previous latest states and unused blobs?
 - Does data written by a local development version of an extension sync?
-- Where does a cloud project live on disk on a new device, and how does the repository
-  get cloned before a remote command creates a workspace there?
-- Where do cloud devices run, and who pays for them?
