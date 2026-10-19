@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, setSystemTime, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -25,15 +25,28 @@ afterAll(async () => {
 const apps: Awaited<ReturnType<typeof createTestApp>>[] = [];
 const schedulers: ReturnType<typeof createExtensionScheduler>[] = [];
 const roots: string[] = [];
+let previousDefaultExtensions: string | undefined;
+beforeEach(() => {
+  previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  // App-owned schedulers must not advance the journal past the manually driven occurrences.
+  setSystemTime(new Date("2026-10-19T09:00:00.000Z"));
+});
 afterEach(async () => {
-  const state = (globalThis as Record<string, unknown>).__targetedAutomation as
-    | { gate?: { resolve?: () => void } }
-    | undefined;
-  state?.gate?.resolve?.();
-  await Promise.all(schedulers.splice(0).map((scheduler) => scheduler.dispose()));
-  await Promise.all(apps.splice(0).map((app) => app.close()));
-  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
-  delete (globalThis as Record<string, unknown>).__targetedAutomation;
+  try {
+    const state = (globalThis as Record<string, unknown>).__targetedAutomation as
+      | { gate?: { resolve?: () => void } }
+      | undefined;
+    state?.gate?.resolve?.();
+    await Promise.all(schedulers.splice(0).map((scheduler) => scheduler.dispose()));
+    await Promise.all(apps.splice(0).map((app) => app.close()));
+    await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+  } finally {
+    delete (globalThis as Record<string, unknown>).__targetedAutomation;
+    setSystemTime();
+    if (previousDefaultExtensions === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+    else process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensions;
+  }
 });
 
 test("replicated schedules execute only on their target; disable waits for delivery and lets active work finish", async () => {
