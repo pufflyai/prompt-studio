@@ -12,6 +12,7 @@ COPY extensions extensions
 COPY infra/local/extensions infra/local/extensions
 COPY infra/relay/package.json infra/relay/package.json
 COPY infra/account-manager/package.json infra/account-manager/package.json
+COPY infra/telemetry/package.json infra/telemetry/package.json
 COPY .pstdio/extensions .pstdio/extensions
 COPY scripts scripts
 # The docs pages are built from the repo's documentation and extension READMEs.
