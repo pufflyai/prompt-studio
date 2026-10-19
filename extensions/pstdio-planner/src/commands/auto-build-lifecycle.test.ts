@@ -3,7 +3,7 @@ import { autoBuildCommand } from "./auto-build";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { supervisorFixture } from "./auto-build-supervisor.fixture";
 
-for (const status of ["completed", "in_progress"]) {
+for (const status of ["completed", "in_progress"] as const) {
   test(`restarting creates a fresh supervisor when the old session is ${status}`, async () => {
     const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture();
     await ticket("Ready work");

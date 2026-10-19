@@ -1,13 +1,11 @@
-import { definePage, defineResourceKind, defineView, l10n, packageAsset, workbenchModes } from "@pstdio/sdk/extensions";
+import { definePage, defineView, l10n, packageAsset, workbenchModes } from "@pstdio/sdk/extensions";
 import { artifactPage, artifactPanelRef, libraryPageRef, libraryPanelRef } from "./artifact-refs";
 import { queryArtifactTab } from "./artifact-tab";
 import { changedEvent } from "./events";
+import { artifact } from "./resource-kinds";
 
-export const artifact = defineResourceKind({
-  id: "artifact",
-  label: l10n("resources.artifact", "Artifact"),
-  icon: "file-code",
-});
+export { artifact } from "./resource-kinds";
+
 export const view = defineView({
   id: "artifacts",
   title: l10n("views.artifacts", "Artifacts"),

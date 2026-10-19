@@ -6,7 +6,8 @@ import { createWorkbench, getWorkbenchRenderers } from "../../../core";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { WorkbenchKanbanView } from "./kanban-view";
 
-const DeferredMove = () => {
+const DeferredMove = (props: { viewMode?: "board" | "list" }) => {
+  const { viewMode = "board" } = props;
   const [pending, setPending] = useState<Array<(success: boolean) => void>>([]);
   const [fixture] = useState(() => {
     const workbench = createWorkbench();
@@ -20,16 +21,19 @@ const DeferredMove = () => {
           id: "status",
           label: "Status",
           groupable: true,
+          displayable: true,
+          editable: true,
           type: {
             kind: "enum",
             options: [
               { value: "backlog", label: "Backlog" },
               { value: "ready", label: "Ready" },
+              { value: "done", label: "Done" },
             ],
           },
         },
       ],
-      defaultSettings: { viewMode: "board", columnGrouping: "status", rowGrouping: "none", displayProperties: [] },
+      defaultSettings: { viewMode, columnGrouping: "status", rowGrouping: "none", displayProperties: ["status"] },
       executeQuery: () => rows,
       getBoardColumnConfig: () => ({ canDragIn: true, canDragOut: true, canCreate: false }),
       onAttributeChange: (rowId, attributeId, value) =>
@@ -107,5 +111,66 @@ export const RestoreAfterFailure: StoryObj = {
     await waitFor(() =>
       expect(within(canvas.getByTestId("board-column-backlog")).getByText("Review ticket filters")).toBeVisible(),
     );
+  },
+};
+
+const changeStatus = async (canvasElement: HTMLElement) => {
+  const canvas = within(canvasElement);
+  const card = await canvas.findByLabelText("Review ticket filters");
+  await userEvent.click(within(card).getByText("Backlog"));
+  await userEvent.click(within(document.body).getByRole("menuitemradio", { name: /^Ready$/ }));
+  await canvas.findByText("1 saves pending");
+  return canvas;
+};
+
+export const PropertyBeforeSave: StoryObj = {
+  render: () => <DeferredMove />,
+  play: async ({ canvasElement }) => {
+    const canvas = await changeStatus(canvasElement);
+    const target = canvas.getByTestId("board-column-ready");
+    await expect(within(target).getByText("Review ticket filters")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Finish save" }));
+    await canvas.findByText("0 saves pending");
+    await expect(within(target).getByText("Review ticket filters")).toBeVisible();
+  },
+};
+
+export const PropertyFailure: StoryObj = {
+  render: () => <DeferredMove />,
+  play: async ({ canvasElement }) => {
+    const canvas = await changeStatus(canvasElement);
+    await expect(within(canvas.getByTestId("board-column-ready")).getByText("Review ticket filters")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Reject save" }));
+    await waitFor(() =>
+      expect(within(canvas.getByTestId("board-column-backlog")).getByText("Review ticket filters")).toBeVisible(),
+    );
+  },
+};
+
+export const ListPropertyBeforeSave: StoryObj = {
+  render: () => <DeferredMove viewMode="list" />,
+  play: async ({ canvasElement }) => {
+    const canvas = await changeStatus(canvasElement);
+    await expect(within(canvas.getByLabelText("Review ticket filters")).getByText("Ready")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Finish save" }));
+    await canvas.findByText("0 saves pending");
+    await expect(within(canvas.getByLabelText("Review ticket filters")).getByText("Ready")).toBeVisible();
+  },
+};
+
+export const LaterPropertySurvivesFailure: StoryObj = {
+  render: () => <DeferredMove />,
+  play: async ({ canvasElement }) => {
+    const canvas = await changeStatus(canvasElement);
+    await userEvent.click(within(canvas.getByLabelText("Review ticket filters")).getByText("Ready"));
+    await userEvent.click(within(document.body).getByRole("menuitemradio", { name: /^Done$/ }));
+    const target = canvas.getByTestId("board-column-done");
+    await expect(within(target).getByText("Review ticket filters")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Reject save" }));
+    await canvas.findByText("1 saves pending");
+    await expect(within(target).getByText("Review ticket filters")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Finish save" }));
+    await canvas.findByText("0 saves pending");
+    await expect(within(target).getByText("Review ticket filters")).toBeVisible();
   },
 };

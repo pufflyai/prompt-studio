@@ -7,11 +7,6 @@ import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { normalizeEmbeddedFileName } from "pstdio-paths";
 import { removeArchivedWorkspaces } from "./archived-workspaces-migration";
 import { finishBoardViewRules, prepareBoardViewRules } from "./board-view-rules-migration";
-import {
-  ensureLegacyTemplateOwners,
-  hasLegacyTemplatesTable,
-  migrateLegacyTemplates,
-} from "./legacy-template-migration";
 import { migrateThrough } from "./migrate-through";
 import { openPglite } from "./open-pglite";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
@@ -32,7 +27,6 @@ const DRIZZLE_EXTRACT_DIR = "pstdio-drizzle";
 const PGLITE_WASM_SUFFIX = "/pstdio-db/vendor/pglite/pglite.wasm";
 const PGLITE_DATA_SUFFIX = "/pstdio-db/vendor/pglite/pglite.data";
 const PGLITE_INITIAL_DATABASE_SUFFIX = "/pstdio-db/vendor/pglite/initial-database.tar.gz";
-const LEGACY_TEMPLATE_STORAGE_MIGRATION = 17;
 
 const getEmbeddedFiles = (): EmbeddedFile[] => {
   try {
@@ -149,16 +143,6 @@ export const createDb = async (options?: { path?: string; onPhase?: (phase: DbOp
     const db = drizzle(openedPglite, { schema });
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
-      if (await hasLegacyTemplatesTable(openedPglite)) {
-        const storage = await openedPglite.query<{ extension_files: string | null }>(
-          "SELECT to_regclass('public.extension_files')::text AS extension_files",
-        );
-        if (!storage.rows[0]?.extension_files) {
-          await migrateThrough(db, migrationsFolder, LEGACY_TEMPLATE_STORAGE_MIGRATION);
-        }
-        await ensureLegacyTemplateOwners(openedPglite);
-      }
-      await migrateLegacyTemplates(openedPglite);
       const legacy = await openedPglite.query<{ legacy: boolean }>(
         "SELECT to_regclass('public.projects') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'workspaces' AND column_name = 'root_path') AS legacy",
       );

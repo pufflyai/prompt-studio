@@ -1,4 +1,3 @@
-import { legacyTemplateOwnerSourcePath } from "pstdio-db";
 import type { RouteDeps } from "../features/deps";
 import {
   installDefaultExtensions,
@@ -90,39 +89,8 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
   }
 };
 
-export const repairLegacyTemplateOwners = async (
-  deps: RouteDeps,
-  installExtensions: typeof installDefaultExtensions = installDefaultExtensions,
-  signal?: AbortSignal,
-) => {
-  try {
-    signal?.throwIfAborted();
-    const sources = await deps.installedExtensionSourcesService.list();
-    const installNames = sources
-      .filter((source) => source.source_path === legacyTemplateOwnerSourcePath(source.extension_id))
-      .map((source) => source.install_name);
-    if (installNames.length === 0) return;
-
-    const installed = await installExtensions({
-      forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
-      installNames: [...new Set(installNames)],
-      releaseRef: deps.extensionUpgradeService.releaseRef,
-      signal,
-    });
-    signal?.throwIfAborted();
-    await registerInstalledExtensionSources(deps.extensionService, installed);
-  } catch (err) {
-    if (signal?.aborted) return;
-    apiLogger.warn(
-      { err, event: "startup.legacy_template_owner_repair.error" },
-      "Legacy template owner repair failed during startup",
-    );
-  }
-};
-
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
   const defaultExtensionPreparation = (async () => {
-    await repairLegacyTemplateOwners(deps, installDefaultExtensions, signal);
     signal?.throwIfAborted();
     if (options?.prepareDefaultExtensions) await options.prepareDefaultExtensions(signal);
     else await ensureDefaultExtensionsInstalled(deps, signal);
