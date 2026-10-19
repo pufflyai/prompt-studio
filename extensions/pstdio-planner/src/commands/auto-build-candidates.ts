@@ -2,7 +2,11 @@ import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readNextTickets } from "./next-tickets";
 
-export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBuildMode, input: { limit?: number } = {}) {
+export async function readAutoBuildCandidates(
+  ctx: CommandContext,
+  mode: AutoBuildMode,
+  input: { limit?: number } = {},
+) {
   const { tickets, waiting, capacity, snapshot, completed, observations, configurationError } = await readNextTickets(
     ctx,
     mode,

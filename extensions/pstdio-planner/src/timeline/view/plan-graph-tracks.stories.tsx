@@ -3,6 +3,7 @@ import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor } from "storybook/test";
+import { emptyWorkflowStatuses } from "../../data/workflow-statuses";
 import type { PlanTag } from "../contracts";
 import { buildPlan } from "../model/build-plan";
 import { PlanGraph } from "./plan-graph";
@@ -36,6 +37,7 @@ const ticket = (id: string, trackId: string | null, dependsOn: string[] = [], st
 
 // Same-track, cross-track, completed, and upward links, plus one ticket without a track.
 const plan = buildPlan({
+  workflow: { ...emptyWorkflowStatuses(), completedStatusIds: ["done"] },
   statuses: [
     {
       id: "done",

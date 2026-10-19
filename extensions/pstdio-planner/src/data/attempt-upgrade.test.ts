@@ -85,8 +85,11 @@ test("concurrent upgrades preserve all variant history, requests, selections, an
   });
 });
 
-test("separate host contexts report contention without interrupting a healthy upgrade", async () => {
+test("separate host contexts wait for one upgrade instead of failing", async () => {
   const storage = createMemoryStorage();
+  await storage
+    .collection("planner-attempts")
+    .put("legacy", { schemaVersion: 1, workspaceId: "legacy", state: "blocked" });
   const original = storage.collection.bind(storage);
   let released!: () => void;
   const gate = new Promise<void>((resolve) => {
@@ -96,6 +99,7 @@ test("separate host contexts report contention without interrupting a healthy up
   const started = new Promise<void>((resolve) => {
     entered = resolve;
   });
+  let scans = 0;
   const host = {
     ...storage,
     collection: <T>(name: string) => {
@@ -104,6 +108,7 @@ test("separate host contexts report contention without interrupting a healthy up
       return {
         ...collection,
         list: async () => {
+          scans++;
           entered();
           await gate;
           return collection.list();
@@ -113,12 +118,14 @@ test("separate host contexts report contention without interrupting a healthy up
   };
   const first = upgradeAttemptStorage(host);
   await started;
-  await expect(upgradeAttemptStorage({ ...storage })).rejects.toThrow("write claim");
-  await Bun.sleep(1100);
-  released();
-  await first;
-  await upgradeAttemptStorage({ ...storage });
-  expect(await storage.collection("planner-storage-migrations").get("agent-owned-progress-v2")).toEqual({
-    complete: true,
+  let waited = false;
+  const second = upgradeAttemptStorage({ ...storage }).then(() => {
+    waited = true;
   });
+  await Bun.sleep(10);
+  expect(waited).toBe(false);
+  released();
+  await Promise.all([first, second]);
+  expect(scans).toBe(1);
+  expect(await storage.collection("planner-attempts").get("legacy")).toMatchObject({ schemaVersion: 2 });
 });

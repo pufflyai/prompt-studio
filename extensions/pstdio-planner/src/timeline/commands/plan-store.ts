@@ -2,8 +2,8 @@
 import type { ExtensionContextBase, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { readTickets } from "../../commands/read-tickets";
 import { readTicketStatuses } from "../../data/status-operations";
-import { plannerSchemaChanged } from "../../events";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
+import { plannerSchemaChanged } from "../../events";
 import { planChanged, type StoredPlan } from "../contracts";
 import { resolvePlan } from "../model/resolve-plan";
 import type { PlannerTicket } from "../planner";
