@@ -18,7 +18,7 @@ test("independent runtime stores preserve their environment and shared workbench
       ["first", "second"].map(async (laptop) => {
         const path = join(root, laptop);
         phase(laptop, "open initial database");
-        const initial = await createDb({ path });
+        const initial = await createDb({ path, onPhase: (name) => phase(laptop, `initial ${name}`) });
         phase(laptop, "initial database ready");
         let environmentId: string;
         try {
@@ -37,7 +37,7 @@ test("independent runtime stores preserve their environment and shared workbench
           await initial.close();
         }
         phase(laptop, "reopen database");
-        const restarted = await createDb({ path });
+        const restarted = await createDb({ path, onPhase: (name) => phase(laptop, `restart ${name}`) });
         phase(laptop, "restarted database ready");
         try {
           expect(await createEnvironmentDBService(restarted.db).get()).toEqual({ environmentId: environmentId! });
@@ -58,6 +58,8 @@ test("independent runtime stores preserve their environment and shared workbench
     expect(environments).toHaveLength(2);
     expect(environments[0]).not.toBe(environments[1]);
   } finally {
+    phase("all", "remove temporary databases");
     await rm(root, { recursive: true, force: true });
+    phase("all", "temporary databases removed");
   }
 });
