@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createFileEditController } from "./file-renderer-edit-state";
+import { createFileRendererLoadKey } from "./file-renderer-load-key";
 import {
   acceptFileRendererLoad,
+  clearCachedResourceContent,
   type LoadedFile,
   readCachedFileContent,
   storeCachedFileContent,
@@ -133,6 +136,19 @@ describe("file renderer content loads", () => {
 });
 
 describe("file content cache", () => {
+  test("removing a resource clears every cached renderer and page variant for that owner", () => {
+    const resource = { extensionId: "notes", projectId: "one", type: "note", id: "removed" };
+    const keys = [
+      createFileRendererLoadKey({ fileRendererId: "editor", resource }),
+      createFileRendererLoadKey({ fileRendererId: "preview", resource, pageParams: { full: true } }),
+    ];
+    const other = createFileRendererLoadKey({ fileRendererId: "editor", resource: { ...resource, projectId: "two" } });
+    for (const key of [...keys, other]) storeCachedFileContent(key, { content: "cached body" });
+    clearCachedResourceContent(resourceKey(resource));
+    for (const key of keys) expect(readCachedFileContent(key)).toBeUndefined();
+    expect(readCachedFileContent(other)).toEqual({ content: "cached body" });
+  });
+
   test("stores and reads the last loaded document per binding", () => {
     storeCachedFileContent("cache-test:a", { content: "hello" });
 

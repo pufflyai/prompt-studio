@@ -9,6 +9,7 @@ export * from "./extension-kernel";
 export * from "./extensions";
 export { pageParamDefinitionsSchema, pageParamValueSchema } from "./extensions/page-params-schema";
 export * from "./extensions.terminal";
+export * from "./file-renderer-load-key";
 export * from "./files";
 export * from "./harness";
 export * from "./harness-commands";
