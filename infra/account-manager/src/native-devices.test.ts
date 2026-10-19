@@ -9,8 +9,6 @@ import { createOwnedTls } from "./owned-tls.fixture";
 const fixture = createAuthorityFixture(implementation);
 let cleanup = async () => {};
 let child: Bun.Subprocess<"pipe", "pipe", "inherit">;
-let drops = 2;
-let renewalUnavailable = false;
 let output: Promise<void>;
 beforeAll(() => fixture.initialize());
 beforeAll(async () => {
@@ -30,31 +28,7 @@ beforeAll(async () => {
     hostname: "127.0.0.1",
     port,
     tls: { cert: Bun.file(tls.cert), key: Bun.file(tls.key) },
-    async fetch(request) {
-      const path = new URL(request.url).pathname;
-      if (path === "/fixture/renewal-outage") {
-        renewalUnavailable = true;
-        return Response.json({ ok: true });
-      }
-      if (path === "/v1/environment-access" && renewalUnavailable) {
-        renewalUnavailable = false;
-        return new Response(null, { status: 503 });
-      }
-      const response = await handler(request);
-      if (
-        drops > 0 &&
-        request.method === "POST" &&
-        /\/environments(?:\/replace)?$/.test(path) &&
-        response.status === 201
-      ) {
-        const result = (await response.clone().json()) as { token: string | null };
-        if (result.token) {
-          drops -= 1;
-          return new Response(null, { status: 503 });
-        }
-      }
-      return response;
-    },
+    fetch: handler,
   });
   cleanup = async () => {
     if (child && child.exitCode === null) {
@@ -66,12 +40,17 @@ beforeAll(async () => {
     await tls.close();
     await fixture.close();
   };
-  const a = await authentication.login(`native-a-${crypto.randomUUID()}`);
-  const b = await authentication.login(`native-b-${crypto.randomUUID()}`);
+  // Each login signs out the Google session it used, so every device login gets its own session.
+  const subject = `native-a-${crypto.randomUUID()}`;
+  const [a, again, b] = [
+    await authentication.login(subject),
+    await authentication.login(subject),
+    await authentication.login(`native-b-${crypto.randomUUID()}`),
+  ];
   child = Bun.spawn(
     [
       process.execPath,
-      resolve(import.meta.dir, "../../../packages/pstdio-api/src/services/account/native-enrollment.integration.ts"),
+      resolve(import.meta.dir, "../../../packages/pstdio-api/src/services/account/native-devices.integration.ts"),
     ],
     {
       env: {
@@ -79,6 +58,7 @@ beforeAll(async () => {
         NODE_EXTRA_CA_CERTS: tls.cert,
         OWNER_TEST_ORIGIN: origin,
         OWNER_TEST_COOKIE_A: a.headers.get("cookie")!,
+        OWNER_TEST_COOKIE_A_AGAIN: again.headers.get("cookie")!,
         OWNER_TEST_COOKIE_B: b.headers.get("cookie")!,
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
       },
@@ -106,10 +86,9 @@ beforeAll(async () => {
 });
 afterAll(() => cleanup());
 
-test("native enrollment uses the real owner authority across lost responses and runtime restart", async () => {
+test("two native hosts log in as devices of one user and manage each other through the real manager", async () => {
   child.stdin.write("run\n");
   child.stdin.end();
   expect(await child.exited).toBe(0);
   await output;
-  expect(drops).toBe(0);
 });

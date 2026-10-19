@@ -1,29 +1,21 @@
-import type { createEnvironmentDBService } from "pstdio-db";
 import { createRelayAccess } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
-import { readPrivateFile } from "../account/private-file";
-import { configSchema, type RelayWorkbench } from "./config";
 import { startRelayExtension } from "./extension-owner";
 
-export type { RelayWorkbench } from "./config";
+export type RelayWorkbench = {
+  accountId: string;
+  workbenchId: string;
+  environmentId: string;
+  relayOrigin: string;
+  managerOrigin: string;
+  renewalGrant: string;
+};
 
-export const startRelayRuntime = async (input: {
-  path?: string;
-  environment: ReturnType<typeof createEnvironmentDBService>;
-  deps: ExtensionsRouteDeps;
-}) => {
-  const config = input.path
-    ? await readPrivateFile(input.path, configSchema, { connections: [] })
-    : { connections: [] };
-  const identity = await input.environment.get();
+export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps }) => {
   const workbenches = new Map<string, RelayWorkbench>();
-  for (const connection of config.connections) {
-    if (connection.environmentId !== identity.environmentId || workbenches.has(connection.workbenchId))
-      throw new Error("Native relay owner mismatch");
-    workbenches.set(connection.workbenchId, connection);
-  }
+  const access = new Map<string, ReturnType<typeof createRelayAccess>>();
   const controller = new AbortController();
   const { deps } = input;
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
@@ -40,9 +32,6 @@ export const startRelayRuntime = async (input: {
       projectId: workbenchId,
       eventId: "pstdio.event.storage-changed",
     });
-  const access = new Map(
-    [...workbenches].map(([id, config]) => [id, createRelayAccess({ ...config, signal: controller.signal })]),
-  );
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
@@ -84,7 +73,7 @@ export const startRelayRuntime = async (input: {
     }
   };
   const reconcile = async () => {
-    for (const [workbenchId, config] of workbenches)
+    for (const [workbenchId, config] of [...workbenches])
       await reconcileWorkbench(workbenchId, config).catch(() => {
         apiLogger.warn({ event: "relay.discovery.failed", workbenchId }, "Relay extension discovery will retry");
         if (!retry && !controller.signal.aborted)
@@ -123,22 +112,25 @@ export const startRelayRuntime = async (input: {
   });
   await refresh();
   return {
-    async connect(connection: RelayWorkbench) {
-      if (connection.environmentId !== identity.environmentId) throw new Error("Native relay owner mismatch");
-      const previous = workbenches.get(connection.workbenchId);
-      if (previous && canonicalJson(previous) === canonicalJson(connection)) return;
-      if (
-        previous &&
-        (previous.accountId !== connection.accountId ||
-          previous.managerOrigin !== connection.managerOrigin ||
-          previous.relayOrigin !== connection.relayOrigin)
-      )
-        throw new Error("Native relay owner mismatch");
-      // Only this workbench's credential changes; other live connections keep their owners.
-      // Publish its owner before awaiting shutdown so an older in-flight start cannot take ownership.
-      workbenches.set(connection.workbenchId, connection);
-      access.set(connection.workbenchId, createRelayAccess({ ...connection, signal: controller.signal }));
-      const obsolete = [...connections].filter(([, active]) => active.owner.workbenchId === connection.workbenchId);
+    // Replaces the synced workbenches. Only workbenches whose login changed restart their connections.
+    async update(next: RelayWorkbench[]) {
+      const desired = new Map(next.map((connection) => [connection.workbenchId, connection]));
+      const changed = new Set(
+        [...workbenches]
+          .filter(([id, current]) => canonicalJson(desired.get(id) ?? null) !== canonicalJson(current))
+          .map(([id]) => id),
+      );
+      for (const id of changed) {
+        workbenches.delete(id);
+        access.delete(id);
+      }
+      // Publish new owners before awaiting shutdown so an older in-flight start cannot take ownership.
+      for (const [id, connection] of desired)
+        if (!workbenches.has(id)) {
+          workbenches.set(id, connection);
+          access.set(id, createRelayAccess({ ...connection, signal: controller.signal }));
+        }
+      const obsolete = [...connections].filter(([, active]) => changed.has(active.owner.workbenchId));
       await Promise.all(obsolete.map(([key, active]) => stopConnection(key, active)));
       await refresh();
     },
@@ -154,31 +146,24 @@ export const startRelayRuntime = async (input: {
     },
   };
 };
-export const connectAppRelay = async <
-  T extends {
-    deps: ExtensionsRouteDeps & { environmentService: ReturnType<typeof createEnvironmentDBService> };
-    close: () => Promise<void>;
-  },
->(
+export const connectAppRelay = async <T extends { deps: ExtensionsRouteDeps; close: () => Promise<void> }>(
   app: T,
-  path?: string,
-  ready?: (connect: (connection: RelayWorkbench) => Promise<void>) => void,
+  ready: (relay: Awaited<ReturnType<typeof startRelayRuntime>>) => Promise<void>,
 ) => {
+  const close = async (relay?: Awaited<ReturnType<typeof startRelayRuntime>>) => {
+    try {
+      await relay?.close();
+    } finally {
+      await app.close();
+    }
+  };
+  let relay: Awaited<ReturnType<typeof startRelayRuntime>> | undefined;
   try {
-    const relay = await startRelayRuntime({ path, environment: app.deps.environmentService, deps: app.deps });
-    ready?.(relay.connect);
-    return {
-      ...app,
-      close: async () => {
-        try {
-          await relay.close();
-        } finally {
-          await app.close();
-        }
-      },
-    };
+    relay = await startRelayRuntime({ deps: app.deps });
+    await ready(relay);
   } catch (error) {
-    await app.close();
+    await close(relay);
     throw error;
   }
+  return { ...app, close: () => close(relay) };
 };

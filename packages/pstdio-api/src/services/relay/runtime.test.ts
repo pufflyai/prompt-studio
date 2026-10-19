@@ -14,7 +14,7 @@ const waitFor = async (condition: () => boolean) => {
   expect(condition()).toBe(true);
 };
 
-test("workbench enrollment discovers all enabled extensions and follows enable, disable, and source changes", async () => {
+test("a cloud project syncs all enabled extensions and follows enable, disable, and source changes", async () => {
   const root = await mkdtemp(join(tmpdir(), "relay-discovery-"));
   const previous = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
@@ -65,23 +65,16 @@ test("workbench enrollment discovers all enabled extensions and follows enable, 
   try {
     const first = await enable("first");
     const environment = await app.deps.environmentService.get();
-    const path = join(root, "relay.json");
-    await writeFile(
-      path,
-      JSON.stringify({
-        connections: [
-          {
-            accountId: "account",
-            workbenchId: projectId,
-            environmentId: environment.environmentId,
-            relayOrigin: wire.peer.url.origin,
-            managerOrigin: wire.peer.url.origin,
-            renewalGrant: "owned-grant",
-          },
-        ],
-      }),
-    );
-    runtime = await startRelayRuntime({ path, environment: app.deps.environmentService, deps: app.deps });
+    const connection = (workbenchId: string, renewalGrant: string) => ({
+      accountId: "account",
+      workbenchId,
+      environmentId: environment.environmentId,
+      relayOrigin: wire.peer.url.origin,
+      managerOrigin: wire.peer.url.origin,
+      renewalGrant,
+    });
+    runtime = await startRelayRuntime({ deps: app.deps });
+    await runtime.update([connection(projectId, "owned-grant")]);
     await waitFor(() => JSON.stringify(wire.connected()) === JSON.stringify(["example.first"]));
     expect(wire.connected()).toEqual(["example.first"]);
     const additional = await app.app.request("/v1/projects", {
@@ -93,14 +86,10 @@ test("workbench enrollment discovers all enabled extensions and follows enable, 
     const additionalProject = (await additional.json()) as { id: string };
     await enable("additional", additionalProject.id);
     const existingOpens = wire.opened.filter((id) => id === "example.first").length;
-    await runtime.connect({
-      accountId: "account",
-      workbenchId: additionalProject.id,
-      environmentId: environment.environmentId,
-      relayOrigin: wire.peer.url.origin,
-      managerOrigin: wire.peer.url.origin,
-      renewalGrant: "second-owned-grant",
-    });
+    await runtime.update([
+      connection(projectId, "owned-grant"),
+      connection(additionalProject.id, "second-owned-grant"),
+    ]);
     await waitFor(() => wire.connected().length === 2);
     expect(wire.connected()).toEqual(["example.additional", "example.first"]);
     expect(wire.opened.filter((id) => id === "example.first")).toHaveLength(existingOpens);
@@ -134,18 +123,18 @@ test("workbench enrollment discovers all enabled extensions and follows enable, 
     try {
       app.deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "source_changed" });
       await starting.promise;
-      const rotated = runtime.connect({
-        accountId: "account",
-        workbenchId: projectId,
-        environmentId: environment.environmentId,
-        relayOrigin: wire.peer.url.origin,
-        managerOrigin: wire.peer.url.origin,
-        renewalGrant: "renewed-grant",
-      });
+      const rotated = runtime.update([
+        connection(projectId, "renewed-grant"),
+        connection(additionalProject.id, "second-owned-grant"),
+      ]);
       resume.resolve();
       await rotated;
       await waitFor(() => wire.renewals.includes("Bearer renewed-grant"));
       expect(wire.renewals).toContain("Bearer renewed-grant");
+      await runtime.update([connection(projectId, "renewed-grant")]);
+      await waitFor(() => JSON.stringify(wire.connected()) === JSON.stringify(["example.second"]));
+      await runtime.update([]);
+      await waitFor(() => wire.connected().length === 0);
     } finally {
       resume.resolve();
       app.deps.extensionStorageService.open = openStorage;

@@ -1,24 +1,21 @@
-import { canonicalJson } from "pstdio-sync-contracts";
-import { configSchema, type RelayWorkbench } from "../relay/config";
+import { relayOrigin } from "pstdio-sync/relay";
+import { identitySchema } from "pstdio-sync-contracts";
+import { z } from "zod";
+import { managerOriginSchema } from "./manager-client";
 import { readPrivateFile, serializeNativeWrite, writePrivateFile } from "./private-file";
 
-export const assertSameOwner = (current: RelayWorkbench, next: Omit<RelayWorkbench, "renewalGrant">) => {
-  const { renewalGrant: _, ...owner } = current;
-  if (canonicalJson(owner) !== canonicalJson(next)) throw new Error("Native relay owner mismatch");
-};
-export const createNativeStore = (path: string) => {
-  const read = () => readPrivateFile(path, configSchema, { connections: [] });
-  return {
-    read,
-    connect: (input: RelayWorkbench) =>
-      serializeNativeWrite(path, async () => {
-        const next = configSchema.shape.connections.element.parse(input);
-        const config = await read();
-        const current = config.connections.find((entry) => entry.workbenchId === next.workbenchId);
-        const { renewalGrant: _, ...owner } = next;
-        if (current) assertSameOwner(current, owner);
-        config.connections = [...config.connections.filter((entry) => entry.workbenchId !== next.workbenchId), next];
-        await writePrivateFile(path, config);
-      }),
-  };
-};
+// The device credential stays in this private native file. Host API responses never include it.
+export const deviceLoginSchema = z.strictObject({
+  managerOrigin: managerOriginSchema,
+  relayOrigin: z.string().transform(relayOrigin),
+  accountId: identitySchema,
+  deviceId: identitySchema,
+  token: z.string().min(1),
+});
+const fileSchema = z.strictObject({ login: deviceLoginSchema.nullable() });
+export type DeviceLogin = z.infer<typeof deviceLoginSchema>;
+
+export const createNativeStore = (path: string) => ({
+  read: async () => (await readPrivateFile(path, fileSchema, { login: null })).login,
+  save: (login: DeviceLogin | null) => serializeNativeWrite(path, () => writePrivateFile(path, { login })),
+});

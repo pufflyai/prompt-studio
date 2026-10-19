@@ -1,36 +1,35 @@
 import type { AppConfig } from "../../app-config";
 import type { RouteDeps } from "../../features/deps";
-import type { RelayWorkbench } from "../relay/config";
 import { connectAppRelay } from "../relay/runtime";
-import { createNativeAccount, nativeAccountPaths } from "./native-account";
+import { createNativeAccount, nativeAccountFile } from "./native-account";
 
 export const createAppAccount = (
   config: AppConfig,
   environment: RouteDeps["environmentService"],
-  project: RouteDeps["projectService"],
+  projects: RouteDeps["projectService"],
 ) => {
-  const paths = nativeAccountPaths(config.database.path, config.storage.root, config.relay?.connectionsFile);
-  let connectRelay: (connection: RelayWorkbench) => Promise<void> = async () => {
-    throw new Error("Relay is starting");
-  };
   const accountService = createNativeAccount({
-    ...paths,
+    file: nativeAccountFile(config.database.path, config.storage.root, config.accountFile),
     environment,
-    project,
-    connected: (connection) => connectRelay(connection),
+    projects,
   });
+  let stopEvents = () => {};
   const connectAccountRelay = <T extends { deps: RouteDeps; close: () => Promise<void> }>(app: T) =>
     connectAppRelay(
       {
         ...app,
         close: async () => {
+          stopEvents();
           accountService.close();
           await app.close();
         },
       },
-      paths.connectionsFile,
-      (connect) => {
-        connectRelay = connect;
+      async (relay) => {
+        // A project created or bound here may already be a cloud project of this account.
+        stopEvents = app.deps.eventBus.subscribe((event) => {
+          if (event.table === "projects") void accountService.refresh();
+        });
+        accountService.start(relay.update);
       },
     );
   return { accountService, connectAccountRelay };

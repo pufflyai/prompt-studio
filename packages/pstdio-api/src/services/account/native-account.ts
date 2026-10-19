@@ -1,101 +1,134 @@
+import { hostname } from "node:os";
 import { dirname, join } from "node:path";
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
-import type { RelayWorkbench } from "../relay/config";
+import { apiLogger } from "../../lib/logger";
+import type { RelayWorkbench } from "../relay/runtime";
 import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
 import { startNativeLogin } from "./native-login";
-import { assertSameOwner, createNativeStore } from "./native-store";
-import { readPrivateFile, serializeNativeWrite, writePrivateFile } from "./private-file";
+import { createNativeStore, type DeviceLogin } from "./native-store";
 
-const intentSchema = z.object({
-  requestId: identitySchema,
+const RETRY_MS = 60_000;
+const loginSchema = z.object({
   accountId: identitySchema,
-  workbenchId: identitySchema,
-  environmentId: identitySchema,
-  managerOrigin: managerOriginSchema,
-  expiresAt: z.iso.datetime(),
-  replacesId: identitySchema.optional(),
+  deviceId: identitySchema,
+  token: z.string().min(1),
+  relayOrigin: z.string(),
 });
-const stateSchema = z.strictObject({
-  sessions: z.array(z.strictObject({ managerOrigin: managerOriginSchema, token: z.string().min(1) })),
-  pending: z.array(intentSchema),
+const devicesSchema = z.object({
+  deviceId: identitySchema,
+  devices: z.array(
+    z.object({
+      id: identitySchema,
+      name: z.string(),
+      platform: z.string(),
+      createdAt: z.string(),
+      lastSeenAt: z.string(),
+    }),
+  ),
 });
-const grantSchema = z.object({
-  id: identitySchema,
-  accountId: identitySchema,
-  workbenchId: identitySchema,
-  environmentId: identitySchema,
-  token: z.string().nullable(),
-});
-const accountsSchema = z.array(z.object({ accountId: identitySchema }));
-export const enrollmentInputSchema = z.strictObject({
-  managerOrigin: managerOriginSchema,
-  accountId: identitySchema,
-  expiresAt: z.iso.datetime(),
-});
+const workbenchesSchema = z.array(z.object({ workbenchId: identitySchema }));
 
-const currentAccess = async (connection: RelayWorkbench) => {
-  try {
-    await managerRequest(connection.managerOrigin, "/v1/environment-access", connection.renewalGrant, {
-      workbenchId: connection.workbenchId,
-    });
-    return true;
-  } catch (error) {
-    if (error instanceof ManagerRequestDenied && error.status === 401) return false;
-    throw error;
-  }
-};
-const pendingEnrollment = (
-  state: z.infer<typeof stateSchema>,
-  next: Omit<z.infer<typeof intentSchema>, "requestId" | "replacesId">,
-) => {
-  const pending = state.pending.find((entry) => entry.workbenchId === next.workbenchId);
-  if (
-    pending &&
-    (pending.accountId !== next.accountId ||
-      pending.managerOrigin !== next.managerOrigin ||
-      pending.environmentId !== next.environmentId)
-  )
-    throw new Error("Native relay owner mismatch");
-  if (pending && new Date(pending.expiresAt) > new Date()) return pending;
-  state.pending = state.pending.filter((entry) => entry !== pending);
-  const created = intentSchema.parse({ ...next, requestId: crypto.randomUUID() });
-  state.pending.push(created);
-  return created;
-};
-const issueEnrollment = async (pending: z.infer<typeof intentSchema>, token: string) => {
-  const { accountId, managerOrigin, ...body } = pending;
-  const path = `/v1/accounts/${encodeURIComponent(accountId)}/environments${pending.replacesId ? "/replace" : ""}`;
-  const issued = grantSchema.parse(await managerRequest(managerOrigin, path, token, body));
-  if (
-    issued.accountId !== accountId ||
-    issued.workbenchId !== pending.workbenchId ||
-    issued.environmentId !== pending.environmentId
-  )
-    throw new Error("Native relay owner mismatch");
-  return issued;
-};
+// Messages that are safe to show; other account failures stay generic.
+export class AccountRequestError extends Error {}
 
 export const createNativeAccount = (input: {
-  stateFile: string;
-  connectionsFile: string;
+  file: string;
   environment: RouteDeps["environmentService"];
-  project: Pick<RouteDeps["projectService"], "get">;
-  connected: (connection: RelayWorkbench) => Promise<void>;
+  projects: Pick<RouteDeps["projectService"], "get">;
 }) => {
-  const store = createNativeStore(input.connectionsFile);
-  const read = () => readPrivateFile(input.stateFile, stateSchema, { sessions: [], pending: [] });
-  const save = (state: z.infer<typeof stateSchema>) => writePrivateFile(input.stateFile, state);
-  const serialized = <T>(action: () => Promise<T>) => serializeNativeWrite(input.stateFile, action);
-  const session = async (origin: string) => {
-    const token = (await read()).sessions.find((entry) => entry.managerOrigin === origin)?.token;
-    if (!token) throw new Error("Sign in to this account service first");
-    return token;
-  };
+  const store = createNativeStore(input.file);
   const logins = new Map<string, ReturnType<typeof startNativeLogin>>();
-  const safeConnections = async () => (await store.read()).connections.map(({ renewalGrant: _, ...owner }) => owner);
+  let cloudProjects: string[] = [];
+  let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
+  let retry: ReturnType<typeof setTimeout> | undefined;
+  let refreshing = Promise.resolve();
+
+  const current = async () => {
+    const login = await store.read();
+    if (!login) throw new AccountRequestError("Log in first with pst login");
+    return login;
+  };
+  const call = async (path: string, body?: unknown) => {
+    const login = await current();
+    return managerRequest(login.managerOrigin, path, login.token, body);
+  };
+  const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
+  const projectPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}`;
+
+  // Syncs every cloud project that also exists on this device. Others start once they are created or bound here.
+  const publish = async (login: DeviceLogin | null) => {
+    const local = await Promise.all(cloudProjects.map(async (id) => ((await input.projects.get(id)) ? id : null)));
+    await update(
+      login
+        ? local
+            .filter((id) => id !== null)
+            .map((workbenchId) => ({
+              accountId: login.accountId,
+              workbenchId,
+              environmentId: login.deviceId,
+              relayOrigin: login.relayOrigin,
+              managerOrigin: login.managerOrigin,
+              renewalGrant: login.token,
+            }))
+        : [],
+    );
+  };
+  const load = async () => {
+    clearTimeout(retry);
+    let login = await store.read();
+    try {
+      cloudProjects = login
+        ? workbenchesSchema
+            .parse(await managerRequest(login.managerOrigin, "/v1/workbenches", login.token))
+            .map((row) => row.workbenchId)
+        : [];
+    } catch (error) {
+      if (error instanceof ManagerRequestDenied && error.status === 401) {
+        // Another device removed this one, so its credential no longer works.
+        await store.save(null);
+        login = null;
+        cloudProjects = [];
+      } else {
+        // Local work continues offline. The list loads once the account service is reachable.
+        apiLogger.warn({ event: "account.cloud_projects.unavailable" }, "Cloud projects will load later");
+        retry = setTimeout(() => void refresh(), RETRY_MS);
+        retry.unref?.();
+      }
+    }
+    await publish(login);
+  };
+  const refresh = () => {
+    refreshing = refreshing.then(load).catch((error: unknown) => {
+      apiLogger.warn({ event: "account.refresh.failed", error }, "Cloud project sync update failed");
+    });
+    return refreshing;
+  };
+  const logout = async () => {
+    const login = await current();
+    await managerRequest(login.managerOrigin, `${devicePath(login.deviceId)}/remove`, login.token, {});
+    await store.save(null);
+    await refresh();
+    return { ok: true };
+  };
+  const finishLogin = async (origin: string, session: string, signal: AbortSignal) => {
+    const { environmentId } = await input.environment.get();
+    const device = { deviceId: environmentId, name: hostname(), platform: process.platform };
+    const login = loginSchema.parse(await managerRequest(origin, "/v1/device-login", session, device, signal));
+    // The Google session is only needed to log in; the device credential replaces it.
+    await managerRequest(origin, "/api/auth/sign-out", session, {}, signal).catch(() => {});
+    signal.throwIfAborted();
+    await store.save({ managerOrigin: origin, ...login });
+    await refresh();
+  };
+
   return {
+    start(relay: (connections: RelayWorkbench[]) => Promise<void>) {
+      update = relay;
+      void refresh();
+    },
+    refresh,
     async login(managerOrigin: string) {
       const origin = managerOriginSchema.parse(managerOrigin);
       for (const [id, login] of logins)
@@ -104,135 +137,51 @@ export const createNativeAccount = (input: {
           logins.delete(id);
         }
       const id = crypto.randomUUID();
-      const login = startNativeLogin(origin, (token, signal) =>
-        serialized(async () => {
-          const state = await read();
-          signal.throwIfAborted();
-          state.sessions = [
-            ...state.sessions.filter((entry) => entry.managerOrigin !== origin),
-            { managerOrigin: origin, token },
-          ];
-          await save(state);
-        }),
-      );
+      const login = startNativeLogin(origin, (session, signal) => finishLogin(origin, session, signal));
       logins.set(id, login);
       return { id, url: login.url };
     },
     loginStatus: (id: string) => ({ status: logins.get(id)?.status() ?? "failed" }),
-    async inspect(managerOrigin: string) {
-      const origin = managerOriginSchema.parse(managerOrigin);
-      const token = await session(origin);
-      const current = z
-        .object({
-          user: z.object({ id: z.string(), email: z.string(), name: z.string() }),
-          session: z.object({ expiresAt: z.string() }),
-        })
-        .parse(await managerRequest(origin, "/api/auth/get-session", token));
-      return {
-        ...current,
-        accounts: accountsSchema.parse(await managerRequest(origin, "/v1/owner/accounts", token)),
-        connections: await safeConnections(),
-      };
+    async status() {
+      const login = await store.read();
+      if (!login) return { login: null, cloudProjects: [] };
+      const { token: _, ...device } = login;
+      return { login: device, cloudProjects };
     },
-    async createAccount(managerOrigin: string) {
-      const origin = managerOriginSchema.parse(managerOrigin);
-      return z
-        .object({ accountId: identitySchema })
-        .parse(await managerRequest(origin, "/v1/owner/accounts", await session(origin), {}));
+    logout,
+    async devices() {
+      const listed = devicesSchema.parse(await call("/v1/devices"));
+      return listed.devices.map((device) => ({ ...device, current: device.id === listed.deviceId }));
     },
-    async logout(managerOrigin: string) {
-      const origin = managerOriginSchema.parse(managerOrigin);
-      for (const login of logins.values()) if (login.origin === origin) login.close();
-      await managerRequest(origin, "/api/auth/sign-out", await session(origin), {});
-      await serialized(async () => {
-        const state = await read();
-        state.sessions = state.sessions.filter((entry) => entry.managerOrigin !== origin);
-        await save(state);
-      });
+    async renameDevice(id: string, name: string) {
+      await call(`${devicePath(id)}/rename`, { name });
       return { ok: true };
     },
-    async list(managerOrigin: string, accountId: string, kind: "workbenches" | "environments") {
-      const origin = managerOriginSchema.parse(managerOrigin);
-      identitySchema.parse(accountId);
-      return managerRequest(origin, `/v1/accounts/${encodeURIComponent(accountId)}/${kind}`, await session(origin));
-    },
-    async revoke(managerOrigin: string, accountId: string, environmentId: string) {
-      const origin = managerOriginSchema.parse(managerOrigin);
-      identitySchema.parse(accountId);
-      identitySchema.parse(environmentId);
-      await managerRequest(
-        origin,
-        `/v1/accounts/${encodeURIComponent(accountId)}/environments/revoke`,
-        await session(origin),
-        { requestId: crypto.randomUUID(), environmentId },
-      );
+    async removeDevice(id: string) {
+      const login = await current();
+      if (id === login.deviceId) return logout();
+      await call(`${devicePath(id)}/remove`, {});
       return { ok: true };
     },
-    connections: safeConnections,
-    connect: (workbenchId: string, body: z.input<typeof enrollmentInputSchema>) =>
-      serialized(async () => {
-        const intent = enrollmentInputSchema.parse(body);
-        identitySchema.parse(workbenchId);
-        if (!(await input.project.get(workbenchId))) throw new Error("Bind or create this workbench locally first");
-        const { environmentId } = await input.environment.get();
-        const token = await session(intent.managerOrigin);
-        const accountPath = `/v1/accounts/${encodeURIComponent(intent.accountId)}`;
-        // Permission is checked even when a matching local enrollment already exists.
-        await managerRequest(intent.managerOrigin, `${accountPath}/workbenches`, token);
-        const current = (await store.read()).connections.find((entry) => entry.workbenchId === workbenchId);
-        if (current) {
-          assertSameOwner(current, {
-            accountId: intent.accountId,
-            managerOrigin: intent.managerOrigin,
-            relayOrigin: current.relayOrigin,
-            workbenchId,
-            environmentId,
-          });
-          if (await currentAccess(current)) {
-            await input.connected(current);
-            return { accountId: current.accountId, workbenchId, environmentId, connected: true };
-          }
-        }
-        const state = await read();
-        const pending = pendingEnrollment(state, { ...intent, workbenchId, environmentId });
-        await save(state);
-        let grant = await issueEnrollment(pending, token);
-        if (!grant.token) {
-          pending.replacesId = grant.id;
-          pending.requestId = crypto.randomUUID();
-          await save(state);
-          grant = await issueEnrollment(pending, token);
-        }
-        if (!grant.token) throw new Error("Enrollment response unavailable; retry connect");
-        // The manager's configured relay audience owns the relay URL, not a caller-supplied URL.
-        const configuration = z
-          .object({ relayOrigin: managerOriginSchema })
-          .parse(await managerRequest(intent.managerOrigin, "/v1/owner/configuration", token));
-        const connection = {
-          accountId: intent.accountId,
-          workbenchId,
-          environmentId,
-          managerOrigin: intent.managerOrigin,
-          relayOrigin: configuration.relayOrigin,
-          renewalGrant: grant.token,
-        };
-        await store.connect(connection);
-        state.pending = state.pending.filter((entry) => entry !== pending);
-        await save(state);
-        await input.connected(connection);
-        return { accountId: intent.accountId, workbenchId, environmentId, connected: true };
-      }),
+    async syncProject(projectId: string) {
+      if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
+      await call(projectPath(projectId), {});
+      await refresh();
+      return { ok: true };
+    },
+    async stopProjectSync(projectId: string) {
+      await call(`${projectPath(projectId)}/remove`, {});
+      await refresh();
+      return { ok: true };
+    },
     close() {
+      clearTimeout(retry);
+      update = async () => {};
       for (const login of logins.values()) login.close();
       logins.clear();
     },
   };
 };
 
-export const nativeAccountPaths = (databasePath: string, storageRoot: string, connectionsFile?: string) => {
-  const root = databasePath === ":memory:" ? storageRoot : dirname(databasePath);
-  return {
-    stateFile: join(root, "native-account.json"),
-    connectionsFile: connectionsFile ?? join(root, "relay-connections.json"),
-  };
-};
+export const nativeAccountFile = (databasePath: string, storageRoot: string, file?: string) =>
+  file ?? join(databasePath === ":memory:" ? storageRoot : dirname(databasePath), "native-account.json");
