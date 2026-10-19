@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
-import { deleteResource, renameResource } from "./artifact-actions";
+import { deleteResource, renameResource, resolveResource } from "./artifact-actions";
 import { commands } from "./commands";
 
 const fixture = async () => {
@@ -26,6 +26,12 @@ test("renames the selected artifact through its stable resource identity", async
   expect(result.artifactId).toBe(artifact.artifactId);
   expect(result.url).toBe(artifact.url);
   expect((await commands.list.run(ctx, {}))[0].title).toBe("Launch plan");
+  expect(await resolveResource.run(ctx, { artifactId: artifact.artifactId })).toMatchObject({
+    id: artifact.artifactId,
+    label: "Launch plan",
+    type: "artifact",
+    projectId: ctx.projectId,
+  });
 });
 
 test("deletes only the selected artifact and its saved revisions", async () => {
@@ -33,4 +39,17 @@ test("deletes only the selected artifact and its saved revisions", async () => {
   await deleteResource.run(ctx, { artifactId: artifact.artifactId });
   expect(await commands.list.run(ctx, {})).toEqual([]);
   expect(await snapshots.list()).toEqual([]);
+});
+
+test("resolves an unknown artifact as missing", async () => {
+  const { ctx } = await fixture();
+
+  expect(await resolveResource.run(ctx, { artifactId: "missing" })).toBeNull();
+});
+
+test("resolves a deleted artifact as missing", async () => {
+  const { ctx, artifact } = await fixture();
+  await deleteResource.run(ctx, { artifactId: artifact.artifactId });
+
+  expect(await resolveResource.run(ctx, { artifactId: artifact.artifactId })).toBeNull();
 });

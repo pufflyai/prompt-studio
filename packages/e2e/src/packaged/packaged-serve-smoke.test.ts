@@ -226,6 +226,7 @@ test(
 );
 
 // Browser smoke also covers mode panel restoration and generic page-preview cleanup.
+// Showcase resource checks include resolving an unknown Artifact without a failed command.
 registerPackagedShowcaseSmokeTests();
 registerPackagedPlannerSmokeTests();
 

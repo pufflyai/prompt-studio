@@ -66,7 +66,7 @@ test("read-only files remain readable without offering note mutations", async ()
   const tree = groups[0].nodes[0];
   expect(tree.children).toMatchObject([{ id: note.id }]);
   expect(tree.actions[0].disabled).toBe(true);
-  expect(tree.children[0].contextMenuActions.every((action) => action.disabled)).toBe(true);
+  expect(tree.children[0]).toMatchObject({ resource: { metadata: { writable: false } } });
 });
 
 test("remote-only projects do not read local note files", async () => {
