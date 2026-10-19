@@ -44,7 +44,7 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 6. Chat problems appear in the conversation, without banners.
 7. The system-error and performance popovers share their width and gap above the status bar. Each aligns with its widget: system errors on the left, performance on the right. Long error lists grow with the viewport and scroll inside the popover. Keep the count and dismissal controls visible when text is long.
 8. Pending system errors keep the status bar visible even when the active mode hides it. Restore the mode's hidden state after the last system error is dismissed. Custom status-bar content stays available beside the error widget.
-9. Alert action and close buttons sit inside the alert, bottom-right aligned below its message. Use ghost buttons that inherit the alert's semantic foreground and the active theme's hover and focus colors. Let the footer wrap in narrow containers. Keep recovery failures inside that same alert.
+9. Alert action buttons sit inside the alert, bottom-right aligned below its message. Close buttons sit at the top right, beside the title. Both use ghost buttons that inherit the alert's semantic foreground and the active theme's hover and focus colors. Let the action footer wrap in narrow containers. Keep recovery failures inside that same alert.
 
 ## 7. Activity
 

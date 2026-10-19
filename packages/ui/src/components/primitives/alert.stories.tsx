@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Place recovery controls in endElement. Action and dismiss buttons share a wrapping bottom-right footer and inherit themed ghost styling from the alert.",
+          "Place recovery controls in endElement for a wrapping bottom-right footer. Dismiss buttons stay at the top right beside the title. Both inherit themed ghost styling from the alert.",
       },
     },
   },
@@ -91,6 +91,11 @@ export const Actions: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getAllByRole("alert")).toHaveLength(4);
     const error = within(canvas.getAllByRole("alert")[3]);
+    const dismiss = error.getByRole("button", { name: "Dismiss error notice" }).getBoundingClientRect();
+    const title = error.getByText("Extension runtime stopped").getBoundingClientRect();
+    const action = error.getByRole("button", { name: "Restart service" }).getBoundingClientRect();
+    await expect(Math.abs(dismiss.top - title.top)).toBeLessThanOrEqual(1);
+    await expect(dismiss.bottom).toBeLessThanOrEqual(action.top);
     await userEvent.click(error.getByRole("button", { name: "Restart service" }));
     await expect(error.getByText("Action requested")).toBeVisible();
     await userEvent.click(error.getByRole("button", { name: "Show details" }));
