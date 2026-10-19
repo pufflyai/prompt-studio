@@ -1,5 +1,6 @@
 export type * from "./authoring";
 export * from "./compatibility";
+export * from "./extension-publications";
 export * from "./fingerprint";
 export * from "./identity";
 export * from "./replay";

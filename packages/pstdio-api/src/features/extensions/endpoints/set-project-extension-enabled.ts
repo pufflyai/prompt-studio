@@ -3,6 +3,8 @@ import { projectExtensionInstanceSchema, setProjectExtensionEnabledRequestSchema
 import type { AppRouteHandler } from "../../../types";
 import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
+import { SharedExtensionEnablementError } from "../publication/enablement";
+
 const errorSchema = z.object({ error: z.string() });
 
 export const setProjectExtensionEnabledRoute = createRoute({
@@ -26,6 +28,10 @@ export const setProjectExtensionEnabledRoute = createRoute({
       description: "Updated extension instance.",
       content: { "application/json": { schema: projectExtensionInstanceSchema } },
     },
+    409: {
+      description: "Use the shared publication switch.",
+      content: { "application/json": { schema: errorSchema } },
+    },
     404: {
       description: "Extension instance not found for project.",
       content: { "application/json": { schema: errorSchema } },
@@ -40,8 +46,13 @@ export const setProjectExtensionEnabledHandler = (
     const { projectId, instanceId } = c.req.valid("param");
     const { enabled } = c.req.valid("json");
 
-    const updated = await deps.projectExtensionLifecycle.setEnabled(projectId, instanceId, enabled);
-    if (!updated) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
-    return c.json(updated, 200);
+    try {
+      const updated = await deps.projectExtensionLifecycle.setEnabled(projectId, instanceId, enabled);
+      if (!updated) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
+      return c.json(updated, 200);
+    } catch (error) {
+      if (error instanceof SharedExtensionEnablementError) return c.json({ error: error.message }, 409);
+      throw error;
+    }
   };
 };
