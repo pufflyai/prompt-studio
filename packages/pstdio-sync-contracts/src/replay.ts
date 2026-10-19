@@ -1,11 +1,14 @@
 import { z } from "zod";
 import { canonicalJson } from "./fingerprint";
-import { checkpointSchema, receiptSchema } from "./state";
+import { dictionarySchema } from "./json";
+import { checkpointSchema, receiptSchema, snapshotBoundarySchema } from "./state";
 import { scopeSchema } from "./wire";
 
 export const replaySchema = z
   .strictObject({
-    protocolVersion: z.literal(1),
+    protocolVersion: z.literal(2),
+    ...snapshotBoundarySchema.shape,
+    outstanding: dictionarySchema(receiptSchema),
     scope: scopeSchema,
     after: checkpointSchema,
     through: checkpointSchema,
@@ -22,7 +25,20 @@ export const replaySchema = z
         canonicalJson(group.mutation.scope) === canonicalJson(batch.scope),
     );
     const unique = new Set(batch.groups.map((group) => group.operationId)).size === batch.groups.length;
-    if (!sameEpoch || !complete || !validGroups || !unique)
+    const validOutstanding = Object.entries(batch.outstanding).every(
+      ([id, receipt]) =>
+        id === receipt.operationId &&
+        receipt.status !== "accepted" &&
+        canonicalJson(receipt.mutation.scope) === canonicalJson(batch.scope),
+    );
+    if (
+      !sameEpoch ||
+      !complete ||
+      !validGroups ||
+      !unique ||
+      !validOutstanding ||
+      batch.covered > batch.through.sequence
+    )
       ctx.addIssue({
         code: "custom",
         message: "Replay must contain contiguous complete accepted groups in one scope and epoch",

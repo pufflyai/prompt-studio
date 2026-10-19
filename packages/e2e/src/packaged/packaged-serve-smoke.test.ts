@@ -52,7 +52,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Shared record contracts remain covered through the compiled host. The separate relay
 // image checks authenticated HTTP, immutable asset ranges and finite native sockets.
-// Native relay coverage hydrates artifact mounts and attachment URLs, and restores foreign journal work after restart.
+// Protocol 2 relay coverage hydrates files and attachment URLs, and preserves local content across restore fencing.
 import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";

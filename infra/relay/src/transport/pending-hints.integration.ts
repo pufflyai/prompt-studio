@@ -1,9 +1,12 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { Client } from "pg";
-import { fingerprint, sealMutation } from "pstdio-sync-contracts";
+import { fingerprint } from "pstdio-sync-contracts";
+import { sealStoredMutation } from "../storage/mutation.fixture";
 import { createTransportFixture } from "./integration-fixture";
 
 const fixture = createTransportFixture();
+const sealMutation = (body: Parameters<typeof sealStoredMutation>[0]) =>
+  sealStoredMutation(body, fixture.relayDatabaseUrl);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
@@ -18,7 +21,7 @@ test("unchanged pending retries stay quiet while accepted dependencies still adv
     const owner = context.storage.owner(context.scope);
     const create = async (operationId: string, parents: string[]) =>
       sealMutation({
-        protocolVersion: 1,
+        protocolVersion: 2,
         scope: context.scope,
         environmentId: context.environmentId,
         operationId,

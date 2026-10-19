@@ -1,11 +1,15 @@
 import { sql } from "drizzle-orm";
 import { bigint, index, jsonb, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
-import type { Mutation, Scope, StoredRecord } from "pstdio-sync-contracts";
+import type { Asset, CoverageAck, Mutation, Scope, StoredRecord } from "pstdio-sync-contracts";
 
 export const relayScopes = pgTable("relay_scopes", {
   id: text().primaryKey(),
   scope: jsonb().$type<Scope>().notNull(),
   epoch: text().notNull(),
+  generation: bigint({ mode: "number" }).notNull().default(0),
+  covered: bigint({ mode: "number" }).notNull().default(0),
+  writers: jsonb().$type<Record<string, { floor: number }>>().notNull().default({}),
+  documents: jsonb().$type<Record<string, number>>().notNull().default({}),
   acceptedSequence: bigint({ mode: "number" }).notNull(),
   journalSequence: bigint({ mode: "number" }).notNull(),
   replayFrom: bigint({ mode: "number" }).notNull(),
@@ -42,6 +46,13 @@ export const relayOperations = pgTable(
   (table) => [
     primaryKey({ columns: [table.ownerId, table.id] }),
     uniqueIndex("relay_operations_order").on(table.ownerId, table.order),
+    uniqueIndex("relay_operations_writer_position").on(
+      table.ownerId,
+      sql`(${table.mutation}->>'epoch')`,
+      sql`(${table.mutation}->>'generation')`,
+      sql`(${table.mutation}->>'environmentId')`,
+      sql`(${table.mutation}->>'sequence')`,
+    ),
     uniqueIndex("relay_operations_accepted_sequence").on(table.ownerId, table.acceptedSequence),
     index("relay_operations_captures")
       .using("gin", sql`(${table.mutation}->'resolution'->'capturedOperationIds')`)
@@ -66,3 +77,20 @@ export const relayConflicts = pgTable(
     index("relay_conflicts_records").using("gin", table.recordIds),
   ],
 );
+
+export const relayCaptures = pgTable("relay_captures", {
+  id: text().primaryKey(),
+  ownerId: text()
+    .notNull()
+    .references(() => relayScopes.id, { onDelete: "cascade" }),
+  snapshotHash: text().notNull(),
+  references: jsonb().$type<{ scope: Scope; asset: Asset; kind: "asset" | "package" }[]>().notNull(),
+});
+
+export const relayAcknowledgements = pgTable("relay_acknowledgements", {
+  id: text().primaryKey(),
+  ownerId: text()
+    .notNull()
+    .references(() => relayScopes.id, { onDelete: "cascade" }),
+  ack: jsonb().$type<CoverageAck>().notNull(),
+});

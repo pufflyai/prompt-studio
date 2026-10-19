@@ -1,4 +1,16 @@
-import { type RelayOperation, receiptSchema, relayPath, type Scope, snapshotSchema } from "pstdio-sync-contracts";
+import {
+  type Checkpoint,
+  canonicalJson,
+  captureSchema,
+  coverageResultSchema,
+  type RelayOperation,
+  receiptSchema,
+  relayPath,
+  relayReplayResultSchema,
+  type Scope,
+  snapshotFingerprint,
+  snapshotSchema,
+} from "pstdio-sync-contracts";
 import type { RelayAdapter } from "../types";
 import { createRelayAssetAdapter } from "./assets";
 
@@ -53,6 +65,8 @@ export const createRelayAdapter = (input: RelayHttpInput) => {
     });
     if (!response.ok && !(operation === "assets/read" && response.status === 404)) {
       await response.body?.cancel();
+      if (response.status === 409 || (response.status === 404 && operation === "snapshot"))
+        throw new Error(`Resynchronization required (${response.status}): local proposals remain saved`);
       throw new Error(`Relay request failed (${response.status})`);
     }
     return response;
@@ -65,6 +79,7 @@ export const createRelayAdapter = (input: RelayHttpInput) => {
   const adapter = {
     scope: input.scope,
     snapshot: async () => snapshotSchema.parse(await (await request("snapshot")).json()),
+    acknowledge: async (ack) => coverageResultSchema.parse(await (await request("acknowledge", json(ack))).json()),
     submit: async (mutation) => receiptSchema.parse(await (await request("submit", json(mutation))).json()),
     recover: async (mutation, proof) =>
       receiptSchema.parse(await (await request("recover", json({ mutation, proof }))).json()),
@@ -72,6 +87,20 @@ export const createRelayAdapter = (input: RelayHttpInput) => {
   } satisfies RelayAdapter;
   return {
     ...adapter,
+    capture: async () => {
+      const capture = captureSchema.parse(await (await request("capture", json({}))).json());
+      if (
+        canonicalJson(capture.snapshot.scope) !== canonicalJson(input.scope) ||
+        capture.snapshotHash !== (await snapshotFingerprint(capture.snapshot))
+      )
+        throw new Error("Capture differs from its scope or immutable checksum");
+      return capture;
+    },
+    releaseCapture: async (id: string) => {
+      await request("captures/release", json({ id }));
+    },
+    replay: async (after: Checkpoint) =>
+      relayReplayResultSchema.parse(await (await request("replay", json(after))).json()),
     initialize: async (publishedRevision: string) =>
       snapshotSchema.parse(await (await request("initialize", json({ publishedRevision }))).json()),
   };

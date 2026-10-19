@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canonicalJson } from "./fingerprint";
 import { dictionarySchema } from "./json";
 import {
   assetSchema,
@@ -52,8 +53,13 @@ export const receiptSchema = z
       ctx.addIssue({ code: "custom", message: "Receipt identity, fingerprint, outcome and checkpoint must agree" });
     }
   });
-export const snapshotSchema = z.strictObject({
-  protocolVersion: z.literal(1),
+const snapshotBodySchema = z.strictObject({
+  protocolVersion: z.literal(2),
+  generation: revisionSchema,
+  covered: revisionSchema,
+  writers: dictionarySchema(z.strictObject({ floor: revisionSchema })),
+  documents: dictionarySchema(revisionSchema),
+  retainedBranches: z.array(identitySchema),
   scope: scopeSchema,
   journalSequence: revisionSchema,
   checkpoint: checkpointSchema,
@@ -61,6 +67,24 @@ export const snapshotSchema = z.strictObject({
   receipts: dictionarySchema(receiptSchema),
   conflicts: dictionarySchema(conflictSchema),
   publishedRevision: identitySchema,
+});
+export const snapshotSchema = snapshotBodySchema.superRefine((snapshot, ctx) => {
+  const receiptsAgree = Object.entries(snapshot.receipts).every(
+    ([id, receipt]) =>
+      id === receipt.operationId &&
+      canonicalJson(receipt.mutation.scope) === canonicalJson(snapshot.scope) &&
+      receipt.order <= snapshot.journalSequence &&
+      (receipt.checkpoint?.sequence ?? 0) <= snapshot.checkpoint.sequence,
+  );
+  if (!receiptsAgree || snapshot.covered > snapshot.checkpoint.sequence)
+    ctx.addIssue({ code: "custom", message: "Snapshot receipt identities, scope, and coverage must agree" });
+});
+export const snapshotBoundarySchema = snapshotBodySchema.omit({
+  protocolVersion: true,
+  scope: true,
+  checkpoint: true,
+  records: true,
+  receipts: true,
 });
 export const syncOutcomeSchema = z.discriminatedUnion("status", [
   z.strictObject({ status: z.literal("saved-locally"), operationId: identitySchema }),

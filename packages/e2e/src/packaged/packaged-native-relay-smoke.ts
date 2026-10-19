@@ -12,7 +12,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 export const registerNativeRelaySmokeTests = () => {
   test(
-    "compiled native connection restores foreign journal work through public storage after restart",
+    "compiled protocol 2 connection preserves records and bytes when restore requires resynchronization",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "packaged-native-relay-"));
       const source = join(root, "source");
@@ -73,7 +73,10 @@ export const registerNativeRelaySmokeTests = () => {
         const documentId = storageRecordId(["artifact-file"], "documents/remote.txt");
         const blobId = storageRecordId(["blob-file"], "remote-attachment");
         const mutation = await sealMutation({
-          protocolVersion: 1,
+          protocolVersion: 2,
+          epoch: "owned-wire-peer",
+          generation: 0,
+          sequence: 1,
           scope,
           environmentId: "remote-environment",
           operationId: "remote-save",
@@ -121,7 +124,12 @@ export const registerNativeRelaySmokeTests = () => {
         });
         const checkpoint = { epoch: "owned-wire-peer", sequence: 1 };
         const snapshot: Snapshot = {
-          protocolVersion: 1,
+          protocolVersion: 2,
+          generation: 0,
+          covered: 0,
+          writers: { "remote-environment": { floor: 0 }, [identity.environmentId]: { floor: 0 } },
+          documents: {},
+          retainedBranches: [],
           scope,
           checkpoint,
           journalSequence: 1,
@@ -146,9 +154,9 @@ export const registerNativeRelaySmokeTests = () => {
           conflicts: {},
         };
         // This owned protocol peer checks bundle wiring. Real manager/PostgreSQL/S3 behavior is tested separately.
-        let recovered = false;
-        peer = createNativeRelayPeer(snapshot, bytes, (operationId) => {
-          recovered = operationId === "remote-save";
+        const restoredRead = Promise.withResolvers<void>();
+        peer = createNativeRelayPeer(snapshot, bytes, undefined, (observed) => {
+          if (observed.checkpoint.epoch === "restored-peer") restoredRead.resolve();
         });
         const configPath = join(root, "relay.json");
         writeFileSync(
@@ -195,7 +203,8 @@ export const registerNativeRelaySmokeTests = () => {
           conflicts: {},
         });
         host = await startPackagedServe(root, { ...env, PSTDIO_RELAY_CONFIG_FILE: configPath });
-        while (!recovered) await Bun.sleep(20);
+        await restoredRead.promise;
+        expect(snapshot.receipts).toEqual({});
         expect((await read(project.id)).value).toBe("From the native connection");
         await stopProcess(host.child);
         await peer.stop(true);

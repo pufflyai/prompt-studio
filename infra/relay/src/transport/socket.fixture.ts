@@ -4,7 +4,7 @@ export const connectSocket = (origin: URL, scope: RelayTarget, token: string) =>
   const url = new URL(relayPath(scope, "changes"), origin);
   url.protocol = "ws:";
   const socket = new WebSocket(url, { headers: { authorization: `Bearer ${token}` } });
-  const messages: { protocolVersion: 1; type: "ready" | "changed" }[] = [];
+  const messages: { protocolVersion: 2; type: "ready" | "changed" }[] = [];
   const waiting: ReturnType<typeof Promise.withResolvers<(typeof messages)[number]>>[] = [];
   const closed = Promise.withResolvers<CloseEvent>();
   let received = 0;

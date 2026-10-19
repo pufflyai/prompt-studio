@@ -2,11 +2,11 @@ import { z } from "zod";
 import { checkpointGroupSchema, coverageAckSchema, writerFrontierSchema } from "./checkpoint";
 import { dictionarySchema } from "./json";
 import { conflictSchema, recordSchema } from "./state";
-import { assetSchema, fingerprintSchema, identitySchema, revisionSchema, scopeSchema } from "./wire";
+import { assetSchema, fingerprintSchema, identitySchema, mutationSchema, revisionSchema, scopeSchema } from "./wire";
 
 export const coveredReceiptSchema = z
   .strictObject({
-    group: checkpointGroupSchema,
+    group: z.union([mutationSchema, checkpointGroupSchema]),
     status: z.enum(["accepted", "pending", "conflict"]),
     cut: revisionSchema.nullable(),
   })

@@ -8,7 +8,12 @@ export async function acceptedHandlerState(f: Awaited<ReturnType<typeof artifact
   const current = await f.storage.readState();
   const state: GroupedState = { owner: current.owner, accepted: null, journal: current.journal };
   const accepted: Snapshot = {
-    protocolVersion: 1,
+    protocolVersion: 2,
+    generation: 0,
+    covered: 0,
+    writers: {},
+    documents: {},
+    retainedBranches: [],
     scope: { accountId: "fixture", ...f.owner },
     journalSequence: state.journal.length,
     checkpoint: { epoch: "seed", sequence: state.journal.length },
@@ -20,7 +25,9 @@ export async function acceptedHandlerState(f: Awaited<ReturnType<typeof artifact
   // These setup writes are the accepted baseline, not save-handler checkpoint writes.
   accepted.scope = { accountId: "fixture", workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId };
   for (const [index, entry] of state.journal.entries()) {
-    const mutation = await sealMutation({ protocolVersion: 1, scope: accepted.scope, ...entry.mutation });
+    entry.mutation.position = { epoch: "seed", generation: 0, sequence: index + 1 };
+    const { position, ...body } = entry.mutation;
+    const mutation = await sealMutation({ protocolVersion: 2, scope: accepted.scope, ...body, ...position });
     accepted.receipts[mutation.operationId] = {
       mutation,
       fingerprint: mutation.fingerprint,

@@ -8,18 +8,30 @@ export const peerSchema = z.strictObject({
 });
 export type Peer = z.infer<typeof peerSchema>;
 export const protocolPeer: Peer = {
-  release: "contracts-v1",
-  protocolVersions: [1],
-  supportedFeatures: ["atomic-groups", "retained-recovery", "revisioned-resolution"],
-  requiredFeatures: ["atomic-groups", "retained-recovery", "revisioned-resolution"],
+  release: "contracts-v2",
+  protocolVersions: [2],
+  supportedFeatures: [
+    "atomic-groups",
+    "retained-recovery",
+    "revisioned-resolution",
+    "covered-snapshots",
+    "fenced-generations",
+  ],
+  requiredFeatures: [
+    "atomic-groups",
+    "retained-recovery",
+    "revisioned-resolution",
+    "covered-snapshots",
+    "fenced-generations",
+  ],
 };
 
 export function negotiate(client: Peer, relay: Peer) {
-  const common = client.protocolVersions.includes(1) && relay.protocolVersions.includes(1);
+  const common = client.protocolVersions.includes(2) && relay.protocolVersions.includes(2);
   const features =
     client.requiredFeatures.every((feature) => relay.supportedFeatures.includes(feature)) &&
     relay.requiredFeatures.every((feature) => client.supportedFeatures.includes(feature));
-  if (common && features) return { status: "compatible" as const, protocolVersion: 1 as const };
+  if (common && features) return { status: "compatible" as const, protocolVersion: 2 as const };
   return {
     status: "unsupported-protocol" as const,
     recoverable: true as const,

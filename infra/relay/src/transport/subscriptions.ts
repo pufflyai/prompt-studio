@@ -35,7 +35,7 @@ export const createRelaySubscription = async (
   };
   const send = (type: "ready" | "changed") => {
     // A hint has no payload queue. Disconnect a slow consumer when the socket cannot accept it.
-    if (socket!.send(JSON.stringify({ protocolVersion: 1, type })) <= 0) close(1013);
+    if (socket!.send(JSON.stringify({ protocolVersion: 2, type })) <= 0) close(1013);
   };
   const deliver = () => {
     scheduled = false;

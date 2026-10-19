@@ -25,7 +25,12 @@ test("journal replay evidence survives accepted-snapshot replacement and databas
     await service.transaction(owner, async (state) => {
       state.journal[0].recoveryProof = "a".repeat(64);
       state.accepted = {
-        protocolVersion: 1,
+        protocolVersion: 2,
+        generation: 0,
+        covered: 0,
+        writers: {},
+        documents: {},
+        retainedBranches: [],
         scope: { ...owner, accountId: "account" },
         journalSequence: 0,
         checkpoint: { epoch: "before-restore", sequence: 0 },

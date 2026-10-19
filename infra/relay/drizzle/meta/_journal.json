@@ -15,6 +15,13 @@
       "when": 1792125970489,
       "tag": "0001_thick_the_twelve",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792399975481,
+      "tag": "0002_secret_prowler",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   type Checkpoint,
   canonicalJson,
@@ -8,15 +8,18 @@ import {
   type Scope,
   type Snapshot,
   scopeSchema,
+  snapshotAssets,
   snapshotSchema,
   validateMutation,
 } from "pstdio-sync-contracts";
+import { captureSnapshot } from "./captures";
 import { createRelayChanges, notifyScope } from "./changes";
+import { acknowledgeSnapshot } from "./coverage";
 import { connectRelay, type RelayTransaction } from "./database";
 import { publishGroup, type RelayAssets } from "./publication";
 import { withPublishedRevision } from "./published-revision";
 import { restoreSnapshot } from "./restore";
-import { relayScopes } from "./schema";
+import { relayCaptures, relayScopes } from "./schema";
 import { readReplay, readSnapshot, requireOwner } from "./snapshots";
 
 export { migrateRelayStorage } from "./database";
@@ -67,6 +70,38 @@ export const createRelayStorage = (databaseUrl: string, assets: RelayAssets) => 
           throw new Error("Mutation belongs to another relay scope");
         return write((transaction, row) => publishGroup(transaction, row, mutation, assets, signal), signal);
       },
+      async enroll(environmentId: string, signal?: AbortSignal) {
+        identitySchema.parse(environmentId);
+        return write(async (transaction, row) => {
+          if (!Object.hasOwn(row.writers, environmentId)) {
+            await transaction
+              .update(relayScopes)
+              .set({ writers: { ...row.writers, [environmentId]: { floor: 0 } } })
+              .where(eq(relayScopes.id, row.id));
+            await notifyScope(transaction, row.id);
+          }
+          return readSnapshot(transaction, row.id);
+        }, signal);
+      },
+      async capture(signal?: AbortSignal) {
+        return write(async (transaction, row) => {
+          const capture = await captureSnapshot(transaction, row.id, await readSnapshot(transaction, row.id));
+          for (const reference of capture.references)
+            if (!(await assets.complete(reference.scope, reference.asset, signal)))
+              throw new Error("Capture references incomplete assets");
+          return capture;
+        }, signal);
+      },
+      async releaseCapture(id: string, signal?: AbortSignal) {
+        return write(async (transaction, row) => {
+          await transaction
+            .delete(relayCaptures)
+            .where(and(eq(relayCaptures.id, id), eq(relayCaptures.ownerId, row.id)));
+        }, signal);
+      },
+      async acknowledge(input: unknown, environmentId: string, signal?: AbortSignal) {
+        return write((transaction, row) => acknowledgeSnapshot(transaction, row, input, environmentId), signal);
+      },
       async snapshot(signal?: AbortSignal) {
         return connection.run(
           (db) =>
@@ -104,19 +139,11 @@ export const createRelayStorage = (databaseUrl: string, assets: RelayAssets) => 
           if (canonicalJson(receipt.mutation.scope) !== canonicalJson(scope))
             throw new Error("Snapshot receipt belongs to another relay scope");
         }
-        const references = new Map(
-          [
-            ...Object.values(saved.records).flatMap((record) => (record.asset ? [record.asset] : [])),
-            ...Object.values(saved.receipts)
-              .filter((receipt) => receipt.status !== "pending")
-              .flatMap((receipt) =>
-                receipt.mutation.changes.flatMap((change) => (change.asset?.next ? [change.asset.next] : [])),
-              ),
-          ].map((asset) => [canonicalJson(asset), asset]),
-        );
-        for (const asset of references.values())
-          if (!(await assets.complete(scope, asset))) throw new Error("Restored history references incomplete assets");
+        const references = snapshotAssets(saved);
         return write(async (transaction, row) => {
+          for (const asset of references)
+            if (!(await assets.complete(scope, asset)))
+              throw new Error("Restored history references incomplete assets");
           await restoreSnapshot(transaction, row.id, saved);
           await notifyScope(transaction, row.id);
         });

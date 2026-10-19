@@ -1,10 +1,13 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { Client } from "pg";
-import { relayPath, sealMutation } from "pstdio-sync-contracts";
+import { relayPath } from "pstdio-sync-contracts";
 import { startRelay } from "../service";
+import { sealStoredMutation } from "../storage/mutation.fixture";
 import { createTransportFixture } from "./integration-fixture";
 
 const fixture = createTransportFixture();
+const sealMutation = (body: Parameters<typeof sealStoredMutation>[0]) =>
+  sealStoredMutation(body, fixture.relayDatabaseUrl);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
@@ -28,7 +31,7 @@ test("disconnecting publication cancels its separate asset verification query be
     await blocker.query("BEGIN");
     await blocker.query("LOCK TABLE relay_verified_assets IN ACCESS EXCLUSIVE MODE");
     const mutation = await sealMutation({
-      protocolVersion: 1,
+      protocolVersion: 2,
       scope: context.scope,
       environmentId: context.environmentId,
       operationId: "asset-publication",

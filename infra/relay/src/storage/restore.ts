@@ -19,6 +19,10 @@ export const restoreSnapshot = async (transaction: RelayTransaction, ownerId: st
     .update(relayScopes)
     .set({
       epoch: crypto.randomUUID(),
+      generation: saved.generation,
+      covered: 0,
+      writers: saved.writers,
+      documents: saved.documents,
       acceptedSequence: saved.checkpoint.sequence,
       replayFrom: saved.checkpoint.sequence,
       journalSequence: saved.journalSequence,

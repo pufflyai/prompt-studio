@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { type Asset, canonicalJson, fingerprint, type Scope, sealMutation } from "pstdio-sync-contracts";
+import { type Asset, canonicalJson, fingerprint, type Scope } from "pstdio-sync-contracts";
 import { createConformanceObjects } from "pstdio-sync-contracts/conformance";
+import { sealStoredMutation as sealMutation } from "./mutation.fixture";
 import { createRelayStorage, migrateRelayStorage } from "./storage";
 
 const databaseUrl = process.env.SYNC_TEST_DATABASE_URL;
@@ -32,7 +33,7 @@ test("a complete record and image group retains its receipt after reopening Post
   };
   await objects.put(scope, asset, bytes);
   const mutation = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
     scope,
     environmentId: "laptop-a",
     operationId: crypto.randomUUID(),
@@ -67,7 +68,7 @@ test("a complete record and image group retains its receipt after reopening Post
 
 const replacement = async (scope: Scope, value: string, operationId: string = crypto.randomUUID()) =>
   sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
     scope,
     environmentId: value,
     operationId,
@@ -158,7 +159,7 @@ test("scoped owners reject redirected input and require snapshots for invalid re
     expect((await other.replay({ ...snapshot.checkpoint, sequence })).status).toBe("snapshot-required");
 });
 
-test("restore requires historical asset bytes retained by authoritative receipts", async () => {
+test("restore verifies current and retained branch byte closure under the publication boundary", async () => {
   const scope = { accountId: "owner", workbenchId: crypto.randomUUID(), extensionId: "images" };
   const owner = await storage.initialize(scope, "published-images-1");
   const versions: Asset[] = [];
@@ -173,7 +174,7 @@ test("restore requires historical asset bytes retained by authoritative receipts
     const previous = versions.at(-1) ?? null;
     const receipt = await owner.submit(
       await sealMutation({
-        protocolVersion: 1,
+        protocolVersion: 2,
         scope,
         environmentId: "laptop",
         operationId: crypto.randomUUID(),
@@ -194,13 +195,13 @@ test("restore requires historical asset bytes retained by authoritative receipts
   const saved = await owner.snapshot();
   expect(saved.records.image.asset).toEqual(versions[1]);
   await objects.remove(scope, versions[0]);
-  const error = await owner.restore(saved).then(
-    () => null,
-    (error: unknown) => error,
-  );
-  expect(error).toBeInstanceOf(Error);
-  expect(String(error)).toContain("incomplete assets");
-  expect(await owner.snapshot()).toEqual(saved);
+  await owner.restore(saved);
+  const restored = await owner.snapshot();
+  expect(restored.records.image.asset).toEqual(versions[1]);
+  expect(restored.receipts).toEqual(saved.receipts);
+  await objects.remove(scope, versions[1]);
+  await expect(owner.restore(restored)).rejects.toThrow("incomplete assets");
+  expect(await owner.snapshot()).toEqual(restored);
 });
 
 test("restore starts a new replay lineage while preserving original acknowledgments", async () => {
@@ -209,13 +210,14 @@ test("restore starts a new replay lineage while preserving original acknowledgme
   const mutation = await replacement(scope, "saved");
   const receipt = await owner.submit(mutation);
   const saved = await owner.snapshot();
+  expect(saved.receipts[mutation.operationId]).toEqual(receipt);
   await owner.publishRevision("published-1", "published-2");
   await owner.restore(saved);
   const restored = await owner.snapshot();
   expect(restored.checkpoint.epoch).not.toBe(saved.checkpoint.epoch);
   expect(restored.checkpoint.sequence).toBe(saved.checkpoint.sequence);
   expect(restored.publishedRevision).toBe("published-1");
-  expect(await owner.submit(mutation)).toEqual(receipt);
+  await expect(owner.submit(mutation)).rejects.toThrow("Resynchronization required");
   expect((await owner.replay(saved.checkpoint)).status).toBe("snapshot-required");
   expect((await owner.replay({ ...restored.checkpoint, sequence: 0 })).status).toBe("snapshot-required");
   const next = await replacement(scope, "next");

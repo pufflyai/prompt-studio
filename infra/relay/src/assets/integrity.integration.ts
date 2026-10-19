@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { fingerprint, sealMutation } from "pstdio-sync-contracts";
+import { fingerprint } from "pstdio-sync-contracts";
+import { sealStoredMutation as sealMutation } from "../storage/mutation.fixture";
 import { createRelayStorage } from "../storage/storage";
 import { createRelayAssets } from "./assets";
 import { createAssetFixture, input, newScope, reference } from "./integration-fixture";
@@ -111,7 +112,7 @@ test("denied object access leaves recoverable intent without a completion acknow
     try {
       const owner = await storage.initialize(scope, "published-images-1");
       const mutation = await sealMutation({
-        protocolVersion: 1,
+        protocolVersion: 2,
         scope,
         operationId: crypto.randomUUID(),
         environmentId: "denied-test",
@@ -149,7 +150,7 @@ test("real object completion releases a whole record group and remains required 
   try {
     const owner = await storage.initialize(scope, "published-images-1");
     const mutation = await sealMutation({
-      protocolVersion: 1,
+      protocolVersion: 2,
       scope,
       operationId: crypto.randomUUID(),
       environmentId: "asset-test",

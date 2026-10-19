@@ -1,8 +1,9 @@
 # Covered checkpoint contracts
 
 PS-808 defines protocol 2 checkpoint, coverage, recovery, and retention contracts.
-Its executable owner is an isolated reference; production adoption belongs to
-PS-776, PS-780, and PS-781. See [ADR 0082](../../adrs/0082-covered-snapshots-and-checkpointed-editing.md).
+Its document editing and retention owner is an isolated reference. PS-815 adopts
+generic protocol 2 groups in production host and relay storage. PS-776 owns live
+document editing; PS-780 owns verified backups; PS-781 owns retirement and deletion. See [ADR 0082](../../adrs/0082-covered-snapshots-and-checkpointed-editing.md).
 
 ## Scope and rollout
 
@@ -15,16 +16,80 @@ recovery revision, parent references, document delta, and complete projection gr
 The reference reuses existing record staging rules internally; its protocol 2
 boundary rejects protocol 1 envelopes. This is not an old-client adapter.
 
-The current production owners still use protocol 1. This ticket neither enables
-production compaction nor changes the native editor's save scheduling. Their later
-cutover must update host and relay together, reject mismatches clearly, and keep
-local proposals. There is no historical conversion requirement and no fallback to
-per-pause durable file synchronization for qualifying collaborative documents.
+The production host and relay now use protocol 2 together. There is no protocol 1
+decoder or mixed-protocol fallback. A mismatch requires resynchronization and keeps
+local records, pending proposals, and source bytes. Production compaction and the
+native editor's checkpoint schedule remain separate work. There is no historical
+conversion requirement or fallback to per-pause durable file synchronization for
+qualifying collaborative documents.
 
 This is reusable platform plumbing. Notes and Planner have no relay, Yjs, or backup
 settings. Extension load/save, file, and storage interfaces remain the authoring
 boundary. Credentials, sessions, processes, unpublished overrides, and presence
 remain outside content snapshots.
+
+## Generic production groups
+
+[`mutationBodySchema`](../../../packages/pstdio-sync-contracts/src/wire.ts) seals
+ordinary scalar, map, asset, and immutable package publication operations. Every
+group names its scope, restore epoch, stream generation, environment, writer
+sequence, original operation ID, observed preconditions, and parents. The local
+journal freezes its writer position before sending and persists it with the
+original proposal. Restart and lost-response retries use the same digest. The
+relay owns writer enrollment and floors, checks sequence reuse transactionally,
+and fences stale epoch, stream, and document generations before evaluation.
+
+Document metadata is optional. When present it includes the real document ID,
+generation, consumed recovery revision, and a corresponding text delta in the
+atomic group. Ordinary operations carry no invented document or recovery facts.
+The stricter document checkpoint envelope remains the editor reference contract;
+production generic receipts retain their full mutation, original order, outcome,
+conflict identity, and accepted checkpoint. PS-776 must integrate this foundation
+before its final protocol 2 editor delivery.
+
+Production snapshots include accepted records, tombstones, all outstanding outcomes,
+conflict revisions, publication identity, document generations, enrolled writer
+floors, and explicit retained branches. `checkpoint.sequence` is the accepted cut;
+`journalSequence` also counts operations that are pending or conflicting. Neither
+counter treats pending work as accepted. `covered` remains zero: environment
+acknowledgements alone do not establish a verified-backup frontier. No receipt
+retirement or user-data deletion occurs in PS-815.
+
+Replay includes contiguous accepted groups plus the current outstanding receipts,
+conflicts, publication revision, and frontier metadata from one repeatable-read
+transaction. This also captures changes that do not advance the accepted cut.
+[`reconstructSnapshot`](../../../packages/pstdio-sync/src/replay.ts) validates the
+starting scope, epoch, generation, immutable digests, and complete group boundary
+before reconstructing the exact content snapshot.
+
+## Production capture and acknowledgement
+
+The authenticated native relay uses `/v2/workbenches/.../extensions/.../` routes.
+`owner.capture()` and the native adapter's `capture()` return an immutable snapshot,
+its canonical content checksum, and scoped asset/package references. Capture holds
+the scope publication boundary and the catalog lock, verifies the required bytes,
+and persists its reference pin in `relay_captures` in the same transaction. Concurrent
+package publication therefore selects one complete package identity. Recovery proofs,
+credentials, local source paths, and runtime state do not enter content captures.
+PS-780 can keep the returned capture ID while it copies and verifies a backup.
+`releaseCapture(id)` removes that capture's pin explicitly. PS-781 must include
+these durable pins in its reachability rules before deleting any objects.
+
+The host installs snapshots and assets durably before acknowledging coverage. An
+acknowledgement binds to the authenticated enrolled environment, exact content
+checksum, scope, epoch, generation, installed cut, retained proposals, and recovery
+accounting. The relay accepts an acknowledgement only while that exact snapshot
+is current. Concurrent changes return `snapshot-required` without storing coverage
+or failing completed content synchronization. The next catch-up can acknowledge
+the newer boundary. Accepted evidence is stored in
+`relay_acknowledgements`. Unsent local proposals prevent the generic host from
+claiming coverage until their identities are represented at the relay. PS-776 owns
+accounting for its active live-document recovery sessions.
+
+A restored epoch or changed stream generation requires resynchronization before
+replacing a bound installation. Its prior accepted view, journal, and complete
+source bytes remain available. Reconciliation belongs to PS-782; an old proof
+never authorizes execution of an old-epoch proposal in a fresh lineage.
 
 ## Checkpoints and recovery
 

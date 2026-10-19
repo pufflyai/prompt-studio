@@ -4,6 +4,7 @@ import {
   negotiate,
   protocolPeer,
   receiptSchema,
+  snapshotFingerprint,
   snapshotSchema,
   validateMutation,
 } from "pstdio-sync-contracts";
@@ -26,6 +27,11 @@ export const synchronize = async (
   const receive = async () => {
     const observed = await input.store.transaction(input.owner, async (state) => state.accepted);
     const snapshot = snapshotSchema.parse(await adapter.snapshot());
+    if (
+      observed &&
+      (observed.checkpoint.epoch !== snapshot.checkpoint.epoch || observed.generation !== snapshot.generation)
+    )
+      throw new Error("Resynchronization required: preserve local records, proposals and source bytes");
     if (canonicalJson(snapshot.scope) !== canonicalJson(adapter.scope))
       throw new Error("Relay snapshot scope differs from its adapter");
     for (const receipt of Object.values(snapshot.receipts)) await validateMutation(receipt.mutation);
@@ -59,6 +65,26 @@ export const synchronize = async (
     outcomes.push(receipt);
   }
   await receive();
+  const installed = await input.store.transaction(input.owner, async (state) => ({
+    snapshot: state.accepted!,
+    branches: pendingOperations(state, input.environmentId).map((operation) => operation.operationId),
+  }));
+  if (
+    adapter.acknowledge &&
+    Object.hasOwn(installed.snapshot.writers, input.environmentId) &&
+    installed.branches.every((id) => Object.hasOwn(installed.snapshot.receipts, id))
+  )
+    await adapter.acknowledge({
+      protocolVersion: 2,
+      scope: adapter.scope,
+      epoch: installed.snapshot.checkpoint.epoch,
+      generation: installed.snapshot.generation,
+      environmentId: input.environmentId,
+      cut: installed.snapshot.checkpoint.sequence,
+      snapshotHash: await snapshotFingerprint(installed.snapshot),
+      branches: installed.branches,
+      recovery: [],
+    });
   return input.store.transaction(input.owner, async (state) => {
     const conflicts = Object.values(state.accepted?.conflicts ?? {}).some((conflict) => !conflict.resolvedBy);
     if (conflicts) return { status: "conflict" as const, outcomes };

@@ -90,7 +90,10 @@ test("a read-only workspace keeps receiving structured storage without creating 
       const sequence = snapshot.journalSequence + 1;
       const checkpoint = { epoch: snapshot.checkpoint.epoch, sequence };
       const mutation = await sealMutation({
-        protocolVersion: 1,
+        protocolVersion: 2,
+        epoch: snapshot.checkpoint.epoch,
+        generation: snapshot.generation,
+        sequence,
         scope: snapshot.scope,
         environmentId: "remote",
         operationId: crypto.randomUUID(),

@@ -1,14 +1,11 @@
 # Synchronization contracts
 
-The private `pstdio-sync-contracts` package defines wire protocol 1 and an executable
-reference for the v0.1 synchronization model. The protocol 2 replacement contracts
-are defined in [covered checkpoints](0027-covered-checkpoints.md); their production
-cutover is separate. The owners below currently build on protocol 1:
-grouped local storage in `pstdio-sync` and `pstdio-db`, the relay in `infra/relay`,
-account authority in `infra/account-manager`, and an opt-in runtime connection in
-`pstdio-api`. They are on `main` but in no release. The
-[PRD delivery record](../../requirements/platform/0007-synchronization-contracts.md#delivery-record)
-lists what is proven.
+The private `pstdio-sync-contracts` package defines protocol 2 for generic grouped
+records and optional document checkpoints. Production local journals, native HTTP
+transport, and PostgreSQL relay storage adopt it together in PS-815. See
+[covered checkpoints](0027-covered-checkpoints.md) for coverage, capture, and the
+separate document editing, backup, retention, and restore owners. This is source
+implementation, not a claim that these owners are released or deployed.
 
 ## Package and ownership
 
@@ -41,7 +38,9 @@ conflict metadata, one canonical operation body, its outcome, and the accepted r
 sequence commit together. Supersession is derived from accepted resolution captures;
 it is not another stored status. Test-only references remain independent from this owner.
 
-The owner provides repeatable-read snapshots and contiguous accepted replay. Restore
+The owner provides repeatable-read snapshots and contiguous accepted replay with
+outstanding receipts, conflicts, publication identity, and writer metadata from the
+same boundary. Restore
 validates receipt fingerprints and the immutable bytes required by retained history,
 replaces scoped content in one transaction, and creates a new epoch. Old receipts keep
 their saved acknowledgments. Replay after restore begins at the restored sequence in
@@ -299,8 +298,9 @@ Snapshot requests capture the current accepted state before network work. Instal
 a response only if that observed state still matches, including receipts and
 conflicts. Receipt outcomes can change without advancing checkpoint counters.
 Within one epoch, older journal or accepted positions cannot replace current
-state. A fresh restore can start a new epoch at a lower position. Local pending
-edits remain in the journal during this check.
+state. A restore can start a new epoch at a lower position. A bound production host reports
+resynchronization before replacing its previous view. It retains local records,
+proposals, and bytes for PS-782 reconciliation.
 
 The source cases were inspected at WS-272 commit `565ceab57` in
 `infra/relay/prototype/src/{protocol,staging,client-model,recovery}.ts` and adjacent

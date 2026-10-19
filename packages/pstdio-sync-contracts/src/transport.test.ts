@@ -27,7 +27,7 @@ test("asset requests reject extra claims and invalid resume offsets", () => {
 });
 
 test("subscription messages carry only versioned readiness or change hints", () => {
-  expect(relayEventSchema.parse({ protocolVersion: 1, type: "ready" }).type).toBe("ready");
-  expect(relayEventSchema.parse({ protocolVersion: 1, type: "changed" }).type).toBe("changed");
-  expect(relayEventSchema.safeParse({ protocolVersion: 1, type: "changed", records: {} }).success).toBe(false);
+  expect(relayEventSchema.parse({ protocolVersion: 2, type: "ready" }).type).toBe("ready");
+  expect(relayEventSchema.parse({ protocolVersion: 2, type: "changed" }).type).toBe("changed");
+  expect(relayEventSchema.safeParse({ protocolVersion: 2, type: "changed", records: {} }).success).toBe(false);
 });

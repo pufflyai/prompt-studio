@@ -1,10 +1,13 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { fingerprint, relayPath, sealMutation } from "pstdio-sync-contracts";
+import { fingerprint, relayPath } from "pstdio-sync-contracts";
 import { startRelay } from "../service";
+import { sealStoredMutation } from "../storage/mutation.fixture";
 import { createTransportFixture } from "./integration-fixture";
 import { connectSocket } from "./socket.fixture";
 
 const fixture = createTransportFixture();
+const sealMutation = (body: Parameters<typeof sealStoredMutation>[0]) =>
+  sealStoredMutation(body, fixture.relayDatabaseUrl);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
@@ -20,7 +23,7 @@ test("ready sockets see only their committed scope while revoked renewal leaves 
     const commit = async (context: typeof first) =>
       context.storage.owner(context.scope).submit(
         await sealMutation({
-          protocolVersion: 1,
+          protocolVersion: 2,
           scope: context.scope,
           environmentId: context.environmentId,
           operationId: "same-id",
@@ -36,7 +39,7 @@ test("ready sockets see only their committed scope while revoked renewal leaves 
         }),
       );
     await commit(first);
-    expect(await a.next()).toEqual({ protocolVersion: 1, type: "changed" });
+    expect(await a.next()).toEqual({ protocolVersion: 2, type: "changed" });
     expect((await first.storage.owner(first.scope).snapshot()).records["same-record"]!.value).toBe(
       first.scope.accountId,
     );
