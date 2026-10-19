@@ -14,6 +14,7 @@ import {
 import { createRelayChanges, notifyScope } from "./changes";
 import { connectRelay, type RelayTransaction } from "./database";
 import { publishGroup, type RelayAssets } from "./publication";
+import { withPublishedRevision } from "./published-revision";
 import { restoreSnapshot } from "./restore";
 import { relayScopes } from "./schema";
 import { readReplay, readSnapshot, requireOwner } from "./snapshots";
@@ -42,7 +43,7 @@ export const createRelayStorage = (databaseUrl: string, assets: RelayAssets) => 
                 .for("update")
             )[0];
             if (!row) throw new Error("Relay scope has not been initialized");
-            return action(transaction, row);
+            return action(transaction, await withPublishedRevision(transaction, row, true));
           }),
         signal,
       );

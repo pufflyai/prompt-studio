@@ -31,6 +31,7 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 // Includes linked dependency loading and missing dependency diagnostics.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
+import { registerExtensionPublicationSmokeTests } from "./packaged-extension-publication-smoke";
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
@@ -118,6 +119,7 @@ registerSharedCodexSmokeTests();
 registerCliHelpSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
+registerExtensionPublicationSmokeTests();
 registerExtensionStartupSmokeTests();
 registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();

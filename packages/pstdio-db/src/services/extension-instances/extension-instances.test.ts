@@ -131,3 +131,36 @@ describe("extensionInstancesService", () => {
     });
   });
 });
+
+test("activating a published source keeps the project instance and leaves other projects on their local source", async () => {
+  const first = await svc.create({
+    installed_extension_id: installedId,
+    scope_type: "project",
+    scope_id: projectId,
+    config_json: { keep: true },
+  });
+  const other = await svc.create({
+    installed_extension_id: installedId,
+    scope_type: "project",
+    scope_id: "other-workbench",
+  });
+  const source = await sourcesSvc.register({
+    install_name: "published",
+    extension_id: "pstdio.core-templates",
+    display_name: "Published",
+    source_kind: "registry",
+    source_path: "/published/revision",
+  });
+  const activated = await svc.activateProjectSource({
+    projectId,
+    extensionId: source.extension_id,
+    instanceId: first.id,
+    installedSourceId: source.id,
+    enabled: false,
+  });
+  expect(activated.instance.id).toBe(first.id);
+  expect(activated.instance.config_json).toEqual({ keep: true });
+  expect(activated.instance.installed_extension_id).toBe(source.id);
+  expect(activated.instance.enabled).toBe(false);
+  expect((await svc.get(other.id))?.installed_extension_id).toBe(installedId);
+});

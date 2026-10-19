@@ -100,6 +100,8 @@ import {
   type ProjectExtensionLifecycleRouteDeps,
 } from "./project-extension-lifecycle";
 
+import { publicationRoutes } from "./publication/routes";
+
 type ExtensionRoutes = OpenAPIHono<AppBindings>;
 
 const registerInstalledExtensionRoutes = (routes: ExtensionRoutes, deps: ExtensionsRouteDeps) => {
@@ -174,6 +176,7 @@ export const createExtensionRoutes = (
 ) => {
   const routes = new OpenAPIHono<AppBindings>();
 
+  routes.route("/", publicationRoutes(deps));
   registerInstalledExtensionRoutes(routes, deps);
   registerExtensionWorkbenchRoutes(routes, deps);
   registerExtensionFileRoutes(routes, deps);

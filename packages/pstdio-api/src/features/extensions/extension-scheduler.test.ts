@@ -83,6 +83,7 @@ type AutomationPreferenceRow = { extension_instance_id: string; automation_id: s
 
 const createDeps = (sourcePath: string, automationPreferences: AutomationPreferenceRow[] = []) => {
   const extensionService = {
+    listProjectExtensionInstances: async () => extensionService.listEnabledSourcesForProject(),
     listEnabledSourcesForProject: async () => [
       {
         instance: { id: "instance-1" },
@@ -116,6 +117,7 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     extensionService,
     projectService,
     extensionStorageService: {
+      open: async () => ({ readState: async () => ({ accepted: null }) }),
       getKv: async () => null,
       setKv: async () => {},
       deleteKv: async () => {},

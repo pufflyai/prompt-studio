@@ -100,7 +100,14 @@
       ]
     },
     "packages/pstdio-api": {
-      "entry": ["package.json", "src/index.ts", "src/server.ts", "src/**/*.test.ts", "src/**/*.fixture.ts"],
+      "entry": [
+        "package.json",
+        "src/index.ts",
+        "src/server.ts",
+        "src/**/*.test.ts",
+        "src/**/*.fixture.ts",
+        "src/**/*.integration.ts"
+      ],
       "project": ["src/**/*.ts"],
       "ignore": ["dist/**"],
       // Tests install these extensions and fixtures from source. Declared so CI treats their changes as API changes.
