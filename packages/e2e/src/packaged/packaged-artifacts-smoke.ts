@@ -51,6 +51,16 @@ export const expectPackagedArtifacts = async (input: {
       expect.objectContaining({ id: `pstdio.pstdio-artifacts.command.${action}` }),
     );
   }
+  const missingResource = await fetch(
+    `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-artifacts.command.resolve-resource/execute`,
+    {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ params: { artifactId: crypto.randomUUID() } }),
+    },
+  );
+  expect(missingResource.status).toBe(200);
+  expect((await missingResource.json()).outcome).toMatchObject({ status: "success", value: null });
   expect(metadata.resourceKinds).toContainEqual(
     expect.objectContaining({
       extensionId: "pstdio.pstdio-artifacts",

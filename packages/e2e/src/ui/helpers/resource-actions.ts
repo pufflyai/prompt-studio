@@ -14,6 +14,7 @@ export const createResourceActionsProject = async (request: APIRequestContext, f
 export const prepareResourceActionsDashboard = async (page: Page, projectId: string) => {
   await page.addInitScript(
     ({ selectedProjectId }) => {
+      if (window !== window.top) return;
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
       localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
