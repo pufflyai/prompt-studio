@@ -1,7 +1,7 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 import { alertAnatomy } from "@chakra-ui/react/anatomy";
 
-const rootDensity = { px: "xs", py: "2xs", gap: "2xs" };
+const rootDensity = { px: "xs", py: "2xs", gap: "xs" };
 
 export const alertSlotRecipe = defineSlotRecipe({
   slots: alertAnatomy.keys(),
@@ -13,15 +13,17 @@ export const alertSlotRecipe = defineSlotRecipe({
       minH: "auto",
       "& .chakra-button": {
         color: "inherit",
+        bg: "transparent",
+        borderColor: "currentColor",
         maxWidth: "full",
         height: "auto",
-        minHeight: "7",
+        minHeight: "6",
         whiteSpace: "normal",
         overflowWrap: "anywhere",
       },
     },
     indicator: {
-      mt: "0.0625rem",
+      mt: "2xs",
     },
     content: {
       gap: "0",
@@ -29,6 +31,7 @@ export const alertSlotRecipe = defineSlotRecipe({
     },
     title: {
       textStyle: "label/M/medium",
+      py: "0.5",
       overflowWrap: "anywhere",
     },
     description: {

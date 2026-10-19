@@ -36,7 +36,7 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 
 ## 6. Feedback placement
 
-1. System errors sit at the leading, left-aligned end of the status bar. Other app-wide indicators sit at the trailing end; normal states stay muted. The error widget label shows the latest error without a count suffix; its popover shows the count.
+1. System errors sit at the leading, left-aligned end of the status bar. Other app-wide indicators sit at the trailing end; normal states stay muted. The error widget label shows the latest error without a count suffix; its popover shows the count in a tag beside its title.
 2. Connection loss shows an amber Reconnecting indicator there while loaded navigation stays visible.
 3. Never use toast notifications for errors.
 4. System errors appear in a status-bar widget. Show an indicator with the error when it occurs; opening the widget shows its details. This widget is for system errors only.
@@ -44,8 +44,9 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 6. Chat problems appear in the conversation, without banners.
 7. The system-error and performance popovers share their width and gap above the status bar. Each aligns with its widget: system errors on the left, performance on the right. Long error lists grow with the viewport and scroll inside the popover. Keep the count and dismissal controls visible when text is long.
 8. Pending system errors keep the status bar visible even when the active mode hides it. Restore the mode's hidden state after the last system error is dismissed. Custom status-bar content stays available beside the error widget.
-9. Alert action buttons sit inside the alert, bottom-right aligned below its message. Close buttons sit at the top right, beside the title. Both use ghost buttons that inherit the alert's semantic foreground and the active theme's hover and focus colors. Let the action footer wrap in narrow containers. Keep recovery failures inside that same alert.
+9. Alert action buttons sit inside the alert, bottom-right aligned below its message. Close buttons sit at the top right, beside the title. Both use compact `2xs` outline buttons that inherit the alert's semantic foreground and the active theme's hover and focus colors. Let the action footer wrap in narrow containers. Keep recovery failures inside that same alert.
 10. Alert titles use `label/M/medium`; messages use `paragraph/S/regular`.
+11. Leave an `xs` gap between an alert's icon and text. Align the icon and close button with the center of the title's first line, including when a title wraps.
 
 ## 7. Activity
 

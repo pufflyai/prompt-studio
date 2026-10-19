@@ -4,7 +4,7 @@ import * as React from "react";
 
 export interface AlertProps extends Omit<ChakraAlert.RootProps, "title"> {
   startElement?: React.ReactNode;
-  // Recovery controls in the bottom-right footer. Buttons inherit themed ghost defaults.
+  // Recovery controls in the bottom-right footer. Buttons inherit compact, themed outlines.
   endElement?: React.ReactNode;
   title?: React.ReactNode;
   icon?: React.ReactElement;
@@ -18,7 +18,7 @@ export const AlertMessage = React.forwardRef<HTMLDivElement, AlertProps>(functio
   return (
     <ChakraAlert.Root ref={ref} {...rest}>
       {startElement || <ChakraAlert.Indicator>{icon}</ChakraAlert.Indicator>}
-      <ButtonPropsProvider value={{ variant: "ghost", size: "xs" }}>
+      <ButtonPropsProvider value={{ variant: "outline", size: "2xs" }}>
         <ChakraAlert.Content>
           <HStack gap="2xs" alignItems="flex-start" minW="0">
             <ChakraAlert.Title flex="1" minW="0">

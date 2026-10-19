@@ -1,4 +1,4 @@
-import { Button, HStack, Icon, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Icon, Popover, Portal, Stack, Tag, Text } from "@chakra-ui/react";
 import { AlertMessage, ScrollArea } from "@pstdio/ui";
 import { TriangleAlert } from "lucide-react";
 import type { WorkbenchCore } from "../../core";
@@ -44,7 +44,10 @@ export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
             <Popover.Body display="flex" flexDirection="column" gap="sm" minH="0">
               <HStack gap="xs" flexShrink="0">
                 <Icon as={TriangleAlert} boxSize="4" />
-                <Popover.Title>System errors ({errors.length})</Popover.Title>
+                <Popover.Title>System errors</Popover.Title>
+                <Tag.Root size="sm" variant="subtle" colorPalette="red" aria-label={`${errors.length} system errors`}>
+                  <Tag.Label>{errors.length}</Tag.Label>
+                </Tag.Root>
                 <Button
                   size="2xs"
                   variant="ghost"

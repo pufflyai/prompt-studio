@@ -4,4 +4,4 @@
 "@pstdio/ui": patch
 ---
 
-Keep system errors in a scrollable status-bar widget, keep action failures local, and align themed ghost alert controls at the bottom right.
+Keep system errors in a scrollable status-bar widget with a count tag, keep action failures local, and align compact outlined alert controls.
