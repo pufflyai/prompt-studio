@@ -1,5 +1,14 @@
 # pstdio-artifacts
 
+## 0.44.0
+
+_2026-10-18_
+
+### Patch Changes
+
+- d3a0941: Keep extension configuration, drafts, prototypes, tickets, reports, and backups in extension-storage.
+- 191998c: Link the publish-artifact skill to the public Artifacts and extension storage docs.
+
 ## 0.43.1
 
 _2026-10-13_
