@@ -81,8 +81,7 @@ test.describe("Session bubble workspace selection", () => {
     await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
     const ticketUrl = page.url();
 
-    const nav = page.locator('[data-workbench-region="nav"]');
-    await nav.getByRole("button", { name: "Show Side Panel" }).click();
+    await page.getByRole("group", { name: "Panel controls" }).getByRole("button", { name: "Show Side Panel" }).click();
     await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
     await page.getByRole("menuitem", { name: "Session", exact: true }).click();
     const sidePanel = page.getByTestId("workbench-side-panel-attached");
