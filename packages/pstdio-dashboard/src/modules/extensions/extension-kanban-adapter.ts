@@ -202,6 +202,7 @@ export const createDashboardKanbanAdapter = (input: {
       return ctx.commands.executeCommand(command.command.id, args, context).then(() => undefined);
     },
     onAfterCreate: async ({ record, created, submission }) => {
+      const reportError = ctx.notifications.captureActionError("Attach files");
       try {
         const extensionInstanceId = metadata.extensions.find(
           (extension) => extension.id === record.extensionId,
@@ -215,11 +216,7 @@ export const createDashboardKanbanAdapter = (input: {
           extensionInstanceId,
         });
       } catch (error) {
-        ctx.notifications.show({
-          level: "error",
-          title: "Could not attach files",
-          message: error instanceof Error ? error.message : String(error),
-        });
+        reportError(error);
       }
     },
   };

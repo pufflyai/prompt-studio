@@ -37,7 +37,10 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 
 1. App-wide indicators sit at the trailing end of the status bar; normal states stay muted.
 2. Connection loss shows an amber Reconnecting indicator there while loaded navigation stays visible.
-3. Chat problems appear in the conversation, without banners.
+3. Never use toast notifications for errors.
+4. System errors appear in a status-bar widget. Show an indicator with the error when it occurs; opening the widget shows its details. This widget is for system errors only.
+5. When a user action cannot be completed, show the failure in the UI where the user tried the action, beside the relevant control or content.
+6. Chat problems appear in the conversation, without banners.
 
 ## 7. Activity
 

@@ -45,13 +45,21 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
         workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId })),
     },
     notifications: {
-      show: (notice) =>
+      show: (notice) => {
+        if (notice.type === "error") {
+          workbench.notifications.captureActionError(
+            notice.title ?? "Extension action",
+            placement?.instanceId,
+          )(new Error(notice.message));
+          return;
+        }
         workbench.notifications.show({
           level: notice.type,
           metadata: notice.metadata,
           title: notice.title ?? notice.message,
           message: notice.title === undefined ? undefined : notice.message,
-        }),
+        });
+      },
     },
     preferences: createWebviewPreferencesAdapter(input),
     terminal: workbench.terminal,

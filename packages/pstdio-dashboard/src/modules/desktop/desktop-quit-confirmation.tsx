@@ -22,6 +22,8 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
   return (
     <Dialog.Root
       role="alertdialog"
+      scrollBehavior="inside"
+      placement="center"
       open={activity !== null}
       initialFocusEl={() => keepOpenRef.current}
       closeOnInteractOutside={false}
@@ -31,12 +33,12 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
     >
       <Portal>
         <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
+        <Dialog.Positioner px="md">
+          <Dialog.Content minH="0" minW="0">
+            <Dialog.Header flexShrink={0}>
               <Dialog.Title>Active work is still running</Dialog.Title>
             </Dialog.Header>
-            <Dialog.Body>
+            <Dialog.Body minH="0">
               <Stack gap="sm">
                 <Dialog.Description color="fg.muted" textStyle="paragraph/M/regular">
                   Canceling this work will stop the items below. This cannot be undone.
@@ -51,7 +53,7 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
                         </Text>
                         <Stack as="ul" gap="2xs" listStyle="none" padding="0" margin="0" mt="2xs">
                           {group.items.map((item) => (
-                            <Text as="li" key={item.id} textStyle="paragraph/M/regular">
+                            <Text as="li" key={item.id} textStyle="paragraph/M/regular" overflowWrap="anywhere">
                               {item.label}
                             </Text>
                           ))}
@@ -61,7 +63,7 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
                   })}
               </Stack>
             </Dialog.Body>
-            <Dialog.Footer>
+            <Dialog.Footer flexShrink={0} flexWrap="wrap">
               <Button ref={keepOpenRef} size="sm" onClick={onKeepOpen}>
                 Keep Prompt Studio open
               </Button>

@@ -1,27 +1,24 @@
 import type { NotificationRegistry } from "../registries/notifications/notification-registry";
 
 export const reportUserActionError = (
-  workbench: { notifications: Pick<NotificationRegistry, "show"> },
+  workbench: { notifications: Pick<NotificationRegistry, "captureActionError"> },
   label: string,
   error: unknown,
 ) => {
-  workbench.notifications.show({
-    level: "error",
-    title: `${label} failed`,
-    message: error instanceof Error ? error.message : String(error),
-  });
+  workbench.notifications.captureActionError(label)(error);
 };
 
-// Use at UI entry points without an inline error display. Dialogs and reads
-// retain the rejected promise so their own error display remains the owner.
+// Capture the originating view before awaiting work, so switching focus cannot
+// move its failure into another view. Dialogs may keep their own rejected promise.
 export const runUserAction = async (
-  workbench: { notifications: Pick<NotificationRegistry, "show"> },
+  workbench: { notifications: Pick<NotificationRegistry, "captureActionError"> },
   label: string,
   run: () => unknown,
 ) => {
+  const reportError = workbench.notifications.captureActionError(label);
   try {
     await run();
   } catch (error) {
-    reportUserActionError(workbench, label, error);
+    reportError(error);
   }
 };

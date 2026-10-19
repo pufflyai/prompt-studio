@@ -3,6 +3,7 @@ import type { ExtensionConnectionRecord, WorkbenchExtensionMetadata } from "@pst
 import { toaster } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useActionError } from "@/shared/components/use-action-error";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
   useCheckExtensionConnection,
@@ -21,6 +22,7 @@ interface ExtensionConnectionRowProps {
 
 const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
   const { projectId, definition, configured } = props;
+  const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
   const configure = useConfigureExtensionConnection(projectId);
   const check = useCheckExtensionConnection(projectId);
@@ -34,12 +36,12 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
 
   const connectionInput = { extensionId: definition.extensionId, connectionId: definition.localId };
   const notifyError = (error: Error) =>
-    toaster.create({
-      type: "error",
+    showError({
       title: t("projectSettings.extensionsPanel.connections.actionFailed"),
       description: error.message,
     });
   const handleConfigure = () => {
+    clearError();
     configure.mutate(
       { ...connectionInput, baseUrl, secret: secret || undefined },
       {
@@ -54,6 +56,7 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
 
   return (
     <Stack gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
+      {errorNotice}
       <Stack gap="0">
         <Text textStyle="label/S/medium">{resolveLocalizableString(definition.label, definition.extensionId)}</Text>
         <Text textStyle="label/XS" color={configured?.configured ? "fg.success" : "fg.muted"}>
@@ -106,7 +109,10 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
             variant="outline"
             disabled={!configured?.configured}
             loading={check.isPending}
-            onClick={() => check.mutate(connectionInput, { onError: notifyError })}
+            onClick={() => {
+              clearError();
+              check.mutate(connectionInput, { onError: notifyError });
+            }}
           >
             {t("projectSettings.extensionsPanel.connections.check")}
           </Button>
@@ -116,7 +122,10 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
             size="2xs"
             variant="destructive"
             loading={remove.isPending}
-            onClick={() => remove.mutate(connectionInput, { onError: notifyError })}
+            onClick={() => {
+              clearError();
+              remove.mutate(connectionInput, { onError: notifyError });
+            }}
           >
             {t("projectSettings.extensionsPanel.connections.revoke")}
           </Button>

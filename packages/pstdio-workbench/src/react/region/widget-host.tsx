@@ -11,6 +11,7 @@ import type {
 } from "../../core";
 import { getWorkbenchRenderers } from "../../core";
 import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
+import { WorkbenchActionErrors } from "../notifications/action-errors";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -92,12 +93,14 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       data-workbench-view={view?.id ?? placement.contributionId}
       data-workbench-renderer={renderer ? "mounted" : "missing"}
       display="flex"
+      flexDirection="column"
       flex="1 0 auto"
       minW="0"
       minH="0"
       w="full"
       overflow="hidden"
     >
+      <WorkbenchActionErrors workbench={workbench} target={placement.widgetId} />
       {renderer ? (
         <WorkbenchRenderedWidgetFrame>
           {renderer.render({ workbench, panel, instance, refresh }) as ReactNode}
