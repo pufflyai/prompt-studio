@@ -84,9 +84,12 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
 }) => {
   const project = await createProject(request);
 
-  const initialInstallResponse = await request.post(`${apiBase}/v1/projects/${project.id}/extensions/install`, {
-    data: { source: { kind: "catalog", name: marketplaceExtension }, force: true },
-  });
+  const [initialInstallResponse] = await Promise.all([
+    request.post(`${apiBase}/v1/projects/${project.id}/extensions/install`, {
+      data: { source: { kind: "catalog", name: marketplaceExtension }, force: true },
+    }),
+    openExtensions(page, project.id),
+  ]);
   expect(initialInstallResponse.status(), await initialInstallResponse.text()).toBe(201);
 
   const listResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions`);
@@ -98,7 +101,6 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   expect(installed).toMatchObject({ enabled: true });
   expect(existsSync(installedManifestPath())).toBe(true);
 
-  await openExtensions(page, project.id);
   const installedRow = page.getByTestId("extension-entry").filter({ hasText: marketplaceExtensionName });
   const availableRow = page.getByTestId("marketplace-extension-entry").filter({ hasText: marketplaceExtensionName });
 

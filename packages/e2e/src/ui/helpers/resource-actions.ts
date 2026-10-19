@@ -1,5 +1,6 @@
 import { type APIRequestContext, expect, type Page } from "@playwright/test";
 import { folderProjectInput } from "../../helpers/folder-project";
+import { switchSession } from "../../helpers/session-side-panel";
 import { uiOrigin as apiBase } from "../../ui-server";
 
 export const createResourceActionsProject = async (request: APIRequestContext, folderPath?: string) => {
@@ -40,16 +41,6 @@ export const expectResourceMenuItems = async (page: Page, labels: string[]) => {
   }
 };
 
-export const switchSession = async (page: Page, title: string) => {
-  await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
-  const picker = page.getByRole("dialog", { name: "Switch session", exact: true });
-  await picker.getByRole("textbox").fill(title);
-  await picker
-    .getByRole("option")
-    .filter({ has: page.getByText(title, { exact: true }) })
-    .click();
-};
-
 export const openSessionSidePanel = async (page: Page, title: string) => {
   await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
@@ -58,4 +49,8 @@ export const openSessionSidePanel = async (page: Page, title: string) => {
     .getByRole("tab", { selected: true })
     .click({ button: "right" });
   await switchSession(page, title);
+  const tab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: title, exact: true });
+  await tab.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+  await expect(tab).toHaveCSS("font-style", "normal");
 };

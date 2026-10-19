@@ -39,9 +39,9 @@ test("plan actions take over the composer and restore its draft without sending 
   }, project.id);
   const resource = encodeURIComponent(`pstdio://extension-resource/session/${session.id}`);
   await page.goto(`/projects/${project.id}/session?resource=${resource}`);
-  const decision = page.getByLabel("Plan decision", { exact: true });
+  const decision = page.getByLabel("Plan decision", { exact: true }).filter({ visible: true });
   const editor = page.locator('[data-testid="content-editable"][contenteditable="true"]:visible').last();
-  const controls = page.getByLabel("Harness controls", { exact: true });
+  const controls = page.getByLabel("Harness controls", { exact: true }).filter({ visible: true });
   const reopen = async () => {
     await controls.getByRole("button", { name: "Plan details" }).click();
     await page.getByRole("button", { name: "Approve and implement", exact: true }).click();

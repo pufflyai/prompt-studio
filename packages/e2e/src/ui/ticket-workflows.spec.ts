@@ -123,7 +123,7 @@ for (const action of ["Delete workspace"]) {
     await expect(page).toHaveURL(/\/workspace\?resource=/);
     await expect(page.getByRole("tab", { name: "Changes", exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Workspaces", exact: true })).toHaveCount(0);
-    await page.getByRole("button", { name: `Actions for ${workspace.workspace_shorthand}`, exact: true }).click();
+    await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
     await expect(page.getByRole("menuitem", { name: "Delete workspace", exact: true })).toBeVisible();
     const response = page.waitForResponse(
       (response) =>

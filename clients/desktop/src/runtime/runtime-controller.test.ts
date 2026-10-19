@@ -109,12 +109,12 @@ describe("desktop runtime controller", () => {
   test("classifies actionable startup failures", () => {
     expect(classifyRuntimeFailure("listen EADDRINUSE: address already in use").code).toBe("port_bind_failure");
     expect(classifyRuntimeFailure("Failed to start server. Is port 59152 in use?").code).toBe("port_bind_failure");
-    expect(
-      classifyRuntimeFailure("pstdio.db is in use by pid 42 (pstdio serve) — refusing to open it a second time").code,
-    ).toBe("pglite_ownership_conflict");
-    expect(classifyRuntimeFailure("Timed out waiting for another process choosing the pstdio.db lock").code).toBe(
+    expect(classifyRuntimeFailure("pstdio.db is in use — refusing to open it a second time").code).toBe(
       "pglite_ownership_conflict",
     );
+    expect(
+      classifyRuntimeFailure("A legacy pstdio.db lock exists. Stop its runtime before removing the legacy lock.").code,
+    ).toBe("pglite_ownership_conflict");
     expect(classifyRuntimeFailure("invalid checkpoint record").code).toBe("pglite_recovery_failure");
   });
 
@@ -124,6 +124,16 @@ describe("desktop runtime controller", () => {
 
     expect(classifyRuntimeFailure(output).code).toBe("pglite_recovery_failure");
     expect(classifyRuntimeFailure(message).code).toBe("unexpected_exit");
+  });
+
+  test("recognizes database ownership conflicts before database-open failures", () => {
+    for (const message of [
+      "pstdio.db is in use — refusing to open it a second time",
+      "A legacy pstdio.db lock exists. Stop its runtime before removing the legacy lock.",
+    ]) {
+      const output = JSON.stringify({ event: "db.open.failed", err: { message } });
+      expect(classifyRuntimeFailure(output).code).toBe("pglite_ownership_conflict");
+    }
   });
 
   test("reads a logged startup step as progress, not as a database ownership conflict", () => {

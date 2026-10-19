@@ -1,5 +1,45 @@
 # @pstdio/sdk
 
+## 0.44.0
+
+_2026-10-18_
+
+### Minor Changes
+
+- 64aff9e: Move allocated files to publisher-isolated extension storage in extension API 0.2.
+- e0d2a76: Add resource-owned related tabs with mode-scoped panels, remembered closures, temporary automatic reveal, pin-on-drop retention, and qualified activity-ordered session queries
+- bcb38f8: Add linked count badges and restore document breadcrumb ancestry through owner resource resolution.
+- e419d9d: Add virtual board rendering, complete move callbacks, and schema-only view refresh.
+- 6655795: Add extension-owned data migration versions and scoped access to retained legacy records.
+- e2b23f5: Add typed page params and persist extension-owned webview preferences on the server.
+- 0b86513: Add labeled resource menu sections and disabled action contracts.
+- 39d5ddf: Add durable grouped storage with guarded saves, retained conflicts, and public SDK access.
+- 0325001: Add shared session rename, archive, and guarded deletion actions with synced navigation and public SDK support.
+- 26bb359: Add stable workbench bindings and isolate local runtime identities, connections, and caches.
+- bc13b78: Add resumable verified asset storage with streaming uploads and retained immutable versions.
+- 4b3c6cb: Place native extension controls in their Settings tab, save rapid edits in order, preserve status colors, and validate resource links against the enabled extension owner.
+- 7572b09: Repair extension logging, lifecycle events, webview context, test helpers, and notification snoozing; remove APIs deprecated in 0.43.1 with replacements listed in the extension API 0.2.0 migration guide.
+
+### Patch Changes
+
+- d6c34a7: Unify notification status changes across extension commands and HTTP clients.
+- afe5fe6: Add typed webview settings deletion to restore declared fallbacks.
+- fe37abf: Translate localized extension parameter guidance in CLI help.
+- 3e37198: Share camelCase session and workspace fields across commands and SDK clients.
+- 31693f4: Deprecate filesystem hook contexts and the repository file guard while retaining pure helpers.
+- 3157d46: Let resource owners open claimed file paths and show resource bubbles in rich messages.
+- fc9a05f: Keep the storage passed to `makeCommandContext` so tests that patch it or pass a whole storage override reach the command again.
+- a87809d: Deprecate historical workspace archive operations in favor of delete.
+- 19c042b: Preserve complete command outcomes and share cancellable chunk streams across webviews, SDK and CLI.
+- 83a7e7a: Preserve serialized command failure messages when no reason is available.
+- 759265f: Add paged session queries and cancellable SDK iteration.
+- be6e8ed: Make resource link mutations atomic and consistent across extension APIs.
+- 4b3c6cb: Expose execution exit evidence and guard automatic session continuation against changed runs.
+- 121db2c: Use typed dashboard requests and report the supported public SDK surface.
+- cf0dd46: Add typed webview clients, shared host context, structured errors and event-driven query refresh.
+- 0ea0e49: Add paged resource queries and camelCase client contracts with 0.44 compatibility aliases.
+- 83d67ff: Let extension tree rows show a tooltip anywhere on the row with the new `tooltip` field, such as a file's full path.
+
 ## 0.43.1
 
 _2026-10-13_

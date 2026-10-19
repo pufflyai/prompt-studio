@@ -1,4 +1,5 @@
 import type {
+  DockedWorkbenchRegion,
   FileRendererSectionTarget,
   Localizable,
   PageDocumentDeclaration,
@@ -73,6 +74,8 @@ export interface WorkbenchPageSlotOpenInput {
   slotId: string;
   resource?: ResourceRef;
   open?: PageOpenIntent;
+  /** Explicit destination for this open. Omit to keep an existing tab's placement. */
+  region?: DockedWorkbenchRegion;
 }
 
 export interface WorkbenchPageSlotInstance {

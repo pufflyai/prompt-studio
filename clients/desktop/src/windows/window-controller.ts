@@ -145,7 +145,9 @@ export class DesktopWindowController {
     // workbench loads again and then reads the confirmation state, so quitting never
     // waits on a dialog nobody can see.
     const contents = this.#workbench?.webContents;
+    // The URL can commit before the document finishes loading. Join that load before revealing the view.
     if (
+      this.#workbenchLoad ||
       !this.#workbench ||
       !contents ||
       contents.isCrashed() ||

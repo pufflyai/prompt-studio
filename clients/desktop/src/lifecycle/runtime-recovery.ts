@@ -23,8 +23,9 @@ export const createRuntimeRecovery = (deps: RuntimeRecoveryDeps) => {
         // Loading a workbench can finish after its backend exits. Reveal recovery again
         // so that late load cannot hide the error with a disconnected dashboard.
         const failure = interrupted;
-        if (failure) await deps.showFailure(failure.error);
+        // Recovery exposes Retry immediately; it must start a fresh attempt even while the UI finishes loading.
         pending = null;
+        if (failure) await deps.showFailure(failure.error);
       }
     })();
     return pending;

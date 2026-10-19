@@ -37,6 +37,23 @@ const sessionPlacements = (workbench: ReturnType<typeof createWorkbench>) =>
   workbench.layout
     .getLayout()
     .regions.side.widgets.filter((widget) => widget.viewId === dashboardWidgetIds.sessionBubble);
+test("adding a Session to Bottom never changes Side", async () => {
+  const workbench = createWorkbench();
+  workbench.registerModule(createSessionBubbleModule());
+  await activateProjectPage(workbench);
+  workbench.shell.setRegionOpen("side", true);
+  const observed: number[] = [];
+  const unsubscribe = workbench.layout.store.subscribe(() => observed.push(sessionPlacements(workbench).length));
+  const add = workbench.composition
+    .panelsFor("secondary")
+    .addable.find((panel) => panel.contribution.title === "Session");
+  expect(add?.open).toBeDefined();
+  await add!.open!();
+  unsubscribe();
+  expect(observed.every((count) => count === 0)).toBe(true);
+  expect(workbench.layout.getActivePanel("secondary")?.resource?.type).toBe("session-draft");
+  expect(workbench.shell.getRegionState("side").open).toBe(true);
+});
 test("opens the session supplied by a resource menu execution context", async () => {
   const workbench = createWorkbench();
   workbench.registerModule(createSessionBubbleModule());

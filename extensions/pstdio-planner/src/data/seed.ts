@@ -209,14 +209,14 @@ export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
     const [existing, seeded] = await Promise.all([tagsCollection(storage).list(), storage.get(TAG_SEED_MARKER)]);
     if (seeded || (existing.length > 0 && !isOnlyDefaultTags(existing))) {
       if (!seeded) await storage.set(TAG_SEED_MARKER, true);
-      return ensureHumanRequestedTag(storage, existing);
+      return sortedBySortOrder(await ensureHumanRequestedTag(storage, existing));
     }
 
     const existingIds = new Set(existing.map((tag) => tag.id));
     const missing = DEFAULT_TAGS.map((seed) => seed()).filter((tag) => !existingIds.has(tag.id));
     await Promise.all(missing.map((tag) => putTag(storage, tag)));
     await storage.set(TAG_SEED_MARKER, true);
-    return ensureHumanRequestedTag(storage, sortedBySortOrder(await tagsCollection(storage).list()));
+    return sortedBySortOrder(await ensureHumanRequestedTag(storage, await tagsCollection(storage).list()));
   })();
   tagSeedPromises.set(storage, promise);
   try {

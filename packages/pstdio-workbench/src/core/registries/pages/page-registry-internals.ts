@@ -1,5 +1,6 @@
 import type { PageLocation, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { Disposable } from "../../shared/disposable";
+import type { PlacementDestination } from "../layout/placement-reconciliation";
 import type { createPagePreparation } from "./page-preparation";
 import type {
   WorkbenchPageOpenInput,
@@ -42,8 +43,8 @@ export interface WorkbenchPageRegistryInternals<Value> {
     normalize?: (state: WorkbenchPageRegistryStoreState<Value>) => WorkbenchPageRegistryStoreState<Value>,
   ): Disposable;
   activateLocation(input: WorkbenchPageLocationCommitInput): void;
-  refreshModePlacements(): void;
-  refreshShellPlacements(): void;
+  refreshModePlacements(destination?: PlacementDestination): void;
+  refreshShellPlacements(destination?: PlacementDestination): void;
   clearProject(projectId: string | undefined): void;
   resolveClosePlacement(identity: PlacementIdentity): WorkbenchPageCloseResolution;
 }

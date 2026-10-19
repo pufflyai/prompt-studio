@@ -55,6 +55,39 @@ test("failed automatic startup opens recovery without retrying in a loop", async
   expect(s.failures).toEqual([error]);
 });
 
+test("Retry starts when recovery is visible and preserves the new pending startup", async () => {
+  const failureShown = Promise.withResolvers<void>();
+  const finishFailure = Promise.withResolvers<void>();
+  const finishRetry = Promise.withResolvers<void>();
+  let starts = 0;
+  const recovery = createRuntimeRecovery({
+    start: async () => {
+      if (++starts === 1) throw new Error("ownership is uncertain");
+      await finishRetry.promise;
+    },
+    canRestart: () => true,
+    showFailure: async () => {
+      failureShown.resolve();
+      await finishFailure.promise;
+    },
+  });
+  try {
+    const first = recovery.start();
+    await failureShown.promise;
+    const retry = recovery.start();
+    expect(starts).toBe(2);
+    finishFailure.resolve();
+    await first;
+    const repeated = recovery.start();
+    expect(starts).toBe(2);
+    finishRetry.resolve();
+    await Promise.all([retry, repeated]);
+  } finally {
+    finishFailure.resolve();
+    finishRetry.resolve();
+  }
+});
+
 test("external runtimes and quit confirmation only show recovery", async () => {
   const s = setup();
   await s.recovery.start();

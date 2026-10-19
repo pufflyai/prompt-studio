@@ -97,8 +97,8 @@ describe("seedDefaultTags", () => {
 
     await Promise.all([seedDefaultTags(storage), seedDefaultTags(storage)]);
 
-    const stored = await tagsCollection(storage).list();
-    expect(sortedBySortOrder(stored).map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity", "Flags"]);
+    const stored = sortedBySortOrder(await tagsCollection(storage).list());
+    expect(stored.map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity", "Flags"]);
     expect(stored.find((tag) => tag.id === "default-type")?.type).toBe("single_select");
   });
 

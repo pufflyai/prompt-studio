@@ -4,6 +4,7 @@ import type {
   ResourceRef,
   WorkbenchModuleContext,
   WorkbenchModuleContribution,
+  WorkbenchPanelRegion,
   WorkbenchTabRetention,
 } from "@pstdio/workbench";
 import { lazy, Suspense } from "react";
@@ -117,6 +118,7 @@ const openNewSessionDraft = (
     sidePanel?: boolean;
     tabRetention?: WorkbenchTabRetention;
     replacePanel?: PlacementIdentity;
+    region?: WorkbenchPanelRegion;
   } = {},
 ) => {
   const workspace = input.workspace ?? getPrimaryWorkspaceResource(ctx) ?? createDefaultWorkspaceResource(ctx);
@@ -148,6 +150,7 @@ const openNewSessionDraft = (
     resource: draftResource,
     title: draftResource.label,
     tabRetention: input.tabRetention,
+    region: input.region,
   });
 };
 const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
@@ -213,6 +216,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
           replacePanel: isNewTab ? undefined : replacePanel,
           sidePanel: sidePanel || isNewTab,
           tabRetention: isNewTab ? "persistent" : undefined,
+          region: context?.region,
         });
         return undefined;
       },

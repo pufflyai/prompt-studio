@@ -4,6 +4,16 @@ import { folderProjectInput } from "./folder-project";
 
 export const fakeHarnessId = "pstdio.workbench-fixture.harness.fake";
 
+export const switchSession = async (page: Page, title: string) => {
+  await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "Switch session", exact: true });
+  await picker.getByRole("textbox").fill(title);
+  await picker
+    .getByRole("option")
+    .filter({ has: page.getByText(title, { exact: true }) })
+    .click();
+};
+
 // Creates a project with two finished fake-harness sessions and shows both, one after the other, in
 // a single Side Panel tab. The tab ends on the last session.
 export const openSessionsInOneSidePanelTab = async (page: Page, request: APIRequestContext, projectName: string) => {
@@ -39,10 +49,8 @@ export const openSessionsInOneSidePanelTab = async (page: Page, request: APIRequ
   const header = page.locator('[data-workbench-panel-header="side"]');
   const switchTab = async (from: string, to: string) => {
     await header.getByRole("tab", { name: from, exact: true }).click({ button: "right" });
-    await page
-      .getByRole("menu", { name: `${from} context menu`, exact: true })
-      .getByRole("menuitem", { name: to, exact: true })
-      .click();
+    if (to === "New session") await page.getByRole("menuitem", { name: "New session", exact: true }).click();
+    else await switchSession(page, to);
     await expect(header.getByRole("tab", { name: to, exact: true })).toBeVisible();
   };
   if ((await header.getByRole("tab", { name: "New session", exact: true }).count()) === 0) {

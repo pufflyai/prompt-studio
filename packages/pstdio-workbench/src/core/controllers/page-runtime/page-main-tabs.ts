@@ -122,9 +122,7 @@ const refreshSharedPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPlace
 
 const sharedPageTabValue = (input: PageTabsInput, widget: WorkbenchWidgetPlacement) => {
   const key = placementIdentityKey(widget.placementIdentity!);
-  const explicit =
-    !pageContextChanged(input.state, input.previous) &&
-    input.state.reconciliation.activate.find((entry) => placementIdentityKey(entry.identity) === key);
+  const explicit = input.state.reconciliation.activate.find((entry) => placementIdentityKey(entry.identity) === key);
   return explicit ? { ...explicit.value, widgetId: widget.widgetId } : refreshSharedPageTab(input, widget);
 };
 
@@ -181,6 +179,7 @@ export const scopePageMainTabs = (input: PageTabsInput) => {
     reconciliation: reconcileOwnedPlacements({
       current: previous.placements,
       desired: placements,
+      destinations: state.reconciliation.destinations,
       activate: state.reconciliation.activate
         .filter((entry) =>
           placements.some(

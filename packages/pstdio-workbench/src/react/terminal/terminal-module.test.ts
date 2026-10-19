@@ -116,8 +116,14 @@ describe("createWorkbenchTerminalModule", () => {
     const workbench = setup();
     workbench.shell.setRegionOpen("secondary", false);
     const terminalPanelId = shellPlacementContributionId(WORKBENCH_TERMINAL_WIDGET_ID);
+    const observed: number[] = [];
+    const unsubscribe = workbench.layout.store.subscribe(() => {
+      observed.push(workbench.layout.listPanelInstances("secondary").length);
+    });
     const add = workbench.composition.panelsFor(region).addable.find((panel) => panel.panelId === terminalPanelId);
     await add?.open?.();
+    unsubscribe();
+    expect(observed.every((count) => count === 0)).toBe(true);
     const widgets = workbench.layout.getLayout().regions[region].widgets;
     expect(widgets.some((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID)).toBe(true);
     expect(workbench.shell.getRegionState("secondary").open).toBe(false);

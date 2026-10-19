@@ -13,7 +13,7 @@ export const retainTrayPreviews = (
   modeLayout?: WorkbenchLayout,
 ) => {
   const rendered = renderDesiredPlacements(
-    { layout: current, modeLayout, placements: state.placements },
+    { layout: current, modeLayout, placements: state.placements, destinations: state.reconciliation.destinations },
     indexCurrentOwnedPlacements(current),
   );
   const incoming = [
@@ -56,6 +56,7 @@ export const removeTrayPreviews = (state: State, previous: State, removed: Reado
     reconciliation: reconcileOwnedPlacements({
       current: previous.placements,
       desired: placements,
+      destinations: state.reconciliation.destinations,
       activate: state.reconciliation.activate
         .filter((entry) => !removed.has(placementIdentityKey(entry.identity)))
         .map((entry) => entry.identity),

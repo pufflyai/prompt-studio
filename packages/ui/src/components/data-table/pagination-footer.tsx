@@ -21,6 +21,7 @@ export function PaginationFooter(props: PaginationFooterProps) {
 
   return (
     <Flex
+      flexShrink="0"
       alignItems="center"
       justifyContent="flex-end"
       borderTop="1px solid"

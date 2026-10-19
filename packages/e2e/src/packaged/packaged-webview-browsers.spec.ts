@@ -17,6 +17,7 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { verifyTreeGroups } from "../helpers/tree-groups";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
@@ -72,6 +73,10 @@ test.describe("packaged extension webviews", () => {
     browserTest(
       `persists commands and settings through authenticated opaque webviews in ${browserCase.name}`,
       async () => {
+        const startedAt = Date.now();
+        const phase = (name: string) =>
+          logTestPhase(`Packaged ${browserCase.name} ${name} (${Date.now() - startedAt}ms)`);
+        phase("runtime start");
         const tempRoot = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-packaged-webview-")));
         let child: ChildProcess | null = null;
         let browser: Browser | null = null;
@@ -112,6 +117,7 @@ test.describe("packaged extension webviews", () => {
             await sleep(250);
           }
           expect(labWebview?.webview.moduleUrl).toBeTruthy();
+          phase("runtime ready");
 
           browser = await browserCase.type.launch({ headless: true, ...browserCase.launchOptions });
           const context = await browser.newContext();
@@ -183,33 +189,39 @@ test.describe("packaged extension webviews", () => {
 
           await page.reload();
           await expect(settingsFrame.getByRole("spinbutton")).toHaveValue("7");
-          await page.keyboard.press("Escape");
+          await page.getByRole("button", { name: "Close Lab (project)", exact: true }).click();
           await expect(page.getByRole("dialog")).toHaveCount(0);
           await page.getByRole("option", { name: "Settings", exact: true }).click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
           await expect(settingsFrame.getByRole("spinbutton")).toHaveValue("7");
-          await page.keyboard.press("Escape");
+          await page.getByRole("button", { name: "Close Lab (project)", exact: true }).click();
           await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
           await expect(frame.getByText("1", { exact: true })).toBeVisible();
           await frame.getByRole("button", { name: "Increment", exact: true }).click();
           await expect(frame.getByText("8", { exact: true })).toBeVisible();
 
           if (browserCase.name === "Chromium") {
+            phase("core checked; notes start");
             await verifyPackagedNoteHeadings(
               page,
               started.baseUrl,
               project.id,
               runtimeAuthorization(started.descriptor),
             );
+            phase("notes checked; terminal start");
             await verifyPackagedTerminal(page, started.baseUrl, project.id, started.descriptor.token);
+            phase("terminal checked; session menus start");
             await verifyPackagedSessionMenus(
               page,
               started.baseUrl,
               project.id,
               runtimeAuthorization(started.descriptor),
             );
+            phase("session menus checked; preview selection start");
             await verifyPackagedPreviewSelection(page, project.id, started.descriptor);
+            phase("preview checked; panel menus start");
             await verifyPackagedPanelMenuTabs(page, started.baseUrl, project.id);
+            phase("panel menus checked; collection start");
             await verifyPackagedCollectionBreadcrumb(
               page,
               started.baseUrl,
@@ -217,7 +229,9 @@ test.describe("packaged extension webviews", () => {
               projectFolder,
               runtimeAuthorization(started.descriptor),
             );
+            phase("collection checked; document state start");
             await verifyPackagedDocumentState(page, started.baseUrl, project.id);
+            phase("documents checked; tree start");
             await page.goto(`${started.baseUrl}/projects/${project.id}/workspaces`);
             const sidenav = page.locator('[data-workbench-region="sidenav"]');
             await verifyTreeGroups(page, sidenav, sidenav.getByRole("option", { name: "Search", exact: true }));
@@ -228,6 +242,7 @@ test.describe("packaged extension webviews", () => {
           expect(authenticationFailures).toEqual([]);
           expect((await page.content()).includes(started.descriptor.token)).toBe(false);
           expect((await page.evaluate(() => document.cookie)).includes(started.descriptor.token)).toBe(false);
+          phase("checks complete");
         } finally {
           await browser?.close();
           if (child) await stopProcess(child);

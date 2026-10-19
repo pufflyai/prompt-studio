@@ -155,6 +155,7 @@ const applyPageState = (
       modeLayout,
       placements: bindPlacementsToActivePageLocation(latest),
       activate: activation.map((placement) => placement.identity),
+      destinations: source === "transition" ? latest.reconciliation.destinations : undefined,
     };
     const layout = reconcilePageLayout(layoutInput, latest, restoresLayout);
     const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
@@ -312,11 +313,11 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     modes: input.modes,
     registry,
   });
-  getOwnedPlacementPreparation(input.modePlacements).connectRuntime(() =>
-    getWorkbenchPageRegistryInternals(registry).refreshModePlacements(),
+  getOwnedPlacementPreparation(input.modePlacements).connectRuntime((destination) =>
+    getWorkbenchPageRegistryInternals(registry).refreshModePlacements(destination),
   );
-  getOwnedPlacementPreparation(input.shellPlacements).connectRuntime(() =>
-    getWorkbenchPageRegistryInternals(registry).refreshShellPlacements(),
+  getOwnedPlacementPreparation(input.shellPlacements).connectRuntime((destination) =>
+    getWorkbenchPageRegistryInternals(registry).refreshShellPlacements(destination),
   );
   return registry;
 };
