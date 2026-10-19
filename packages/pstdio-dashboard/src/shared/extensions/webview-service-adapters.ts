@@ -55,10 +55,18 @@ export const createDashboardWebviewSettingsAdapter = (owner: SettingsOwner) => {
   return undefined;
 };
 
-export const createDashboardWebviewNotificationsAdapter = (input: { projectId?: string; extensionId: string }) => {
+export const createDashboardWebviewNotificationsAdapter = (input: {
+  projectId?: string;
+  extensionId: string;
+  showError: (notice: { title?: string; description?: string }) => void;
+}) => {
   const projectId = input.projectId;
   return {
     show: (notice) => {
+      if (notice.type === "error") {
+        input.showError({ title: notice.title ?? "Extension action failed", description: notice.message });
+        return;
+      }
       toaster.create({ type: notice.type, title: notice.title, description: notice.message });
     },
     ...(projectId

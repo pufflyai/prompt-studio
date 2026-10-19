@@ -40,6 +40,7 @@ import { createMenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModePlacementRegistry } from "./registries/modes/mode-placement-registry";
 import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
 import type { createNavigationTreeRegistry } from "./registries/navigation/navigation-tree-registry";
+import { actionErrorTarget } from "./registries/notifications/action-error-target";
 import { createNotificationRegistry } from "./registries/notifications/notification-registry";
 import { createWorkbenchOverlayRegistry } from "./registries/overlays/overlay-registry";
 import type { WorkbenchPageRegistryStoreState } from "./registries/pages/page-registry";
@@ -269,7 +270,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     modes,
     modePlacements,
     shellPlacements,
-    notifications: createNotificationRegistry(),
+    notifications: createNotificationRegistry(() => actionErrorTarget({ focus, layout })),
     overlays,
     placeholders,
     pageLocations,

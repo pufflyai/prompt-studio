@@ -1,4 +1,3 @@
-import { toaster } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { type CollectionChange, getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
@@ -203,7 +202,10 @@ export const useUninstallProjectExtension = (projectId: string | undefined) => {
   });
 };
 
-export const useExecuteExtensionCommand = (projectId: string | undefined) => {
+export const useExecuteExtensionCommand = (
+  projectId: string | undefined,
+  showNotice: Parameters<typeof surfaceWebviewCommandOutcome>[1],
+) => {
   const owner = getRuntimeCollections();
   const queryClient = useQueryClient();
 
@@ -223,7 +225,7 @@ export const useExecuteExtensionCommand = (projectId: string | undefined) => {
       return response;
     },
     onSuccess: async (response) => {
-      surfaceWebviewCommandOutcome(response, (notification) => toaster.create(notification));
+      surfaceWebviewCommandOutcome(response, showNotice);
       await queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) });
     },
   });

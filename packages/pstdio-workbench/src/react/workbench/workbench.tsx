@@ -7,6 +7,7 @@ import type { CommandParamFieldRenderer } from "../command-palette/command-param
 import { WorkbenchNavChrome } from "../header/workbench-nav-chrome";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
+import { useHasSystemErrors } from "../notifications/system-error-state";
 import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useModeChrome } from "../region/mode-chrome";
 import { movePanelHost } from "../region/move-panel-host";
@@ -79,6 +80,7 @@ const createSidePanelHost = () => {
 const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
   const statusChrome = useModeChrome(workbench, "status");
   const statusBarItems = useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
+  const hasSystemErrors = useHasSystemErrors(workbench);
   useWorkbenchStore(workbench.context.store, (state) => state.values);
   const activeModeId = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   return {
@@ -92,11 +94,12 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
     hasSideWidgets: useWorkbenchRegionContent(workbench, "side", { locationScoped: true }),
     hasSideMenus: useWorkbenchPanelMenusPresent(workbench, "side"),
     hasStatusWidgets:
-      statusChrome !== undefined
+      hasSystemErrors ||
+      (statusChrome !== undefined
         ? statusChrome !== false
         : activeModeId === workbench.modes.getActiveModeId() &&
           Object.keys(statusBarItems).length > 0 &&
-          workbench.statusBar.listVisibleItems().length > 0,
+          workbench.statusBar.listVisibleItems().length > 0),
   };
 };
 

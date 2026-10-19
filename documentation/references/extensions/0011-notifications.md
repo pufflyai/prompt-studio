@@ -12,7 +12,7 @@ The dashboard's notification center starts off. Users enable it in **Settings â†
 | Toast | `ctx.notify.toast(...)` | Ephemeral feedback the user does not need to revisit. |
 | Notifications | `ctx.notify.action(...)` | Durable pending work the user or an agent still needs to resolve. |
 
-Use notifications only for actionable items such as review, approval, merge, unblock, retry, or failure recovery. Routine progress belongs in activity, and short success/error feedback belongs in toasts.
+Use notifications only for actionable items such as review, approval, merge, unblock, retry, or failure recovery. Routine progress belongs in activity, and short success feedback belongs in toasts. Show failed actions in the UI where the user tried the action. Errors never use toasts. The host's status-bar error widget is for system errors only.
 
 ## Creating Action Items
 

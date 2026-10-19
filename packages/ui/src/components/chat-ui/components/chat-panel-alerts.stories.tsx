@@ -218,11 +218,7 @@ export const WorkspaceSetupFailed: Story = {
   },
 };
 
-const retry = (
-  <Button size="2xs" variant="outline">
-    Retry
-  </Button>
-);
+const retry = <Button>Retry</Button>;
 
 const sentConversation: SessionMessage[] = [
   { id: "user-sent", role: "user", parts: [{ type: "text", text: "Check the board" }], createdAt: Date.now() - 60_000 },

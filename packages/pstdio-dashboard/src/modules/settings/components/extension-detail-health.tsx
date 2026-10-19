@@ -32,20 +32,14 @@ export const ExtensionDetailHealth = (props: ExtensionDetailHealthProps) => {
       }
       data-testid="extension-detail-health"
       endElement={
-        <HStack gap="xs" flexShrink="0">
+        <HStack gap="2xs" justifyContent="flex-end" flexWrap="wrap" minW="0">
           {extension.canUpgrade && (
-            <Button
-              variant="primary"
-              size="2xs"
-              onClick={onUpgrade}
-              loading={upgrading}
-              data-testid="extension-health-upgrade"
-            >
+            <Button onClick={onUpgrade} loading={upgrading} data-testid="extension-health-upgrade">
               <ArrowUpCircle size={12} />
               {t("projectSettings.extensionsPanel.upgrade.action")}
             </Button>
           )}
-          <Button variant="ghost" size="2xs" onClick={() => void copyError()} data-testid="extension-copy-error">
+          <Button onClick={() => void copyError()} data-testid="extension-copy-error">
             <Copy size={12} />
             {t("projectSettings.extensionsPanel.health.copyError")}
           </Button>

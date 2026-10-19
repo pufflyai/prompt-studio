@@ -12,6 +12,7 @@ import {
   workbenchCommandPaletteMenuPath,
 } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
+import { WorkbenchActionErrors } from "../notifications/action-errors";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -84,9 +85,13 @@ const executePaletteCommand = async (input: {
   args: unknown;
   context?: WorkbenchCommandExecutionContext;
   label: string;
+  onClose: () => void;
 }) => {
-  const { args, commandId, context, label, workbench } = input;
-  await runUserAction(workbench, label, () => workbench.commands.executeCommand(commandId, args, context));
+  const { args, commandId, context, label, workbench, onClose } = input;
+  await runUserAction(workbench, label, () => workbench.commands.executeCommand(commandId, args, context), {
+    inlineTarget: "command-palette",
+    onSuccess: onClose,
+  });
 };
 
 const createEntry = (input: {
@@ -127,12 +132,12 @@ const createEntry = (input: {
     ),
     onActivate: () => {
       const context = commandExecutionContext(workbench);
-      onClose();
       if (hasCommandParameters(record.command.params) && onRequestParams) {
+        onClose();
         onRequestParams({ record, action, label, args, context });
         return;
       }
-      void executePaletteCommand({ workbench, commandId: record.command.id, args, context, label });
+      void executePaletteCommand({ workbench, commandId: record.command.id, args, context, label, onClose });
     },
   };
 };
@@ -276,6 +281,7 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
           inputIcon={({ mode }) => getPaletteInputIcon({ view, mode })}
           placeholder={({ mode }) => getPalettePlaceholder({ view, mode })}
           emptyLabel="No results found."
+          footerStart={<WorkbenchActionErrors workbench={workbench} target="command-palette" />}
           onActiveEntryChange={(entry) => {
             if (!open || !isThemeView) return;
             const themeEntry = entry as WorkbenchThemePaletteEntry | null;
