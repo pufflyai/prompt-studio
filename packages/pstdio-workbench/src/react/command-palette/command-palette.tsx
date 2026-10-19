@@ -11,6 +11,7 @@ import {
   type WorkbenchCore,
   workbenchCommandPaletteMenuPath,
 } from "../../core";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchActionErrors } from "../notifications/action-errors";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
@@ -87,13 +88,10 @@ const executePaletteCommand = async (input: {
   onClose: () => void;
 }) => {
   const { args, commandId, context, label, workbench, onClose } = input;
-  const reportError = workbench.notifications.captureActionError(label, "command-palette");
-  try {
-    await workbench.commands.executeCommand(commandId, args, context);
-    onClose();
-  } catch (error) {
-    reportError(error);
-  }
+  await runUserAction(workbench, label, () => workbench.commands.executeCommand(commandId, args, context), {
+    inlineTarget: "command-palette",
+    onSuccess: onClose,
+  });
 };
 
 const createEntry = (input: {

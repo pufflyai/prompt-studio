@@ -47,6 +47,7 @@ export const executeWorkbenchExtensionCommandResponse = async (
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
   const resource = input.resource;
+  const reportNavigationError = context.workbench.notifications.captureActionError("Open command result");
   const response = await context.executeCommand(
     commandId,
     {
@@ -66,11 +67,7 @@ export const executeWorkbenchExtensionCommandResponse = async (
       try {
         await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { region: input.region }));
       } catch (error) {
-        context.workbench.notifications.show({
-          level: "warning",
-          title: "Command completed, but navigation failed",
-          message: error instanceof Error ? error.message : String(error),
-        });
+        reportNavigationError(error);
       }
     }
   }

@@ -3,6 +3,41 @@ import { createNotificationRegistry } from "../registries/notifications/notifica
 import { runUserAction } from "./run-user-action";
 
 describe("user action failure reporting", () => {
+  test("keeps a failed picker open and reports its error inside the picker", async () => {
+    const notifications = createNotificationRegistry(() => "files");
+    let closed = false;
+    await runUserAction({ notifications }, "Open", () => Promise.reject(new Error("File unavailable")), {
+      inlineTarget: "command-palette",
+      onSuccess: () => {
+        closed = true;
+      },
+    });
+    expect(closed).toBe(false);
+    expect(notifications.listNotifications()).toMatchObject([
+      { inlineTarget: "command-palette", message: "File unavailable" },
+    ]);
+  });
+
+  test("closes a picker only after its action succeeds", async () => {
+    const notifications = createNotificationRegistry();
+    let completed = false;
+    let closed = false;
+    await runUserAction(
+      { notifications },
+      "Open",
+      async () => {
+        completed = true;
+      },
+      {
+        onSuccess: () => {
+          expect(completed).toBe(true);
+          closed = true;
+        },
+      },
+    );
+    expect(closed).toBe(true);
+  });
+
   test("successful actions do not report a failure", async () => {
     const notifications = createNotificationRegistry();
     let ran = false;

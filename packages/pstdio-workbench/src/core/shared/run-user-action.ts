@@ -14,10 +14,12 @@ export const runUserAction = async (
   workbench: { notifications: Pick<NotificationRegistry, "captureActionError"> },
   label: string,
   run: () => unknown,
+  options?: { inlineTarget?: string; onSuccess?: () => void },
 ) => {
-  const reportError = workbench.notifications.captureActionError(label);
+  const reportError = workbench.notifications.captureActionError(label, options?.inlineTarget);
   try {
     await run();
+    options?.onSuccess?.();
   } catch (error) {
     reportError(error);
   }

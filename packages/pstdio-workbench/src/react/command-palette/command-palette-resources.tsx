@@ -47,8 +47,10 @@ export const useWorkbenchCommandPaletteResourceEntries = (input: UseWorkbenchCom
               group: result.group ?? group.title,
               icon: result.icon ? <WorkbenchIcon name={result.icon} /> : undefined,
               onActivate: () => {
-                onClose();
-                void runUserAction(workbench, result.label, () => result.activate());
+                void runUserAction(workbench, result.label, () => result.activate(), {
+                  inlineTarget: "command-palette",
+                  onSuccess: onClose,
+                });
               },
             })),
           ),

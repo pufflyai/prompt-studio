@@ -232,7 +232,11 @@ describe("executeWorkbenchExtensionCommand", () => {
     expect(created).toEqual(["created"]);
     expect(workbench.pages.store.getState().activePageId).toBe("tickets");
     expect(workbench.notifications.listNotifications()).toEqual([
-      expect.objectContaining({ level: "warning", message: expect.stringContaining("unavailable") }),
+      expect.objectContaining({
+        level: "error",
+        inlineTarget: "region:main",
+        message: expect.stringContaining("unavailable"),
+      }),
     ]);
   });
 
