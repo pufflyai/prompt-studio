@@ -3,6 +3,7 @@ import { join, posix, relative, resolve } from "node:path";
 import type { ArtifactFile, ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
 import { createReadBoundary } from "../runtime/read-boundary";
 import { ARTIFACT_MOUNT_ROOT } from "./extension-storage-path";
+import { globPatternToRegExp } from "./file-glob";
 import { normalizeArtifactMountPath } from "./path-normalization";
 import { createSafeFileRoot, normalizeMountRelativePath } from "./safe-file-root";
 import { createWorkspaceFileAccess, type WorkspaceFileAccess } from "./workspace-file-access";
@@ -22,16 +23,6 @@ type CreateArtifactMountInput = ArtifactMountLocation & {
 };
 
 type FileMountOptions = Pick<CreateArtifactMountInput, "signal" | "onWrite">;
-
-const globPatternToRegExp = (pattern: string) => {
-  const body = pattern.replace(/\*\*\/|\*\*|\*|[.+^${}()|[\]\\]/g, (token) => {
-    if (token === "**/") return "(?:.*/)?";
-    if (token === "**") return ".*";
-    if (token === "*") return "[^/]*";
-    return `\\${token}`;
-  });
-  return new RegExp(`^${body}$`);
-};
 
 const toPosixPath = (path: string) =>
   path

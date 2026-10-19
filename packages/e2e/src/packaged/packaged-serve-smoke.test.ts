@@ -35,6 +35,7 @@ import { registerExtensionInstallSmokeTests } from "./packaged-extension-install
 import { registerExtensionPublicationSmokeTests } from "./packaged-extension-publication-smoke";
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
+// Also proves conflicted inputs stop dispatch while public inspection remains available.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.

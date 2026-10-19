@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { StorageOwner } from "pstdio-sync";
-import type { StorageGroup } from "pstdio-sync-contracts";
+import type { StorageConflict, StorageGroup } from "pstdio-sync-contracts";
+import { assertConflictFreeRead } from "./conflict-read-boundary";
 
 const observations = new AsyncLocalStorage<{
   expected: Record<string, string>;
@@ -42,6 +43,8 @@ export const observeStorageOutcome = <T extends { status: string }>(outcome: T) 
 };
 
 export const storageObserver = {
+  beforeRead: (_owner: StorageOwner, recordIds: string[], conflicts: StorageConflict[]) =>
+    assertConflictFreeRead(recordIds, conflicts),
   read: (owner: StorageOwner, record: { recordId: string; revision: string }) => {
     observeStorageRecord(owner, record);
   },

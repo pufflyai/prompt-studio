@@ -16,6 +16,7 @@
     "test": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun src/test-utils/run-api-tests.ts",
     "test:coverage": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun src/test-utils/run-api-tests.ts --coverage",
     "test:publications": "SYNC_TEST_ENTRY=../pstdio-api/src/features/extensions/publication/publication.integration.ts bun ../pstdio-sync-contracts/scripts/isolated.ts",
+    "test:conflicts": "SYNC_TEST_ENTRY=../pstdio-api/src/features/extensions/published-conflicts.integration.ts bun ../pstdio-sync-contracts/scripts/isolated.ts",
     "test:automations": "SYNC_TEST_ENTRY=../pstdio-api/src/features/extensions/synchronized-automations/scheduler.test.ts bun ../pstdio-sync-contracts/scripts/isolated.ts ../pstdio-api/src/features/extensions/synchronized-automations/runs.test.ts"
   },
   "dependencies": {

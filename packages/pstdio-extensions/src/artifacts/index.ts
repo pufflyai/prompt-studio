@@ -7,6 +7,7 @@ export {
 } from "./artifact-mount";
 export { isPackageAssetDescriptor } from "./asset-validation";
 export { type ExtensionStorageOwner, extensionFilesPath } from "./extension-storage-path";
+export { globPatternToRegExp } from "./file-glob";
 export {
   PackageAssetError,
   type PackageAssetKind,

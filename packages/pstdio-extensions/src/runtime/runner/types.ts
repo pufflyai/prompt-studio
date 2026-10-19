@@ -100,6 +100,9 @@ export interface BuildEnvironmentInput {
 }
 
 export interface CommandRunnerHostDeps {
+  /** Local storage read boundary, including nested commands and event handlers. */
+  runWithStorageBoundary?: <T>(run: () => T) => T;
+  beforeDispatch?: (input: { projectId: string; extensionId: string; recordIds: readonly string[] }) => Promise<void>;
   buildEnvironment: (input: BuildEnvironmentInput) => Promise<CommandRunnerEnvironment> | CommandRunnerEnvironment;
   /** Receives each transient extension event before its hooks run. */
   onWillDispatchEvent?: (eventId: string) => void;

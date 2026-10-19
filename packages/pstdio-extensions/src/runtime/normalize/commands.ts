@@ -200,6 +200,7 @@ export const registerCommands = (
       palette: normalizeCommandPalette(command.palette),
       cli,
       automation: command.automation === true,
+      storageInputs: command.storageInputs,
       mutating: command.mutating === true,
       stream: command.stream,
       resourceMutation: command.resourceMutation,

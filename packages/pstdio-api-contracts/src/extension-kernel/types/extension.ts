@@ -28,6 +28,7 @@ import type { PageContribution } from "./pages";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { PackageAssetDescriptor } from "./resources";
 import type { StatusBarItemContribution } from "./status-bar";
+import type { ExtensionRecordsApi, StorageConflictHandler } from "./storage-records";
 import type {
   NavigationItemContribution,
   NavigationTreeContribution,
@@ -39,7 +40,7 @@ import type {
 /** Current host extension API version. `engines.pstdio` declares caret ranges, such as `^0.1.0`. */
 // Stays on 0.x until the API is settled, so a breaking change moves the minor. The version moves at
 // most one step per release; the manifest reference has the change levels.
-export const EXTENSION_API_VERSION = "0.2.0";
+export const EXTENSION_API_VERSION = "0.3.0";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
@@ -140,6 +141,8 @@ export interface CommandDefinition<
   cli?: true | CliContribution;
   /** Exposes this exact command and its params schema to scoped machine tokens. */
   automation?: true;
+  /** Pure declaration of complete storage record addresses known before dispatch. */
+  storageInputs?(params: SchemaParams<TSchema>, records: Pick<ExtensionRecordsApi, "id">): readonly string[];
   /** Preview a resource rename or removal in the dashboard while this command saves. Removal asks for confirmation. */
   resourceMutation?:
     | { kind: "rename"; resourceType: string; idParam: string; labelParam: string }
@@ -256,6 +259,8 @@ export interface UiContributions {
 
 /** Behavioural surface: commands, middleware, hooks, schedules. */
 export interface BehaviourContributions {
+  /** Optional pure merges, selected only from the published immutable package. */
+  conflictHandlers?: Readonly<Record<string, StorageConflictHandler>>;
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous command shapes
   commands?: readonly CommandDefinition<any, any, any, any>[];
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous middleware shapes

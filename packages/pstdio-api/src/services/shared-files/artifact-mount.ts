@@ -4,11 +4,13 @@ import {
   createArtifactMount,
   createFileMount,
   createSafeFileRoot,
+  globPatternToRegExp,
   normalizeMountRelativePath,
   resolveArtifactMountRoot,
 } from "pstdio-extensions";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
+import { withoutConflictReadBoundary } from "./conflict-read-boundary";
 import { createFileProjectionIO } from "./file-io";
 import { createFileReconciler } from "./file-reconciliation";
 import { fileProjection, serializeFiles } from "./file-state";
@@ -16,6 +18,8 @@ import { createFileTree, type FileNode, fileRecordId, within } from "./file-tree
 import { withoutStorageObservation } from "./storage-observation";
 
 type FileDeps = Pick<ExtensionsRouteDeps, "extensionStorageService" | "assetTransferService">;
+const isDirectory = (value: unknown) =>
+  typeof value === "object" && value !== null && "kind" in value && value.kind === "directory";
 const missing = (path: string) => Object.assign(new Error(`Artifact not found: ${path}`), { code: "ENOENT" });
 
 export const createSharedArtifactMount = (
@@ -78,13 +82,30 @@ export const createSharedArtifactMount = (
     signal: input.signal,
   });
   const run = <T>(action: (storage: Awaited<ReturnType<typeof open>>) => Promise<T>) =>
-    serializeFiles(key, async () => action(await withoutStorageObservation(reconcile)));
+    serializeFiles(key, async () =>
+      action(await withoutConflictReadBoundary(() => withoutStorageObservation(reconcile))),
+    );
+  const readTree = async (
+    storage: Awaited<ReturnType<typeof open>>,
+    path: string,
+    includeDescendant: (path: string, value: unknown) => boolean = () => false,
+  ) => {
+    const target = fullPath(path);
+    const paths = new Set([target, ...tree.ancestors(target)]);
+    return tree.active(
+      await storage.records.list('["artifact-file",', (record) => {
+        const address = JSON.parse(record.recordId) as string[];
+        const candidate = address[1]!;
+        return paths.has(candidate) || (within(candidate, target) && includeDescendant(candidate, record.value));
+      }),
+    );
+  };
   const write = (path: string, value: Blob, update: boolean) =>
     run(async (storage) => {
       const target = fullPath(path);
       tree.assertWritable(target);
       await assertBoundary(path);
-      const { live } = tree.active(await storage.records.list());
+      const { live } = await readTree(storage, path, () => true);
       const before = await storage.records.read(fileRecordId(target));
       if (live.get(target)?.node.kind === "directory") throw new Error(`Artifact is a directory: ${path}`);
       if (update && !live.has(target)) throw missing(path);
@@ -123,30 +144,55 @@ export const createSharedArtifactMount = (
         deleted: false,
       });
       await storage.records.commit({ operationId: crypto.randomUUID(), edits });
-      await withoutStorageObservation(reconcile);
+      await withoutConflictReadBoundary(() => withoutStorageObservation(reconcile));
     });
   const read = (path: string) =>
     run(async (storage) => {
       await assertBoundary(path);
-      const entry = tree.active(await storage.records.list()).live.get(fullPath(path));
+      const entry = (await readTree(storage, path)).live.get(fullPath(path));
       if (entry?.node.kind !== "file" || !entry.record.asset) throw missing(path);
       return assets.read(owner, entry.record.asset, input.signal);
     });
   const api: ArtifactMount = {
-    exists: (path) => run(async () => local.exists(path)),
+    exists: (path) =>
+      run(async (storage) => {
+        await readTree(storage, path);
+        return local.exists(path);
+      }),
     readText: async (path) => new Response(await read(path)).text(),
     readBytes: async (path) => new Uint8Array(await new Response(await read(path)).arrayBuffer()),
     writeText: (path, value) => write(path, new Blob([value], { type: "text/plain" }), false),
     updateText: (path, value) => write(path, new Blob([value], { type: "text/plain" }), true),
     writeBytes: (path, value) => write(path, new Blob([new Uint8Array(value)]), false),
-    list: (pattern) => run(async () => local.list(pattern)),
-    listDirs: (path) => run(async () => local.listDirs(path)),
+    list: (pattern) =>
+      run(async (storage) => {
+        const query = pattern || "**/*";
+        const files = globPatternToRegExp(query);
+        const parts = query.split("/");
+        const parents = parts
+          .slice(0, -1)
+          .map((_part, index) => globPatternToRegExp(parts.slice(0, index + 1).join("/")));
+        await readTree(storage, "", (candidate, value) => {
+          const relative = posix.relative(fullPath(""), candidate);
+          return files.test(relative) || (isDirectory(value) && parents.some((glob) => glob.test(relative)));
+        });
+        return local.list(pattern);
+      }),
+    listDirs: (path) =>
+      run(async (storage) => {
+        await readTree(
+          storage,
+          path ?? "",
+          (candidate, value) => isDirectory(value) && posix.dirname(candidate) === fullPath(path ?? ""),
+        );
+        return local.listDirs(path);
+      }),
     delete: (path) =>
       run(async (storage) => {
         const target = fullPath(path);
         tree.assertDeletable(target);
         await assertBoundary(path);
-        const entries = [...tree.active(await storage.records.list()).live.values()].filter(({ node }) =>
+        const entries = [...(await readTree(storage, path, () => true)).live.values()].filter(({ node }) =>
           within(node.path, target),
         );
         if (!entries.length) throw missing(path);
@@ -159,7 +205,8 @@ export const createSharedArtifactMount = (
             asset: null,
           })),
         });
-        if (outcome.status !== "conflict") await withoutStorageObservation(reconcile);
+        if (outcome.status !== "conflict")
+          await withoutConflictReadBoundary(() => withoutStorageObservation(reconcile));
       }),
   };
   return { ...api, refresh: () => run(async () => {}) };

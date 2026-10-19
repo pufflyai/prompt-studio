@@ -3,6 +3,7 @@ import { createCommandRunner, type RuntimeScheduleRecord } from "pstdio-extensio
 import type { RunContext } from "pstdio-scheduler";
 import { createCommandEnvironment } from "./command-environment";
 import { createExtensionLogger } from "./extension-logger";
+import { localExecutionBoundaries } from "./local-conflicts";
 import type { ProjectExtensionRuntimeSnapshot } from "./project-extension-runtime-snapshot";
 import type { AutomationDeps } from "./synchronized-automations/catalog";
 
@@ -21,6 +22,7 @@ export const executeScheduledCommand = async (input: {
   const { deps, snapshot, schedule, ctx } = input;
   const projectId = snapshot.project.id;
   const runner = createCommandRunner(snapshot.runtime, {
+    ...localExecutionBoundaries(deps),
     logger: input.extensionLogger,
     createLogger: input.extensionLogger ? () => input.extensionLogger! : createExtensionLogger,
     buildEnvironment: (ids) =>

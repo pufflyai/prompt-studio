@@ -23,6 +23,7 @@ const readFiles = defineCommand({
 const read = defineCommand({
   id: "read",
   title: "Read shared notes",
+  storageInputs: (_params, records) => [records.id("note"), records.id("caption")],
   async run(ctx) {
     const records = ctx.storage.records;
     return {

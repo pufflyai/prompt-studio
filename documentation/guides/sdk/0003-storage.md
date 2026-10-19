@@ -92,3 +92,74 @@ These file APIs do not add their contents to the record journal.
 See the [storage reference](../../references/sdk/0004-storage.md),
 [asset workflow](0002-assets.md), and
 [allocated extension files](../extensions/0009-allocated-extension-files.md).
+
+## Declare execution inputs
+
+The execution boundary and handlers below require the unreleased API 0.3 host and SDK.
+
+Commands may declare record addresses known from their parameters:
+
+```ts
+const exportNote = defineCommand({
+  id: "export-note",
+  title: "Export note",
+  storageInputs: (_params, records) => [records.id("note")],
+  async run(ctx) {
+    const note = await ctx.storage.records.read(ctx.storage.records.id("note"));
+    return note.value;
+  },
+});
+```
+
+The local host checks these inputs before dispatch and again after middleware
+changes the invocation. An unresolved conflict rejects dispatch. Other records
+remain usable. Record addresses from other scopes can also be returned.
+
+During commands, hooks, middleware and workspace provider calls, storage reads
+stop at unresolved conflicts. This includes legacy KV, collection, attachment and
+artifact reads. A conflict discovered after an external effect stops further work;
+the host never restarts the invocation or undoes that effect. Use `conflicts()` and
+`inspect()` to show accepted state and alternatives. These inspection methods and
+explicit `resolve()` remain available to people and agents.
+
+## Optional pure domain merges
+
+An extension can publish optional handlers with its definition:
+
+```ts
+export default defineExtension({
+  conflictHandlers: {
+    mergeLabels: (inspection) => {
+      if (inspection.accepted.length !== 1) return null;
+      const record = inspection.accepted[0]!;
+      if (!Array.isArray(record.value)) return null;
+      const values = [record.value, ...inspection.alternatives.flatMap(
+        branch => branch.records.filter(item => item.recordId === record.recordId)
+          .map(item => item.value),
+      )];
+      if (!values.every(Array.isArray)) return null;
+      return [{ recordId: record.recordId, replace: [...new Set(values.flat())] }];
+    },
+  },
+});
+```
+
+Handlers receive only a captured inspection. They must be pure: no host calls,
+file writes, network requests, processes or other effects. Return edits for every
+captured record exactly once, or `null` when the domain cannot merge it. Invalid
+results, unavailable packages and handler failures leave alternatives retained.
+Handlers run in declaration order until one proposes edits. Shared sequence edits
+preserve captured ancestry. Atomic fields start from the accepted side.
+
+Before dispatch with known conflicted inputs, the authorized local host loads the
+handler from the accepted published package bytes. An unpublished development
+override cannot supply automatic handlers. The proposal pins that package revision,
+handler ID and the inspected conflict and input revisions. A stale or competing
+proposal stays retained. The relay checks these guards and never loads extension
+code. Automatic handlers require a locally complete published package and a synced
+storage scope with the same published revision.
+
+For an explicit domain decision, pass `edits` with the same inspection fields to
+`records.resolve()`. Keep `choose` to select the initial side for fields the edits
+do not change. Each captured record must appear once. Stage new asset bytes before
+proposing them. Explicit decisions do not require an automatic handler.

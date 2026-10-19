@@ -20,6 +20,7 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
   const maxDepth = deps.maxDepth ?? DEFAULT_MAX_COMMAND_DEPTH;
   const generateId = deps.generateId ?? defaultGenerateId;
   const logger = deps.logger ?? consoleLogger;
+  const within = deps.runWithStorageBoundary ?? ((run) => run());
 
   const runRef = { run: undefined as unknown as (input: InternalExecuteInput) => Promise<CommandOutcome> };
   const executeBuilder = createExecuteBuilder(runRef);
@@ -45,7 +46,7 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
   const executeInternal = async (input: InternalExecuteInput) => {
     const hasUi = input.source === "dashboard" || input.source === "command-panel";
     const navigationScope = input.navigationScope?.fork() ?? (hasUi ? createNavigationScope() : undefined);
-    const outcome = await executeExtensionCommand(state, { ...input, navigationScope });
+    const outcome = await within(() => executeExtensionCommand(state, { ...input, navigationScope }));
     navigationScope?.complete(outcome.ok);
     if (!outcome.ok || input.navigationScope) return outcome;
     const navigationRequests = navigationScope?.collect();
@@ -60,13 +61,15 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
       return factory.buildExtensionContext(env, input, 0);
     },
     execute: (input: CommandExecuteInput) => executeInternal({ ...input, depth: 0 }),
-    executeHostCommand: (input) => executeHostCommand(state, input),
+    executeHostCommand: (input) => within(() => executeHostCommand(state, input)),
     dispatchEvent: (input: ExtensionEventDispatchInput): Promise<EventDeliveryResult> =>
-      dispatcher.dispatch(input.eventId, { ...(input.payload ?? {}), projectId: input.projectId } as Struct, {
-        projectId: input.projectId,
-        workspaceDir: input.payload?.workspaceDir as string | undefined,
-        workspaceId: input.payload?.workspaceId as string | undefined,
-      }),
+      within(() =>
+        dispatcher.dispatch(input.eventId, { ...(input.payload ?? {}), projectId: input.projectId } as Struct, {
+          projectId: input.projectId,
+          workspaceDir: input.payload?.workspaceDir as string | undefined,
+          workspaceId: input.payload?.workspaceId as string | undefined,
+        }),
+      ),
   };
 };
 

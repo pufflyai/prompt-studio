@@ -5,6 +5,7 @@ import { withStorageObservation } from "../../services/shared-files/storage-obse
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
 import { createExtensionLogger } from "./extension-logger";
+import { localExecutionBoundaries } from "./local-conflicts";
 
 export class ExtensionCommandNotFoundError extends Error {
   constructor(readonly commandId: string) {
@@ -55,6 +56,7 @@ export const executeProjectExtensionCommand = async (
     throw new CommandWorkspaceNotFoundError(body.workspaceId);
   const eventIds = new Set<string>();
   const runner = createCommandRunner(snapshot.runtime, {
+    ...localExecutionBoundaries(deps),
     createLogger: createExtensionLogger,
     onDidDispatchEvent: (eventId) => eventIds.add(eventId),
     buildEnvironment: (environment) =>

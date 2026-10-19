@@ -13,6 +13,7 @@ import { createEnvironmentCache, environmentFailedOutcome, withNotices } from ".
 import { findCommand, findPrivateHandler, middlewaresFor, serializeError } from "./internals";
 import { type MiddlewareChainResult, runMiddlewareChain } from "./middleware";
 import { createInvocationScope, type InvocationScope } from "./scope";
+import { storagePreflight } from "./storage-preflight";
 import type { CommandRunnerEnvironment, InternalExecuteInput } from "./types";
 import { validateCommandParams } from "./validate-params";
 
@@ -78,6 +79,15 @@ const runExtensionCommand = async (
     };
   }
 
+  return runRegisteredCommand(state, input, scope, record);
+};
+
+const runRegisteredCommand = async (
+  state: RunnerState,
+  input: InternalExecuteInput,
+  scope: InvocationScope,
+  record: RuntimeCommandRecord,
+): Promise<CommandOutcome> => {
   if (input.onChunk && !record.stream)
     return { ok: false, status: "error", code: "command_not_streamable", reason: "Command does not declare a stream." };
   const writer = createCommandStreamWriter(input.onChunk, scope.signal);
@@ -102,6 +112,8 @@ const runExtensionCommand = async (
     slot: input.slot,
     metadata: input.metadata,
   };
+  const blocked = await storagePreflight(state, input.projectId, record, commandEnv, initialInvocation);
+  if (blocked) return blocked;
 
   const buildCommandCtx = (invocation: CommandInvocation) =>
     state.factory.buildCommandContext(
@@ -160,6 +172,8 @@ const runExtensionCommand = async (
   }
 
   const finalInvocation = middlewareResult.invocation;
+  const blockedAfterMiddleware = await storagePreflight(state, input.projectId, record, commandEnv, finalInvocation);
+  if (blockedAfterMiddleware) return blockedAfterMiddleware;
 
   const validation = validateCommandParams(record.params, finalInvocation.params);
   if (!validation.ok) {

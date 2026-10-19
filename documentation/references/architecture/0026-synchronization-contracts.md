@@ -363,3 +363,22 @@ selection run in `infra/relay/src/storage/extension-publications.integration.ts`
 
 See [synchronized automations](0027-synchronized-automations.md) for exact targets,
 local run identities, skipped occurrences, and pending disable delivery.
+
+## Local conflict execution boundary
+
+The local runtime applies optional `conflictHandlers` from the accepted immutable
+publication. `local-conflicts.ts` verifies the package hash, loads its captured
+bytes separately from installed overrides, and binds the result to the inspection
+and package revision. Missing, failed or declining handlers retain the conflict.
+Handlers receive data only and must have no external effects. The relay remains a
+protocol validator and never imports these handlers.
+
+Commands can declare `storageInputs(params, records)` for preflight checks. The
+runner checks those addresses before lifecycle dispatch and after middleware.
+A local asynchronous read boundary covers commands, nested calls, events and
+workspace provider calls. Record reads check current conflicts inside the storage
+owner transaction; legacy APIs pass through that same boundary. Inspection and
+explicit guarded resolution remain available. Independent record reads continue.
+No whole-invocation retry or external-effect rollback occurs on a blocked read.
+
+See the [extension author workflow](../../guides/sdk/0003-storage.md#optional-pure-domain-merges).

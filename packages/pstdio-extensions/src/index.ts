@@ -23,6 +23,7 @@ export {
   type WorkspaceMountResolvedEntry,
   type WorkspaceMountSearchResult,
 } from "./artifacts";
+export { globPatternToRegExp } from "./artifacts/file-glob";
 export { createSafeFileRoot } from "./artifacts/safe-file-root";
 export {
   createDirectoryTreeWatcher,

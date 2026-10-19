@@ -52,6 +52,8 @@ export interface StorageResolution {
   capturedOperationIds: string[];
   expectedInputs: { recordId: string; revision: string }[];
   choose: "local" | "remote";
+  /** Optional domain merge. Must cover every captured record exactly once. */
+  edits?: RecordEdit[];
   handler?: { publishedRevision: string; handlerId: string };
 }
 

@@ -106,7 +106,15 @@ export const registerGroupedStorageSmokeTests = () => {
           },
         });
         expect(stale.status).toBe("conflict");
-        expect((await read(project.id)).caption.value).toBe("First caption");
+        const blocked = await post(
+          `/projects/${project.id}/extensions/commands/example.shared-notes.command.read/execute`,
+          {},
+        );
+        expect((await blocked.json()).outcome).toMatchObject({
+          ok: false,
+          status: "rejected",
+          code: "storage_conflict",
+        });
         await stopProcess(host.child);
         host = await startPackagedServe(root, env);
         expect(
@@ -115,6 +123,9 @@ export const registerGroupedStorageSmokeTests = () => {
         const inspected = await command<StorageConflictInspection>(project.id, "inspect", {
           conflictId: "second-caller",
         });
+        expect(inspected.accepted.find((record) => record.recordId === initial.caption.recordId)?.value).toBe(
+          "First caption",
+        );
         expect(
           inspected.alternatives[0]!.records.find(({ recordId }) => recordId === initial.caption.recordId)?.value,
         ).toBe("Second caption");

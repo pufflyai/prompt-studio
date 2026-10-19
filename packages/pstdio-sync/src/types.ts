@@ -7,6 +7,7 @@ import type {
   Receipt,
   Scope,
   Snapshot,
+  StorageConflict,
   StorageGroup,
   StorageResolution,
 } from "pstdio-sync-contracts";
@@ -61,6 +62,7 @@ export interface GroupedState {
 }
 
 export interface StorageObserver {
+  beforeRead?(owner: StorageOwner, recordIds: string[], conflicts: StorageConflict[]): void;
   read(owner: StorageOwner, record: { recordId: string; revision: string }): void;
   group(owner: StorageOwner, group: StorageGroup): StorageGroup;
   committed(owner: StorageOwner, records: { recordId: string; revision: string }[], outcome: { status: string }): void;

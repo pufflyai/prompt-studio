@@ -1,7 +1,9 @@
 import type { ExtensionContextBase, WorkspaceTypeProvider } from "pstdio-api-contracts/extension-kernel";
 import { createCommandRunner } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
+import { withConflictReadBoundary } from "../../services/shared-files/conflict-read-boundary";
 import { createCommandEnvironment } from "../extensions/command-environment";
+import { localExecutionBoundaries } from "../extensions/local-conflicts";
 import type { WorkspacesRouteDeps } from "./deps";
 
 export interface WorkspaceProviderHandle {
@@ -32,6 +34,7 @@ export const defaultWorkspaceProviderRuntime: WorkspaceProviderRuntime = {
     if (!record) return undefined;
 
     const runner = createCommandRunner(snapshot.runtime, {
+      ...localExecutionBoundaries(deps),
       logger: providerLogger,
       buildEnvironment: (environmentInput) =>
         createCommandEnvironment(deps, snapshot.enabledSources, {
@@ -87,7 +90,11 @@ export const runWorkspaceProviderCall = async <T>(
   });
 
   try {
-    return await Promise.race([Promise.resolve().then(call), timeoutPromise, abortPromise]);
+    return await Promise.race([
+      Promise.resolve().then(() => withConflictReadBoundary(call)),
+      timeoutPromise,
+      abortPromise,
+    ]);
   } finally {
     if (timeout) clearTimeout(timeout);
     removeAbortListener();

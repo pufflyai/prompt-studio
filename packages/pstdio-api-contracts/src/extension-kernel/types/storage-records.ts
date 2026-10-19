@@ -1,4 +1,5 @@
 import type {
+  RecordEdit,
   StorageConflict,
   StorageConflictInspection,
   StorageGroup,
@@ -6,6 +7,11 @@ import type {
   StorageResolution,
   StorageSaveOutcome,
 } from "pstdio-sync-contracts";
+
+/** Pure domain merge. No host context or effects. Return null when no merge is possible. */
+export type StorageConflictHandler = (
+  inspection: StorageConflictInspection,
+) => RecordEdit[] | null | Promise<RecordEdit[] | null>;
 
 export type {
   SharedEdit as SharedStorageEdit,

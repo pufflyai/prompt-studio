@@ -10,6 +10,7 @@ const contributionKeys = new Set(
     artifactMounts: true,
     commandPaletteResources: true,
     commands: true,
+    conflictHandlers: true,
     connections: true,
     defaultLocale: true,
     fileIconThemes: true,

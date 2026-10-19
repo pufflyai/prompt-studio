@@ -4,6 +4,7 @@ import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
 import { createExtensionLogger } from "./extension-logger";
+import { localExecutionBoundaries } from "./local-conflicts";
 
 export type ExtensionEventDeps = ExtensionsRouteDeps;
 type WorkspaceSnapshot = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["workspaceService"]["get"]>>>;
@@ -56,6 +57,7 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
   const context = await resolveEventContext(deps, projectId, payload, workspaceSnapshot);
   const runner = createCommandRunner(snapshot.runtime, {
+    ...localExecutionBoundaries(deps),
     createLogger: createExtensionLogger,
     onWillDispatchEvent: (eventId) =>
       deps.eventBus.emit("extension_events", "set", { id: crypto.randomUUID(), projectId, eventId }),

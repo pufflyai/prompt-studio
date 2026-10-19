@@ -211,6 +211,9 @@ jobs:
       - name: Test automation targets and missed occurrences in isolated environments
         run: bun run --cwd packages/pstdio-api test:automations
 
+      - name: Test published conflict handlers in isolated environments
+        run: bun run --cwd packages/pstdio-api test:conflicts
+
       - name: Test private account authority and its built image with disposable PostgreSQL
         run: bun run --cwd infra/account-manager test:isolated
 

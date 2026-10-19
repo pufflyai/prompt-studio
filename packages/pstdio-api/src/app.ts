@@ -20,6 +20,7 @@ import { createArtifactMountWriteLedger } from "./features/extensions/artifact-m
 import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
+import { closePublishedHandlerHost } from "./features/extensions/published-handler-cache";
 import type { SessionHookDeps } from "./features/hooks/session-hooks";
 import type { RuntimeRouteDeps } from "./features/runtime/routes";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
@@ -280,7 +281,7 @@ const buildApp = async (
     artifactMountWatch,
     automationService,
     terminalSupervisor,
-    closeDb,
+    closeDb: () => closePublishedHandlerHost(extensionStorageDBService, closeDb),
   });
   return connectAppRelay({ app, close, deps, eventBus }, input.config.relay?.connectionsFile);
 };

@@ -133,3 +133,107 @@ test("a fresh competing choice guards resolved ancestry without treating it as a
   expect(resolved.outcomes.get("retry")?.status).toBe("pending");
   expect(resolved.conflicts).toEqual([]);
 });
+
+test("a domain proposal saves merged values and rejects simultaneous or stale inputs and packages", async () => {
+  const { state } = await conflictedState();
+  const inspection = await inspectConflict(state, "writer", "branch");
+  const proposal = {
+    ...inspection,
+    operationId: "merged",
+    choose: "remote" as const,
+    handler: { publishedRevision: "published", handlerId: "merge" },
+    edits: [{ recordId: "note", replace: "domain merge" }],
+  };
+  state.journal.push(await resolutionEntry(state, proposal, "writer"));
+  let view = await projectGroups(state, "writer");
+  expect(view.read("note").value).toBe("domain merge");
+  expect(view.conflicts).toEqual([]);
+  state.journal.push(await resolutionEntry(state, { ...proposal, operationId: "simultaneous" }, "writer"));
+  view = await projectGroups(state, "writer");
+  expect(view.outcomes.get("simultaneous")?.status).toBe("conflict");
+  expect(view.read("note").value).toBe("domain merge");
+  const fresh = await conflictedState();
+  fresh.state.accepted!.publishedRevision = "new-package";
+  fresh.state.journal.push(await resolutionEntry(fresh.state, proposal, "writer"));
+  expect((await projectGroups(fresh.state, "writer")).outcomes.get("merged")?.status).toBe("conflict");
+});
+
+test("domain shared edits keep the complete captured sequence ancestry", async () => {
+  const { createRecordStorage } = await import("./storage");
+  const state = {
+    owner: { workbenchId: "w", extensionId: "e" },
+    accepted: null,
+    journal: [],
+  } as import("./types").GroupedState;
+  const storage = createRecordStorage({
+    owner: state.owner,
+    environmentId: "writer",
+    store: { transaction: async (_owner, run) => run(state) },
+  });
+  const empty = await storage.records.read("note");
+  for (const [operationId, text] of [
+    ["winner", "accepted"],
+    ["branch", "alternative"],
+  ]) {
+    await storage.records.commit({
+      operationId: operationId!,
+      edits: [
+        {
+          recordId: "note",
+          expectedRevision: empty.revision,
+          replace: text!,
+          shared: [{ kind: "text.insert", index: 0, text: text! }],
+        },
+      ],
+    });
+  }
+  const inspection = await storage.records.inspect("branch");
+  await storage.records.resolve({
+    ...inspection,
+    operationId: "merged-sequence",
+    choose: "remote",
+    edits: [{ recordId: "note", shared: [{ kind: "text.insert", index: 0, text: "!" }] }],
+  });
+  const result = await storage.records.read("note");
+  expect(result.shared?.value).toContain("accepted");
+  expect(result.shared?.value).toContain("alternative");
+  expect(result.shared?.value).toContain("!");
+});
+
+test("domain shared edits retain a sequence introduced only by the captured branch", async () => {
+  const { createRecordStorage } = await import("./storage");
+  const state: import("./types").GroupedState = {
+    owner: { workbenchId: "w", extensionId: "e" },
+    accepted: null,
+    journal: [],
+  };
+  const storage = createRecordStorage({
+    owner: state.owner,
+    environmentId: "writer",
+    store: { transaction: async (_owner, run) => run(state) },
+  });
+  const empty = await storage.records.read("note");
+  await storage.records.commit({
+    operationId: "winner",
+    edits: [{ recordId: "note", expectedRevision: empty.revision, replace: "accepted" }],
+  });
+  await storage.records.commit({
+    operationId: "branch",
+    edits: [
+      {
+        recordId: "note",
+        expectedRevision: empty.revision,
+        replace: "alternative",
+        shared: [{ kind: "text.insert", index: 0, text: "alternative" }],
+      },
+    ],
+  });
+  const inspection = await storage.records.inspect("branch");
+  await storage.records.resolve({
+    ...inspection,
+    operationId: "merged",
+    choose: "remote",
+    edits: [{ recordId: "note", shared: [{ kind: "text.insert", index: 0, text: "!" }] }],
+  });
+  expect((await storage.records.read("note")).shared?.value).toContain("alternative");
+});

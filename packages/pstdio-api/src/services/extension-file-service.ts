@@ -134,7 +134,10 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
       });
     const storage = await open(resolved.owner);
     const files = [];
-    for (const record of await storage.records.list()) {
+    for (const record of await storage.records.list('["blob-file",', (record) => {
+      const value = metadata.safeParse(record.value);
+      return value.success && value.data.scopeType === input.scope_type && value.data.scopeId === input.scope_id;
+    })) {
       if (!record.recordId.startsWith('["blob-file",')) continue;
       const value = metadata.parse(record.value);
       if (value.scopeType !== input.scope_type || value.scopeId !== input.scope_id) continue;

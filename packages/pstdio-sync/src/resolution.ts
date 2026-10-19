@@ -1,9 +1,9 @@
-import { type Change, fingerprint, type StoredRecord } from "pstdio-sync-contracts";
+import { type Change, fingerprint, type SharedEdit, type StoredRecord } from "pstdio-sync-contracts";
 import { inputFingerprint, recordVersion } from "./authoring";
 import { readBranch } from "./branches";
 import { captureBranch } from "./capture";
 import { projectGroups } from "./projection";
-import { applyRecordChange } from "./records";
+import { applyRecordChange, sharedChange } from "./records";
 import { resolutionGuards } from "./resolution-preflight";
 import type { GroupedState, LocalOperation, ResolutionCommit } from "./types";
 
@@ -18,6 +18,7 @@ export const inspectConflict = async (state: GroupedState, environmentId: string
   const branch = captureBranch(state, environmentId, conflictId, known ? undefined : published);
   const captured = new Set(branch.map((mutation) => mutation.operationId));
   const ids = [...new Set(branch.flatMap((mutation) => mutation.changes.map((change) => change.recordId)))];
+
   const accepted = ids.map(view.read);
   return {
     conflictId,
@@ -40,11 +41,28 @@ export const inspectConflict = async (state: GroupedState, environmentId: string
   };
 };
 
-const resolutionShared = async (current: StoredRecord, draft: StoredRecord, choose: ResolutionCommit["choose"]) => {
-  const selected = choose === "local" ? draft : current;
-  const source = choose === "remote" && current.primitive !== draft.primitive ? current : draft;
+const resolutionShared = async (
+  current: StoredRecord,
+  draft: StoredRecord,
+  choose: ResolutionCommit["choose"],
+  edits?: SharedEdit[],
+) => {
+  let selected = choose === "local" ? draft : current;
+  let source = choose === "remote" && current.primitive !== draft.primitive ? current : draft;
+  if (edits) {
+    // Sequence updates carry captured ancestry even when the atomic value chooses the accepted side.
+    if (draft.primitive === "text" || draft.primitive === "list") source = draft;
+    const base = source.primitive === "map" ? selected : source;
+    selected = applyRecordChange(base, {
+      recordId: base.recordId,
+      expectedRevision: base.revision,
+      baseDeleted: base.deleted,
+      shared: await sharedChange(base, edits),
+    });
+    if (selected.primitive !== "map") source = selected;
+  }
   if (source.primitive !== "map") return source.shared;
-  const keys = [...new Set([...Object.keys(source.map), ...Object.keys(current.map)])];
+  const keys = [...new Set([...Object.keys(source.map), ...Object.keys(current.map), ...Object.keys(selected.map)])];
   if (!keys.length) return undefined;
   const entries = await Promise.all(
     keys.map(async (key) => ({
@@ -66,6 +84,13 @@ export const resolutionEntry = async (state: GroupedState, input: ResolutionComm
     return operation;
   });
   const ids = [...new Set(branch.flatMap((mutation) => mutation.changes.map((change) => change.recordId)))];
+  if (
+    input.edits &&
+    (input.edits.length !== ids.length ||
+      new Set(input.edits.map((edit) => edit.recordId)).size !== ids.length ||
+      ids.some((id) => !input.edits!.some((edit) => edit.recordId === id)))
+  )
+    throw new Error("Domain merge must cover every captured record exactly once");
   if (input.expectedInputs.length !== ids.length) throw new Error("Resolution inputs must cover every captured record");
   const replaced = new Set(branch.flatMap((mutation) => mutation.resolution?.capturedOperationIds ?? []));
   const current = new Map(
@@ -86,14 +111,18 @@ export const resolutionEntry = async (state: GroupedState, input: ResolutionComm
       const base = current.get(recordId)!;
       const alternative = draft.get(recordId)!;
       const selected = input.choose === "local" ? alternative : base;
+      const edit = input.edits?.find((edit) => edit.recordId === recordId);
       return {
         recordId,
         expectedRevision: base.revision,
         baseDeleted: base.deleted,
-        shared: await resolutionShared(base, alternative, input.choose),
-        value: { expected: await fingerprint(base.value), next: selected.value },
-        asset: { base: base.asset, next: selected.asset },
-        deleted: selected.deleted,
+        shared: await resolutionShared(base, alternative, input.choose, edit?.shared),
+        value: {
+          expected: await fingerprint(base.value),
+          next: edit && Object.hasOwn(edit, "replace") ? edit.replace! : selected.value,
+        },
+        asset: { base: base.asset, next: edit?.asset === undefined ? selected.asset : edit.asset },
+        deleted: edit?.deleted ?? selected.deleted,
       };
     }),
   );

@@ -1,4 +1,4 @@
-import { localOperationSchema } from "pstdio-sync-contracts";
+import { localOperationSchema, type StorageRecord } from "pstdio-sync-contracts";
 import { entryFor, inputFingerprint } from "./authoring";
 import { readBranch, workingRecords } from "./branches";
 import { pendingOperations, sealOperation } from "./journal";
@@ -35,11 +35,25 @@ export const createRecordStorage = (input: {
         return sealOperation(state, entry.mutation);
       }),
     records: {
-      list: () =>
+      list: (
+        prefix = "",
+        select: (record: Pick<StorageRecord, "recordId" | "value" | "asset" | "deleted">) => boolean = () => true,
+      ) =>
         input.store.transaction(input.owner, async (state) => {
           const view = await projectGroups(state, input.environmentId);
+          const ids = [...view.records.keys(), ...view.conflicts.flatMap((conflict) => conflict.recordIds)].filter(
+            (id) =>
+              id.startsWith(prefix) &&
+              (select(view.read(id)) ||
+                view.conflicts.some((conflict) =>
+                  conflict.alternatives.some((alternative) =>
+                    alternative.records.some((record) => record.recordId === id && select(record)),
+                  ),
+                )),
+          );
+          input.store.observer?.beforeRead?.(input.owner, ids, view.conflicts);
           return [...view.records.keys()]
-            .filter((id) => !view.records.get(id)!.deleted)
+            .filter((id) => id.startsWith(prefix) && !view.records.get(id)!.deleted && select(view.read(id)))
             .sort()
             .map((id) => readRecord(view.read(id)));
         }),
@@ -49,8 +63,13 @@ export const createRecordStorage = (input: {
         ),
       inspect: (conflictId: string) =>
         input.store.transaction(input.owner, (state) => inspectConflict(state, input.environmentId, conflictId)),
-      resolve: (proposal: ResolutionCommit) =>
-        input.store.transaction(input.owner, async (state) => {
+      resolve: async (proposal: ResolutionCommit) => {
+        const assets = proposal.edits?.flatMap((edit) => (edit.asset ? [edit.asset] : [])) ?? [];
+        if (assets.length) {
+          if (!input.assets) throw new Error("Asset verification is unavailable");
+          await input.assets.verifyComplete(assets);
+        }
+        return input.store.transaction(input.owner, async (state) => {
           const previous = state.journal.find((entry) => entry.mutation.operationId === proposal.operationId);
           if (previous && previous.inputFingerprint !== (await inputFingerprint(proposal)))
             throw new Error("Operation identity reused with changed payload");
@@ -60,10 +79,13 @@ export const createRecordStorage = (input: {
             state.journal.push(entry);
           }
           return (await projectGroups(state, input.environmentId)).outcomes.get(proposal.operationId)!;
-        }),
+        });
+      },
       read: (recordId: string, options?: { operationId: string }) =>
         input.store.transaction(input.owner, async (state) => {
-          if (!options) return readRecord((await projectGroups(state, input.environmentId)).read(recordId));
+          const view = await projectGroups(state, input.environmentId);
+          input.store.observer?.beforeRead?.(input.owner, [recordId], view.conflicts);
+          if (!options) return readRecord(view.read(recordId));
           return readBranch(state, input.environmentId, recordId, options.operationId);
         }),
       conflicts: () =>

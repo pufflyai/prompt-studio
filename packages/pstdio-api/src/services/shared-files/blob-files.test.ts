@@ -64,3 +64,33 @@ test("journal-backed blobs are readable without a local files row or the sender'
     await a.close();
   }
 });
+
+test("execution lists independent attachment scopes while retaining a conflicted attachment", async () => {
+  const { withConflictReadBoundary } = await import("./conflict-read-boundary");
+  const f = await blobFilesFixture();
+  try {
+    await f.service.upload({ ...f.scope, file_name: "conflicted.txt", data: Buffer.from("bytes") });
+    const observed = (await f.storage.records.list())[0]!;
+    for (const [operationId, name] of [
+      ["winner", "accepted.txt"],
+      ["branch", "alternative.txt"],
+    ] as const) {
+      await f.storage.records.commit({
+        operationId,
+        edits: [
+          {
+            recordId: observed.recordId,
+            expectedRevision: observed.revision,
+            replace: { ...(observed.value as object), name },
+          },
+        ],
+      });
+    }
+    await withConflictReadBoundary(async () => {
+      expect(await f.service.list({ ...f.scope, scope_type: "resource", scope_id: "independent" })).toEqual([]);
+      await expect(f.service.list(f.scope)).rejects.toThrow("Unresolved storage conflict");
+    });
+  } finally {
+    await f.close();
+  }
+});

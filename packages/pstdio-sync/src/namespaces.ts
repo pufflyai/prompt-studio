@@ -18,9 +18,10 @@ export const legacyNamespaceStorage = (
   return {
     read: (id: string) => records.read(storedId(id)),
     list: async () =>
-      (await records.list())
-        .filter((record) => record.recordId.startsWith(prefix))
-        .map((record) => ({ ...record, recordId: (JSON.parse(record.recordId) as string[]).at(-1)! })),
+      (await records.list(prefix)).map((record) => ({
+        ...record,
+        recordId: (JSON.parse(record.recordId) as string[]).at(-1)!,
+      })),
     commit: (group: Parameters<typeof records.commit>[0]) =>
       records.commit({
         ...group,

@@ -131,3 +131,33 @@ test("write notifications keep the workspace path used by filesystem watchers", 
   await mount.writeText("note.md", "saved through linked workspace");
   expect(writes).toContain(join(alias, ".pstdio/extension-storage/example-documents/documents/note.md"));
 });
+
+test("execution blocks a conflicted artifact and keeps independent file reads available", async () => {
+  const { withConflictReadBoundary } = await import("./conflict-read-boundary");
+  const f = await fixture();
+  const mount = f.mount();
+  await mount.writeText("file[1].md", "base");
+  await mount.writeText("independent.md", "independent");
+  const observed = await f.storage.records.read(f.recordId("documents/file[1].md"));
+  await f.replace("documents/file[1].md", "accepted");
+  await f.storage.records.commit({
+    operationId: "draft",
+    edits: [
+      {
+        recordId: observed.recordId,
+        expectedRevision: observed.revision,
+        replace: { ...(observed.value as object), updatedAt: "draft" },
+      },
+    ],
+  });
+  await withConflictReadBoundary(async () => {
+    expect(await mount.readText("independent.md")).toBe("independent");
+    expect((await mount.list("independent.md")).map((file) => file.path)).toEqual(["independent.md"]);
+    expect(await mount.listDirs()).toEqual([]);
+    await expect(mount.readText("file[1].md")).rejects.toThrow("Unresolved storage conflict");
+    await expect(mount.exists("file[1].md")).rejects.toThrow("Unresolved storage conflict");
+    await expect(mount.list("file[1].md")).rejects.toThrow("Unresolved storage conflict");
+    await expect(mount.list()).rejects.toThrow("Unresolved storage conflict");
+    await expect(mount.list("")).rejects.toThrow("Unresolved storage conflict");
+  });
+});
