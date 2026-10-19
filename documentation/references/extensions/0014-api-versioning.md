@@ -106,6 +106,26 @@ Declare a caret range that starts at the lowest API version your extension needs
 
 On `0.x`, a new minor version is a breaking release. When one arrives, update the extension's code for the new API. Then declare `^0.1.0 || ^0.2.0` if one build supports both versions, or `^0.2.0` if it supports only the new one.
 
+## API 0.3 adoption before cutover
+
+API 0.3 stops an invocation when it reads an unresolved storage input. A command
+must surface that failure instead of using the accepted value as if no conflict
+existed. Inspection and explicit guarded resolution remain available. Ordinary
+project source files are separate from shared extension records and artifact mounts.
+
+PS-816 validates existing extension code on the API 0.2 host and on an isolated
+host built from PS-779's exact API 0.3 revision. Its manifest adoption is a separate
+prerequisite PR. Extensions that pass both hosts retain their existing declaration
+and add `^0.3.0`. They keep their published SDK dependencies when no new SDK API is
+needed. PS-779 integrates that submitted adoption revision before its final host
+validation and cutover. Neither PR authorizes a release or an automatic merge.
+
+The PS-816 change request records the manifest inventory, exact tested host commits,
+representative contributions, conflicted-input outcomes and remaining coverage
+limits. Loading a manifest alone does not establish the runtime behavior promise.
+Adoption that needs new SDK calls belongs in a later dependent extension PR and
+waits for the SDK release under [the extension rules](../../../extensions/AGENTS.md).
+
 ## What counts as the extension API
 
 Anything an extension author writes code or manifest content against:
