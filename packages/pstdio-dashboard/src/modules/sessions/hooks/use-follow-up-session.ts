@@ -2,7 +2,7 @@ import type { ChatInputQuestionResponse } from "@pstdio/ui/chat-ui";
 import { useMutation } from "@tanstack/react-query";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { getApiClient } from "@/lib/api";
-import type { HarnessParamValues } from "../components/harness-param-values";
+import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 
 interface FollowUpInput {
   sessionId: string;

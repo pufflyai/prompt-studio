@@ -1,3 +1,4 @@
+import type { AgentInfo, AgentModel, HarnessParamsInfo } from "../../agents";
 import type { TerminalSessionOperation, TerminalSessionResult } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type { CommandNotice, CommandOutcome } from "./commands";
@@ -6,6 +7,7 @@ import type { JsonObject, JsonValue } from "./json";
 import type { NavigationTarget } from "./navigation-target";
 import type { PageLocation, PageParamValue } from "./pages";
 import type { ResourceRef } from "./resources";
+import type { ExtensionHarnessInput } from "./sessions";
 
 export type { ExtensionBlobRef } from "./context";
 
@@ -16,6 +18,8 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "clipboard.write",
   "commands.execute",
   "commands.stream",
+  "harnesses.read",
+  "resources.actions",
   "navigation.open",
   "page.params.update",
   "placement.close",
@@ -166,6 +170,8 @@ export interface WebviewKeyboardEventParams {
 }
 
 export interface WebviewHostCapabilityParams {
+  "harnesses.read": { harnessId?: string; model?: string };
+  "resources.actions": { operation: "list" | "execute"; resource: ResourceRef; key?: string };
   "commands.execute": WebviewCommandsExecuteParams;
   "commands.stream": WebviewCommandsStreamParams;
   "page.params.update": WebviewPageParamsUpdateParams;
@@ -196,6 +202,14 @@ export interface WebviewHostCapabilityParams {
 }
 
 export interface WebviewHostCapabilityResults {
+  "harnesses.read": {
+    harnesses: AgentInfo[];
+    models: AgentModel[];
+    schema?: HarnessParamsInfo;
+    defaults?: Record<string, string | boolean>;
+    selection?: ExtensionHarnessInput;
+  };
+  "resources.actions": WebviewResourceAction[];
   "commands.execute": { outcome: CommandOutcome };
   "commands.stream": { operation: "start" | "cancel" | "ack"; accepted: true };
   "page.params.update": { location: PageLocation };
@@ -223,6 +237,16 @@ export interface WebviewHostCapabilityResults {
   "files.delete": void;
   "artifacts.read": WebviewArtifactFile[] | string;
   "host.dispatchKeyboardEvent": void;
+}
+
+export interface WebviewResourceAction {
+  key: string;
+  label: string;
+  commandId?: string;
+  icon?: string;
+  isDisabled?: boolean;
+  separatorBefore?: boolean;
+  group?: { id: string; label?: string };
 }
 
 export type WebviewHostCapabilityResult<

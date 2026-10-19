@@ -4,7 +4,7 @@ import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { createDashboardSessionResource } from "@/shared/app/resources";
-import type { HarnessParamValues } from "../components/harness-param-values";
+import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 import { toSessionNotice } from "../data/session-notice";
 import { rememberDashboardSessionResource } from "../state/session-selection";

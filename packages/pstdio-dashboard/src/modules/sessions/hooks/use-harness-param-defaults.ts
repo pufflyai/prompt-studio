@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getApiClient } from "@/lib/api";
-import type { HarnessParamValues } from "../components/harness-param-values";
+import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 
 const queryKey = (projectId: string | undefined, agentId: string | undefined, model?: string) => [
   "harness-param-defaults",

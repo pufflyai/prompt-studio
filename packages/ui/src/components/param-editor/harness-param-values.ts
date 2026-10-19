@@ -1,4 +1,6 @@
-import type { HarnessParamsInfo } from "pstdio-api-contracts";
+import type { AgentInfo } from "@pstdio/sdk/resources";
+
+type HarnessParamsInfo = NonNullable<AgentInfo["params"]>;
 
 export type HarnessParamValues = Record<string, string | boolean>;
 

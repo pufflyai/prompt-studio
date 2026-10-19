@@ -4,6 +4,7 @@ import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
+import { createWebviewResourceActions } from "./webview-resource-actions";
 
 interface CreateWorkbenchWebviewHostAdaptersInput {
   workbench: WorkbenchCore;
@@ -18,6 +19,7 @@ interface CreateWorkbenchWebviewHostAdaptersInput {
 export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebviewHostAdaptersInput) => {
   const { workbench, placement, extensionId, projectId, hostEvents } = input;
   return {
+    resourceActions: createWebviewResourceActions(workbench, projectId, extensionId),
     hostEvents,
     executeCommand: async (request, signal) => ({
       outcome: {
@@ -41,8 +43,7 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       },
     },
     navigation: {
-      open: (target) =>
-        workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId })),
+      open: (target) => workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId })),
     },
     notifications: {
       show: (notice) => {

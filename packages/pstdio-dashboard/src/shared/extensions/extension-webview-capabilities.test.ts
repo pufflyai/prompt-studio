@@ -9,7 +9,6 @@ test("dashboard adapters keep the shared capability contract without an owner", 
     createDashboardExtensionWebviewAdapters({
       base: {},
       extensionId: "pstdio.lab",
-      projectId: "project-1",
       webviewId: "view-1",
     }),
   );

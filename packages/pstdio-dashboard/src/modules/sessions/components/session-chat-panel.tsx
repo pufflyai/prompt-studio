@@ -28,7 +28,7 @@ import type { useDashboardSessionMessages } from "../hooks/use-dashboard-session
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useStopSession } from "../hooks/use-stop-session";
 import { canSubmitSessionMessage } from "../runtime/session-runtime-selection";
-import type { HarnessParamValues } from "./harness-param-values";
+import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import { useSessionLinks } from "./session-chat-links";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";

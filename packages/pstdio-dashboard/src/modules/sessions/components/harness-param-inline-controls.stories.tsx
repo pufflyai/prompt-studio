@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { HarnessParamInlineControls } from "./harness-param-inline-controls";
-import type { HarnessParamValues } from "./harness-param-values";
+import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 
 const meta = {
   title: "Sessions/Harness Inline Controls",

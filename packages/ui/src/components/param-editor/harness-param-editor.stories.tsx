@@ -113,7 +113,7 @@ const HarnessParamEditorStory = (props: {
 };
 
 const meta: Meta<typeof HarnessParamEditorStory> = {
-  title: "Sessions/HarnessParamEditor",
+  title: "Components/Param Editor/Harness run options",
   component: HarnessParamEditorStory,
 };
 

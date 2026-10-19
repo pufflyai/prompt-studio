@@ -150,6 +150,12 @@ settings view has no project file owner, so it does not receive these methods. K
 The declaration gate still applies. If the view omits a declaration, the bridge rejects
 the call before it reaches the file host.
 
+### Embedded harness controls and resource actions
+
+On `main`, extension API 0.2.1 adds two declared webview capabilities. Use `harnesses.read` to read the current project's harnesses, available models, model-specific parameter schema, defaults, and initial selection. Pass an optional `harnessId` and `model` to read another choice. The host owns the project scope. Render the returned data with `HarnessModelPicker` and `HarnessParamEditor` from `@pstdio/ui/param-editor` to keep the model and its run options in your own form.
+
+Use `resources.actions` with `{ operation: "list", resource }` to read the same current menu actions as a native resource card. Render those actions with `ResourceContextMenu`. Invoke one with `{ operation: "execute", resource, key }`. The host resolves the menu again before execution, applies its availability rules, and opens the normal parameter form when an action needs input. Declare each named capability on the view.
+
 ### Navigate from a webview
 
 Add `navigation.open` to the view and pass an explicit page or panel target:

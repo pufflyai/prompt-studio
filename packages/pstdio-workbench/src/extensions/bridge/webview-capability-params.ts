@@ -52,6 +52,11 @@ const terminalRequest = z.object({
 });
 
 const schemas = {
+  "harnesses.read": z.object({ harnessId: identifier.optional(), model: z.string().optional() }),
+  "resources.actions": z.discriminatedUnion("operation", [
+    z.object({ operation: z.literal("list"), resource: extensionResourceRefSchema }),
+    z.object({ operation: z.literal("execute"), resource: extensionResourceRefSchema, key: identifier }),
+  ]),
   "commands.execute": command,
   "commands.stream": z.discriminatedUnion("operation", [
     command.extend({ ...streamId, operation: z.literal("start") }),

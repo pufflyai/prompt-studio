@@ -16,7 +16,7 @@ import {
   type HarnessParamValues,
   harnessParamValuesEqual,
   resolveHarnessParamDefaults,
-} from "./harness-param-values";
+} from "@pstdio/ui/param-editor";
 
 interface SessionModelControlsProps {
   selectionScope?: "draft" | "request";

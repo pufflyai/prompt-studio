@@ -74,7 +74,10 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
   } = adapters;
   const terminalCapability =
     terminal && hostEvents ? createTerminalSessionCapability({ terminal, hostEvents }) : undefined;
+  const readHarnesses = adapters.harnesses?.read.bind(adapters.harnesses);
   return {
+    "harnesses.read": capability("harnesses.read", readHarnesses),
+    "resources.actions": capability("resources.actions", adapters.resourceActions),
     "commands.execute": capability("commands.execute", commandExecution(adapters)),
     "commands.stream": capability("commands.stream", commandStreaming(adapters)),
     "navigation.open": capability(

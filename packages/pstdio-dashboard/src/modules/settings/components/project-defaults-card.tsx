@@ -6,8 +6,8 @@ import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
 import { useActionError } from "@/shared/components/use-action-error";
 import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
-import { HarnessParamEditor } from "../../sessions/components/harness-param-editor";
-import { filterHarnessParamValues, type HarnessParamValues } from "../../sessions/components/harness-param-values";
+import { HarnessParamEditor } from "@pstdio/ui/param-editor";
+import { filterHarnessParamValues, type HarnessParamValues } from "@pstdio/ui/param-editor";
 import {
   useHarnessParamDefaults,
   useUpdateHarnessParamDefaults,
