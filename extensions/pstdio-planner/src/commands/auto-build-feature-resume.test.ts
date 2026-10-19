@@ -3,8 +3,8 @@ import { putTicket, statusesCollection } from "../data/collections";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { nextTicketsCommand } from "./next-tickets";
-import { createSessionResource } from "./session.fixture";
 import { sessionQuery } from "./session-query.fixture";
+import { sessionRecord } from "./session-record.fixture";
 
 test("a feature attempt keeps its recorded base when its owner stops", async () => {
   const f = await fixture();
@@ -71,7 +71,7 @@ test("a feature attempt keeps its recorded base when its owner stops", async () 
     workspaceId: "draft",
   });
   expect(started).toMatchObject({ decision: "started", workspaceId: "draft" });
-  const owner = createSessionResource({ id: "session-0", title: "Owner", status: "completed" });
+  const owner = sessionRecord({ id: "session-0", title: "Owner", status: "completed" });
   f.ctx.sessions.get = async () => owner;
   f.ctx.sessions.query = sessionQuery(async () => [owner]);
   const result = await nextTicketsCommand.run(f.ctx, {});

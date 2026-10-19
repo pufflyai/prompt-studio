@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { fixture } from "./auto-build.fixture";
 import { requestHumanCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
-import { createSessionResource } from "./session.fixture";
+import { sessionRecord } from "./session-record.fixture";
 
 async function ownedWork() {
   const f = await fixture();
@@ -10,8 +10,7 @@ async function ownedWork() {
   const attempt = await runAttemptCommand.run(f.ctx, { ticket: ticket.id });
   const followups: string[] = [];
   f.ctx.sessions.get = async (id) =>
-    createSessionResource({
-      type: "session",
+    sessionRecord({
       id,
       title: "Owner",
       status: "completed",

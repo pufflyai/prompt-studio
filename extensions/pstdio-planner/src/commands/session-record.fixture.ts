@@ -2,11 +2,8 @@ import type { ExtensionSessionsApi } from "@pstdio/sdk/extensions";
 
 type Session = Awaited<ReturnType<ExtensionSessionsApi["create"]>>;
 
-export const createSessionResource = (overrides: Partial<Session> = {}) => ({
+export const sessionRecord = (input: Pick<Session, "id" | "title" | "status"> & Partial<Session>) => ({
   type: "session" as const,
-  id: "session-1",
-  title: "Session",
-  status: "in_progress" as Session["status"],
   archived: false,
   agent: null,
   cwd: null,
@@ -26,5 +23,5 @@ export const createSessionResource = (overrides: Partial<Session> = {}) => ({
   last_request_ended: null,
   anchors_json: [],
   usage: null,
-  ...overrides,
+  ...input,
 });

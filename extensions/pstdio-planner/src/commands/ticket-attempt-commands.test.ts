@@ -5,12 +5,12 @@ import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicket } from "../data/types";
 import { commandParamsFor, makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { implementTicketCommand } from "./implement-ticket";
-import { createSessionResource as sessionResource } from "./session.fixture";
 import { sessionQuery } from "./session-query.fixture";
+import { sessionRecord } from "./session-record.fixture";
 import { ticketWorkspacesCommand, ticketWorktreesListCommand } from "./ticket-workspaces";
 
 const createSessionResource = () =>
-  sessionResource({
+  sessionRecord({
     type: "session" as const,
     id: "s1",
     title: "Implement ticket: T-1",

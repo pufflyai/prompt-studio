@@ -7,8 +7,8 @@ import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { requestHumanCommand, reviewCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
-import { createSessionResource } from "./session.fixture";
 import { sessionQuery } from "./session-query.fixture";
+import { sessionRecord } from "./session-record.fixture";
 
 test.each([
   "completed",
@@ -55,7 +55,7 @@ test.each([
   await putTicket(storage, { ...parent, statusId: "done" });
   const child = await ticket("Dependent", [parent.id]);
   const first = (await dispatchCandidates(ctx)).started[0]!;
-  ctx.sessions.get = async (id) => createSessionResource({ id, title: "Implementation", status: "completed" });
+  ctx.sessions.get = async (id) => sessionRecord({ id, title: "Implementation", status: "completed" });
   const ownRequest = await requestHumanCommand.run(ctx, {
     ticket: child.id,
     workspaceId: first.workspaceId,

@@ -1,9 +1,7 @@
 import type { ExtensionSessionsApi } from "@pstdio/sdk/extensions";
+import { sessionRecord } from "./session-record.fixture";
 
-import { createSessionResource } from "./session.fixture";
-
-type SessionRecord = Awaited<ReturnType<ExtensionSessionsApi["create"]>>;
-type Session = Pick<SessionRecord, "id" | "title" | "status"> & Partial<SessionRecord>;
+type Session = Parameters<typeof sessionRecord>[0];
 
 export const sessionQuery =
   (
@@ -14,7 +12,7 @@ export const sessionQuery =
     items: [...(await (input?.workspaceId && byWorkspace ? byWorkspace(input.workspaceId) : all()))]
       .reverse()
       .map((session) =>
-        createSessionResource({
+        sessionRecord({
           workspaceId: input?.workspaceId ?? null,
           workspace_id: input?.workspaceId ?? null,
           ...session,

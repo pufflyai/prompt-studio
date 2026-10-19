@@ -7,8 +7,8 @@ import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand } from "./auto-build-mode";
 import { nextTicketsCommand } from "./next-tickets";
 import { runAttemptCommand } from "./run-attempt";
-import { createSessionResource } from "./session.fixture";
 import { sessionQuery } from "./session-query.fixture";
+import { sessionRecord } from "./session-record.fixture";
 
 async function trackFixture() {
   const result = await fixture(6);
@@ -49,8 +49,7 @@ async function submitDependency(result: Awaited<ReturnType<typeof trackFixture>>
     ],
   });
   result.ctx.sessions.get = async () =>
-    createSessionResource({
-      type: "session",
+    sessionRecord({
       id: started.session.id,
       title: "Finished",
       status: "completed",

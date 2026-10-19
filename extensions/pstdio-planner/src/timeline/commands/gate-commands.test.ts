@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "../../commands/command-context.fixture";
-import { createSessionResource } from "../../commands/session.fixture";
+import { sessionRecord } from "../../commands/session-record.fixture";
 import { ticketsCollection } from "../../data/collections";
 import { createGateCommand } from "./gate-commands";
 import { gates } from "./gate-store";
@@ -31,7 +31,7 @@ test("preserves a gate ticket after failed registration and registers it on revi
     overrides: {
       sessions: {
         create: async () =>
-          createSessionResource({
+          sessionRecord({
             id: "gate-session",
             title: "Gate review",
             type: "session" as const,
