@@ -43,6 +43,7 @@ export const registerSchedules = (ext: NormalizedExtension, source: LoadedExtens
       params: schedule.params,
       workspaceId: schedule.workspaceId,
       disabled: typeof schedule.disabled === "boolean" ? schedule.disabled : undefined,
+      enabledWhen: schedule.enabledWhen,
     };
     runtime.schedules.push(record);
   }

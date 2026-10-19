@@ -24,6 +24,10 @@ Most hooks do follow-up work after a change was accepted. Provisioning is differ
 
 Use `defineSchedule` to bind a cron schedule to a command. A project's automation toggle overrides the author's enabled default.
 
+On `main` (not yet released), a schedule can declare `enabledWhen: async ({ storage }) => Boolean((await storage.get("mode"))?.enabled)`. The host arms it only when both the project automation preference and this condition allow it. The callback receives storage scoped to the owning project and extension instance. Keep it read-only: it must not change storage or start work. An error leaves the schedule inactive.
+
+The host evaluates eligibility on startup, after committed changes to the owning extension's storage, and before invocation. Returning false stops future ticks; it does not cancel work that has already started. This lets a feature's saved mode control its schedule without maintaining another enabled flag.
+
 Use `ctx.automation.enqueue` for accepted work that needs a durable run record beyond the invoking request. See [durable automation](0007-durable-automation.md) for limits, cancellation, retries, and restart behavior. An unawaited promise is not durable execution.
 
 ## Logging

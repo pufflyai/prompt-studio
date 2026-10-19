@@ -12,6 +12,7 @@ import type {
   MenuContribution,
   ParamObjectSchema,
   RendererCallback,
+  ScheduleContribution,
   WorkspaceTypeProvider,
 } from "@pstdio/sdk/extensions";
 import type {
@@ -166,6 +167,7 @@ export interface RuntimeScheduleRecord {
   params?: any;
   workspaceId?: string;
   disabled?: boolean;
+  enabledWhen?: ScheduleContribution["enabledWhen"];
 }
 
 export interface RuntimeHarnessRecord {

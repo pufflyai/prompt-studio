@@ -1,5 +1,5 @@
 import type { ExtensionLoggerApi, JsonObject, Localizable } from "pstdio-api-contracts/extension-kernel";
-import { createCommandRunner } from "pstdio-extensions";
+import { createCommandRunner, type RuntimeScheduleRecord } from "pstdio-extensions";
 import {
   type CronFactory,
   createFileWatermarkStore,
@@ -9,6 +9,7 @@ import {
 } from "pstdio-scheduler";
 import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "./command-environment";
+import { createStorageApi } from "./command-environment/storage";
 import type { ExtensionsRouteDeps } from "./deps";
 import { instanceIdsByExtensionId, isAutomationEnabled, loadAutomationPreferences } from "./extension-automations";
 import { createExtensionLogger } from "./extension-logger";
@@ -55,7 +56,41 @@ const outcomeError = (input: { commandId: string; reason?: string; status?: stri
     `Extension schedule command "${input.commandId}" failed: ${input.reason ?? input.status ?? "unknown error"}`,
   );
 
+const resolveScheduleWorkspace = async (
+  deps: ExtensionsRouteDeps,
+  schedule: RuntimeScheduleRecord,
+  projectId: string,
+) => {
+  const workspace = schedule.workspaceId
+    ? await deps.workspaceService.get(schedule.workspaceId)
+    : await deps.workspaceService.getDefault(projectId);
+  if (schedule.workspaceId && !workspace) throw new Error("Scheduled workspace no longer exists.");
+  if (workspace && workspace.project_id !== projectId) throw new Error("Workspace does not belong to this project.");
+  return workspace;
+};
+
 export const createExtensionScheduler = (input: Input) => {
+  let conditionalOwners = new Set<string>();
+  const eligible = async (schedule: RuntimeScheduleRecord, projectId: string, instanceId: string | undefined) => {
+    if (!schedule.enabledWhen) return true;
+    if (!instanceId) return false;
+    try {
+      return await schedule.enabledWhen({
+        storage: createStorageApi(input.deps, {
+          projectId,
+          extensionId: schedule.extensionId,
+          extensionInstanceId: instanceId,
+        }),
+      });
+    } catch (err) {
+      apiLogger.error(
+        { err, event: "extension.schedule.eligibility.error", projectId, scheduleId: schedule.id },
+        "Failed to evaluate schedule eligibility",
+      );
+      return false;
+    }
+  };
+
   const scheduler = createScheduler({
     now: input.now,
     cron: input.cron,
@@ -64,6 +99,7 @@ export const createExtensionScheduler = (input: Input) => {
 
     listJobs: async () => {
       const jobs: Job[] = [];
+      const owners = new Set<string>();
 
       for (const projectId of await input.listProjectIds()) {
         let snapshot: ProjectExtensionRuntimeSnapshot;
@@ -82,7 +118,14 @@ export const createExtensionScheduler = (input: Input) => {
         const preferences = await loadAutomationPreferences(input.deps, projectId);
 
         for (const schedule of snapshot.runtime.schedules) {
-          if (!isAutomationEnabled(schedule, instanceIds.get(schedule.extensionId), preferences)) continue;
+          if (schedule.enabledWhen) {
+            const owner = JSON.stringify([projectId, schedule.extensionId]);
+            owners.add(owner);
+            conditionalOwners.add(owner);
+          }
+          const instanceId = instanceIds.get(schedule.extensionId);
+          if (!isAutomationEnabled(schedule, instanceId, preferences)) continue;
+          if (!(await eligible(schedule, projectId, instanceId))) continue;
 
           jobs.push({
             key: `${projectId}/${schedule.id}`,
@@ -99,6 +142,7 @@ export const createExtensionScheduler = (input: Input) => {
         }
       }
 
+      conditionalOwners = owners;
       return jobs;
     },
 
@@ -112,6 +156,7 @@ export const createExtensionScheduler = (input: Input) => {
       const preferences = await loadAutomationPreferences(input.deps, meta.projectId);
       const instanceId = instanceIdsByExtensionId(snapshot.enabledSources).get(schedule.extensionId);
       if (!isAutomationEnabled(schedule, instanceId, preferences)) return;
+      if (!(await eligible(schedule, meta.projectId, instanceId))) return;
 
       const runner = createCommandRunner(snapshot.runtime, {
         logger: input.extensionLogger,
@@ -129,12 +174,7 @@ export const createExtensionScheduler = (input: Input) => {
           }),
       });
 
-      const workspace = schedule.workspaceId
-        ? await input.deps.workspaceService.get(schedule.workspaceId)
-        : await input.deps.workspaceService.getDefault(meta.projectId);
-      if (schedule.workspaceId && !workspace) throw new Error("Scheduled workspace no longer exists.");
-      if (workspace && workspace.project_id !== meta.projectId)
-        throw new Error("Workspace does not belong to this project.");
+      const workspace = await resolveScheduleWorkspace(input.deps, schedule, meta.projectId);
       const outcome = await runner.execute({
         commandId: schedule.commandId,
         projectId: meta.projectId,
@@ -154,12 +194,16 @@ export const createExtensionScheduler = (input: Input) => {
   const unsubscribe = input.deps.eventBus?.subscribe((event) => {
     if (isExtensionChangeEvent(event)) void scheduler.refresh();
   });
+  const stopStorage = input.deps.extensionStorageService.watch((owner) => {
+    if (conditionalOwners.has(JSON.stringify([owner.workbenchId, owner.extensionId]))) void scheduler.refresh();
+  });
 
   return {
     activity: scheduler.activity,
     refresh: scheduler.refresh,
     async dispose() {
       unsubscribe?.();
+      stopStorage();
       await scheduler.dispose();
     },
   };

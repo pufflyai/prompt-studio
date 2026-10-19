@@ -176,6 +176,10 @@ export interface ScheduleContribution<TParams extends Struct = Struct> extends C
   params?: TParams;
   workspaceId?: string;
   disabled?: boolean;
+  /** Read-only eligibility check. False leaves the schedule unarmed, regardless of user preferences.
+   * Rechecked after extension storage changes and before invocation. Must not write to storage.
+   */
+  enabledWhen?: (ctx: Pick<ExtensionContextBase, "storage">) => MaybePromise<boolean>;
 }
 
 export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace-type"> {
