@@ -55,7 +55,7 @@ test.each([
     await f.ctx.settings.set("implementation.defaultTargetBranch", "main");
     const ticket = await f.ticket("Continue previous work");
     const old = await runAttemptCommand.run(f.ctx, { ticket: ticket.id });
-    const previous = { ...old.attempt, base: { workspaceId: null, headSha: head } };
+    const previous = { ...old.variant, base: { workspaceId: null, headSha: head } };
     await putAttempt(f.storage, previous);
     const ready = await f.ticket("Independent ready work");
     const home = await f.ctx.workspaces.getDefault();
