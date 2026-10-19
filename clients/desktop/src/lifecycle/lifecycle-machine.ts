@@ -7,7 +7,7 @@ export type DesktopRuntimeIdentity = {
 export type RuntimeActivity = {
   sessions: Array<{ id: string; label: string }>;
   terminals: Array<{ id: string; label: string }>;
-  jobs: Array<{ id: string; label: string }>;
+  jobs: Array<{ id: string; label: string; description?: string }>;
 };
 
 export type DesktopRecoveryCode =
