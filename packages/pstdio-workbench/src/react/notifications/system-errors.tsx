@@ -97,6 +97,7 @@ export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
                             height="auto"
                             minH="8"
                             whiteSpace="normal"
+                            overflowWrap="anywhere"
                             onClick={() => {
                               const report = workbench.notifications.captureActionError(
                                 action.title,

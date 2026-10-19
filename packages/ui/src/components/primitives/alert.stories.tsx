@@ -1,5 +1,6 @@
-import { Button, Stack } from "@chakra-ui/react";
+import { Box, Button, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect } from "storybook/test";
 import { AlertMessage } from "./alert";
 
 const meta = {
@@ -43,4 +44,23 @@ export const Recoverable: Story = {
       </AlertMessage>
     </Stack>
   ),
+};
+
+export const LongContent: Story = {
+  render: () => (
+    <Box width="sm" maxW="full">
+      <AlertMessage
+        status="error"
+        role="alert"
+        title={`Service unavailable: ${"long-service-name".repeat(12)}`}
+        onClose={() => {}}
+      >
+        {`Unable to load /${"unbroken-resource-path".repeat(30)}.`}
+      </AlertMessage>
+    </Box>
+  ),
+  play: async ({ canvas }) => {
+    const alert = canvas.getByRole("alert");
+    await expect(alert.scrollWidth).toBeLessThanOrEqual(alert.clientWidth);
+  },
 };

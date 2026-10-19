@@ -17,12 +17,15 @@ export const alertSlotRecipe = defineSlotRecipe({
     },
     content: {
       gap: "0",
+      minWidth: "0",
     },
     title: {
       textStyle: "label/S/medium",
+      overflowWrap: "anywhere",
     },
     description: {
       textStyle: "paragraph/S/regular",
+      overflowWrap: "anywhere",
     },
   },
   compoundVariants: [
