@@ -60,6 +60,7 @@ try {
   await compose("run", "--rm", "tester");
   await compose("build", "smoke");
   await compose("run", "--rm", "smoke");
+  await compose("run", "--rm", "smoke", "bun", "test", "telemetry.test.js");
 } finally {
   try {
     await compose("down", "--volumes", "--remove-orphans");

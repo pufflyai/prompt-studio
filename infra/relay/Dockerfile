@@ -1,6 +1,7 @@
 FROM oven/bun:1.4.2 AS build
 WORKDIR /build
 COPY package.json bun.lock bunfig.toml ./
+COPY infra/telemetry/package.json ./infra/telemetry/package.json
 COPY infra/relay/package.json ./infra/relay/package.json
 COPY infra/account-manager/package.json ./infra/account-manager/package.json
 COPY packages/pstdio-sync/package.json ./packages/pstdio-sync/package.json
@@ -9,6 +10,7 @@ RUN bun install --frozen-lockfile --production --filter pstdio-relay
 COPY infra/relay/src ./infra/relay/src
 COPY infra/relay/scripts ./infra/relay/scripts
 COPY infra/account-manager/src ./infra/account-manager/src
+COPY infra/telemetry/src ./infra/telemetry/src
 COPY packages/pstdio-sync/src ./packages/pstdio-sync/src
 COPY packages/pstdio-sync-contracts/src ./packages/pstdio-sync-contracts/src
 RUN bun build infra/relay/src/server.ts infra/relay/src/index.ts infra/relay/scripts/smoke.ts infra/relay/scripts/enroll-local.fixture.ts infra/relay/scripts/initialize.fixture.ts infra/relay/scripts/transport-client-smoke.ts infra/relay/scripts/recovery-key.fixture.ts --target bun --outdir dist

@@ -1,4 +1,5 @@
 import type { ServerWebSocket } from "bun";
+import type { ReportFailure } from "pstdio-service-telemetry";
 import type { Scope } from "pstdio-sync-contracts";
 import type { RelayOwners } from "./owners";
 
@@ -7,6 +8,7 @@ export const createRelaySubscription = async (
   scope: Scope,
   expiresAt: string,
   requestSignal?: AbortSignal,
+  report: ReportFailure = () => {},
 ) => {
   const expiry = new Date(expiresAt).getTime();
   let socket: Pick<ServerWebSocket, "send" | "close"> | undefined;
@@ -62,7 +64,10 @@ export const createRelaySubscription = async (
           queueMicrotask(deliver);
         }
       },
-      () => close(1011),
+      () => {
+        if (!stopped) report("sync_subscription_failed");
+        close(1011);
+      },
     );
     if (stopped) {
       unsubscribe();

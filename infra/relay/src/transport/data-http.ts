@@ -1,3 +1,4 @@
+import type { ReportFailure } from "pstdio-service-telemetry";
 import {
   canonicalJson,
   checkpointSchema,
@@ -11,6 +12,18 @@ import {
 import type { RelayOwners } from "./owners";
 import { relayResponse } from "./responses";
 
+const dataFailures: Partial<Record<RelayOperation, Parameters<ReportFailure>[0]>> = {
+  initialize: "sync_initialize_failed",
+  snapshot: "sync_snapshot_failed",
+  replay: "sync_replay_failed",
+  recover: "sync_recover_failed",
+  submit: "sync_submit_failed",
+};
+
+const reportDataFailure = (operation: RelayOperation, signal: AbortSignal, report: ReportFailure) => {
+  if (!signal.aborted) report(dataFailures[operation] ?? "request_exception");
+};
+
 export const handleRelayData = async (
   owners: RelayOwners,
   scope: Scope,
@@ -18,6 +31,7 @@ export const handleRelayData = async (
   operation: RelayOperation,
   body: unknown,
   signal: AbortSignal,
+  report: ReportFailure,
 ) => {
   const owner = owners.storage.owner(scope);
   try {
@@ -52,6 +66,7 @@ export const handleRelayData = async (
       return relayResponse({ error: "Forbidden identity" }, 403);
     return relayResponse(owners.recovery.receipt(await owner.submit(mutation.data, signal)));
   } catch {
+    reportDataFailure(operation, signal, report);
     return relayResponse({ error: "Relay operation failed" }, 409);
   }
 };

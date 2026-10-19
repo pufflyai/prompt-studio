@@ -180,6 +180,7 @@ describe("verifyBoundaries", () => {
 test("a relay outside packages is discovered and obeys package boundaries", () => {
   const dependencies = {
     "pstdio-account-manager": "workspace:*",
+    "pstdio-service-telemetry": "workspace:*",
     "pstdio-sync": "workspace:*",
     "pstdio-sync-contracts": "workspace:*",
   };
