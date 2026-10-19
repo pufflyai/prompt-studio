@@ -1,8 +1,8 @@
 import { Box, Button, Dialog, Input, InputGroup, Text, useSlotRecipe } from "@chakra-ui/react";
-import { ArrowUp, Folder, FolderPlus, Home, Search } from "lucide-react";
+import { ArrowUp, FolderPlus, Home, Search } from "lucide-react";
 import { useState } from "react";
-import { ListRow } from "@/components/list-row/list-row";
-import { ScrollArea } from "@/components/primitives/scroll-area";
+import { type FolderPickerDrive, FolderPickerDriveMenu } from "./folder-picker-drive-menu";
+import { FolderPickerList } from "./folder-picker-list";
 
 export interface FolderPickerEntry {
   name: string;
@@ -12,6 +12,8 @@ export interface FolderPickerEntry {
 export interface FolderPickerProps {
   currentPath: string;
   entries: FolderPickerEntry[];
+  drives?: FolderPickerDrive[];
+  isUnavailable?: boolean;
   isLoading?: boolean;
   isOpening?: boolean;
   error?: string;
@@ -22,7 +24,19 @@ export interface FolderPickerProps {
 }
 
 export const FolderPicker = (props: FolderPickerProps) => {
-  const { currentPath, entries, isLoading, isOpening, error, onClose, onSelect, onNavigate, onCreateFolder } = props;
+  const {
+    currentPath,
+    entries,
+    drives = [],
+    isUnavailable,
+    isLoading,
+    isOpening,
+    error,
+    onClose,
+    onSelect,
+    onNavigate,
+    onCreateFolder,
+  } = props;
   const styles = useSlotRecipe({ key: "folderPicker" })({});
   const [path, setPath] = useState(currentPath);
   const [previousPath, setPreviousPath] = useState(currentPath);
@@ -35,14 +49,16 @@ export const FolderPicker = (props: FolderPickerProps) => {
     setPath(currentPath);
     setQuery("");
   }
-  const folders = entries.filter(
-    (entry) => entry.isDirectory && entry.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
-  );
   const normalizedPath = currentPath.replaceAll("\\", "/");
   const root = normalizedPath.match(/^\/\/[^/]+\/[^/]+/)?.[0] ?? normalizedPath.match(/^[a-z]:\//i)?.[0] ?? "/";
   const ancestor = normalizedPath.replace(/\/+$/, "").split("/").slice(0, -1).join("/");
   const parent = ancestor.length < root.length ? root : ancestor;
   const atRoot = normalizedPath.replace(/\/+$/, "") === root.replace(/\/+$/, "");
+  const navigate = (path: string) => {
+    setCreating(false);
+    setFolderName("");
+    onNavigate(path);
+  };
   const createFolder = async () => {
     if (!folderName.trim()) return;
     setSaving(true);
@@ -68,8 +84,8 @@ export const FolderPicker = (props: FolderPickerProps) => {
             variant="outline"
             css={styles.navigationButton}
             aria-label="Go to home directory"
-            disabled={isLoading || isOpening}
-            onClick={() => onNavigate("~")}
+            disabled={isLoading || isOpening || saving}
+            onClick={() => navigate("~")}
           >
             <Home />
           </Button>
@@ -78,11 +94,19 @@ export const FolderPicker = (props: FolderPickerProps) => {
             variant="outline"
             css={styles.navigationButton}
             aria-label="Go to parent directory"
-            disabled={isLoading || isOpening || atRoot}
-            onClick={() => onNavigate(parent)}
+            disabled={isLoading || isOpening || saving || atRoot || !currentPath || isUnavailable}
+            onClick={() => navigate(parent)}
           >
             <ArrowUp />
           </Button>
+          {drives.length > 0 && (
+            <FolderPickerDriveMenu
+              drives={drives}
+              currentPath={currentPath}
+              disabled={Boolean(isLoading || isOpening || saving)}
+              onNavigate={navigate}
+            />
+          )}
           <Input
             css={styles.path}
             size="sm"
@@ -92,15 +116,15 @@ export const FolderPicker = (props: FolderPickerProps) => {
             value={path}
             onChange={(event) => setPath(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") onNavigate(path);
+              if (event.key === "Enter") navigate(path);
             }}
-            disabled={isLoading || isOpening}
+            disabled={isLoading || isOpening || saving}
           />
           {!creating && (
             <Button
               variant="outline"
               size="sm"
-              disabled={!currentPath || isLoading || isOpening}
+              disabled={!currentPath || isUnavailable || isLoading || isOpening}
               onClick={() => setCreating(true)}
             >
               <FolderPlus />
@@ -115,6 +139,7 @@ export const FolderPicker = (props: FolderPickerProps) => {
               aria-label="Filter folders"
               placeholder="Filter folders"
               value={query}
+              disabled={isUnavailable}
               onChange={(event) => setQuery(event.target.value)}
             />
           </InputGroup>
@@ -143,25 +168,14 @@ export const FolderPicker = (props: FolderPickerProps) => {
             {error}
           </Text>
         )}
-        <ScrollArea css={styles.list}>
-          <Box css={styles.rows} aria-label="Folders">
-            {isLoading && <Text color="fg.muted">Loading folders...</Text>}
-            {!isLoading && folders.length === 0 && (
-              <Text color="fg.muted">{query ? "No matching folders." : "This folder is empty."}</Text>
-            )}
-            {!isLoading &&
-              folders.map((entry) => (
-                <ListRow
-                  key={entry.path}
-                  id={entry.path}
-                  label={entry.name}
-                  icon={<Folder />}
-                  disabled={isLoading || isOpening}
-                  onActivate={() => onNavigate(entry.path)}
-                />
-              ))}
-          </Box>
-        </ScrollArea>
+        <FolderPickerList
+          entries={entries}
+          query={query}
+          isLoading={isLoading}
+          isUnavailable={isUnavailable}
+          disabled={Boolean(isLoading || isOpening || saving)}
+          onNavigate={navigate}
+        />
       </Dialog.Body>
       <Dialog.Footer css={styles.footer}>
         <Button size="sm" variant="outline" onClick={onClose} disabled={isLoading || isOpening || saving}>
@@ -173,7 +187,7 @@ export const FolderPicker = (props: FolderPickerProps) => {
             variant="primary"
             onClick={onSelect}
             loading={isOpening}
-            disabled={!currentPath || isLoading || saving}
+            disabled={!currentPath || isUnavailable || isLoading || saving}
           >
             Open folder
           </Button>

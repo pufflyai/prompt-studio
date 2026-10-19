@@ -86,7 +86,7 @@ test("keeps the tab viewport unscrolled during drag and supports pointer and key
   }, project.id);
   await page.goto(`/projects/${project.id}`);
   await expect(page.getByText("Project home", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
   const header = page.locator('[data-workbench-panel-header="secondary"]');
   for (let index = 0; index < 3; index += 1) {
     await header.getByRole("button", { name: "Add panel", exact: true }).click();

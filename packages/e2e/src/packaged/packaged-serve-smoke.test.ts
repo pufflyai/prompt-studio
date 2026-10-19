@@ -22,7 +22,7 @@ import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-ext
 // Independent hosts also bind one workbench identity to their own environment and folder.
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
-// Core extension checks cover extension-owned draft storage and allocated file roots.
+// Core extension checks cover extension-owned draft storage, versioned template edits, and allocated file roots.
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // grouped ticket settings and icons, cleanup/merge settings, saved document links, and ticket/workspace navigation.
@@ -33,6 +33,7 @@ import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-dia
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
+// Grouped storage checks cached record/legacy reads after unrelated saves and durable restart.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -51,6 +52,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Shared record contracts remain covered through the compiled host. The separate relay
 // image checks authenticated HTTP, immutable asset ranges and finite native sockets.
+// Private service diagnostics are checked in the manager image smoke with an owned capture endpoint.
 // Native relay coverage hydrates artifact mounts and attachment URLs, and restores foreign journal work after restart.
 import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
 // Navigation metadata preserves independent panel capabilities through the compiled host.
@@ -61,7 +63,8 @@ import { registerNotificationStatusSmokeTests } from "./packaged-notification-st
 // Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
-// Planner covers timeline state, dependency recovery and Git conflicts in separate packaged cases.
+// Planner covers timeline state, complete board moves, dependency recovery and Git conflicts in separate packaged cases.
+// Its browser smoke also checks immediate ticket property edits while persistence is held open.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
@@ -147,6 +150,7 @@ test("includes extension development, smoke test, browser setup and update comma
   expect(updateResult.stdout).toContain("extensions update [name]");
 });
 
+// Includes host drive discovery and browsing through the packaged filesystem API.
 registerPackagedProjectSetupSmokeTests();
 
 test(
@@ -226,6 +230,7 @@ test(
 );
 
 // Browser smoke also covers mode panel restoration and generic page-preview cleanup.
+// Showcase resource checks include resolving an unknown Artifact without a failed command.
 registerPackagedShowcaseSmokeTests();
 registerPackagedPlannerSmokeTests();
 

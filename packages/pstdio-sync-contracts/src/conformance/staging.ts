@@ -23,9 +23,9 @@ async function changeProblem(current: StoredRecord, change: Change) {
 }
 
 // Pure reference staging, never a production service.
-export async function stage(snapshot: Snapshot, mutation: Mutation) {
+export async function stage(snapshot: Snapshot, mutation: Mutation, parentAccepted?: (id: string) => boolean) {
   const conflict = (reason: string) => ({ status: "conflict" as const, records: snapshot.records, reason });
-  const problem = resolutionProblem(snapshot, mutation);
+  const problem = resolutionProblem(snapshot, mutation, parentAccepted);
   if (problem) return conflict(problem);
   const candidate = structuredClone(snapshot.records);
   for (const change of mutation.changes) {

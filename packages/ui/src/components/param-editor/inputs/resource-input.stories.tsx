@@ -1,5 +1,6 @@
 import { Container } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { ParamEditor } from "../param-editor";
 import type { ResourceParam } from "../param-editor.types";
 
@@ -83,5 +84,24 @@ export const Demo: Story = {
     onChange: () => {},
     onOpenResource: () => {},
     params: [id, status, tags, dependsOn, reviewLinks],
+  },
+};
+
+export const ImmediateMultiSelectChanges: Story = {
+  ...Demo,
+  tags: ["!manifest"],
+  args: {
+    params: [{ ...tags, defaultValue: [] }],
+    onChange: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Add priority" }));
+    await userEvent.click(within(document.body).getByRole("menuitemcheckbox", { name: /^High$/ }));
+    await expect(args.onChange).toHaveBeenLastCalledWith("priority", ["high"]);
+    await userEvent.click(within(document.body).getByRole("menuitemcheckbox", { name: /^Urgent$/ }));
+    await expect(args.onChange).toHaveBeenLastCalledWith("priority", ["high", "urgent"]);
+    await userEvent.click(within(document.body).getByRole("menuitemcheckbox", { name: /^High$/ }));
+    await expect(args.onChange).toHaveBeenLastCalledWith("priority", ["urgent"]);
   },
 };

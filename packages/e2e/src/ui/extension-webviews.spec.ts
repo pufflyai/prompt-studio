@@ -292,7 +292,7 @@ test.describe("Extension webviews", () => {
     const terminalTabs = terminalTabList.getByRole("tab");
     const addTerminal = async () => {
       await expect(page.getByRole("region", { name: "Main", exact: true })).toBeVisible();
-      const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+      const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
       if (await showSecondary.isVisible()) await showSecondary.click();
       await secondaryHeader.getByRole("button", { name: "Add panel" }).click();
       await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
@@ -312,8 +312,8 @@ test.describe("Extension webviews", () => {
     await expectVisibleTerminalOutput();
 
     await page.getByRole("separator", { name: "Resize Secondary Panel" }).press("Home");
-    await expect(page.getByRole("button", { name: "Show Secondary Panel" })).toBeVisible();
-    await page.getByRole("button", { name: "Show Secondary Panel" }).click();
+    await expect(page.getByRole("button", { name: "Show Bottom Panel" })).toBeVisible();
+    await page.getByRole("button", { name: "Show Bottom Panel" }).click();
     await expectVisibleTerminalOutput();
 
     // Close the active terminal, then add another alongside the remaining content.

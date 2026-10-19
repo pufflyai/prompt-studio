@@ -1,3 +1,4 @@
+import type { ReportFailure } from "pstdio-service-telemetry";
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { createManagerAuthentication } from "./manager-authentication";
@@ -14,7 +15,7 @@ const unauthorized = () => json({ error: "Authentication unavailable" }, 401, { 
 
 type RenewalLog = (event: { event: "environment_access.failed"; category: "database" | "signing" | "service" }) => void;
 
-const renewAccess = async (auth: Authentication, request: Request, log: RenewalLog) => {
+const renewAccess = async (auth: Authentication, request: Request, log: RenewalLog, report: ReportFailure) => {
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, { allow: "POST" });
   const token = /^Bearer[ \t]+(\S+)[ \t]*$/i.exec(request.headers.get("authorization") ?? "")?.[1];
   if (!token) return unauthorized();
@@ -28,9 +29,11 @@ const renewAccess = async (auth: Authentication, request: Request, log: RenewalL
     return json(await auth.renew(token, workbenchId));
   } catch (error) {
     if (error instanceof EnvironmentAccessDenied) return unauthorized();
+    const category = error instanceof EnvironmentAccessFailure ? error.category : "service";
+    report(`renewal_${category}_failed`);
     log({
       event: "environment_access.failed",
-      category: error instanceof EnvironmentAccessFailure ? error.category : "service",
+      category,
     });
     return json({ error: "Environment access service unavailable" }, 503);
   }
@@ -65,15 +68,27 @@ export const createManagerHandler = (
   auth: Authentication,
   origin: string,
   log: RenewalLog = (event) => console.error(JSON.stringify(event)),
+  report: ReportFailure = () => {},
 ) => {
   const canonicalOrigin = new URL(origin).origin;
   return async (request: Request) => {
-    const path = new URL(request.url).pathname;
-    if (path.startsWith("/api/auth/")) return auth.handler(request);
-    if (path === "/health") return json({ ok: true });
-    if (path === "/v1/environment-access") return renewAccess(auth, request, log);
-    const management = /^\/v1\/accounts\/([^/]+)\/environments(?:\/(replace|revoke))?$/.exec(path);
-    if (management) return manageEnvironments(auth, canonicalOrigin, request, management);
-    return json({ error: "Not found" }, 404);
+    try {
+      const path = new URL(request.url).pathname;
+      if (path.startsWith("/api/auth/")) {
+        const response = await auth.handler(request);
+        if (response.status < 500) return response;
+        await response.body?.cancel().catch(() => {});
+        if (!request.signal.aborted) report("request_exception");
+        return json({ error: "Account manager unavailable" }, 503);
+      }
+      if (path === "/health") return json({ ok: true });
+      if (path === "/v1/environment-access") return await renewAccess(auth, request, log, report);
+      const management = /^\/v1\/accounts\/([^/]+)\/environments(?:\/(replace|revoke))?$/.exec(path);
+      if (management) return await manageEnvironments(auth, canonicalOrigin, request, management);
+      return json({ error: "Not found" }, 404);
+    } catch {
+      if (!request.signal.aborted) report("request_exception");
+      return json({ error: "Account manager unavailable" }, 503);
+    }
   };
 };

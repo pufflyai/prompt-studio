@@ -1,7 +1,6 @@
 import {
   defineArtifactMount,
   definePage,
-  defineResourceKind,
   defineView,
   type ExtensionContextBase,
   eventRef,
@@ -11,7 +10,10 @@ import {
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { notesFileAccess } from "./file-access";
-import { noteTabActions } from "./note-tab-actions";
+import { note } from "./resource-kinds";
+
+export { note } from "./resource-kinds";
+
 import { noteExists, readNote, readNoteTitle, writeNote } from "./notes";
 
 export const notesChanged = eventRef<{ noteId?: string }>({
@@ -23,12 +25,6 @@ export const documents = defineArtifactMount({
   id: "documents",
   path: "documents",
   label: l10n("mounts.documents", "Notes"),
-});
-
-export const note = defineResourceKind({
-  id: "note",
-  label: l10n("resources.note", "Note"),
-  icon: "file-text",
 });
 
 /** Notes belong to the default project workspace through the host artifact mount. */
@@ -102,13 +98,13 @@ export const notesPage = definePage({
         refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
         query: async (ctx, { renderer }) => {
           const id = renderer.resource?.id;
-          const { readable, writable } = await notesFileAccess(ctx);
+          const { readable } = await notesFileAccess(ctx);
           if (!readable) return {};
           const mount = notesMount(ctx);
           if (!id || !(await noteExists(mount, id))) return {};
           try {
             const label = await readNoteTitle(mount, id);
-            return { label, menu: noteTabActions(id, writable, label) };
+            return { label };
           } catch (error) {
             if (await noteExists(mount, id)) throw error;
             return {};
@@ -127,6 +123,7 @@ export const noteResource = (
   id: string,
   label: string,
   context?: Pick<ExtensionContextBase, "extensionId" | "projectId">,
+  writable?: boolean,
 ) =>
   ({
     type: note.id,
@@ -134,6 +131,7 @@ export const noteResource = (
     label,
     extensionId: context?.extensionId,
     projectId: context?.projectId,
+    ...(writable === undefined ? {} : { metadata: { writable } }),
   }) satisfies ResourceRef;
 
 export const noteTarget = (

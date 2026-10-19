@@ -15,7 +15,7 @@ import { cleanupLegacyWorkspaceStatus } from "./data/cleanup-legacy-workspace-st
 import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./data/collections";
 import { seedDefaultStatuses } from "./data/seed";
 import type { StoredStatus } from "./data/types";
-import { plannerTicketsChanged } from "./events";
+import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { sortedBySortOrder } from "./utils/sort";
 
 // Creating a ticket in a column is a command on the status, so it travels in the
@@ -90,6 +90,7 @@ export const saveStatusSettings = defineCommand({
       ),
     ]);
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
 
     return { statuses: sortedBySortOrder(next).map(toTicketStatusDraft) };
   },

@@ -1,7 +1,9 @@
 # Synchronization contracts
 
 The private `pstdio-sync-contracts` package defines wire protocol 1 and an executable
-reference for the v0.1 synchronization model. Production owners build on it:
+reference for the v0.1 synchronization model. The protocol 2 replacement contracts
+are defined in [covered checkpoints](0027-covered-checkpoints.md); their production
+cutover is separate. The owners below currently build on protocol 1:
 grouped local storage in `pstdio-sync` and `pstdio-db`, the relay in `infra/relay`,
 account authority in `infra/account-manager`, and an opt-in runtime connection in
 `pstdio-api`. They are on `main` but in no release. The
@@ -222,50 +224,72 @@ same revision checks without requiring a handler field. The relay authorizes cal
 and the native connection initializes each scope with the installed source revision.
 The fixture uses a publication marker.
 
+## Local read projections
+
+Accepted state and the immutable journal are the only durable storage authorities.
+The database storage service owns a disposable projection cache, with at most 32
+owner/environment entries per service. Each entry contains the working records,
+operation outcomes and conflicts derived by the same projector used for recovery.
+There is no writable working-record table.
+
+Each owner row has an opaque UUID revision. The storage transaction changes it
+when appending operations, changing acceptance or recovery evidence, or replacing
+accepted state. The token commits with those changes under the owner lock. A
+journal ordinal alone would miss acceptance-only changes; snapshot checkpoint
+counters would miss pending work and conflicts. A new owner receives a new token,
+so deleting and recreating an owner cannot revive its previous cached records.
+
+Ordinary record reads, outcomes, conflict summaries and deprecated KV/collection
+reads first fetch only this token. A matching projection serves the read without
+loading the journal or acquiring the owner write lock. Single-record work depends
+on that record's payload and revision ancestry, rather than unrelated retained
+history. Listing still scans current records. Callers receive
+copies of cached values and metadata.
+
+A committed local append advances existing projections through only the new
+operations. The service copies the derived view and appended payloads so issued
+views stay immutable. Copying this derived state still costs work during writes;
+only replay is limited to the appended operations. The new view becomes available
+after the transaction commits. Failed transactions publish no cache changes.
+Acceptance changes and accepted-state replacement discard old projections. This
+also covers epoch, snapshot frontier and document-generation changes represented
+by a replacement snapshot, even when checkpoint counters do not change. Any
+future history compaction must update the owner token in its storage transaction.
+
+A cache miss rebuilds from accepted state and the retained journal under the
+owner lock, including any legacy import in the same transaction. Eviction,
+independent service instances and process restart use this same recovery path.
+The cache does not change durability, stale-write guards, conflict retention or
+public storage contracts. Writes, branch inspection and recovery can still read
+retained history; this cache does not implement history compaction.
+
 ## Replay, snapshots, retention and restore
 
-A checkpoint is `(epoch, sequence)`, scoped to one extension/workbench/account stream.
-Sequence increases on accepted publication. `Receipt.order` orders every retained
-attempt, including conflicts and pending dependencies. A snapshot contains a
-consistent accepted record set, tombstones, conflict alternatives, receipt index,
-published revision and checkpoint. Incremental production replay must frame whole
-groups and apply them atomically, then advance the local checkpoint in the same
-transaction. Never advance a cursor before its group is durable. The relay serves
-replay, but the current native client downloads snapshots instead.
+The current protocol 1 owners use checkpoints of `(epoch, sequence)`, whole-group
+replay, and retained receipts. Replay cursors outside the retained range or epoch
+require snapshots. A content restore starts a fresh epoch and never restores grants.
+Local reconnect preserves newer accepted and pending work and their source bytes.
+These owners do not implement production compaction yet.
 
-`replaySchema` validates contiguous complete accepted groups in one scope and epoch, with matching receipt identities and checkpoints. `replayBoundary` requests a snapshot for a different epoch, an out-of-range cursor,
-or a cursor older than retained replay. Production content restore preserves scope
-IDs and creates a new epoch before exposing restored content. Sequence rollback
-inside the same epoch is invalid. Compacting replay entries does not change epoch.
+PS-808 replaces permanent receipt retention with the
+[covered checkpoint contract](0027-covered-checkpoints.md). Protocol 2 snapshots
+carry current records, required tombstones, explicit retained branches, document
+generations, writer floors, and outstanding receipts. Coverage requires durable
+installation by every enrolled environment and an independent verified backup.
+Offline environments, active recovery, retained ancestry, and in-flight publication
+or capture restrict the cut. There is no time-based expiry.
 
-The following metadata must survive replay compaction and content cleanup:
+Generation retirement replaces covered terminal outcomes with per-environment
+floors and preserves outstanding exceptions. Late old-generation operations require
+resynchronization with their proposals intact. Document rotation fences all writers
+and publishes one shared fresh CRDT seed. Deletion follows committed retirement and
+rechecks reachability under the publication boundary. Backup manifests own independent
+copies; restore starts a new epoch and preserves newer local recovery proposals.
 
-- Operation IDs, immutable digests, acceptance outcomes, ordering and checkpoints.
-- Parent edges, resolution captures and their supersession receipts, including nonaccepted ancestors needed to replay accepted resolutions.
-- Record revision lineage and tombstones, conflict revisions and unresolved alternatives.
-- Snapshot coverage, restore epoch lineage, and enough sealed payload/byte material to replay missing accepted local work and pending branches.
-
-The v0.1 reference retains all of this. Removing a replay entry must never remove
-the receipt index or imply that the operation was lost. A production compactor may
-replace history only with an explicit verifiable coverage checkpoint plus retained
-recovery material and ancestry that provides the same guarantees for returning
-environments. Until that design is proved, do not compact these receipts. No TTL,
-device-clock cutoff, or assumed maximum offline interval is specified here.
-
-On reconnect, compare retained accepted receipts with the incoming snapshot before
-replacing accepted local state. Compare immutable fingerprints as well as outcomes: a restored pending receipt does not acknowledge newer accepted local work. Requeue missing or rolled-back accepted operations and their
-nonaccepted captured ancestors in retained journal order, before pending mutations.
-Keep original IDs/digests and local bytes. Reconcile acknowledgments only against
-the current relay receipts. If recovered work now conflicts, retain it as an
-alternative; restore cannot silently reset it. A snapshot with truncated receipt
-coverage is invalid under this reference, not evidence of data loss to guess about.
-If required recovery material is unavailable, preserve local work and report that
-recovery is incomplete; never label it synchronized.
-
-Current authorization must succeed before a returning environment contributes work.
-Content snapshots never restore grants. Account-manager recovery and credential
-invalidation are implemented separately in `infra/account-manager`; see
-[account authority development](../../guides/development/0007-account-manager.md#recovery).
+The isolated reference proves these rules; PS-776, PS-780, PS-781, and PS-782 own
+production editing, backups, compaction, and restore. Do not apply protocol 2 deletion
+rules to protocol 1 production data before the paired host/relay cutover. There is no
+mixed-client fallback or historical conversion in this alpha redesign.
 
 ## Compatibility
 

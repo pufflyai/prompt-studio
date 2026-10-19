@@ -50,5 +50,6 @@
   "timeline.autoBuild.stop": "Arrêter la construction automatique",
   "timeline.autoBuild.cancel": "Annuler",
   "timeline.autoBuild.description": "Un superviseur utilise votre consigne pour attribuer les tickets valides et non attribués lorsque la capacité le permet. Il attend entre les vérifications et reprend lorsque davantage de travail peut démarrer.",
-  "timeline.autoBuild.documentation": "Documentation Auto Build"
+  "timeline.autoBuild.documentation": "Documentation Auto Build",
+  "commands.ticketRelatedOpenings.title": "Sélectionner les ressources liées au ticket"
 }

@@ -5,7 +5,12 @@ export interface DirectoryEntry {
   path: string;
   isDirectory: boolean;
 }
+export interface FilesystemDrive {
+  name: string;
+  path: string;
+}
 export const createFilesystemClient = (request: RequestFn) => ({
+  drives: () => request<{ drives: FilesystemDrive[] }>("/v1/filesystem/drives"),
   list: (path?: string) =>
     request<{ currentPath: string; entries: DirectoryEntry[] }>(
       `/v1/filesystem/list${path ? `?path=${encodeURIComponent(path)}` : ""}`,

@@ -24,7 +24,7 @@ export const verifyEmptyPanelAddition = async (page: Page) => {
   const side = page.locator('[data-workbench-panel-header="side"]');
   const bottom = page.locator('[data-workbench-panel-header="secondary"]');
   const showSide = page.getByRole("button", { name: "Show Side Panel", exact: true });
-  const showBottom = page.getByRole("button", { name: "Show Secondary Panel", exact: true });
+  const showBottom = page.getByRole("button", { name: "Show Bottom Panel", exact: true });
   if (await showSide.isVisible()) await showSide.click();
   if (await showBottom.isVisible()) await showBottom.click();
   await expect(side).toBeVisible();
@@ -39,7 +39,7 @@ export const verifyEmptyPanelAddition = async (page: Page) => {
   await side.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
   await expect(side.getByRole("tab", { selected: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Hide Secondary Panel", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Hide Bottom Panel", exact: true })).toBeVisible();
   await expect(bottom.getByRole("tab")).toHaveCount(0);
   expect(await bottomTabs.evaluate((watcher) => watcher.stop())).toBe(false);
   await bottomTabs.dispose();

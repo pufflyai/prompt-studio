@@ -65,7 +65,7 @@ test("keeps the mode's secondary panel preference across resources and reload", 
     await workspacesNavigation.click();
 
     await openWorkspace(page, attemptA.workspace.workspace_shorthand);
-    await page.getByRole("button", { name: "Show Secondary Panel" }).click();
+    await page.getByRole("button", { name: "Show Bottom Panel" }).click();
     const separator = page.getByRole("separator", { name: "Resize Secondary Panel" });
     await separator.press("ArrowUp");
     await separator.press("ArrowUp");
@@ -76,12 +76,12 @@ test("keeps the mode's secondary panel preference across resources and reload", 
     await openWorkspace(page, attemptB.workspace.workspace_shorthand);
     await expect(separator).toBeVisible();
     await expect(separator).toHaveAttribute("aria-valuenow", workspaceASize!);
-    await page.getByRole("button", { name: "Hide Secondary Panel", exact: true }).click();
+    await page.getByRole("button", { name: "Hide Bottom Panel", exact: true }).click();
 
     await workspacesNavigation.click();
     await openWorkspace(page, attemptA.workspace.workspace_shorthand);
     await expect(page.getByRole("region", { name: "Secondary Panel" })).not.toBeVisible();
-    await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+    await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
     await expect(separator).toBeVisible();
     await expect(separator).toHaveAttribute("aria-valuenow", workspaceASize!);
 

@@ -1,7 +1,7 @@
 import { Box, Flex, Icon, Stack } from "@chakra-ui/react";
 import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ResourceOption, ResourceRefValue } from "../param-editor.types";
 import { ParamEditorLabel } from "../param-editor-label";
 import { ResourceChipList } from "./resource-input-chips";
@@ -122,21 +122,14 @@ export const ResourceInput = (props: ResourceInputProps) => {
   } = props;
 
   const [value, setValue] = useState(defaultValue);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setValue(defaultValue);
   }, [defaultValue]);
 
-  const emitChange = (next: string | string[]) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  const commit = (next: string | string[]) => {
+    setValue(next);
     onChange(id, next);
-  };
-
-  // Debounce multi-select toggles so a burst of menu clicks makes one update call.
-  const scheduleChange = (next: string | string[]) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => onChange(id, next), 540);
   };
 
   const selectedIds = toIds(value);
@@ -161,20 +154,17 @@ export const ResourceInput = (props: ResourceInputProps) => {
       const next = selectedIds.includes(optionId)
         ? selectedIds.filter((entry) => entry !== optionId)
         : [...selectedIds, optionId];
-      setValue(next);
-      scheduleChange(next);
+      commit(next);
       return;
     }
     // Re-picking the selected option clears it.
     const next = selectedIds.includes(optionId) ? "" : optionId;
-    setValue(next);
-    emitChange(next);
+    commit(next);
   };
 
   const removeOption = (optionId: string) => {
     const next = selectedIds.filter((entry) => entry !== optionId);
-    setValue(next);
-    scheduleChange(next);
+    commit(next);
   };
 
   if (multiSelect) {

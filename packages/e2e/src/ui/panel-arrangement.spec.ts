@@ -18,7 +18,7 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   const main = page.getByRole("region", { name: "Main", exact: true });
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader).not.toBeVisible();
-  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
   const secondary = page.locator('[data-workbench-panel-header="secondary"]');
   await secondary.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();

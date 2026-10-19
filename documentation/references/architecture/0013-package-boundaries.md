@@ -120,10 +120,14 @@ layer-map change.
    Cross-package relative imports are only allowed for the
    generated embed manifest allowlist enforced by the boundary checker.
 
+The API declares Notes and Planner as development dependencies for the isolated
+checkpoint save-handler proof. Their source handlers are test inputs, not runtime
+imports. This lets the package graph select that proof when a handler changes.
+
 ## Shared relay
 
 The private `pstdio-relay` workspace lives under `infra/relay/`. It is a separate
-service, not part of the local API host or the CLI bundle. It consumes the private
+service, not part of the local API host or the CLI bundle. It consumes the shared diagnostic adapter, the private
 `pstdio-sync` record/branch rules and `pstdio-sync-contracts` wire schemas. Its production
 access verification uses only the database-free `pstdio-account-manager/access` entry;
 the relay receives public issuer/audience/JWKS trust, without the manager database role, signing secret or renewal grants. Isolated integration fixtures may
@@ -135,10 +139,18 @@ Future Terraform configuration belongs under `infra/relay/terraform/`,
 separate from relay source. See the [relay development guide](../../guides/development/0006-relay.md)
 for isolated storage fixtures and container checks.
 
+## Service diagnostics
+
+The private `pstdio-service-telemetry` workspace under `infra/telemetry/` has no
+workspace dependencies. Manager and relay use it to send fixed diagnostic codes
+with deployment tags to the selected EU destination. It never consumes content,
+authentication material or local host APIs. It is excluded from the CLI bundle.
+See [service diagnostics](../../guides/development/0010-service-diagnostics.md).
+
 ## Account authority
 
 The private `pstdio-account-manager` workspace lives under `infra/account-manager/`.
-It consumes only the merged `pstdio-sync-contracts` identity and canonical JSON
+It consumes the shared diagnostic adapter and the merged `pstdio-sync-contracts` identity and canonical JSON
 contracts. It owns a separate private PostgreSQL database/role and imports no
 relay content implementation, local API host, SDK, UI, client or extension code.
 It is not part of the CLI bundle. Its authenticated HTTP service and the relay's

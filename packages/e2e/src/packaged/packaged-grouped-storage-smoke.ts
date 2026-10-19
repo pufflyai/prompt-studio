@@ -52,7 +52,7 @@ export const registerGroupedStorageSmokeTests = () => {
         );
         expect(response.status).toBe(200);
         const body = (await response.json()) as { outcome: { ok: boolean; value: T } };
-        expect(body.outcome.ok).toBe(true);
+        expect(body.outcome).toMatchObject({ ok: true });
         return body.outcome.value;
       };
       const read = (id: string) => command<{ note: StorageRecord; caption: StorageRecord }>(id, "read");
@@ -61,6 +61,17 @@ export const registerGroupedStorageSmokeTests = () => {
         expect(created.status).toBe(201);
         const project = (await created.json()) as { id: string };
         const initial = await read(project.id);
+        const cached = await command<{
+          before: StorageRecord;
+          reads: { record: StorageRecord; legacy: unknown }[];
+        }>(project.id, "check-read-cache");
+        expect(cached.before).toEqual(initial.caption);
+        expect(cached.reads).toEqual(
+          Array.from({ length: 3 }, () => ({
+            record: initial.caption,
+            legacy: { saved: true },
+          })),
+        );
         const image = await command<AssetReference>(project.id, "stage", {
           operationId: "image",
           content: "first image",

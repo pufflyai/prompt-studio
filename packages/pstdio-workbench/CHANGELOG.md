@@ -1,5 +1,42 @@
 # @pstdio/workbench
 
+## 0.44.0
+
+_2026-10-18_
+
+### Minor Changes
+
+- e0d2a76: Add resource-owned related tabs with mode-scoped panels, remembered closures, temporary automatic reveal, pin-on-drop retention, and qualified activity-ordered session queries
+- ea4a560: Share resource actions across navigation, tabs, and breadcrumbs and add a searchable session picker with live status indicators.
+- e2b23f5: Add typed page params and persist extension-owned webview preferences on the server.
+- 25c534b: Open related resources with a default-on Appearance setting, keep one leftmost preview per tray, and show preview replacement while dragging.
+- 45580fe: Synchronize extension storage and declared artifact files transparently across enrolled environments.
+- 452aeb8: Allow reordering saved views in Kanban boards and data tables with drag and keyboard controls.
+- 7572b09: Repair extension logging, lifecycle events, webview context, test helpers, and notification snoozing; remove APIs deprecated in 0.43.1 with replacements listed in the extension API 0.2.0 migration guide.
+
+### Patch Changes
+
+- adc2df3: Create tabs directly in the chosen panel without disturbing other panels.
+- 25c534b: Keep page context stable and restore tab menu focus.
+- bcb38f8: Add linked count badges and restore document breadcrumb ancestry through owner resource resolution.
+- fb0c413: Show full tab titles on hover and keyboard focus.
+- 3157d46: Let resource owners open claimed file paths and show resource bubbles in rich messages.
+- e419d9d: Add virtual board rendering, complete move callbacks, and schema-only view refresh.
+- eb26d78: Show correct database ownership recovery and allow Retry as soon as recovery is visible. Wait for the first workbench load before showing quit confirmation, and update shared resource inspectors during navigation.
+- e0d2a76: Restore each mode's panels and moved tabs, keep Main tabs on their page and Side/Bottom tabs across pages, restore live tab behavior, and close unpinned tabs on page navigation.
+- 19c042b: Preserve complete command outcomes and share cancellable chunk streams across webviews, SDK and CLI.
+- 83a7e7a: Use one webview host capability factory across dashboard, workbench, and testbench.
+- a08ac05: Preview moves immediately for views using attribute callbacks.
+- 310e039: Open core pages while extension startup continues in the background.
+- 1dc235f: Keep navigation visible without load-error notices in the nav panel.
+- cf0dd46: Add typed webview clients, shared host context, structured errors and event-driven query refresh.
+- 0325001: Add shared session rename, archive, and guarded deletion actions with synced navigation and public SDK support.
+- 26bb359: Add stable workbench bindings and isolate local runtime identities, connections, and caches.
+- 83d67ff: Let extension tree rows show a tooltip anywhere on the row with the new `tooltip` field, such as a file's full path.
+- 0a2adf3: Keep data table controls pinned while rows scroll and apply the selected theme to host terminals.
+- 4b3c6cb: Place native extension controls in their Settings tab, save rapid edits in order, preserve status colors, and validate resource links against the enabled extension owner.
+- e0d2a76: Keep shared resource tabs visible when moved into Main after leaving a resource page.
+
 ## 0.43.1
 
 _2026-10-13_
