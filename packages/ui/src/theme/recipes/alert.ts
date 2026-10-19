@@ -11,6 +11,14 @@ export const alertSlotRecipe = defineSlotRecipe({
       borderRadius: "xs",
       alignItems: "flex-start",
       minH: "auto",
+      "& .chakra-button": {
+        color: "inherit",
+        maxWidth: "full",
+        height: "auto",
+        minHeight: "7",
+        whiteSpace: "normal",
+        overflowWrap: "anywhere",
+      },
     },
     indicator: {
       mt: "0.0625rem",

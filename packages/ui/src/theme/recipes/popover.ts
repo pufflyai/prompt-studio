@@ -17,8 +17,8 @@ export const popoverRecipe = defineSlotRecipe({
     },
     content: {
       gap: "8px",
-      px: "xs",
-      py: "2xs",
+      px: "sm",
+      py: "xs",
       borderRadius: "xs",
       bg: "bg",
       borderWidth: "1px",

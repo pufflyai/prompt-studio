@@ -58,11 +58,7 @@ export const FeedbackSection = () => {
           status="error"
           title="Could not load conversation"
           onClose={() => {}}
-          endElement={
-            <Button size="2xs" variant="outline">
-              Retry
-            </Button>
-          }
+          endElement={<Button>Retry</Button>}
         >
           <Text>The server had a temporary problem.</Text>
         </AlertMessage>

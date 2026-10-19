@@ -9,15 +9,7 @@ interface RendererReadNoticeProps {
 export const RendererReadNotice = (props: RendererReadNoticeProps) => {
   const { error, retry } = props;
   return (
-    <AlertMessage
-      status="error"
-      title="Could not load this view"
-      endElement={
-        <Button size="xs" variant="outline" onClick={retry}>
-          Retry
-        </Button>
-      }
-    >
+    <AlertMessage status="error" title="Could not load this view" endElement={<Button onClick={retry}>Retry</Button>}>
       {error}
     </AlertMessage>
   );

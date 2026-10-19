@@ -23,7 +23,7 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 
 1. Use small controls in dialogs and settings.
 2. Use extra-small controls for inline file creation and renaming in the side navigation.
-3. Popovers use `xs` horizontal padding and `2xs` vertical padding, defined in the shared popover recipe.
+3. Popovers use `sm` horizontal padding and `xs` vertical padding, defined in the shared popover recipe.
 
 ## 4. Delete actions
 
@@ -44,7 +44,7 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 6. Chat problems appear in the conversation, without banners.
 7. The system-error and performance popovers share their width and gap above the status bar. Each aligns with its widget: system errors on the left, performance on the right. Long error lists grow with the viewport and scroll inside the popover. Keep the count and dismissal controls visible when text is long.
 8. Pending system errors keep the status bar visible even when the active mode hides it. Restore the mode's hidden state after the last system error is dismissed. Custom status-bar content stays available beside the error widget.
-9. Notification recovery buttons appear inside their `AlertMessage`, below the message. Keep recovery failures inside that same alert.
+9. Alert action and close buttons sit inside the alert, bottom-right aligned below its message. Use ghost buttons that inherit the alert's semantic foreground and the active theme's hover and focus colors. Let the footer wrap in narrow containers. Keep recovery failures inside that same alert.
 
 ## 7. Activity
 

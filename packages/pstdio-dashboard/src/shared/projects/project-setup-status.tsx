@@ -19,7 +19,7 @@ export const ProjectSetupStatus = (props: ProjectSetupStatusProps) => {
       role="alert"
       title="Project setup did not finish"
       endElement={
-        <Button variant="outline" size="sm" loading={retrying} onClick={onRetry}>
+        <Button loading={retrying} onClick={onRetry}>
           Retry setup
         </Button>
       }

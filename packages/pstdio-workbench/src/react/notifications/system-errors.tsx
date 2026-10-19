@@ -1,6 +1,6 @@
-import { Button, HStack, Icon, IconButton, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Icon, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import { AlertMessage, ScrollArea } from "@pstdio/ui";
-import { TriangleAlert, X } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchActionErrors } from "./action-errors";
@@ -65,49 +65,26 @@ export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
                     <AlertMessage
                       key={error.id}
                       status="error"
-                      title={
-                        <HStack gap="xs" alignItems="start">
-                          <Text flex="1" minW="0">
-                            {error.title}
-                          </Text>
-                          <IconButton
-                            aria-label={`Dismiss ${error.title}`}
-                            size="2xs"
-                            variant="ghost"
-                            onClick={() => workbench.notifications.dismiss(error.id)}
-                          >
-                            <X />
-                          </IconButton>
-                        </HStack>
-                      }
+                      title={error.title}
+                      closeLabel={`Dismiss ${error.title}`}
+                      onClose={() => workbench.notifications.dismiss(error.id)}
+                      endElement={error.actions?.map((action) => (
+                        <Button
+                          key={action.commandId}
+                          onClick={() => {
+                            const report = workbench.notifications.captureActionError(
+                              action.title,
+                              `system-errors.${error.id}`,
+                            );
+                            void workbench.commands.executeCommand(action.commandId, action.args).catch(report);
+                          }}
+                        >
+                          {action.title}
+                        </Button>
+                      ))}
                     >
                       <Stack gap="xs" minW="0">
                         <Text>{error.message}</Text>
-                        {error.actions?.length ? (
-                          <HStack gap="xs" flexWrap="wrap">
-                            {error.actions.map((action) => (
-                              <Button
-                                key={action.commandId}
-                                size="xs"
-                                variant="outline"
-                                maxW="full"
-                                height="auto"
-                                minH="8"
-                                whiteSpace="normal"
-                                overflowWrap="anywhere"
-                                onClick={() => {
-                                  const report = workbench.notifications.captureActionError(
-                                    action.title,
-                                    `system-errors.${error.id}`,
-                                  );
-                                  void workbench.commands.executeCommand(action.commandId, action.args).catch(report);
-                                }}
-                              >
-                                {action.title}
-                              </Button>
-                            ))}
-                          </HStack>
-                        ) : null}
                         <WorkbenchActionErrors workbench={workbench} target={`system-errors.${error.id}`} />
                       </Stack>
                     </AlertMessage>
