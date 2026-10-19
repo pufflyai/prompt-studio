@@ -39,12 +39,13 @@
   "settings.tickets.deleteLinkedWorkspaces.title": "연결된 작업 공간 삭제",
   "settings.tickets.deleteLinkedWorkspaces.description": "티켓을 보관하거나 삭제하면 활성 티켓이 사용하지 않는 작업 공간을 삭제합니다. 작업 트리, 브랜치 및 커밋하지 않은 변경 사항이 삭제됩니다.",
   "settings.tickets.markDoneOnMerge.title": "병합 시 완료로 표시",
-  "settings.tickets.markDoneOnMerge.description": "작업 공간 브랜치 또는 연결된 풀 리퀘스트가 병합되면 티켓을 완료로 이동합니다.",
+  "settings.tickets.markDoneOnMerge.description": "작업 공간 브랜치 또는 연결된 풀 리퀘스트가 병합되면 티켓을 병합 후 선택한 상태로 이동합니다.",
   "requests.view.title": "검토 요청",
   "requests.page.title": "검토 요청",
   "timeline.autoBuild.start": "자동 빌드",
   "timeline.autoBuild.stop": "자동 빌드 중지",
   "timeline.autoBuild.cancel": "취소",
   "timeline.autoBuild.description": "감독 에이전트는 입력한 지침에 따라 여유가 생기면 유효한 미할당 티켓을 할당합니다. 확인 사이에는 대기하고 더 많은 작업을 시작할 수 있으면 재개합니다.",
-  "timeline.autoBuild.documentation": "Auto Build 문서"
+  "timeline.autoBuild.documentation": "Auto Build 문서",
+  "views.workflowSettings.title": "플래너 워크플로"
 }

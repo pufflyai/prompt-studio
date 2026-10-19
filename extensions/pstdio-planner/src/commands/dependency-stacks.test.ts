@@ -61,7 +61,7 @@ async function independentDependencies(conflict = false) {
 test("repairs an unsubmitted child from Done dependency branches without changing main", async () => {
   const f = await independentDependencies();
   try {
-    expect(await readStackRepair(f.ctx, f.attempt)).toMatchObject({ needsIntegration: true });
+    expect(await readStackRepair(f.ctx, f.attempt, {})).toMatchObject({ needsIntegration: true });
     const updated = await updateStackCommand.run(f.ctx, f.input);
     expect(updated.base.workspaceId).toBeNull();
     await f.git("merge-base", "--is-ancestor", f.left, updated.base.headSha);
@@ -72,7 +72,29 @@ test("repairs an unsubmitted child from Done dependency branches without changin
     expect(await f.git("rev-parse", "main")).toBe(f.base);
     const submitted = await submitChangeRequestCommand.run(f.ctx, await f.params());
     expect(submitted.revisions.at(-1)?.baseSha).toBe(updated.base.headSha);
-    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!)).toBeNull();
+    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!, {})).toBeNull();
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("automatic stack repair honors the merge requirement and keeps stopped owners stopped", async () => {
+  const f = await independentDependencies();
+  try {
+    expect(await readStackRepair(f.ctx, f.attempt, {})).toMatchObject({ needsIntegration: true });
+    expect(await readStackRepair(f.ctx, f.attempt, { requireMergedDependencies: true })).toBeNull();
+    let cause = "user_stop";
+    f.ctx.sessions.get = async (id) =>
+      ({
+        type: "session",
+        id,
+        title: id,
+        status: "cancelled",
+        last_exit: { cause, startedAt: null, endedAt: null },
+      }) as never;
+    expect(await readStackRepair(f.ctx, f.attempt, {})).toBeNull();
+    cause = "request_aborted";
+    expect(await readStackRepair(f.ctx, f.attempt, {})).toBeNull();
   } finally {
     await f.cleanup();
   }
@@ -97,7 +119,7 @@ test("the owner can reconcile conflicting dependencies and submit without a huma
     expect(await f.git("status", "--porcelain")).toBe("");
     expect(updated.base.headSha).toBe(f.base);
     await submitChangeRequestCommand.run(f.ctx, await f.params());
-    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!)).toBeNull();
+    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!, {})).toBeNull();
     expect((await listTicketReviewRequests(f.storage, "Child")).requests).toHaveLength(0);
     expect(await f.git("rev-parse", "main")).toBe(f.base);
   } finally {

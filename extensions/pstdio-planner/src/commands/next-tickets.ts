@@ -1,7 +1,7 @@
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
 import { type AttemptReadinessResult, findPendingPrerequisites } from "../data/attempt-readiness";
-import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
-import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
+import { retiredWorkspaceIds } from "../data/attempt-retirement";
+import { attemptEventsCollection, attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
 import type { AttemptRecord, TicketAttemptSelection } from "../data/attempt-types";
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { ticketsCollection } from "../data/collections";
@@ -50,7 +50,7 @@ async function appendStackRepair(
   retired: Set<string>,
   base?: string,
 ) {
-  const repair = await readSelectedStackRepair(ctx, summary.id, attempts, selections, retired);
+  const repair = await readSelectedStackRepair(ctx, summary.id, attempts, selections, retired, mode);
   if (!repair) return false;
   if ("unavailableWorkspaceId" in repair) {
     const recoveryBase = await readRecoveryBase(ctx, repair.attempt, base);
@@ -107,17 +107,20 @@ export async function readNextTickets(
   input: NextTicketQuery & { base?: string; limit?: number } = {},
   scope?: NextTicketQuery[],
 ) {
-  const [plan, attempts, tickets, resumptions, capacity, assignments, requests, retired, workflow] = await Promise.all([
-    readPlanCommand.run(ctx, {}),
-    listAttempts(ctx.storage),
-    ticketsCollection(ctx.storage).list(),
-    readAutoBuildResumptions(ctx),
-    readImplementationCapacity(ctx),
-    readAutoBuildAssignments(ctx),
-    readTicketReviewRequests(ctx.storage),
-    readRetiredWorkspaceIds(ctx.storage),
-    readWorkflowStatuses(ctx).then(usableWorkflowStatuses),
-  ]);
+  const [plan, attempts, tickets, resumptions, capacity, assignments, requests, events, selections, workflow] =
+    await Promise.all([
+      readPlanCommand.run(ctx, {}),
+      listAttempts(ctx.storage),
+      ticketsCollection(ctx.storage).list(),
+      readAutoBuildResumptions(ctx),
+      readImplementationCapacity(ctx),
+      readAutoBuildAssignments(ctx),
+      readTicketReviewRequests(ctx.storage),
+      attemptEventsCollection(ctx.storage).list(),
+      attemptSelectionsCollection(ctx.storage).list(),
+      readWorkflowStatuses(ctx).then(usableWorkflowStatuses),
+    ]);
+  const retired = retiredWorkspaceIds(events);
   const byRef = new Map(
     tickets.flatMap((ticket) => [
       [ticket.id, ticket],
@@ -125,7 +128,6 @@ export async function readNextTickets(
     ]),
   );
   const byId = new Map(tickets.map((ticket) => [ticket.id, ticket]));
-  const selections = await attemptSelectionsCollection(ctx.storage).list();
   const started = new Set(
     attempts.filter(({ workspaceId }) => !retired.has(workspaceId)).map(({ ticketId }) => ticketId),
   );
@@ -177,6 +179,10 @@ export async function readNextTickets(
       const work = await observeTicketWork(ctx, byId.get(row.id)!, {
         requests,
         completedStatusIds: workflow.completedStatusIds,
+        attempts,
+        retired,
+        selections,
+        events,
       });
       observations.push(...work.observations);
       appendObservedWork(work, { ...summary, ...wait }, capacity, next, waiting);

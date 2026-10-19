@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
 import { defaultAutoBuildIgnore } from "../data/auto-build-mode";
-import { putTicket } from "../data/collections";
+import { putTicket, ticketsCollection } from "../data/collections";
 import { fixture } from "./auto-build.fixture";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { autoBuildScopeCommand } from "./auto-build-scope";
+import { runAttemptCommand } from "./run-attempt";
 
 const scope = async (ctx: Awaited<ReturnType<typeof fixture>>["ctx"]) => {
   const { revision } = await readAutoBuildCommand.run(ctx, {});
@@ -75,6 +76,24 @@ test("Auto Build succeeds when its scoped tickets are completed", async () => {
   await putTicket(storage, { ...second, statusId: "done" });
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: true, stuck: false });
   await putTicket(storage, { ...second, statusId: "ready" });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: false });
+});
+
+test("started work that leaves the eligible status keeps Auto Build unfinished", async () => {
+  const { ctx, ticket, storage } = await fixture();
+  const started = await ticket("Calculator addition");
+  const finished = await ticket("Calculator subtraction");
+  await configureAutoBuildCommand.run(ctx, {
+    enabled: true,
+    eligible: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready"] }] },
+  });
+  await scope(ctx);
+  await runAttemptCommand.run(ctx, { ticket: started.id });
+  await putTicket(storage, {
+    ...(await storage.collection("tickets").get(started.id))!,
+    statusId: "in-progress",
+  } as never);
+  await putTicket(storage, { ...finished, statusId: "done" });
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: false });
 });
 

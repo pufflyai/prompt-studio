@@ -175,7 +175,7 @@ test("an owner can realign and submit a root after rebasing to another target", 
     });
     expect(result.base).toEqual({ workspaceId: null, headSha: target });
     expect(result.headSha).toBe(head);
-    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!)).toMatchObject({
+    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!, {})).toMatchObject({
       headSha: head,
       base: { workspaceId: null, headSha: target },
       needsIntegration: false,

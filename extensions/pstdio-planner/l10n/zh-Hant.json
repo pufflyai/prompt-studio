@@ -39,12 +39,13 @@
   "settings.tickets.deleteLinkedWorkspaces.title": "刪除關聯工作區",
   "settings.tickets.deleteLinkedWorkspaces.description": "封存或刪除工單時，刪除沒有使用中工單的關聯工作區。這會刪除工作樹、分支和未提交的變更。",
   "settings.tickets.markDoneOnMerge.title": "合併時標記為完成",
-  "settings.tickets.markDoneOnMerge.description": "工作區分支或關聯的提取要求合併後，將工單移至完成。",
+  "settings.tickets.markDoneOnMerge.description": "工作區分支或連結的提取要求合併後，將工單移至所選的合併後狀態。",
   "requests.view.title": "審核請求",
   "requests.page.title": "審核請求",
   "timeline.autoBuild.start": "自動建置",
   "timeline.autoBuild.stop": "停止自動建置",
   "timeline.autoBuild.cancel": "取消",
   "timeline.autoBuild.description": "監督代理會依照你的提示，在有可用容量時指派有效且未指派的工單。它會在檢查之間等待，並在可以開始更多工作時恢復。",
-  "timeline.autoBuild.documentation": "Auto Build 文件"
+  "timeline.autoBuild.documentation": "Auto Build 文件",
+  "views.workflowSettings.title": "規劃器工作流程"
 }

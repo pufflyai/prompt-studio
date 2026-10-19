@@ -39,12 +39,13 @@
   "settings.tickets.deleteLinkedWorkspaces.title": "リンクされたワークスペースを削除",
   "settings.tickets.deleteLinkedWorkspaces.description": "チケットをアーカイブまたは削除したとき、アクティブなチケットが使用していないワークスペースを削除します。作業ツリー、ブランチ、未コミットの変更が削除されます。",
   "settings.tickets.markDoneOnMerge.title": "マージ時に完了にする",
-  "settings.tickets.markDoneOnMerge.description": "ワークスペースのブランチまたはリンクされたプルリクエストがマージされると、チケットを完了に移動します。",
+  "settings.tickets.markDoneOnMerge.description": "ワークスペースのブランチまたはリンクされたプルリクエストがマージされたとき、チケットをマージ後に選択したステータスへ移動します。",
   "requests.view.title": "レビュー依頼",
   "requests.page.title": "レビュー依頼",
   "timeline.autoBuild.start": "自動ビルド",
   "timeline.autoBuild.stop": "自動ビルドを停止",
   "timeline.autoBuild.cancel": "キャンセル",
   "timeline.autoBuild.description": "スーパーバイザーはあなたの指示に従い、空きができると有効な未割り当てチケットを割り当てます。確認の間は待機し、作業を開始できるようになると再開します。",
-  "timeline.autoBuild.documentation": "Auto Build のドキュメント"
+  "timeline.autoBuild.documentation": "Auto Build のドキュメント",
+  "views.workflowSettings.title": "プランナーのワークフロー"
 }

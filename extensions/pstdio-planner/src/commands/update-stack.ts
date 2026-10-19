@@ -6,12 +6,17 @@ import type { AttemptRecord } from "../data/attempt-types";
 import { readSessionHistory } from "../data/session-history";
 import { withWriteGuard } from "../data/write-guard";
 import { loadAttemptDependencies } from "./attempt-readiness";
+import { isUnexpectedExit } from "./auto-build-resume";
 import { isLiveSession } from "./auto-build-sessions";
 import { WorkspaceUnavailableError, workspaceGitPath, workspaceHead } from "./change-requests";
 import { containsDependencyHeads, dependencyHeads } from "./dependency-base";
 import { containsCommit, prepareRequiredStackBase, readRequiredStackDependencies } from "./stack-validation";
 
-export async function readStackRepair(ctx: CommandContext, attempt: AttemptRecord) {
+export async function readStackRepair(
+  ctx: CommandContext,
+  attempt: AttemptRecord,
+  policy: { requireMergedDependencies?: boolean },
+) {
   const latest = attempt.revisions.at(-1);
   const session = await ctx.sessions.get(attempt.implementationSessionId);
   if (isLiveSession(session)) return null;
@@ -20,6 +25,8 @@ export async function readStackRepair(ctx: CommandContext, attempt: AttemptRecor
     throw new WorkspaceUnavailableError(`Workspace ${attempt.workspaceShorthand} is no longer available.`);
   const head = await workspaceHead(ctx, attempt.workspaceId);
   if (!session) return null;
+  // A user stop stays stopped. The resume path owns the single recovery of a lost run.
+  if (session.last_exit?.cause === "user_stop" || isUnexpectedExit(session)) return null;
   if (
     !(await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(({ id }) => id === session.id)
   )
@@ -28,6 +35,7 @@ export async function readStackRepair(ctx: CommandContext, attempt: AttemptRecor
   if (await attemptEventsCollection(ctx.storage).get(eventId)) return null;
   const { readiness } = await loadAttemptDependencies(ctx, attempt.ticketId, {
     base: attempt.base.headSha,
+    requireMergedDependencies: policy.requireMergedDependencies,
   });
   if (readiness.decision === "wait") return null;
   const base =

@@ -1,7 +1,5 @@
 import type { CommandContext, SessionRunSnapshot } from "@pstdio/sdk/extensions";
-import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
-import { attemptEventsCollection, attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
-import type { AttemptRecord, AttemptTimelineEvent } from "../data/attempt-types";
+import type { AttemptRecord, AttemptTimelineEvent, TicketAttemptSelection } from "../data/attempt-types";
 import { hasPendingImplementationInput } from "../data/implementation-input";
 import type { TicketReviewRequests } from "../data/review-request-types";
 import { readSessionHistory } from "../data/session-history";
@@ -195,17 +193,20 @@ const observeVariant = async (
   return observeStoppedWork(ctx, ticket, attempt, input, session);
 };
 
+// Callers pass project history they already loaded, so observing many tickets reads it once.
 export async function observeTicketWork(
   ctx: CommandContext,
   ticket: StoredTicket,
-  input: { requests: Map<string, TicketReviewRequests>; completedStatusIds: string[] },
+  input: {
+    requests: Map<string, TicketReviewRequests>;
+    completedStatusIds: string[];
+    attempts: AttemptRecord[];
+    retired: Set<string>;
+    selections: TicketAttemptSelection[];
+    events: AttemptTimelineEvent[];
+  },
 ) {
-  const [attempts, retired, selections, events] = await Promise.all([
-    listAttempts(ctx.storage),
-    readRetiredWorkspaceIds(ctx.storage),
-    attemptSelectionsCollection(ctx.storage).list(),
-    attemptEventsCollection(ctx.storage).list(),
-  ]);
+  const { attempts, retired, selections, ...shared } = input;
   const candidates: WorkCandidate[] = [];
   const observations: WorkObservation[] = [];
   const variants = attempts.filter((attempt) => attempt.ticketId === ticket.id && !retired.has(attempt.workspaceId));
@@ -213,8 +214,7 @@ export async function observeTicketWork(
   const chosen = selected ? variants.filter((attempt) => attempt.workspaceId === selected.workspaceId) : variants;
   for (const attempt of variants) {
     const result = await observeVariant(ctx, ticket, attempt, {
-      ...input,
-      events,
+      ...shared,
       owned: chosen.length === 1 && chosen[0]?.workspaceId === attempt.workspaceId,
     });
     if (result.candidate) candidates.push(result.candidate);

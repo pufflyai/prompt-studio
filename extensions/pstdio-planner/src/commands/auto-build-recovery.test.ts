@@ -7,8 +7,19 @@ import { fixture } from "./auto-build.fixture";
 import { readAutoBuildCandidates } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { autoBuildScopeCommand } from "./auto-build-scope";
+import { readNextTickets } from "./next-tickets";
 import { runAttemptCommand } from "./run-attempt";
 import { sessionQuery } from "./session-query.fixture";
+
+const submittedRevision = {
+  revision: 1,
+  baseSha: "main-sha",
+  headSha: "head",
+  changeRequestReportId: "report",
+  submittedAt: new Date().toISOString(),
+  submittedBy: { type: "agent" as const, id: "owner", displayName: "Owner" },
+  reviews: [],
+};
 
 test("unrelated ticket edits cannot wake resolved scope and live handoff owners retain capacity", async () => {
   const { ctx, storage, ticket } = await fixture();
@@ -127,4 +138,33 @@ test("failed execution after a recorded handoff remains visibly unfinished", asy
   const result = await readAutoBuildCandidates(ctx, await readAutoBuildMode(ctx));
   expect(result.candidates).toHaveLength(0);
   expect(result.observations).toMatchObject([{ reason: "The owner execution failed." }]);
+});
+
+async function historyReadsFor(ticketCount: number) {
+  const { ctx, storage, ticket } = await fixture(ticketCount);
+  for (let index = 0; index < ticketCount; index++) {
+    const started = await runAttemptCommand.run(ctx, { ticket: (await ticket(`Submitted ${index}`)).id });
+    await putAttempt(storage, { ...started.variant, revisions: [submittedRevision] });
+  }
+  ctx.sessions.get = async (id) => ({ id, title: id, status: "failed" }) as never;
+  const collection = ctx.storage.collection.bind(ctx.storage);
+  let reads = 0;
+  ctx.storage.collection = <T>(name: string) => {
+    const source = collection<T>(name);
+    if (name !== "planner-attempt-events") return source;
+    return {
+      ...source,
+      list: async () => {
+        reads++;
+        return source.list();
+      },
+    };
+  };
+  const { observations } = await readNextTickets(ctx, await readAutoBuildMode(ctx));
+  expect(observations).toHaveLength(ticketCount);
+  return reads;
+}
+
+test("observing more started tickets does not reread attempt history", async () => {
+  expect(await historyReadsFor(3)).toBe(await historyReadsFor(1));
 });

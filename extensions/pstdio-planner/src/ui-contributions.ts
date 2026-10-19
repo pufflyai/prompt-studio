@@ -97,7 +97,7 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const workflowSettings = defineView({
     id: "workflow-settings",
-    title: "Planner workflow",
+    title: l10n("views.workflowSettings.title", "Planner workflow"),
     body: {
       kind: "controls",
       query: queryWorkflowSettings,

@@ -39,12 +39,13 @@
   "settings.tickets.deleteLinkedWorkspaces.title": "删除关联工作区",
   "settings.tickets.deleteLinkedWorkspaces.description": "归档或删除工单时，删除没有活动工单使用的关联工作区。这会删除工作树、分支和未提交的更改。",
   "settings.tickets.markDoneOnMerge.title": "合并时标记为完成",
-  "settings.tickets.markDoneOnMerge.description": "工作区分支或关联的拉取请求合并后，将工单移至完成。",
+  "settings.tickets.markDoneOnMerge.description": "工作区分支或关联的拉取请求合并后，将工单移至所选的合并后状态。",
   "requests.view.title": "审核请求",
   "requests.page.title": "审核请求",
   "timeline.autoBuild.start": "自动构建",
   "timeline.autoBuild.stop": "停止自动构建",
   "timeline.autoBuild.cancel": "取消",
   "timeline.autoBuild.description": "监督代理会按照你的提示，在有可用容量时分配有效且未分配的工单。它会在检查之间等待，并在可以开始更多工作时恢复。",
-  "timeline.autoBuild.documentation": "Auto Build 文档"
+  "timeline.autoBuild.documentation": "Auto Build 文档",
+  "views.workflowSettings.title": "规划器工作流"
 }

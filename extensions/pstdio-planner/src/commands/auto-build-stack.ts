@@ -1,6 +1,7 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { appendAttemptEvent, readAttempt } from "../data/attempt-storage";
+import { readAutoBuildMode } from "../data/auto-build-mode";
 import { readStackRepair } from "./update-stack";
 
 export async function resumeStackRepair(
@@ -9,7 +10,7 @@ export async function resumeStackRepair(
   beforeDispatch: (head?: string) => Promise<void>,
 ) {
   const attempt = await readAttempt(ctx.storage, workspaceId);
-  const repair = attempt ? await readStackRepair(ctx, attempt) : null;
+  const repair = attempt ? await readStackRepair(ctx, attempt, await readAutoBuildMode(ctx)) : null;
   if (!attempt || !repair) return { decision: "wait" as const, reason: "ticket-not-ready" };
   await beforeDispatch(repair.base.headSha);
   await ctx.sessions.followup({

@@ -35,8 +35,11 @@ export async function selectScopedWork(ctx: CommandContext, input: ScopedWorkInp
   const isCompleted = (row: PlanRow) => input.completedStatusIds.includes(row.status?.id ?? "");
   const inQueries = await selectNextTicketScopeRows(ctx, plan, tickets, savedScope ?? [{}]);
   const queryIds = new Set(inQueries.map(({ id }) => id));
+  // Started work stays in scope after its agent moves it out of the eligible statuses.
   const scoped = inQueries.filter(
-    (row) => !byId.get(row.id)?.draft && (isCompleted(row) || (eligible.has(row.id) && !ignored.has(row.id))),
+    (row) =>
+      !byId.get(row.id)?.draft &&
+      (isCompleted(row) || ((eligible.has(row.id) || input.started.has(row.id)) && !ignored.has(row.id))),
   );
   // Completion is derived, so reopening a scoped ticket clears it.
   const completed = Boolean(savedScope) && scoped.length > 0 && scoped.every(isCompleted);
