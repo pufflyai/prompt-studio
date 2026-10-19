@@ -190883,6 +190883,733 @@
           }
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "NYtHk",
+      "x": 55230,
+      "y": 0,
+      "name": "Planner · Auto Build modal",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1280,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 32,
+      "padding": 64,
+      "children": [
+        {
+          "type": "text",
+          "id": "J0e8a",
+          "fill": "$ds-fg",
+          "content": "Auto Build · Configure a supervisor",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "hhcao",
+          "width": "fill_container",
+          "gap": 48,
+          "children": [
+            {
+              "type": "frame",
+              "id": "YPQNs",
+              "name": "Dialog · Auto Build",
+              "clip": true,
+              "width": 560,
+              "fill": "$ds-bg",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "pZuqL",
+                  "name": "Header",
+                  "width": "fill_container",
+                  "height": 52,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "e8XoqP",
+                      "name": "Title with help",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "r8y5Ws",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Auto Build",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "LpC4p",
+                          "name": "About Auto Build",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "info",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "J219t",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Close",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "x",
+                          "width": 14,
+                          "height": 14
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "r7TaJ",
+                  "name": "Body · Fields",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "id": "IPO2d",
+                      "type": "ref",
+                      "ref": "eH2Cx",
+                      "name": "Supervisor prompt",
+                      "width": "fill_container",
+                      "height": 140,
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "descendants": {
+                        "JVI4w": {
+                          "enabled": false
+                        },
+                        "X0nUI": {
+                          "content": "Describe how the supervisor should choose and assign work…",
+                          "fontSize": 14,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "KarJp",
+                      "name": "Model selection row",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Wp5i9",
+                          "name": "User Role label",
+                          "gap": 5,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Vafuf",
+                              "name": "Model label text",
+                              "fill": "#9BA1AB",
+                              "content": "Supervisor model",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "qr95Y",
+                          "name": "Model trigger",
+                          "height": 32,
+                          "fill": "#0D1017",
+                          "cornerRadius": 4,
+                          "stroke": "#2E333F",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "pvX4W",
+                              "name": "Model selected icon",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "cpu",
+                              "library": "lucide",
+                              "fill": "#AEB8C8"
+                            },
+                            {
+                              "type": "text",
+                              "id": "n33dlP",
+                              "name": "Model selected value",
+                              "fill": "#E8EAED",
+                              "content": "GPT-6-Luna",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "iQqLk",
+                              "name": "Model chevron",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "chevron-down",
+                              "library": "lucide",
+                              "fill": "#777D87"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "A8pc9",
+                      "name": "Supervisor reasoning effort",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "dntOM",
+                          "name": "Navigation Section label",
+                          "gap": 5,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "FnGrN",
+                              "name": "Reasoning effort label text",
+                              "fill": "#9BA1AB",
+                              "content": "Reasoning effort",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "v6YN8C",
+                              "name": "Reasoning effort help",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "info",
+                              "library": "lucide",
+                              "fill": "#777D87"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "L4vaq",
+                          "name": "Reasoning effort trigger",
+                          "height": 32,
+                          "fill": "#0D1017",
+                          "cornerRadius": 4,
+                          "stroke": "#2E333F",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "tnXMG",
+                              "name": "Reasoning effort selected icon",
+                              "theme": {
+                                "palette": "blue"
+                              },
+                              "width": 14,
+                              "height": 14,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 1,
+                                  "id": "azZ9I",
+                                  "x": 0,
+                                  "y": 9,
+                                  "name": "Bar 1",
+                                  "fill": "$pal-500",
+                                  "width": 2.5,
+                                  "height": 5
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 1,
+                                  "id": "z1ONHQ",
+                                  "x": 3.83,
+                                  "y": 6,
+                                  "name": "Bar 2",
+                                  "fill": "$pal-500",
+                                  "width": 2.5,
+                                  "height": 8
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 1,
+                                  "id": "ux87N",
+                                  "x": 7.66,
+                                  "y": 3,
+                                  "name": "Bar 3",
+                                  "fill": "$ds-border",
+                                  "width": 2.5,
+                                  "height": 11
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 1,
+                                  "id": "C9Iw8m",
+                                  "x": 11.49,
+                                  "y": 0,
+                                  "name": "Bar 4",
+                                  "fill": "$ds-border",
+                                  "width": 2.5,
+                                  "height": 14
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "HLjQB",
+                              "name": "Reasoning effort selected value",
+                              "fill": "#E8EAED",
+                              "content": "Medium",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "QBJkc",
+                              "name": "Reasoning effort chevron",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "chevron-down",
+                              "library": "lucide",
+                              "fill": "#777D87"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "m0rRr",
+                      "name": "Eligible tickets",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "eEUZs",
+                          "fill": "$ds-fg",
+                          "content": "Eligible tickets",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "id": "rWFx4",
+                          "type": "ref",
+                          "ref": "vWuSg",
+                          "width": "fill_container",
+                          "descendants": {
+                            "P04W8v/Hf4GT": {
+                              "enabled": false
+                            },
+                            "fA6IH": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "id": "x1dXCy",
+                      "type": "ref",
+                      "ref": "IVFN2",
+                      "descendants": {
+                        "DFyJZ": {
+                          "content": "Require merged dependencies"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Fw17Q",
+                  "name": "Footer",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "zHx3E",
+                      "name": "Actions",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "pUp1y",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Cancel",
+                          "height": 32,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false,
+                              "width": 16,
+                              "height": 16
+                            },
+                            "Hf4GT": {
+                              "content": "Cancel"
+                            },
+                            "khvEs": {
+                              "theme": {
+                                "kbd": "raised",
+                                "size": "md"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "id": "B94nnN",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Run",
+                          "height": 32,
+                          "theme": {
+                            "btn": "primary",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false,
+                              "width": 16,
+                              "height": 16
+                            },
+                            "Hf4GT": {
+                              "content": "Auto Build"
+                            },
+                            "khvEs": {
+                              "theme": {
+                                "kbd": "raised",
+                                "size": "md"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "CgFe2",
+              "name": "About Auto Build · help popover",
+              "width": 320,
+              "fill": "$ds-elevated",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "u64jRM",
+                  "fill": "$ds-fg",
+                  "content": "About Auto Build",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "p12Ti",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "A supervisor uses your prompt to assign valid, unassigned tickets as capacity becomes available. It sleeps between checks and resumes when more work can run.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "Ef8hj",
+                  "fill": "$ds-accent",
+                  "content": "Auto Build documentation ↗",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "FXWFd",
+          "name": "Activity popover and Timeline display",
+          "width": "fill_container",
+          "gap": 48,
+          "children": [
+            {
+              "type": "frame",
+              "id": "h4FmH6",
+              "name": "Auto Build activity popover",
+              "width": 440,
+              "fill": "$ds-elevated",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "kaFhf",
+                  "fill": "$ds-fg",
+                  "content": "Auto Build",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "R2zQI",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "ONGOING SESSIONS\nAuto Build supervisor · sleeping\nP-1 · Preview A: greeting · in progress\n\nRunning · 1 of 2 agents",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "T3EidC",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Stop Auto Build",
+                  "height": 32,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false,
+                      "width": 16,
+                      "height": 16
+                    },
+                    "Hf4GT": {
+                      "content": "Stop"
+                    },
+                    "khvEs": {
+                      "theme": {
+                        "kbd": "raised",
+                        "size": "md"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "F3f0Y",
+              "name": "Timeline Display properties",
+              "width": 300,
+              "fill": "$ds-elevated",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "OzrP4",
+                  "fill": "$ds-fg-muted",
+                  "content": "PROPERTIES",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "LjKsA",
+                  "name": "Visible property toggles",
+                  "width": "fill_container",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "id": "C8whb",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "ID",
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "height": 24,
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "ID"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "X72gL6",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Status",
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "height": 24,
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Status"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "RHvvJ",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Priority",
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "height": 24,
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Priority"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "a5VqbL",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Type",
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "height": 24,
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Type"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
