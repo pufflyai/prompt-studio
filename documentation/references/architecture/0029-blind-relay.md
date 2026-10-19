@@ -84,7 +84,7 @@ on several replicas.
 ## Storage
 
 PostgreSQL keeps metadata, sequence numbers and the replace-only-if-current check
-(`infra/relay/src/storage/document-schema.ts`). It also keeps each latest state's encrypted
+(`services/relay/src/storage/document-schema.ts`). It also keeps each latest state's encrypted
 summary, at most 64 KiB, so clients can compare it without a download. Object storage keeps the
 update, latest-state and blob bytes (R47).
 
@@ -93,7 +93,7 @@ overwrites stored bytes. When a row goes away, or a write is refused or ignored,
 goes to a deletion queue. Cleanup deletes a queued object only when no row points at it. A write
 whose commit reply was lost may have stored its row, and its bytes stay.
 
-Blobs reuse the verified multipart asset owner in `infra/relay/src/assets`. Each blob is its own
+Blobs reuse the verified multipart asset owner in `services/relay/src/assets`. Each blob is its own
 asset owner, so two blobs with equal ciphertext never share stored bytes.
 
 Writes from one account run one at a time under a PostgreSQL advisory lock. That makes the
@@ -101,7 +101,7 @@ quota check exact and keeps cleanup from removing a blob while an update starts 
 
 ## Limits
 
-Operators set limits through environment variables. Defaults are in `infra/relay/src/limits.ts`.
+Operators set limits through environment variables. Defaults are in `services/relay/src/limits.ts`.
 
 | Variable | Default |
 | --- | --- |

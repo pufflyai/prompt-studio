@@ -33,7 +33,7 @@ const config = {
     },
     tester: {
       image: "oven/bun:1.4.2",
-      working_dir: "/repo/infra/account-manager",
+      working_dir: "/repo/services/account-manager",
       volumes: [`${root}:/repo:ro`],
       environment: {
         MANAGER_TEST_ADMIN_URL: "postgres://fixture_admin:fixture-admin-only@database:5432/authority_admin",
@@ -42,7 +42,7 @@ const config = {
       depends_on: { database: { condition: "service_healthy" } },
     },
     smoke: {
-      build: { context: root, dockerfile: "infra/account-manager/Dockerfile.smoke" },
+      build: { context: root, dockerfile: "services/account-manager/Dockerfile.smoke" },
       environment: {
         MANAGER_TEST_ADMIN_URL: "postgres://fixture_admin:fixture-admin-only@database:5432/authority_admin",
       },

@@ -111,6 +111,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Adding Terminal in Side or Session in Bottom keeps the other empty panel open.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
+import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";
 
 const BUILD_TIMEOUT = 180_000;
 
@@ -121,6 +122,7 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 registerSharedCodexSmokeTests();
+registerWorkspaceCleanupSmokeTests();
 registerCliHelpSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();

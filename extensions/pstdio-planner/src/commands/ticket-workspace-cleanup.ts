@@ -24,6 +24,7 @@ export const deleteUnusedLinkedWorkspaces = async (ctx: TicketCleanupContext, ti
           .filter((anchor) => anchor.type === "ticket")
           .every((anchor) => !activeIds.has(anchor.id)),
     );
+    // The host shares a deletion limit across all callers and archive batches.
     const results = await Promise.allSettled(unused.map((workspace) => ctx.workspaces.delete(workspace.id)));
     const failures = results.filter((result) => result.status === "rejected");
     if (failures.length)

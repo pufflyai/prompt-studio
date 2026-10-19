@@ -124,9 +124,19 @@ The API declares Notes and Planner as development dependencies for the isolated
 checkpoint save-handler proof. Their source handlers are test inputs, not runtime
 imports. This lets the package graph select that proof when a handler changes.
 
+## Services and infrastructure
+
+`services/` holds the code of deployable services: the relay, the account
+manager, and the telemetry library they share. The relay and the account
+manager each keep their source, migrations, and Dockerfiles in their own
+folder. `infra/` holds only deployment and environment setup, such as Docker
+Compose files and Terraform. The relay's test and local Compose files live in `infra/relay/`.
+`infra/local/` is the local development stack and the example extensions it
+installs. Service code does not belong in `infra/`.
+
 ## Shared relay
 
-The private `pstdio-relay` workspace lives under `infra/relay/`. It is a separate
+The private `pstdio-relay` workspace lives under `services/relay/`. It is a separate
 service, not part of the local API host or the CLI bundle. It consumes the shared diagnostic adapter, the private
 `pstdio-sync` record/branch rules and `pstdio-sync-contracts` wire schemas, including the
 blind sync protocol in `pstdio-sync-contracts/protocol`. Its production
@@ -142,7 +152,7 @@ for isolated storage fixtures and container checks.
 
 ## Service diagnostics
 
-The private `pstdio-service-telemetry` workspace under `infra/telemetry/` has no
+The private `pstdio-service-telemetry` workspace under `services/telemetry/` has no
 workspace dependencies. Manager and relay use it to send fixed diagnostic codes
 with deployment tags to the selected EU destination. It never consumes content,
 authentication material or local host APIs. It is excluded from the CLI bundle.
@@ -150,7 +160,7 @@ See [service diagnostics](../../guides/development/0010-service-diagnostics.md).
 
 ## Account authority
 
-The private `pstdio-account-manager` workspace lives under `infra/account-manager/`.
+The private `pstdio-account-manager` workspace lives under `services/account-manager/`.
 It consumes the shared diagnostic adapter and the merged `pstdio-sync-contracts` identity and canonical JSON
 contracts. It owns a separate private PostgreSQL database/role and imports no
 relay content implementation, local API host, SDK, UI, client or extension code.

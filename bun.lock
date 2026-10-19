@@ -370,24 +370,6 @@
         "typescript": "6.0.2",
       },
     },
-    "infra/account-manager": {
-      "name": "pstdio-account-manager",
-      "dependencies": {
-        "better-auth": "1.7.10",
-        "drizzle-orm": "^0.45.2",
-        "jose": "^6.2.12",
-        "pg": "^8.20.0",
-        "pstdio-service-telemetry": "workspace:*",
-        "pstdio-sync-contracts": "workspace:*",
-        "zod": "^4.3.6",
-      },
-      "devDependencies": {
-        "@types/bun": "1.4.2",
-        "@types/pg": "^8.18.0",
-        "drizzle-kit": "^0.31.9",
-        "typescript": "6.0.2",
-      },
-    },
     "infra/local/extensions/bookmarks": {
       "name": "bookmarks",
       "version": "0.1.0",
@@ -411,32 +393,6 @@
       "version": "0.1.0",
       "dependencies": {
         "@pstdio/sdk": "^0.43.1",
-      },
-    },
-    "infra/relay": {
-      "name": "pstdio-relay",
-      "dependencies": {
-        "@aws-sdk/client-s3": "3.1152.0",
-        "drizzle-orm": "^0.45.2",
-        "pg": "^8.20.0",
-        "pstdio-account-manager": "workspace:*",
-        "pstdio-service-telemetry": "workspace:*",
-        "pstdio-sync": "workspace:*",
-        "pstdio-sync-contracts": "workspace:*",
-        "zod": "^4.3.6",
-      },
-      "devDependencies": {
-        "@types/bun": "1.4.2",
-        "@types/pg": "^8.18.0",
-        "drizzle-kit": "^0.31.9",
-        "typescript": "6.0.2",
-      },
-    },
-    "infra/telemetry": {
-      "name": "pstdio-service-telemetry",
-      "devDependencies": {
-        "@types/bun": "1.4.2",
-        "typescript": "6.0.2",
       },
     },
     "packages/e2e": {
@@ -942,6 +898,50 @@
       },
       "devDependencies": {
         "@changesets/config": "3.1.3",
+        "@types/bun": "1.4.2",
+        "typescript": "6.0.2",
+      },
+    },
+    "services/account-manager": {
+      "name": "pstdio-account-manager",
+      "dependencies": {
+        "better-auth": "1.7.10",
+        "drizzle-orm": "^0.45.2",
+        "jose": "^6.2.12",
+        "pg": "^8.20.0",
+        "pstdio-service-telemetry": "workspace:*",
+        "pstdio-sync-contracts": "workspace:*",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/pg": "^8.18.0",
+        "drizzle-kit": "^0.31.9",
+        "typescript": "6.0.2",
+      },
+    },
+    "services/relay": {
+      "name": "pstdio-relay",
+      "dependencies": {
+        "@aws-sdk/client-s3": "3.1152.0",
+        "drizzle-orm": "^0.45.2",
+        "pg": "^8.20.0",
+        "pstdio-account-manager": "workspace:*",
+        "pstdio-service-telemetry": "workspace:*",
+        "pstdio-sync": "workspace:*",
+        "pstdio-sync-contracts": "workspace:*",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/pg": "^8.18.0",
+        "drizzle-kit": "^0.31.9",
+        "typescript": "6.0.2",
+      },
+    },
+    "services/telemetry": {
+      "name": "pstdio-service-telemetry",
+      "devDependencies": {
         "@types/bun": "1.4.2",
         "typescript": "6.0.2",
       },
@@ -4274,7 +4274,7 @@
 
     "pstdio": ["pstdio@workspace:packages/pstdio"],
 
-    "pstdio-account-manager": ["pstdio-account-manager@workspace:infra/account-manager"],
+    "pstdio-account-manager": ["pstdio-account-manager@workspace:services/account-manager"],
 
     "pstdio-api": ["pstdio-api@workspace:packages/pstdio-api"],
 
@@ -4306,7 +4306,7 @@
 
     "pstdio-planner": ["pstdio-planner@workspace:extensions/pstdio-planner"],
 
-    "pstdio-relay": ["pstdio-relay@workspace:infra/relay"],
+    "pstdio-relay": ["pstdio-relay@workspace:services/relay"],
 
     "pstdio-reports": ["pstdio-reports@workspace:extensions/pstdio-reports"],
 
@@ -4314,7 +4314,7 @@
 
     "pstdio-scripts": ["pstdio-scripts@workspace:scripts"],
 
-    "pstdio-service-telemetry": ["pstdio-service-telemetry@workspace:infra/telemetry"],
+    "pstdio-service-telemetry": ["pstdio-service-telemetry@workspace:services/telemetry"],
 
     "pstdio-shader-lab": ["pstdio-shader-lab@workspace:.pstdio/extensions/shader-lab"],
 

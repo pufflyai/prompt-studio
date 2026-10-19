@@ -4,8 +4,8 @@ The private `pstdio-sync-contracts` package defines wire protocol 1 and an execu
 reference for the v0.1 synchronization model. The protocol 2 replacement contracts
 are defined in [covered checkpoints](0027-covered-checkpoints.md); their production
 cutover is separate. The owners below currently build on protocol 1:
-grouped local storage in `pstdio-sync` and `pstdio-db`, the relay in `infra/relay`,
-account authority in `infra/account-manager`, and an opt-in runtime connection in
+grouped local storage in `pstdio-sync` and `pstdio-db`, the relay in `services/relay`,
+account authority in `services/account-manager`, and an opt-in runtime connection in
 `pstdio-api`. They are on `main` but in no release.
 
 [PRD 0014](../../requirements/platform/0014-local-first-sync.md) replaces this design
@@ -27,8 +27,8 @@ test-only export. Its development dependencies are not a runtime implementation.
 | Identity, PS-745 | Persist stable IDs, map local folders/environments, isolate credentials and caches. |
 | Assets, PS-747 | Immutable content references, streamed persistence, integrity, completion and recovery. |
 | Storage/SDK, PS-746 | Journal, accepted state, atomic local saves, authoring operations and conflict inspection/resolution. |
-| Relay, `infra/relay` | Authorization, immutable publication checks, atomic PostgreSQL publication, durable replay/snapshots and restore epochs. |
-| Account manager, `infra/account-manager` | Account lifecycle and current environment grants; independent from content restore. |
+| Relay, `services/relay` | Authorization, immutable publication checks, atomic PostgreSQL publication, durable replay/snapshots and restore epochs. |
+| Account manager, `services/account-manager` | Account lifecycle and current environment grants; independent from content restore. |
 | Native connection, `pstdio-sync/relay` and `pstdio-api` | Opt-in runtime enrollment, access renewal, snapshot download, submission, recovery and view refresh. |
 | Extensions | Data models, domain validation and pure local handlers from published packages. |
 
@@ -37,7 +37,7 @@ adds `storage.assets` and grouped `storage.records` through the public SDK and h
 The older key-value and collection methods remain and are marked `@deprecated`, following
 [API versioning](../extensions/0014-api-versioning.md). Only nightly SDK builds contain the new methods.
 
-PS-758 implements the internal PostgreSQL persistence owner in `infra/relay/src/storage/`.
+PS-758 implements the internal PostgreSQL persistence owner in `services/relay/src/storage/`.
 It reuses the production record evaluator and pure resolution validator from `pstdio-sync`.
 Account/workbench/extension scope rows serialize independent writers. Current records,
 conflict metadata, one canonical operation body, its outcome, and the accepted replay
@@ -51,7 +51,7 @@ their saved acknowledgments. Replay after restore begins at the restored sequenc
 the new epoch. It does not erase receipt ancestry or use a TTL to discard offline work.
 
 This internal scope is not authorization. PS-768 adds authenticated HTTP and finite
-WebSocket subscriptions in `infra/relay/src/transport/`. They check finite access
+WebSocket subscriptions in `services/relay/src/transport/`. They check finite access
 from the account manager and derive current grants and published revisions. PS-760's
 production S3 owner keeps scoped upload intent and acknowledged multipart parts in
 PostgreSQL. Each upload has its own object key. Completion streams the durable object
@@ -322,11 +322,11 @@ bun run verify:lockfile
 ```
 
 The production owners have their own Docker-backed suites. CI runs them in the
-`relay_smoke` job: `bun run --cwd infra/relay test:storage`, `test:assets`,
+`relay_smoke` job: `bun run --cwd services/relay test:storage`, `test:assets`,
 `test:transport`, and `test:isolated`, `test:conformance` with
 `SYNC_TEST_ENTRY` set to the production-relay entry
 (`packages/pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts`),
-and `bun run --cwd infra/account-manager test:isolated`.
+and `bun run --cwd services/account-manager test:isolated`.
 
 `registerConformance` takes a structural adapter factory so later storage/relay
 implementations can reuse the scenarios. `createReferenceFixture` supplies disposable
