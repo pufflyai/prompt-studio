@@ -79,14 +79,6 @@ describe("note editor", () => {
       }),
     ).toMatchObject({
       label: "Renamed",
-      menu: [
-        {
-          rows: [
-            { id: "rename", action: { target: { params: { noteId: note.id } } } },
-            { id: "delete", action: { target: { params: { noteId: note.id } } } },
-          ],
-        },
-      ],
     });
   });
 

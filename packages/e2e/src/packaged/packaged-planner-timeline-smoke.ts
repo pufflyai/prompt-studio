@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { commandRunner } from "./packaged-planner-helpers";
+import { expectPackagedPlannerMoves } from "./packaged-planner-moves-smoke";
 import { expectIndependentPlannerViews } from "./packaged-planner-views-smoke";
 
 export async function expectPackagedPlannerTimeline(input: {
@@ -88,6 +89,7 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(tickets).toContainEqual(expect.objectContaining({ id: result.ticket.id }));
   await expectSharedMilestoneProperties(execute, result.ticket.id, deadline.id);
   await expectReviewRequests(execute, deadline.id);
+  await expectPackagedPlannerMoves(input);
 }
 
 async function expectSharedMilestoneProperties(execute: Execute, ticketId: string, deadlineId: string) {

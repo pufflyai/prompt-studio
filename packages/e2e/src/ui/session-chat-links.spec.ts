@@ -35,7 +35,7 @@ test("opens chat workspace files and restores selected documents through history
         workspace_id: workspaces[0].id,
         title: "Chat link review",
         prompt:
-          "Inspect [Source](src/nested/app.ts:2) and [README](README.md). Also `src/nested/app.ts` and [Draft](.pstdio/extension-storage/pstdio-planner/tickets/PS-105/ticket.md).",
+          "Inspect [Source](src/nested/app.ts:2) and [README](README.md). Also `src/nested/app.ts`, not `origin/main` or github.com, and [Draft](.pstdio/extension-storage/pstdio-planner/tickets/PS-105/ticket.md).\n\n| Ref |\n| --- |\n| `origin/main` |",
         agent: "pstdio.workbench-fixture.harness.fake",
       },
     });
@@ -43,12 +43,35 @@ test("opens chat workspace files and restores selected documents through history
     const session = await response.json();
     await prepareDashboard(page, project.id);
     const resource = `pstdio://extension-resource/session/${session.id}`;
+    // `origin/main` is checked by listing the folder `origin`; wait for that answer before asserting.
+    const guessChecked = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname.endsWith("/files") && url.searchParams.get("path") === "origin";
+    });
     await page.goto(`/projects/${project.id}/session?resource=${encodeURIComponent(resource)}`);
     const source = page.getByRole("link", { name: "Source", exact: true }).last();
     await expect(source).toBeVisible();
     await expect(source).toHaveAttribute("href", /document=src%2Fnested%2Fapp.ts/);
     const sourceHref = await source.getAttribute("href");
     expect(sourceHref).toContain("document=src%2Fnested%2Fapp.ts");
+    await expect(page.getByRole("link", { name: "src/nested/app.ts", exact: true }).last()).toBeVisible();
+    await guessChecked;
+    for (const text of ["origin/main", "github.com"])
+      await expect(page.getByRole("link", { name: text, exact: true })).toHaveCount(0);
+    const copiedHtml = await page.evaluate(() => {
+      const message = [...document.querySelectorAll('[data-rich-message="true"] [contenteditable]')].findLast(
+        (element) => element.textContent?.includes("Inspect Source"),
+      )!;
+      let html = "";
+      window.addEventListener("copy", (event) => (html = event.clipboardData?.getData("text/html") ?? ""), {
+        once: true,
+      });
+      window.getSelection()!.selectAllChildren(message);
+      document.execCommand("copy");
+      window.getSelection()!.removeAllRanges();
+      return html;
+    });
+    expect(copiedHtml).toContain("<code>src/nested/app.ts</code>");
     await source.focus();
     await expect(source).toBeFocused();
     await page.keyboard.press("Enter");

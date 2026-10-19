@@ -45,7 +45,7 @@ test("resizes, closes, and reopens the Secondary Panel within the interaction bu
 
   await page.goto(`/projects/${project.id}`);
   await expect(page.getByRole("link", { name: "Start", exact: true })).toBeVisible();
-  const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+  const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
   await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
   await page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "Terminal", exact: true }).click();
@@ -63,11 +63,11 @@ test("resizes, closes, and reopens the Secondary Panel within the interaction bu
     ready: () => expect(separator).toHaveAttribute("aria-valuenow", resizedSize),
   });
 
-  const showPanelButton = page.getByRole("button", { name: "Show Secondary Panel" });
+  const showPanelButton = page.getByRole("button", { name: "Show Bottom Panel" });
   const close = await measure(page, {
     trigger: separator,
     interact: () => separator.press("Home"),
-    settledSelector: '[aria-label="Show Secondary Panel"]',
+    settledSelector: '[aria-label="Show Bottom Panel"]',
     ready: () => expect(showPanelButton).toBeVisible(),
   });
 

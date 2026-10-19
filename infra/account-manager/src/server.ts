@@ -1,7 +1,9 @@
+import { createServiceTelemetry } from "pstdio-service-telemetry";
 import { createManagerAuthentication } from "./manager-authentication";
 import { createManagerHandler } from "./manager-http";
 
 const number = (name: string) => Number(process.env[name]);
+const telemetry = createServiceTelemetry(process.env, "manager");
 const auth = createManagerAuthentication({
   databaseUrl: process.env.DATABASE_URL ?? "",
   origin: process.env.MANAGER_ORIGIN ?? "",
@@ -22,13 +24,18 @@ const server = Bun.serve({
   hostname: process.env.MANAGER_HOST ?? "127.0.0.1",
   port,
   ...(certificate && key ? { tls: { cert: Bun.file(certificate), key: Bun.file(key) } } : {}),
-  fetch: createManagerHandler(auth, process.env.MANAGER_ORIGIN!),
+  fetch: createManagerHandler(auth, process.env.MANAGER_ORIGIN!, undefined, telemetry.report),
 });
 let closing: Promise<void> | undefined;
 const close = () =>
   (closing ??= (async () => {
-    await server.stop();
-    await auth.close();
+    try {
+      await server.stop();
+      await auth.close();
+    } finally {
+      telemetry.close();
+      console.log(JSON.stringify({ event: "telemetry.delivery", service: "manager", ...telemetry.counts() }));
+    }
   })());
 for (const signal of ["SIGINT", "SIGTERM"])
   process.on(signal, () => {

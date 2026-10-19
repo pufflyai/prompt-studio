@@ -2,7 +2,7 @@ import { defineCommand, type ExtensionContextBase, params, type ResourceRef } fr
 import { setTicketAttribute } from "../set-ticket-attribute";
 
 export const updateTicketProperty = async (
-  ctx: Pick<ExtensionContextBase, "storage" | "events">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId">,
   resource: ResourceRef | undefined,
   input: { controlId: string; value?: unknown },
 ) => {

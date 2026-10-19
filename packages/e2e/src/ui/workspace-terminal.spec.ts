@@ -34,7 +34,7 @@ const openWorkspace = async (page: import("@playwright/test").Page, workspaceNam
 };
 
 const showSecondaryPanel = async (page: import("@playwright/test").Page) => {
-  const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+  const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
   await expect(page.getByRole("region", { name: "Secondary Panel" })).toBeVisible();
 };
@@ -116,17 +116,17 @@ test("restores the first terminal when the hidden launcher was persisted active"
     await page.goto(`/projects/${project.id}`);
     await expect(page.getByTestId("start-page")).toBeVisible();
 
-    const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+    const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
     if (await showSecondary.isVisible()) await showSecondary.click();
     await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
     await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
     await expect(page.getByRole("textbox", { name: "Terminal input" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Hide Secondary Panel" }).click();
+    await page.getByRole("button", { name: "Hide Bottom Panel" }).click();
     await persistHiddenLauncherAsActive(page);
     await page.reload();
     await expect(page.getByTestId("start-page")).toBeVisible();
-    await page.getByRole("button", { name: "Show Secondary Panel" }).click();
+    await page.getByRole("button", { name: "Show Bottom Panel" }).click();
 
     await expect(page.locator(".xterm:visible")).toHaveCount(1);
     const terminalInput = page.getByRole("textbox", { name: "Terminal input" });
@@ -227,7 +227,7 @@ test("closing a terminal tab leaves no shell process behind", async ({ page, req
       page.getByRole("region", { name: "Main", exact: true }).getByText("Terminal Cleanup", { exact: true }),
     ).toBeVisible();
 
-    const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+    const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
     if (await showSecondary.isVisible()) await showSecondary.click();
     await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
     await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();

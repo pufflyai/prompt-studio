@@ -11,6 +11,7 @@ Prompt Studio is a workbench where people and agents build and use tools through
 - [Develop private account authority](development/0007-account-manager.md)
 - [Sign in and connect workbenches](development/0010-owner-enrollment.md)
 - [Test the relay with two dashboards](development/0008-two-dashboard-relay.md)
+- [Configure private service diagnostics](development/0010-service-diagnostics.md)
 - [Write an extension](extensions/0001-authoring.md)
 - [Look up SDK methods](../references/sdk/0003-api.md)
 - [Check lessons when stuck](../lessons-learned)

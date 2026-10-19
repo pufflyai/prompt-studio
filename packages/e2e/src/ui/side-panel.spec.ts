@@ -47,7 +47,7 @@ const expectDashboardAttachedBounds = async (page: import("@playwright/test").Pa
   expect(sideBox).not.toBeNull();
 
   expectNear(sideBox!.y, PANEL_GAP_PX);
-  expectNear(sideBox!.height, 720 - 2 * PANEL_GAP_PX);
+  expectNear(sideBox!.height, 720 - PANEL_GAP_PX - 32);
   expectNear(sideBox!.width, 420);
   expectNear(mainBox!.x + mainBox!.width + PANEL_GAP_PX, sideBox!.x);
   expectNear(sideBox!.x + sideBox!.width, 1280 - PANEL_GAP_PX);
@@ -61,8 +61,8 @@ test("closes and keyboard-restores the same full-height Side Panel", async ({ pa
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByText(ticket.content, { exact: true }).click();
 
-  const nav = page.locator('[data-workbench-region="nav"]');
-  await nav.getByRole("button", { name: "Show Side Panel" }).click();
+  const controls = page.getByRole("group", { name: "Panel controls" });
+  await controls.getByRole("button", { name: "Show Side Panel" }).click();
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
   await page.getByRole("menuitem", { name: "Session", exact: true }).click();
@@ -75,7 +75,7 @@ test("closes and keyboard-restores the same full-height Side Panel", async ({ pa
   expect(secondaryNode).not.toBeNull();
   expect(sideRegionNode).not.toBeNull();
 
-  await nav.getByRole("button", { name: "Hide Side Panel" }).click();
+  await controls.getByRole("button", { name: "Hide Side Panel" }).click();
   await expect(page.getByTestId("workbench-side-panel-attached")).not.toBeVisible();
   await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
   await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
@@ -87,7 +87,7 @@ test("closes and keyboard-restores the same full-height Side Panel", async ({ pa
   expect(await secondaryNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await sideRegionNode!.evaluate((element) => element.isConnected)).toBe(true);
 
-  const showSide = nav.getByRole("button", { name: "Show Side Panel" });
+  const showSide = controls.getByRole("button", { name: "Show Side Panel" });
   await showSide.focus();
   await expect(showSide).toBeFocused();
   await showSide.press("Enter");

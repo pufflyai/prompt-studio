@@ -9,7 +9,6 @@ export function timelineQueryData(
 ) {
   const attributes = plan.ticketAttributes.flatMap<AttributeDescriptor>((attribute) => {
     const type = attribute.type;
-    if (type.kind === "status") return [];
     if (type.kind === "enum" || type.kind === "enum-multi") {
       return [
         {

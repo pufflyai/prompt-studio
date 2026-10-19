@@ -178,6 +178,7 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
       label: text(mode.label, mode.modeId),
       panels: mode.panelRegions,
       regionSettings: mode.regionSettings,
+      panelHeaders: "legacy",
       floatingPanels: mode.floatingPanels,
       defaultTheme: mode.defaultTheme,
       chrome: mode.chrome,

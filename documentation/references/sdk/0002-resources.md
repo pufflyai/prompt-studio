@@ -80,7 +80,7 @@ another client or through the CLI.
 
 ## Resource file paths
 
-Resource kind `paths` are on `main` and ship in the release after 0.43.x. `@pstdio/sdk` 0.43.1 does not declare them.
+Resource kind `paths` ship in `@pstdio/sdk` 0.44.0.
 
 Declare `paths` on a resource kind to open its files in the owner's UI. Each entry
 contains a workspace-relative `prefix` and a `resolve` command reference. Matching

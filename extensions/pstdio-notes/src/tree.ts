@@ -4,7 +4,7 @@ import { listFolders } from "./folders";
 import { moveTreeNote } from "./note-movement";
 import { listNotes } from "./notes";
 import { noteResource, notesChanged, notesMount, noteTarget } from "./pages";
-import { folderActions, newFolderAction, newNoteAction, noteActions } from "./tree-actions";
+import { folderActions, newFolderAction, newNoteAction } from "./tree-actions";
 
 export const notesTree = defineView({
   id: "note-list",
@@ -29,9 +29,8 @@ export const notesTree = defineView({
         icon: "file-text",
         canDrag: writable,
         canDrop: writable,
-        resource: noteResource(note.id, note.title, ctx),
+        resource: noteResource(note.id, note.title, ctx, writable),
         target: noteTarget(note.id, note.title, ctx),
-        contextMenuActions: noteActions(note, writable),
       });
       const folderIds = new Set(folders.map((folder) => folder.id));
       return [

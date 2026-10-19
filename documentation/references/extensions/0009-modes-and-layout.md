@@ -38,7 +38,7 @@ const mode = defineMode({
 });
 ```
 
-`chrome` replaces the content of `nav`, `sidenav`, `activity`, or `status` with a declared view while the mode is active. Custom `nav` keeps the shared panel visibility buttons beside the view. Use `false` to hide a chrome region. Omit a key to retain its normal host content. These views share the normal webview capability boundary and receive the active `pageLocation` in their props. Include navigation back to the project when replacing host navigation.
+`chrome` replaces the content of `nav`, `sidenav`, `activity`, or `status` with a declared view while the mode is active. Global panel controls live in host chrome: the web navigation header or the desktop title bar. They remain available beside custom navigation content. Use `false` to hide a chrome region. Omit a key to retain its normal host content. These views share the normal webview capability boundary and receive the active `pageLocation` in their props. Include navigation back to the project when replacing host navigation.
 
 `regionSettings.sidenav` controls a custom sidebar even without a placement. Page-owned content still belongs in `slots`. Region settings inherit the host defaults per property. For example, setting `alwaysShowTabs` preserves the host's size unless the mode supplies its own `size`.
 
@@ -61,6 +61,24 @@ A moved view keeps its tab tray even when it is the only view in its destination
 Live views stay mounted during tab selection and page navigation. Iframe state also survives explicit moves in browsers with the DOM `moveBefore` API. See [ADR 0053](../../adrs/0053-temporary-webview-move-fallback.md) for the temporary WebKit limit.
 
 ## Panel policy
+
+Each permission is independent. The active mode owns the policy; the saved mode layout owns visibility and header choices. Main always remains available as page context. Side and Bottom remain global within the mode.
+
+| Region setting | Behavior |
+| --- | --- |
+| `canOpen` | Allows revealing a closed panel. Existing open panels remain usable when false. |
+| `canClose` | Allows hiding a panel. Closing individual tabs stays independent. A nonclosing surface remains visible after its last tab closes. |
+| `acceptsTabs` | Allows new tabs and drops, including moves. Existing tabs remain usable. |
+| `resizable` | Allows pointer, keyboard and command resizing. Equal minimum and maximum sizes also prevent resizing. |
+| `floatable` | Side only. Allows floating, independently of visibility. Overrides `floatingPanels`. |
+
+These optional booleans default to true. Unavailable panels reject opening and drops, and stale layouts cannot restore them. Commands validate before publishing navigation. Disallowed controls are omitted. A directional Show or Hide action requires its corresponding permission; a toggle requires both. Tab movement still respects published `movableTo` restrictions. Whole-panel docking is separate work.
+
+`floatingPanels` is deprecated in favor of `regionSettings.side.floatable`. Panel `collapsible` is deprecated in favor of `canOpen`/`canClose`; it keeps its legacy drag-collapse behavior, including explicit Show/Hide, when new permissions are omitted. Panel menus still support `collapsible`. Publish this additive SDK and host release before adopting the new fields in separately released extensions.
+
+Right-click a header, press Shift+F10 or the Context Menu key while it has focus, or touch and hold to hide it. Its hidden top edge offers the same ways to show it. Header choices persist in the mode layout and reset with layout reset. Showing a header grants no other permission. The host treats explicit `showHeader` as authoritative. Auxiliary trays show a lone tab by default. Main keeps the single-resource view rule: no implicit tab strip or close action. Published extension declarations keep their existing implicit header and single-tab rules until the coordinated breaking release, even when they use the new permissions. An explicit user header choice overrides those defaults.
+
+Optional panels still collapse when their final tab closes or moves away. An explicit empty-panel open does not exempt a later final-tab close. Related placement, manual closure and revisit keep the [related-opening rules](0019-related-resource-openings.md). No page Side/Bottom layer or page panel snapshots are added.
 
 Declare `floatingPanels: "hidden"` on the mode to prevent floating side panels. The controller attaches an open floating panel when entering the mode and leaves a closed panel closed. Floating requests and restored state obey the same policy. The default is `"visible"`. Placements and page slots do not control floating.
 

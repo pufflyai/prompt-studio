@@ -8,7 +8,7 @@ import {
   setDefaultStatus,
   updateTicketStatus,
 } from "../data/status-operations";
-import { plannerTicketsChanged } from "../events";
+import { plannerSchemaChanged, plannerTicketsChanged } from "../events";
 
 export const readTicketStatusesCommand = defineCommand({
   id: "ticket-status.read",
@@ -49,6 +49,7 @@ export const createTicketStatusCommand = defineCommand({
       columnActions: commandParams.columnActions,
     });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return status;
   },
 });
@@ -83,6 +84,7 @@ export const updateTicketStatusCommand = defineCommand({
       columnActions: commandParams.columnActions,
     });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return status;
   },
 });
@@ -100,6 +102,7 @@ export const deleteTicketStatusCommand = defineCommand({
     const statusId = commandParams.statusId ?? (await resolveStatusId(ctx.storage, commandParams.status ?? ""));
     const result = await deleteTicketStatus({ storage: ctx.storage, statusId });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return result;
   },
 });
@@ -116,6 +119,7 @@ export const setDefaultTicketStatusCommand = defineCommand({
     const statusId = await resolveStatusId(ctx.storage, commandParams.status);
     const result = await setDefaultStatus({ storage: ctx.storage, statusId });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return result;
   },
 });
@@ -134,6 +138,7 @@ export const reorderTicketStatusesCommand = defineCommand({
   async run(ctx, commandParams) {
     const result = await reorderTicketStatuses({ storage: ctx.storage, statusIds: commandParams.statusIds ?? [] });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return result;
   },
 });

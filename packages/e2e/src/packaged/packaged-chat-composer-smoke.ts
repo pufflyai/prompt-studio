@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -8,7 +8,10 @@ import { expectPackagedPanelMotion, expectPackagedStreamingMotion } from "./pack
 
 export const expectPackagedChatComposer = async (baseUrl: string, headers: Record<string, string>, root: string) => {
   const folder = join(root, "chat-project");
-  mkdirSync(folder);
+  // Guessed paths in chat become links only when the files exist.
+  mkdirSync(join(folder, "src", "app", "(dashboard)"), { recursive: true });
+  writeFileSync(join(folder, "src", "app.ts"), "export {};\n");
+  writeFileSync(join(folder, "src", "app", "(dashboard)", "page.ts"), "export {};\n");
   const response = await fetch(`${baseUrl}/v1/projects`, {
     method: "POST",
     headers: { ...headers, "Content-Type": "application/json" },
@@ -75,7 +78,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await page.unroute("**/follow-up");
 
     const equations =
-      "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nRead src/app.ts and src/app/(dashboard)/page.ts. Open {{link('https://example.com')}}. End equations.";
+      "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nRead src/app.ts and src/app/(dashboard)/page.ts, not src/missing.ts. Open {{link('https://example.com')}}. End equations.";
     await editor.fill(equations);
     await editor.press("Enter");
     const reply = page.locator(".ai-message__root").filter({ hasText: "Fake Agent: follow-up" }).last();
@@ -90,6 +93,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(groupedPath).toBeVisible();
     await expect(groupedPath).toHaveAttribute("href", /src%2Fapp%2F%28dashboard%29%2Fpage\.ts/);
     await expect(reply.getByRole("link", { name: "/page.ts", exact: true })).toHaveCount(0);
+    await expect(reply.getByRole("link", { name: "src/missing.ts", exact: true })).toHaveCount(0);
     const webReference = reply.getByRole("link", { name: "example.com", exact: true });
     await expect(webReference).toHaveAttribute("href", "https://example.com");
     await expect(webReference).toHaveAttribute("target", "_blank");

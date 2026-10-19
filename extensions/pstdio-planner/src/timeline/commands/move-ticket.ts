@@ -5,7 +5,7 @@ import { withWriteGuard } from "../../data/write-guard";
 import { moveTicket } from "../model/edit-plan";
 import { deadlineOrNone, findTicket, loadPlan, savePlan } from "./plan-store";
 export const moveTicketInPlan = async (
-  ctx: Pick<ExtensionContextBase, "storage" | "events">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId">,
   input: { ticket: string; deadline?: string; before?: string },
 ) => {
   const { ticket: ticketKey, deadline, before } = input;

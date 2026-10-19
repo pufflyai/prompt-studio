@@ -69,7 +69,6 @@ describe("ticket work in shared folders", () => {
         merge: false,
         rebase: false,
         delete: supportsDelete,
-        archive: false,
       },
       anchors_json: [{ type: "ticket", id: ticket.id, shorthand: ticket.shorthand }],
     };

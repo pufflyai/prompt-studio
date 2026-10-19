@@ -1,7 +1,9 @@
 import { defineExtension, defineKeybinding } from "@pstdio/sdk/extensions";
-import { createNoteCommand, deleteNoteCommand, renameNoteCommand } from "./src/commands";
+import { createNoteCommand, deleteNoteCommand, renameNoteCommand, resolveNoteCommand } from "./src/commands";
 import { createFolderCommand, deleteFolderCommand, moveNoteCommand, renameFolderCommand } from "./src/folder-commands";
-import { documents, editor, note, notesPage } from "./src/pages";
+import { documents } from "./src/mounts";
+import { editor, note, notesPage } from "./src/pages";
+import { resolveNotePathCommand } from "./src/resolve-note-path";
 import { noteResources } from "./src/resources";
 import { notesTree, notesTreeNavigation } from "./src/tree";
 
@@ -15,6 +17,8 @@ export default defineExtension({
     createNoteCommand,
     deleteNoteCommand,
     renameNoteCommand,
+    resolveNoteCommand,
+    resolveNotePathCommand,
     createFolderCommand,
     renameFolderCommand,
     deleteFolderCommand,

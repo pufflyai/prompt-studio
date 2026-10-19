@@ -44,3 +44,11 @@ Declare direct dependencies in the consuming package. A helper workspace can exp
 A host reload defect, package resolver defect, or shared UI initialization defect belongs to the platform. Do not add aliases, global initialization hacks, or chrome overrides to these general examples. Report the failing entry and versions, and keep any necessary temporary exception with its owning ADR rather than teaching it as the normal authoring pattern.
 
 For copy actions, add `clipboard.write` to the view capabilities and use `CopyButton` from `@pstdio/ui`. Writes happen in the guest click handler; there is no clipboard bridge method. Clipboard reads are not supported.
+
+## Saved view preferences
+
+Use `client.preferences.get(name, scope)` and `client.preferences.set(name, value, scope)` for small saved view choices. Declare `preferences.get` and `preferences.set`. A name without a setting declaration belongs to your extension. The host stores values on the server, so reloads, restarts, other clients, and agents see the same data. `set` returns after the value is stored. The default scope is `user`. Use `project`, `workspace`, or `session` for shorter lifetimes; `workspace` and `session` need a scope ID.
+
+Use your own extension's names. Reading or writing names registered by another extension is deprecated in 0.44 and will be removed in 0.45. `dashboard.themePreference` and `dashboard.locale` stay shared host preferences.
+
+Use preferences for small saved view choices, page params for shareable view state, declared settings for user configuration, and commands with `ctx.storage` for product data. Agents use the authenticated routes in the [webview preferences reference](https://prompt.studio/docs/references/extensions/webview-and-storage-api/#webview-preferences).

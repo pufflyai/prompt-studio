@@ -16,7 +16,7 @@ export const verifyClosedSidePreference = async (page: Page, preview: Locator, l
     await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
   };
   const reset = async () => {
-    const showBottom = page.getByRole("button", { name: "Show Secondary Panel", exact: true });
+    const showBottom = page.getByRole("button", { name: "Show Bottom Panel", exact: true });
     if (await showBottom.isVisible()) await showBottom.click();
     await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
     await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
@@ -46,10 +46,10 @@ export const verifyGlobalBottomState = async (page: Page, terminalTab: Locator, 
   await reopen();
   await expect(terminalTab).toBeVisible();
   await leave();
-  await page.getByRole("button", { name: "Hide Secondary Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Hide Bottom Panel", exact: true }).click();
   await reopen();
   await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
-  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
   await expect(terminalTab).toBeVisible();
   await leave();
   await expect(terminalTab).toBeVisible();

@@ -1,4 +1,4 @@
-import { type PlacementIdentity, resourceKey, workbenchPanels } from "@pstdio/sdk/extensions";
+import { type PlacementIdentity, resourceKey } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
   WorkbenchModuleContext,
@@ -7,6 +7,7 @@ import type {
 } from "@pstdio/workbench";
 import { rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { sessionPanelRef } from "./session-panel-placements";
 
 interface OpenSessionBubbleWidgetsInput {
   resource?: ResourceRef;
@@ -15,13 +16,13 @@ interface OpenSessionBubbleWidgetsInput {
   region?: WorkbenchPanelRegion;
 }
 export const openSessionBubbleWidgets = (
-  ctx: Pick<WorkbenchModuleContext, "navigation">,
+  ctx: Pick<WorkbenchModuleContext, "navigation" | "modes">,
   input: OpenSessionBubbleWidgetsInput = {},
 ) => {
   if (!input.resource) return undefined;
   return ctx.navigation.openTarget({
     kind: "panel",
-    panel: workbenchPanels.projectSession,
+    panel: sessionPanelRef(ctx.modes.getActiveModeId() ?? "project"),
     resource: input.resource,
     open: input.tabRetention === "persistent" ? "pin" : "preview",
     region: input.region,

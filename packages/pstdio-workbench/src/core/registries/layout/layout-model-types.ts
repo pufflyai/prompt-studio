@@ -40,8 +40,15 @@ export interface LayoutPersistenceAdapter {
 export interface CreateLayoutModelInput {
   defaultRegionVisibility?: Partial<Record<WorkbenchRegion, boolean>>;
   persistence?: LayoutPersistenceAdapter;
+  normalizeLayout?(layout: WorkbenchLayout): WorkbenchLayout;
+  validateRegionChange?(region: WorkbenchRegion, action: "open" | "close" | "resize"): void;
+  validateWidgetOpen?(
+    region: WorkbenchRegion,
+    existing: WorkbenchWidgetPlacement | undefined,
+    target: OpenWidgetInput,
+  ): void;
   /** Region policy for the active context; the layout asks on every query. */
-  getRegionSettings?(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
+  getRegionSettings?(regionId: WorkbenchRegion, modeId?: string): WorkbenchRegionSettings | undefined;
 }
 
 export interface LayoutModel {
@@ -55,7 +62,7 @@ export interface LayoutModel {
   getWidget(id: string): RegisteredWidgetContribution | undefined;
   getPanel(id: string): WorkbenchPanelContribution | undefined;
   getRegionSize(regionId: WorkbenchRegion): WorkbenchRegionSize | undefined;
-  getRegionSettings(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
+  getRegionSettings(regionId: WorkbenchRegion, modeId?: string): WorkbenchRegionSettings | undefined;
   getRegionCollapsible(regionId: WorkbenchRegion): boolean;
   getRegionHeaderBorderBottom(regionId: WorkbenchRegion): boolean;
   setRegionVisible(regionId: WorkbenchRegion, visible: boolean): void;

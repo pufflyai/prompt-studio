@@ -4,6 +4,7 @@ import {
   type WorkbenchLayout,
   type WorkbenchPanelRegion,
   type WorkbenchRegion,
+  type WorkbenchRegionSettings,
   type WorkbenchWidgetPlacement,
   workbenchPanelRegions,
 } from "../layout/layout-model";
@@ -17,7 +18,8 @@ const modePanelRegions = {
 
 const allModeRegions = Object.values(modePanelRegions).flat();
 
-export const panelsForMode = (mode: WorkbenchModeContribution) => mode.panels ?? workbenchPanelRegions;
+export const panelsForMode = (mode: WorkbenchModeContribution) =>
+  mode.panels ? [...new Set(["main" as const, ...mode.panels])] : workbenchPanelRegions;
 
 export const getWorkbenchModePanelForRegion = (region: WorkbenchRegion) =>
   (Object.keys(modePanelRegions) as WorkbenchPanelRegion[]).find((panel) =>
@@ -90,6 +92,25 @@ export const applyModePanelAvailability = (layout: WorkbenchLayout, panels: read
     .filter((panel) => !available.has(panel))
     .flatMap((panel) => modePanelRegions[panel]);
   return clearRegions(layout, unavailableRegions);
+};
+
+// Availability and close permissions constrain restored layouts as well as commands.
+export const applyModePanelPolicy = (
+  layout: WorkbenchLayout,
+  mode: WorkbenchModeContribution | undefined,
+  getSettings: (region: WorkbenchRegion) => WorkbenchRegionSettings | undefined,
+) => {
+  let next = mode ? applyModePanelAvailability(layout, panelsForMode(mode)) : layout;
+  for (const region of ["side", "secondary"] as const) {
+    if (
+      isWorkbenchModePanelAvailable(mode, region) &&
+      getSettings(region)?.canClose === false &&
+      !next.regions[region].visible
+    ) {
+      next = { ...next, regions: { ...next.regions, [region]: { ...next.regions[region], visible: true } } };
+    }
+  }
+  return next;
 };
 
 export const restoreUnscopedModeLayout = (

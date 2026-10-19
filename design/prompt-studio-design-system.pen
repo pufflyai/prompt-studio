@@ -15342,6 +15342,25 @@
                       "alignItems": "center",
                       "children": [
                         {
+                          "id": "kUCSG",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Sidenav control",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "width": 24,
+                          "height": 24,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "panel-left",
+                              "width": 12,
+                              "height": 12
+                            }
+                          }
+                        },
+                        {
                           "id": "LLPuw",
                           "type": "ref",
                           "ref": "nvvgg",
@@ -15371,7 +15390,7 @@
                           },
                           "width": 24,
                           "height": 24,
-                          "x": 42,
+                          "x": 74,
                           "y": 8,
                           "rotation": 0,
                           "descendants": {
@@ -15512,25 +15531,6 @@
                           "name": "Nav Chrome spacer",
                           "width": "fill_container",
                           "height": 1
-                        },
-                        {
-                          "id": "kUCSG",
-                          "type": "ref",
-                          "ref": "nvvgg",
-                          "name": "Sidenav control",
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          },
-                          "width": 24,
-                          "height": 24,
-                          "descendants": {
-                            "k7mgm": {
-                              "icon": "panel-left",
-                              "width": 12,
-                              "height": 12
-                            }
-                          }
                         },
                         {
                           "id": "q7B3uG",
@@ -41841,6 +41841,26 @@
                               }
                             },
                             {
+                              "id": "Qw3Y1",
+                              "type": "ref",
+                              "ref": "clw66",
+                              "name": "Drive selector · Windows only",
+                              "enabled": false,
+                              "height": 32,
+                              "context": "Windows runtime only. Accessible name: Drive. Select to navigate to the drive root; Open folder confirms. Derive selection from the current path. UNC paths have no selected drive.",
+                              "descendants": {
+                                "xr1ec": {
+                                  "icon": "hard-drive"
+                                },
+                                "l7dix": {
+                                  "padding": 0
+                                },
+                                "sefGB": {
+                                  "content": "C:"
+                                }
+                              }
+                            },
+                            {
                               "type": "frame",
                               "id": "mXhv9",
                               "name": "Folder path",
@@ -67196,6 +67216,12 @@
                           "name": "Nav Chrome",
                           "width": "fill_container",
                           "descendants": {
+                            "kUCSG": {
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "theme": {
                                 "btn": "ghost",
@@ -67249,12 +67275,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -69869,6 +69889,12 @@
                   "name": "Nav Chrome · ownership strip",
                   "width": "fill_container",
                   "descendants": {
+                    "kUCSG": {
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      }
+                    },
                     "LLPuw": {
                       "theme": {
                         "btn": "ghost",
@@ -69922,12 +69948,6 @@
                       "theme": {
                         "btn": "ghost",
                         "size": "xs"
-                      }
-                    },
-                    "kUCSG": {
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
                       }
                     },
                     "q7B3uG": {
@@ -70116,6 +70136,12 @@
                       "name": "Nav Chrome · Panels open",
                       "width": "fill_container",
                       "descendants": {
+                        "kUCSG": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
                         "LLPuw": {
                           "theme": {
                             "btn": "ghost",
@@ -70169,12 +70195,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         },
                         "q7B3uG": {
@@ -70268,6 +70288,15 @@
                       "name": "Nav Chrome · Recovery state",
                       "width": "fill_container",
                       "descendants": {
+                        "kUCSG": {
+                          "enabled": false,
+                          "width": 1,
+                          "height": 1,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
                         "LLPuw": {
                           "theme": {
                             "btn": "ghost",
@@ -70326,15 +70355,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "enabled": false,
-                          "width": 1,
-                          "height": 1,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         },
                         "q7B3uG": {
@@ -74702,6 +74722,13 @@
                           ],
                           "gap": 4,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "enabled": false,
                               "theme": {
@@ -74796,13 +74823,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -75022,6 +75042,13 @@
                           ],
                           "gap": 4,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "enabled": false,
                               "theme": {
@@ -75132,13 +75159,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -75477,6 +75497,13 @@
                           ],
                           "gap": 4,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "enabled": false,
                               "theme": {
@@ -75587,13 +75614,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -78109,6 +78129,13 @@
                       "name": "Nav Chrome",
                       "width": "fill_container",
                       "descendants": {
+                        "kUCSG": {
+                          "enabled": false,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
                         "LLPuw": {
                           "theme": {
                             "btn": "ghost",
@@ -78185,13 +78212,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "enabled": false,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         },
                         "q7B3uG": {
@@ -78306,6 +78326,13 @@
                           ],
                           "gap": 5,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "theme": {
                                 "btn": "ghost",
@@ -78370,13 +78397,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -78977,6 +78997,13 @@
                           ],
                           "gap": 5,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "theme": {
                                 "btn": "ghost",
@@ -79041,13 +79068,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -79648,6 +79668,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -79779,13 +79806,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -79954,6 +79974,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -80105,13 +80132,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -80280,6 +80300,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -80411,13 +80438,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -80586,6 +80606,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -80717,13 +80744,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -80906,6 +80926,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -81037,13 +81064,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -81212,6 +81232,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -81363,13 +81390,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -81538,6 +81558,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -81711,13 +81738,6 @@
                                 "size": "xs"
                               }
                             },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
                             "q7B3uG": {
                               "enabled": false,
                               "theme": {
@@ -81884,6 +81904,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -82035,13 +82062,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -82224,6 +82244,9 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -82280,9 +82303,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
                               "enabled": false
                             },
                             "q7B3uG": {
@@ -82443,6 +82463,9 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -82542,9 +82565,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
                               "enabled": false
                             },
                             "q7B3uG": {
@@ -82705,6 +82725,9 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -82829,9 +82852,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
                               "enabled": false
                             },
                             "q7B3uG": {
@@ -82992,6 +83012,9 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -83048,9 +83071,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
                               "enabled": false
                             },
                             "q7B3uG": {
@@ -83706,6 +83726,12 @@
                               "name": "Nav Chrome",
                               "width": "fill_container",
                               "descendants": {
+                                "kUCSG": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  }
+                                },
                                 "LLPuw": {
                                   "theme": {
                                     "btn": "ghost",
@@ -83759,12 +83785,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 },
                                 "q7B3uG": {
@@ -85319,6 +85339,12 @@
                               "name": "Nav Chrome",
                               "width": "fill_container",
                               "descendants": {
+                                "kUCSG": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  }
+                                },
                                 "LLPuw": {
                                   "theme": {
                                     "btn": "ghost",
@@ -85372,12 +85398,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 },
                                 "q7B3uG": {
@@ -86928,6 +86948,12 @@
                               "name": "Nav Chrome",
                               "width": "fill_container",
                               "descendants": {
+                                "kUCSG": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  }
+                                },
                                 "LLPuw": {
                                   "theme": {
                                     "btn": "ghost",
@@ -86981,12 +87007,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 },
                                 "q7B3uG": {
@@ -87425,6 +87445,12 @@
                               "name": "Nav Chrome",
                               "width": "fill_container",
                               "descendants": {
+                                "kUCSG": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  }
+                                },
                                 "LLPuw": {
                                   "theme": {
                                     "btn": "ghost",
@@ -87478,12 +87504,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 },
                                 "q7B3uG": {
@@ -87823,6 +87843,12 @@
                               "name": "Nav Chrome",
                               "width": "fill_container",
                               "descendants": {
+                                "kUCSG": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  }
+                                },
                                 "LLPuw": {
                                   "theme": {
                                     "btn": "ghost",
@@ -87876,12 +87902,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 },
                                 "q7B3uG": {
@@ -107442,6 +107462,12 @@
                       "name": "Nav Chrome",
                       "width": "fill_container",
                       "descendants": {
+                        "kUCSG": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
                         "LLPuw": {
                           "theme": {
                             "btn": "ghost",
@@ -107513,12 +107539,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         },
                         "q7B3uG": {
@@ -110177,6 +110197,12 @@
                       "name": "Nav Chrome",
                       "width": "fill_container",
                       "descendants": {
+                        "kUCSG": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
                         "LLPuw": {
                           "theme": {
                             "btn": "ghost",
@@ -110253,12 +110279,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         },
                         "q7B3uG": {
@@ -143122,6 +143142,12 @@
                           "name": "Nav Chrome",
                           "width": "fill_container",
                           "descendants": {
+                            "kUCSG": {
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "theme": {
                                 "btn": "ghost",
@@ -143175,12 +143201,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -189745,6 +189765,816 @@
                   "content": "disabled"
                 }
               }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "lQwpX",
+      "x": 18927,
+      "y": 19998,
+      "name": "Windows folder picker · drive selection · PS-5",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1900,
+      "height": 740,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 32,
+      "children": [
+        {
+          "type": "text",
+          "id": "K9luSJ",
+          "name": "Windows folder picker heading",
+          "fill": "$ds-fg",
+          "content": "Windows · Choose a drive",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "L6V6fK",
+          "name": "Runtime ownership note",
+          "fill": "$ds-fg-muted",
+          "content": "Browse the drives on the machine running Prompt Studio. Choose a drive, browse to a folder, then choose Open folder.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "lmQCX",
+          "name": "Windows picker states",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "yJUnp",
+              "name": "Browse another drive state",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Xdwjh",
+                  "name": "Browse another drive label",
+                  "fill": "$ds-fg",
+                  "content": "Browse another drive",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "id": "IraaP",
+                  "type": "ref",
+                  "ref": "I2wLw",
+                  "name": "Browse another drive picker",
+                  "width": "fill_container",
+                  "descendants": {
+                    "D5TnMu": {
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      }
+                    },
+                    "zsgoJ": {
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      }
+                    },
+                    "Qw3Y1": {
+                      "enabled": true
+                    },
+                    "Qw3Y1/sefGB": {
+                      "content": "D:"
+                    },
+                    "KlD5y": {
+                      "content": "D:\\Projects"
+                    },
+                    "U5wtCV": {
+                      "theme": {
+                        "row": "default"
+                      }
+                    },
+                    "U5wtCV/h0cJn": {
+                      "content": "My tools"
+                    },
+                    "U5wtCV/E8VVm": {
+                      "theme": {
+                        "badge": "subtle",
+                        "palette": "blue"
+                      }
+                    },
+                    "Z7pc3": {
+                      "theme": {
+                        "row": "default"
+                      }
+                    },
+                    "Z7pc3/h0cJn": {
+                      "content": "Notes"
+                    },
+                    "Z7pc3/E8VVm": {
+                      "theme": {
+                        "badge": "subtle",
+                        "palette": "blue"
+                      }
+                    },
+                    "lQgUD": {
+                      "theme": {
+                        "row": "default"
+                      }
+                    },
+                    "lQgUD/h0cJn": {
+                      "content": "Prototypes"
+                    },
+                    "lQgUD/E8VVm": {
+                      "theme": {
+                        "badge": "subtle",
+                        "palette": "blue"
+                      }
+                    },
+                    "uBpQq": {
+                      "theme": {
+                        "row": "default"
+                      }
+                    },
+                    "uBpQq/h0cJn": {
+                      "content": "Shared"
+                    },
+                    "uBpQq/E8VVm": {
+                      "theme": {
+                        "badge": "subtle",
+                        "palette": "blue"
+                      }
+                    },
+                    "vzzEL": {
+                      "enabled": false
+                    },
+                    "z28bu": {
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      }
+                    },
+                    "z28bu/khvEs": {
+                      "theme": {
+                        "kbd": "raised",
+                        "size": "md"
+                      }
+                    },
+                    "U5CKl9": {
+                      "theme": {
+                        "btn": "primary",
+                        "size": "sm"
+                      }
+                    },
+                    "U5CKl9/khvEs": {
+                      "theme": {
+                        "kbd": "raised",
+                        "size": "md"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "idd3H",
+                  "name": "Browse another drive guidance",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Drive selection changes the location. Open folder confirms it.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "TOWNl",
+              "name": "Choose a drive state",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "zBAph",
+                  "name": "Choose a drive label",
+                  "fill": "$ds-fg",
+                  "content": "Choose a drive",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "id": "Kaqn9",
+                  "type": "ref",
+                  "ref": "I2wLw",
+                  "name": "Choose a drive picker",
+                  "width": "fill_container",
+                  "descendants": {
+                    "D5TnMu": {
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      }
+                    },
+                    "zsgoJ": {
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      }
+                    },
+                    "Qw3Y1": {
+                      "enabled": true,
+                      "theme": {
+                        "trig": "open"
+                      }
+                    },
+                    "Qw3Y1/sefGB": {
+                      "content": "C:"
+                    },
+                    "KlD5y": {
+                      "content": "C:\\Users\\Alex"
+                    },
+                    "U5wtCV": {
+                      "theme": {
+                        "row": "default"
+                      }
+                    },
+                    "U5wtCV/h0cJn": {
+                      "content": "My tools"
+                    },
+                    "U5wtCV/E8VVm": {
+                      "theme": {
+                        "badge": "subtle",
+                        "palette": "blue"
+                      }
+                    },
+                    "Z7pc3": {
+                      "theme": {
+                        "row": "default"
+                      }
+                    },
+                    "Z7pc3/h0cJn": {
+                      "content": "Notes"
+                    },
+                    "Z7pc3/E8VVm": {
+                      "theme": {
+                        "badge": "subtle",
+                        "palette": "blue"
+                      }
+                    },
+                    "lQgUD": {
+                      "theme": {
+                        "row": "default"
+                      }
+                    },
+                    "lQgUD/h0cJn": {
+                      "content": "Prototypes"
+                    },
+                    "lQgUD/E8VVm": {
+                      "theme": {
+                        "badge": "subtle",
+                        "palette": "blue"
+                      }
+                    },
+                    "uBpQq": {
+                      "theme": {
+                        "row": "default"
+                      }
+                    },
+                    "uBpQq/h0cJn": {
+                      "content": "Shared"
+                    },
+                    "uBpQq/E8VVm": {
+                      "theme": {
+                        "badge": "subtle",
+                        "palette": "blue"
+                      }
+                    },
+                    "vzzEL": {
+                      "enabled": false
+                    },
+                    "z28bu": {
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      }
+                    },
+                    "z28bu/khvEs": {
+                      "theme": {
+                        "kbd": "raised",
+                        "size": "md"
+                      }
+                    },
+                    "U5CKl9": {
+                      "theme": {
+                        "btn": "primary",
+                        "size": "sm"
+                      }
+                    },
+                    "U5CKl9/khvEs": {
+                      "theme": {
+                        "kbd": "raised",
+                        "size": "md"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "BzXWY",
+                  "name": "Choose a drive guidance",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Arrow keys move between drives; Enter selects; Escape closes.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "kT2D3",
+                  "type": "ref",
+                  "ref": "rhikV",
+                  "name": "Available drives · open menu",
+                  "layoutPosition": "absolute",
+                  "x": 96,
+                  "y": 136,
+                  "width": 240,
+                  "context": "Drives reported by the runtime. Selected drive is checked. Escape returns focus to Drive.",
+                  "descendants": {
+                    "Ktsh0": {
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      }
+                    },
+                    "IEF4i": {
+                      "content": "Drives"
+                    },
+                    "Q6G8L": {
+                      "theme": {
+                        "menu": "selected"
+                      }
+                    },
+                    "Q6G8L/UEgTp": {
+                      "icon": "hard-drive"
+                    },
+                    "Q6G8L/UTbhN": {
+                      "content": "C:"
+                    },
+                    "Q6G8L/OxQag": {
+                      "enabled": true,
+                      "icon": "check"
+                    },
+                    "x4Jxq3/UEgTp": {
+                      "icon": "hard-drive"
+                    },
+                    "x4Jxq3/UTbhN": {
+                      "content": "D:"
+                    },
+                    "TJqgM": {
+                      "enabled": false,
+                      "width": 240
+                    },
+                    "OKKAb/UEgTp": {
+                      "icon": "hard-drive"
+                    },
+                    "OKKAb/UTbhN": {
+                      "content": "E:"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Z8Nsx",
+              "name": "Drive unavailable state",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "NVIaR",
+                  "name": "Drive unavailable label",
+                  "fill": "$ds-fg",
+                  "content": "Drive unavailable",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "id": "uqSX2",
+                  "type": "ref",
+                  "ref": "I2wLw",
+                  "name": "Drive unavailable picker",
+                  "width": "fill_container",
+                  "descendants": {
+                    "D5TnMu": {
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      }
+                    },
+                    "zsgoJ": {
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      },
+                      "opacity": 0.4
+                    },
+                    "Qw3Y1": {
+                      "enabled": true
+                    },
+                    "Qw3Y1/sefGB": {
+                      "content": "E:"
+                    },
+                    "KlD5y": {
+                      "content": "E:\\"
+                    },
+                    "nZbUt": {
+                      "opacity": 0.4
+                    },
+                    "e3c889": {
+                      "opacity": 0.4
+                    },
+                    "num3Q": {
+                      "type": "frame",
+                      "id": "D1ktr",
+                      "name": "Drive unavailable feedback",
+                      "width": 552,
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "kEYLp",
+                          "name": "Drive error",
+                          "fill": "$ds-error",
+                          "content": "This drive is unavailable.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "IqTCt",
+                          "name": "Recovery hint",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Reconnect the drive, choose another drive, or go Home.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    "vzzEL": {
+                      "enabled": false
+                    },
+                    "z28bu": {
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      }
+                    },
+                    "z28bu/khvEs": {
+                      "theme": {
+                        "kbd": "raised",
+                        "size": "md"
+                      }
+                    },
+                    "U5CKl9": {
+                      "theme": {
+                        "btn": "primary",
+                        "size": "sm"
+                      },
+                      "opacity": 0.4
+                    },
+                    "U5CKl9/khvEs": {
+                      "theme": {
+                        "kbd": "raised",
+                        "size": "md"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "dvmmZ",
+                  "name": "Drive unavailable guidance",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Keep drive selection and Home available so the user can recover.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "gAlqG",
+      "x": 51282,
+      "y": 0,
+      "name": "PS-791 · Global panel controls and header choices",
+      "width": 940,
+      "height": 560,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "K2bWdV",
+          "fill": "$ds-fg",
+          "content": "Global panel controls · independent mode permissions",
+          "fontFamily": "$font-label",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "diJSW",
+          "name": "light",
+          "theme": {
+            "mode": "light"
+          },
+          "width": "fill_container",
+          "height": 190,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "T7t0m",
+              "fill": "$ds-fg",
+              "content": "Web: Sidenav before history; Bottom and Side after breadcrumbs. Desktop: beside project tabs.",
+              "fontFamily": "$font-label",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "I6Bn6Z",
+              "name": "Panel header · focus, context menu, touch hold",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "fW52M",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab",
+                  "width": 180,
+                  "height": 32
+                },
+                {
+                  "type": "text",
+                  "id": "dbio7",
+                  "fill": "$ds-fg",
+                  "content": "Right-click or Shift+F10: Hide header",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "S8WXKM",
+              "name": "Hidden header top edge",
+              "fill": "$ds-fg",
+              "content": "Hidden top edge · focus then Shift+F10: Show header",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "R7pEK",
+              "name": "Web navigation controls",
+              "width": "fill_container",
+              "height": 32,
+              "gap": 4,
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "f6XIm",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "W9xJcR",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "P3m2Nq",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "O4TIMd",
+          "name": "dark",
+          "theme": {
+            "mode": "dark"
+          },
+          "width": "fill_container",
+          "height": 190,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "z9e5X",
+              "fill": "$ds-fg",
+              "content": "Web: Sidenav before history; Bottom and Side after breadcrumbs. Desktop: beside project tabs.",
+              "fontFamily": "$font-label",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "BHuu2",
+              "name": "Panel header · focus, context menu, touch hold",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "Cw8IR",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab",
+                  "width": 180,
+                  "height": 32
+                },
+                {
+                  "type": "text",
+                  "id": "rEp5g",
+                  "fill": "$ds-fg",
+                  "content": "Right-click or Shift+F10: Hide header",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "OzPKu",
+              "name": "Hidden header top edge",
+              "fill": "$ds-fg",
+              "content": "Hidden top edge · focus then Shift+F10: Show header",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "p1Gu1s",
+              "name": "Web navigation controls",
+              "width": "fill_container",
+              "height": 32,
+              "gap": 4,
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "Lcyc4",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "KB4XA",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "whxtI",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
             }
           ]
         }

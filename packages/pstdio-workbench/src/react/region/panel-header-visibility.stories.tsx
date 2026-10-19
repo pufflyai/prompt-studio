@@ -9,7 +9,17 @@ const createPanelWorkbench = (
 ) => {
   const page = { kind: "page", extensionId: "storybook", id: "panel-header" } as const;
   const workbench = createWorkbench({ startPage: page });
-  workbench.modes.registerMode({ id: "panel-header", label: "Panel header", activate: () => undefined });
+  workbench.modes.registerMode({
+    id: "panel-header",
+    label: "Panel header",
+    activate: () => undefined,
+    regionSettings: {
+      main: {
+        showHeader: Boolean(options.changes || options.collapsed || options.action),
+        alwaysShowTabs: Boolean(options.changes || options.collapsed),
+      },
+    },
+  });
   for (const [id, title] of [
     ["files", "Files"],
     ["changes", "Changes"],

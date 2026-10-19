@@ -71,7 +71,7 @@ const expectCanonicalFrame = async (
   expect(sideBox).not.toBeNull();
 
   const contentHeight = options.statusBar === "visible" ? 688 : 720;
-  const panelHeight = contentHeight - 2 * PANEL_GAP_PX;
+  const panelHeight = contentHeight - (options.statusBar === "visible" ? PANEL_GAP_PX : 2 * PANEL_GAP_PX);
   const sidenavWidth = options.sidenav === "visible" ? 250 : 0;
   const sideX = 1280 - PANEL_GAP_PX - 420;
   const mainColumnX = PANEL_GAP_PX + sidenavWidth + (options.sidenav === "visible" ? PANEL_GAP_PX : 0);
@@ -118,12 +118,12 @@ test("aligns an attached Side Panel with the active Location Panel", async ({ pa
 
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByText("Canonical geometry", { exact: true }).click();
-  const nav = page.locator('[data-workbench-region="nav"]');
-  await nav.getByRole("button", { name: "Show Side Panel" }).click();
+  const controls = page.getByRole("group", { name: "Panel controls" });
+  await controls.getByRole("button", { name: "Show Side Panel" }).click();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
   await page.getByRole("menuitem", { name: "Session", exact: true }).click();
 
-  await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "hidden" });
+  await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "visible" });
 });
 
 test("reopens the Main right menu from a single-resource page", async ({ page, request }) => {

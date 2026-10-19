@@ -5,6 +5,7 @@ import { type AutomationClient, createAutomationClient } from "./automation";
 import { type BoardViewsClient, createBoardViewsClient } from "./board-views";
 import { createExtensionClient, type ExtensionClient } from "./extensions";
 import { createFilesystemClient, type FilesystemClient } from "./filesystem";
+import { createLinkIconsClient, type LinkIconsClient } from "./link-icons";
 import { createNotificationsClient, type NotificationsClient } from "./notifications";
 import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
@@ -33,6 +34,7 @@ export type PstdioClient = {
   notifications: NotificationsClient;
   extensions: ExtensionClient;
   settings: SettingsClient;
+  linkIcons: LinkIconsClient;
   sync: SyncClient;
   runtime: RuntimeClient;
 };
@@ -55,6 +57,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     notifications: createNotificationsClient(request),
     extensions: createExtensionClient(request, streams),
     settings: createSettingsClient(request),
+    linkIcons: createLinkIconsClient(request),
     sync: createSyncClient(options),
     runtime: createRuntimeClient(request),
   };

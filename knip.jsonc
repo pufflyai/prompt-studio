@@ -20,6 +20,11 @@
       // scripts/ci/install-native-dependencies.ts points npm_config_node_gyp at this package's binary.
       "ignoreDependencies": ["node-gyp"]
     },
+    "infra/telemetry": {
+      "entry": ["src/telemetry.ts", "src/**/*.test.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["dist/**"]
+    },
     "infra/account-manager": {
       "entry": ["src/index.ts", "src/server.ts", "src/**/*.test.ts", "scripts/*.ts", "drizzle.config.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts", "drizzle.config.ts"],
@@ -70,6 +75,8 @@
         "src/cli/run-pstdio.ts",
         "src/**/*.spec.ts",
         "src/**/*.perf.ts",
+        "src/perf/planner-moves.stress.ts",
+        "src/perf/planner-moves.validation.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",
         "src/**/*.fixture.tsx",
@@ -105,7 +112,7 @@
         "src/index.ts",
         "src/server.ts",
         "src/**/*.test.ts",
-        // Isolated tests launch integration entries by path.
+        // The isolated conformance runner launches these by path.
         "src/**/*.integration.ts",
         "src/**/*.fixture.ts"
       ],
@@ -259,6 +266,7 @@
         "src/views/tags-settings-panel.tsx",
         "src/views/status-settings-panel.tsx",
         "src/views/ticket-review-requests.tsx",
+        "src/commands/reorder-ticket.stress.fixture.ts",
         "src/timeline/view/entry.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]

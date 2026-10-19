@@ -8,6 +8,7 @@ import { configureAutoBuildCommand } from "./auto-build-mode";
 import { nextTicketsCommand } from "./next-tickets";
 import { runAttemptCommand } from "./run-attempt";
 import { sessionQuery } from "./session-query.fixture";
+import { sessionRecord } from "./session-record.fixture";
 
 async function trackFixture() {
   const result = await fixture(6);
@@ -47,12 +48,12 @@ async function submitDependency(result: Awaited<ReturnType<typeof trackFixture>>
       },
     ],
   });
-  result.ctx.sessions.get = async () => ({
-    type: "session",
-    id: started.session.id,
-    title: "Finished",
-    status: "completed",
-  });
+  result.ctx.sessions.get = async () =>
+    sessionRecord({
+      id: started.session.id,
+      title: "Finished",
+      status: "completed",
+    });
   return { parent, attempt };
 }
 

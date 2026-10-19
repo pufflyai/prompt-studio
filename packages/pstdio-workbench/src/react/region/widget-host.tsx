@@ -31,11 +31,20 @@ const WorkbenchWidgetFallback = (props: { label: string }) => {
   );
 };
 
-const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode }) => {
+const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode; status: boolean }) => {
   const { children } = props;
 
   return (
-    <Box flex="1" minW="0" minH="0" w="full" h="full" overflow="hidden">
+    <Box
+      flex="1"
+      minW="0"
+      minH="0"
+      w="full"
+      h="full"
+      overflow="hidden"
+      display={props.status ? "flex" : undefined}
+      alignItems={props.status ? "center" : undefined}
+    >
       {children}
     </Box>
   );
@@ -99,7 +108,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       overflow="hidden"
     >
       {renderer ? (
-        <WorkbenchRenderedWidgetFrame>
+        <WorkbenchRenderedWidgetFrame status={props.region === "status"}>
           {renderer.render({ workbench, panel, instance, refresh }) as ReactNode}
         </WorkbenchRenderedWidgetFrame>
       ) : (

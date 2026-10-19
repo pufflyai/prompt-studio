@@ -10,6 +10,7 @@ import type {
   StorageGroup,
   StorageResolution,
 } from "pstdio-sync-contracts";
+import type { RecordProjection } from "./projection";
 
 export interface AssetStore {
   verifyComplete(assets: Asset[]): Promise<void>;
@@ -68,6 +69,7 @@ export interface StorageObserver {
 
 export interface GroupedStore {
   observer?: StorageObserver;
+  project?(owner: StorageOwner, environmentId: string): Promise<RecordProjection>;
   transaction<T>(owner: StorageOwner, action: (state: GroupedState) => Promise<T>): Promise<T>;
 }
 

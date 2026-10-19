@@ -2,8 +2,9 @@
 // Workspace-internal dependencies each package may declare. Additions here are
 // intentional architecture changes — update the docs when this map changes.
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
-  "pstdio-account-manager": ["pstdio-sync-contracts"],
-  "pstdio-relay": ["pstdio-account-manager", "pstdio-sync", "pstdio-sync-contracts"],
+  "pstdio-service-telemetry": [],
+  "pstdio-account-manager": ["pstdio-sync-contracts", "pstdio-service-telemetry"],
+  "pstdio-relay": ["pstdio-account-manager", "pstdio-sync", "pstdio-sync-contracts", "pstdio-service-telemetry"],
   "pstdio-api-contracts": ["pstdio-sync-contracts"],
   "pstdio-sync-contracts": [],
   "pstdio-sync": ["pstdio-sync-contracts"],
@@ -44,6 +45,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "extension-lab",
     "pstdio-base-themes",
     "pstdio-planner",
+    "pstdio-notes",
     "pstdio-skills",
     "workbench-fixture",
   ],

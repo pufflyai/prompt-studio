@@ -13,7 +13,7 @@ import {
   updateTagOption,
   updateTicketTag,
 } from "../data/tag-operations";
-import { plannerTicketsChanged } from "../events";
+import { plannerSchemaChanged, plannerTicketsChanged } from "../events";
 
 export const readTicketTagsCommand = defineCommand({
   id: "ticket-tag.read",
@@ -37,6 +37,7 @@ export const createTicketTagCommand = defineCommand({
     const type = commandParams.type === "multi_select" ? "multi_select" : "single_select";
     const result = await createTicketTag({ storage: ctx.storage, name: commandParams.name, type });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return result;
   },
 });
@@ -66,6 +67,7 @@ export const updateTicketTagCommand = defineCommand({
       sortOrder: commandParams.sortOrder,
     });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return result;
   },
 });
@@ -83,6 +85,7 @@ export const deleteTicketTagCommand = defineCommand({
     const tagId = commandParams.tagId ?? (await resolveTagId(ctx.storage, commandParams.tag ?? ""));
     const result = await deleteTicketTag({ storage: ctx.storage, tagId });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return result;
   },
 });
@@ -112,6 +115,7 @@ export const createTagOptionCommand = defineCommand({
       description: commandParams.description,
     });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return result;
   },
 });
@@ -145,6 +149,7 @@ export const updateTagOptionCommand = defineCommand({
       description: commandParams.description,
     });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return result;
   },
 });
@@ -168,6 +173,7 @@ export const deleteTagOptionCommand = defineCommand({
       optionId: commandParams.optionId,
     });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return result;
   },
 });
@@ -203,6 +209,7 @@ export const applyTicketTagDraftCommand = defineCommand({
       optionIdsToDelete: commandParams.optionIdsToDelete ?? [],
     });
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
     return result;
   },
 });

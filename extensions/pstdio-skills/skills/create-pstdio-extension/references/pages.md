@@ -171,3 +171,13 @@ export default defineExtension({
 The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels. Users leave a level through the breadcrumb or browser history; the Sidenav adds no Back row. Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
 
 For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.
+
+## Typed page params
+
+Use `params` on a page for shareable filters, search text, sort choices, and time ranges. The types are `string`, `number`, `boolean`, and `string[]`, each with an optional matching default. Names use lowercase letters, digits, and hyphens and start with a letter. Do not reuse host URL selectors such as `resource`, `section`, or `document`.
+
+Pass `params` on a page navigation target to open a page with overrides. Navigation pushes history. In a webview, read params with `client.page.location()` and `client.page.params<T>()` from the [typed client](client-contracts.md), and listen with `client.page.subscribe(listener)`. Declare `page.params.update` to call `client.page.updateParams(patch)`. A `null` value resets a name to its default. Updates replace the current history entry, and only the extension that owns the active page can make them. The render-context `page` helper is deprecated.
+
+Native query and load callbacks owned by the active page receive values in `renderer.pageParams` and rerun when params change. Params do not change panel layout, page state keys, or breadcrumbs. Invalid URL values fall back to defaults. Invalid params on a navigation target fail and leave the current page unchanged.
+
+Page params need SDK 0.44 or newer. The [page params reference](https://prompt.studio/docs/references/extensions/webview-and-storage-api/#page-params) lists limits and error codes.

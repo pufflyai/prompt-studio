@@ -17,6 +17,7 @@ export type {
   InstalledExtensionSource,
   IssueAutomationTokenInput,
   IssueAutomationTokenResponse,
+  LinkIcon,
   ListAutomationRunEventsResponse,
   ListAutomationTokensResponse,
   ResourceRef,

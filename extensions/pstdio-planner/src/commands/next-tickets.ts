@@ -1,6 +1,6 @@
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
 import { filterRowsByView } from "@pstdio/ui/collection-view";
-import { findPendingPrerequisites } from "../data/attempt-readiness";
+import { type AttemptReadinessResult, findPendingPrerequisites } from "../data/attempt-readiness";
 import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
 import type { AttemptRecord, TicketAttemptSelection } from "../data/attempt-types";
 import { usableAutoBuildIgnore } from "../data/auto-build-ignore";
@@ -21,6 +21,22 @@ import type { NextTicket, WaitingTicket } from "./next-ticket-types";
 import { nextTicketWait } from "./next-ticket-wait";
 import { nextWorkSnapshot } from "./next-work-snapshot";
 import { readRecoveryBase, readRecoverySeed } from "./workspace-recovery";
+
+function appendCandidate(
+  summary: Pick<NextTicket, "id" | "ticket" | "title">,
+  readiness: AttemptReadinessResult,
+  resumable: boolean,
+  next: NextTicket[],
+  waiting: WaitingTicket[],
+) {
+  if (readiness.decision === "wait") {
+    waiting.push({ ...summary, reason: readiness.reason, dependencyIds: readiness.dependencyIds });
+  } else if (resumable) {
+    next.push({ ...summary, action: "resume" });
+  } else {
+    next.push({ ...summary, action: "start", baseHeadSha: readiness.baseHeadSha });
+  }
+}
 
 async function appendStackRepair(
   ctx: CommandContext,
@@ -69,7 +85,7 @@ async function appendStackRepair(
 export async function readNextTickets(
   ctx: CommandContext,
   mode: AutoBuildMode,
-  input: NextTicketQuery & { base?: string } = {},
+  input: NextTicketQuery & { base?: string; limit?: number } = {},
   scope?: NextTicketQuery[],
 ) {
   const [plan, attempts, tickets, resumptions, capacity, assignments, requests] = await Promise.all([
@@ -104,7 +120,9 @@ export async function readNextTickets(
   // Share GitHub reads within this query; dispatch rechecks create a fresh query.
   const deliveryReads: DependencyDeliveryReads = new Map();
   let base = input.base;
+  const limit = input.limit ?? Infinity;
   for (const row of selected) {
+    if (next.length >= limit) break;
     const summary = { id: row.id, ticket: row.shorthand, title: row.title };
     const pending = findPendingPrerequisites(byRef.get(row.id)!, byRef, requests);
     const wait = nextTicketWait(row, {
@@ -133,13 +151,7 @@ export async function readNextTickets(
       { base: recordedBase ?? base, dependencyReview: mode.blockOnReview ? "approved" : "submitted" },
       deliveryReads,
     );
-    if (readiness.decision === "wait") {
-      waiting.push({ ...summary, reason: readiness.reason, dependencyIds: readiness.dependencyIds });
-    } else if (resumptions.has(row.id)) {
-      next.push({ ...summary, action: "resume" });
-    } else {
-      next.push({ ...summary, action: "start", baseHeadSha: readiness.baseHeadSha });
-    }
+    appendCandidate(summary, readiness, resumptions.has(row.id), next, waiting);
   }
   const state = await nextWorkSnapshot(ctx, {
     revision: mode.revision,

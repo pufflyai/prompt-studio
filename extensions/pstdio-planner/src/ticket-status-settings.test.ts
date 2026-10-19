@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket, statusesCollection, ticketsCollection } from "./data/collections";
 import type { StoredTicket } from "./data/types";
+import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { readStatusSettings, saveStatusSettings } from "./ticket-status-settings";
 
 const makeTicket = (statusId: string): StoredTicket => ({
@@ -72,6 +73,17 @@ describe("ticket status settings", () => {
     });
 
     expect((await ticketsCollection(storage).get("ticket-1"))?.statusId).toBe("backlog");
+  });
+
+  test("refreshes board filter options after a save", async () => {
+    const storage = createMemoryStorage();
+    const current = await readStatusSettings.run(context(storage), {});
+    const events: unknown[] = [];
+    const ctx = { storage, events: { emit: async (event: unknown) => void events.push(event) } } as never;
+
+    await saveStatusSettings.run(ctx, { statuses: current.statuses });
+
+    expect(events).toEqual([plannerTicketsChanged, plannerSchemaChanged]);
   });
 
   test("preserves the drag rules the editor cannot reach", async () => {

@@ -1,3 +1,4 @@
+import type { ReportFailure } from "pstdio-service-telemetry";
 import {
   type RelayOperation,
   relayAssetBeginSchema,
@@ -16,6 +17,7 @@ export const handleRelayAsset = async (
   operation: RelayOperation,
   request: Request,
   body: unknown,
+  report: ReportFailure,
 ) => {
   let action: () => Promise<Response>;
   try {
@@ -78,6 +80,7 @@ export const handleRelayAsset = async (
     if (operation !== "assets/cancel") await owners.storage.owner(scope).checkpoint(request.signal);
     return await action();
   } catch {
+    if (!request.signal.aborted) report("asset_operation_failed");
     return relayResponse({ error: "Asset operation failed" }, 409);
   }
 };

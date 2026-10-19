@@ -17,6 +17,9 @@ export const createRecordStorage = (input: {
     input.store.observer?.read(input.owner, record);
     return record;
   };
+  const projection = () =>
+    input.store.project?.(input.owner, input.environmentId) ??
+    input.store.transaction(input.owner, (state) => projectGroups(state, input.environmentId));
   return {
     synchronize: (adapter: RelayAdapter) => synchronize(input, adapter),
     readState: () =>
@@ -36,17 +39,13 @@ export const createRecordStorage = (input: {
       }),
     records: {
       list: () =>
-        input.store.transaction(input.owner, async (state) => {
-          const view = await projectGroups(state, input.environmentId);
+        projection().then((view) => {
           return [...view.records.keys()]
             .filter((id) => !view.records.get(id)!.deleted)
             .sort()
             .map((id) => readRecord(view.read(id)));
         }),
-      outcome: (operationId: string) =>
-        input.store.transaction(input.owner, async (state) =>
-          (await projectGroups(state, input.environmentId)).outcomes.get(operationId),
-        ),
+      outcome: (operationId: string) => projection().then((view) => structuredClone(view.outcomes.get(operationId))),
       inspect: (conflictId: string) =>
         input.store.transaction(input.owner, (state) => inspectConflict(state, input.environmentId, conflictId)),
       resolve: (proposal: ResolutionCommit) =>
@@ -61,21 +60,22 @@ export const createRecordStorage = (input: {
           }
           return (await projectGroups(state, input.environmentId)).outcomes.get(proposal.operationId)!;
         }),
-      read: (recordId: string, options?: { operationId: string }) =>
-        input.store.transaction(input.owner, async (state) => {
-          if (!options) return readRecord((await projectGroups(state, input.environmentId)).read(recordId));
-          return readBranch(state, input.environmentId, recordId, options.operationId);
-        }),
+      read: (recordId: string, options?: { operationId: string }) => {
+        if (!options) return projection().then((view) => readRecord(view.read(recordId)));
+        return input.store.transaction(input.owner, (state) =>
+          readBranch(state, input.environmentId, recordId, options.operationId),
+        );
+      },
       conflicts: () =>
-        input.store.transaction(input.owner, async (state) =>
-          (await projectGroups(state, input.environmentId)).conflicts.map(
-            ({ conflictId, revision, reason, recordIds, alternativeOperationIds }) => ({
+        projection().then((view) =>
+          structuredClone(
+            view.conflicts.map(({ conflictId, revision, reason, recordIds, alternativeOperationIds }) => ({
               conflictId,
               revision,
               reason,
               recordIds,
               alternativeOperationIds,
-            }),
+            })),
           ),
         ),
       commit: async (proposal: GroupCommit) => {

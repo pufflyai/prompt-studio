@@ -74,7 +74,29 @@ const outcome = defineCommand({
   run: (ctx, { operationId }) => ctx.storage.records.outcome(operationId),
 });
 
+const checkReadCache = defineCommand({
+  id: "check-read-cache",
+  title: "Check record reads across unrelated saves",
+  mutating: true,
+  async run(ctx) {
+    const records = ctx.storage.records;
+    const before = await records.read(records.id("caption"));
+    await ctx.storage.set("fixed", { saved: true });
+    for (let index = 0; index < 20; index++) {
+      const recordId = records.id(`unrelated-${index}`);
+      await records.commit({
+        operationId: `unrelated-${index}`,
+        edits: [{ recordId, expectedRevision: (await records.read(recordId)).revision, replace: index }],
+      });
+    }
+    const reads = [];
+    for (let repeat = 0; repeat < 3; repeat++)
+      reads.push({ record: await records.read(before.recordId), legacy: await ctx.storage.get("fixed") });
+    return { before, reads };
+  },
+});
+
 export default defineExtension({
   artifactMounts: [documents],
-  commands: [read, readFiles, stage, commit, inspect, resolve, outcome],
+  commands: [read, readFiles, stage, commit, inspect, resolve, outcome, checkReadCache],
 });

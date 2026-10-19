@@ -42,6 +42,7 @@ import { readTicketsCommand } from "./read-tickets";
 import { listAttemptsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
 import { refinementPolicyCommand } from "./refinement-policy";
 import { reorderTicketCommand } from "./reorder-ticket";
+import { resolveTicketPathCommand } from "./resolve-ticket-path";
 import {
   cancelReviewRequestCommand,
   listReviewRequestsCommand,
@@ -79,6 +80,7 @@ import {
 import { linkTicketCommand, unlinkTicketCommand } from "./ticket-links";
 import { ticketPropertiesQueryCommand } from "./ticket-properties/query";
 import { ticketPropertiesUpdateCommand } from "./ticket-properties/update";
+import { ticketRelatedOpeningsCommand } from "./ticket-related-openings";
 import {
   createTicketStatusCommand,
   deleteTicketStatusCommand,
@@ -110,6 +112,8 @@ import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
+  ticketRelatedOpeningsCommand,
+  resolveTicketPathCommand,
   autoBuildCommand,
   autoBuildCandidatesCommand,
   autoBuildDispatchCommand,

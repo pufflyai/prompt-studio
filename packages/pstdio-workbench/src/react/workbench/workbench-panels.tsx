@@ -87,21 +87,25 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       minW="0"
       overflow="hidden"
     >
-      <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
-      <Box
-        display={chrome ? "none" : "flex"}
-        alignItems="stretch"
-        justifyContent="space-between"
-        px="sm"
-        h="full"
-        minW="0"
-        w="full"
-      >
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
-        </Box>
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+      <Box display="flex" h="full" minW="0">
+        <Box flex="1" minW="0" position="relative">
+          <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
+          <Box
+            display={chrome ? "none" : "flex"}
+            alignItems="stretch"
+            justifyContent="space-between"
+            px="sm"
+            h="full"
+            minW="0"
+            w="full"
+          >
+            <Box display="flex" alignItems="stretch" minW="0" h="full">
+              <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+            </Box>
+            <Box display="flex" alignItems="stretch" minW="0" h="full">
+              <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+            </Box>
+          </Box>
         </Box>
       </Box>
     </WorkbenchFocusRegion>
