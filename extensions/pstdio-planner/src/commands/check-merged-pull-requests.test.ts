@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { attemptEventsCollection, putAttempt } from "../data/attempt-storage";
-import { statusesCollection, ticketsCollection } from "../data/collections";
+import { STATUSES_COLLECTION, statusesCollection, TICKETS_COLLECTION, ticketsCollection } from "../data/collections";
+import { DEFAULT_STATUSES } from "../data/seed";
+import type { StoredTicket } from "../data/types";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
 import { makeCommandArgs } from "./command-context.fixture";
@@ -54,13 +56,27 @@ test("a merged GitHub review link marks its ticket Done", async () => {
 });
 
 test("checks many linked PRs with bounded parallel processes", async () => {
-  const storage = createMemoryStorage();
-  await statusesCollection(storage).put("done", { id: "done", name: "Done" } as never);
-  const tickets = [];
-  for (let number = 1; number <= 30; number++) {
-    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Merge" } }));
-    await ticketsCollection(storage).put(ticket.id, {
-      ...ticket,
+  const started = performance.now();
+  const now = new Date().toISOString();
+  const tickets: StoredTicket[] = Array.from({ length: 30 }, (_, index) => {
+    const number = index + 1;
+    return {
+      id: crypto.randomUUID(),
+      shorthand: `T-${number}`,
+      title: "Merge",
+      content: "",
+      statusId: "backlog",
+      tagIds: [],
+      attachments: [],
+      parentId: null,
+      dependsOn: [],
+      blockedReason: null,
+      userPrompt: null,
+      draft: false,
+      archived: false,
+      sortOrder: index,
+      createdAt: now,
+      updatedAt: now,
       reviewLinks: [
         {
           id: String(number),
@@ -69,13 +85,22 @@ test("checks many linked PRs with bounded parallel processes", async () => {
           url: `https://github.com/acme/tools/pull/${number}`,
           externalId: String(number),
           title: null,
-          createdAt: ticket.createdAt,
-          updatedAt: ticket.updatedAt,
+          createdAt: now,
+          updatedAt: now,
         },
       ],
-    });
-    tickets.push(ticket);
-  }
+    };
+  });
+  // Seed the existing PR links directly so setup only writes their starting state.
+  const storage = createMemoryStorage({
+    collections: {
+      [STATUSES_COLLECTION]: Object.fromEntries(DEFAULT_STATUSES.map((status) => [status.id, status])),
+      [TICKETS_COLLECTION]: Object.fromEntries(tickets.map((ticket) => [ticket.id, ticket])),
+    },
+  });
+  await ticketsCollection(storage).list();
+  console.log(`Linked PR phase: fixture ready in ${performance.now() - started}ms`);
+  const checking = performance.now();
   let active = 0;
   let maxActive = 0;
   let calls = 0;
@@ -97,6 +122,7 @@ test("checks many linked PRs with bounded parallel processes", async () => {
       },
     }),
   );
+  console.log(`Linked PR phase: check completed in ${performance.now() - checking}ms`);
   expect(calls).toBe(30);
   expect(maxActive).toBeGreaterThan(1);
   expect(maxActive).toBeLessThanOrEqual(8);
