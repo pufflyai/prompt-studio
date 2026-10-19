@@ -84,7 +84,12 @@ export const PerformanceStatusItem = (props: PerformanceStatusItemProps) => {
       </Tooltip>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content width="performance-popover" maxH="70vh" overflowY="auto">
+          <Popover.Content
+            width="performance-popover"
+            maxW="calc(100vw - var(--chakra-spacing-md) * 2)"
+            maxH="70dvh"
+            overflowY="auto"
+          >
             <Popover.Body paddingX="md" paddingY="sm">
               <PerformancePopoverContent
                 snapshot={snapshot.data}
