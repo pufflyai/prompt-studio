@@ -12,6 +12,7 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
   ).toMatchObject({
     enabled: true,
     blockOnReview: false,
+    storageOutcome: { status: "saved-locally", operationId: expect.any(String) },
   });
   expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
   expect(await execute("next-tickets", {})).toMatchObject({ enabled: true, tickets: [], waiting: [] });
@@ -27,6 +28,7 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
   await expectScopedAutoBuild(execute);
   expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
     enabled: false,
+    storageOutcome: { status: "saved-locally", operationId: expect.any(String) },
   });
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
   await expectPackagedDependencyBlockers({ ...input, execute });
