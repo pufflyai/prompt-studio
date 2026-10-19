@@ -37,8 +37,8 @@ const addTerminal = async (page: import("@playwright/test").Page) => {
   await expect(
     page.getByRole("region", { name: "Main", exact: true }).getByText("Project home", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /^(Show|Hide) Secondary Panel$/ })).toBeVisible();
-  const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+  await expect(page.getByRole("button", { name: /^(Show|Hide) Bottom Panel$/ })).toBeVisible();
+  const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
   await getSecondaryHeader(page).getByRole("button", { name: "Add panel" }).click();
   await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
@@ -69,11 +69,11 @@ test("starts the Secondary Panel closed and preserves that state after refresh",
 
   await page.goto(`/projects/${project.id}`);
 
-  const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+  const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
   await expect(showSecondary).toBeVisible();
 
   await addTerminal(page);
-  const hideSecondary = page.getByRole("button", { name: "Hide Secondary Panel" });
+  const hideSecondary = page.getByRole("button", { name: "Hide Bottom Panel" });
   await expect(hideSecondary).toBeVisible();
   await hideSecondary.click();
 
@@ -139,13 +139,13 @@ test("resizes, drag-closes, and restores the live Secondary Panel", async ({ pag
   await dragPanelToRawSize(page, separator, 72);
 
   await expect(separator).not.toBeVisible();
-  await expect(page.getByRole("button", { name: "Show Secondary Panel" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show Bottom Panel" })).toBeVisible();
   expect(await mainNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await secondaryNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await terminalHostNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await terminalNode!.evaluate((element) => element.isConnected)).toBe(true);
 
-  await page.getByRole("button", { name: "Show Secondary Panel" }).click();
+  await page.getByRole("button", { name: "Show Bottom Panel" }).click();
   await expect(separator).toBeVisible();
   await expect(separator).toHaveAttribute("aria-valuenow", "320");
   await expect(terminal).toBeVisible();

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -53,4 +54,78 @@ test("opens the session draft in the Side Panel while a session page is open", a
     }),
   ]);
   expect(workbench.pages.store.getState().location).toEqual(location);
+});
+
+test("opens a session beside an extension page and keeps each mode's sessions separate", async () => {
+  const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  workbench.registerModule(createWorkspacesModule());
+  workbench.registerModule(createSessionBubbleModule());
+  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+  workbench.pageLocations.setProject("project-1");
+  workbench.modes.registerMode({ id: "notes", panels: ["main", "side"], activate() {} });
+  workbench.views.registerView({ id: "notes", title: "Notes", body: { kind: "react", render: () => null } });
+  const page = { kind: "page", extensionId: "notes", id: "notes" } as const;
+  workbench.pages.registerPage({
+    id: "notes",
+    ref: page,
+    modeId: "notes",
+    path: "notes",
+    main: { kind: "view", view: { kind: "view", id: "notes" }, cardinality: "one" },
+    slots: [],
+  });
+  await workbench.navigation.openTarget({ kind: "page", page });
+  const location = workbench.pages.store.getState().location;
+  expect(workbench.modes.getActiveModeId()).toBe("notes");
+  await openDashboardSidePanel(workbench);
+  const notesSession = workbench.layout.listPanelInstances("side")[0];
+  expect(notesSession).toMatchObject({ viewId: dashboardWidgetIds.sessionBubble, resource: { type: "session-draft" } });
+  expect(workbench.pages.store.getState().location).toEqual(location);
+  expect(workbench.sidePanel.getMode()).toBe("floating");
+  openWorkspacesPage(workbench);
+  expect(workbench.layout.listPanelInstances("side")).toHaveLength(0);
+  await openDashboardSidePanel(workbench);
+  expect(workbench.layout.listPanelInstances("side")[0].resource?.id).not.toBe(notesSession.resource?.id);
+  await workbench.navigation.openTarget({ kind: "page", page });
+  expect(workbench.layout.listPanelInstances("side")[0].resource?.id).toBe(notesSession.resource?.id);
+});
+
+test("opens a session tab alongside an extension reader", async () => {
+  const workbench = createWorkbench({ initialSidePanelMode: "attached" });
+  workbench.registerModule(createWorkspacesModule());
+  workbench.registerModule(createSessionBubbleModule());
+  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+  openWorkspacesPage(workbench);
+  workbench.views.registerView({ id: "reader", title: "Message", body: { kind: "react", render: () => null } });
+  workbench.shellPlacements.registerPlacement({
+    id: "reader",
+    region: "side",
+    item: { kind: "view", view: { kind: "view", id: "reader" }, presence: "open" },
+  });
+  const reader = workbench.layout.listPanelInstances("side")[0];
+  await openDashboardSidePanel(workbench);
+  expect(workbench.layout.listPanelInstances("side")).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ viewId: "reader", instanceId: reader.instanceId }),
+      expect.objectContaining({ viewId: dashboardWidgetIds.sessionBubble }),
+    ]),
+  );
+  const session = workbench.layout.getActivePanel("side");
+  expect(session?.viewId).toBe(dashboardWidgetIds.sessionBubble);
+  await openDashboardSidePanel(workbench);
+  expect(workbench.layout.listPanelInstances("side")).toHaveLength(2);
+});
+
+test("reopens the active session when several session tabs exist", async () => {
+  const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  workbench.registerModule(createWorkspacesModule());
+  workbench.registerModule(createSessionBubbleModule());
+  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+  openWorkspacesPage(workbench);
+  for (let index = 0; index < 2; index++) {
+    await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, { source: "panel-add" });
+  }
+  const session = workbench.layout.getActivePanel("side");
+  workbench.sidePanel.setMode("closed");
+  await openDashboardSidePanel(workbench);
+  expect(workbench.layout.getActivePanel("side")?.instanceId).toBe(session?.instanceId);
 });

@@ -2,8 +2,10 @@ import { Box, Text } from "@chakra-ui/react";
 import { WindowTitleBar } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { createWorkbench } from "../../core";
+import { createPolicyWorkbench } from "../region/panel-policy.fixture";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { Workbench } from "./workbench";
+import { WorkbenchPanelToggles } from "./workbench-panel-toggles";
 
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Title bar",
@@ -39,4 +41,20 @@ export const HostTitle: Story = {
       </WindowTitleBar>
     ),
   },
+};
+
+export const HostPanelControls: Story = {
+  args: (() => {
+    const workbench = createPolicyWorkbench();
+    return {
+      workbench,
+      panelControlsPlacement: "host" as const,
+      titleBar: (
+        <WindowTitleBar platform="darwin">
+          <Text textStyle="label/S/medium">Project tabs</Text>
+          <WorkbenchPanelToggles workbench={workbench} />
+        </WindowTitleBar>
+      ),
+    };
+  })(),
 };

@@ -1,10 +1,10 @@
 import { Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout, type ResourceContextAction, type ThemePreferenceStorage, Toaster } from "@pstdio/ui";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
-import type { WorkbenchCore, WorkbenchShellOpenRegion } from "../../core";
+import type { WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import type { CommandParamFieldRenderer } from "../command-palette/command-params-dialog";
-import { WorkbenchNavChrome, type WorkbenchNavRegionControl } from "../header/workbench-nav-chrome";
+import { WorkbenchNavChrome } from "../header/workbench-nav-chrome";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
@@ -18,6 +18,7 @@ import { installWorkbenchDataTableRenderer } from "../renderers/data-table/insta
 import { installWorkbenchFileRenderer } from "../renderers/file/install-file-renderer";
 import { installWorkbenchKanbanRenderer } from "../renderers/kanban/install-kanban-renderer";
 import { installWorkbenchTreeRenderer } from "../renderers/tree/install-tree-renderer";
+import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchFloatingSidePanel } from "../side-panel/side-panel";
 import { useWorkbenchFileIconThemePreferences } from "../theme/use-workbench-file-icon-theme-preferences";
@@ -39,6 +40,8 @@ import { WorkbenchSidePanelBoundary } from "./workbench-side-panel-boundary";
 import { WorkbenchSidePanelRegionHeader, WorkbenchSidePanelRegionPortal } from "./workbench-side-panel-layout";
 
 interface WorkbenchProps {
+  /** The host renders WorkbenchPanelToggles outside the navigation header. */
+  panelControlsPlacement?: "nav" | "host";
   workbench: WorkbenchCore;
   /** Host chrome above all workbench regions, inside the current theme. */
   titleBar?: ReactNode;
@@ -97,55 +100,8 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
   };
 };
 
-interface WorkbenchRegionControlsInput {
-  showSidenav: boolean;
-  sidenavOpen: boolean;
-  showSecondaryPanel: boolean;
-  secondaryPanelOpen: boolean;
-  hasSidePanel: boolean;
-  sidePanelMode: "attached" | "floating" | "closed";
-  setPanelOpen: (region: WorkbenchShellOpenRegion, open: boolean) => void;
-}
-
-const createWorkbenchRegionControls = (input: WorkbenchRegionControlsInput) => {
-  const controls: WorkbenchNavRegionControl[] = [];
-
-  if (input.showSidenav && !input.sidenavOpen) {
-    controls.push({
-      id: "sidenav",
-      label: "Show Sidenav",
-      icon: "PanelLeft",
-      open: false,
-      onToggle: () => input.setPanelOpen("sidenav", true),
-    });
-  }
-
-  if (input.showSecondaryPanel) {
-    controls.push({
-      id: "secondary",
-      label: input.secondaryPanelOpen ? "Hide Secondary Panel" : "Show Secondary Panel",
-      icon: "PanelBottom",
-      open: input.secondaryPanelOpen,
-      onToggle: () => input.setPanelOpen("secondary", !input.secondaryPanelOpen),
-    });
-  }
-
-  if (input.hasSidePanel) {
-    const open = input.sidePanelMode !== "closed";
-    controls.push({
-      id: "side",
-      label: open ? "Hide Side Panel" : "Show Side Panel",
-      icon: "PanelRight",
-      open,
-      onToggle: () => input.setPanelOpen("side", !open),
-    });
-  }
-
-  return controls;
-};
-
 const WorkbenchContent = (props: WorkbenchProps) => {
-  const { workbench, renderParamField, sidePanelBubbleIcon, onOpenSidePanel, titleBar } = props;
+  const { workbench, renderParamField, sidePanelBubbleIcon, onOpenSidePanel, titleBar, panelControlsPlacement } = props;
   const [sidenavContextActions, setSidenavContextActions] = useState<ResourceContextAction[]>([]);
   installWorkbenchTreeRenderer(workbench, {
     renderParamField,
@@ -163,11 +119,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
   const sidenavOpen = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.visible);
-  const secondaryPanelOpen = useWorkbenchStore(
-    workbench.layout.store,
-    (state) => state.layout.regions.secondary.visible,
-  );
-  const hasSecondaryPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
   const hasSidePanelHeader = useWorkbenchPanelHeaderVisible(workbench, "side");
   const sidePanelMode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
 
@@ -178,31 +129,24 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasSideWidgets,
     hasSideMenus,
     hasSidenavWidgets,
-    hasSecondaryHeaderWidgets,
-    hasSecondaryWidgets,
-    hasSecondaryMenus,
     hasStatusWidgets,
   } = useWorkbenchLayoutFlags(workbench);
-  const hasSidePanel = hasSideHeaderWidgets || hasSideWidgets || hasSidePanelHeader || hasSideMenus;
+  const sidePolicy = usePanelPolicy(workbench, "side");
+  const sidenavPolicy = usePanelPolicy(workbench, "sidenav");
+  const hasSidePanel =
+    (sidePolicy.provided && !sidePolicy.canClose) ||
+    hasSideHeaderWidgets ||
+    hasSideWidgets ||
+    hasSidePanelHeader ||
+    hasSideMenus;
   const showSidenav = hasSidenavWidgets;
   const sidenavCollapsible = resolvePanelCollapsible(workbench, "sidenav");
-  const showSecondaryPanel =
-    hasSecondaryHeaderWidgets || hasSecondaryWidgets || hasSecondaryPanelHeader || hasSecondaryMenus;
   const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
   const sidenavSize = resolveSidenavSize(workbench, persistedSidenavSize);
   const showAttachedSidePanel = hasSidePanel && sidePanelMode === "attached";
   // Closed removes the Side Panel's footprint, not its live region. Keeping the
   // portal in the hidden attached slot preserves provider and renderer state.
   const setPanelOpen = workbench.shell.setRegionOpen;
-  const regionControls = createWorkbenchRegionControls({
-    showSidenav,
-    sidenavOpen,
-    showSecondaryPanel,
-    secondaryPanelOpen,
-    hasSidePanel,
-    sidePanelMode,
-    setPanelOpen,
-  });
 
   const sideHeader =
     hasSideHeaderWidgets || hasSidePanelHeader ? (
@@ -221,7 +165,11 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 
   const contentWithHeader = (
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
-      <WorkbenchNavChrome workbench={workbench} hasNav={hasNavWidgets} regionControls={regionControls} />
+      <WorkbenchNavChrome
+        workbench={workbench}
+        hasNav={hasNavWidgets}
+        panelControls={panelControlsPlacement !== "host"}
+      />
       <Flex flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchBody workbench={workbench} />
       </Flex>
@@ -236,13 +184,14 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       resizablePanel={<WorkbenchSidenav workbench={workbench} contextActions={sidenavContextActions} />}
       contentPanel={contentWithHeader}
       collapsed={!showSidenav || !sidenavOpen}
-      collapsible={sidenavCollapsible}
+      resizable={sidenavPolicy.resizable}
+      collapsible={sidenavPolicy.canClose && sidenavCollapsible}
       defaultSizePx={sidenavSize.defaultPx}
       minSizePx={sidenavSize.minPx}
       maxSizePx={sidenavSize.maxPx}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
       resizeLabel="Resize sidenav"
-      onSizeChange={(width) => workbench.layout.setRegionSize("sidenav", width)}
+      onSizeChange={(width) => workbench.shell.setRegionSize("sidenav", width)}
       onCollapsedChange={(collapsed) => {
         if (!collapsed || sidenavCollapsible) setPanelOpen("sidenav", !collapsed);
       }}

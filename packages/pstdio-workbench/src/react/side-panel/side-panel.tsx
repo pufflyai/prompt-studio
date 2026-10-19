@@ -1,13 +1,14 @@
 import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
-import { AttachedPanel, BubbleButton, BubblePanel, Header, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
-import { MessageCircle, Minimize2 } from "lucide-react";
+import { AttachedPanel, BubbleButton, BubblePanel, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
+import { MessageCircle, Minimize2, Minus, SquareArrowOutUpRight } from "lucide-react";
 import type { ReactNode } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { PanelHeader } from "../region/panel-header";
 import { useWorkbenchRegionTabsVisible } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
-import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
+import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 
@@ -45,11 +46,9 @@ const WorkbenchSidePanelHeader = (props: WorkbenchSidePanelHeaderProps) => {
 
 export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   const { workbench, contentSlotRef, header } = props;
-  const settings = useWorkbenchModeRegionSettings(workbench, "side");
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
-  const attached = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode() === "attached");
   const hasTabs = useWorkbenchRegionTabsVisible(workbench, "side");
-  const showHeader = (settings?.showHeader !== false || hasTabs) && Boolean(header || canFloat);
+  const attached = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode() === "attached");
 
   return (
     <WorkbenchFocusRegion workbench={workbench} region="side" h="full" minH="0" minW="0" w="full">
@@ -62,8 +61,16 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         bg={workbenchBackgrounds.widget}
         layerStyle="panel"
         header={
-          showHeader && attached ? (
-            <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
+          attached ? (
+            <PanelHeader
+              workbench={workbench}
+              region="side"
+              hasTabs={hasTabs}
+              hasContent={Boolean(header || canFloat)}
+              variant="main"
+              flexShrink={0}
+              gap="sm"
+            >
               <WorkbenchSidePanelHeader header={header} />
               <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
               {canFloat ? (
@@ -72,13 +79,13 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
                     size={PANEL_HEADER_CONTROL_SIZE}
                     variant="ghost"
                     aria-label="Float Side Panel"
-                    onClick={() => workbench.sidePanel.setMode("floating")}
+                    onClick={() => workbench.shell.setSidePanelPresentation("floating")}
                   >
                     <Minimize2 size={16} />
                   </IconButton>
                 </Tooltip>
               ) : null}
-            </Header>
+            </PanelHeader>
           ) : undefined
         }
       >
@@ -101,17 +108,18 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
   const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon, onOpen, available = true } = props;
   const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
+  const policy = usePanelPolicy(workbench, "side");
   const visible = available && canFloat && mode === "floating";
 
   return (
     <>
-      {available && canFloat && mode !== "attached" ? (
+      {available && canFloat && policy.canOpen && mode !== "attached" ? (
         <BubbleButton
           isOpen={visible}
           aria-label="Open Side Panel"
           containerProps={{ bottom: launcherBottom(bottomOffset) }}
           tooltip="Open Side Panel"
-          onClick={onOpen ?? (() => workbench.sidePanel.setMode("floating"))}
+          onClick={onOpen ?? (() => workbench.shell.setSidePanelPresentation("floating"))}
         >
           {bubbleIcon ?? <MessageCircle size={20} strokeWidth={2} />}
         </BubbleButton>
@@ -128,7 +136,35 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
           bg: workbenchBackgrounds.widget,
         }}
         popOutLabel="Reattach Side Panel"
-        onClose={() => workbench.sidePanel.setMode("closed")}
+        header={
+          visible ? (
+            <PanelHeader workbench={workbench} region="side" hasTabs variant="main" gap="sm">
+              <WorkbenchSidePanelHeader header={header} />
+              <Tooltip content="Reattach Side Panel">
+                <IconButton
+                  size={PANEL_HEADER_CONTROL_SIZE}
+                  variant="ghost"
+                  aria-label="Reattach Side Panel"
+                  onClick={() => workbench.shell.setSidePanelPresentation("attached")}
+                >
+                  <SquareArrowOutUpRight size={16} />
+                </IconButton>
+              </Tooltip>
+              {policy.canClose ? (
+                <Tooltip content="Close Side Panel">
+                  <IconButton
+                    size={PANEL_HEADER_CONTROL_SIZE}
+                    variant="ghost"
+                    aria-label="Close Side Panel"
+                    onClick={() => workbench.shell.setRegionOpen("side", false)}
+                  >
+                    <Minus size={16} />
+                  </IconButton>
+                </Tooltip>
+              ) : null}
+            </PanelHeader>
+          ) : null
+        }
         onPopOut={() => workbench.sidePanel.setMode("attached")}
         menu={visible ? <WorkbenchSidePanelHeader header={header} /> : undefined}
         overlay={<WorkbenchTabDropTarget region="side" />}

@@ -20,6 +20,7 @@ export const writeNavigationExtension = (root: string) => {
   writeFileSync(
     join(source, "extension.ts"),
     `export default {
+      modes: [{ id: "policy", ref: { kind: "mode", id: "policy" }, label: "Policy", regions: ["main", "side", "secondary"], regionSettings: { side: { canOpen: true, canClose: false, acceptsTabs: true, resizable: false, floatable: false } } }],
       resourceKinds: [{ id: "record", ref: { kind: "resource-kind", id: "record" } }],
       views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: { kind: "file", resourceKind: { kind: "resource-kind", id: "record" }, load: () => ({ content: "probe", editable: false }) } }],
       pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, slots: [], panels: {} }],
@@ -51,6 +52,14 @@ export const expectPackagedNavigation = async (input: {
   const metadata = await metadataResponse.json();
   expect(metadata.pages).toContainEqual(
     expect.objectContaining({ localId: "record", document: { metadataKey: "documentId" } }),
+  );
+  expect(metadata.modes).toContainEqual(
+    expect.objectContaining({
+      localId: "policy",
+      regionSettings: {
+        side: { canOpen: true, canClose: false, acceptsTabs: true, resizable: false, floatable: false },
+      },
+    }),
   );
   const documentResponse = await fetch(
     `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/test.navigation-probe.command.open-document/execute`,

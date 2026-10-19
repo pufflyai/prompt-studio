@@ -23,7 +23,8 @@ const TabIcon = (props: { indicator?: import("../../core").WorkbenchTabSnapshot[
 export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
   const { workbench, placement, activeWidgetId, disabled = false, sortable = false } = props;
   const tabs = useTabsContext();
-  const behavior = useRegionTab(props);
+  const triggerId = tabs.getTriggerProps({ value: placement.widgetId }).id!;
+  const behavior = useRegionTab(props, triggerId);
   const { snapshot, drag, target, drop } = behavior;
   const label = snapshot.label ?? placement.resource?.label ?? placement.title ?? placement.contributionId;
   const labelId = `workbench-tab-label-${placement.widgetId}`;
@@ -54,12 +55,12 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
       >
         <Tooltip content={label} openDelay={300} closeDelay={150} positioning={{ placement: "bottom" }}>
           <Tabs.Trigger
-            id={tabs.getTriggerProps({ value: placement.widgetId }).id}
+            id={triggerId}
             value={placement.widgetId}
             aria-labelledby={labelId}
             disabled={disabled}
             aria-haspopup="menu"
-            aria-expanded={behavior.open}
+            aria-expanded={behavior.menu.api.open}
             aria-keyshortcuts={sortable ? "Alt+ArrowLeft Alt+ArrowRight Shift+F10" : "Shift+F10"}
             fontStyle={placement.tabRetention === "preview" ? "italic" : undefined}
             opacity={drag.isDragging ? 0.5 : undefined}
@@ -112,10 +113,8 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         <TabDropIndicator drop={drop} />
       </Box>
       <RegionTabMenu
-        anchor={behavior.anchor}
+        menu={behavior.menu}
         label={label}
-        open={behavior.open}
-        setOpen={behavior.setOpen}
         groups={snapshot.menu ?? []}
         placement={placement}
         workbench={workbench}

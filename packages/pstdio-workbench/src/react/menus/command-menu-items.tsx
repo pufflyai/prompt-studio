@@ -8,7 +8,7 @@ import type {
 } from "../../core";
 import { scopeWorkbenchResourceContextValues } from "../../core";
 import { reportUserActionError } from "../../core/shared/run-user-action";
-import { hasCommandParameters } from "../command-palette/command-palette-params";
+import { hasCommandParameters, resolveCommandResourceParams } from "../command-palette/command-palette-params";
 import type { TreeActionParamsRequest } from "../renderers/tree/tree-actions";
 import { WorkbenchIcon } from "../shared/icon";
 import { resolveMenuItemState } from "./menu-item-state";
@@ -134,7 +134,11 @@ export const createMenuItemGroups = (input: CreateMenuItemsInput) => {
               requestParams();
               return;
             }
-            void workbench.commands.executeCommand(record.command.id, args, context).catch((error) => {
+            const bound = resolveCommandResourceParams(record.command.params, args, context);
+            const resolvedArgs = Object.keys(bound).length
+              ? { ...(typeof args === "object" && args !== null ? args : {}), ...bound }
+              : args;
+            void workbench.commands.executeCommand(record.command.id, resolvedArgs, context).catch((error) => {
               if (onCommandError) onCommandError(error);
               else reportUserActionError(workbench, label, error);
             });

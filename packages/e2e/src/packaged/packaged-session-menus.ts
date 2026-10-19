@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
-import { verifyModePanelState } from "./packaged-mode-panel-state";
+import { verifyExtensionModeSessionRestore, verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";
 import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
 import { verifySharedPageTab } from "./packaged-shared-page-tab";
@@ -53,7 +53,7 @@ export const verifyPackagedSessionMenus = async (
   authorization: Record<string, string>,
 ) => {
   const { workspace, session } = await createSessionFixture(baseUrl, projectId, authorization);
-  const hideBottom = page.getByRole("button", { name: "Hide Secondary Panel", exact: true });
+  const hideBottom = page.getByRole("button", { name: "Hide Bottom Panel", exact: true });
   if (await hideBottom.isVisible()) await hideBottom.click();
   const workspaceUrl = serializePageUrl({
     projectId,
@@ -134,7 +134,7 @@ export const verifyPackagedSessionMenus = async (
   await reopenWorkspace();
   const bottomHeader = page.locator('[data-workbench-panel-header="secondary"]');
   await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
-  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
   const terminalConnection = page.waitForEvent(
     "websocket",
     (socket) => new URL(socket.url()).pathname === "/v1/terminal",
@@ -165,9 +165,9 @@ export const verifyPackagedSessionMenus = async (
   await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
   await terminalClosed;
   await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
-  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
   await reopenWorkspace();
-  await expect(page.getByRole("button", { name: "Hide Secondary Panel", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Hide Bottom Panel", exact: true })).toBeVisible();
   await page.goto(`${baseUrl}/projects/${projectId}/sessions`);
   const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
     name: "Packaged session actions",
@@ -233,4 +233,5 @@ export const verifyPackagedSessionMenus = async (
   await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions$`));
   const deleted = await fetch(`${baseUrl}/v1/sessions/${session.id}`, { headers: authorization });
   expect(deleted.status).toBe(404);
+  await verifyExtensionModeSessionRestore(page, projectId);
 };

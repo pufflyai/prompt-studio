@@ -4,6 +4,7 @@ import type { HostApi, HostEventMessage, InitMessage, PropsUpdateMessage, ThemeU
 import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
+import { observeContentWidth } from "./observe-content-width";
 import { createViewLifecycle } from "./view-lifecycle";
 
 const MOUNT_ID = "pstdio-extension-mount";
@@ -120,9 +121,18 @@ const start = async () => {
       message.extensionId,
       propsStore,
     );
-    return await view.mount(ensureMount(), host, propsStore);
+    const mount = ensureMount();
+    const stopSizing =
+      message.sizing === "content-width"
+        ? observeContentWidth(mount, (width) => connection.remote.contentWidthChanged(width))
+        : undefined;
+    const dispose = await view.mount(mount, host, propsStore);
+    return () => {
+      stopSizing?.();
+      dispose?.();
+    };
   });
-  let keyboardForwarderInstalled = false;
+  let inputForwardersInstalled = false;
 
   const connection = await guest.connect({
     init: async (message: InitMessage) => {
@@ -131,8 +141,8 @@ const start = async () => {
         propsStore.set(message.props);
         await viewLifecycle.initialize(message);
 
-        if (!keyboardForwarderInstalled) {
-          keyboardForwarderInstalled = true;
+        if (!inputForwardersInstalled) {
+          inputForwardersInstalled = true;
           document.addEventListener(
             "keydown",
             (event) => {
@@ -153,6 +163,28 @@ const start = async () => {
             },
             true,
           );
+          for (const type of ["pointerdown", "click"] as const) {
+            document.addEventListener(
+              type,
+              (event) => {
+                connection.remote.dispatchPointerEvent({
+                  type,
+                  clientX: event.clientX,
+                  clientY: event.clientY,
+                  button: event.button,
+                  buttons: event.buttons,
+                  pointerId: event.pointerId,
+                  pointerType: event.pointerType,
+                  isPrimary: event.isPrimary,
+                  ctrlKey: event.ctrlKey,
+                  metaKey: event.metaKey,
+                  altKey: event.altKey,
+                  shiftKey: event.shiftKey,
+                });
+              },
+              true,
+            );
+          }
         }
       } catch (error) {
         const payload = normalizeRuntimeError(error);

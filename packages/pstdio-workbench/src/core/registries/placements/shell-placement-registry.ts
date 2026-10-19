@@ -76,6 +76,9 @@ const identityFor = (placementId: string, instanceKey: string): PlacementIdentit
   placementId,
   instanceKey,
 });
+const shellInstanceId = (placementId: string, instanceKey: string) =>
+  `workbench.shell.${encodeURIComponent(placementId)}.${encodeURIComponent(instanceKey)}`;
+
 const roleForRegion = (region: WorkbenchRegion): WorkbenchWidgetRole => {
   if (region === "main") return "location";
   if (region === "secondary" || region === "side") return "sub-panel";
@@ -86,9 +89,14 @@ const tabState = (open: PageOpenIntent | undefined) => {
   if (open === "preview") return { pinned: false, tabRetention: "preview" as const };
   return {};
 };
-export const createWorkbenchShellPlacementRegistry = (input: {
+interface CreateWorkbenchShellPlacementRegistryInput {
   views: WorkbenchViewRegistry;
   viewMenus?: WorkbenchViewMenuRegistry;
+  validateOpen?(
+    identity: PlacementIdentity,
+    region: WorkbenchRegion,
+    options: { reveal: boolean; resource?: ResourceRef; requestedRegion?: WorkbenchRegion },
+  ): void;
   getPanel(panelId: string): RegisteredWidgetContribution | undefined;
   registerPanel: Parameters<typeof registerWorkbenchViewPlacement>[0];
   activatePanel(instanceId: string): unknown;
@@ -100,7 +108,11 @@ export const createWorkbenchShellPlacementRegistry = (input: {
   loadLayout?(context: OwnedPlacementLocationContext): WorkbenchLayout | undefined;
   enteredWithPersistedLayout(): boolean;
   onDidChangePersistenceScope(listener: () => void): Disposable;
-}): WorkbenchShellPlacementRegistry => {
+}
+
+export const createWorkbenchShellPlacementRegistry = (
+  input: CreateWorkbenchShellPlacementRegistryInput,
+): WorkbenchShellPlacementRegistry => {
   const placements = new Map<string, WorkbenchShellPlacementContribution>();
   let state = createOwnedPlacementState();
   const listeners = new Set<() => void>();
@@ -147,18 +159,14 @@ export const createWorkbenchShellPlacementRegistry = (input: {
       region: placement.region,
       order: placement.order ?? 0,
       value: {
-        ...createPlacement(
-          `workbench.shell.${encodeURIComponent(placement.id)}.${encodeURIComponent(instanceKey)}`,
-          panel,
-          {
-            viewId: placementItemViewId(placement.item),
-            role: roleForRegion(placement.region),
-            closable: staticPlacementClosable(placement.item),
-            ...(resource ? { resource } : {}),
-            ...(title ? { title } : {}),
-            ...tabState(open),
-          },
-        ),
+        ...createPlacement(shellInstanceId(placement.id, instanceKey), panel, {
+          viewId: placementItemViewId(placement.item),
+          role: roleForRegion(placement.region),
+          closable: staticPlacementClosable(placement.item),
+          ...(resource ? { resource } : {}),
+          ...(title ? { title } : {}),
+          ...tabState(open),
+        }),
         ...(relatedSource ? { relatedSource } : {}),
       },
     };
@@ -275,12 +283,15 @@ export const createWorkbenchShellPlacementRegistry = (input: {
     listPlacements: () => [...placements.values()].sort((left, right) => left.id.localeCompare(right.id)),
     openPlacement(target) {
       const prepared = preparation.open(target);
+      input.validateOpen?.(prepared.identity, target.region ?? placements.get(target.placementId)!.region, {
+        reveal: !target.relatedSource,
+        resource: target.resource,
+        requestedRegion: target.region,
+      });
       preparation.apply(prepared.state);
       preparation.publish(target.region ? { identity: prepared.identity, region: target.region } : undefined);
       if (target.activate !== false)
-        input.activatePanel(
-          `workbench.shell.${encodeURIComponent(target.placementId)}.${encodeURIComponent(prepared.identity.instanceKey)}`,
-        );
+        input.activatePanel(shellInstanceId(target.placementId, prepared.identity.instanceKey));
       return prepared.identity;
     },
 

@@ -76,8 +76,20 @@ export interface ActivityItemContribution<TParams extends Struct = Struct>
 export interface ModeRegionSettings {
   /** Hide the panel header when the mode supplies its own controls. */
   readonly showHeader?: boolean;
+  /** Permit explicit opening/revealing independently of closing. Defaults to true. */
+  readonly canOpen?: boolean;
+  /** Permit hiding the panel. Individual tabs can still close. */
+  readonly canClose?: boolean;
+  /** Permit adding or dropping tabs. Existing tabs remain usable. */
+  readonly acceptsTabs?: boolean;
+  /** Permit resizing independently of visibility and tab acceptance. */
+  readonly resizable?: boolean;
+  /** Side only. Overrides the mode floatingPanels setting. */
+  readonly floatable?: boolean;
   readonly size?: RegionSize;
-  /** Allow dragging this region closed. Explicit hide/show is always available. */
+  /** Allow dragging this region closed. Explicit hide/show is always available.
+   * @deprecated For panel visibility use canOpen/canClose. Retained for menu collapse.
+   */
   readonly collapsible?: boolean;
   /** Keep a tab visible when this region has only one visible item. */
   readonly alwaysShowTabs?: boolean;
@@ -89,7 +101,9 @@ export interface ModeContribution extends ContributionDefinition<"mode"> {
   regions: readonly ExtensionPanelRegion[];
   /** Default theme for this mode. An explicit user choice for the mode takes precedence. */
   defaultTheme?: ThemeRef;
-  /** Whether side panels may float while this mode is active. Defaults to visible. */
+  /** Whether side panels may float while this mode is active. Defaults to visible.
+   * @deprecated Use regionSettings.side.floatable.
+   */
   floatingPanels?: "visible" | "hidden";
   /** Replace host chrome with a view, or hide it with false, while the mode is active. */
   chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", ViewRef | false>>;
