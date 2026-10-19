@@ -2,9 +2,9 @@ import { asc, eq, sql } from "drizzle-orm";
 import { canonicalJson, fingerprint, identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { session, verification } from "./auth-schema";
-import { grantSchema, ownerSchema } from "./contracts";
+import { ownerSchema } from "./contracts";
 import type { ManagerDatabase } from "./database";
-import { accounts, credentials, requests, restoreRequests, workbenches } from "./schema";
+import { accounts, devices, requests, restoreRequests, workbenches } from "./schema";
 
 const snapshotSchema = z
   .strictObject({
@@ -23,7 +23,7 @@ const snapshotSchema = z
         accountId: identitySchema,
         id: identitySchema,
         fingerprint: z.string().regex(/^[0-9a-f]{64}$/),
-        result: z.union([z.strictObject({ accountId: identitySchema }), grantSchema, z.strictObject({})]),
+        result: z.union([z.strictObject({ accountId: identitySchema }), z.strictObject({})]),
       }),
     ),
   })
@@ -44,8 +44,6 @@ const snapshotSchema = z
       if (!accountIds.has(row.accountId)) invalid(["requests", index], "Unknown request account");
       if ("accountId" in row.result && row.result.accountId !== row.accountId)
         invalid(["requests", index, "result"], "Request result belongs to another account");
-      if ("workbenchId" in row.result && !memberships.has(canonicalJson([row.accountId, row.result.workbenchId])))
-        invalid(["requests", index, "result"], "Request result has no account workbench membership");
     }
   });
 
@@ -89,7 +87,8 @@ export const restoreManager = async (db: ManagerDatabase, requestId: string, inp
     }
     await transaction.delete(verification);
     await transaction.delete(session);
-    await transaction.delete(credentials);
+    // Restored devices log in again, so no device credential survives a restore.
+    await transaction.delete(devices);
     await transaction.update(accounts).set({ state: "disabled" });
     // Bound each SQL statement while keeping the full restore in this transaction.
     const batchSize = 1_000;

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { SQL } from "bun";
 import { createServiceTelemetry } from "pstdio-service-telemetry";
-import { createAuthorityFixture, provisionAccount, registration } from "./authority.fixture";
+import { connectDevice, createAuthorityFixture, provisionAccount } from "./authority.fixture";
 import * as implementation from "./index";
 import { createAuthenticationFixture } from "./manager-authentication.fixture";
 
@@ -44,16 +44,16 @@ test("renewal distinguishes unavailable storage and signing from invalid credent
     );
   try {
     const accountId = await provisionAccount(manager);
-    const grant = await manager.register(registration(accountId));
+    const grant = await connectDevice(manager, accountId);
     expect((await request("invalid-secret")).status).toBe(401);
     expect(events).toEqual([]);
     await sql`ALTER TABLE auth_jwks RENAME TO unavailable_jwks`;
-    const signing = await request(grant.token!);
+    const signing = await request(grant.token);
     expect(signing.status).toBe(503);
-    expect(await signing.text()).not.toContain(grant.token!);
+    expect(await signing.text()).not.toContain(grant.token);
     expect(events).toEqual([{ event: "environment_access.failed", category: "signing" }]);
     await sql`ALTER TABLE unavailable_jwks RENAME TO auth_jwks`;
-    expect((await request(grant.token!)).status).toBe(200);
+    expect((await request(grant.token)).status).toBe(200);
     const login = await authentication.login(accountId);
     await sql`ALTER TABLE auth_sessions RENAME TO unavailable_session`;
     try {
@@ -65,7 +65,7 @@ test("renewal distinguishes unavailable storage and signing from invalid credent
       await sql`ALTER TABLE unavailable_session RENAME TO auth_sessions`;
     }
     await authentication.auth.close();
-    const storage = await request(grant.token!);
+    const storage = await request(grant.token);
     expect(storage.status).toBe(503);
     expect(storage.headers.get("www-authenticate")).toBeNull();
     expect(events).toContainEqual({ event: "environment_access.failed", category: "database" });
@@ -78,7 +78,7 @@ test("renewal distinguishes unavailable storage and signing from invalid credent
     ]);
     expect((await handler(new Request(`${authentication.config.origin}/health`))).status).toBe(200);
     const diagnostics = JSON.stringify({ events, captures });
-    for (const secret of [grant.token!, fixture.databaseUrl, authentication.config.secret, "invalid-secret"])
+    for (const secret of [grant.token, fixture.databaseUrl, authentication.config.secret, "invalid-secret"])
       expect(diagnostics).not.toContain(secret);
   } finally {
     telemetry.close();
