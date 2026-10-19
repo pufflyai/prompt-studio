@@ -4,8 +4,9 @@ import { createNote } from "./notes";
 import { resolveNotePathCommand } from "./resolve-note-path";
 import { note } from "./resource-kinds";
 
-test("note content paths open the note editor and other files stay workspace files", async () => {
+const fixture = () => {
   const mount = createMemoryRepoFiles();
+  const workspace = { provider_state: "ready", files: "write" };
   const [ctx] = makeCommandArgs({
     storage: createMemoryStorage(),
     params: {},
@@ -14,17 +15,22 @@ test("note content paths open the note editor and other files stay workspace fil
       workspaces: {
         getDefault: async () => ({
           execution_kind: "local",
-          provider_state: "ready",
+          provider_state: workspace.provider_state,
           root_path: "/notes",
-          provider_capabilities_json: { files: "write" },
+          provider_capabilities_json: { files: workspace.files },
         }),
       } as never,
     },
   });
-  const created = await createNote(mount, "Launch plan");
   const [claim] = note.paths ?? [];
   const resolve = (path: string) =>
     resolveNotePathCommand.run(ctx, { path: `${claim.prefix}${path}`, workspaceId: "workspace" });
+  return { mount, workspace, claim, resolve };
+};
+
+test("note content paths open the note editor and other files stay workspace files", async () => {
+  const { mount, claim, resolve } = fixture();
+  const created = await createNote(mount, "Launch plan");
 
   expect(claim.prefix).toBe(".pstdio/extension-storage/pstdio-notes/documents/");
   expect(resolveNotePathCommand.id).toBe(claim.resolve.id);
@@ -37,4 +43,14 @@ test("note content paths open the note editor and other files stay workspace fil
   });
   expect(await resolve("missing/content.md")).toBeNull();
   expect(await resolve(`${created.id}/title.txt`)).toBeNull();
+});
+
+test("note paths follow the default workspace's file access", async () => {
+  const { mount, workspace, resolve } = fixture();
+  const created = await createNote(mount, "Launch plan");
+
+  workspace.files = "read";
+  expect(await resolve(`${created.id}/content.md`)).toMatchObject({ resource: { metadata: { writable: false } } });
+  workspace.provider_state = "initializing";
+  expect(await resolve(`${created.id}/content.md`)).toBeNull();
 });

@@ -45,7 +45,7 @@ Open **Artifacts** in the project navigation. The library shows a grid of page p
 
 Artifacts are also searchable resources. Search by their current name to open them from global search or choose them in a resource picker. Each artifact appears once, opens its latest version, and disappears from search when deleted.
 
-When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio-artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens the artifact instead of the raw file.
+When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio-artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens the artifact at its latest version instead of the raw file.
 
 The library stays open as an **Artifacts** tab next to each artifact you open. Switching tabs keeps the state of each interactive preview. Click **Artifacts** in the breadcrumb to return to the library tab. A link to a published URL opens the matching artifact tab.
 
