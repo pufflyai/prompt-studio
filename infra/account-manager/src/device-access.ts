@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { identitySchema } from "pstdio-sync-contracts";
 import { account } from "./auth-schema";
 import { deviceNameSchema, deviceProfileSchema } from "./contracts";
@@ -34,8 +34,14 @@ export const createDeviceLogin =
       .from(account)
       .where(and(eq(account.userId, session.user.id), eq(account.providerId, "google")));
     if (!provider) throw new DeviceAccessDenied();
-    // The Google identity decides the account ID, so every login of this user finds the same account.
-    const accountId = digestCredential(`${googleIssuer}\n${provider.subject}`);
+    // A Google user has one account: the one they already own, or a new one whose ID comes from their identity.
+    const [owned] = await db
+      .select({ id: accounts.id })
+      .from(accounts)
+      .where(and(eq(accounts.ownerIssuer, googleIssuer), eq(accounts.ownerSubject, provider.subject)))
+      .orderBy(asc(accounts.id))
+      .limit(1);
+    const accountId = owned?.id ?? digestCredential(`${googleIssuer}\n${provider.subject}`);
     return withAccountTransaction(db, accountId, async (transaction) => {
       await transaction
         .insert(accounts)

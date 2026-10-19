@@ -98,12 +98,14 @@ try {
   assert.equal((await call(desktop, `/account/devices/${laptopLogin.deviceId}/rename`, "POST", rename)).status, 200);
   assert.equal((await devices(laptop)).find((device) => device.current)?.name, "Work laptop");
 
-  // Removing a device stops its renewal. The removed device notices on its next refresh and stops syncing.
+  // Removing a device stops its renewal. The removed device notices on its next manager request and stops syncing.
   const laptopToken = (await token(laptop))!;
   assert.equal(await renew(laptopToken, project.id), 200);
   assert.equal((await call(desktop, `/account/devices/${laptopLogin.deviceId}/remove`, "POST")).status, 200);
   assert.equal(await renew(laptopToken, project.id), 401);
-  await laptop.account.refresh();
+  const removedCall = await call<{ error: string }>(laptop, "/account/devices");
+  assert.equal(removedCall.status, 400);
+  assert.match(removedCall.body.error, /removed from your account/);
   assert.equal((await call<Status>(laptop, "/account")).body.login, null);
   assert.deepEqual(laptop.synced(), []);
   assert.deepEqual(
@@ -122,7 +124,7 @@ try {
   assert.deepEqual(desktop.synced(), []);
   const desktopToken = (await token(desktop))!;
   assert.equal(await renew(desktopToken, project.id), 401);
-  assert.equal((await call(desktop, "/account/logout", "POST")).status, 200);
+  assert.deepEqual((await call(desktop, "/account/logout", "POST")).body, { ok: true, removed: true });
   assert.equal((await call<Status>(desktop, "/account")).body.login, null);
   assert.equal(await token(desktop), undefined);
 

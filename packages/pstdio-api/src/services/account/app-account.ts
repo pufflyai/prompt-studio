@@ -24,12 +24,16 @@ export const createAppAccount = (
           await app.close();
         },
       },
-      async (relay) => {
-        // A project created or bound here may already be a cloud project of this account.
-        stopEvents = app.deps.eventBus.subscribe((event) => {
-          if (event.table === "projects") void accountService.refresh();
-        });
-        accountService.start(relay.update);
+      {
+        // A rejected renewal means this device or project left the account; refreshing finds out which.
+        denied: () => void accountService.refresh(),
+        ready: async (relay) => {
+          // A project created or bound here may already be a cloud project of this account.
+          stopEvents = app.deps.eventBus.subscribe((event) => {
+            if (event.table === "projects") void accountService.refresh();
+          });
+          accountService.start(relay.update);
+        },
       },
     );
   return { accountService, connectAccountRelay };

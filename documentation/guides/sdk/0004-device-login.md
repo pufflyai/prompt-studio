@@ -41,7 +41,7 @@ pst devices remove DEVICE_ID
 pst logout
 ```
 
-`devices list` marks the current device with `*`. Removing a device stops it from renewing access. Access it already has ends within the access lifetime the service sets. Data already on that device stays there. `pst logout` removes the current device and stops its sync.
+`devices list` marks the current device with `*`. Removing a device stops it from renewing access. Access it already has ends within the access lifetime the service sets. Data already on that device stays there. `pst logout` removes the current device and stops its sync. If the account service cannot be reached, it still logs out here; remove the device from another one later.
 
 ## Native storage and SDK
 

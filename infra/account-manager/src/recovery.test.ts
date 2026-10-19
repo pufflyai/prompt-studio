@@ -24,7 +24,7 @@ test("retrying a completed manager restore does not revoke newly established aut
     await owner.restore("restore-retry", snapshot);
     expect(await owner.authorize(fresh.token, fresh.workbenchId)).not.toBeNull();
     await expect(
-      owner.restore("restore-retry", { version: 1, accounts: [], workbenches: [], requests: [] }),
+      owner.restore("restore-retry", { version: 2, accounts: [], workbenches: [], requests: [] }),
     ).rejects.toThrow("changed intent");
     expect(await owner.authorize(fresh.token, fresh.workbenchId)).not.toBeNull();
   } finally {
@@ -95,7 +95,7 @@ test("an invalid manager snapshot leaves live authority intact", async () => {
     const accountId = await provisionAccount(owner);
     const grant = await connectDevice(owner, accountId);
     const snapshot = await owner.snapshot();
-    await expect(owner.restore("unsupported-version", { ...snapshot, version: 2 })).rejects.toThrow();
+    await expect(owner.restore("unsupported-version", { ...snapshot, version: 1 })).rejects.toThrow();
     expect(await owner.authorize(grant.token, grant.workbenchId)).not.toBeNull();
     await expect(
       owner.restore("invalid-relationships", {

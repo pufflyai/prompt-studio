@@ -25,7 +25,10 @@ Closing a pending login stops its in-flight exchange and the write that follows 
 [`createNativeAccount`](../../../packages/pstdio-api/src/services/account/native-account.ts) keeps the account's cloud project list in memory. It loads the list from `GET /v1/workbenches` at startup, after login, after `pst projects cloud` or `pst projects local`, and when a local project is created or bound. It then hands the relay runtime one connection per cloud project that exists on this device. The relay runtime restarts only the projects whose connection changed.
 
 - If the manager cannot be reached, local work goes on and the host tries again every minute.
-- If the manager answers 401, another device removed this one. The host clears its login and stops syncing.
+- If the manager answers 401 to any account request, another device removed this one. The host clears its login and stops syncing. It clears only the credential that was rejected, so a newer login stays.
+- If the relay's access renewal gets a 401, the host refreshes its list. That stops a removed device, and a project that another device stopped syncing.
+- A login saved for another environment ID, for example by another database in the same folder, counts as logged out.
+- `pst logout` clears the login even when the manager cannot be reached. The device then stays on the account's list until another device removes it.
 - A project that another device makes a cloud project later starts syncing here at the next start, login, or project create or bind.
 
 The device credential never leaves the native host. Host API responses and extension events do not include it.
@@ -36,7 +39,7 @@ The device credential never leaves the native host. Host API responses and exten
 | --- | --- |
 | `POST /v1/account/login`, `GET /v1/account/login/:id` | Start a login and read its status. |
 | `GET /v1/account` | This device's login, without the credential, and the account's cloud projects. |
-| `POST /v1/account/logout` | Remove this device at the manager and clear the login. |
+| `POST /v1/account/logout` | Clear the login and remove this device at the manager. `removed` is false when the manager could not be reached. |
 | `GET /v1/account/devices` | The account's devices, with `current` set for this one. |
 | `POST /v1/account/devices/:id/rename`, `POST /v1/account/devices/:id/remove` | Rename or remove a device. Removing this device logs out. |
 | `PUT /v1/account/projects/:id`, `DELETE /v1/account/projects/:id` | Make a local project a cloud project, or stop syncing it. |

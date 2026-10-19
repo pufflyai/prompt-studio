@@ -27,6 +27,8 @@ export const startNativeLogin = (origin: string, save: (token: string, signal: A
       )
         return new Response("Invalid sign-in callback", { status: 400 });
       consuming = true;
+      // A login that reached its exchange finishes even past the expiry, or its new credential would be lost.
+      clearTimeout(expiry);
       try {
         const session = sessionSchema.parse(
           await managerRequest(

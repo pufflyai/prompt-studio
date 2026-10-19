@@ -14,7 +14,16 @@ export const deviceLoginSchema = z.strictObject({
 const fileSchema = z.strictObject({ login: deviceLoginSchema.nullable() });
 export type DeviceLogin = z.infer<typeof deviceLoginSchema>;
 
-export const createNativeStore = (path: string) => ({
-  read: async () => (await readPrivateFile(path, fileSchema, { login: null })).login,
-  save: (login: DeviceLogin | null) => serializeNativeWrite(path, () => writePrivateFile(path, { login })),
-});
+export const createNativeStore = (path: string) => {
+  const read = async () => (await readPrivateFile(path, fileSchema, { login: null })).login;
+  return {
+    read,
+    save: (login: z.input<typeof deviceLoginSchema>) =>
+      serializeNativeWrite(path, () => writePrivateFile(path, { login: deviceLoginSchema.parse(login) })),
+    // Clears the login only while it still holds this credential, so a newer login is kept.
+    forget: (token: string) =>
+      serializeNativeWrite(path, async () => {
+        if ((await read())?.token === token) await writePrivateFile(path, { login: null });
+      }),
+  };
+};

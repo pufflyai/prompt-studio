@@ -117,3 +117,19 @@ test("Google login connects each device to every cloud project, and devices mana
     await authentication.close();
   }
 });
+
+test("login finds the account an operator provisioned for the same Google user", async () => {
+  const manager = fixture.owner();
+  const { authentication, request } = setup();
+  try {
+    const accountId = await provisionAccount(manager);
+    const user = await authentication.login(accountId);
+    const headers = new Headers(user.headers);
+    headers.set("origin", authentication.config.origin);
+    const response = await request("/v1/device-login", deviceProfile(), headers);
+    expect(response.status).toBe(201);
+    expect(((await response.json()) as { accountId: string }).accountId).toBe(accountId);
+  } finally {
+    await Promise.all([manager.close(), authentication.close()]);
+  }
+});

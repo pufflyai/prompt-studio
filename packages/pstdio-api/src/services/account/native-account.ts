@@ -44,15 +44,32 @@ export const createNativeAccount = (input: {
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
   let retry: ReturnType<typeof setTimeout> | undefined;
   let refreshing = Promise.resolve();
+  let queued: Promise<void> | undefined;
+  let closed = false;
 
-  const current = async () => {
+  // A login saved by another database in the same folder belongs to another device.
+  const readLogin = async () => {
     const login = await store.read();
+    const { environmentId } = await input.environment.get();
+    return login?.deviceId === environmentId ? login : null;
+  };
+  const current = async () => {
+    const login = await readLogin();
     if (!login) throw new AccountRequestError("Log in first with pst login");
     return login;
   };
+  const denied = (error: unknown) => error instanceof ManagerRequestDenied && error.status === 401;
   const call = async (path: string, body?: unknown) => {
     const login = await current();
-    return managerRequest(login.managerOrigin, path, login.token, body);
+    try {
+      return await managerRequest(login.managerOrigin, path, login.token, body);
+    } catch (error) {
+      if (!denied(error)) throw error;
+      // Another device removed this one, so its credential no longer works.
+      await store.forget(login.token);
+      await refresh();
+      throw new AccountRequestError("This device was removed from your account. Log in again with pst login");
+    }
   };
   const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
   const projectPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}`;
@@ -77,7 +94,8 @@ export const createNativeAccount = (input: {
   };
   const load = async () => {
     clearTimeout(retry);
-    let login = await store.read();
+    if (closed) return;
+    let login = await readLogin();
     try {
       cloudProjects = login
         ? workbenchesSchema
@@ -85,12 +103,12 @@ export const createNativeAccount = (input: {
             .map((row) => row.workbenchId)
         : [];
     } catch (error) {
-      if (error instanceof ManagerRequestDenied && error.status === 401) {
-        // Another device removed this one, so its credential no longer works.
-        await store.save(null);
-        login = null;
+      if (login && denied(error)) {
+        // Another device removed this one. A newer login saved meanwhile stays.
+        await store.forget(login.token);
+        login = await readLogin();
         cloudProjects = [];
-      } else {
+      } else if (!closed) {
         // Local work continues offline. The list loads once the account service is reachable.
         apiLogger.warn({ event: "account.cloud_projects.unavailable" }, "Cloud projects will load later");
         retry = setTimeout(() => void refresh(), RETRY_MS);
@@ -99,18 +117,30 @@ export const createNativeAccount = (input: {
     }
     await publish(login);
   };
+  // Refreshes run one at a time. Calls that arrive while one waits to start share it.
   const refresh = () => {
-    refreshing = refreshing.then(load).catch((error: unknown) => {
-      apiLogger.warn({ event: "account.refresh.failed", error }, "Cloud project sync update failed");
-    });
-    return refreshing;
+    if (queued) return queued;
+    const next = refreshing
+      .then(() => {
+        queued = undefined;
+        return load();
+      })
+      .catch((error: unknown) => {
+        apiLogger.warn({ event: "account.refresh.failed", error }, "Cloud project sync update failed");
+      });
+    queued = next;
+    refreshing = next;
+    return next;
   };
+  // Logging out works offline and after removal. Removing the device at the manager is best effort.
   const logout = async () => {
     const login = await current();
-    await managerRequest(login.managerOrigin, `${devicePath(login.deviceId)}/remove`, login.token, {});
-    await store.save(null);
+    const removed = await managerRequest(login.managerOrigin, `${devicePath(login.deviceId)}/remove`, login.token, {})
+      .then(() => true)
+      .catch(() => false);
+    await store.forget(login.token);
     await refresh();
-    return { ok: true };
+    return { ok: true, removed };
   };
   const finishLogin = async (origin: string, session: string, signal: AbortSignal) => {
     const { environmentId } = await input.environment.get();
@@ -143,7 +173,7 @@ export const createNativeAccount = (input: {
     },
     loginStatus: (id: string) => ({ status: logins.get(id)?.status() ?? "failed" }),
     async status() {
-      const login = await store.read();
+      const login = await readLogin();
       if (!login) return { login: null, cloudProjects: [] };
       const { token: _, ...device } = login;
       return { login: device, cloudProjects };
@@ -175,6 +205,7 @@ export const createNativeAccount = (input: {
       return { ok: true };
     },
     close() {
+      closed = true;
       clearTimeout(retry);
       update = async () => {};
       for (const login of logins.values()) login.close();

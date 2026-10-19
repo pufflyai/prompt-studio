@@ -32,7 +32,8 @@ export const createAccountClient = (request: RequestFn) => {
     loginStatus: (id: string) =>
       request<{ status: "pending" | "complete" | "failed" }>(`/v1/account/login/${encodeURIComponent(id)}`),
     status: () => request<AccountStatus>("/v1/account"),
-    logout: () => request<Ok>("/v1/account/logout", { method: "POST" }),
+    /** `removed` is false when the account service could not be reached; remove the device from another one. */
+    logout: () => request<Ok & { removed: boolean }>("/v1/account/logout", { method: "POST" }),
     devices: () => request<AccountDevice[]>("/v1/account/devices"),
     renameDevice: (id: string, name: string) => request<Ok>(`${device(id)}/rename`, { method: "POST", body: { name } }),
     removeDevice: (id: string) => request<Ok>(`${device(id)}/remove`, { method: "POST" }),

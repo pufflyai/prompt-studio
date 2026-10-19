@@ -20,8 +20,23 @@ test("the device login stays in a private file across restarts until logout", as
     await createNativeStore(file).save(login);
     expect(await createNativeStore(file).read()).toEqual(login);
     if (process.platform !== "win32") expect((await stat(file)).mode & 0o777).toBe(0o600);
-    await createNativeStore(file).save(null);
+    await createNativeStore(file).forget(login.token);
     expect(await createNativeStore(file).read()).toBeNull();
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("forgetting an older credential keeps a newer login", async () => {
+  const root = await mkdtemp(join(tmpdir(), "native-device-forget-"));
+  const store = createNativeStore(join(root, "native-account.json"));
+  try {
+    await store.save(login);
+    const newer = { ...login, token: "newer-device-credential" };
+    await Promise.all([store.save(newer), store.forget(login.token)]);
+    expect(await store.read()).toEqual(newer);
+    await store.forget(newer.token);
+    expect(await store.read()).toBeNull();
   } finally {
     await rm(root, { recursive: true, force: true });
   }

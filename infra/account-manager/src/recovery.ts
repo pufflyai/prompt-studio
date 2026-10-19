@@ -8,7 +8,8 @@ import { accounts, devices, requests, restoreRequests, workbenches } from "./sch
 
 const snapshotSchema = z
   .strictObject({
-    version: z.literal(1),
+    // Version 2 drops per-project grant receipts; devices log in again after a restore.
+    version: z.literal(2),
     accounts: z.array(
       z.strictObject({
         id: identitySchema,
@@ -57,7 +58,7 @@ export const captureManager = (db: ManagerDatabase) =>
         .orderBy(asc(workbenches.accountId), asc(workbenches.id));
       const requestRows = await transaction.select().from(requests).orderBy(asc(requests.accountId), asc(requests.id));
       return snapshotSchema.parse({
-        version: 1,
+        version: 2,
         accounts: accountRows,
         workbenches: workbenchRows,
         requests: requestRows,

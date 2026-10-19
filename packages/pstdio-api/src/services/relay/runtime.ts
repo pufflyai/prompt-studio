@@ -13,7 +13,8 @@ export type RelayWorkbench = {
   renewalGrant: string;
 };
 
-export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps }) => {
+// `denied` runs when the manager rejects a device credential, for example after another device removed this one.
+export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; denied?: () => void }) => {
   const workbenches = new Map<string, RelayWorkbench>();
   const access = new Map<string, ReturnType<typeof createRelayAccess>>();
   const controller = new AbortController();
@@ -128,7 +129,7 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps }) =>
       for (const [id, connection] of desired)
         if (!workbenches.has(id)) {
           workbenches.set(id, connection);
-          access.set(id, createRelayAccess({ ...connection, signal: controller.signal }));
+          access.set(id, createRelayAccess({ ...connection, signal: controller.signal, denied: input.denied }));
         }
       const obsolete = [...connections].filter(([, active]) => changed.has(active.owner.workbenchId));
       await Promise.all(obsolete.map(([key, active]) => stopConnection(key, active)));
@@ -148,7 +149,7 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps }) =>
 };
 export const connectAppRelay = async <T extends { deps: ExtensionsRouteDeps; close: () => Promise<void> }>(
   app: T,
-  ready: (relay: Awaited<ReturnType<typeof startRelayRuntime>>) => Promise<void>,
+  account: { denied: () => void; ready: (relay: Awaited<ReturnType<typeof startRelayRuntime>>) => Promise<void> },
 ) => {
   const close = async (relay?: Awaited<ReturnType<typeof startRelayRuntime>>) => {
     try {
@@ -159,8 +160,8 @@ export const connectAppRelay = async <T extends { deps: ExtensionsRouteDeps; clo
   };
   let relay: Awaited<ReturnType<typeof startRelayRuntime>> | undefined;
   try {
-    relay = await startRelayRuntime({ deps: app.deps });
-    await ready(relay);
+    relay = await startRelayRuntime({ deps: app.deps, denied: account.denied });
+    await account.ready(relay);
   } catch (error) {
     await close(relay);
     throw error;

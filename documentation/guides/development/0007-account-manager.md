@@ -32,7 +32,7 @@ A device is one client runtime. Its environment ID is its device ID. Logging in 
 | `authorize(token, workbenchId)` | Read current account, device and cloud project state. Return `{ accountId, workbenchId, deviceId }` or `null`. |
 | `disable(intent)` | Disable account authorization and new logins. |
 | `reconcile(intent)` | Apply explicit current operator ownership/lifecycle and remove every device of the account. This is the private recovery boundary, not a user-facing ownership-transfer API. |
-| `snapshot()` | Capture a consistent, versioned private manager snapshot. It excludes devices and credential digests. |
+| `snapshot()` | Capture a consistent, versioned private manager snapshot (version 2). It excludes devices and credential digests. |
 | `restore(requestId, snapshot)` | Import missing history, preserve known identities and receipts, remove every device and disable all accounts atomically. An exact completed retry preserves authority established afterward; changed input cannot reuse its ID. |
 | `close()` | Close this owner's PostgreSQL connections. |
 
@@ -54,7 +54,7 @@ Better Auth owns `/api/auth/*`, including Google sign-in/callback, sessions, sig
 | GET /v1/workbenches | Device credential. Lists the account's cloud projects. |
 | POST /v1/workbenches/:id, /v1/workbenches/:id/remove | Device credential. Make a project a cloud project, or stop syncing it. |
 
-The Google session is needed only to log in. The account ID is derived from the Google issuer and subject, so every login of one user finds the same account. Devices of one account manage each other; a device of another account gets 401 or 404. Operator lifecycle and recovery remain private. See [device login development](0011-device-login.md) for the supported browser and CLI flow. Errors discard sensitive causes and responses use no-store.
+The Google session is needed only to log in. Login uses the account the Google user already owns. Without one, it creates an account whose ID comes from the Google issuer and subject, so every login of one user finds the same account. Devices of one account manage each other. A device can never see or change the devices or cloud projects of another account. Operator lifecycle and recovery remain private. See [device login development](0011-device-login.md) for the supported browser and CLI flow. Errors discard sensitive causes and responses use no-store.
 
 The Bun listener requires DATABASE_URL, MANAGER_ORIGIN, RELAY_AUDIENCE, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_LIFETIME_SECONDS, SESSION_UPDATE_AGE_SECONDS and ACCESS_LIFETIME_SECONDS. Lifetimes are positive explicit policy, with update age below session lifetime. Origins use HTTPS. MANAGER_HOST/PORT select the listener; optional paired MANAGER_TLS_CERT/KEY paths supply TLS when it terminates in this process. A trusted HTTPS ingress can terminate TLS instead. Configure Google's callback for the trusted origin's /api/auth/callback/google path.
 
