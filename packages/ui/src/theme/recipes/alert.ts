@@ -1,13 +1,13 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 import { alertAnatomy } from "@chakra-ui/react/anatomy";
 
+const rootDensity = { px: "xs", py: "2xs", gap: "2xs" };
+
 export const alertSlotRecipe = defineSlotRecipe({
   slots: alertAnatomy.keys(),
   base: {
     root: {
-      px: "xs",
-      py: "2xs",
-      gap: "2xs",
+      ...rootDensity,
       borderRadius: "xs",
       alignItems: "flex-start",
       minH: "auto",
@@ -34,6 +34,13 @@ export const alertSlotRecipe = defineSlotRecipe({
     description: {
       textStyle: "paragraph/S/regular",
       overflowWrap: "anywhere",
+    },
+  },
+  variants: {
+    size: {
+      sm: { root: rootDensity },
+      md: { root: rootDensity },
+      lg: { root: rootDensity },
     },
   },
   compoundVariants: [
