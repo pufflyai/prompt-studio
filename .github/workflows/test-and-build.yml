@@ -202,6 +202,9 @@ jobs:
           SYNC_TEST_ENTRY: ../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts
         run: bun run --cwd packages/pstdio-sync-contracts test:conformance
 
+      - name: Build API integration dependencies
+        run: bun run build -- --scope pstdio-api --include-dependencies
+
       - name: Test immutable extension publication with three local environments
         run: bun run --cwd packages/pstdio-api test:publications
 
