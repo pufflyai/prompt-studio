@@ -31,6 +31,7 @@
         "drizzle.config.ts",
         "src/index.ts",
         "src/server.ts",
+        "src/backup-server.ts",
         "src/**/*.test.ts",
         "src/**/*.integration.ts",
         "src/**/*.fixture.ts",

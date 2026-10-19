@@ -3,15 +3,20 @@ import {
   fingerprint,
   publishedExtensionsId,
   type Snapshot,
-  snapshotAssets,
   snapshotFingerprint,
+  snapshotRecoveryAssets,
   validatePublicationRecord,
 } from "pstdio-sync-contracts";
 import type { RelayTransaction } from "./database";
 import { relayCaptures, relayRecords } from "./schema";
 
-export const captureSnapshot = async (transaction: RelayTransaction, ownerId: string, snapshot: Snapshot) => {
-  const references = snapshotAssets(snapshot).map((asset) => ({
+export const captureSnapshot = async (
+  transaction: RelayTransaction,
+  ownerId: string,
+  snapshot: Snapshot,
+  id: string = crypto.randomUUID(),
+) => {
+  const references = snapshotRecoveryAssets(snapshot).map((asset) => ({
     scope: snapshot.scope,
     asset,
     kind: "asset" as "asset" | "package",
@@ -32,7 +37,7 @@ export const captureSnapshot = async (transaction: RelayTransaction, ownerId: st
   }
   if (snapshot.scope.extensionId === publishedExtensionsId)
     for (const reference of references) reference.kind = "package";
-  const capture = { id: crypto.randomUUID(), snapshot, snapshotHash: await snapshotFingerprint(snapshot), references };
+  const capture = { id, snapshot, snapshotHash: await snapshotFingerprint(snapshot), references };
   await transaction
     .insert(relayCaptures)
     .values({ id: capture.id, ownerId, snapshotHash: capture.snapshotHash, references });

@@ -85,6 +85,10 @@ bun run --cwd infra/relay test:assets
 
 This starts disposable PostgreSQL and RustFS. It checks scoped reads, multipart resume, process kills, lost acknowledgments, corrupt and truncated bytes, denied credentials, cancellation, mixed group publication, restore checks and incremental transfer. Resource observations are diagnostic; this is not the parent's 10,000-record/5 GiB acceptance workload or a performance budget.
 
+## Hourly independent backups
+
+The separate backup worker captures native protocol 2 content, pins its full recovery byte closure and verifies copies in a private bucket before publishing coverage. See [relay backups](0010-relay-backups.md) for scheduling, manifests, permissions, status, interruption recovery and retained restore validation. It has no account-manager authority or product backup trigger.
+
 ## Provider contract
 
 The reusable `src/assets/objects.contract.ts` probe checks the exact S3 operations used by the adapter: multipart creation/listing/recovery, streamed parts, completion, full reads, conditional ETag reads, immutable byte ranges, empty objects, abort, part-list verification and deletion. It creates random keys under `relay-storage-contract/` and deletes only those probe keys and uploads. The local `test:assets` command runs it against RustFS.

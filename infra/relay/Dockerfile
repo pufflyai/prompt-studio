@@ -11,7 +11,7 @@ COPY infra/relay/scripts ./infra/relay/scripts
 COPY infra/account-manager/src ./infra/account-manager/src
 COPY packages/pstdio-sync/src ./packages/pstdio-sync/src
 COPY packages/pstdio-sync-contracts/src ./packages/pstdio-sync-contracts/src
-RUN bun build infra/relay/src/server.ts infra/relay/src/index.ts infra/relay/scripts/smoke.ts infra/relay/scripts/enroll-local.fixture.ts infra/relay/scripts/initialize.fixture.ts infra/relay/scripts/transport-client-smoke.ts infra/relay/scripts/recovery-key.fixture.ts --target bun --outdir dist
+RUN bun build infra/relay/src/server.ts infra/relay/src/backup-server.ts infra/relay/src/index.ts infra/relay/scripts/smoke.ts infra/relay/scripts/enroll-local.fixture.ts infra/relay/scripts/initialize.fixture.ts infra/relay/scripts/transport-client-smoke.ts infra/relay/scripts/recovery-key.fixture.ts --target bun --outdir dist
 
 RUN bun build infra/account-manager/src/server.ts --target bun --outfile dist/manager.js
 
@@ -27,6 +27,7 @@ CMD ["bun", "tls.fixture.ts"]
 FROM oven/bun:1.4.2-slim AS base
 WORKDIR /app
 COPY --from=build --chown=bun:bun /build/dist/src/server.js ./server.js
+COPY --from=build --chown=bun:bun /build/dist/src/backup-server.js ./backup-server.js
 COPY --from=build --chown=bun:bun /build/dist/src/index.js ./storage.js
 COPY --chown=bun:bun infra/relay/drizzle ./drizzle
 ENV RELAY_HOST=0.0.0.0 RELAY_PORT=8080

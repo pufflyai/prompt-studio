@@ -1,4 +1,5 @@
 export type * from "./authoring";
+export * from "./backups";
 export * from "./checkpoint";
 export * from "./checkpoint-peer";
 export * from "./compatibility";

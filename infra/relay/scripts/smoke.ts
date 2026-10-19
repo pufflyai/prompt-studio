@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import { fingerprint, sealMutation } from "pstdio-sync-contracts";
 import { createRelayAssets, createRelayStorage, migrateRelayStorage } from "../src/index";
+import { checkBuiltBackups } from "./smoke-backups";
 import { checkBuiltTransport } from "./smoke-transport";
 
 const response = await fetch(`${process.env.RELAY_URL}/health`);
@@ -88,4 +89,5 @@ try {
   await storage.close();
   await assets.close();
 }
+await checkBuiltBackups(config);
 await checkBuiltTransport();

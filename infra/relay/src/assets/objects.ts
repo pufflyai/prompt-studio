@@ -141,6 +141,7 @@ export const createAssetObjects = (config: ObjectConfig) => {
         new CompleteMultipartUploadCommand({
           ...target(key),
           UploadId: uploadId,
+          IfNoneMatch: "*",
           MultipartUpload: {
             Parts: parts.map((part) => ({
               PartNumber: part.number,
@@ -154,7 +155,12 @@ export const createAssetObjects = (config: ObjectConfig) => {
     },
     async empty(key: string, asset: Asset, signal?: AbortSignal) {
       await client.send(
-        new PutObjectCommand({ ...target(key), Body: new Uint8Array(), ContentType: asset.mediaType }),
+        new PutObjectCommand({
+          ...target(key),
+          Body: new Uint8Array(),
+          ContentType: asset.mediaType,
+          IfNoneMatch: "*",
+        }),
         { abortSignal: signal },
       );
     },

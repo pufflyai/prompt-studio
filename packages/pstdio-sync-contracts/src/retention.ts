@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { checkpointGroupSchema, coverageAckSchema, writerFrontierSchema } from "./checkpoint";
+import { canonicalJson } from "./fingerprint";
 import { dictionarySchema } from "./json";
 import { conflictSchema, recordSchema } from "./state";
 import { assetSchema, fingerprintSchema, identitySchema, mutationSchema, revisionSchema, scopeSchema } from "./wire";
@@ -66,7 +67,7 @@ function coveredParent(snapshot: CoveredSnapshot, key: string) {
 export function coveredAssetClosure(snapshot: CoveredSnapshot, branchIds = snapshot.retainedBranches) {
   const required = new Map<string, z.infer<typeof assetSchema>>();
   const add = (asset: z.infer<typeof assetSchema> | null | undefined) => {
-    if (asset) required.set(asset.sha256, asset);
+    if (asset) required.set(canonicalJson(asset), asset);
   };
   for (const record of Object.values(snapshot.records)) if (!record.deleted) add(record.asset);
   const visited = new Set<string>();

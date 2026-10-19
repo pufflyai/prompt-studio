@@ -198,8 +198,7 @@ at this coordinated boundary.
 
 The manifest names the exact covered snapshot, writer frontiers, coverage evidence,
 asset and package copies, and checksums. Verify every copy and the manifest before
-recording backup coverage. The reference's package list is empty; production package
-capture and scheduling belong to PS-780. Backups remain usable without live object
+recording backup coverage. The reference's package list is empty. The [production backup worker](../../guides/development/0010-relay-backups.md) captures package references and the native snapshot recovery tail, pins them during copying, and publishes durable verified coverage through its private-bucket catalog. Hourly scheduling, checksum verification, interruption recovery and retained backup restore are covered by real-store tests. Production compaction remains PS-781. Backups remain usable without live object
 storage. Content restore preserves scope and starts a fresh epoch; it never restores
 authorization or credentials. Old coverage cannot cover the new epoch, though its
 explicit recovery roots remain protected until environments account for them.

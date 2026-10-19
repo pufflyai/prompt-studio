@@ -85,7 +85,7 @@ their HTTP adapter now streams local persistence and download. See the [asset gu
 New legacy blobs encode workbench and file IDs under a separate `files` directory. Existing rows keep their stored paths
 for reads, updates, and rollback. Project cleanup deletes only its database-owned file paths and readable siblings;
 it never derives a recursive directory from an opaque identity or removes retained asset versions.
-Grouped commits, relay storage, and grants live in the owners above. Backup scheduling and full offline readiness are not implemented.
+Grouped commits, relay storage, and grants live in the owners above. [Hourly independent backup scheduling](../../guides/development/0010-relay-backups.md) is implemented in the separate relay backup worker. Full offline readiness remains separate work.
 
 ## Local UI sync and relay ownership
 
@@ -310,7 +310,7 @@ handler revision, compatibility, canonical fingerprint and resolution-restore ca
 It uses throw-based faults immediately before commit and after commit/before receipt,
 and closes/reopens durable client stores. This suite alone does not establish OS-kill
 recovery, WebSocket delivery, or revocation; the relay storage, transport, and account
-manager suites cover those. Production backups and Spaces behavior remain unproven.
+manager suites cover those. The backup suite separately verifies real PostgreSQL/RustFS captures, copies and retained restore after live data loss. Live Spaces behavior remains unproven.
 No production service from the prototype is imported.
 
 ## Published extension distribution

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fingerprint } from "./fingerprint";
+import { canonicalJson, fingerprint } from "./fingerprint";
 import { coveredAssetClosure, coveredSnapshotSchema } from "./retention";
 import type { Snapshot } from "./state";
 import { snapshotSchema } from "./state";
@@ -31,6 +31,15 @@ export const asCoveredSnapshot = (snapshot: Snapshot) =>
     ),
   });
 export const snapshotAssets = (snapshot: Snapshot) => coveredAssetClosure(asCoveredSnapshot(snapshot));
+
+// Independent captures retain every byte needed by the uncovered database tail too.
+export const snapshotRecoveryAssets = (snapshot: Snapshot) => {
+  const assets = new Map(snapshotAssets(snapshot).map((asset) => [canonicalJson(asset), asset]));
+  for (const receipt of Object.values(snapshot.receipts))
+    for (const change of receipt.mutation.changes)
+      for (const asset of [change.asset?.base, change.asset?.next]) if (asset) assets.set(canonicalJson(asset), asset);
+  return [...assets.values()];
+};
 
 // Recovery proofs are authorization evidence. Content captures never include them.
 export const contentSnapshot = (snapshot: Snapshot) => ({
