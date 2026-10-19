@@ -1,8 +1,8 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
 import { TICKETS_DIR, ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import { findTicketAncestors, findTicketByShorthand } from "../data/ticket-shorthand-lookup";
 
 export const resolveTicketPathCommand = defineCommand({
   id: "resolve-ticket-path",
@@ -11,13 +11,12 @@ export const resolveTicketPathCommand = defineCommand({
   async run(ctx, input) {
     if (!input.path.startsWith(`${TICKETS_DIR}/`)) return null;
     const [shorthand] = input.path.slice(`${TICKETS_DIR}/`.length).split("/");
-    const tickets = await ticketsCollection(ctx.storage).list();
-    const ticket = tickets.find((ticket) => ticket.shorthand === shorthand);
+    const ticket = shorthand ? await findTicketByShorthand(ctx, shorthand) : undefined;
     if (!ticket) return null;
     // Only saved files are written under files/; attachments stay in storage.
     const document = (ticket.files ?? []).find((file) => input.path === `${ticketFilesDir(shorthand)}/${file.name}`);
     if (input.path !== ticketMarkdownPath(shorthand) && !document) return null;
-    const reference = ticketResourceReference(ticket, new Map(tickets.map((ticket) => [ticket.id, ticket])));
+    const reference = ticketResourceReference(ticket, await findTicketAncestors(ctx, ticket));
     const resource = {
       ...reference,
       projectId: ctx.projectId,
