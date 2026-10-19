@@ -127,10 +127,10 @@ imports. This lets the package graph select that proof when a handler changes.
 ## Services and infrastructure
 
 `services/` holds the code of deployable services: the relay, the account
-manager, and the telemetry library they share. Each service folder keeps its
-source, migrations, and Dockerfiles. `infra/` holds only deployment and
-environment setup, such as Docker Compose files, Kubernetes manifests, and
-Terraform. The relay's test and local Compose files live in `infra/relay/`.
+manager, and the telemetry library they share. The relay and the account
+manager each keep their source, migrations, and Dockerfiles in their own
+folder. `infra/` holds only deployment and environment setup, such as Docker
+Compose files and Terraform. The relay's test and local Compose files live in `infra/relay/`.
 `infra/local/` is the local development stack and the example extensions it
 installs. Service code does not belong in `infra/`.
 
