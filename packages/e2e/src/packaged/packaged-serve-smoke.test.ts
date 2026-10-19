@@ -7,6 +7,7 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
+import { registerAutomationTargetSmokeTests } from "./packaged-automation-targets-smoke";
 // Includes retained creation drafts, backdrop protection, and creation without row activation.
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
@@ -120,6 +121,7 @@ registerCliHelpSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
 registerExtensionPublicationSmokeTests();
+registerAutomationTargetSmokeTests();
 registerExtensionStartupSmokeTests();
 registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();

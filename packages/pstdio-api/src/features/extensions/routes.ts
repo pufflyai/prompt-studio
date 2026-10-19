@@ -99,8 +99,8 @@ import {
   createProjectExtensionLifecycle,
   type ProjectExtensionLifecycleRouteDeps,
 } from "./project-extension-lifecycle";
-
 import { publicationRoutes } from "./publication/routes";
+import { automationTargetRoutes } from "./synchronized-automations/routes";
 
 type ExtensionRoutes = OpenAPIHono<AppBindings>;
 
@@ -172,11 +172,12 @@ export const createExtensionRoutes = (
   deps: ExtensionsRouteDeps &
     ExtensionWebviewMetadataDeps &
     ExtensionWebviewRouteDeps &
-    Pick<RouteDeps, "installedExtensionSourcesService" | "webviewPreferencesDBService">,
+    Pick<RouteDeps, "installedExtensionSourcesService" | "webviewPreferencesDBService" | "environmentService">,
 ) => {
   const routes = new OpenAPIHono<AppBindings>();
 
   routes.route("/", publicationRoutes(deps));
+  routes.route("/", automationTargetRoutes(deps));
   registerInstalledExtensionRoutes(routes, deps);
   registerExtensionWorkbenchRoutes(routes, deps);
   registerExtensionFileRoutes(routes, deps);

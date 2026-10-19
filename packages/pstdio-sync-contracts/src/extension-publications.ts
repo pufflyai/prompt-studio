@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { automationRunsId, automationsId } from "./automations";
 import type { StoredRecord } from "./state";
 import { identitySchema } from "./wire";
 
 export const publishedExtensionsId = "pstdio.published-extensions";
 export const publicationSchema = z.strictObject({
-  extensionId: identitySchema.refine((id) => id !== publishedExtensionsId),
+  extensionId: identitySchema.refine((id) => ![publishedExtensionsId, automationsId, automationRunsId].includes(id)),
   revision: z.string().regex(/^[a-f0-9]{64}$/),
   automation: z.boolean(),
   enabled: z.boolean(),

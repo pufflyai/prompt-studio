@@ -1,5 +1,6 @@
 import { defineCommandGroup } from "../../command-group";
 import * as addCommand from "./add";
+import * as automationsCommand from "./automations";
 import * as checkCommand from "./check";
 import * as devCommand from "./dev";
 import * as installBrowserCommand from "./install-browser";
@@ -15,5 +16,6 @@ export const { command, describe, subcommands, builder, handler } = defineComman
   installBrowserCommand,
   updateCommand,
   publicationCommand,
+  automationsCommand,
   testCommand,
 );

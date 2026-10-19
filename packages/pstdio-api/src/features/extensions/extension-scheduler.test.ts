@@ -117,7 +117,7 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     extensionService,
     projectService,
     extensionStorageService: {
-      open: async () => ({ readState: async () => ({ accepted: null }) }),
+      open: async () => ({ readState: async () => ({ accepted: null }), records: { list: async () => [] } }),
       getKv: async () => null,
       setKv: async () => {},
       deleteKv: async () => {},
