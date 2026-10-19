@@ -19,6 +19,7 @@ import { extensionIframeAllow } from "./iframe-permissions";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
 
 export interface ExtensionFrameProps {
+  sizing?: "content-width";
   view: ExtensionViewDescriptor;
   props: Partial<WebviewHostProps> & Record<string, unknown>;
   theme: ThemePreference;
@@ -69,6 +70,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     onError,
     onDiagnostics,
     title,
+    sizing,
   } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const remoteRef = useRef<GuestRemote | null>(null);
@@ -89,6 +91,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   // Panel floats). The bump remounts a fresh iframe so a single clean connection
   // owns the new browsing context.
   const [frameEpoch, setFrameEpoch] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
 
   propsRef.current = createWebviewHostProps(extensionProps);
   themeRef.current = theme;
@@ -142,6 +145,9 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     reportDiagnostics(createCapabilityGate().diagnostics);
 
     const hostApi = {
+      contentWidthChanged: (width: number) => {
+        if (sizing === "content-width" && Number.isFinite(width) && width >= 0) setContentWidth(width);
+      },
       dispatchKeyboardEvent: async (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => {
         if (onKeyboardEventRef.current) return onKeyboardEventRef.current(event);
         document.dispatchEvent(new KeyboardEvent("keydown", { ...event, bubbles: true, cancelable: true }));
@@ -175,6 +181,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           hostEventsRef.current?.bind((message) => remote.hostEvent?.(message));
 
           await remote.init({
+            sizing,
             moduleUrl: moduleUrlAtConnect,
             styles: stylesAtConnect,
             props: propsRef.current,
@@ -198,7 +205,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     // at iframe load and binds to that connection ID. Closing during React StrictMode's
     // dev-only cleanup would leave the live iframe with no host listener.
     return removeLoadListener;
-  }, [frameEpoch, view.extensionId, view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
+  }, [frameEpoch, sizing, view.extensionId, view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
 
   // Re-renders may hand the frame a fresh publisher (renderers rebuild their
   // capability context per render); route it to the live connection.
@@ -252,7 +259,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   }, []);
 
   return (
-    <div style={frameShellStyle}>
+    <div style={{ ...frameShellStyle, width: sizing === "content-width" ? contentWidth : "100%" }}>
       <iframe
         // A new runtime or module needs its own browsing context and bridge handshake.
         key={`${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`}

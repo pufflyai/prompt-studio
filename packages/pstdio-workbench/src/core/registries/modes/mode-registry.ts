@@ -4,7 +4,7 @@ import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { WorkbenchLayout } from "../layout/layout-model";
 import { clampPanelSizes } from "../layout/panel-size-policy";
 import {
-  applyModePanelAvailability,
+  applyModePanelPolicy,
   disposeReverse,
   panelsForMode,
   restoreModeLayout,
@@ -66,7 +66,9 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     const context = input.resolveContext();
     const scopeKey = `${mode.id}\0${context.layout.getPersistenceScope() ?? "unscoped"}`;
     const availableLayout = clampPanelSizes(
-      applyModePanelAvailability(context.layout.getLayout(), panelsForMode(mode)),
+      applyModePanelPolicy(context.layout.getLayout(), mode, (region) =>
+        context.layout.getRegionSettings(region, mode.id),
+      ),
       context.layout.getRegionSize,
     );
     restoreModeLayout(context, availableLayout);

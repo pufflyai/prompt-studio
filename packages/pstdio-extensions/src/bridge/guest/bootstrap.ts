@@ -4,6 +4,7 @@ import type { HostApi, HostEventMessage, InitMessage, PropsUpdateMessage, ThemeU
 import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
+import { observeContentWidth } from "./observe-content-width";
 import { createViewLifecycle } from "./view-lifecycle";
 
 const MOUNT_ID = "pstdio-extension-mount";
@@ -120,7 +121,16 @@ const start = async () => {
       message.extensionId,
       propsStore,
     );
-    return await view.mount(ensureMount(), host, propsStore);
+    const mount = ensureMount();
+    const stopSizing =
+      message.sizing === "content-width"
+        ? observeContentWidth(mount, (width) => connection.remote.contentWidthChanged(width))
+        : undefined;
+    const dispose = await view.mount(mount, host, propsStore);
+    return () => {
+      stopSizing?.();
+      dispose?.();
+    };
   });
   let keyboardForwarderInstalled = false;
 

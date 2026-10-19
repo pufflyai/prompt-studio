@@ -33,3 +33,5 @@ frame accepts at most 16 active streams and 8 MiB of unread data; acknowledgemen
 buffer capacity. These limits apply to all hosts.
 
 See [extension webviews](../extensions/0005-webview-and-storage-api.md) for author-facing APIs.
+
+Status bar webviews use their content width and the host status bar height. The guest runtime reports width changes, so a contributed view can update its text without choosing a fixed iframe size. Other regions fill the space assigned by the host.

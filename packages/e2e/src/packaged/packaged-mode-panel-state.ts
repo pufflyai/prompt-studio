@@ -22,6 +22,8 @@ export const verifyModePanelState = async (page: Page, terminal: Locator) => {
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();
     await expect(bottom).toHaveCount(0);
     await expect(terminal).toBeHidden();
+    const status = page.frameLocator('iframe[title="Lab status"]:visible');
+    await expect(status.getByText("Extension Lab", { exact: true })).toBeVisible();
     if (!checkedModeSession) {
       await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
       const floating = page.getByTestId("workbench-side-panel-floating");

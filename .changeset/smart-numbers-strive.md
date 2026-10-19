@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Restore web panel controls to navigation and keep sessions working in extension modes.
+Restore web panel controls to navigation and fix extension sessions, required panels, and status widget sizing.

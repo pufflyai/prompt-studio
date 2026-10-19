@@ -149,3 +149,10 @@ test("public commands reject forbidden operations and keep the same layout", asy
   await w.commands.executeCommand("workbench.setPanelHeaderVisible", { region: "side", visible: false });
   expect(w.shell.getPanelPolicy("side")).toMatchObject({ canClose: false, showHeader: false });
 });
+
+test("a nonclosing panel opens even when the host starts with Side closed", () => {
+  const w = createWorkbench({ initialSidePanelMode: "closed" });
+  w.modes.registerMode({ id: "player", activate() {}, regionSettings: { side: { canClose: false } } });
+  w.modes.setActiveMode("player");
+  expect(w.shell.getPanelPolicy("side")).toMatchObject({ canClose: false, open: true });
+});
