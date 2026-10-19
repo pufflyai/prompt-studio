@@ -1,6 +1,8 @@
 import type { RuntimeScheduleRecord } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "./deps";
 
+import { sharedAutomationIds } from "./publication/enablement";
+
 type AutomationPreferenceRow = { extension_instance_id: string; automation_id: string; enabled: boolean };
 
 type EnabledSourceLike = {
@@ -24,8 +26,17 @@ export const isAutomationEnabled = (
 export const instanceIdsByExtensionId = (enabledSources: EnabledSourceLike[]) =>
   new Map(enabledSources.map(({ installedSource, instance }) => [installedSource.extension_id, instance.id]));
 
-export const loadAutomationPreferences = async (deps: ExtensionsRouteDeps, projectId: string) =>
-  deps.extensionAutomationPreferencesService.list(projectId);
+export const loadAutomationPreferences = async (deps: ExtensionsRouteDeps, projectId: string) => {
+  const shared = await sharedAutomationIds(deps, projectId);
+  const sharedInstances = new Set(
+    (await deps.extensionService.listProjectExtensionInstances(projectId))
+      .filter(({ installedSource }) => shared.has(installedSource.extension_id))
+      .map(({ instance }) => instance.id),
+  );
+  return (await deps.extensionAutomationPreferencesService.list(projectId)).filter(
+    (row) => !sharedInstances.has(row.extension_instance_id),
+  );
+};
 
 export const buildAutomationRecords = async (
   deps: ExtensionsRouteDeps,

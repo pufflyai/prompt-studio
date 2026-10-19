@@ -35,6 +35,9 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
       eventBus: { emit: mock(() => {}) },
       extensionAutomationPreferencesService: { set: mock(async (row: unknown) => row) },
       extensionConnectionService: { removeExtension: mock(async () => {}) },
+      extensionStorageService: {
+        open: async () => ({ readState: async () => ({ accepted: null }) }),
+      },
       extensionRuntimeCatalog: {
         get: mock(async () => ({ runtime: { schedules: [] as Array<Record<string, unknown>> } })),
         getSourcesRuntime: mock(async () => ({ hooks: [], skills: input.skills ?? [] })),
@@ -92,11 +95,16 @@ describe("project extension lifecycle", () => {
 
   test("finishes required workspace provisioning before enablement returns", async () => {
     let finishProvisioning: (() => void) | undefined;
+    let startedProvisioning: (() => void) | undefined;
+    const provisioningStarted = new Promise<void>((resolve) => {
+      startedProvisioning = resolve;
+    });
     const { deps, provisionProjectWorkspaces } = createDeps({ skills: [{}] });
     provisionProjectWorkspaces.mockImplementation(
       () =>
         new Promise<void>((resolve) => {
           finishProvisioning = resolve;
+          startedProvisioning?.();
         }),
     );
     const lifecycle = createProjectExtensionLifecycle(deps as never);
@@ -106,9 +114,7 @@ describe("project extension lifecycle", () => {
       settled = true;
       return result;
     });
-    for (let index = 0; index < 5 && provisionProjectWorkspaces.mock.calls.length === 0; index += 1) {
-      await Promise.resolve();
-    }
+    await provisioningStarted;
     expect(provisionProjectWorkspaces).toHaveBeenCalledTimes(1);
     expect(settled).toBe(false);
 

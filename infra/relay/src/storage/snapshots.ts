@@ -2,12 +2,13 @@ import { and, asc, eq, gt, lte } from "drizzle-orm";
 import { type Checkpoint, replayBoundary, replaySchema, snapshotSchema } from "pstdio-sync-contracts";
 import { checkpoint, conflictFromRow, receiptFromRow } from "./codec";
 import type { RelayTransaction } from "./database";
+import { withPublishedRevision } from "./published-revision";
 import { relayConflicts, relayOperations, relayRecords, relayScopes } from "./schema";
 
 export const requireOwner = async (transaction: RelayTransaction, ownerId: string) => {
   const owner = (await transaction.select().from(relayScopes).where(eq(relayScopes.id, ownerId)))[0];
   if (!owner) throw new Error("Relay scope has not been initialized");
-  return owner;
+  return withPublishedRevision(transaction, owner);
 };
 
 export const readSnapshot = async (transaction: RelayTransaction, ownerId: string) => {

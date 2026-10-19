@@ -1,5 +1,11 @@
 import { and, eq, inArray } from "drizzle-orm";
-import type { Asset, Mutation, Scope } from "pstdio-sync-contracts";
+import {
+  type Asset,
+  type Mutation,
+  publishedExtensionsId,
+  type Scope,
+  validatePublicationRecord,
+} from "pstdio-sync-contracts";
 import { loadCandidate, stageCandidate } from "./candidate";
 import { receiptFromRow } from "./codec";
 import { acceptResolution, advanceConflicts, retainConflict } from "./conflicts";
@@ -62,6 +68,8 @@ export const publishGroup = async (
       conflictId,
     });
   }
+  if (owner.scope.extensionId === publishedExtensionsId)
+    for (const record of candidate.records.values()) validatePublicationRecord(record);
   for (const record of candidate.records.values())
     await transaction
       .insert(relayRecords)
