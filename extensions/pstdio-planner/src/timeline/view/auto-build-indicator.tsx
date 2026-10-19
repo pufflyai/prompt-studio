@@ -11,6 +11,7 @@ interface AutoBuildStatusInput {
   stuck?: boolean;
   supervisorStatus?: string;
   running: number;
+  starting?: boolean;
 }
 
 export function resolveAutoBuildIndicatorStatus(input: AutoBuildStatusInput) {
@@ -21,6 +22,7 @@ export function resolveAutoBuildIndicatorStatus(input: AutoBuildStatusInput) {
   if (stuck || supervisorStatus === "awaiting_input") return "awaiting_input";
   if (running > 0 || supervisorStatus === "in_progress") return "in_progress";
   if (supervisorStatus === "queued") return "queued";
+  if (input.starting) return "queued";
   return "sleeping";
 }
 

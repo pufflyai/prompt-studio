@@ -19,12 +19,14 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
     <AutoBuildButton
       enabled={autoBuild.mode?.enabled ?? false}
       completed={autoBuild.mode?.completed}
+      matchingTicketCount={autoBuild.mode?.matchingTicketCount}
+      starting={autoBuild.mode?.running}
       supervisor={autoBuild.mode?.supervisor}
       sessions={autoBuild.mode?.sessions ?? []}
       running={autoBuild.mode?.capacity.running ?? 0}
       capacity={autoBuild.mode?.capacity.limit ?? 0}
       stuck={autoBuild.mode?.stuck}
-      error={autoBuild.mode?.error}
+      error={autoBuild.mode?.configurationError ?? autoBuild.mode?.error ?? autoBuild.error}
       onOpenSession={(session) =>
         void host.call("navigation.open", {
           target: {

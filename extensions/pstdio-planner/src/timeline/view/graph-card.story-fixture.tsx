@@ -58,6 +58,7 @@ export function EditableCardPreview(props: ComponentProps<typeof GraphCard>) {
             },
           },
         ],
+        displayProperties: ["id", "status", "type"],
       }}
     />
   );

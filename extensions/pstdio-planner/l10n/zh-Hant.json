@@ -50,6 +50,6 @@
   "views.workflowSettings.title": "規劃器工作流程",
   "timeline.autoBuild.about": "關於 Auto Build",
   "timeline.autoBuild.supervisorModel": "監督者模型",
-  "timeline.autoBuild.defaultModel": "專案預設模型",
-  "commands.autoBuild.selectModel": "監督者模型"
+  "timeline.autoBuild.noMatchingTickets": "沒有符合目前範圍和篩選條件的未完成工單。請停止 Auto Build 以變更設定，或新增符合條件的工單。",
+  "timeline.autoBuild.starting": "正在等待啟動監督代理"
 }

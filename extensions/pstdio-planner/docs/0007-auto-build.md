@@ -4,9 +4,9 @@ Auto Build uses a supervisor to assign valid, unassigned tickets using your prom
 
 ## Start Auto Build
 
-Open **Project Timeline** and click **Auto Build**. In the modal, describe how the supervisor should choose work, set **Eligible tickets**, and click the primary **Auto Build** button. The information icon next to the title opens an explanation and a documentation link.
+Open **Project Timeline** and click **Auto Build**. Enter the supervisor prompt at the top of the modal, choose its model and run options, set **Eligible tickets**, and click the primary **Auto Build** button. The information icon next to the title opens an explanation and a documentation link.
 
-Choose **Supervisor model**, its harness, and its run options directly in the same modal, using the controls from Run attempt. The prompt, model, options, and filters save together when you start Auto Build. Cancel leaves the saved configuration unchanged. Worker sessions still use the project default agent. Stop and start Auto Build to use a different model for an existing supervisor.
+Choose **Supervisor model**, its harness, and its run options directly in the same modal, using the controls from Run attempt. The prompt, model, options, and filters save together when you start Auto Build. Cancel leaves the saved configuration unchanged. The supervisor uses the default collaboration mode. Worker sessions still use the project default agent. Stop and start Auto Build to use a different model for an existing supervisor.
 
 Starting Auto Build immediately queues a check. The first check starts the supervisor as soon as it finds eligible work; the supervisor then queries its full scope before launching tickets. The queued startup status stays available while that check runs.
 
@@ -42,17 +42,19 @@ Implementation follows the project's Planner settings, including adversarial rev
 
 ## Inspect or stop Auto Build
 
-The header button always says **Auto Build**. It shows a Play icon when Auto Build is stopped without an error. While Auto Build is on, or after an error, it shows a colored status indicator: the session spinner while work runs, a blue moon while the supervisor sleeps, a red mark if the supervisor fails, and a green check when the run is complete. A run is complete when every ticket in the supervisor's saved scope has a completed status. Reopening one of those tickets clears the check. Click the button to open a modal with a separate supervisor row and running ticket sessions. Each row uses the normal session status icon and color. The modal shows used capacity and its limit. Click a session to inspect it.
+While Auto Build is running, its button opens an activity popover. Click outside it or press Escape to close it. The popover shows startup, the supervisor, running ticket sessions, and failures. If the scope and eligible filters match no unfinished tickets, it explains that there is no matching work. Stop Auto Build to change its configuration.
 
-Click the small **Stop** button with the pause icon in the modal footer to prevent future supervisor prompts and automatic dispatches. Running sessions continue. Stopping does not cancel their work or discard changes. Starting again creates a fresh supervisor conversation and leaves the previous conversation available in session history.
+The header button always says **Auto Build**. It shows a Play icon when Auto Build is stopped without an error. While Auto Build is on, or after an error, it shows a colored status indicator: the session spinner while work runs, a blue moon while the supervisor sleeps, a red mark if the supervisor fails, and a green check when the run is complete. A run is complete when every ticket in the supervisor's saved scope has a completed status. Reopening one of those tickets clears the check. Click the button to open a popover with a separate supervisor row and running ticket sessions. Each row uses the normal session status icon and color. The popover shows used capacity and its limit. Click a session to inspect it.
+
+Click the small **Stop** button with the pause icon in the popover footer to prevent future supervisor prompts and automatic dispatches. Running sessions continue. Stopping does not cancel their work or discard changes. Starting again creates a fresh supervisor conversation and leaves the previous conversation available in session history.
 
 Auto Build keeps working when you close the timeline and resumes its checks after restarting Prompt Studio. Starting it again preserves your prompt, supervisor model, eligibility filters, and the merged-dependencies choice. A run saved before eligible filters existed stays stopped until you configure it.
 
 ## When work needs attention
 
-If the supervisor cannot start or resume, Auto Build turns off. Its header indicator turns red, and its modal shows the error. The saved failure does not appear as a timeline error or in a new start form. Resolve the problem and start it again. Existing attempts remain available.
+If the supervisor cannot start or resume, Auto Build turns off. Its header indicator turns red, and its activity popover shows the error. The saved failure does not appear as a timeline error or in a new start form. Resolve the problem and start it again. Existing attempts remain available.
 
-The modal shows a small banner when the supervisor fails or needs input, all running ticket sessions need input, or no work can run because of dependencies, blockers, or review requests. A finished board does not show a blocker banner.
+The activity popover shows a small banner when the supervisor fails or needs input, all running ticket sessions need input, or no work can run because of dependencies, blockers, or review requests. A finished board does not show a blocker banner.
 
 If an implementation needs help, answer every open [review request](0006-review-requests.md). The supervisor can then resume that attempt in the same workspace and session when capacity is available, with your answers included.
 

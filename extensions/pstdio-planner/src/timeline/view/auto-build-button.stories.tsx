@@ -27,6 +27,8 @@ export const StoppedWithLiveSessions: Story = {
   },
 };
 export const Waiting: Story = { args: { enabled: true } };
+export const Starting: Story = { args: { enabled: true, starting: true } };
+export const NoMatchingTickets: Story = { args: { enabled: true, matchingTicketCount: 0 } };
 export const Running: Story = {
   args: {
     enabled: true,

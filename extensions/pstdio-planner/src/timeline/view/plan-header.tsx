@@ -5,6 +5,7 @@ import {
   type KanbanRendererSettings,
 } from "@pstdio/ui/kanban-renderer";
 import type { ReactNode } from "react";
+import { TimelineDisplayMenu } from "./timeline-display-menu";
 import { timelineInitialState, type timelineQueryData } from "./timeline-query";
 
 interface PlanHeaderProps {
@@ -47,7 +48,7 @@ export function PlanHeader(props: PlanHeaderProps) {
       search={search}
       onSearchChange={onSearchChange}
       searchResultLabel={resultLabel}
-      displayControl={null}
+      displayControl={<TimelineDisplayMenu storageKey={data.storageKey} attributes={data.attributes} />}
       actions={actions}
     />
   );

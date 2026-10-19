@@ -54,6 +54,7 @@ export const readAutoBuildCommand = defineCommand({
       sessions: ticketSessions,
       capacity,
       completed,
+      matchingTicketCount: work?.matchingTicketCount,
       stuck,
       running,
       error: completed ? undefined : latest?.error?.message,

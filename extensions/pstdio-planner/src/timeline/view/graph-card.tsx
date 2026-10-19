@@ -1,7 +1,12 @@
 // Draw one ticket card in the graph: gate marker, shorthand, status, and title.
 import { Box, Flex, Icon, Text } from "@chakra-ui/react";
 import { DropIndicator, ResourceContextMenu, Tooltip } from "@pstdio/ui";
-import { collectDisplayBadges, KanbanRendererCard } from "@pstdio/ui/kanban-renderer";
+import {
+  collectDisplayBadges,
+  getAttributeValue,
+  KanbanRendererCard,
+  renderBadgeListDisplay,
+} from "@pstdio/ui/kanban-renderer";
 import { ShieldCheck } from "lucide-react";
 import type { PlanRow } from "../contracts";
 import { card } from "./graph-geometry";
@@ -31,17 +36,13 @@ export function GraphCard(props: GraphCardProps) {
     ? [{ attributeId: "status", label: row.status.name, icon: row.status.icon, color: row.status.color }]
     : [];
   const badges = source
-    ? collectDisplayBadges(
-        source,
-        fields,
-        fields
-          .filter(
-            (field) =>
-              field.displayable && field.editable && (field.type.kind === "enum" || field.type.kind === "enum-multi"),
-          )
-          .map(({ id }) => id),
-      )
+    ? collectDisplayBadges(source, fields, interaction?.displayProperties.filter((id) => id !== "id") ?? [])
     : statusBadges;
+  const slots = source
+    ? fields
+        .filter(({ id, displayable }) => displayable && interaction?.displayProperties.includes(id))
+        .map((field) => renderBadgeListDisplay(field, getAttributeValue(source, field), source))
+    : [];
   const activate = () => {
     if (interaction) void interaction.host.call("navigation.open", { target: row.target });
     else actions.onSelect(row.id);
@@ -84,12 +85,16 @@ export function GraphCard(props: GraphCardProps) {
         {/* The shared placement indicator marks the insertion point in the gap above the card. */}
         {dropBefore ? <DropIndicator top="-12px" /> : null}
         <KanbanRendererCard
-          eyebrow={[...row.ancestors, row].map(({ shorthand }) => shorthand).join("/")}
+          eyebrow={
+            !interaction || interaction.displayProperties.includes("id")
+              ? [...row.ancestors, row].map(({ shorthand }) => shorthand).join("/")
+              : undefined
+          }
           title={row.title}
           isSelected={relation === "selected"}
           badges={badges}
           onBadgeChange={interaction ? menu.onBadgeChange : undefined}
-          customSlots={[row.gate ? <GateMark key="gate" /> : null]}
+          customSlots={[...slots, row.gate ? <GateMark key="gate" /> : null]}
           onClick={activate}
           draggable
           onDragStart={(event) => {

@@ -50,6 +50,6 @@
   "views.workflowSettings.title": "プランナーのワークフロー",
   "timeline.autoBuild.about": "Auto Build について",
   "timeline.autoBuild.supervisorModel": "スーパーバイザーのモデル",
-  "timeline.autoBuild.defaultModel": "プロジェクトの既定値",
-  "commands.autoBuild.selectModel": "スーパーバイザーのモデル"
+  "timeline.autoBuild.noMatchingTickets": "現在の対象範囲とフィルターに一致する未完了のチケットはありません。Auto Build を停止して設定を変更するか、一致するチケットを追加してください。",
+  "timeline.autoBuild.starting": "スーパーバイザーの開始を待っています"
 }

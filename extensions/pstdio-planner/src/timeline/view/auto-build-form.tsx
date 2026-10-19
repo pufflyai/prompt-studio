@@ -57,6 +57,15 @@ export function AutoBuildForm(props: AutoBuildFormProps) {
       <Dialog.Body flex="1" minH="0" p="0">
         <ScrollArea h="full" contentProps={{ py: "md" }}>
           <Stack gap="md">
+            <Stack px="lg">
+              <LazyMarkdownEditor
+                autoFocus
+                defaultState={prompt}
+                isEditable={!saving}
+                placeholder={t("timeline.autoBuild.prompt", "Describe the work to build…")}
+                onChange={setPrompt}
+              />
+            </Stack>
             <Stack gap="0" px="sm">
               <SupervisorModelField
                 host={host}
@@ -67,13 +76,6 @@ export function AutoBuildForm(props: AutoBuildFormProps) {
               />
             </Stack>
             <Stack gap="md" px="lg">
-              <LazyMarkdownEditor
-                autoFocus
-                defaultState={prompt}
-                isEditable={!saving}
-                placeholder={t("timeline.autoBuild.prompt", "Describe the work to build…")}
-                onChange={setPrompt}
-              />
               <Stack gap="xs" role="group" aria-label={eligibleLabel}>
                 <Text textStyle="label/S/medium">{eligibleLabel}</Text>
                 <CollectionFilter

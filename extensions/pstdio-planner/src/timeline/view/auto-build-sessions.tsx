@@ -16,14 +16,38 @@ interface AutoBuildSessionsProps
     | "stuck"
     | "onOpenSession"
     | "t"
+    | "matchingTicketCount"
+    | "starting"
   > {
   failed: boolean;
 }
 export function AutoBuildSessions(props: AutoBuildSessionsProps) {
-  const { enabled, completed, supervisor, sessions, running, capacity, failed, error, stuck, onOpenSession, t } = props;
+  const {
+    enabled,
+    completed,
+    supervisor,
+    sessions,
+    running,
+    capacity,
+    failed,
+    error,
+    stuck,
+    onOpenSession,
+    t,
+    matchingTicketCount,
+    starting,
+  } = props;
   const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
   return (
     <Stack gap="md">
+      {enabled && !completed && !starting && matchingTicketCount === 0 ? (
+        <Text textStyle="paragraph/S/regular">
+          {t(
+            "timeline.autoBuild.noMatchingTickets",
+            "No unfinished tickets match the current scope and eligible filters. Stop Auto Build to change them, or add matching tickets.",
+          )}
+        </Text>
+      ) : null}
       {failed || (!completed && (stuck || supervisor?.status === "awaiting_input")) ? (
         <AlertMessage
           role="alert"
@@ -52,7 +76,7 @@ export function AutoBuildSessions(props: AutoBuildSessionsProps) {
         ) : (
           <Text textStyle="paragraph/S/regular">
             {enabled
-              ? t("timeline.autoBuild.sleeping", "sleeping")
+              ? t("timeline.autoBuild.starting", "Waiting to start the supervisor")
               : t("timeline.autoBuild.noSupervisor", "No supervisor session")}
           </Text>
         )}

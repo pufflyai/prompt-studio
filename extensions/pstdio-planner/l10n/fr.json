@@ -55,6 +55,6 @@
   "views.workflowSettings.title": "Flux de travail du planificateur",
   "timeline.autoBuild.about": "À propos d’Auto Build",
   "timeline.autoBuild.supervisorModel": "Modèle du superviseur",
-  "timeline.autoBuild.defaultModel": "Modèle par défaut du projet",
-  "commands.autoBuild.selectModel": "Modèle du superviseur"
+  "timeline.autoBuild.noMatchingTickets": "Aucun ticket inachevé ne correspond au périmètre et aux filtres actuels. Arrêtez Auto Build pour les modifier ou ajoutez des tickets correspondants.",
+  "timeline.autoBuild.starting": "En attente du démarrage du superviseur"
 }

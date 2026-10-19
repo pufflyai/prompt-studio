@@ -2,4 +2,4 @@
 "pstdio-planner": patch
 ---
 
-Configure Auto Build and its supervisor in one modal and share editable ticket bubbles and actions between Kanban and Timeline.
+Configure Auto Build in one modal, inspect running work in a popover, and share editable ticket cards with saved Timeline display options.

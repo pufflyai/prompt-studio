@@ -45,6 +45,6 @@ export function useAutoBuild(client: PlanClient) {
       setSaving(false);
     }
   };
-  // Saved run failures belong to the activity dialog, not a new configuration attempt.
+  // Saved run failures belong to the activity popover, not a new configuration attempt.
   return { mode, saving, error, configure };
 }

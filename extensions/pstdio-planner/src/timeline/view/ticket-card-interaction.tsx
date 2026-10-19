@@ -11,6 +11,7 @@ export interface TicketCardInteraction {
   client: PlanClient;
   rows: ReadonlyMap<string, TimelineTicketRow>;
   attributes: AttributeDescriptor[];
+  displayProperties: string[];
 }
 
 export function useTicketCardActions(

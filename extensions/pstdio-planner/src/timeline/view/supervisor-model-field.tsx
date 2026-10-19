@@ -21,7 +21,7 @@ export function SupervisorModelField(props: SupervisorModelFieldProps) {
     setCatalog(next);
     if (!value && next.selection) onChange(next.selection);
     else if (value && next.selection)
-      onChange({ ...next.selection, params: filterHarnessParamValues(next.schema, value.params) });
+      onChange({ ...next.selection, params: filterHarnessParamValues(supervisorSchema(next.schema), value.params) });
   });
   useEffect(() => {
     let active = true;
@@ -61,7 +61,7 @@ export function SupervisorModelField(props: SupervisorModelFieldProps) {
         onModelChange={(model) => onChange({ harnessId: harnessId!, model, params: value?.params })}
       />
       <HarnessParamEditor
-        schema={catalog?.schema}
+        schema={supervisorSchema(catalog?.schema)}
         defaults={catalog?.defaults}
         overrides={value?.params ?? {}}
         disabled={disabled}
@@ -78,3 +78,6 @@ export function SupervisorModelField(props: SupervisorModelFieldProps) {
 
 const readCatalog = (host: GuestHost, harnessId?: string, model?: string) =>
   host.call("harnesses.read", { harnessId, model });
+
+const supervisorSchema = (schema: Awaited<ReturnType<typeof readCatalog>>["schema"]) =>
+  Object.fromEntries(Object.entries(schema ?? {}).filter(([key]) => key !== "collaboration_mode"));

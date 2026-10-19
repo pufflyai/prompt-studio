@@ -213,7 +213,16 @@ export async function readNextTickets(
     waiting,
     capacity,
   });
-  return { tickets: next, waiting, capacity, completed, observations, configurationError, ...state };
+  return {
+    tickets: next,
+    waiting,
+    capacity,
+    completed,
+    matchingTicketCount: selected.length,
+    observations,
+    configurationError,
+    ...state,
+  };
 }
 
 export const nextTicketsCommand = defineCommand({

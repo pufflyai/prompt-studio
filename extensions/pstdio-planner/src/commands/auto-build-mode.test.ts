@@ -62,6 +62,18 @@ test("starting rejects incomplete eligible filters and leaves the run stopped", 
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: false });
 });
 
+test("Auto Build reports when eligible filters match no unfinished tickets", async () => {
+  const { ctx, ticket } = await fixture();
+  await ticket("Build the greeting");
+  await configureAutoBuildCommand.run(ctx, {
+    enabled: true,
+    eligible: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "unmatched" }] },
+  });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ matchingTicketCount: 0, completed: false });
+  await configureAutoBuildCommand.run(ctx, { enabled: true, eligible: { conjunction: "and", rules: [] } });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ matchingTicketCount: 1, completed: false });
+});
+
 test("Auto Build succeeds when its scoped tickets are completed", async () => {
   const { ctx, ticket, storage } = await fixture();
   const first = await ticket("Calculator addition");
