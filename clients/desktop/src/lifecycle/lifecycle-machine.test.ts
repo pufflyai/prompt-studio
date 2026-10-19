@@ -28,7 +28,7 @@ describe("desktop lifecycle", () => {
     expect(transitionDesktopState(confirmation, { type: "quit_confirmed" })).toEqual({ kind: "closing" });
   });
 
-  test("closes without confirmation when only background automation jobs are running", () => {
+  test("protects background automation work before closing", () => {
     expect(
       transitionDesktopState(
         { kind: "workbench", runtime: desktopRuntime },
@@ -37,7 +37,7 @@ describe("desktop lifecycle", () => {
           activity: { sessions: [], terminals: [], jobs: [{ id: "job-one", label: "Auto Build check" }] },
         },
       ),
-    ).toEqual({ kind: "closing" });
+    ).toMatchObject({ kind: "confirming_active_work" });
   });
 
   test("detaches from persistent runtimes and recovers from unexpected exits", () => {

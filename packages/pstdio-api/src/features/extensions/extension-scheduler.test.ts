@@ -58,6 +58,7 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean; workspac
                 metadata: ctx.invocation.metadata,
                 params: commandParams,
               });
+              await state.blocker;
             },
           },
         ],
@@ -143,7 +144,11 @@ afterEach(async () => {
 describe("createExtensionScheduler", () => {
   test("runs extension schedule commands with schedule metadata", async () => {
     const sourcePath = writeScheduledExtension();
-    const state = { calls: [] as Array<{ source?: string; metadata?: Record<string, unknown>; params?: unknown }> };
+    const run = Promise.withResolvers<void>();
+    const state = {
+      calls: [] as Array<{ source?: string; metadata?: Record<string, unknown>; params?: unknown }>,
+      blocker: run.promise,
+    };
     (globalThis as Record<string, unknown>).__extensionScheduleState = state;
 
     const now = new Date("2026-05-18T07:56:15.000Z");
@@ -161,6 +166,17 @@ describe("createExtensionScheduler", () => {
     void cron.fireAll();
 
     await waitFor(() => state.calls.length === 1);
+    try {
+      expect(scheduler.activity()).toEqual([
+        {
+          id: expect.any(String),
+          label: "Heartbeat",
+          description: "Project",
+        },
+      ]);
+    } finally {
+      run.resolve();
+    }
     expect(state.calls[0]).toMatchObject({
       source: "schedule",
       params: { from: "schedule" },

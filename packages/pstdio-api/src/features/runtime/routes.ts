@@ -13,6 +13,7 @@ export type RuntimeOwnerType = "desktop" | "persistent";
 export type RuntimeActivityItem = {
   id: string;
   label: string;
+  description?: string;
 };
 
 export type RuntimeActivitySummary = {
@@ -49,7 +50,8 @@ const isExpectedInstance = (value: unknown, instanceId: string) => {
   return (value as Record<string, unknown>).instanceId === instanceId;
 };
 
-const hasActivity = (activity: RuntimeActivitySummary) => activity.sessions.length > 0 || activity.terminals.length > 0;
+const hasActivity = (activity: RuntimeActivitySummary) =>
+  activity.sessions.length > 0 || activity.terminals.length > 0 || activity.jobs.length > 0;
 
 const readJson = async (request: Request) => {
   try {

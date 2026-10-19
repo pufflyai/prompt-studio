@@ -143,7 +143,7 @@ afterEach(() => {
 
 describe("packaged runtime lifecycle", () => {
   test(
-    "closes a desktop-owned runtime with active background automation without confirmation",
+    "shows readable automation activity and protects it until quit is confirmed",
     async () => {
       const home = createRuntimeHome();
       const env = createRuntimeEnv(home);
@@ -223,9 +223,10 @@ describe("packaged runtime lifecycle", () => {
         if (jobs.length) break;
         await Bun.sleep(25);
       }
-      expect(jobs).toHaveLength(1);
+      expect(jobs).toEqual([{ id: expect.any(String), label: "Check", description: "Background work" }]);
       const shutdown = await request("/runtime/shutdown", { instanceId: descriptor.instanceId, force: false });
-      expect(shutdown.status).toBe(202);
+      expect(shutdown.status).toBe(409);
+      expect((await request("/runtime/shutdown", { instanceId: descriptor.instanceId, force: true })).status).toBe(202);
       expect(await exited).toBe(0);
       expect(existsSync(descriptorPath)).toBe(false);
     },

@@ -9,9 +9,12 @@ const meta = {
   parameters: { layout: "fullscreen" },
   args: {
     activity: {
-      sessions: [{ id: "session-one", label: "PS-217 implementation" }],
+      sessions: [{ id: "session-one", label: "Improve the quit warning" }],
       terminals: [{ id: "terminal-one", label: "Desktop tests" }],
-      jobs: [{ id: "job-one", label: "Package verification" }],
+      jobs: [
+        { id: "job-one", label: "Check merged pull requests", description: "Prompt Studio" },
+        { id: "job-two", label: "Auto build", description: "Website" },
+      ],
     },
     onKeepOpen: fn(),
     onQuit: fn(),
@@ -69,13 +72,14 @@ export const LongContent: Story = {
         id: `terminal-${index}`,
         label: `Terminal ${index + 1}`,
       })),
-      jobs: [{ id: "background-check", label: "Background automation check" }],
+      jobs: [{ id: "background-check", label: "Check merged pull requests", description: "Prompt Studio" }],
     },
   },
   play: async () => {
     const dialog = await screen.findByRole("alertdialog", { name: "Active work is still running" });
     await waitFor(() => expect(dialog).toBeVisible());
-    await expect(screen.queryByText("Background automation check")).not.toBeInTheDocument();
+    await expect(screen.getByText("Check merged pull requests")).toBeInTheDocument();
+    await expect(screen.getAllByRole("listitem")).toHaveLength(51);
     await expect(screen.getByRole("button", { name: "Keep Prompt Studio open" })).toBeVisible();
     await expect(screen.getByRole("button", { name: "Cancel work and quit" })).toBeVisible();
   },
