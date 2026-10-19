@@ -76,14 +76,16 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   const composerStyles = useSlotRecipe({ recipe: chatComposerRecipe })({ workspace: hasWorkspaceHub });
   const hasQueuedFollowUps = queuedFollowUps.length > 0;
 
-  const editing = queuedComposer.isEditing && !chatInputQuestionPrompt && !composerDecision;
+  const hasPendingResponse = Boolean(chatInputQuestionPrompt || composerDecision);
+  const editing = queuedComposer.isEditing && !hasPendingResponse;
   const editor = <QueuedComposerInput {...props} editing={editing} hasQueuedFollowUps={hasQueuedFollowUps} />;
   return (
     <Stack p="xs" gap="0">
       <Box className="ps-chat-composer__workspace" css={composerStyles.workspace}>
         {workspaceHub}
         {composerHeader}
-        {composerFallback || (
+        {composerFallback}
+        {!composerFallback && (
           <>
             <QueuedFollowUpList
               items={queuedFollowUps}
@@ -99,17 +101,16 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
               onRemove={onQueuedFollowUpRemove}
               onMove={onQueuedFollowUpMove}
             />
-            {editing ? (
+            {editing && (
               <Box css={styles.draft} asChild>
                 <button type="button" onClick={queuedComposer.selectDraft} aria-label="Edit saved draft">
                   {queuedComposer.draftValue || "Saved draft · select to edit"}
                 </button>
               </Box>
-            ) : (
-              editor
             )}
           </>
         )}
+        {!editing && (!composerFallback || hasPendingResponse) && editor}
       </Box>
     </Stack>
   );

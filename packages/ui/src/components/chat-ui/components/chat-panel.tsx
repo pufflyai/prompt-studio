@@ -53,7 +53,7 @@ export interface ChatPanelProps extends ChatLinkProps {
   /** Attachment controls shown only while editing a message draft. */
   attachmentActions?: ReactNode;
   composerHeader?: ReactNode;
-  /** Replaces message entry and its controls, retaining the workspace header and draft state. */
+  /** Replaces message entry and queue controls, retaining the workspace header, drafts, and pending responses. */
   composerFallback?: ReactNode;
   attachedResources?: string[];
   onClearAttachments?: () => void;
@@ -65,7 +65,7 @@ export interface ChatPanelProps extends ChatLinkProps {
   workspaceHub?: ReactNode;
   workspaceInitializing?: boolean;
   inputDisabled?: boolean;
-  /** Blocks sending while the editor stays usable, for example while no model is selected. */
+  /** Blocks ordinary messages while the editor stays usable. Pending questions and decisions stay available. */
   submitDisabled?: boolean;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
   composerDecision?: ComposerDecision;
