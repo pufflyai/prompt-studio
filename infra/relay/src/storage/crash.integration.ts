@@ -3,7 +3,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { SQL } from "bun";
-import { fingerprint, sealMutation } from "pstdio-sync-contracts";
+import { fingerprint } from "pstdio-sync-contracts";
+import { sealStoredMutation as sealMutation } from "./mutation.fixture";
 import { createRelayStorage, migrateRelayStorage } from "./storage";
 
 const databaseUrl = process.env.SYNC_TEST_DATABASE_URL;
@@ -32,7 +33,7 @@ test("killing a publisher before commit rolls back its whole group and retry sur
   const scope = { accountId: "crash-test", workbenchId: crypto.randomUUID(), extensionId: "notes" };
   const owner = await storage.initialize(scope, "published-1");
   const mutation = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
     scope,
     environmentId: "publisher",
     operationId: crypto.randomUUID(),

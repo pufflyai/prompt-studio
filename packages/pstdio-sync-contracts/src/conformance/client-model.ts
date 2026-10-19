@@ -43,7 +43,16 @@ export async function edit(state: LocalState, scope: Scope, environmentId: strin
     }),
   );
   const mutation = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
+    epoch: state.accepted.checkpoint.epoch,
+    generation: state.accepted.generation,
+    sequence:
+      Math.max(
+        0,
+        ...[...state.pending, ...Object.values(state.accepted.receipts).map((receipt) => receipt.mutation)]
+          .filter((group) => group.environmentId === environmentId)
+          .map((group) => group.sequence),
+      ) + 1,
     scope,
     environmentId,
     operationId: crypto.randomUUID(),
@@ -106,7 +115,16 @@ export async function resolve(
     }),
   );
   const mutation = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
+    epoch: state.accepted.checkpoint.epoch,
+    generation: state.accepted.generation,
+    sequence:
+      Math.max(
+        0,
+        ...[...state.pending, ...Object.values(state.accepted.receipts).map((receipt) => receipt.mutation)]
+          .filter((group) => group.environmentId === environmentId)
+          .map((group) => group.sequence),
+      ) + 1,
     scope,
     environmentId,
     operationId: crypto.randomUUID(),

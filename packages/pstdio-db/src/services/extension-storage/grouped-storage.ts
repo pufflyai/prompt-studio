@@ -47,7 +47,7 @@ export const createGroupedStorageDBService = (db: DbClient, observer?: StorageOb
         .orderBy(extension_storage_journal.ordinal);
       const journal = stored.map((entry) => ({
         inputFingerprint: entry.input_fingerprint,
-        mutation: entry.mutation_json,
+        mutation: structuredClone(entry.mutation_json),
         acceptance: entry.acceptance_json,
         recoveryProof: entry.recovery_proof ?? undefined,
       }));

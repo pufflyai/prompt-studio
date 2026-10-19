@@ -8,7 +8,12 @@ import { retainUncapturedAlternatives } from "./retain-alternatives";
 import { stage } from "./staging";
 
 export const emptySnapshot = (scope: Scope): Snapshot => ({
-  protocolVersion: 1,
+  protocolVersion: 2,
+  generation: 0,
+  covered: 0,
+  writers: {},
+  documents: {},
+  retainedBranches: [],
   scope,
   journalSequence: 0,
   checkpoint: { epoch: "initial", sequence: 0 },
@@ -48,6 +53,12 @@ export function recordOutcome(state: Snapshot, mutation: Mutation, staged: Await
   return { status: staged.status, reason: staged.reason, conflictId };
 }
 
+const prepareWriter = (state: Snapshot, mutation: Mutation) => {
+  if (mutation.epoch !== state.checkpoint.epoch || mutation.generation !== state.generation)
+    throw new Error("Resynchronization required: preserve the original proposal");
+  state.writers[mutation.environmentId] ??= { floor: 0 };
+};
+
 export async function createRelay(databaseUrl: string, objects: TestObjects) {
   const pool = new Pool({ connectionString: databaseUrl });
   // Test-only schema. Never pointed at the app database; no production migration.
@@ -69,6 +80,7 @@ export async function createRelay(databaseUrl: string, objects: TestObjects) {
       ]);
       const result = await connection.query("SELECT state FROM conformance_state WHERE scope=$1 FOR UPDATE", [key]);
       const state = snapshotSchema.parse(result.rows[0].state);
+      prepareWriter(state, mutation);
       const previous = own(state.receipts, mutation.operationId);
       if (previous && previous.fingerprint !== mutation.fingerprint)
         throw new Error("operation identity reused with changed content");
@@ -101,6 +113,9 @@ export async function createRelay(databaseUrl: string, objects: TestObjects) {
         checkpoint: outcome.status === "accepted" ? { ...state.checkpoint } : null,
       };
       put(state.receipts, mutation.operationId, receipt);
+      state.retainedBranches = Object.values(state.receipts)
+        .filter((receipt) => receipt.status !== "accepted")
+        .map((receipt) => receipt.operationId);
       await connection.query("UPDATE conformance_state SET state=$2 WHERE scope=$1", [key, state]);
       if (crash === "before-commit") throw new Error("crash before commit");
       await connection.query("COMMIT");

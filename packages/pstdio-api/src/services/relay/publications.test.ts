@@ -48,7 +48,10 @@ test("an empty environment discovers published packages and one failed activatio
       });
     }
     const mutation = await sealMutation({
-      protocolVersion: 1,
+      protocolVersion: 2,
+      epoch: "published",
+      generation: 0,
+      sequence: 1,
       scope,
       environmentId: "publisher",
       operationId: crypto.randomUUID(),
@@ -57,7 +60,12 @@ test("an empty environment discovers published packages and one failed activatio
     });
     const checkpoint = { epoch: "published", sequence: 1 };
     wire.snapshots.set(JSON.stringify([project.id, publishedExtensionsId]), {
-      protocolVersion: 1,
+      protocolVersion: 2,
+      generation: 0,
+      covered: 0,
+      writers: {},
+      documents: {},
+      retainedBranches: [],
       scope,
       publishedRevision: "published-extensions-v1",
       checkpoint,

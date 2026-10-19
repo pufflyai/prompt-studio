@@ -3,6 +3,7 @@ export { createLegacyRecordStorage } from "./legacy";
 export { initialRecordRevision, scopeRecordStorage, storageRecordId } from "./namespaces";
 export { appendGroups, projectGroups, type RecordProjection } from "./projection";
 export { applyRecordChange, blankRecord, recordConflict } from "./records";
+export * from "./replay";
 export { type ResolutionState, validateResolution } from "./resolution-validation";
 export { createRecordStorage } from "./storage";
 export type {

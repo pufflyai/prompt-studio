@@ -84,6 +84,12 @@ export const coverageAckSchema = z.strictObject({
       .refine((recovery) => recovery.checkpointRevision <= recovery.revision, "Recovery checkpoint is in the future"),
   ),
 });
+export const coverageResultSchema = z.discriminatedUnion("status", [
+  z.strictObject({ status: z.literal("acknowledged"), acknowledgement: coverageAckSchema }),
+  z.strictObject({ status: z.literal("snapshot-required") }),
+]);
+export type CoverageResult = z.infer<typeof coverageResultSchema>;
+export type CoverageAck = z.infer<typeof coverageAckSchema>;
 export const writerFrontierSchema = z.strictObject({ floor: revisionSchema });
 export const recoveryFileSchema = z.strictObject({
   protocolVersion: z.literal(2),

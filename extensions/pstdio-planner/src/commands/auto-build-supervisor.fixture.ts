@@ -1,18 +1,19 @@
 import { fixture } from "./auto-build.fixture";
 import { sessionQuery } from "./session-query.fixture";
+import { sessionRecord } from "./session-record.fixture";
 
 export async function supervisorFixture(limit = 2) {
   const result = await fixture(limit);
-  const sessions = new Map<string, { id: string; title: string; status: string; last_request_started: string }>();
+  const sessions = new Map<string, ReturnType<typeof sessionRecord>>();
   const prompts: { sessionId: string; prompt?: string }[] = [];
   result.ctx.sessions.create = async (input) => {
-    const session = {
+    const session = sessionRecord({
       type: "session" as const,
       id: `supervisor-${sessions.size}`,
       title: input.title,
       status: "in_progress" as const,
       last_request_started: new Date().toISOString(),
-    };
+    });
     sessions.set(session.id, session);
     prompts.push({ sessionId: session.id, prompt: input.prompt });
     return session;

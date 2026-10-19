@@ -2,6 +2,8 @@ import type {
   Asset,
   Change,
   Checkpoint,
+  CoverageAck,
+  CoverageResult,
   Mutation,
   Peer,
   Receipt,
@@ -40,6 +42,8 @@ export interface LocalOperation {
   parents: string[];
   changes: Change[];
   resolution?: Mutation["resolution"];
+  document?: Mutation["document"];
+  position?: Pick<Mutation, "epoch" | "generation" | "sequence">;
 }
 
 export interface Acceptance {
@@ -78,6 +82,7 @@ export interface RelayAdapter {
   peer?: Peer;
   assets?: RelayAssets;
   snapshot(): Promise<Snapshot>;
+  acknowledge?(ack: CoverageAck): Promise<CoverageResult>;
   submit(mutation: Mutation): Promise<Receipt>;
   recover?(mutation: Mutation, proof: string): Promise<Receipt>;
 }

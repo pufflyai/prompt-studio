@@ -29,7 +29,12 @@ export const discoveryPeer = (accountId: string) => {
         const input = (await request.json()) as { publishedRevision: string };
         if (!snapshots.has(key))
           snapshots.set(key, {
-            protocolVersion: 1,
+            protocolVersion: 2,
+            generation: 0,
+            covered: 0,
+            writers: {},
+            documents: {},
+            retainedBranches: [],
             scope: { accountId, workbenchId: route.workbenchId, extensionId: route.extensionId },
             publishedRevision: input.publishedRevision,
             checkpoint: { epoch: crypto.randomUUID(), sequence: 0 },
@@ -50,7 +55,7 @@ export const discoveryPeer = (accountId: string) => {
       open(socket) {
         sockets.add(socket);
         opened.push(socket.data.extensionId);
-        socket.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+        socket.send(JSON.stringify({ protocolVersion: 2, type: "ready" }));
       },
       message() {},
       close(socket) {
@@ -65,7 +70,7 @@ export const discoveryPeer = (accountId: string) => {
     snapshots,
     assets,
     wake: () => {
-      for (const socket of sockets) socket.send(JSON.stringify({ protocolVersion: 1, type: "changed" }));
+      for (const socket of sockets) socket.send(JSON.stringify({ protocolVersion: 2, type: "changed" }));
     },
   };
 };

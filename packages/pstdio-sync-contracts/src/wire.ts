@@ -52,8 +52,20 @@ export const resolutionSchema = z.strictObject({
   expectedInputs: z.array(z.strictObject({ recordId: identitySchema, revision: revisionSchema })).min(1),
   handler: z.strictObject({ publishedRevision: identitySchema, handlerId: identitySchema }).optional(),
 });
+export const documentCheckpointSchema = z.strictObject({
+  recordId: identitySchema,
+  generation: revisionSchema,
+  recoveryRevision: revisionSchema,
+});
+export const streamPositionSchema = z.strictObject({
+  epoch: identitySchema,
+  generation: revisionSchema,
+  sequence: z.number().int().positive(),
+});
 export const mutationBodySchema = z.strictObject({
-  protocolVersion: z.literal(1),
+  protocolVersion: z.literal(2),
+  ...streamPositionSchema.shape,
+  document: documentCheckpointSchema.optional(),
   scope: scopeSchema,
   environmentId: identitySchema,
   operationId: identitySchema,
@@ -62,9 +74,19 @@ export const mutationBodySchema = z.strictObject({
   resolution: resolutionSchema.optional(),
 });
 export const localOperationSchema = mutationBodySchema
-  .omit({ protocolVersion: true, scope: true })
+  .omit({ protocolVersion: true, scope: true, epoch: true, generation: true, sequence: true })
+  .extend({ position: streamPositionSchema.optional() })
   .superRefine(checkGroup);
-export const mutationSchema = mutationBodySchema.extend({ fingerprint: fingerprintSchema }).superRefine(checkGroup);
+export const mutationSchema = mutationBodySchema
+  .extend({ fingerprint: fingerprintSchema })
+  .superRefine((group, ctx) => {
+    checkGroup(group, ctx);
+    if (
+      group.document &&
+      !group.changes.some((change) => change.recordId === group.document!.recordId && change.shared?.kind === "text")
+    )
+      ctx.addIssue({ code: "custom", message: "Checkpoint needs its document delta" });
+  });
 export type Scope = z.infer<typeof scopeSchema>;
 export type Asset = z.infer<typeof assetSchema>;
 export type Change = z.infer<typeof changeSchema>;

@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import {
   type Asset,
   type Mutation,
@@ -11,7 +11,7 @@ import { receiptFromRow } from "./codec";
 import { acceptResolution, advanceConflicts, retainConflict } from "./conflicts";
 import type { RelayTransaction } from "./database";
 import { saveReceipt } from "./receipts";
-import { relayOperations, relayRecords, type relayScopes } from "./schema";
+import { relayOperations, relayRecords, relayScopes } from "./schema";
 
 export interface RelayAssets {
   complete(scope: Scope, asset: Asset, signal?: AbortSignal): Promise<boolean>;
@@ -45,6 +45,34 @@ export const publishGroup = async (
   assets: RelayAssets,
   signal?: AbortSignal,
 ) => {
+  if (
+    mutation.epoch !== owner.epoch ||
+    mutation.generation !== owner.generation ||
+    mutation.sequence <= (owner.writers[mutation.environmentId]?.floor ?? 0) ||
+    (mutation.document &&
+      mutation.document.generation !==
+        (Object.hasOwn(owner.documents, mutation.document.recordId) ? owner.documents[mutation.document.recordId] : 0))
+  )
+    throw new Error("Resynchronization required: preserve the original proposal");
+  const [samePosition] = await transaction
+    .select()
+    .from(relayOperations)
+    .where(
+      and(
+        eq(relayOperations.ownerId, owner.id),
+        sql`${relayOperations.mutation}->>'environmentId' = ${mutation.environmentId}`,
+        sql`${relayOperations.mutation}->>'epoch' = ${mutation.epoch}`,
+        sql`(${relayOperations.mutation}->>'generation')::bigint = ${mutation.generation}`,
+        sql`(${relayOperations.mutation}->>'sequence')::bigint = ${mutation.sequence}`,
+      ),
+    )
+    .limit(1);
+  if (samePosition && samePosition.id !== mutation.operationId)
+    throw new Error("Writer sequence reused with another operation identity");
+  if (!Object.hasOwn(owner.writers, mutation.environmentId)) {
+    owner.writers = { ...owner.writers, [mutation.environmentId]: { floor: 0 } };
+    await transaction.update(relayScopes).set({ writers: owner.writers }).where(eq(relayScopes.id, owner.id));
+  }
   const previous = (
     await transaction
       .select()
@@ -76,5 +104,9 @@ export const publishGroup = async (
       .values({ ownerId: owner.id, id: record.recordId, record })
       .onConflictDoUpdate({ target: [relayRecords.ownerId, relayRecords.id], set: { record } });
   await acceptResolution(transaction, owner.id, state, mutation);
+  if (mutation.document) {
+    const documents = { ...owner.documents, [mutation.document.recordId]: mutation.document.generation };
+    await transaction.update(relayScopes).set({ documents }).where(eq(relayScopes.id, owner.id));
+  }
   return saveReceipt(transaction, owner, mutation, previous, { status: "accepted" });
 };

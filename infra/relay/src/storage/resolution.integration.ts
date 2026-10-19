@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { fingerprint, type Mutation, type Scope, type Snapshot, sealMutation } from "pstdio-sync-contracts";
+import { fingerprint, type Mutation, type Scope, type Snapshot } from "pstdio-sync-contracts";
+import { sealStoredMutation as sealMutation } from "./mutation.fixture";
 import { createRelayStorage, migrateRelayStorage } from "./storage";
 
 const databaseUrl = process.env.SYNC_TEST_DATABASE_URL;
@@ -14,7 +15,7 @@ const edit = async (
   resolution?: Mutation["resolution"],
 ) =>
   sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
     scope,
     environmentId: value,
     operationId: crypto.randomUUID(),

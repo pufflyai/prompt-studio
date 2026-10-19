@@ -82,7 +82,10 @@ export const registerExtensionPublicationSmokeTests = () => {
           asset: { base: null, next: after[0].asset },
         };
         const mutation = await sealMutation({
-          protocolVersion: 1,
+          protocolVersion: 2,
+          epoch: "published",
+          generation: 0,
+          sequence: 1,
           scope,
           operationId: saved.operationId,
           environmentId: environment.environmentId,
@@ -91,7 +94,12 @@ export const registerExtensionPublicationSmokeTests = () => {
         });
         const checkpoint = { epoch: "published", sequence: 1 };
         peer = createNativeRelayPeer({
-          protocolVersion: 1,
+          protocolVersion: 2,
+          generation: 0,
+          covered: 0,
+          writers: {},
+          documents: {},
+          retainedBranches: [],
           scope,
           publishedRevision: "published-extensions-v1",
           checkpoint,

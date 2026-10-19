@@ -7,7 +7,10 @@ export const conflictedState = async () => {
   const owner = { workbenchId: scope.workbenchId, extensionId: scope.extensionId };
   const mutation = async (operationId: string, value: string) =>
     sealMutation({
-      protocolVersion: 1,
+      protocolVersion: 2,
+      epoch: "relay",
+      generation: 0,
+      sequence: 1,
       scope,
       operationId,
       environmentId: operationId === "winner" ? "writer" : "other",
@@ -28,7 +31,12 @@ export const conflictedState = async () => {
   const branch = await mutation("branch", "retained");
   const checkpoint = { epoch: "relay", sequence: 1 };
   const before: Snapshot = {
-    protocolVersion: 1,
+    protocolVersion: 2,
+    generation: 0,
+    covered: 0,
+    writers: {},
+    documents: {},
+    retainedBranches: [],
     scope,
     checkpoint,
     journalSequence: 1,
@@ -49,6 +57,7 @@ export const conflictedState = async () => {
   const latest: Snapshot = {
     ...structuredClone(before),
     journalSequence: 2,
+    retainedBranches: ["branch"],
     receipts: {
       ...before.receipts,
       branch: {
@@ -68,12 +77,14 @@ export const conflictedState = async () => {
   const state: GroupedState = {
     owner,
     accepted: structuredClone(latest),
-    journal: [winner, branch].map((mutation) => ({
-      inputFingerprint: mutation.fingerprint,
-      mutation,
-      acceptance:
-        mutation.operationId === "winner" ? { fingerprint: mutation.fingerprint, order: 1, checkpoint } : null,
-    })),
+    journal: [winner, branch].map(
+      ({ epoch, generation, sequence, protocolVersion: _version, scope: _scope, ...mutation }) => ({
+        inputFingerprint: mutation.fingerprint,
+        mutation: { ...mutation, position: { epoch, generation, sequence } },
+        acceptance:
+          mutation.operationId === "winner" ? { fingerprint: mutation.fingerprint, order: 1, checkpoint } : null,
+      }),
+    ),
   };
   return { state, before, latest };
 };

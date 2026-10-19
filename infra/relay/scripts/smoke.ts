@@ -33,7 +33,10 @@ let storage = createRelayStorage(databaseUrl, assets);
 try {
   const owner = await storage.initialize(scope, "published-smoke-1");
   const mutation = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
+    epoch: (await owner.snapshot()).checkpoint.epoch,
+    generation: 0,
+    sequence: 1,
     scope,
     operationId: crypto.randomUUID(),
     environmentId: "built-smoke",

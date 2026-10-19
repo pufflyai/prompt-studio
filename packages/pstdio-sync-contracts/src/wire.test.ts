@@ -2,7 +2,10 @@ import { expect, test } from "bun:test";
 import { mutationSchema } from "./wire";
 
 const valid = () => ({
-  protocolVersion: 1,
+  protocolVersion: 2,
+  epoch: "initial",
+  generation: 0,
+  sequence: 1,
   scope: { accountId: "a", workbenchId: "w", extensionId: "x" },
   environmentId: "e",
   operationId: "o",
@@ -29,7 +32,7 @@ test("resolution inputs cover the complete captured group", () => {
 });
 
 test("unknown fields and unsupported versions cannot enter the journal", () => {
-  expect(mutationSchema.safeParse({ ...valid(), protocolVersion: 2 }).success).toBe(false);
+  expect(mutationSchema.safeParse({ ...valid(), protocolVersion: 1 }).success).toBe(false);
   expect(mutationSchema.safeParse({ ...valid(), cloudSecret: "no" }).success).toBe(false);
   expect(mutationSchema.safeParse(valid()).success).toBe(true);
 });
@@ -38,7 +41,10 @@ test("payload fingerprints survive JSON transport and ignore object key order", 
   const { sealMutation, validateMutation } = await import("./fingerprint");
   const group = await sealMutation({
     ...valid(),
-    protocolVersion: 1,
+    protocolVersion: 2,
+    epoch: "initial",
+    generation: 0,
+    sequence: 1,
     changes: [{ recordId: "r", expectedRevision: 0, baseDeleted: false, deleted: true, shared: undefined }],
   });
   expect(await validateMutation(JSON.parse(JSON.stringify(group)))).toEqual(JSON.parse(JSON.stringify(group)));
@@ -63,7 +69,10 @@ test("map keys retain empty JSON property names through wire validation", async 
   const { sealMutation, validateMutation } = await import("./fingerprint");
   const mutation = await sealMutation({
     ...valid(),
-    protocolVersion: 1,
+    protocolVersion: 2,
+    epoch: "initial",
+    generation: 0,
+    sequence: 1,
     changes: [
       {
         recordId: "map",

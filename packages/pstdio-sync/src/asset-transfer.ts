@@ -1,4 +1,4 @@
-import { type Asset, canonicalJson, type Mutation, type Snapshot } from "pstdio-sync-contracts";
+import type { Asset, Mutation, Snapshot } from "pstdio-sync-contracts";
 import type { AssetStore, RelayAdapter } from "./types";
 
 class MissingRemoteAsset extends Error {}
@@ -49,15 +49,24 @@ export const downloadSnapshotAssets = async (
   snapshot: Snapshot,
 ) => {
   const references = new Map<string, { asset: Asset; required: boolean }>();
-  for (const receipt of Object.values(snapshot.receipts)) {
+  const add = (asset: Asset | null | undefined, required: boolean) => {
+    if (asset)
+      references.set(asset.sha256, { asset, required: required || references.get(asset.sha256)?.required === true });
+  };
+  for (const record of Object.values(snapshot.records)) if (!record.deleted) add(record.asset, true);
+  const visited = new Set<string>();
+  const visit = (id: string) => {
+    if (visited.has(id)) return;
+    visited.add(id);
+    const receipt = Object.hasOwn(snapshot.receipts, id) ? snapshot.receipts[id] : undefined;
+    // An unfinished group may name a parent its writer has not uploaded yet.
+    if (!receipt) return;
     for (const change of receipt.mutation.changes) {
-      const asset = change.asset?.next;
-      if (!asset) continue;
-      const key = canonicalJson(asset);
-      references.set(key, { asset, required: receipt.status !== "pending" || references.get(key)?.required === true });
+      add(change.asset?.base, receipt.status !== "pending");
+      add(change.asset?.next, receipt.status !== "pending");
     }
-  }
-  for (const record of Object.values(snapshot.records))
-    if (record.asset) references.set(canonicalJson(record.asset), { asset: record.asset, required: true });
+    for (const parent of receipt.mutation.parents) visit(parent);
+  };
+  for (const id of snapshot.retainedBranches) visit(id);
   for (const { asset, required } of references.values()) await downloadAsset(local, adapter, asset, required);
 };

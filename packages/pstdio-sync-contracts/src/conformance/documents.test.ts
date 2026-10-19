@@ -34,7 +34,10 @@ for (const scenario of cases) {
     const record = { ...blank("map"), map: { key: "original" } };
     const shared = await sharedChange(record, scenario.edits);
     const mutation = await sealMutation({
-      protocolVersion: 1,
+      protocolVersion: 2,
+      epoch: "initial",
+      generation: 0,
+      sequence: 1,
       scope: { accountId: "a", workbenchId: "w", extensionId: "x" },
       environmentId: "e",
       operationId: "o",

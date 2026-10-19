@@ -27,14 +27,21 @@ export const saveJournal = async (
   for (let index = 0; index < stored.length; index++) {
     const entry = state.journal[index];
     const original = stored[index];
+    const position = entry.mutation.position;
+    const previousPosition = original.mutation_json.position;
+    const positionChanged =
+      position?.epoch !== previousPosition?.epoch ||
+      position?.generation !== previousPosition?.generation ||
+      position?.sequence !== previousPosition?.sequence;
     if (
+      positionChanged ||
       entry.acceptance !== original.acceptance_json ||
       entry.recoveryProof !== (original.recovery_proof ?? undefined)
     ) {
       metadataChanged = true;
       await tx
         .update(extension_storage_journal)
-        .set({ acceptance_json: entry.acceptance, recovery_proof: entry.recoveryProof })
+        .set({ mutation_json: entry.mutation, acceptance_json: entry.acceptance, recovery_proof: entry.recoveryProof })
         .where(
           and(
             eq(extension_storage_journal.workbench_id, owner.workbenchId),

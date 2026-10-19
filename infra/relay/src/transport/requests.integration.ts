@@ -1,22 +1,19 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import {
-  fingerprint,
-  receiptSchema,
-  relayReplayResultSchema,
-  sealMutation,
-  snapshotSchema,
-} from "pstdio-sync-contracts";
+import { fingerprint, receiptSchema, relayReplayResultSchema, snapshotSchema } from "pstdio-sync-contracts";
 import { startRelay } from "../service";
+import { sealStoredMutation } from "../storage/mutation.fixture";
 import { createTransportFixture } from "./integration-fixture";
 
 const fixture = createTransportFixture();
+const sealMutation = (body: Parameters<typeof sealStoredMutation>[0]) =>
+  sealStoredMutation(body, fixture.relayDatabaseUrl);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
 test("real HTTP groups retain duplicate receipts and contiguous replay", async () => {
   const context = await fixture.context();
   const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
-  const base = `/v1/workbenches/~${context.scope.workbenchId}/extensions/~notes/`;
+  const base = `/v2/workbenches/~${context.scope.workbenchId}/extensions/~notes/`;
   const request = (path: string, body?: unknown) =>
     fetch(new URL(base + path, server.url), {
       method: body === undefined ? "GET" : "POST",
@@ -26,7 +23,7 @@ test("real HTTP groups retain duplicate receipts and contiguous replay", async (
   try {
     const initial = snapshotSchema.parse(await (await request("snapshot")).json());
     const mutation = await sealMutation({
-      protocolVersion: 1,
+      protocolVersion: 2,
       scope: context.scope,
       environmentId: context.environmentId,
       operationId: "create",
@@ -59,7 +56,7 @@ test("real HTTP groups retain duplicate receipts and contiguous replay", async (
 test("current authority rejects foreign mutations and invalid scope registration", async () => {
   const context = await fixture.context();
   const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
-  const base = `/v1/workbenches/~${context.scope.workbenchId}/extensions/~notes/`;
+  const base = `/v2/workbenches/~${context.scope.workbenchId}/extensions/~notes/`;
   const call = (path: string, token: string | null, body?: unknown) =>
     fetch(new URL(path, server.url), {
       method: body === undefined ? "GET" : "POST",
@@ -79,8 +76,11 @@ test("current authority rejects foreign mutations and invalid scope registration
       { scope: context.scope, environmentId: "foreign" },
     ]) {
       const mutation = await sealMutation({
-        protocolVersion: 1,
+        protocolVersion: 2,
         ...claims,
+        epoch: (await context.storage.owner(context.scope).snapshot()).checkpoint.epoch,
+        generation: 0,
+        sequence: 1,
         operationId: "forged",
         parents: [],
         changes: [{ recordId: "note", expectedRevision: 0, baseDeleted: false, deleted: true }],

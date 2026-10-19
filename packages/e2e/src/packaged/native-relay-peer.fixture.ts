@@ -1,9 +1,11 @@
 import {
   canonicalJson,
+  coverageAckSchema,
   type RelayOperation,
   relayRecoverySchema,
   relayRoute,
   type Snapshot,
+  snapshotFingerprint,
 } from "pstdio-sync-contracts";
 
 const readAsset = async (request: Request, bytes: Uint8Array | undefined) => {
@@ -22,6 +24,7 @@ export const createNativeRelayPeer = (
   snapshot: Snapshot,
   bytes?: Uint8Array,
   onRecovery?: (operationId: string) => void,
+  onSnapshot?: (snapshot: Snapshot) => void,
 ) => {
   const retained = structuredClone(snapshot);
   const recover = async (request: Request) => {
@@ -29,9 +32,8 @@ export const createNativeRelayPeer = (
     const receipt = retained.receipts[mutation.operationId];
     if (!receipt || receipt.recoveryProof !== proof || canonicalJson(receipt.mutation) !== canonicalJson(mutation))
       return new Response(null, { status: 403 });
-    const checkpoint = { ...snapshot.checkpoint, sequence: snapshot.checkpoint.sequence + 1 };
-    Object.assign(snapshot, structuredClone(retained), { checkpoint });
-    snapshot.receipts[mutation.operationId]!.checkpoint = checkpoint;
+    if (mutation.epoch !== snapshot.checkpoint.epoch || mutation.generation !== snapshot.generation)
+      return new Response(null, { status: 409 });
     onRecovery?.(mutation.operationId);
     return Response.json(snapshot.receipts[mutation.operationId]);
   };
@@ -44,7 +46,14 @@ export const createNativeRelayPeer = (
     switch (operation) {
       case "snapshot":
       case "initialize":
+        onSnapshot?.(snapshot);
         return Response.json(snapshot);
+      case "acknowledge": {
+        const ack = coverageAckSchema.parse(await request.json());
+        if (ack.snapshotHash !== (await snapshotFingerprint(snapshot)))
+          return Response.json({ status: "snapshot-required" });
+        return Response.json({ status: "acknowledged", acknowledgement: ack });
+      }
       case "assets/read":
         return readAsset(request, bytes);
       case "assets/begin": {
@@ -75,7 +84,7 @@ export const createNativeRelayPeer = (
     },
     websocket: {
       open(socket) {
-        socket.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+        socket.send(JSON.stringify({ protocolVersion: 2, type: "ready" }));
       },
       message() {},
     },

@@ -194,7 +194,15 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         hideToolbar={contribution.hideToolbar}
         onRowClick={contribution.onRowActivate ? handleOpenRow : undefined}
         onActionError={(error, action) => reportUserActionError(workbench, action, error)}
-        onAttributeChange={contribution.onAttributeChange}
+        onAttributeChange={
+          contribution.onAttributeChange
+            ? (rowId, attributeId, value) =>
+                read.mutate(
+                  (rows) => applyKanbanMove(rows, { rowId, attributes: { [attributeId]: value } }),
+                  () => contribution.onAttributeChange!(rowId, attributeId, value),
+                )
+            : undefined
+        }
         onMove={
           contribution.onMove || contribution.onAttributeChange
             ? (move) => {

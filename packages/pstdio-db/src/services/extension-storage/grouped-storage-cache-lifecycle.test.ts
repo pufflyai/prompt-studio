@@ -27,7 +27,12 @@ const setup = async () => {
   return { db, service, writer, reader, save, queries, journalReads };
 };
 const snapshot = (epoch = "epoch", value = "accepted"): Snapshot => ({
-  protocolVersion: 1,
+  protocolVersion: 2,
+  generation: 0,
+  covered: 0,
+  writers: {},
+  documents: {},
+  retainedBranches: [],
   scope: { ...owner, accountId: "account" },
   checkpoint: { epoch, sequence: 0 },
   journalSequence: 0,

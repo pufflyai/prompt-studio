@@ -6,7 +6,10 @@ import { receiptSchema } from "./state";
 async function batch() {
   const scope = { accountId: "a", workbenchId: "w", extensionId: "x" };
   const mutation = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
+    epoch: "initial",
+    generation: 0,
+    sequence: 1,
     scope,
     environmentId: "e",
     operationId: "o",
@@ -14,7 +17,16 @@ async function batch() {
     changes: [{ recordId: "r", expectedRevision: 0, baseDeleted: false, deleted: true }],
   });
   return {
-    protocolVersion: 1,
+    protocolVersion: 2,
+    generation: 0,
+    covered: 0,
+    writers: {},
+    documents: {},
+    retainedBranches: [],
+    journalSequence: 1,
+    conflicts: {},
+    outstanding: {},
+    publishedRevision: "published-1",
     scope,
     after: { epoch: "e", sequence: 0 },
     through: { epoch: "e", sequence: 1 },

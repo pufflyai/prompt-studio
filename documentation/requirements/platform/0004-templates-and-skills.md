@@ -38,7 +38,7 @@ To make a lasting change, edit the source skill, not the installed copy. To get 
 
 ## Migration
 
-When an existing database first starts on this architecture, Prompt Studio moves each live legacy template into the owning enabled extension's storage before dropping the old tables. Startup stops with a clear error if ownership cannot be resolved, so content is never discarded silently.
+When an existing database first starts on this architecture, Prompt Studio keeps the old template rows before it drops the old tables. Planner and Reports then import their own templates the first time they use template storage. An import stops with a clear error if names collide, so content is never discarded silently, and it retries on the next use.
 
 ## Delivery record
 
@@ -47,8 +47,8 @@ Checked on 2026-10-18 against main commit `45580feb`. The newest stable release 
 | Field | Record |
 | --- | --- |
 | Status | Templates: released. Skills: the installation contract above is implemented in source on this branch and is not released. |
-| Template implementation | Extension-owned templates and the legacy template migration came in #627 (`packages/pstdio-db/src/db/legacy-template-migration.ts` and `legacy-template-owners.ts`). Since #1158, startup downloads placeholder owner extensions in the background; see [database upgrades](../../references/architecture/0025-database-upgrades.md#legacy-template-owners). |
+| Template implementation | Extension-owned templates came in #627. #1173 moves the legacy template import out of core into `migrate-templates.ts` in Planner and Reports, using the extension migration helpers from #1168; see [database upgrades](../../references/architecture/0025-database-upgrades.md#legacy-templates). |
 | Skill implementation | This branch changes the installer in `packages/pstdio/src/features/skills/install-skills.ts`, the `setup` and `install-skills` commands in `packages/pstdio/src/adapters/cli/commands/agents/`, and workspace sync in `packages/pstdio-extensions/src/artifacts/workspace-sync-dir.ts`. Before this change, on `45580feb` and in `pstdio@0.43.1`, the installer deleted and rewrote every enabled skill folder, and workspace sync overwrote every wanted file, including edited ones. |
-| Availability | #627 shipped in `pstdio@0.30.0`. #1158 is in the nightly `pstdio@0.44.0-nightly.20261018030230` only. The skill contract is in no release. |
-| Remaining work | Merge and release the skill contract, then check real agent folders from the packaged CLI for first install, reinstall, edited content, and `--force`. Move legacy template imports into Planner and Reports with the extension migration helpers; that work is open in #1173 and waits for an SDK release with #1168. |
-| Evidence | Unit tests, passed locally on 2026-10-18: `legacy-template-migration.test.ts` (unknown types, normalized-name collisions, ambiguous owners) and `packages/pstdio-api/src/startup/index.test.ts` (background preparation and owner repair). Skill tests, passed locally on 2026-10-18 against this branch's uncommitted source: `install-skills.test.ts` and `agents/setup.test.ts` in `packages/pstdio` (12 tests), and `workspace-files-mount.test.ts` in `packages/pstdio-extensions` (15 tests). No packaged run is recorded. |
+| Availability | #627 shipped in `pstdio@0.30.0`. #1173 needs `@pstdio/sdk` 0.44.0, which is not published yet. The skill contract is in no release. |
+| Remaining work | Merge and release the skill contract, then check real agent folders from the packaged CLI for first install, reinstall, edited content, and `--force`. Release the template import move from #1173 after `@pstdio/sdk` 0.44.0 publishes. |
+| Evidence | Unit tests, passed locally on 2026-10-18 with the workspace SDK linked: `migrate-templates.test.ts` in Planner and Reports (import, retry after interruption, normalized-name collisions, newer destination records). Skill tests, passed locally on 2026-10-18 against this branch's uncommitted source: `install-skills.test.ts` and `agents/setup.test.ts` in `packages/pstdio` (12 tests), and `workspace-files-mount.test.ts` in `packages/pstdio-extensions` (15 tests). No packaged run is recorded. |

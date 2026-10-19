@@ -8,12 +8,12 @@ test("independently released peers negotiate a common wire protocol", () => {
       { ...protocolPeer, release: "runtime-0.1" },
       { ...protocolPeer, release: "relay-0.9", protocolVersions: [2, 1] },
     ),
-  ).toEqual({ status: "compatible", protocolVersion: 1 });
+  ).toEqual({ status: "compatible", protocolVersion: 2 });
 });
 
 test("unsupported versions and required features give an actionable recoverable result", () => {
   for (const peer of [
-    { ...protocolPeer, protocolVersions: [2] },
+    { ...protocolPeer, protocolVersions: [1] },
     { ...protocolPeer, requiredFeatures: ["future-required"] },
   ]) {
     const result = negotiate(protocolPeer, peer);
