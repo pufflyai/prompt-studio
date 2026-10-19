@@ -50,6 +50,7 @@ test("testbench webviews keep workspace, placement resource, metadata, and slot"
   }) as { props: { capabilities: Record<string, (request: unknown) => Promise<unknown>> } };
   expect(Object.keys(frame.props.capabilities).sort()).toEqual([...WEBVIEW_HOST_CAPABILITIES].sort());
   const supported = new Set([
+    "resources.actions",
     "commands.execute",
     "navigation.open",
     "page.params.update",

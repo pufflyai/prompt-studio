@@ -171,7 +171,9 @@ export interface WebviewKeyboardEventParams {
 
 export interface WebviewHostCapabilityParams {
   "harnesses.read": { harnessId?: string; model?: string };
-  "resources.actions": { operation: "list" | "execute"; resource: ResourceRef; key?: string };
+  "resources.actions":
+    | { operation: "list"; resource: ResourceRef }
+    | { operation: "execute"; resource: ResourceRef; key: string };
   "commands.execute": WebviewCommandsExecuteParams;
   "commands.stream": WebviewCommandsStreamParams;
   "page.params.update": WebviewPageParamsUpdateParams;
