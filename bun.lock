@@ -377,6 +377,7 @@
         "drizzle-orm": "^0.45.2",
         "jose": "^6.2.12",
         "pg": "^8.20.0",
+        "pstdio-service-telemetry": "workspace:*",
         "pstdio-sync-contracts": "workspace:*",
         "zod": "^4.3.6",
       },
@@ -419,6 +420,7 @@
         "drizzle-orm": "^0.45.2",
         "pg": "^8.20.0",
         "pstdio-account-manager": "workspace:*",
+        "pstdio-service-telemetry": "workspace:*",
         "pstdio-sync": "workspace:*",
         "pstdio-sync-contracts": "workspace:*",
       },
@@ -426,6 +428,13 @@
         "@types/bun": "1.4.2",
         "@types/pg": "^8.18.0",
         "drizzle-kit": "^0.31.9",
+        "typescript": "6.0.2",
+      },
+    },
+    "infra/telemetry": {
+      "name": "pstdio-service-telemetry",
+      "devDependencies": {
+        "@types/bun": "1.4.2",
         "typescript": "6.0.2",
       },
     },
@@ -4302,6 +4311,8 @@
     "pstdio-scheduler": ["pstdio-scheduler@workspace:packages/pstdio-scheduler"],
 
     "pstdio-scripts": ["pstdio-scripts@workspace:scripts"],
+
+    "pstdio-service-telemetry": ["pstdio-service-telemetry@workspace:infra/telemetry"],
 
     "pstdio-shader-lab": ["pstdio-shader-lab@workspace:.pstdio/extensions/shader-lab"],
 

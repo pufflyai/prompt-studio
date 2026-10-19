@@ -68,7 +68,8 @@
     ".pstdio/extensions/motion-lab",
     ".pstdio/extensions/social-radar",
     ".pstdio/extensions/shader-lab",
-    ".pstdio/extensions/shape-art"
+    ".pstdio/extensions/shape-art",
+    "infra/telemetry"
   ],
   "devDependencies": {
     "@biomejs/biome": "2.4.10",
