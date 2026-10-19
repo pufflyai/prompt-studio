@@ -2,6 +2,20 @@
 
 The private `pstdio-relay` workspace under `infra/relay/` owns transactional PostgreSQL storage and verified S3 assets for shared extension groups. It serves authenticated HTTP and finite native WebSocket subscriptions. The native runtime adapter and two-dashboard launcher are described in [the local relay guide](0008-two-dashboard-relay.md). Public browser onboarding, live provider validation and deployment remain separate work.
 
+## Blind sync store
+
+The relay also serves the blind sync protocol from [PRD 0014](../../requirements/platform/0014-local-first-sync.md) under `/sync/`. It stores encrypted updates, latest states and blobs per document and cannot read them. The [blind relay reference](../../references/architecture/0029-blind-relay.md) describes the protocol, cleanup and limits. The grouped storage described below keeps working until clients move to the new protocol; PS-824 removes it.
+
+`createSyncOwners` in `src/transport/owners.ts` builds the document store, the live connection hub and the rate limit. The runtime reads operator limits with `readRelayLimits(env)` and runs cleanup every hour. Schema changes start in `src/storage/document-schema.ts` and use the same `db:generate` command.
+
+Run the real PostgreSQL and object storage checks:
+
+```sh
+bun run --cwd infra/relay test:sync
+```
+
+They cover duplicate updates, rejected stale latest states, blobs kept for the grace period, a storage dump with no plaintext from a seeded project, the storage bound across ten compaction cycles, protocol version errors, personal-space access, live forwarding and rate limits.
+
 ## Build and check
 
 Use Bun 1.4.2 and Docker with the Compose plugin. From the repository root:

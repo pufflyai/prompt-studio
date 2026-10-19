@@ -12,9 +12,11 @@ import {
   migrateAccountManager,
 } from "pstdio-account-manager";
 import { createRelayAssets } from "../assets/assets";
+import { defaultRelayLimits, type RelayLimits } from "../limits";
 import { createRecoveryProofs } from "../recovery-proofs";
 import { migrateRelayStorage } from "../storage/database";
 import { createRelayStorage } from "../storage/storage";
+import { createSyncOwners } from "./owners";
 
 export const createTransportFixture = () => {
   const input = process.env.SYNC_TEST_DATABASE_URL;
@@ -91,11 +93,19 @@ export const createTransportFixture = () => {
         environmentId?: string;
         expiresAt?: string;
         accessLifetimeSeconds?: number;
+        limits?: RelayLimits;
       } = {},
     ) {
       const manager = createAccountManager(managerDatabase.url);
       const assets = createRelayAssets({ databaseUrl: relayDatabase.url, bucket, s3 });
       const storage = createRelayStorage(relayDatabase.url, assets);
+      const sync = createSyncOwners({
+        databaseUrl: relayDatabase.url,
+        bucket,
+        s3,
+        assets,
+        limits: options.limits ?? defaultRelayLimits,
+      });
       const auth = createManagerAuthentication({
         databaseUrl: managerDatabase.url,
         origin: "https://manager.fixture.test",
@@ -115,7 +125,7 @@ export const createTransportFixture = () => {
       };
       const environmentId = options.environmentId ?? crypto.randomUUID();
       const close = async () => {
-        await Promise.all([storage.close(), assets.close(), manager.close(), auth.close()]);
+        await Promise.all([storage.close(), sync.sync.close(), assets.close(), manager.close(), auth.close()]);
         await rm(directory, { recursive: true, force: true });
       };
       try {
@@ -149,6 +159,7 @@ export const createTransportFixture = () => {
           expiresAt: access.expiresAt,
           storage,
           assets,
+          ...sync,
           verifyAccess: createEnvironmentAccessVerifier(trust),
           managerHandler: createManagerHandler(auth, "https://manager.fixture.test"),
           recovery: createRecoveryProofs(recoveryKey),

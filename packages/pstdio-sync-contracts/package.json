@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./protocol": "./src/protocol/index.ts",
     "./conformance": "./src/conformance/index.ts"
   },
   "scripts": {

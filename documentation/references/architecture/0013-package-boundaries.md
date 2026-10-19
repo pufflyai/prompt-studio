@@ -128,7 +128,8 @@ imports. This lets the package graph select that proof when a handler changes.
 
 The private `pstdio-relay` workspace lives under `infra/relay/`. It is a separate
 service, not part of the local API host or the CLI bundle. It consumes the shared diagnostic adapter, the private
-`pstdio-sync` record/branch rules and `pstdio-sync-contracts` wire schemas. Its production
+`pstdio-sync` record/branch rules and `pstdio-sync-contracts` wire schemas, including the
+blind sync protocol in `pstdio-sync-contracts/protocol`. Its production
 access verification uses only the database-free `pstdio-account-manager/access` entry;
 the relay receives public issuer/audience/JWKS trust, without the manager database role, signing secret or renewal grants. Isolated integration fixtures may
 use the manager's operator exports to create disposable accounts and grants. Production

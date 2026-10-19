@@ -5,9 +5,11 @@ import { authorizeRelayRequest } from "./authorization";
 import { handleRelayData } from "./data-http";
 import type { RelayOwners } from "./owners";
 import { relayResponse } from "./responses";
-import { createRelaySubscription, type RelaySubscription } from "./subscriptions";
+import type { RelaySocket } from "./sockets";
+import { createRelaySubscription } from "./subscriptions";
+import { handleSyncRequest } from "./sync-http";
 
-type RelayUpgrade = (request: Request, subscription: RelaySubscription) => boolean;
+type RelayUpgrade = (request: Request, socket: RelaySocket) => boolean;
 
 const upgradeSubscription = async (
   owners: RelayOwners,
@@ -35,6 +37,7 @@ const handleRelayRequest = async (
 ) => {
   const url = new URL(request.url);
   if (request.method === "GET" && url.pathname === "/health") return relayResponse({ status: "ok" });
+  if (url.pathname.startsWith("/sync/")) return handleSyncRequest(owners, upgrade, request, report);
   const route = relayRoute(url.pathname);
   if (!route) return relayResponse({ error: "Not found" }, 404);
   if (url.search) return relayResponse({ error: "Invalid request" }, 400);
