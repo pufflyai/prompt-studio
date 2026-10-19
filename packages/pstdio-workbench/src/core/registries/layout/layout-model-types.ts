@@ -40,6 +40,13 @@ export interface LayoutPersistenceAdapter {
 export interface CreateLayoutModelInput {
   defaultRegionVisibility?: Partial<Record<WorkbenchRegion, boolean>>;
   persistence?: LayoutPersistenceAdapter;
+  normalizeLayout?(layout: WorkbenchLayout): WorkbenchLayout;
+  validateRegionChange?(region: WorkbenchRegion, action: "open" | "close" | "resize"): void;
+  validateWidgetOpen?(
+    region: WorkbenchRegion,
+    existing: WorkbenchWidgetPlacement | undefined,
+    target: OpenWidgetInput,
+  ): void;
   /** Region policy for the active context; the layout asks on every query. */
   getRegionSettings?(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
 }

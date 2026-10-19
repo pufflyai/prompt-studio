@@ -5,6 +5,7 @@ import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { WorkbenchRegion } from "../region/region";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { WorkbenchPanelToggles } from "./workbench-panel-toggles";
 import { WorkbenchStatusBarItems } from "./workbench-status-bar-items";
 
 interface WorkbenchSidenavProps {
@@ -45,6 +46,7 @@ export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
 interface WorkbenchRegionPanelProps {
   workbench: WorkbenchCore;
   visible?: boolean;
+  panelControls?: boolean;
 }
 
 export const WORKBENCH_STATUS_BAR_HEIGHT = "2rem";
@@ -87,22 +89,27 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       minW="0"
       overflow="hidden"
     >
-      <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
-      <Box
-        display={chrome ? "none" : "flex"}
-        alignItems="stretch"
-        justifyContent="space-between"
-        px="sm"
-        h="full"
-        minW="0"
-        w="full"
-      >
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+      <Box display="flex" h="full" minW="0">
+        <Box flex="1" minW="0" position="relative">
+          <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
+          <Box
+            display={chrome ? "none" : "flex"}
+            alignItems="stretch"
+            justifyContent="space-between"
+            px="sm"
+            h="full"
+            minW="0"
+            w="full"
+          >
+            <Box display="flex" alignItems="stretch" minW="0" h="full">
+              <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+            </Box>
+            <Box display="flex" alignItems="stretch" minW="0" h="full">
+              <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+            </Box>
+          </Box>
         </Box>
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
-        </Box>
+        {props.panelControls ? <WorkbenchPanelToggles workbench={workbench} /> : null}
       </Box>
     </WorkbenchFocusRegion>
   );

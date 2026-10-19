@@ -53,6 +53,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // image checks authenticated HTTP, immutable asset ranges and finite native sockets.
 // Native relay coverage hydrates artifact mounts and attachment URLs, and restores foreign journal work after restart.
 import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
+// Navigation metadata preserves independent panel capabilities through the compiled host.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
 // The browser suite checks typed host props, page updates, structured capability errors and saved settings.

@@ -189749,6 +189749,288 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "eS0DA",
+      "x": 51282,
+      "y": 0,
+      "name": "PS-791 · Global panel controls and header choices",
+      "width": 940,
+      "height": 560,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "eMjr7",
+          "fill": "$ds-fg",
+          "content": "Global panel controls · independent mode permissions",
+          "fontFamily": "$font-label",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "uyNk3",
+          "name": "light",
+          "theme": {
+            "mode": "light"
+          },
+          "width": "fill_container",
+          "height": 190,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "QM515",
+              "fill": "$ds-fg",
+              "content": "Main context stays in the breadcrumb. Side and Bottom stay global.",
+              "fontFamily": "$font-label",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "aMwKa",
+              "name": "Panel header · focus, context menu, touch hold",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "yWZsu",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab",
+                  "width": 180,
+                  "height": 32
+                },
+                {
+                  "type": "text",
+                  "id": "cPLC7",
+                  "fill": "$ds-fg",
+                  "content": "Right-click or Shift+F10: Hide header",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "tDIys",
+              "name": "Hidden header top edge",
+              "fill": "$ds-fg",
+              "content": "Hidden top edge · focus then Shift+F10: Show header",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "jVaeb",
+              "name": "Host-owned status controls",
+              "width": "fill_container",
+              "height": 32,
+              "gap": 4,
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "x6A4BF",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "j1KO3y",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "F4P8ZS",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "CXyTJ",
+          "name": "dark",
+          "theme": {
+            "mode": "dark"
+          },
+          "width": "fill_container",
+          "height": 190,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "oeVko",
+              "fill": "$ds-fg",
+              "content": "Main context stays in the breadcrumb. Side and Bottom stay global.",
+              "fontFamily": "$font-label",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "WQDO6",
+              "name": "Panel header · focus, context menu, touch hold",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "v46L6N",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab",
+                  "width": 180,
+                  "height": 32
+                },
+                {
+                  "type": "text",
+                  "id": "vfdAo",
+                  "fill": "$ds-fg",
+                  "content": "Right-click or Shift+F10: Hide header",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "RfbEZ",
+              "name": "Hidden header top edge",
+              "fill": "$ds-fg",
+              "content": "Hidden top edge · focus then Shift+F10: Show header",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "PCG5v",
+              "name": "Host-owned status controls",
+              "width": "fill_container",
+              "height": 32,
+              "gap": 4,
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "ZzDD7",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "bzuaQ",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "W99IyR",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

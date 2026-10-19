@@ -1,8 +1,8 @@
 import { Box } from "@chakra-ui/react";
-import { Header } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { PanelHeader } from "../region/panel-header";
 import { WorkbenchRegion } from "../region/region";
 import {
   useWorkbenchPanelHeaderVisible,
@@ -10,7 +10,6 @@ import {
   WorkbenchRegionTabs,
 } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
-import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
@@ -21,10 +20,8 @@ interface WorkbenchSecondaryPanelProps {
 
 export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => {
   const { workbench, hasSecondaryHeader } = props;
-  const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
-  const settings = useWorkbenchModeRegionSettings(workbench, "secondary");
   const hasTabs = useWorkbenchRegionTabsVisible(workbench, "secondary");
-  const visible = (settings?.showHeader !== false || hasTabs) && (hasSecondaryHeader || hasPanelHeader);
+  const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
 
   return (
     <WorkbenchFocusRegion
@@ -45,8 +42,11 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
       w="full"
       position="relative"
     >
-      <Header
-        display={visible ? "flex" : "none"}
+      <PanelHeader
+        workbench={workbench}
+        region="secondary"
+        hasTabs={hasTabs}
+        hasContent={hasSecondaryHeader || hasPanelHeader}
         data-workbench-panel-header="secondary"
         variant="main"
         bg={workbenchBackgrounds.panel}
@@ -62,7 +62,7 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
         </Box>
         <WorkbenchPanelMenuOpeners workbench={workbench} panel="secondary" />
         <WorkbenchHeaderBorder workbench={workbench} region="secondary-header" />
-      </Header>
+      </PanelHeader>
       <WorkbenchTabDropTarget region="secondary" />
       <Box flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchPanelMenuLayout workbench={workbench} panel="secondary">

@@ -104,7 +104,8 @@ export const createWorkbenchCompositionController = (
     const resource = input.getResource();
     const location = getActiveLocationPlacement(layout);
     const mode = input.getActiveMode();
-    if (!isWorkbenchModePanelAvailable(mode, region)) return { open, addable: [], closable: [] };
+    if (!isWorkbenchModePanelAvailable(mode, region) || mode?.regionSettings?.[region]?.acceptsTabs === false)
+      return { open, addable: [], closable: [] };
     const placements = open;
     const widgets = input.listWidgets();
     const modePanels = mode?.listAddablePanels?.({ layout, resource }) ?? [];

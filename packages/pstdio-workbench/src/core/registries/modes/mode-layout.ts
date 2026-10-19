@@ -17,7 +17,8 @@ const modePanelRegions = {
 
 const allModeRegions = Object.values(modePanelRegions).flat();
 
-export const panelsForMode = (mode: WorkbenchModeContribution) => mode.panels ?? workbenchPanelRegions;
+export const panelsForMode = (mode: WorkbenchModeContribution) =>
+  mode.panels ? [...new Set(["main" as const, ...mode.panels])] : workbenchPanelRegions;
 
 export const getWorkbenchModePanelForRegion = (region: WorkbenchRegion) =>
   (Object.keys(modePanelRegions) as WorkbenchPanelRegion[]).find((panel) =>

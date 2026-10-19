@@ -11,6 +11,8 @@ import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 
+import { requirePanelOpen } from "../shell/panel-open-policy";
+
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
 
 export const panelModeId = (core: WorkbenchCore, target: NavigationTargetPanel, proposedModeId?: string) => {
@@ -153,6 +155,15 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
       }
     } else {
       throw new Error("Compound navigation accepts only page and panel targets");
+    }
+    if (target.kind === "panel") {
+      for (const placement of proposed.reconciliation.activate)
+        requirePanelOpen(core, target.region ?? placement.region, {
+          modeId: proposed.activeModeId,
+          identity: placement.identity,
+          resource: target.resource,
+          requestedRegion: target.region,
+        });
     }
     recordPanelOpenings(target, proposed.reconciliation.activate, activate, destinations);
   }

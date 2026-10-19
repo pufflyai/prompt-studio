@@ -65,7 +65,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     const context = input.resolveContext();
     const scopeKey = `${mode.id}\0${context.layout.getPersistenceScope() ?? "unscoped"}`;
     const availableLayout = applyModePanelAvailability(context.layout.getLayout(), panelsForMode(mode));
-    restoreModeLayout(context, availableLayout);
+    context.layout.restoreLayout(availableLayout);
     context.layout.reconcilePanelMenus();
     if (!seededScopes.has(scopeKey) && !context.layout.enteredWithPersistedLayout()) {
       seedModeScope(mode, context, input.establishLocation);

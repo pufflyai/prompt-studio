@@ -83,3 +83,18 @@ A routed resource page can declare `document: { metadataKey: "workspaceFilePath"
 Chat UI accepts an optional `linkHandler` with `resolveHref`, `open`, and optional `describe` methods. It passes the original destination and its origin (Markdown, inline code, reference, or tool) to the host. The session host resolves relative paths from the originating workspace root, checks rooted paths against that root, and uses registered page URLs for saved resources. A file path under `.pstdio/extension-storage/pstdio-planner/tickets` opens those workspace bytes. It does not imply a saved Planner document. Absolute dashboard URLs must have the dashboard's origin; another project is selected before its page is restored. Raw custom schemes cannot execute commands. Uploaded attachments retain their own open behavior.
 
 The legacy public `onOpenFile` callback remains available and is deprecated in favor of `linkHandler`. Existing callers without a handler retain their behavior.
+
+## Shared panel commands
+
+Global panel controls render in the web status bar. Desktop hosts use the exported `WorkbenchPanelToggles` beside project tabs and set `Workbench.panelControlsPlacement="host"`. Custom mode status chrome keeps these host controls. The breadcrumb stays with Main.
+
+`shell.getPanelPolicy(region)` resolves availability, visibility, opening, closing, tab acceptance, resizing, floating and header visibility. UI controls, tab destinations, public commands and restoration use this policy. `workbench.movePanel` moves a tab; whole-panel docking is separate work.
+
+| Command | Parameters |
+| --- | --- |
+| `workbench.setPanelOpen` | `region: sidenav, secondary, side`, `open: boolean` |
+| `workbench.setPanelHeaderVisible` | `region: main, secondary, side`, `visible: boolean` |
+| `workbench.resizePanel` | `region: sidenav, secondary, side`, `size: number` in pixels |
+| `workbench.setSidePanelPresentation` | `presentation: attached, floating, closed` |
+
+The matching shell methods enforce the same permissions. Header show/hide also has a context menu on the header or hidden top edge with keyboard and touch access. Header choices stay in the mode layout and layout reset clears them. Optional panels collapse after their last tab closes, including panels previously opened empty.

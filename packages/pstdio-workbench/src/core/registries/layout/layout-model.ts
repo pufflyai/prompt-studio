@@ -124,12 +124,18 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
   const requireWidget = (id: string) => requireRegisteredWidget(getWidgets(), id);
 
   const setLayout = (layout: WorkbenchLayout) => {
+    layout = input.normalizeLayout?.(layout) ?? layout;
     const snapshot = store.getState();
     if (snapshot.layout === layout) return;
     store.setState({ ...snapshot, layout }, false, "setLayout");
   };
 
-  const regionMethods = createLayoutRegionMethods({ getLayout, setLayout, persistLayout });
+  const regionMethods = createLayoutRegionMethods({
+    getLayout,
+    setLayout,
+    persistLayout,
+    validateChange: input.validateRegionChange,
+  });
   const regionContentMethods = createLayoutRegionContentMethods({
     defaultRegionVisibility: input.defaultRegionVisibility,
     getLayout,
@@ -156,7 +162,12 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
   const panelRegistrations = createPanelRegistrations({
     registerWidget: contributionRegistrations.registerWidget,
   });
-  const widgetOpeners = createWidgetOpeners({ getLayout, requireWidget, applyAndActivate });
+  const widgetOpeners = createWidgetOpeners({
+    getLayout,
+    requireWidget,
+    applyAndActivate,
+    validateOpen: input.validateWidgetOpen,
+  });
   const placementMethods = createLayoutPlacementMethods({
     getLayout,
     requireWidget,

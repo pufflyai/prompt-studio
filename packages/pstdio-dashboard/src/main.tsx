@@ -93,6 +93,7 @@ const renderDashboard = async () => {
       <HostStorageProvider storage={storage}>
         <SyncProvider workbench={dashboardWorkbench} connectionStatusSettings={connectionStatusSettings}>
           <Workbench
+            panelControlsPlacement={projectTabs ? "host" : "status"}
             workbench={dashboardWorkbench}
             themeStorage={storage}
             titleBar={

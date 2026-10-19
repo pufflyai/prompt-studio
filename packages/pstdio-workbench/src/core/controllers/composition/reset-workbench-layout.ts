@@ -52,7 +52,12 @@ export const resetWorkbenchLayout = (core: WorkbenchCore) => {
       Object.entries(layout.regions).map(([id, region]) => [
         id,
         ["main", "secondary", "side"].includes(id)
-          ? { ...defaults.regions[id as keyof typeof defaults.regions], widgets: [], activeWidgetId: undefined }
+          ? {
+              ...defaults.regions[id as keyof typeof defaults.regions],
+              widgets: [],
+              activeWidgetId: undefined,
+              headerVisible: undefined,
+            }
           : region,
       ]),
     ) as typeof layout.regions,

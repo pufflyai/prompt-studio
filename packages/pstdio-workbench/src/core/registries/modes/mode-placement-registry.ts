@@ -3,7 +3,12 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { notifyWorkbenchChange } from "../../shared/store/workbench-batch";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import { createPlacement } from "../layout/layout-operations";
-import type { RegisteredWidgetContribution, WorkbenchLayout, WorkbenchWidgetPlacement } from "../layout/layout-types";
+import type {
+  RegisteredWidgetContribution,
+  WorkbenchLayout,
+  WorkbenchRegion,
+  WorkbenchWidgetPlacement,
+} from "../layout/layout-types";
 import type { PlacementDestination, ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import {
   clearOwnedPlacementState,
@@ -118,6 +123,11 @@ export const createWorkbenchModePlacementRegistry = (input: {
   getProjectId?(): string | undefined;
   loadLayout?(context: OwnedPlacementLocationContext): WorkbenchLayout | undefined;
   viewMenus?: WorkbenchViewMenuRegistry;
+  validateOpen?(
+    identity: PlacementIdentity,
+    region: WorkbenchRegion,
+    options: { reveal: boolean; resource?: ResourceRef; requestedRegion?: WorkbenchRegion },
+  ): void;
   getPanel(panelId: string): RegisteredWidgetContribution | undefined;
   registerPanel: Parameters<typeof registerWorkbenchViewPlacement>[0];
 }): WorkbenchModePlacementRegistry => {
@@ -285,6 +295,11 @@ export const createWorkbenchModePlacementRegistry = (input: {
       const placement = refs.get(placementRefKey(target.panel));
       if (!placement) throw new Error(`Unknown mode panel: ${target.panel.extensionId}.${target.panel.id}`);
       const prepared = preparation.open({ ...target, placementId: placement.id });
+      input.validateOpen?.(prepared.identity, target.region ?? placement.region, {
+        reveal: !target.relatedSource,
+        resource: target.resource,
+        requestedRegion: target.region,
+      });
       preparation.apply(prepared.state);
       preparation.publish(target.region ? { identity: prepared.identity, region: target.region } : undefined);
       return prepared.identity;

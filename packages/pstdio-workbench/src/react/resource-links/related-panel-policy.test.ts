@@ -143,3 +143,14 @@ for (const region of ["side", "secondary"] as const) {
     s.controller.dispose();
   });
 }
+
+test("already open panels can receive related tabs when revealing is forbidden", async () => {
+  const s = setup([opening("side", "side"), opening("bottom", "secondary")]);
+  s.workbench.shell.setRegionOpen("side", true);
+  const mode = s.workbench.modes.getMode(s.workbench.modes.getActiveModeId()!)!;
+  mode.regionSettings = { side: { canOpen: false } };
+  await s.controller.open(s.source);
+  expect(s.workbench.layout.listPanelInstances("side").map((p) => p.resource?.id)).toEqual(["side"]);
+  expect(s.workbench.layout.listPanelInstances("secondary").map((p) => p.resource?.id)).toEqual(["bottom"]);
+  s.controller.dispose();
+});
