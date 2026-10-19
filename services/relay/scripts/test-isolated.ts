@@ -2,7 +2,9 @@ import { strict as assert } from "node:assert";
 import { resolve } from "node:path";
 
 const project = `pstdio-relay-test-${crypto.randomUUID()}`;
-const compose = ["docker", "compose", "-p", project, "-f", resolve(import.meta.dir, "../compose.test.yaml")];
+// The Compose file is deployment setup, so it lives in infra/relay rather than with the service code.
+const composeFile = resolve(import.meta.dir, "../../../infra/relay/compose.test.yaml");
+const compose = ["docker", "compose", "-p", project, "-f", composeFile];
 console.log(`Isolated relay stack: ${project}`);
 
 async function run(args: string[], capture = false) {

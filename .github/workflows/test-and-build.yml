@@ -183,19 +183,19 @@ jobs:
         run: bun packages/pstdio-db/src/db/pglite-container-lock.integration.ts
 
       - name: Test built relay with disposable PostgreSQL and object storage
-        run: bun run --cwd infra/relay test:isolated
+        run: bun run --cwd services/relay test:isolated
 
       - name: Install dependencies for storage and private account authority checks
         run: bun install --frozen-lockfile
 
       - name: Test PostgreSQL publication and process recovery
-        run: bun run --cwd infra/relay test:storage
+        run: bun run --cwd services/relay test:storage
 
       - name: Test durable streaming assets and object storage contract
-        run: bun run --cwd infra/relay test:assets
+        run: bun run --cwd services/relay test:assets
 
       - name: Test authenticated relay HTTP and finite WebSocket subscriptions
-        run: bun run --cwd infra/relay test:transport
+        run: bun run --cwd services/relay test:transport
 
       - name: Test production relay with real local stores
         env:
@@ -203,7 +203,7 @@ jobs:
         run: bun run --cwd packages/pstdio-sync-contracts test:conformance
 
       - name: Test private account authority and its built image with disposable PostgreSQL
-        run: bun run --cwd infra/account-manager test:isolated
+        run: bun run --cwd services/account-manager test:isolated
 
   # Together these suites took 6 to 8 minutes in one job, where they also slowed each other down.
   # Shards keep each job near the PR stage's 5-minute target.
