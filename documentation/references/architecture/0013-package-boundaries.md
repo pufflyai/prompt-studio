@@ -120,6 +120,10 @@ layer-map change.
    Cross-package relative imports are only allowed for the
    generated embed manifest allowlist enforced by the boundary checker.
 
+The API declares Notes and Planner as development dependencies for the isolated
+checkpoint save-handler proof. Their source handlers are test inputs, not runtime
+imports. This lets the package graph select that proof when a handler changes.
+
 ## Shared relay
 
 The private `pstdio-relay` workspace lives under `infra/relay/`. It is a separate
