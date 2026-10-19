@@ -190579,6 +190579,310 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "vrilb",
+      "x": 52302,
+      "y": 0,
+      "name": "Start · Harness availability",
+      "context": "Project-scoped availability from harness extensions. No provider-specific checks or installation logic. Hidden when any harness is available. Uses shared AlertMessage and small buttons.",
+      "width": 896,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 32,
+      "children": [
+        {
+          "id": "VnLL0",
+          "type": "ref",
+          "ref": "So6vB",
+          "name": "No available harness",
+          "width": "fill_container",
+          "theme": {
+            "status": "warning"
+          },
+          "layout": "horizontal",
+          "descendants": {
+            "sAoE1": {
+              "icon": "triangle-alert"
+            },
+            "R8clK": {
+              "layout": "vertical"
+            },
+            "GL4gS": {
+              "content": "No agent available"
+            },
+            "B8etL": {
+              "type": "frame",
+              "id": "UrKru",
+              "name": "Availability description and actions",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HT4GS",
+                  "name": "Availability explanation",
+                  "fill": "$status-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You can still use Prompt Studio from your own harness. Sessions within Prompt Studio are unavailable until a harness is available.",
+                  "lineHeight": 1.35,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "gUWAM",
+                  "name": "Availability actions",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "id": "H3Lsd1",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Browse extensions",
+                      "height": 32,
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Browse extensions"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "dJT4D": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "id": "r83Ixi",
+          "type": "ref",
+          "ref": "So6vB",
+          "name": "Availability check failed",
+          "width": "fill_container",
+          "theme": {
+            "status": "error"
+          },
+          "layout": "horizontal",
+          "descendants": {
+            "sAoE1": {
+              "icon": "circle-alert"
+            },
+            "R8clK": {
+              "layout": "vertical"
+            },
+            "GL4gS": {
+              "content": "Could not check agent availability"
+            },
+            "B8etL": {
+              "type": "frame",
+              "id": "vOjDZ",
+              "name": "Availability description and actions",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "wGd5D",
+                  "name": "Availability explanation",
+                  "fill": "$status-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Try checking again. Your tools are still available.",
+                  "lineHeight": 1.35,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "YAMNa",
+                  "name": "Availability actions",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "id": "FXy5E",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Check again",
+                      "height": 32,
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Check again"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "dJT4D": {
+              "enabled": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "RbQH5",
+      "x": 53278,
+      "y": 0,
+      "name": "Session · Harness unavailable",
+      "context": "Keep the shared workspace container and header visible. A compact alert and Browse extensions action replace only the message input and its toolbar. Active runs also keep Stop.",
+      "width": 896,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 32,
+      "children": [
+        {
+          "id": "uSpww",
+          "type": "ref",
+          "ref": "JGKK1",
+          "name": "Workspace with unavailable composer",
+          "width": "fill_container",
+          "layout": "vertical",
+          "descendants": {
+            "J3u0Q": {
+              "id": "XO6Ki",
+              "type": "ref",
+              "ref": "So6vB",
+              "name": "Unavailable composer with Extensions action",
+              "width": "fill_container",
+              "theme": {
+                "status": "warning"
+              },
+              "layout": "horizontal",
+              "descendants": {
+                "sAoE1": {
+                  "icon": "triangle-alert"
+                },
+                "R8clK": {
+                  "layout": "vertical"
+                },
+                "GL4gS": {
+                  "content": "No agent available"
+                },
+                "B8etL": {
+                  "enabled": false,
+                  "width": 0,
+                  "textGrowth": "auto"
+                },
+                "dJT4D": {
+                  "enabled": true
+                },
+                "x7Usi7": {
+                  "enabled": true
+                },
+                "x7Usi7/Hf4GT": {
+                  "content": "Browse extensions"
+                },
+                "dqGb1": {
+                  "enabled": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "R7S91",
+      "x": 54254,
+      "y": 0,
+      "name": "Extensions · Harness availability",
+      "context": "Use the existing extension health warning indicator and issue count. Open its shared popover for harness names and extension-provided reasons. No inline harness alerts. Match explicit contribution ownership; disabled and unknown checks do not warn.",
+      "width": 896,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 32,
+      "children": [
+        {
+          "type": "frame",
+          "id": "f87Hq",
+          "name": "Extension row with health indicator",
+          "width": "fill_container",
+          "gap": 8,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "EwRv5",
+              "name": "Extension display name",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Remote helper",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "id": "QMDyw",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Harness health warning indicator",
+              "height": 24,
+              "theme": {
+                "btn": "ghost",
+                "size": "2xs"
+              },
+              "descendants": {
+                "DsEVd": {
+                  "icon": "triangle-alert",
+                  "width": 14,
+                  "height": 14,
+                  "fill": "$ds-warning"
+                },
+                "Hf4GT": {
+                  "content": "1",
+                  "fill": "$ds-warning",
+                  "fontFamily": "$font-mono"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "l0VjqH",
+          "type": "ref",
+          "ref": "tQws6",
+          "name": "Health issues popover",
+          "descendants": {
+            "osQH7": {
+              "content": "1 issue"
+            },
+            "lFTqO": {
+              "content": "Remote helper is unavailable. Connect a machine in this extension’s settings."
+            }
+          }
+        }
+      ]
     }
   ],
   "themes": {

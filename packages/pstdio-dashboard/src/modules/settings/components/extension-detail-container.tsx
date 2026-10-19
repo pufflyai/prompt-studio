@@ -1,6 +1,7 @@
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { Checkbox, DeleteConfirmationModal, toaster } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
+import type { AgentInfo } from "pstdio-api-contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActionError } from "@/shared/components/use-action-error";
@@ -17,18 +18,20 @@ import {
   useUpgradeProjectExtension,
 } from "@/shared/extensions/use-project-extensions";
 import { ExtensionDetail } from "./extension-detail";
+import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionSettingsViews } from "./extension-settings-views";
 
 interface ExtensionDetailContainerProps {
   projectId: string | undefined;
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
+  agents?: AgentInfo[];
   onBack: () => void;
   settingsInput?: WorkbenchPanelRenderInput;
 }
 
 export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) => {
-  const { projectId, extension, metadata, onBack, settingsInput } = props;
+  const { projectId, extension, metadata, agents, onBack, settingsInput } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const settingsPanels =
     metadata?.settingsPanels.filter(
@@ -119,6 +122,11 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         projectId={projectId}
         extension={extension}
         metadata={contributions}
+        unavailableHarnesses={unavailableExtensionHarnesses(
+          extension,
+          contributionsQuery.isSuccess ? contributions?.harnesses : undefined,
+          agents,
+        )}
         automations={automations}
         diagnostics={diagnostics}
         settings={settingsQuery.data?.settings ?? []}
