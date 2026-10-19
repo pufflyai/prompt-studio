@@ -28,7 +28,7 @@ export const alertSlotRecipe = defineSlotRecipe({
       minWidth: "0",
     },
     title: {
-      textStyle: "label/S/medium",
+      textStyle: "label/M/medium",
       overflowWrap: "anywhere",
     },
     description: {
