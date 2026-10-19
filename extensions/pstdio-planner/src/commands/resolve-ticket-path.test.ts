@@ -7,18 +7,19 @@ import type { StoredTicket } from "../data/types";
 import { makeCommandArgs } from "./command-context.fixture";
 import { resolveTicketPathCommand } from "./resolve-ticket-path";
 
-const storedTicket = (id: string, shorthand: string, extra: Partial<StoredTicket> = {}): StoredTicket => ({
-  id,
-  shorthand,
-  title: "Fix links",
-  content: "",
-  statusId: null,
-  archived: false,
-  sortOrder: 0,
-  createdAt: "2026-10-16",
-  updatedAt: "2026-10-16",
-  ...extra,
-});
+const storedTicket = (id: string, shorthand: string, extra: Partial<StoredTicket> = {}) =>
+  ({
+    id,
+    shorthand,
+    title: "Fix links",
+    content: "",
+    statusId: null,
+    archived: false,
+    sortOrder: 0,
+    createdAt: "2026-10-16",
+    updatedAt: "2026-10-16",
+    ...extra,
+  }) satisfies StoredTicket;
 
 // Counts full reads of the ticket list on a real in-memory storage.
 const countTicketLists = (storage: ExtensionStorageApi) => {
@@ -29,13 +30,22 @@ const countTicketLists = (storage: ExtensionStorageApi) => {
     if (name !== "tickets") return target;
     return new Proxy(target, {
       get: (value, key) => {
-        if (key === "list") return () => ((lists += 1), value.list());
+        if (key === "list")
+          return () => {
+            lists += 1;
+            return value.list();
+          };
         const member = Reflect.get(value, key);
         return typeof member === "function" ? member.bind(value) : member;
       },
     });
   }) as typeof storage.collection;
-  return { lists: () => lists, reset: () => (lists = 0) };
+  return {
+    lists: () => lists,
+    reset: () => {
+      lists = 0;
+    },
+  };
 };
 
 const resolver = (storage: ExtensionStorageApi, projectId: string) => (path: string) =>
@@ -70,6 +80,24 @@ test("a ticket created after the last full read is found, then without reading e
   counter.reset();
   expect(await resolve(ticketMarkdownPath("T-3"))).toMatchObject({ resource: { id: "later" } });
   expect(counter.lists()).toBe(0);
+});
+
+test("lookups that start together share one full read", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, storedTicket("one", "T-1"));
+  await putTicket(storage, storedTicket("two", "T-2"));
+  const counter = countTicketLists(storage);
+  const resolve = resolver(storage, "together-project");
+  const results = await Promise.all([resolve(ticketMarkdownPath("T-1")), resolve(ticketMarkdownPath("T-2"))]);
+  expect(results).toMatchObject([{ resource: { id: "one" } }, { resource: { id: "two" } }]);
+  expect(counter.lists()).toBe(1);
+});
+
+test("a parent cycle stops the parent walk", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, storedTicket("a", "T-1", { parentId: "b" }));
+  await putTicket(storage, storedTicket("b", "T-2", { parentId: "a" }));
+  expect(await resolver(storage, "cycle-project")(ticketMarkdownPath("T-1"))).toMatchObject({ resource: { id: "a" } });
 });
 
 test("a renumbered ticket no longer answers to its old shorthand", async () => {
