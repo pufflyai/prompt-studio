@@ -48,7 +48,7 @@ export interface CreateLayoutModelInput {
     target: OpenWidgetInput,
   ): void;
   /** Region policy for the active context; the layout asks on every query. */
-  getRegionSettings?(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
+  getRegionSettings?(regionId: WorkbenchRegion, modeId?: string): WorkbenchRegionSettings | undefined;
 }
 
 export interface LayoutModel {
@@ -62,7 +62,7 @@ export interface LayoutModel {
   getWidget(id: string): RegisteredWidgetContribution | undefined;
   getPanel(id: string): WorkbenchPanelContribution | undefined;
   getRegionSize(regionId: WorkbenchRegion): WorkbenchRegionSize | undefined;
-  getRegionSettings(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
+  getRegionSettings(regionId: WorkbenchRegion, modeId?: string): WorkbenchRegionSettings | undefined;
   getRegionCollapsible(regionId: WorkbenchRegion): boolean;
   getRegionHeaderBorderBottom(regionId: WorkbenchRegion): boolean;
   setRegionVisible(regionId: WorkbenchRegion, visible: boolean): void;

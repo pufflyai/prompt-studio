@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { harness, navigate, panel, resource } from "./placement-lifecycle-test-support";
+import { createWorkbench } from "../../workbench-core";
+import { harness, navigate, openFile, page, panel, resource } from "./placement-lifecycle-test-support";
 
 for (const region of ["side", "secondary"] as const) {
   test(`${region} rejects navigation and tab drops before changing layout`, async () => {
@@ -63,6 +64,49 @@ test("a single page panel open enforces the destination policy", async () => {
   expect(w.layout.getLayout()).toBe(before);
 });
 
+test("compound navigation reuses the incoming page's existing Main tabs", async () => {
+  const w = harness();
+  w.modes.registerMode({ id: "other", activate() {} });
+  w.pages.registerPage({
+    id: "other",
+    ref: page("other"),
+    path: "other",
+    modeId: "other",
+    main: { kind: "view", view: { kind: "view", id: "empty" }, cardinality: "one" },
+    slots: [],
+  });
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget({ ...openFile("one"), open: "pin" });
+  w.modes.getMode("edit")!.regionSettings = { main: { acceptsTabs: false } };
+  await w.navigation.openTarget({ kind: "page", page: page("other") });
+  await w.navigation.openTarget({ kind: "compound", targets: [navigate("alpha"), openFile("one")] });
+  expect(w.layout.getActivePanel("main")?.resource?.id).toBe("one");
+  await expect(w.navigation.openTarget(openFile("two"))).rejects.toThrow("accept tabs");
+});
+
+test("revisiting a moved Main tab uses its actual destination", async () => {
+  const w = harness();
+  await w.navigation.openTarget(navigate("alpha"));
+  const target = { kind: "panel", panel, resource: resource("one"), open: "pin" } as const;
+  await w.navigation.openTarget(target);
+  w.movePanel(w.layout.getActivePanel("side")!.instanceId, "main");
+  w.modes.getMode("edit")!.regionSettings = { side: { acceptsTabs: false } };
+  await w.navigation.openTarget(target);
+  expect(w.layout.getActivePanel("main")?.resource?.id).toBe("one");
+});
+
+test("compound navigation restores a moved Main tab's saved destination", async () => {
+  const w = harness();
+  await w.navigation.openTarget(navigate("alpha"));
+  const target = { kind: "panel", panel, resource: resource("one"), open: "pin" } as const;
+  await w.navigation.openTarget(target);
+  w.movePanel(w.layout.getActivePanel("side")!.instanceId, "main");
+  await w.navigation.openTarget(navigate("beta"));
+  w.modes.getMode("edit")!.regionSettings = { side: { acceptsTabs: false } };
+  await w.navigation.openTarget({ kind: "compound", targets: [navigate("alpha"), target] });
+  expect(w.layout.getActivePanel("main")?.resource?.id).toBe("one");
+});
+
 test("closing the final tab collapses an optional panel and preserves a nonclosing surface", async () => {
   for (const canClose of [true, false]) {
     const w = harness();
@@ -87,4 +131,74 @@ test("reset clears header choices read from persisted layout", async () => {
   w.resetLayout();
   expect(w.layout.getLayout().regions.side.headerVisible).toBeUndefined();
   expect(w.shell.getPanelPolicy("side").showHeader).toBe(false);
+});
+
+test("compound navigation inherits host permissions in the proposed mode", async () => {
+  const w = createWorkbench({ initialSidePanelMode: "closed", regionSettings: { side: { canOpen: false } } });
+  w.views.registerView({ id: "view", title: "View", body: { kind: "react", render: () => null } });
+  for (const id of ["a", "b"]) {
+    w.modes.registerMode({ id, activate() {} });
+    w.pages.registerPage({
+      id,
+      ref: { kind: "page", id, extensionId: "test" },
+      path: id,
+      modeId: id,
+      main: { kind: "view", view: { kind: "view", id: "view" }, cardinality: "one" },
+      slots: [],
+    });
+  }
+  w.shellPlacements.registerPlacement({
+    id: "tool",
+    region: "side",
+    item: { kind: "view", view: { kind: "view", id: "view" }, presence: "closed" },
+  });
+  w.pageLocations.setProject("project");
+  await w.navigation.openTarget({ kind: "page", page: { kind: "page", extensionId: "test", id: "a" } });
+  const before = w.layout.getLayout();
+  await expect(
+    w.navigation.openTarget({
+      kind: "compound",
+      targets: [
+        { kind: "page", page: { kind: "page", extensionId: "test", id: "b" } },
+        { kind: "panel", panel: { kind: "shell-placement", id: "tool" } },
+      ],
+    }),
+  ).rejects.toThrow("cannot open");
+  expect(w.pages.store.getState().activePageId).toBe("a");
+  expect(w.layout.getLayout()).toBe(before);
+});
+
+test("compound navigation checks the incoming mode's saved visibility", async () => {
+  const w = createWorkbench({ initialSidePanelMode: "closed" });
+  w.views.registerView({ id: "view", title: "View", body: { kind: "react", render: () => null } });
+  for (const id of ["a", "b"]) {
+    w.modes.registerMode({ id, activate() {}, regionSettings: id === "b" ? { side: { canOpen: false } } : undefined });
+    w.pages.registerPage({
+      id,
+      ref: { kind: "page", id, extensionId: "test" },
+      path: id,
+      modeId: id,
+      main: { kind: "view", view: { kind: "view", id: "view" }, cardinality: "one" },
+      slots: [],
+    });
+  }
+  w.shellPlacements.registerPlacement({
+    id: "tool",
+    region: "side",
+    item: { kind: "view", view: { kind: "view", id: "view" }, presence: "closed" },
+  });
+  w.pageLocations.setProject("project");
+  const target = (id: string) => ({ kind: "page" as const, page: { kind: "page" as const, extensionId: "test", id } });
+  await w.navigation.openTarget(target("b"));
+  await w.navigation.openTarget(target("a"));
+  w.shell.setRegionOpen("side", true);
+  const before = w.layout.getLayout();
+  await expect(
+    w.navigation.openTarget({
+      kind: "compound",
+      targets: [target("b"), { kind: "panel", panel: { kind: "shell-placement", id: "tool" } }],
+    }),
+  ).rejects.toThrow("cannot open");
+  expect(w.pages.store.getState().activePageId).toBe("a");
+  expect(w.layout.getLayout()).toBe(before);
 });

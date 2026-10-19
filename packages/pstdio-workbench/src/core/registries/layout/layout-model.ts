@@ -135,6 +135,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     setLayout,
     persistLayout,
     validateChange: input.validateRegionChange,
+    getRegionSettings: input.getRegionSettings,
   });
   const regionContentMethods = createLayoutRegionContentMethods({
     defaultRegionVisibility: input.defaultRegionVisibility,
@@ -226,7 +227,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     getPlaceholder,
 
     getRegionSize: regionQueries.getRegionSize,
-    getRegionSettings: (regionId) => input.getRegionSettings?.(regionId),
+    getRegionSettings: (regionId, modeId) => input.getRegionSettings?.(regionId, modeId),
     getRegionCollapsible: regionQueries.getRegionCollapsible,
     getRegionHeaderBorderBottom: regionQueries.getRegionHeaderBorderBottom,
 

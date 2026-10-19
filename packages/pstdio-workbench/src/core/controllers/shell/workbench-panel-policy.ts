@@ -2,6 +2,7 @@ import type { WorkbenchLayout, WorkbenchRegion } from "../../registries/layout/l
 import { clampPanelSizes } from "../../registries/layout/panel-size-policy";
 import { applyModePanelAvailability, panelsForMode } from "../../registries/modes/mode-layout";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { getWorkbenchPanelLayout } from "../page-runtime/workbench-layout-context";
 import { resolvePanelPolicy } from "./panel-policy";
 
 export const workbenchPanelPolicy = (
@@ -13,9 +14,8 @@ export const workbenchPanelPolicy = (
   return resolvePanelPolicy({
     region,
     mode,
-    settings:
-      modeId === core.modes.getActiveModeId() ? core.layout.getRegionSettings(region) : mode?.regionSettings?.[region],
-    state: core.layout.getLayout().regions[region],
+    settings: core.layout.getRegionSettings(region, modeId),
+    state: getWorkbenchPanelLayout(core, modeId).regions[region],
     legacyFloatable: core.sidePanel.canFloat(),
   });
 };

@@ -17,7 +17,9 @@ export const PanelHeader = (props: PanelHeaderProps) => {
   const { workbench, region, hasContent = true, hasTabs = false, children, ...rest } = props;
   const edgeStyles = useRecipe({ key: "panelHeaderEdge" })();
   const policy = usePanelPolicy(workbench, region);
-  const show = policy.legacyHeaders ? (policy.showHeader || hasTabs) && hasContent : policy.showHeader;
+  const show = policy.legacyHeaders
+    ? (policy.showHeader || hasTabs) && hasContent
+    : policy.showHeader && (region !== "main" || hasContent || policy.headerExplicit);
   const label = { secondary: "Bottom", side: "Side", main: "Main" }[region];
   return (
     <ResourceContextMenu

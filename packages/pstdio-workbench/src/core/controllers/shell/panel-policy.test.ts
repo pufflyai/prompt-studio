@@ -119,3 +119,33 @@ test("switching modes preserves each saved size within its own bounds", () => {
   w.modes.setActiveMode("small");
   expect(w.layout.getLayout().regions.side.size).toBe(250);
 });
+
+test("host permissions also preserve a nonclosing panel after its final tab closes", () => {
+  const w = createWorkbench({ regionSettings: { side: { canClose: false } } });
+  w.modes.registerMode({ id: "host", activate() {} });
+  w.modes.setActiveMode("host");
+  w.layout.registerPanel({ id: "tool", title: "Tool", rendererId: "tool", region: "side" });
+  const tab = w.layout.openPanel("tool", { closable: true });
+  w.layout.closePanel(tab.instanceId);
+  expect(w.shell.getPanelPolicy("side")).toMatchObject({ canClose: false, open: true });
+});
+
+test("public commands reject forbidden operations and keep the same layout", async () => {
+  const w = createWorkbench();
+  w.modes.registerMode({
+    id: "restricted",
+    activate() {},
+    regionSettings: { side: { canClose: false, floatable: false, resizable: false } },
+  });
+  w.modes.setActiveMode("restricted");
+  const before = w.layout.getLayout();
+  for (const [command, args] of [
+    ["workbench.setPanelOpen", { region: "side", open: false }],
+    ["workbench.resizePanel", { region: "side", size: 700 }],
+    ["workbench.setSidePanelPresentation", { presentation: "floating" }],
+  ] as const)
+    await expect(w.commands.executeCommand(command, args)).rejects.toThrow("cannot");
+  expect(w.layout.getLayout()).toBe(before);
+  await w.commands.executeCommand("workbench.setPanelHeaderVisible", { region: "side", visible: false });
+  expect(w.shell.getPanelPolicy("side")).toMatchObject({ canClose: false, showHeader: false });
+});

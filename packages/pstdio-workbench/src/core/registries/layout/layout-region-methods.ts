@@ -3,6 +3,7 @@ import type { WorkbenchLayout, WorkbenchRegion, WorkbenchRegionState } from "./l
 
 export interface CreateLayoutRegionMethodsInput {
   getLayout(): WorkbenchLayout;
+  getRegionSettings?: import("./layout-model-types").CreateLayoutModelInput["getRegionSettings"];
   validateChange?(region: WorkbenchRegion, action: "open" | "close" | "resize"): void;
   setLayout(layout: WorkbenchLayout): void;
   persistLayout(): void;
@@ -34,6 +35,8 @@ export const createLayoutRegionMethods = (
     },
 
     setSidePanelMode(mode) {
+      if (mode === "floating" && input.getRegionSettings?.("side")?.floatable === false)
+        throw new Error("Panel cannot float: side");
       const open = input.getLayout().regions.side.visible;
       if ((mode !== "closed") !== open) input.validateChange?.("side", mode === "closed" ? "close" : "open");
       updateRegion("side", (region) => {

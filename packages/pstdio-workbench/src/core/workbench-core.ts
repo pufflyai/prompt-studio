@@ -134,8 +134,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     },
     // The active mode owns region policy; the host input is the fallback. Resolved
     // lazily because the mode registry is created after the layout model.
-    getRegionSettings: (regionId) => {
-      const activeModeId = core?.modes.getActiveModeId();
+    getRegionSettings: (regionId, activeModeId = core?.modes.getActiveModeId()) => {
       const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
       return { ...input.regionSettings?.[regionId], ...activeMode?.regionSettings?.[regionId] };
     },

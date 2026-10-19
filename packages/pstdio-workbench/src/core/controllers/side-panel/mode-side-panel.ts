@@ -1,4 +1,5 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
+import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import type { createWorkbenchInput, WorkbenchCore } from "../../workbench-core-types";
 import { createWorkbenchSidePanelController } from "./side-panel-controller";
@@ -22,6 +23,8 @@ export const createModeSidePanel = (
     },
     getFloatingPanels: () => {
       const activeModeId = modes.getActiveModeId();
+      if (!isWorkbenchModePanelAvailable(activeModeId ? modes.getMode(activeModeId) : undefined, "side"))
+        return "hidden";
       const floatable = layout.getRegionSettings("side")?.floatable;
       if (floatable !== undefined) return floatable ? "visible" : "hidden";
       return (

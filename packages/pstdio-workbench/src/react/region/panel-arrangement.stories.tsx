@@ -17,7 +17,12 @@ export const createArrangementWorkbench = (
     initialSidePanelMode: "attached",
     defaultPanelOpenByRegionId: { secondary: true },
   });
-  w.modes.registerMode({ id: "arrangement", label: "Arrange tabs", regionSettings: { main: { showHeader: false } }, activate() {} });
+  w.modes.registerMode({
+    id: "arrangement",
+    label: "Arrange tabs",
+    regionSettings: { main: { showHeader: false } },
+    activate() {},
+  });
   w.views.registerView({
     id: "page",
     title: "Page",

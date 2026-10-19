@@ -71,7 +71,7 @@ const expectCanonicalFrame = async (
   expect(sideBox).not.toBeNull();
 
   const contentHeight = options.statusBar === "visible" ? 688 : 720;
-  const panelHeight = contentHeight - 2 * PANEL_GAP_PX;
+  const panelHeight = contentHeight - (options.statusBar === "visible" ? PANEL_GAP_PX : 2 * PANEL_GAP_PX);
   const sidenavWidth = options.sidenav === "visible" ? 250 : 0;
   const sideX = 1280 - PANEL_GAP_PX - 420;
   const mainColumnX = PANEL_GAP_PX + sidenavWidth + (options.sidenav === "visible" ? PANEL_GAP_PX : 0);

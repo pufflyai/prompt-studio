@@ -1,8 +1,10 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
-import type { WorkbenchRegion } from "../../registries/layout/layout-types";
+import type { WorkbenchRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { getWorkbenchPanelLayout } from "../page-runtime/workbench-layout-context";
 import { workbenchPanelPolicy } from "./workbench-panel-policy";
 
 /** Validate the actual destination before publishing any owner or layout changes. */
@@ -15,11 +17,12 @@ export const requirePanelOpen = (
     reveal?: boolean;
     requestedRegion?: WorkbenchRegion;
     resource?: ResourceRef;
+    proposed?: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
   } = {},
 ) => {
   const existing =
     options.identity &&
-    Object.values(core.layout.getLayout().regions)
+    Object.values(getWorkbenchPanelLayout(core, options.modeId, options.proposed).regions)
       .flatMap((r) => r.widgets.map((placement) => ({ region: r.id, placement })))
       .find(
         ({ placement }) =>

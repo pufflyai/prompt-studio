@@ -30,6 +30,7 @@ export const resolvePanelPolicy = (input: {
     acceptsTabs: provided && settings.acceptsTabs !== false,
     resizable: provided && !fixedSize && settings.resizable !== false,
     floatable: provided && region === "side" && (settings.floatable ?? input.legacyFloatable ?? true),
+    headerExplicit: state.headerVisible !== undefined || settings.showHeader !== undefined,
     showHeader: provided && (state.headerVisible ?? settings.showHeader ?? true),
     legacyHeaders: state.headerVisible === undefined && mode?.panelHeaders === "legacy",
   };

@@ -39,7 +39,7 @@ export const WorkbenchPanelToggles = (props: { workbench: WorkbenchCore }) => {
               size={PANEL_HEADER_CONTROL_SIZE}
               variant="ghost"
               aria-label={action}
-              aria-pressed={policy.open}
+              aria-pressed={policy.canToggle ? policy.open : undefined}
               onClick={() => workbench.shell.setRegionOpen(region as WorkbenchShellOpenRegion, !policy.open)}
             >
               <WorkbenchIcon name={icon} size={14} />

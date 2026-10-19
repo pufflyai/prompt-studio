@@ -39,8 +39,10 @@ const orderedCenters = async (locators: import("@playwright/test").Locator[]) =>
   expect(centers).toEqual([...centers].sort((left, right) => left - right));
 };
 
-const backgroundColor = (locator: import("@playwright/test").Locator) =>
-  locator.evaluate((element) => getComputedStyle(element).backgroundColor);
+const backgroundColor = async (locator: import("@playwright/test").Locator) => {
+  await locator.page().mouse.move(0, 0);
+  return locator.evaluate((element) => getComputedStyle(element).backgroundColor);
+};
 
 test("keeps Main navigation in its header and global panel controls in the status bar", async ({ page, request }) => {
   test.setTimeout(45_000);
@@ -176,8 +178,8 @@ test("keeps the Secondary Panel closed from Workspaces until requested", async (
   await prepareDashboard(page, project.id);
   await page.goto(`/projects/${project.id}/tickets`);
 
-  const nav = page.locator('[data-workbench-region="nav"]');
-  const showSecondary = nav.getByRole("button", { name: "Show Bottom Panel" });
+  const controls = page.getByRole("group", { name: "Panel controls" });
+  const showSecondary = controls.getByRole("button", { name: "Show Bottom Panel" });
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
 
   await page.goto(`/projects/${project.id}/workspaces`);
