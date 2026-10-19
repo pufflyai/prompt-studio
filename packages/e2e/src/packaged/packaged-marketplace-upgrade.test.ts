@@ -85,6 +85,12 @@ const createMarketplaceRepository = (root: string) => {
     name: "pstdio-skills",
     version: "0.4.0",
   });
+  writeExtension(join(repo, "extensions", "pstdio-notes"), {
+    displayName: "Notes",
+    enginesPstdio: `^${EXTENSION_API_VERSION}`,
+    name: "pstdio-notes",
+    version: "0.5.0",
+  });
   runGit(repo, ["add", "."]);
   runGit(repo, ["commit", "-m", "current planner and skills"]);
   runGit(repo, ["tag", `pstdio@${cliPackage.version}`]);
@@ -93,12 +99,18 @@ const createMarketplaceRepository = (root: string) => {
 
 // A stale extension already on disk whose database row is created by discovery, so it carries
 // no install provenance. The marketplace upgrade must still recover it.
-const seedAdoptedSkills = (tempRoot: string) => {
+const seedAdoptedSkills = (tempRoot: string, projectRepository: string) => {
   writeExtension(join(tempRoot, "extensions", "pstdio-skills"), {
     displayName: "Prompt Studio Skills",
     enginesPstdio: "^1.0.0",
     name: "pstdio-skills",
     version: "0.3.0",
+  });
+  writeExtension(join(projectRepository, ".pstdio", "extensions", "pstdio-notes"), {
+    displayName: "Notes",
+    enginesPstdio: `^${EXTENSION_API_VERSION}`,
+    name: "pstdio-notes",
+    version: "0.1.0",
   });
 };
 
@@ -119,7 +131,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-marketplace-upgrade-"));
   const repository = createMarketplaceRepository(tempRoot);
   const projectRepository = createProjectRepository(tempRoot);
-  seedAdoptedSkills(tempRoot);
+  seedAdoptedSkills(tempRoot, projectRepository);
   let child: ChildProcess | null = null;
   let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
 
@@ -178,6 +190,13 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
         }),
         expect.objectContaining({
           canUpgrade: false,
+          upgradeBlockedReason: "local_source",
+          installName: "pstdio-notes",
+          scope: "repo",
+          version: "0.1.0",
+        }),
+        expect.objectContaining({
+          canUpgrade: false,
           installName: "local-example",
           scope: "repo",
           status: "loaded",
@@ -226,14 +245,34 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(1);
     await expectPage(page.getByTestId("extension-health-upgrade")).toHaveCount(1);
 
+    await page.getByTestId("extension-detail-back").click();
     const adoptedUpgradeResponse = page.waitForResponse(
       (response) => response.url().endsWith("/upgrade") && response.request().method() === "POST",
     );
-    await page.getByTestId("extension-upgrade").click();
+    await page.getByTestId("extensions-upgrade-all").click();
     expect((await adoptedUpgradeResponse).status()).toBe(200);
+    await expectPage(page.getByText("Some extensions were kept", { exact: true })).toBeVisible();
+    await adoptedRow.click();
     await expectPage(page.getByTestId("extension-detail")).toContainText("v0.4.0");
     await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
     await expectPage(page.getByTestId("extension-upgrade")).toHaveCount(0);
+
+    await page.getByTestId("extension-detail-back").click();
+    await page.getByTestId("extension-entry").filter({ hasText: "Notes" }).click();
+    await expectPage(page.getByTestId("extension-detail")).toContainText("v0.1.0");
+    await expectPage(page.getByTestId("extension-upgrade-protected")).toContainText("local folder");
+    await page.getByTestId("extension-use-catalog").click();
+    const replacement = page.getByRole("dialog").last();
+    await replacement.getByRole("button", { name: "Close", exact: true }).last().click();
+    await expectPage(page.getByTestId("extension-detail")).toContainText("v0.1.0");
+    await page.getByTestId("extension-use-catalog").click();
+    const replaceResponse = page.waitForResponse(
+      (response) => response.url().endsWith("/extensions/install") && response.status() === 201,
+    );
+    await page.getByRole("dialog").last().getByRole("button", { name: "Replace", exact: true }).click();
+    await replaceResponse;
+    await expectPage(page.getByTestId("extension-detail")).toContainText("v0.5.0");
+    await expectPage(page.getByTestId("extension-upgrade-protected")).toHaveCount(0);
 
     await page.getByTestId("extension-detail-back").click();
     const localRow = page.getByTestId("extension-entry").filter({ hasText: "Local Example" });

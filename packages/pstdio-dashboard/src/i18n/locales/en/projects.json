@@ -53,14 +53,22 @@
         "action": "Upgrade",
         "succeeded": "Extension upgraded",
         "current": "Extension is already current",
-        "failed": "Extension upgrade failed"
+        "failed": "Extension upgrade failed",
+        "useCatalog": "Use published version",
+        "protected": {
+          "local_source": "Installed from a local folder. Upgrade all keeps this source. You can replace it with the published version.",
+          "different_origin": "Installed from another Git origin. Upgrade all keeps this source. You can replace it with the published version."
+        }
       },
       "upgradeAll": {
         "action": "Upgrade all",
         "succeeded_one": "{{count}} extension upgraded",
         "succeeded_other": "{{count}} extensions upgraded",
         "failed_one": "{{count}} extension could not be upgraded",
-        "failed_other": "{{count}} extensions could not be upgraded"
+        "failed_other": "{{count}} extensions could not be upgraded",
+        "current": "Extensions already current",
+        "skipped": "Some extensions were kept",
+        "skippedHint": "Kept: {{names}}. Open each extension to choose the published version."
       },
       "reload": {
         "action": "Reload",

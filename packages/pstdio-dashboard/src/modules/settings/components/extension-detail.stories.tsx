@@ -206,6 +206,20 @@ export const LocalChangesWaiting: Story = {
   },
 };
 
+export const LocalCatalogSource: Story = {
+  args: {
+    extension: { ...extension, upgradeBlockedReason: "local_source" },
+    onUseCatalogVersion: noop,
+  },
+};
+
+export const DifferentCatalogOrigin: Story = {
+  args: {
+    extension: { ...extension, upgradeBlockedReason: "different_origin" },
+    onUseCatalogVersion: noop,
+  },
+};
+
 export const UpgradeAvailable: Story = {
   args: {
     extension: {

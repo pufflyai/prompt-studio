@@ -41,7 +41,7 @@ export const listProjectExtensionsHandler = (
       const extensions = await Promise.all(
         installedRecords.map(async ({ instance, installedSource }) =>
           toProjectExtensionInstance(instance, installedSource, hashExtensionSource(installedSource.source_path), {
-            canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
+            ...(await deps.extensionUpgradeService?.upgradeAvailability(installedSource)),
           }),
         ),
       );

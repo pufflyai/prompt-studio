@@ -112,6 +112,18 @@ describe("extensions update", () => {
     expect(upgradeProjectExtension).not.toHaveBeenCalled();
   });
 
+  test("explains a protected catalog source instead of calling it current", async () => {
+    const { deps, logs, upgradeProjectExtension } = makeDeps([
+      extension("pstdio-planner", { canUpgrade: false, upgradeBlockedReason: "local_source" }),
+    ]);
+
+    await createHandler(deps)(argv());
+
+    expect(upgradeProjectExtension).not.toHaveBeenCalled();
+    expect(logs.some((message) => message.includes("pstdio-planner") && message.includes("local folder"))).toBe(true);
+    expect(logs.some((message) => message.includes("pst extensions add pstdio-planner --force"))).toBe(true);
+  });
+
   test("continues after one host upgrade fails", async () => {
     const first = extension("first");
     const second = extension("second");

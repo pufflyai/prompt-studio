@@ -63,12 +63,20 @@
         "action": "升级",
         "succeeded": "扩展已升级",
         "current": "扩展已是最新",
-        "failed": "扩展升级失败"
+        "failed": "扩展升级失败",
+        "useCatalog": "使用已发布版本",
+        "protected": {
+          "local_source": "从本地文件夹安装。“全部升级”会保留此来源。你可以将其替换为已发布版本。",
+          "different_origin": "从其他 Git 来源安装。“全部升级”会保留此来源。你可以将其替换为已发布版本。"
+        }
       },
       "upgradeAll": {
         "action": "全部升级",
         "succeeded_other": "已升级 {{count}} 个扩展",
-        "failed_other": "{{count}} 个扩展升级失败"
+        "failed_other": "{{count}} 个扩展升级失败",
+        "current": "扩展已是最新版本",
+        "skipped": "已保留部分扩展",
+        "skippedHint": "已保留：{{names}}。打开各扩展以选择已发布版本。"
       },
       "reload": {
         "action": "重新加载",

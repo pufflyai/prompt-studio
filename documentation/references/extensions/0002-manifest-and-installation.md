@@ -101,6 +101,13 @@ Installs and updates are explicit. Source that appears in the extensions root is
 - A catalog extension shows **Upgrade** when its recorded commit differs from the catalog release.
   Upgrade fetches that origin, validates it in staging, replaces the installed source, and adopts it.
   Healthy local-path extensions stay under local control.
+- Managed Git and registry installs with a missing or older-format release reference can still
+  upgrade from the catalog. A compatible API declaration does not mean the installed release is current.
+- Upgrade all reports the extensions it changed, those already current, failures, and catalog sources
+  it kept because they came from a local folder or another Git origin. Open a kept extension to see
+  why it was skipped. **Use published version** offers an explicit replacement confirmation; it does
+  not replace local source as part of the bulk upgrade. The CLI prints the reason and the matching
+  `pst extensions add <name> --force` recovery command.
 - In the extension panel, every row that can take a newer release shows an upgrade button next to
   its switch. The button upgrades only that extension. **Upgrade all** in the panel header runs
   Upgrade for every extension that offers it, and only appears when at least one does.

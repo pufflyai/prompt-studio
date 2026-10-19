@@ -63,12 +63,20 @@
         "action": "업그레이드",
         "succeeded": "확장을 업그레이드했습니다",
         "current": "확장이 이미 최신입니다",
-        "failed": "확장을 업그레이드하지 못했습니다"
+        "failed": "확장을 업그레이드하지 못했습니다",
+        "useCatalog": "게시된 버전 사용",
+        "protected": {
+          "local_source": "로컬 폴더에서 설치되었습니다. 모두 업그레이드는 이 소스를 유지합니다. 게시된 버전으로 교체할 수 있습니다.",
+          "different_origin": "다른 Git 원본에서 설치되었습니다. 모두 업그레이드는 이 소스를 유지합니다. 게시된 버전으로 교체할 수 있습니다."
+        }
       },
       "upgradeAll": {
         "action": "모두 업그레이드",
         "succeeded_other": "확장 {{count}}개를 업그레이드했습니다",
-        "failed_other": "확장 {{count}}개를 업그레이드하지 못했습니다"
+        "failed_other": "확장 {{count}}개를 업그레이드하지 못했습니다",
+        "current": "이미 최신인 확장 기능",
+        "skipped": "일부 확장 기능을 유지했습니다",
+        "skippedHint": "유지된 확장 기능: {{names}}. 각 확장 기능을 열어 게시된 버전을 선택하세요."
       },
       "reload": {
         "action": "다시 불러오기",

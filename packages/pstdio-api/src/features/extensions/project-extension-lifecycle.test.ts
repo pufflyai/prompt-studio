@@ -50,7 +50,7 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
         })),
       },
       extensionUpgradeService: {
-        canUpgrade: mock(async () => false),
+        upgradeAvailability: mock(async () => ({ canUpgrade: false })),
         installSource: mock(async () => ({
           installName: "test",
           metadata: { id: "test", name: "test" },

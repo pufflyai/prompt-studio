@@ -63,14 +63,22 @@
         "action": "Mettre à niveau",
         "succeeded": "Extension mise à niveau",
         "current": "L'extension est déjà à jour",
-        "failed": "Échec de la mise à niveau de l'extension"
+        "failed": "Échec de la mise à niveau de l'extension",
+        "useCatalog": "Utiliser la version publiée",
+        "protected": {
+          "local_source": "Installée depuis un dossier local. Tout mettre à niveau conserve cette source. Vous pouvez la remplacer par la version publiée.",
+          "different_origin": "Installée depuis une autre origine Git. Tout mettre à niveau conserve cette source. Vous pouvez la remplacer par la version publiée."
+        }
       },
       "upgradeAll": {
         "action": "Tout mettre à niveau",
         "succeeded_one": "{{count}} extension mise à niveau",
         "succeeded_other": "{{count}} extensions mises à niveau",
         "failed_one": "{{count}} extension n'a pas pu être mise à niveau",
-        "failed_other": "{{count}} extensions n'ont pas pu être mises à niveau"
+        "failed_other": "{{count}} extensions n'ont pas pu être mises à niveau",
+        "current": "Extensions déjà à jour",
+        "skipped": "Certaines extensions ont été conservées",
+        "skippedHint": "Conservées : {{names}}. Ouvrez chaque extension pour choisir la version publiée."
       },
       "reload": {
         "action": "Recharger",

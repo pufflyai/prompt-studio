@@ -42,7 +42,12 @@ const createProject = async () => {
 };
 
 describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
-  test("replaces an older marketplace extension with the version from the host release", async () => {
+  test.each([
+    null,
+    "legacy-catalog-reference",
+    "pinned",
+  ])("replaces a managed source with reference %s", async (reference) => {
+    await handle?.close();
     const sourcePath = createTestExtensionSource({
       root: process.env.PSTDIO_HOME!,
       name: "pstdio-planner",
@@ -82,10 +87,18 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       projectId: project.id,
       sourceHash: hashExtensionSource(sourcePath),
       sourceKind: "git",
-      sourceRef: `https://github.com/pufflyai/prompt-studio@${"a".repeat(40)}#extensions/pstdio-planner`,
+      sourceRef:
+        reference === "pinned"
+          ? `https://github.com/pufflyai/prompt-studio@${"a".repeat(40)}#extensions/pstdio-planner`
+          : reference,
       sourcePath,
       version: "1.0.0",
     });
+
+    const list = await handle.app.request(`/v1/projects/${project.id}/extensions`);
+    expect(
+      (await list.json()).extensions.find((entry: { id: string }) => entry.id === enabled.instance.id).canUpgrade,
+    ).toBe(true);
 
     const response = await handle.app.request(`/v1/projects/${project.id}/extensions/${enabled.instance.id}/upgrade`, {
       method: "POST",
@@ -108,5 +121,8 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       reuseInstalledDependencies: true,
       source: "pstdio-planner",
     });
+    expect((await handle.deps.extensionService.getInstalledSource("pstdio-planner"))?.source_ref).toContain(
+      "b".repeat(40),
+    );
   });
 });

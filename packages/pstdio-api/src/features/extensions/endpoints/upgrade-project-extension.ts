@@ -59,7 +59,7 @@ export const upgradeProjectExtensionHandler = (
         {
           changed: result.changed,
           extension: toProjectExtensionInstance(result.instance, result.installedSource, undefined, {
-            canUpgrade: await deps.extensionUpgradeService.canUpgrade(result.installedSource),
+            ...(await deps.extensionUpgradeService.upgradeAvailability(result.installedSource)),
           }),
         },
         200,

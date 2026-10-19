@@ -26,6 +26,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // grouped ticket settings and icons, cleanup/merge settings, saved document links, and ticket/workspace navigation.
+// Marketplace upgrade browser checks also cover protected local catalog sources and explicit release recovery.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 // Includes linked dependency loading and missing dependency diagnostics.

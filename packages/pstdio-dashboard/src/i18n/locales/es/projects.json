@@ -63,14 +63,22 @@
         "action": "Actualizar versión",
         "succeeded": "Extensión actualizada",
         "current": "La extensión ya está al día",
-        "failed": "No se pudo actualizar la extensión"
+        "failed": "No se pudo actualizar la extensión",
+        "useCatalog": "Usar la versión publicada",
+        "protected": {
+          "local_source": "Instalada desde una carpeta local. Actualizar todo conserva esta fuente. Puedes sustituirla por la versión publicada.",
+          "different_origin": "Instalada desde otro origen Git. Actualizar todo conserva esta fuente. Puedes sustituirla por la versión publicada."
+        }
       },
       "upgradeAll": {
         "action": "Actualizar todas",
         "succeeded_one": "{{count}} extensión actualizada",
         "succeeded_other": "{{count}} extensiones actualizadas",
         "failed_one": "No se pudo actualizar {{count}} extensión",
-        "failed_other": "No se pudieron actualizar {{count}} extensiones"
+        "failed_other": "No se pudieron actualizar {{count}} extensiones",
+        "current": "Extensiones ya actualizadas",
+        "skipped": "Se conservaron algunas extensiones",
+        "skippedHint": "Conservadas: {{names}}. Abre cada extensión para elegir la versión publicada."
       },
       "reload": {
         "action": "Recargar",

@@ -72,7 +72,7 @@ export const toProjectExtensionInstance = (
   instance: InstanceLike,
   installedSource: InstalledSourceLike,
   diskSourceHash?: string | null,
-  options: { canUpgrade?: boolean } = {},
+  options: { canUpgrade?: boolean; upgradeBlockedReason?: ProjectExtensionInstance["upgradeBlockedReason"] } = {},
 ): ProjectExtensionInstance => {
   const manifest = (installedSource.manifest_json ?? {}) as Record<string, unknown>;
   const incompatible = compatibilityError(installedSource, { upgradable: options.canUpgrade });
@@ -94,6 +94,7 @@ export const toProjectExtensionInstance = (
     enabled: instance.enabled,
     config: (instance.config_json ?? {}) as Record<string, unknown>,
     canUpgrade: options.canUpgrade === true,
+    ...(options.upgradeBlockedReason ? { upgradeBlockedReason: options.upgradeBlockedReason } : {}),
     updateAvailable: Boolean(
       diskSourceHash && installedSource.source_hash && diskSourceHash !== installedSource.source_hash,
     ),

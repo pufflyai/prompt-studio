@@ -23,11 +23,12 @@ interface ExtensionDetailContainerProps {
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
   onBack: () => void;
+  onUseCatalogVersion?: () => void;
   settingsInput?: WorkbenchPanelRenderInput;
 }
 
 export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) => {
-  const { projectId, extension, metadata, onBack, settingsInput } = props;
+  const { projectId, extension, metadata, onBack, onUseCatalogVersion, settingsInput } = props;
   const settingsPanels =
     metadata?.settingsPanels.filter(
       (panel) => panel.extensionId === extension.extensionId && panel.slot.id === "extension.settings",
@@ -142,6 +143,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         onChangeSetting={(key, value) => updateSetting.mutate({ instanceId: extension.id, key, value })}
         onReload={handleReload}
         onUpgrade={handleUpgrade}
+        onUseCatalogVersion={onUseCatalogVersion}
         onUninstall={() => setConfirmingUninstall(true)}
       />
       <DeleteConfirmationModal

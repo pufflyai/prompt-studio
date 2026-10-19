@@ -43,10 +43,19 @@ export type ExtensionUpgradeServiceDeps = {
 type UpgradeSource = {
   install_name: string;
   manifest_json?: unknown;
+  source_kind?: string;
   source_ref: string | null;
 };
 
 type InstallExtension = (input: InstallExtensionSourceInput) => ReturnType<typeof installExtensionSourceDefault>;
+
+const unpinnedCatalogAvailability = (source: UpgradeSource) => {
+  // API compatibility does not prove that an install contains the current release.
+  // Older managed installs can lack the pinned Git reference used by newer hosts.
+  if (source.source_kind === "git" || source.source_kind === "registry" || compatibilityError(source))
+    return { canUpgrade: true };
+  return { canUpgrade: false, upgradeBlockedReason: "local_source" as const };
+};
 
 const installFromRecordedOrigin = (input: {
   install: InstallExtension;
@@ -92,26 +101,29 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     }
     return commit;
   };
-  const canUpgrade = async (source: UpgradeSource) => {
+  const upgradeAvailability = async (source: UpgradeSource) => {
     const entry = await catalogEntry(source.install_name);
     const parsed = parseExtensionSourceRef(source.source_ref);
-    if (!entry && !parsed) return false;
-    if (entry && parsed && (entry.origin.url !== parsed.url || entry.origin.path !== parsed.path)) return false;
+    if (!entry && !parsed) return { canUpgrade: false };
+    if (entry && parsed && (entry.origin.url !== parsed.url || entry.origin.path !== parsed.path))
+      return { canUpgrade: false, upgradeBlockedReason: "different_origin" as const };
     let releaseRef: string | undefined;
     try {
       releaseRef = entry ? releaseRefFor(entry) : deps.release?.ref;
     } catch {
-      return false;
+      return { canUpgrade: false };
     }
-    if (!parsed) return compatibilityError(source) !== null;
-    if (!releaseRef) return false;
+    if (!parsed) return unpinnedCatalogAvailability(source);
+    if (!releaseRef) return { canUpgrade: false };
     try {
-      return parsed.commit !== (await currentReleaseCommit(parsed.url, releaseRef));
+      return { canUpgrade: parsed.commit !== (await currentReleaseCommit(parsed.url, releaseRef)) };
     } catch {
       // Keep the recovery action available when the release ref cannot be checked yet.
-      return true;
+      return { canUpgrade: true };
     }
   };
+
+  const canUpgrade = async (source: UpgradeSource) => (await upgradeAvailability(source)).canUpgrade;
 
   const requireCatalogEntry = async (installName: string) => {
     const entry = await catalogEntry(installName);
@@ -224,6 +236,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
 
   return {
     canUpgrade,
+    upgradeAvailability,
     enabled: true,
     installSource,
     prepareMarketplaceExtensionSource,

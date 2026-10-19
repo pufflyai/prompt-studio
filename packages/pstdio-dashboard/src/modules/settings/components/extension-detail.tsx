@@ -40,6 +40,7 @@ export interface ExtensionDetailProps {
   onChangeSetting: (key: string, value: unknown) => void;
   onReload: () => void;
   onUpgrade: () => void;
+  onUseCatalogVersion?: () => void;
   onUninstall: () => void;
 }
 
@@ -64,6 +65,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     onChangeSetting,
     onReload,
     onUpgrade,
+    onUseCatalogVersion,
     onUninstall,
   } = props;
   const { t } = useTranslation("projects");
@@ -155,6 +157,19 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           <Text textStyle="label/XS" color="fg.muted" data-testid="extension-reload-hint">
             {t("projectSettings.extensionsPanel.reload.hint")}
           </Text>
+        )}
+
+        {extension.upgradeBlockedReason && (
+          <Stack gap="sm" alignItems="start" data-testid="extension-upgrade-protected">
+            <Text textStyle="label/XS" color="fg.muted">
+              {t(`projectSettings.extensionsPanel.upgrade.protected.${extension.upgradeBlockedReason}`)}
+            </Text>
+            {onUseCatalogVersion && (
+              <Button variant="outline" size="2xs" onClick={onUseCatalogVersion} data-testid="extension-use-catalog">
+                {t("projectSettings.extensionsPanel.upgrade.useCatalog")}
+              </Button>
+            )}
+          </Stack>
         )}
 
         <Stack gap="3xs">

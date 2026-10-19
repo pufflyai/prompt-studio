@@ -245,6 +245,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     expect(row).toMatchObject({
       canUpgrade: false,
       installName: "pstdio-planner",
+      upgradeBlockedReason: "local_source",
       status: "loaded",
       version: "0.10.0",
     });

@@ -6,6 +6,7 @@ import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
+import { runExtensionUpgrades } from "@/shared/extensions/run-extension-upgrades";
 import {
   useAddLocalExtensionFolder,
   useInstallMarketplaceExtension,
@@ -79,7 +80,8 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const handleInstallMarketplace = async (extension: MarketplaceExtension, force = false) => {
     setInstallingMarketplaceNames((current) => [...new Set([...current, extension.installName])]);
     try {
-      await installMarketplace.mutateAsync({ installName: extension.installName, force });
+      const result = await installMarketplace.mutateAsync({ installName: extension.installName, force });
+      if (selected?.installName === extension.installName) setSelectedInstanceId(result.extension.id);
       toaster.create({
         type: "success",
         title: t("projectSettings.extensionsPanel.marketplace.installSucceeded", { name: extension.displayName }),
@@ -101,14 +103,28 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   };
 
   if (selected) {
+    const catalogEntry = marketplace.find((entry) => entry.installName === selected.installName);
     return (
-      <ExtensionDetailContainer
-        projectId={projectId}
-        extension={selected}
-        metadata={metadataQuery.data}
-        settingsInput={settingsInput}
-        onBack={() => setSelectedInstanceId(null)}
-      />
+      <>
+        {replacementDialog}
+        <ExtensionDetailContainer
+          projectId={projectId}
+          extension={selected}
+          metadata={metadataQuery.data}
+          settingsInput={settingsInput}
+          onBack={() => setSelectedInstanceId(null)}
+          onUseCatalogVersion={
+            catalogEntry && selected.upgradeBlockedReason
+              ? () => {
+                  setReplacement({
+                    name: selected.displayName,
+                    retry: () => handleInstallMarketplace(catalogEntry, true),
+                  });
+                }
+              : undefined
+          }
+        />
+      </>
     );
   }
 
@@ -150,22 +166,33 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   // time: each fetches and installs a release, and one failure must not stop the rest.
   const handleUpgradeAll = async (upgradable: ProjectExtensionInstance[]) => {
     setUpgradingInstanceIds((current) => [...new Set([...current, ...upgradable.map((extension) => extension.id)])]);
-    let upgraded = 0;
-    const failed: string[] = [];
-    for (const extension of upgradable) {
-      try {
-        await upgrade.mutateAsync({ instanceId: extension.id });
-        upgraded += 1;
-      } catch (error) {
-        failed.push(`${extension.displayName}: ${error instanceof Error ? error.message : String(error)}`);
-      } finally {
+    const { upgraded, current, skipped, failed } = await runExtensionUpgrades(
+      extensions,
+      (extension) => upgrade.mutateAsync({ instanceId: extension.id }),
+      (extension) => {
         setUpgradingInstanceIds((current) => current.filter((id) => id !== extension.id));
-      }
-    }
-    if (upgraded > 0) {
+      },
+    );
+    if (upgraded.length > 0) {
       toaster.create({
         type: "success",
-        title: t("projectSettings.extensionsPanel.upgradeAll.succeeded", { count: upgraded }),
+        title: t("projectSettings.extensionsPanel.upgradeAll.succeeded", { count: upgraded.length }),
+      });
+    }
+    if (current.length > 0) {
+      toaster.create({
+        type: "info",
+        title: t("projectSettings.extensionsPanel.upgradeAll.current"),
+        description: current.map((entry) => entry.displayName).join(", "),
+      });
+    }
+    if (skipped.length > 0) {
+      toaster.create({
+        type: "info",
+        title: t("projectSettings.extensionsPanel.upgradeAll.skipped"),
+        description: t("projectSettings.extensionsPanel.upgradeAll.skippedHint", {
+          names: skipped.map((entry) => entry.displayName).join(", "),
+        }),
       });
     }
     if (failed.length > 0) {

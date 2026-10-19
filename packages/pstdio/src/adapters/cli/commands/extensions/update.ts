@@ -68,7 +68,15 @@ export const createHandler =
     }
 
     const candidates = installed.filter((extension) => extension.canUpgrade);
+    const protectedSources = installed.filter((extension) => extension.upgradeBlockedReason);
+    for (const extension of protectedSources) {
+      const reason = extension.upgradeBlockedReason === "local_source" ? "a local folder" : "another Git origin";
+      deps.log(
+        `Skipped ${extension.installName}: installed from ${reason}. Use \`pst extensions add ${extension.installName} --force\` to replace it with the catalog version.`,
+      );
+    }
     if (candidates.length === 0) {
+      if (protectedSources.length > 0) return;
       deps.log(
         argv.name
           ? `No host-managed update is available for "${argv.name}".`

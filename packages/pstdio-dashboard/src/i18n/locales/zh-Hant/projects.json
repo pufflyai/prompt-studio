@@ -63,12 +63,20 @@
         "action": "升級",
         "succeeded": "擴充功能已升級",
         "current": "擴充功能已是最新",
-        "failed": "擴充功能升級失敗"
+        "failed": "擴充功能升級失敗",
+        "useCatalog": "使用已發佈版本",
+        "protected": {
+          "local_source": "從本機資料夾安裝。「全部升級」會保留此來源。你可以將其取代為已發佈版本。",
+          "different_origin": "從其他 Git 來源安裝。「全部升級」會保留此來源。你可以將其取代為已發佈版本。"
+        }
       },
       "upgradeAll": {
         "action": "全部升級",
         "succeeded_other": "已升級 {{count}} 個擴充功能",
-        "failed_other": "{{count}} 個擴充功能升級失敗"
+        "failed_other": "{{count}} 個擴充功能升級失敗",
+        "current": "擴充功能已是最新版本",
+        "skipped": "已保留部分擴充功能",
+        "skippedHint": "已保留：{{names}}。開啟各擴充功能以選擇已發佈版本。"
       },
       "reload": {
         "action": "重新載入",

@@ -194,6 +194,7 @@ describe("extension upgrade service", () => {
       await service.canUpgrade({
         ...installedSource,
         manifest_json: { name: "pstdio-planner", enginesPstdio: `^${EXTENSION_API_VERSION}` },
+        source_kind: "local_path",
         source_ref: null,
       }),
     ).toBe(false);

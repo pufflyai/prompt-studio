@@ -44,7 +44,7 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     installedSource: NonNullable<Awaited<ReturnType<LifecycleDeps["extensionService"]["getInstalledSource"]>>>,
   ): Promise<ProjectExtensionInstance> =>
     toProjectExtensionInstance(instance, installedSource, installedSource.source_hash, {
-      canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
+      ...(await deps.extensionUpgradeService?.upgradeAvailability(installedSource)),
     });
 
   const install = async (projectId: string, input: InstallExtensionRequest | UploadExtensionRequest) => {
