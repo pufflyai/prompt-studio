@@ -9,6 +9,8 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
       const frame = document.createElement("iframe");
       frame.title = "Initialization probe";
       frame.sandbox.add("allow-scripts");
+      // Chromium throttles layout observers in opaque iframes below the viewport.
+      Object.assign(frame.style, { position: "fixed", top: "0", left: "0" });
       const moduleUrl = `data:text/javascript,${encodeURIComponent(`
         export default {
           async mount(element) {
@@ -41,6 +43,7 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
       const resizeFromGuest = (data: MessageEvent["data"]) => {
         if (data.action === "RIMLESS/RPC_REQUEST" && data.callName === "contentWidthChanged") {
           frame.style.width = `${data.args[0]}px`;
+          frame.dataset.contentWidth = String(data.args[0]);
           frame.contentWindow?.postMessage({ ...data, action: "RIMLESS/RPC_RESOLVE", result: null }, "*");
         }
       };
@@ -75,6 +78,7 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
       1,
     );
     const iframe = probe.locator('iframe[title="Initialization probe"]');
+    await expect(iframe).toHaveAttribute("data-content-width", /^[1-9]\d*$/);
     const before = (await iframe.boundingBox())!.width;
     await probe
       .frameLocator('iframe[title="Initialization probe"]')
