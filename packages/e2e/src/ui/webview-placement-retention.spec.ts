@@ -38,7 +38,7 @@ test("moving a webview between panels preserves its browsing context", async ({ 
         await page.getByRole("button", { name: "Float Side Panel", exact: true }).click();
         await page.getByRole("button", { name: "Close Side Panel", exact: true }).click();
         await expect(element).toBeHidden();
-        await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+        await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
         await expect(element).toBeVisible();
         expect(frame!.isDetached()).toBe(false);
         expect(await frame!.evaluate(() => Reflect.get(window, "placementMarker"))).toBe("original context");

@@ -47,7 +47,7 @@ const expectDashboardAttachedBounds = async (page: import("@playwright/test").Pa
   expect(sideBox).not.toBeNull();
 
   expectNear(sideBox!.y, PANEL_GAP_PX);
-  expectNear(sideBox!.height, 720 - PANEL_GAP_PX - 32);
+  expectNear(sideBox!.height, 720 - 2 * PANEL_GAP_PX);
   expectNear(sideBox!.width, 420);
   expectNear(mainBox!.x + mainBox!.width + PANEL_GAP_PX, sideBox!.x);
   expectNear(sideBox!.x + sideBox!.width, 1280 - PANEL_GAP_PX);

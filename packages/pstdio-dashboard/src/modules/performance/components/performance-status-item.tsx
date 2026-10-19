@@ -2,7 +2,7 @@ import { Box, Button, HStack, Popover, Portal, Text } from "@chakra-ui/react";
 import { ScrollArea, Tooltip } from "@pstdio/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Gauge, TriangleAlert } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { useOpenExtensionViews } from "@/shared/extensions/open-extension-views";
 import { pausedExtensions, usePausedExtensions } from "@/shared/extensions/paused-extensions";
@@ -23,6 +23,7 @@ interface PerformanceStatusItemProps {
 // current fps. It exists only while monitoring is on and opens the popover.
 export const PerformanceStatusItem = (props: PerformanceStatusItemProps) => {
   const { controller, projectId } = props;
+  const contentRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation("settings");
   const buckets = useSyncExternalStore(controller.frameRate.subscribe, controller.frameRate.getBuckets);
   const open = useSyncExternalStore(controller.subscribe, controller.getPopoverOpen);
@@ -45,6 +46,7 @@ export const PerformanceStatusItem = (props: PerformanceStatusItemProps) => {
   return (
     <Popover.Root
       open={open}
+      initialFocusEl={() => contentRef.current}
       onOpenChange={(event) => controller.setPopoverOpen(event.open)}
       positioning={{ placement: "top-end", offset: { mainAxis: 4 } }}
     >
@@ -85,6 +87,7 @@ export const PerformanceStatusItem = (props: PerformanceStatusItemProps) => {
       <Portal>
         <Popover.Positioner>
           <Popover.Content
+            ref={contentRef}
             width="performance-popover"
             maxW="calc(100vw - var(--chakra-spacing-md) * 2)"
             maxH="70dvh"

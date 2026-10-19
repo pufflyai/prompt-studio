@@ -90,6 +90,8 @@ export const expectPackagedStreamingMotion = async (
   expect(response.ok).toBe(true);
   const session = (await response.json()) as { id: string };
   await page.getByRole("option", { name: "Motion replay", exact: true }).click();
+  const transcript = page.getByRole("log").filter({ visible: true }).first();
+  await expect(transcript.locator('[data-scope="scroll-area"][data-part="viewport"]').first()).toBeVisible();
   const text = page
     .locator('[data-rich-message="true"] [data-lexical-text="true"]')
     .filter({ hasText: /^Step 1\./, visible: true })
