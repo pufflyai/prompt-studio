@@ -56,3 +56,27 @@ export const OneTerminal: Story = {
   args: { activity: { sessions: [], terminals: [{ id: "terminal-one", label: "sleep 300" }], jobs: [] } },
   decorators: Light.decorators,
 };
+
+export const LongContent: Story = {
+  decorators: Light.decorators,
+  args: {
+    activity: {
+      sessions: Array.from({ length: 30 }, (_, index) => ({
+        id: `session-${index}`,
+        label: `Session ${index + 1}: ${"LongProjectAndTaskNameWithoutBreaks".repeat(7)}`,
+      })),
+      terminals: Array.from({ length: 20 }, (_, index) => ({
+        id: `terminal-${index}`,
+        label: `Terminal ${index + 1}`,
+      })),
+      jobs: [{ id: "background-check", label: "Background automation check" }],
+    },
+  },
+  play: async () => {
+    const dialog = await screen.findByRole("alertdialog", { name: "Active work is still running" });
+    await waitFor(() => expect(dialog).toBeVisible());
+    await expect(screen.queryByText("Background automation check")).not.toBeInTheDocument();
+    await expect(screen.getByRole("button", { name: "Keep Prompt Studio open" })).toBeVisible();
+    await expect(screen.getByRole("button", { name: "Cancel work and quit" })).toBeVisible();
+  },
+};

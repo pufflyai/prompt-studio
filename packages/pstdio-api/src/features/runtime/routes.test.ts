@@ -200,6 +200,20 @@ describe("runtime control routes", () => {
     expect(response.status).toBe(409);
   });
 
+  test("permits an unconfirmed shutdown while only background automation jobs are running", async () => {
+    const activity = { ...emptyActivity(), jobs: [{ id: "job-one", label: "project/auto-build" }] };
+    const { calls, request } = createHarness({ activity });
+    expect(await (await request("/runtime/activity")).json()).toEqual(activity);
+    const response = await request("/runtime/shutdown", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ force: false, instanceId: "runtime-one" }),
+    });
+    expect(response.status).toBe(202);
+    await waitFor(() => calls.includes("shutdown"));
+    expect(calls).toEqual(["announce", "shutdown"]);
+  });
+
   test("reports backend-authoritative activity and refuses an unconfirmed shutdown", async () => {
     const activity: RuntimeActivitySummary = {
       sessions: [{ id: "session-one", label: "Implement runtime" }],

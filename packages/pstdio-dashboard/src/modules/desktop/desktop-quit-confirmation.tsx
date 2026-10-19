@@ -12,7 +12,6 @@ interface DesktopQuitConfirmationDialogProps {
 const activityGroups = (activity: DesktopActivity) => [
   { label: "Agent sessions", items: activity.sessions },
   { label: "Terminals", items: activity.terminals },
-  { label: "Jobs", items: activity.jobs },
 ];
 
 export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDialogProps) => {
@@ -23,6 +22,7 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
     <Dialog.Root
       role="alertdialog"
       open={activity !== null}
+      scrollBehavior="inside"
       initialFocusEl={() => keepOpenRef.current}
       closeOnInteractOutside={false}
       onOpenChange={(details) => {
@@ -51,7 +51,7 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
                         </Text>
                         <Stack as="ul" gap="2xs" listStyle="none" padding="0" margin="0" mt="2xs">
                           {group.items.map((item) => (
-                            <Text as="li" key={item.id} textStyle="paragraph/M/regular">
+                            <Text as="li" key={item.id} textStyle="paragraph/M/regular" overflowWrap="anywhere">
                               {item.label}
                             </Text>
                           ))}
@@ -61,7 +61,7 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
                   })}
               </Stack>
             </Dialog.Body>
-            <Dialog.Footer>
+            <Dialog.Footer flexWrap="wrap">
               <Button ref={keepOpenRef} size="sm" onClick={onKeepOpen}>
                 Keep Prompt Studio open
               </Button>

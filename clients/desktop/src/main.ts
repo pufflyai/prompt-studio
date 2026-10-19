@@ -121,7 +121,7 @@ const runtimeManager = new DesktopRuntimeManager({
 // The dashboard shows the quit dialog. Asking to quit again means it may not be visible,
 // for example when the dashboard failed to load, so ask with a native dialog that always shows.
 const askToCancelActiveWork = async (activity: RuntimeActivity) => {
-  const labels = [...activity.sessions, ...activity.terminals, ...activity.jobs].map((item) => item.label);
+  const labels = [...activity.sessions, ...activity.terminals].map((item) => item.label);
   const { response } = await dialog.showMessageBox({
     type: "warning",
     message: "Active work is still running",

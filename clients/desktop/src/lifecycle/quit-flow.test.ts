@@ -125,7 +125,7 @@ describe("desktop quit flow", () => {
       refreshRuntime: async () => current,
       requestShutdown: async () => ({
         state: "active",
-        activity: { ...noActivity, jobs: [{ id: "j1", label: "Job" }] },
+        activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] },
       }),
     });
 

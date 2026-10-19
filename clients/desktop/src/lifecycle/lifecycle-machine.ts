@@ -61,8 +61,7 @@ export type DesktopEvent =
 
 export const initialDesktopState: DesktopState = { kind: "starting", phase: "discovery" };
 
-const hasActivity = (activity: RuntimeActivity) =>
-  activity.sessions.length > 0 || activity.terminals.length > 0 || activity.jobs.length > 0;
+const hasActivity = (activity: RuntimeActivity) => activity.sessions.length > 0 || activity.terminals.length > 0;
 
 const unexpectedExitError = (): DesktopRecoveryError => ({
   code: "unexpected_exit",

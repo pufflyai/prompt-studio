@@ -28,6 +28,18 @@ describe("desktop lifecycle", () => {
     expect(transitionDesktopState(confirmation, { type: "quit_confirmed" })).toEqual({ kind: "closing" });
   });
 
+  test("closes without confirmation when only background automation jobs are running", () => {
+    expect(
+      transitionDesktopState(
+        { kind: "workbench", runtime: desktopRuntime },
+        {
+          type: "quit_requested",
+          activity: { sessions: [], terminals: [], jobs: [{ id: "job-one", label: "Auto Build check" }] },
+        },
+      ),
+    ).toEqual({ kind: "closing" });
+  });
+
   test("detaches from persistent runtimes and recovers from unexpected exits", () => {
     const persistent = {
       kind: "workbench" as const,
