@@ -2,6 +2,7 @@ import { Box } from "@chakra-ui/react";
 import { type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
+import { WorkbenchSystemErrors } from "../notifications/system-errors";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { WorkbenchRegion } from "../region/region";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -87,25 +88,18 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       minW="0"
       overflow="hidden"
     >
-      <Box display="flex" h="full" minW="0">
-        <Box flex="1" minW="0" position="relative">
+      <Box display="flex" alignItems="stretch" justifyContent="space-between" px="sm" h="full" minW="0" w="full">
+        <Box display="flex" alignItems="center" minW="0">
+          <WorkbenchSystemErrors workbench={workbench} />
+        </Box>
+        <Box flex="1" minW="0" h="full" display={chrome ? "block" : "none"}>
           <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
-          <Box
-            display={chrome ? "none" : "flex"}
-            alignItems="stretch"
-            justifyContent="space-between"
-            px="sm"
-            h="full"
-            minW="0"
-            w="full"
-          >
-            <Box display="flex" alignItems="stretch" minW="0" h="full">
-              <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
-            </Box>
-            <Box display="flex" alignItems="stretch" minW="0" h="full">
-              <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
-            </Box>
-          </Box>
+        </Box>
+        <Box display={chrome === undefined ? "flex" : "none"} alignItems="stretch" minW="0" h="full">
+          <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+        </Box>
+        <Box display={chrome === undefined ? "flex" : "none"} alignItems="stretch" minW="0" h="full" marginLeft="auto">
+          <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
         </Box>
       </Box>
     </WorkbenchFocusRegion>

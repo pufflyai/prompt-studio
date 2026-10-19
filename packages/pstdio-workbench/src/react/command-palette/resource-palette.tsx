@@ -39,8 +39,10 @@ const createResourceEntry = (input: {
       />
     ) : undefined,
     onActivate: () => {
-      onClose();
-      void runUserAction(workbench, label, () => activate(resource));
+      void runUserAction(workbench, label, () => activate(resource), {
+        inlineTarget: "command-palette",
+        onSuccess: onClose,
+      });
     },
   };
 };

@@ -1,10 +1,10 @@
 import { Box, Card, HStack, Icon, Stack } from "@chakra-ui/react";
-import { toaster } from "@pstdio/ui";
 import { Bot } from "lucide-react";
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import { useTranslation } from "react-i18next";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
+import { useActionError } from "@/shared/components/use-action-error";
 import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
 import { HarnessParamEditor } from "../../sessions/components/harness-param-editor";
 import { filterHarnessParamValues, type HarnessParamValues } from "../../sessions/components/harness-param-values";
@@ -23,6 +23,7 @@ interface ProjectDefaultsCardProps {
 // can replace or drop harness params.
 export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
   const { projectId } = props;
+  const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("settings");
 
   const { data: agents = [], isLoading: isAgentsLoading } = useAgents(projectId);
@@ -59,12 +60,12 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
   const paramValues = filterHarnessParamValues(paramSchema, storedParamDefaults);
 
   const handleSelectHarness = (agentId: string) => {
+    clearError();
     updateProjectDefaults.mutate(
       { default_agent_id: agentId, default_agent_model: null },
       {
         onError: (error) => {
-          toaster.create({
-            type: "error",
+          showError({
             title: t("agentRow.failedToSetDefaultHarness"),
             description: error.message,
           });
@@ -75,12 +76,12 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
 
   const handleSelectModel = (modelId: string) => {
     if (!selectedHarnessId) return;
+    clearError();
     updateProjectDefaults.mutate(
       { default_agent_id: selectedHarnessId, default_agent_model: modelId || null },
       {
         onError: (error) => {
-          toaster.create({
-            type: "error",
+          showError({
             title: t("agentRow.failedToSetDefaultModel"),
             description: error.message,
           });
@@ -90,13 +91,13 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
   };
 
   const handleParamsChange = (next: HarnessParamValues) => {
+    clearError();
     // Params the selected model hides keep their stored value for the other models.
     updateParamDefaults.mutate(
       { ...storedParamDefaults, ...next },
       {
         onError: (error) => {
-          toaster.create({
-            type: "error",
+          showError({
             title: t("harnessesPanel.runDefaultsSaveError"),
             description: error.message,
           });
@@ -108,6 +109,7 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
   return (
     <Card.Root size="sm" borderRadius="0" data-testid="project-defaults-card">
       <Card.Body>
+        {errorNotice}
         <Stack gap="sm">
           <HStack gap="4" alignItems="flex-start">
             <Icon boxSize="1em" fontSize="2xl" flexShrink="0" color="fg.muted">

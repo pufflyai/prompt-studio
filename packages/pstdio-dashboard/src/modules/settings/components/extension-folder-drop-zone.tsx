@@ -1,8 +1,8 @@
 import { HStack, Icon, Spinner, Stack, Text } from "@chakra-ui/react";
-import { toaster } from "@pstdio/ui";
 import { FolderPlus } from "lucide-react";
 import { type DragEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useActionError } from "@/shared/components/use-action-error";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { readDroppedFolder } from "./read-dropped-folder";
 
@@ -16,6 +16,7 @@ const carriesFiles = (event: DragEvent) => event.dataTransfer.types.includes("Fi
 
 export const ExtensionFolderDropZone = (props: ExtensionFolderDropZoneProps) => {
   const { addingName, onDropFolder } = props;
+  const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
   const [dragging, setDragging] = useState(false);
   const adding = addingName !== undefined;
@@ -37,19 +38,19 @@ export const ExtensionFolderDropZone = (props: ExtensionFolderDropZoneProps) => 
     event.preventDefault();
     setDragging(false);
     if (adding) return;
+    clearError();
 
     // The browser only exposes dropped entries while the drop event runs, so take it before any await.
     const entry = event.dataTransfer.items[0]?.webkitGetAsEntry();
     if (!entry?.isDirectory) {
-      toaster.create({ type: "error", title: t("projectSettings.extensionsPanel.dropZone.notFolder") });
+      showError({ title: t("projectSettings.extensionsPanel.dropZone.notFolder") });
       return;
     }
 
     try {
       onDropFolder(await readDroppedFolder(entry as FileSystemDirectoryEntry));
     } catch (error) {
-      toaster.create({
-        type: "error",
+      showError({
         title: t("projectSettings.extensionsPanel.dropZone.failed"),
         description: error instanceof Error ? error.message : undefined,
       });
@@ -70,6 +71,7 @@ export const ExtensionFolderDropZone = (props: ExtensionFolderDropZoneProps) => 
       onDrop={(event) => void handleDrop(event)}
       data-testid="extension-folder-drop-zone"
     >
+      {errorNotice}
       <HStack gap="xs">
         {adding ? (
           <Spinner size="xs" />

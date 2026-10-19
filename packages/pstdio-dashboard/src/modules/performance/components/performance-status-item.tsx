@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Popover, Portal, Text } from "@chakra-ui/react";
-import { Tooltip } from "@pstdio/ui";
+import { ScrollArea, Tooltip } from "@pstdio/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Gauge, TriangleAlert } from "lucide-react";
 import { useSyncExternalStore } from "react";
@@ -84,18 +84,25 @@ export const PerformanceStatusItem = (props: PerformanceStatusItemProps) => {
       </Tooltip>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content width="performance-popover" maxH="70vh" overflowY="auto">
-            <Popover.Body paddingX="md" paddingY="sm">
-              <PerformancePopoverContent
-                snapshot={snapshot.data}
-                error={snapshot.error?.message}
-                buckets={buckets}
-                paused={paused}
-                openViews={openViews}
-                extensionName={extensionName}
-                onPause={pausedExtensions.pause}
-                onResume={pausedExtensions.resume}
-              />
+          <Popover.Content
+            width="performance-popover"
+            maxW="calc(100vw - var(--chakra-spacing-md) * 2)"
+            maxH="70dvh"
+            overflow="hidden"
+          >
+            <Popover.Body minH="0" display="flex" flexDirection="column">
+              <ScrollArea minH="0">
+                <PerformancePopoverContent
+                  snapshot={snapshot.data}
+                  error={snapshot.error?.message}
+                  buckets={buckets}
+                  paused={paused}
+                  openViews={openViews}
+                  extensionName={extensionName}
+                  onPause={pausedExtensions.pause}
+                  onResume={pausedExtensions.resume}
+                />
+              </ScrollArea>
             </Popover.Body>
           </Popover.Content>
         </Popover.Positioner>

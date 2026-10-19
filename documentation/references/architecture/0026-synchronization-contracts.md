@@ -6,9 +6,11 @@ are defined in [covered checkpoints](0027-covered-checkpoints.md); their product
 cutover is separate. The owners below currently build on protocol 1:
 grouped local storage in `pstdio-sync` and `pstdio-db`, the relay in `infra/relay`,
 account authority in `infra/account-manager`, and an opt-in runtime connection in
-`pstdio-api`. They are on `main` but in no release. The
-[PRD delivery record](../../requirements/platform/0007-synchronization-contracts.md#delivery-record)
-lists what is proven.
+`pstdio-api`. They are on `main` but in no release.
+
+[PRD 0014](../../requirements/platform/0014-local-first-sync.md) replaces this design
+with client-side merging and a relay that cannot read content. This reference
+describes the current code until that work replaces it.
 
 ## Package and ownership
 

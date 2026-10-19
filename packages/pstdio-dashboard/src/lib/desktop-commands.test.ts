@@ -27,7 +27,7 @@ test("native commands use the workbench command handlers and unsubscribe on tear
   expect(receive).toBeUndefined();
 });
 
-test("shows failed native commands through workbench notifications", async () => {
+test("keeps failed native commands in the originating workbench region", async () => {
   const workbench = createDashboardWorkbench();
   let receive: ((id: string) => void) | undefined;
   connectDesktopCommands(
@@ -50,7 +50,7 @@ test("shows failed native commands through workbench notifications", async () =>
 
   await receive?.("unavailable");
   expect(workbench.notifications.listNotifications()).toMatchObject([
-    { level: "error", message: "The action could not finish." },
+    { level: "error", message: "The action could not finish.", inlineTarget: "region:main" },
   ]);
 });
 

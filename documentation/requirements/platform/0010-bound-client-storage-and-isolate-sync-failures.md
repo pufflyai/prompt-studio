@@ -154,8 +154,8 @@ Compaction and eviction conflict with two existing contracts:
 - The [synchronization contract reference](../../references/architecture/0026-synchronization-contracts.md#replay-snapshots-retention-and-restore)
   says not to compact receipts until a coverage design is proved, keeps completed versions without
   expiry, and has restore validate the immutable bytes that retained history needs.
-- The [synchronization contracts PRD](0007-synchronization-contracts.md#delivery-record)
-  gives retention to later relay work and authorizes no automatic history expiration.
+- The synchronization contracts PRD (0007, now deleted) gave retention to later relay work.
+  [PRD 0014](0014-local-first-sync.md) replaces it and owns relay retention and sync failures.
 
 Before any compaction or eviction is turned on, amend both documents or record the change in an ADR.
 Link that change from the PR that turns the feature on.
@@ -245,4 +245,4 @@ Budget enforcement also changes calls that succeed today, so it ships only in a 
 - [Saving rebuilds the captured revision](../../../packages/pstdio-sync/src/authoring.ts)
 - [Asset verification currently precedes retry lookup](../../../packages/pstdio-sync/src/storage.ts)
 - [Connection-owned browser collections](../../../packages/pstdio-dashboard/src/lib/sync/collections.ts)
-- [PS-735 workload and production work still required](0007-synchronization-contracts.md#delivery-record)
+- [Local-first sync PRD, which replaces the relay design this PRD assumed](0014-local-first-sync.md)

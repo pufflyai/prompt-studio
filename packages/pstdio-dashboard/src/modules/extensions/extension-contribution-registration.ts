@@ -111,6 +111,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         createNavigationWhenExpression: (when) =>
           buildDashboardWorkbenchWhenExpression(toWorkbenchWhenExpression(when)),
         executeCommand: async (commandId, body, signal) => {
+          const reportActionError = input.ctx.notifications.captureActionError("Extension command");
           const rawResponse = await input.executeCommand(input.projectId, commandId, body, signal);
           signal?.throwIfAborted();
           const treeId = body.slot?.context?.treeId;
@@ -118,6 +119,10 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
             typeof treeId === "string" ? await withWorkspaceDiffMetadata(rawResponse, undefined, signal) : rawResponse;
           const response = localizeDashboardExtensionCommandResponse(decoratedResponse, owner);
           for (const notification of collectExtensionCommandNotifications(response)) {
+            if (notification.level === "error") {
+              reportActionError(new Error(notification.message ?? notification.title));
+              continue;
+            }
             input.ctx.notifications.show({
               level: notification.level,
               title: notification.title,
