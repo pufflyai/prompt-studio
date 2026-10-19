@@ -1,5 +1,5 @@
 import { and, eq, isNotNull, isNull, lte } from "drizzle-orm";
-import type { StateEnvelope, UpdateEnvelope } from "pstdio-sync-contracts/protocol";
+import type { StateEnvelope, UpdateEnvelope } from "pstdio-sync-contracts";
 import type { RelayLimits } from "../limits";
 import {
   admitWrite,

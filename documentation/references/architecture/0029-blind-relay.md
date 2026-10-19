@@ -11,7 +11,7 @@ clients to the new protocol. PS-824 then removes the grouped relay.
 
 ## Protocol
 
-The protocol lives in `pstdio-sync-contracts/protocol`. It uses Zod and the package's shared
+The protocol lives in `packages/pstdio-sync-contracts/src/protocol/` and is part of the package's main export. It uses Zod and the package's shared
 identity and SHA-256 schemas.
 
 | Message | Fields |

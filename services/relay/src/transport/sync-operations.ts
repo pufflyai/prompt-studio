@@ -1,12 +1,12 @@
-import { fingerprintSchema } from "pstdio-sync-contracts";
 import {
   blobBeginSchema,
   blobReadSchema,
+  fingerprintSchema,
   readRequestSchema,
   type SyncRoute,
   stateEnvelopeSchema,
   updateEnvelopeSchema,
-} from "pstdio-sync-contracts/protocol";
+} from "pstdio-sync-contracts";
 import type { z } from "zod";
 import { projectKey, rejection, type SyncCaller } from "../storage/accounts";
 import type { RelayOwners } from "./owners";

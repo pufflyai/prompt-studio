@@ -1,5 +1,5 @@
 import { and, eq, type SQL, sql } from "drizzle-orm";
-import type { SyncError } from "pstdio-sync-contracts/protocol";
+import type { SyncError } from "pstdio-sync-contracts";
 import type { RelayTransaction } from "./database";
 import { syncBlobs, syncProjects } from "./document-schema";
 

@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from "bun";
-import { type LiveServerMessage, liveClientMessageSchema, syncProtocolVersion } from "pstdio-sync-contracts/protocol";
+import { type LiveServerMessage, liveClientMessageSchema, syncProtocolVersion } from "pstdio-sync-contracts";
 import type { RelayLimits } from "../limits";
 import type { DocumentChange } from "../storage/documents";
 import type { RateLimit } from "./rate-limit";

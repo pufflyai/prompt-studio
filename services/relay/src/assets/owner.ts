@@ -1,5 +1,4 @@
-import { scopeSchema } from "pstdio-sync-contracts";
-import { syncIdSchema } from "pstdio-sync-contracts/protocol";
+import { scopeSchema, syncIdSchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 
 // Grouped storage owns assets per extension scope. Each encrypted sync blob is its own owner, so two

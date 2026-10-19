@@ -11,7 +11,7 @@ import {
   syncProtocolHeader,
   syncProtocolVersion,
   updateResultSchema,
-} from "pstdio-sync-contracts/protocol";
+} from "pstdio-sync-contracts";
 import { defaultRelayLimits } from "../limits";
 import { startRelay } from "../service";
 import { encode, randomId, sha256 } from "../storage/sync-fixture";

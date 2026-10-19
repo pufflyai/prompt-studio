@@ -1,5 +1,5 @@
 import { and, asc, count, gt } from "drizzle-orm";
-import type { ReadResult, StateInfo } from "pstdio-sync-contracts/protocol";
+import type { ReadResult, StateInfo } from "pstdio-sync-contracts";
 import type { RelayLimits } from "../limits";
 import { rejection } from "./accounts";
 import type { connectRelay } from "./database";

@@ -1,5 +1,5 @@
 import { and, eq, ne } from "drizzle-orm";
-import type { BlobBegin } from "pstdio-sync-contracts/protocol";
+import type { BlobBegin } from "pstdio-sync-contracts";
 import type { createRelayAssets } from "../assets/assets";
 import { multipartSize, type PartInput } from "../assets/streams";
 import type { RelayLimits } from "../limits";

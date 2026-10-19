@@ -5,7 +5,7 @@ import {
   syncProtocolHeader,
   syncProtocolVersion,
   syncRoute,
-} from "pstdio-sync-contracts/protocol";
+} from "pstdio-sync-contracts";
 import { projectKey, SyncRejection } from "../storage/accounts";
 import { verifyBearer } from "./authorization";
 import type { RelayOwners } from "./owners";
