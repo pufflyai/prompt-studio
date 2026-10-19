@@ -114,7 +114,16 @@ export const TwelveSystemErrors: Story = {
 
 export const LongSystemErrors: Story = {
   args: { errorCount: 12, longMessages: true },
-  play: TwelveSystemErrors.play,
+  play: async (context) => {
+    await TwelveSystemErrors.play?.(context);
+    const body = within(context.canvasElement.ownerDocument.body);
+    const list = body.getByRole("region", { name: "System error list" });
+    await userEvent.click(within(list).getAllByRole("button", { name: /^Restart / })[0]);
+    await expect(
+      within(list).getByText("The service could not be restarted. Try again when the connection recovers."),
+    ).toBeVisible();
+    await expect(context.canvas.getByRole("button", { name: /System errors \(12\)/ })).toBeVisible();
+  },
 };
 
 export const HundredSystemErrors: Story = {
