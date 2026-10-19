@@ -3,6 +3,7 @@ import {
   isNavigationTarget,
   type NavigationTarget,
   type NavigationTargetPage,
+  type PageRef,
   type ResourceResolution,
 } from "@pstdio/sdk/extensions";
 import { extensionResourceRefSchema, qualifyNavigationTarget } from "pstdio-api-contracts";
@@ -20,6 +21,8 @@ interface ResourcePathInput {
   path: string;
   kinds: ResourcePathKind[];
   position?: FileSourcePosition;
+  // The resource metadata key that names the open document on a page, if the page has one.
+  documentKey(page: PageRef): string | undefined;
   execute(command: string, params: { path: string; workspaceId: string }): Promise<unknown>;
 }
 
@@ -39,13 +42,24 @@ const positionedPage = (target: NavigationTargetPage, position: FileSourcePositi
   position,
 });
 
-const withSourcePosition = (target: NavigationTarget, position?: FileSourcePosition) => {
+// The workbench places a source position only inside a document the page opens, so other pages keep their target.
+const withSourcePosition = (
+  target: NavigationTarget,
+  position: FileSourcePosition | undefined,
+  documentKey: ResourcePathInput["documentKey"],
+) => {
   if (!position) return target;
-  if (target.kind === "page") return positionedPage(target, position);
+  const opensDocument = (page: NavigationTargetPage) => {
+    const key = documentKey(page.page);
+    return Boolean(key && page.resource?.metadata?.[key]);
+  };
+  if (target.kind === "page") return opensDocument(target) ? positionedPage(target, position) : target;
   if (target.kind === "compound")
     return {
       ...target,
-      targets: target.targets.map((item) => (item.kind === "page" ? positionedPage(item, position) : item)),
+      targets: target.targets.map((item) =>
+        item.kind === "page" && opensDocument(item) ? positionedPage(item, position) : item,
+      ),
     };
   return target;
 };
@@ -91,6 +105,7 @@ export const resolveResourcePath = async (input: ResourcePathInput) => {
     target: withSourcePosition(
       qualifyNavigationTarget(result.target, handler.kind.extensionId, input.projectId),
       input.position,
+      input.documentKey,
     ),
   };
 };

@@ -12,7 +12,7 @@ export const resolveChatCodeLink = (node: TextNode, handler: ChatLinkHandler, or
   const parsed = parseChatLink(candidate, origin);
   if (!parsed || parsed.kind === "external") return;
   if (bubble) {
-    node.replace(new ChatResourceLinkNode(candidate, candidate.source));
+    node.replace(new ChatResourceLinkNode(candidate, candidate.source, node.getFormat()));
     return;
   }
   const replacement = new ChatCodeLinkNode(
