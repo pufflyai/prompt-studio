@@ -6,6 +6,8 @@ import {
 import type { AppRouteHandler } from "../../../types";
 import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
+import { SharedExtensionEnablementError } from "../publication/enablement";
+
 const errorSchema = z.object({ error: z.string() });
 
 export const setExtensionAutomationEnabledRoute = createRoute({
@@ -30,6 +32,10 @@ export const setExtensionAutomationEnabledRoute = createRoute({
       description: "Updated automation state.",
       content: { "application/json": { schema: workbenchExtensionAutomationRecordSchema } },
     },
+    409: {
+      description: "Use the shared publication switch.",
+      content: { "application/json": { schema: errorSchema } },
+    },
     404: {
       description: "Extension instance or automation not found.",
       content: { "application/json": { schema: errorSchema } },
@@ -44,13 +50,18 @@ export const setExtensionAutomationEnabledHandler = (
     const { projectId, instanceId, automationId } = c.req.valid("param");
     const { enabled } = c.req.valid("json");
 
-    const automation = await deps.projectExtensionLifecycle.setAutomationEnabled(
-      projectId,
-      instanceId,
-      automationId,
-      enabled,
-    );
-    if (!automation) return c.json({ error: `Automation not found: ${automationId}` }, 404);
-    return c.json(automation, 200);
+    try {
+      const automation = await deps.projectExtensionLifecycle.setAutomationEnabled(
+        projectId,
+        instanceId,
+        automationId,
+        enabled,
+      );
+      if (!automation) return c.json({ error: `Automation not found: ${automationId}` }, 404);
+      return c.json(automation, 200);
+    } catch (error) {
+      if (error instanceof SharedExtensionEnablementError) return c.json({ error: error.message }, 409);
+      throw error;
+    }
   };
 };

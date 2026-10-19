@@ -39,6 +39,9 @@ export const startRelayExtension = async (input: {
     });
   const adapter = adapterFor(signal);
   const revision =
+    (input.source.installedSource.source_ref?.startsWith("pstdio-published:")
+      ? input.source.installedSource.source_ref.slice("pstdio-published:".length)
+      : null) ??
     input.source.installedSource.loaded_revision ??
     input.source.installedSource.source_hash ??
     (await hashExtensionSource(input.source.installedSource.source_path));
