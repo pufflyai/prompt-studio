@@ -1,6 +1,5 @@
 // Compose the plan commands; the browser view infers its client types from this record.
 
-import { readClaimsCommand, releaseClaimCommand } from "./claim-commands";
 import { createTicketCommand } from "./create-ticket";
 import { createDeadlineCommand, deleteDeadlineCommand, updateDeadlineCommand } from "./deadline-commands";
 import { createGateCommand } from "./gate-commands";
@@ -30,8 +29,6 @@ export const commands = {
   "timeline.ticket.create": createTicketCommand,
   "timeline.gate.create": createGateCommand,
   "timeline.gate.launch": launchGateCommand,
-  "timeline.write-claim.read": readClaimsCommand,
-  "timeline.write-claim.release": releaseClaimCommand,
   "timeline.deadline.create": createDeadlineCommand,
   "timeline.deadline.update": updateDeadlineCommand,
   "timeline.deadline.delete": deleteDeadlineCommand,

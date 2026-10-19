@@ -26,6 +26,7 @@ export const ticketMoveFixture = async () => {
     },
   };
   const movingContext = {
+    ...ctx,
     storage: observed,
     events: {
       emit: async (ref: string | { id: string }) => {

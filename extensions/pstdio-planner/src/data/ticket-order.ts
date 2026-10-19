@@ -10,9 +10,12 @@ const ORDER_RETRY_MS = 25;
 /**
  * Serializes ticket creation with other order writers. Board moves fail fast and
  * the board shows the error, but a create must not fail because a move or another
- * create holds the order for a moment. A crashed writer's claim still fails after the wait.
+ * create holds the order for a moment. A live writer retains ownership after the wait.
  */
-export const withTicketOrder = async <T>(ctx: Pick<ExtensionContextBase, "storage">, write: () => Promise<T>) => {
+export const withTicketOrder = async <T>(
+  ctx: Pick<ExtensionContextBase, "storage" | "projectId" | "extensionId">,
+  write: () => Promise<T>,
+) => {
   const deadline = Date.now() + ORDER_WAIT_MS;
   for (;;) {
     const result = await withWriteGuard<T | typeof busy>(ctx, "ticket-order", write, () => busy);

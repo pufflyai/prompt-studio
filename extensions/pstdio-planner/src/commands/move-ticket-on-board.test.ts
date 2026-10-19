@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
+import { withWriteGuard } from "../data/write-guard";
 import { readStoredPlan } from "../timeline/commands/plan-store";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -120,15 +121,15 @@ test("a busy plan rejects a milestone move before changing the ticket", async ()
   const f = await ticketMoveFixture();
   const [first, , last] = f.tickets;
   await f.storage.set("timeline.plan", { deadlines: [preview], order: [] });
-  const claim = { key: "plan", token: "running", startedAt: new Date().toISOString() };
-  await f.storage.collection("timeline.write-claims").createIfAbsent("plan", claim);
-  await expect(
-    moveTicketOnBoard(f.ctx, {
-      rowId: last.id,
-      attributes: { status: "done", milestone: preview.id },
-      order: { beforeRowId: first.id },
-    }),
-  ).rejects.toThrow("Another Planner write");
+  await withWriteGuard(f.ctx, "plan", async () => {
+    await expect(
+      moveTicketOnBoard(f.ctx, {
+        rowId: last.id,
+        attributes: { status: "done", milestone: preview.id },
+        order: { beforeRowId: first.id },
+      }),
+    ).rejects.toThrow("Another Planner write");
+  });
   expect(await milestoneOf(f.storage, last.id)).toBeNull();
   expect(await ticketsCollection(f.storage).get(last.id)).toEqual(last);
   expect(f.writes).toEqual([]);

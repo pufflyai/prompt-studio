@@ -2,4 +2,4 @@
 "pstdio-planner": patch
 ---
 
-Update milestone estimates and review counts for view filters and forecast every milestone from the project's observed pace.
+Fix filtered milestone forecasts and review counts, recover interrupted Planner writes automatically, and reduce Auto Build startup checks.
