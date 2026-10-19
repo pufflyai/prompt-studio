@@ -44,7 +44,7 @@ Better Auth owns `/api/auth/*`, including Google sign-in/callback, sessions, sig
 | POST /v1/accounts/:accountId/environments/replace | Current session and Origin; atomically replaces a named grant. |
 | POST /v1/accounts/:accountId/environments/revoke | Current session and Origin; revokes the requested environment. |
 
-Management bodies use the existing registration/replacement/revocation fields without accountId; account comes from the authenticated path. Unknown provider identities receive no product account or permissions. Operator provisioning remains private, so this service adds no public signup/cardinality flow. Errors discard sensitive causes and responses use no-store.
+Management bodies use the existing registration/replacement/revocation fields without accountId; account comes from the authenticated path. A Google owner can create its stable account through the authenticated owner signup route. Unknown identities cannot manage an existing account. Operator lifecycle and recovery remain private. See [native owner enrollment](0010-owner-enrollment.md) for the supported browser/CLI flow. Errors discard sensitive causes and responses use no-store.
 
 The Bun listener requires DATABASE_URL, MANAGER_ORIGIN, RELAY_AUDIENCE, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_LIFETIME_SECONDS, SESSION_UPDATE_AGE_SECONDS and ACCESS_LIFETIME_SECONDS. Lifetimes are positive explicit policy, with update age below session lifetime. Origins use HTTPS. MANAGER_HOST/PORT select the listener; optional paired MANAGER_TLS_CERT/KEY paths supply TLS when it terminates in this process. A trusted HTTPS ingress can terminate TLS instead. Configure Google's callback for the trusted origin's /api/auth/callback/google path.
 

@@ -1,6 +1,7 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context, Next } from "hono";
 import { redactSensitiveText } from "pstdio-logging";
+import { createAccountRoutes } from "./features/account/routes";
 import { createAgentRoutes } from "./features/agents/routes";
 import { createAssetRoutes } from "./features/assets/routes";
 import { bearerTokenFrom, MAX_INPUT_BYTES } from "./features/automation/automation-policy";
@@ -179,6 +180,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/v1", createProjectRoutes(deps));
   app.route("/v1", createAssetRoutes(deps));
   app.route("/v1", createEnvironmentRoutes(deps));
+  app.route("/v1", createAccountRoutes(deps.accountService));
   app.route("/v1", createResourceAnchorRoutes(deps));
   app.route("/v1", createAutomationRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));

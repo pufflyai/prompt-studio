@@ -1,34 +1,22 @@
-import { readFile } from "node:fs/promises";
 import type { createEnvironmentDBService } from "pstdio-db";
-import { createRelayAccess, relayOrigin } from "pstdio-sync/relay";
-import { identitySchema } from "pstdio-sync-contracts";
-import { z } from "zod";
+import { createRelayAccess } from "pstdio-sync/relay";
+import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
+import { readPrivateFile } from "../account/private-file";
+import { configSchema, type RelayWorkbench } from "./config";
 import { startRelayExtension } from "./extension-owner";
 
-const workbenchSchema = z.strictObject({
-  accountId: identitySchema,
-  workbenchId: identitySchema,
-  environmentId: identitySchema,
-  relayOrigin: z.string().transform(relayOrigin),
-  managerOrigin: z.string().transform(relayOrigin),
-  renewalGrant: z.string().min(1),
-});
-const configSchema = z.strictObject({ connections: z.array(workbenchSchema) });
-export type RelayWorkbench = z.infer<typeof workbenchSchema>;
+export type { RelayWorkbench } from "./config";
+
 export const startRelayRuntime = async (input: {
   path?: string;
   environment: ReturnType<typeof createEnvironmentDBService>;
   deps: ExtensionsRouteDeps;
 }) => {
-  if (!input.path) return { close: async () => {} };
-  let config: z.infer<typeof configSchema>;
-  try {
-    config = configSchema.parse(JSON.parse(await readFile(input.path, "utf8")));
-  } catch {
-    throw new Error("Invalid native relay configuration");
-  }
+  const config = input.path
+    ? await readPrivateFile(input.path, configSchema, { connections: [] })
+    : { connections: [] };
   const identity = await input.environment.get();
   const workbenches = new Map<string, RelayWorkbench>();
   for (const connection of config.connections) {
@@ -39,6 +27,11 @@ export const startRelayRuntime = async (input: {
   const controller = new AbortController();
   const { deps } = input;
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
+  const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
+    connection.close();
+    await connection.done;
+    if (connections.get(key) === connection) connections.delete(key);
+  };
   let running: Promise<void> | undefined;
   let dirty = false;
   const notify = (workbenchId: string) =>
@@ -53,7 +46,7 @@ export const startRelayRuntime = async (input: {
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
-    if (controller.signal.aborted) return;
+    if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
     const workspace = await deps.workspaceService.getDefault(workbenchId);
     const contextKey = JSON.stringify([
       snapshot.generation,
@@ -62,16 +55,14 @@ export const startRelayRuntime = async (input: {
       workspace?.provider_capabilities_json,
     ]);
     const desired = new Set(snapshot.enabledSources.map(({ installedSource }) => installedSource.extension_id));
-    for (const [key, connection] of connections)
-      if (
+    const obsolete = [...connections].filter(
+      ([, connection]) =>
         connection.owner.workbenchId === workbenchId &&
-        (!desired.has(connection.owner.extensionId) || connection.contextKey !== contextKey)
-      ) {
-        connection.close();
-        await connection.done;
-        connections.delete(key);
-      }
+        (!desired.has(connection.owner.extensionId) || connection.contextKey !== contextKey),
+    );
+    await Promise.all(obsolete.map(([key, connection]) => stopConnection(key, connection)));
     for (const source of snapshot.enabledSources) {
+      if (workbenches.get(workbenchId) !== config) return;
       const key = JSON.stringify([workbenchId, source.installedSource.extension_id]);
       if (connections.has(key)) continue;
       const connection = await startRelayExtension({
@@ -84,7 +75,7 @@ export const startRelayRuntime = async (input: {
         signal: controller.signal,
         notify: () => notify(workbenchId),
       });
-      if (controller.signal.aborted) {
+      if (controller.signal.aborted || workbenches.get(workbenchId) !== config) {
         connection.close();
         await connection.done;
         return;
@@ -132,6 +123,25 @@ export const startRelayRuntime = async (input: {
   });
   await refresh();
   return {
+    async connect(connection: RelayWorkbench) {
+      if (connection.environmentId !== identity.environmentId) throw new Error("Native relay owner mismatch");
+      const previous = workbenches.get(connection.workbenchId);
+      if (previous && canonicalJson(previous) === canonicalJson(connection)) return;
+      if (
+        previous &&
+        (previous.accountId !== connection.accountId ||
+          previous.managerOrigin !== connection.managerOrigin ||
+          previous.relayOrigin !== connection.relayOrigin)
+      )
+        throw new Error("Native relay owner mismatch");
+      // Only this workbench's credential changes; other live connections keep their owners.
+      // Publish its owner before awaiting shutdown so an older in-flight start cannot take ownership.
+      workbenches.set(connection.workbenchId, connection);
+      access.set(connection.workbenchId, createRelayAccess({ ...connection, signal: controller.signal }));
+      const obsolete = [...connections].filter(([, active]) => active.owner.workbenchId === connection.workbenchId);
+      await Promise.all(obsolete.map(([key, active]) => stopConnection(key, active)));
+      await refresh();
+    },
     async close() {
       stopStorage();
       stopCatalog();
@@ -152,9 +162,11 @@ export const connectAppRelay = async <
 >(
   app: T,
   path?: string,
+  ready?: (connect: (connection: RelayWorkbench) => Promise<void>) => void,
 ) => {
   try {
     const relay = await startRelayRuntime({ path, environment: app.deps.environmentService, deps: app.deps });
+    ready?.(relay.connect);
     return {
       ...app,
       close: async () => {

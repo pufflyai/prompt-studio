@@ -1,6 +1,8 @@
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { createManagerAuthentication } from "./manager-authentication";
+import { nativeLogin } from "./native-login";
+import { ownerHttp } from "./owner-http";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
@@ -70,6 +72,9 @@ export const createManagerHandler = (
   return async (request: Request) => {
     const path = new URL(request.url).pathname;
     if (path.startsWith("/api/auth/")) return auth.handler(request);
+    if (["/v1/native-login", "/v1/native-callback"].includes(path)) return nativeLogin(auth, canonicalOrigin, request);
+    const ownerResponse = await ownerHttp(auth, canonicalOrigin, request);
+    if (ownerResponse) return ownerResponse;
     if (path === "/health") return json({ ok: true });
     if (path === "/v1/environment-access") return renewAccess(auth, request, log);
     const management = /^\/v1\/accounts\/([^/]+)\/environments(?:\/(replace|revoke))?$/.exec(path);

@@ -1,3 +1,4 @@
+import * as accountCommand from "./account";
 import * as agentsCommand from "./agents";
 import * as authCommand from "./auth";
 import * as automationCommand from "./automation";
@@ -17,6 +18,7 @@ import * as viewsCommand from "./views";
 import * as workspaceCommand from "./workspace";
 
 export const topLevelCommandModules = [
+  accountCommand,
   agentsCommand,
   authCommand,
   automationCommand,

@@ -1,3 +1,4 @@
+export type { AccountClient, AccountSession, OwnerEnvironment, WorkbenchEnrollment } from "./account";
 export type { AgentClient } from "./agents";
 export type { AssetClientOwner, AssetsClient, AssetUploadInput } from "./assets";
 export type { AutomationClient } from "./automation";

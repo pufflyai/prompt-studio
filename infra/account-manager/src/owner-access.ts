@@ -9,7 +9,7 @@ import {
   replaceCredentialInTransaction,
   revokeCredentialsInTransaction,
 } from "./grants";
-import { accounts } from "./schema";
+import { accounts, workbenches } from "./schema";
 import { withAccountTransaction } from "./transactions";
 
 type SessionReader = (headers: Headers) => Promise<{ user: { id: string }; session: { id: string } } | null>;
@@ -60,5 +60,12 @@ export const createOwnerAccess = (
     revoke: (input: unknown) =>
       apply((transaction) => revokeCredentialsInTransaction(transaction, { ...revocation.parse(input), accountId })),
     environments: () => apply((transaction) => listEnvironments(transaction, accountId)),
+    workbenches: () =>
+      apply((transaction) =>
+        transaction
+          .select({ workbenchId: workbenches.id })
+          .from(workbenches)
+          .where(eq(workbenches.accountId, accountId)),
+      ),
   };
 };

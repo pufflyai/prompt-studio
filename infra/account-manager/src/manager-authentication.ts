@@ -1,6 +1,8 @@
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
+import { bearer } from "better-auth/plugins/bearer";
 import { jwt } from "better-auth/plugins/jwt";
+import { oneTimeToken } from "better-auth/plugins/one-time-token";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { identitySchema } from "pstdio-sync-contracts";
 import { type ManagerAuthConfig, parseManagerAuthConfig } from "./auth-config";
@@ -8,6 +10,7 @@ import * as authSchema from "./auth-schema";
 import { digestCredential } from "./credential";
 import { connectManager } from "./database";
 import { createOwnerAccess } from "./owner-access";
+import { createOwnerAccounts } from "./owner-accounts";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 import { accounts, credentials } from "./schema";
 import { withAccountTransaction } from "./transactions";
@@ -25,6 +28,8 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
     logger: { disabled: true },
     disabledPaths: ["/token"],
     plugins: [
+      bearer(),
+      oneTimeToken({ storeToken: "hashed", disableClientRequest: true }),
       jwt({
         disableSettingJwtHeader: true,
         jwks: { keyPairConfig: { alg: "EdDSA" } },
@@ -34,6 +39,13 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
   });
   return {
     handler: auth.handler,
+    configuration: { relayOrigin: config.audience },
+    ownerAccounts: createOwnerAccounts(connection.db, (headers) =>
+      auth.api.getSession({ headers, query: { disableCookieCache: true } }),
+    ),
+    nativeLogin: (callbackURL: string) =>
+      auth.api.signInSocial({ body: { provider: "google", callbackURL }, asResponse: true }),
+    nativeCode: (headers: Headers) => auth.api.generateOneTimeToken({ headers }),
     forSession: (headers: Headers, accountId: string) =>
       createOwnerAccess(
         connection.db,

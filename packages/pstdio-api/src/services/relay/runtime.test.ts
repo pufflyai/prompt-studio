@@ -23,7 +23,7 @@ test("workbench enrollment discovers all enabled extensions and follows enable, 
   const app = await createTestApp();
   const wire = discoveryPeer("account");
   let runtime: Awaited<ReturnType<typeof startRelayRuntime>> | undefined;
-  const enable = async (name: string) => {
+  const enable = async (name: string, targetProject = projectId) => {
     const source = join(root, name);
     await mkdir(source, { recursive: true });
     await writeFile(
@@ -37,7 +37,7 @@ test("workbench enrollment discovers all enabled extensions and follows enable, 
       }),
     );
     await writeFile(join(source, "extension.ts"), "export default {commands:[]};");
-    const response = await app.app.request(`/v1/projects/${projectId}/extensions/installed/${name}/enable`, {
+    const response = await app.app.request(`/v1/projects/${targetProject}/extensions/installed/${name}/enable`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -84,9 +84,29 @@ test("workbench enrollment discovers all enabled extensions and follows enable, 
     runtime = await startRelayRuntime({ path, environment: app.deps.environmentService, deps: app.deps });
     await waitFor(() => JSON.stringify(wire.connected()) === JSON.stringify(["example.first"]));
     expect(wire.connected()).toEqual(["example.first"]);
-    await enable("second");
+    const additional = await app.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(folderProjectInput({ name: "Additional workbench" })),
+    });
+    expect(additional.status).toBe(201);
+    const additionalProject = (await additional.json()) as { id: string };
+    await enable("additional", additionalProject.id);
+    const existingOpens = wire.opened.filter((id) => id === "example.first").length;
+    await runtime.connect({
+      accountId: "account",
+      workbenchId: additionalProject.id,
+      environmentId: environment.environmentId,
+      relayOrigin: wire.peer.url.origin,
+      managerOrigin: wire.peer.url.origin,
+      renewalGrant: "second-owned-grant",
+    });
     await waitFor(() => wire.connected().length === 2);
-    expect(wire.connected()).toEqual(["example.first", "example.second"]);
+    expect(wire.connected()).toEqual(["example.additional", "example.first"]);
+    expect(wire.opened.filter((id) => id === "example.first")).toHaveLength(existingOpens);
+    await enable("second");
+    await waitFor(() => wire.connected().length === 3);
+    expect(wire.connected()).toEqual(["example.additional", "example.first", "example.second"]);
     const before = wire.opened.length;
     app.deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "source_changed" });
     await waitFor(() => wire.opened.length > before);
@@ -97,8 +117,39 @@ test("workbench enrollment discovers all enabled extensions and follows enable, 
       body: JSON.stringify({ enabled: false }),
     });
     app.deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "enablement_changed" });
-    await waitFor(() => JSON.stringify(wire.connected()) === JSON.stringify(["example.second"]));
-    expect(wire.connected()).toEqual(["example.second"]);
+    await waitFor(() => JSON.stringify(wire.connected()) === JSON.stringify(["example.additional", "example.second"]));
+    expect(wire.connected()).toEqual(["example.additional", "example.second"]);
+    const openStorage = app.deps.extensionStorageService.open;
+    const starting = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    let pauseNextStart = true;
+    app.deps.extensionStorageService.open = async (input) => {
+      if (pauseNextStart && input.owner.workbenchId === projectId) {
+        pauseNextStart = false;
+        starting.resolve();
+        await resume.promise;
+      }
+      return openStorage(input);
+    };
+    try {
+      app.deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "source_changed" });
+      await starting.promise;
+      const rotated = runtime.connect({
+        accountId: "account",
+        workbenchId: projectId,
+        environmentId: environment.environmentId,
+        relayOrigin: wire.peer.url.origin,
+        managerOrigin: wire.peer.url.origin,
+        renewalGrant: "renewed-grant",
+      });
+      resume.resolve();
+      await rotated;
+      await waitFor(() => wire.renewals.includes("Bearer renewed-grant"));
+      expect(wire.renewals).toContain("Bearer renewed-grant");
+    } finally {
+      resume.resolve();
+      app.deps.extensionStorageService.open = openStorage;
+    }
   } finally {
     await runtime?.close();
     await wire.peer.stop(true);
