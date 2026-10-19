@@ -1,3 +1,4 @@
+export { captureCheckpoint } from "./checkpoint-capture";
 export { createLegacyRecordStorage } from "./legacy";
 export { initialRecordRevision, scopeRecordStorage, storageRecordId } from "./namespaces";
 export { applyRecordChange, blankRecord, recordConflict } from "./records";

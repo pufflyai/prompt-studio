@@ -44,6 +44,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "extension-lab",
     "pstdio-base-themes",
     "pstdio-planner",
+    "pstdio-notes",
     "pstdio-skills",
     "workbench-fixture",
   ],
