@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { installExtensionSource } from "./install-extension-source";
 import { makeExtension, writeManifest } from "./install-extension-source-test-fixtures";
 
@@ -22,11 +23,12 @@ describe("installExtensionSource API version gate", () => {
   test("refuses an extension built for another API version and leaves the root untouched", async () => {
     const source = join(root, "source-extension");
     makeExtension(source);
-    writeManifest(source, { engines: { pstdio: "^0.3.0" }, packageManager: "bun@1.3.13" });
+    const unsupportedApi = `^${Number(EXTENSION_API_VERSION.split(".")[0]) + 1}.0.0`;
+    writeManifest(source, { engines: { pstdio: unsupportedApi }, packageManager: "bun@1.3.13" });
     const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));
 
     await expect(installExtensionSource({ source, env: { PSTDIO_HOME: pstdioHome }, runCommand })).rejects.toThrow(
-      "^0.3.0",
+      unsupportedApi,
     );
 
     expect(existsSync(join(pstdioHome, "extensions", "source-extension"))).toBe(false);

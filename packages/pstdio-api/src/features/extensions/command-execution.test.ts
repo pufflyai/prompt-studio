@@ -319,7 +319,7 @@ describe("extension command execution routes", () => {
   });
 });
 
-test("native renderer metadata preserves a loaded storage baseline and returns updated versions after saving", async () => {
+test("native renderer saves advance storage baselines and conflicted reads block stale drafts", async () => {
   const read = () =>
     createJson(`/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.counter.read/execute`, {
       metadata: { fileStorageVersions: {} },
@@ -338,9 +338,11 @@ test("native renderer metadata preserves a loaded storage baseline and returns u
   expect(first.outcome.ok).toBe(true);
   const second = (await save(first.outcome.data.fileStorageVersions)) as { outcome: { ok: boolean } };
   expect(second.outcome.ok).toBe(true);
+  expect((await read()).outcome.value).toEqual({ counter: 2 });
   const stale = (await save(versions)) as { outcome: { ok: boolean; reason: string } };
   expect(stale.outcome.ok).toBe(false);
   expect(stale.outcome.reason).toContain("draft is kept");
-  const current = (await read()) as { outcome: { value: { counter: number } } };
-  expect(current.outcome.value.counter).toBe(2);
+  const current = await read();
+  expect(current.outcome.ok).toBe(false);
+  expect(current.outcome.reason).toContain("Unresolved storage conflict");
 });
