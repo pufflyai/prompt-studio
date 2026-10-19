@@ -1,4 +1,9 @@
-import { createWebviewClient, type GuestHost, type WebviewCommandsExecuteParams } from "@pstdio/sdk/extensions";
+import {
+  createWebviewClient,
+  type GuestHost,
+  type WebviewCommandsExecuteParams,
+  workbenchPages,
+} from "@pstdio/sdk/extensions";
 import type { ComponentProps } from "react";
 import { useState } from "react";
 import { GraphCard } from "./graph-card";
@@ -20,7 +25,17 @@ export function EditableCardPreview(props: ComponentProps<typeof GraphCard>) {
   const source = {
     id: props.row.id,
     title: props.row.title,
-    attributes: values,
+    attributes: {
+      ...values,
+      workspace: "workspace",
+      workspaceItems: [
+        {
+          id: "workspace",
+          label: "P-1_A1",
+          target: { kind: "page", page: workbenchPages.workspace, resource: { type: "workspace", id: "workspace" } },
+        },
+      ],
+    },
     resource: { type: "ticket", id: props.row.id },
   };
   return (
@@ -31,6 +46,13 @@ export function EditableCardPreview(props: ComponentProps<typeof GraphCard>) {
         client: createWebviewClient(host) as PlanClient,
         rows: new Map([[source.id, source]]),
         attributes: [
+          {
+            id: "workspace",
+            label: "Workspace",
+            type: { kind: "string" },
+            displayable: true,
+            display: { kind: "badge-list", itemsAttributeId: "workspaceItems" },
+          },
           {
             id: "status",
             label: "Status",
@@ -58,7 +80,7 @@ export function EditableCardPreview(props: ComponentProps<typeof GraphCard>) {
             },
           },
         ],
-        displayProperties: ["id", "status", "type"],
+        displayProperties: ["id", "status", "type", "workspace"],
       }}
     />
   );

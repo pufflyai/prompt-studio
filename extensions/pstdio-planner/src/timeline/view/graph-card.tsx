@@ -8,6 +8,7 @@ import {
   renderBadgeListDisplay,
 } from "@pstdio/ui/kanban-renderer";
 import { ShieldCheck } from "lucide-react";
+import type { TicketWorkspaceBadgeItem } from "../../data/mappers";
 import type { PlanRow } from "../contracts";
 import { card } from "./graph-geometry";
 import { graphLayers } from "./graph-layers";
@@ -41,7 +42,13 @@ export function GraphCard(props: GraphCardProps) {
   const slots = source
     ? fields
         .filter(({ id, displayable }) => displayable && interaction?.displayProperties.includes(id))
-        .map((field) => renderBadgeListDisplay(field, getAttributeValue(source, field), source))
+        .map((field) =>
+          renderBadgeListDisplay(field, getAttributeValue(source, field), source, undefined, (id) => {
+            const items = source.attributes[field.display!.itemsAttributeId] as TicketWorkspaceBadgeItem[];
+            const target = items.find((item) => item.id === id)?.target;
+            return target ? () => void interaction?.host.call("navigation.open", { target }) : undefined;
+          }),
+        )
     : [];
   const activate = () => {
     if (interaction) void interaction.host.call("navigation.open", { target: row.target });
