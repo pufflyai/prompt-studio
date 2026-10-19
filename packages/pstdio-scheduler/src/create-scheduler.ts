@@ -197,7 +197,17 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
 
   return {
     activity: () =>
-      [...active.values()].flatMap((entry) => (entry.runId ? [{ id: entry.runId, label: entry.job.key }] : [])),
+      [...active.values()].flatMap((entry) =>
+        entry.runId
+          ? [
+              {
+                id: entry.runId,
+                label: entry.job.label ?? entry.job.key,
+                ...(entry.job.description ? { description: entry.job.description } : {}),
+              },
+            ]
+          : [],
+      ),
     refresh,
     async dispose() {
       disposed = true;

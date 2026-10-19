@@ -1,7 +1,9 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import { Toaster, toaster } from "@/components/primitives/toaster";
+import { WindowTitleBar } from "@/components/tab-strip/window-title-bar";
 
 type StoryFn = () => ReactNode;
 
@@ -95,5 +97,54 @@ export const Variants = {
         <Toaster />
       </Stack>
     );
+  },
+};
+
+const DesktopTitleBarExample = () => {
+  const [opened, setOpened] = useState(false);
+  return (
+    <Box data-window-full-screen="" position="fixed" inset="0">
+      <WindowTitleBar platform="darwin" />
+      <Stack padding="sm" gap="sm" alignItems="start">
+        <Text textStyle="paragraph/S/regular">Toast controls stay below the desktop title bar.</Text>
+        <Button
+          size="sm"
+          onClick={() =>
+            toaster.create({
+              type: "success",
+              title: "Workspace ready",
+              duration: Number.POSITIVE_INFINITY,
+              action: { label: "Open workspace", onClick: () => setOpened(true) },
+            })
+          }
+        >
+          Show toast
+        </Button>
+        {opened && <Text>Workspace opened</Text>}
+      </Stack>
+      <Toaster />
+    </Box>
+  );
+};
+
+export const WithDesktopTitleBar = {
+  tags: ["!manifest"],
+  parameters: { layout: "fullscreen" },
+  render: () => <DesktopTitleBarExample />,
+  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "Show toast" }));
+    const close = await body.findByRole("button", { name: "Dismiss notification" });
+    const titleBar = canvasElement.querySelector("[data-window-title-bar]")!;
+    await waitFor(() =>
+      expect(close.getBoundingClientRect().top).toBeGreaterThanOrEqual(titleBar.getBoundingClientRect().bottom),
+    );
+    await userEvent.click(await body.findByRole("button", { name: "Open workspace" }));
+    await expect(canvas.getByText("Workspace opened")).toBeVisible();
+    await waitFor(() => expect(body.queryByText("Workspace ready")).not.toBeInTheDocument());
+    await userEvent.click(canvas.getByRole("button", { name: "Show toast" }));
+    await userEvent.click(await body.findByRole("button", { name: "Dismiss notification" }));
+    await waitFor(() => expect(body.queryByText("Workspace ready")).not.toBeInTheDocument());
   },
 };

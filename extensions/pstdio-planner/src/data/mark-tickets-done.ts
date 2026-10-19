@@ -4,7 +4,7 @@ import { statusesCollection, ticketsCollection } from "./collections";
 import { reconcileDependencyBlockers } from "./reconcile-dependency-blockers";
 
 export const markTicketsDone = async (
-  ctx: Pick<ExtensionContextBase, "storage" | "settings" | "events">,
+  ctx: Pick<ExtensionContextBase, "storage" | "settings" | "events" | "projectId" | "extensionId">,
   ticketIds: string[],
 ) => {
   if ((await ctx.settings.get("tickets.markDoneOnMerge")) === false) return;

@@ -86,6 +86,8 @@ export const createExtensionScheduler = (input: Input) => {
 
           jobs.push({
             key: `${projectId}/${schedule.id}`,
+            label: scheduleTitle(schedule.title),
+            description: snapshot.project.name,
             cron: schedule.cron,
             timeoutMs: EXTENSION_SCHEDULE_TIMEOUT_MS,
             meta: {

@@ -1,8 +1,9 @@
 import type { ThemePreferenceMode } from "@pstdio/ui";
 
-interface DesktopActivityItem {
+export interface DesktopActivityItem {
   id: string;
   label: string;
+  description?: string;
 }
 
 export interface DesktopActivity {
