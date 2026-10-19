@@ -46,17 +46,17 @@ try {
     accountId: scope.accountId,
     owner: { issuer: "https://accounts.google.com", subject: "built-owner" },
   });
-  const grant = await manager.register({
-    requestId: "register",
+  await manager.addWorkbench({ accountId: scope.accountId, workbenchId: scope.workbenchId });
+  const device = await manager.registerDevice({
     accountId: scope.accountId,
-    workbenchId: scope.workbenchId,
-    environmentId: "built-network-environment",
-    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    deviceId: "built-network-environment",
+    name: "Built network smoke",
+    platform: "linux",
   });
   await storage.initialize(scope, "published-network");
   await Bun.write(
     "/fixture/grant.json",
-    JSON.stringify({ scope, token: grant.token, environmentId: grant.environmentId }),
+    JSON.stringify({ scope, token: device.token, environmentId: device.deviceId }),
   );
   const config = fixtureManagerConfig(managerUrl);
   await Bun.write(

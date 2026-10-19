@@ -44,11 +44,7 @@ test("ready sockets see only their committed scope while revoked renewal leaves 
     await commit(second);
     expect((await b.next()).type).toBe("changed");
     expect(a.messages).toHaveLength(2);
-    await first.manager.revoke({
-      requestId: "revoke",
-      accountId: first.scope.accountId,
-      environmentId: first.environmentId,
-    });
+    await first.manager.removeDevice({ accountId: first.scope.accountId, deviceId: first.environmentId });
     await expect(first.renew()).rejects.toThrow("Environment access unavailable");
     expect(a.socket.readyState).toBe(WebSocket.OPEN);
     expect(b.socket.readyState).toBe(WebSocket.OPEN);

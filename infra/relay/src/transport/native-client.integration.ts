@@ -40,14 +40,13 @@ const local = (owner: StorageOwner, environmentId: string, assets?: AssetStore) 
 test("two journal owners synchronize through the native HTTP adapter and retain disconnected work", async () => {
   const context = await fixture.context();
   const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
-  const grant = await context.manager.register({
-    requestId: "second-environment",
+  const secondDevice = await context.manager.registerDevice({
     accountId: context.scope.accountId,
-    workbenchId: context.scope.workbenchId,
-    environmentId: "native-second",
-    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    deviceId: "native-second",
+    name: "Second device",
+    platform: "linux",
   });
-  const secondAccess = await context.issue(grant.token!);
+  const secondAccess = await context.issue(secondDevice.token);
   const controller = new AbortController();
   const adapter = (token: string) =>
     createRelayAdapter({
@@ -105,14 +104,13 @@ test("two journal owners synchronize through the native HTTP adapter and retain 
     expect(await first.records.conflicts()).toEqual([]);
     expect((await first.records.read("note")).value).toBe("second-choice");
     expect((await second.records.read("note")).value).toBe("second-choice");
-    const observerGrant = await context.manager.register({
-      requestId: "observer-environment",
+    const observerDevice = await context.manager.registerDevice({
       accountId: context.scope.accountId,
-      workbenchId: context.scope.workbenchId,
-      environmentId: "native-observer",
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      deviceId: "native-observer",
+      name: "Observer device",
+      platform: "linux",
     });
-    const observerAccess = await context.issue(observerGrant.token!);
+    const observerAccess = await context.issue(observerDevice.token);
     const observer = local(context.scope, "native-observer");
     await observer.synchronize(adapter(observerAccess.token));
     const beforeRestore = await context.storage.owner(context.scope).snapshot();
@@ -210,14 +208,13 @@ test("an unfinished foreign asset does not stop unrelated downloads or queued lo
       ],
     });
     expect((await adapter(context.token).submit(note)).status).toBe("accepted");
-    const grant = await context.manager.register({
-      requestId: "asset-observer",
+    const observerDevice = await context.manager.registerDevice({
       accountId: context.scope.accountId,
-      workbenchId: context.scope.workbenchId,
-      environmentId: "asset-observer",
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      deviceId: "asset-observer",
+      name: "Asset observer",
+      platform: "linux",
     });
-    const access = await context.issue(grant.token!);
+    const access = await context.issue(observerDevice.token);
     const observer = local(context.scope, "asset-observer", assets);
     await observer.records.commit({
       operationId: "queued-local",

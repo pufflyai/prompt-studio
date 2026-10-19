@@ -5,14 +5,13 @@ import { relayPath, type Scope } from "pstdio-sync-contracts";
 import { renewFixtureAccess } from "./manager.fixture";
 
 export const checkBuiltShutdown = async (manager: ReturnType<typeof createAccountManager>, scope: Scope) => {
-  const grant = await manager.register({
-    requestId: "built-shutdown",
+  const reader = await manager.registerDevice({
     accountId: scope.accountId,
-    workbenchId: scope.workbenchId,
-    environmentId: "built-shutdown-reader",
-    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    deviceId: "built-shutdown-reader",
+    name: "Built shutdown reader",
+    platform: "linux",
   });
-  const access = await renewFixtureAccess(grant.token!, scope.workbenchId);
+  const access = await renewFixtureAccess(reader.token, scope.workbenchId);
   const keys = [
     "PATH",
     "HOME",

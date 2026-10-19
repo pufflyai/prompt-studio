@@ -5,48 +5,46 @@ const fixture = createTransportFixture();
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
-test("re-enrolling the local demo preserves other workbench renewal grants", async () => {
+test("local enrollment gives the device one token for every cloud project of the fixture account", async () => {
   const context = await fixture.context();
+  const accountId = "built-network-account";
   try {
     await context.manager.provision({
       requestId: "local-fixture-account",
-      accountId: "built-network-account",
+      accountId,
       owner: { issuer: "https://accounts.google.com", subject: "owned-local-fixture" },
     });
-    const notes = await context.manager.register({
-      requestId: "notes-grant",
-      accountId: "built-network-account",
-      workbenchId: context.scope.workbenchId,
-      environmentId: context.environmentId,
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
-    });
-    const enroll = () => {
+    await context.manager.addWorkbench({ accountId, workbenchId: context.scope.workbenchId });
+    const enroll = async () => {
       const child = Bun.spawn(
         [process.execPath, new URL("../../scripts/enroll-local.fixture.ts", import.meta.url).pathname],
         {
           env: { ...process.env, DATABASE_URL: fixture.managerDatabaseUrl },
-          stdin: new Blob([JSON.stringify({ environmentId: context.environmentId, workbenchId: "demo-workbench" })]),
+          stdin: new Blob([
+            JSON.stringify({ deviceId: context.environmentId, name: "Local app", workbenchId: "demo-workbench" }),
+          ]),
           stdout: "pipe",
           stderr: "pipe",
         },
       );
-      return Promise.all([child.exited, new Response(child.stdout).json(), new Response(child.stderr).text()]);
-    };
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const [status, grant, errors] = await enroll();
+      const [status, device, errors] = await Promise.all([
+        child.exited,
+        new Response(child.stdout).json() as Promise<{ accountId: string; deviceId: string; token: string }>,
+        new Response(child.stderr).text(),
+      ]);
       expect(errors).toBe("");
       expect(status).toBe(0);
-      expect(await context.manager.authorize((grant as { token: string }).token, "demo-workbench")).not.toBeNull();
-      const renewed = await context.managerHandler(
-        new Request("https://manager.fixture.test/v1/environment-access", {
-          method: "POST",
-          headers: { authorization: `Bearer ${notes.token}`, "content-type": "application/json" },
-          body: JSON.stringify({ workbenchId: context.scope.workbenchId }),
-        }),
-      );
-      expect(renewed.status).toBe(200);
-      await renewed.body?.cancel();
-    }
+      expect(device).toMatchObject({ accountId, deviceId: context.environmentId });
+      return device.token;
+    };
+    const first = await enroll();
+    for (const workbenchId of ["demo-workbench", context.scope.workbenchId])
+      expect(await context.manager.authorize(first, workbenchId)).not.toBeNull();
+    // The launcher enrolls again when the saved token is denied, for example after another device removed this one.
+    await context.manager.removeDevice({ accountId, deviceId: context.environmentId });
+    const second = await enroll();
+    expect(await context.manager.authorize(second, context.scope.workbenchId)).not.toBeNull();
+    expect(await context.manager.authorize(first, context.scope.workbenchId)).toBeNull();
   } finally {
     await context.close();
   }

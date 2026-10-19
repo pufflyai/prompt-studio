@@ -92,11 +92,7 @@ test("current authority rejects foreign mutations and invalid scope registration
     expect((await call(`${unknown}initialize`, `Bearer ${context.token}`, {})).status).toBe(400);
     expect((await call(`${unknown}snapshot`, `Bearer ${context.token}`)).status).toBe(409);
     expect((await context.storage.owner(context.scope).snapshot()).records).toEqual({});
-    await context.manager.revoke({
-      requestId: "revoke",
-      accountId: context.scope.accountId,
-      environmentId: context.environmentId,
-    });
+    await context.manager.removeDevice({ accountId: context.scope.accountId, deviceId: context.environmentId });
     await expect(context.renew()).rejects.toThrow("Environment access unavailable");
     expect((await call(`${base}snapshot`, `Bearer ${context.token}`)).status).toBe(200);
   } finally {
