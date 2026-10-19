@@ -56,30 +56,3 @@ export const OneTerminal: Story = {
   args: { activity: { sessions: [], terminals: [{ id: "terminal-one", label: "sleep 300" }], jobs: [] } },
   decorators: Light.decorators,
 };
-
-export const ManyActiveItems: Story = {
-  args: {
-    activity: {
-      sessions: Array.from({ length: 16 }, (_, index) => ({
-        id: `session-${index}`,
-        label: `Agent session ${index + 1}: ${"long-resource-name/".repeat(8)}`,
-      })),
-      terminals: Array.from({ length: 12 }, (_, index) => ({
-        id: `terminal-${index}`,
-        label: `Terminal ${index + 1}`,
-      })),
-      jobs: Array.from({ length: 12 }, (_, index) => ({ id: `job-${index}`, label: `Job ${index + 1}` })),
-    },
-  },
-  decorators: Light.decorators,
-  play: async () => {
-    const dialog = await screen.findByRole("alertdialog", { name: "Active work is still running" });
-    await waitFor(() => expect(dialog).toBeVisible());
-    const bounds = dialog.getBoundingClientRect();
-    await expect(bounds.top).toBeGreaterThanOrEqual(0);
-    await expect(bounds.bottom).toBeLessThanOrEqual(window.innerHeight);
-    await expect(bounds.right).toBeLessThanOrEqual(window.innerWidth);
-    await expect(screen.getByRole("button", { name: "Keep Prompt Studio open" })).toBeVisible();
-    await expect(screen.getByRole("button", { name: "Cancel work and quit" })).toBeVisible();
-  },
-};

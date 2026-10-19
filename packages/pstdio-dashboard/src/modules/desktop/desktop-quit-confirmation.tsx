@@ -22,8 +22,6 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
   return (
     <Dialog.Root
       role="alertdialog"
-      scrollBehavior="inside"
-      placement="center"
       open={activity !== null}
       initialFocusEl={() => keepOpenRef.current}
       closeOnInteractOutside={false}
@@ -33,12 +31,12 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
     >
       <Portal>
         <Dialog.Backdrop />
-        <Dialog.Positioner px="md">
-          <Dialog.Content minH="0" minW="0" maxH="calc(100dvh - var(--chakra-spacing-md) * 2)">
-            <Dialog.Header flexShrink={0}>
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
               <Dialog.Title>Active work is still running</Dialog.Title>
             </Dialog.Header>
-            <Dialog.Body minH="0">
+            <Dialog.Body>
               <Stack gap="sm">
                 <Dialog.Description color="fg.muted" textStyle="paragraph/M/regular">
                   Canceling this work will stop the items below. This cannot be undone.
@@ -53,7 +51,7 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
                         </Text>
                         <Stack as="ul" gap="2xs" listStyle="none" padding="0" margin="0" mt="2xs">
                           {group.items.map((item) => (
-                            <Text as="li" key={item.id} textStyle="paragraph/M/regular" overflowWrap="anywhere">
+                            <Text as="li" key={item.id} textStyle="paragraph/M/regular">
                               {item.label}
                             </Text>
                           ))}
@@ -63,7 +61,7 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
                   })}
               </Stack>
             </Dialog.Body>
-            <Dialog.Footer flexShrink={0} flexWrap="wrap">
+            <Dialog.Footer>
               <Button ref={keepOpenRef} size="sm" onClick={onKeepOpen}>
                 Keep Prompt Studio open
               </Button>

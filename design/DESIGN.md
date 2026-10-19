@@ -41,6 +41,7 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 4. System errors appear in a status-bar widget. Show an indicator with the error when it occurs; opening the widget shows its details. This widget is for system errors only.
 5. When a user action cannot be completed, show the failure in the UI where the user tried the action, beside the relevant control or content.
 6. Chat problems appear in the conversation, without banners.
+7. The system-error and performance popovers share their width, alignment, and gap above the status bar. Long error lists grow with the viewport and scroll inside the popover. Keep the count and dismissal controls visible when text is long.
 
 ## 7. Activity
 
