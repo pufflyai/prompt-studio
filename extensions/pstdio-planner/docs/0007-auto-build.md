@@ -6,6 +6,8 @@ Auto Build uses a supervisor to assign valid, unassigned tickets using your prom
 
 Open **Project Timeline** and click **Auto Build**. Describe how the supervisor should choose work, then adjust the ignore filters below the prompt and click the primary **Auto Build** button.
 
+Starting Auto Build immediately queues a check. The first check starts the supervisor as soon as it finds eligible work; the supervisor then queries its full scope before launching tickets. The queued startup status stays available while that check runs.
+
 For example: “Prioritize small independent tickets for the next release. Leave design decisions for me.”
 
 ![Auto Build form with a supervisor prompt and ignore filters.](../../../documentation/images/auto-build-confirmation.png)

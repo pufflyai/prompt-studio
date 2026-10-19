@@ -1,6 +1,7 @@
 // Keep transient selection, collapsing, and drag operations outside the composed page.
 import { useEffect, useState } from "react";
 import type { Plan, PlanRow } from "../contracts";
+import { filterSections } from "../model/filter";
 import { type DropTarget, sameTarget } from "./drag";
 import type { Relation } from "./plan-view";
 import type { PlanClient } from "./use-plan";
@@ -84,12 +85,10 @@ export function useViewSections(plan: Plan | undefined, visibleTicketIds: Readon
       return next;
     });
   const shown = plan?.sections ?? [];
-  const sections = shown
-    .map((section) => ({
-      section,
-      rows: section.rows.filter((row) => visibleTicketIds.has(row.id)),
-      collapsed: collapsed.has(section.deadline?.id ?? "none"),
-    }))
-    .filter(({ section, rows }) => section.rows.length === 0 || rows.length > 0);
+  const sections = (plan ? filterSections(plan, visibleTicketIds) : []).map((section) => ({
+    section,
+    rows: section.rows,
+    collapsed: collapsed.has(section.deadline?.id ?? "none"),
+  }));
   return { shown, sections, toggle };
 }

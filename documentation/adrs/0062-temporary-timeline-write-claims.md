@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-09
 
+Superseded by [ADR 0083: Temporary runtime Planner write guards](0083-temporary-runtime-planner-write-guards.md). The persisted claims and manual recovery described below are historical. Current Planner guards live only in the runtime and cannot survive a crash.
+
 ## Intended design
 
 Planner owns ticket data and timeline placement. A placement change should run as one atomic storage transaction so concurrent commands cannot overwrite another caller's changes.

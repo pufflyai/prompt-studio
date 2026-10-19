@@ -49,10 +49,10 @@ for (const count of [50, 500, 1_000]) {
       };
     },
   };
-  const { events } = makeCommandContext({ storage, params: {} });
+  const ctx = makeCommandContext({ storage, params: {} });
   const start = performance.now();
   await reorderTicket(
-    { storage: observed, events },
+    { ...ctx, storage: observed },
     {
       rowId: "ticket-1",
       beforeRowId: "ticket-0",

@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-11
 
+Superseded by [ADR 0083: Temporary runtime Planner write guards](0083-temporary-runtime-planner-write-guards.md). The `attempt-launch` key now uses a runtime-owned guard. The persisted claims and manual recovery described below are historical.
+
 ## Intended design
 
 Planner should reserve implementation capacity and create an attempt atomically. Manual starts and Auto build should share that reservation, so neither can exceed project capacity or duplicate an automatic selection.

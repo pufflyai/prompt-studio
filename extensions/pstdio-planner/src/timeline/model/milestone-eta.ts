@@ -1,16 +1,12 @@
 import type { AttemptRecord } from "../../data/attempt-types";
 import { ticketTagAttributeId } from "../../data/mappers";
-import type { PlanRow, PlanTag } from "../contracts";
+import type { PlanPace, PlanRow, PlanTag } from "../contracts";
 
 type ComplexityTag = Pick<PlanTag, "id" | "name"> & { options: Pick<PlanTag["options"][number], "id" | "sortOrder">[] };
 
-export function milestoneEta(
-  rows: Pick<PlanRow, "id" | "done" | "tagIds">[],
-  tags: ComplexityTag[],
-  attempts: Pick<AttemptRecord, "ticketId" | "createdAt">[],
-  now: number,
-) {
-  if (!rows.length) return null;
+type EstimateRow = Pick<PlanRow, "id" | "done" | "tagIds">;
+
+function complexityTotals(rows: EstimateRow[], tags: ComplexityTag[]) {
   const complexity =
     tags.find((tag) => ticketTagAttributeId(tag) === "complexity") ??
     tags.find(({ name }) => name.trim().toLowerCase() === "complexity");
@@ -22,14 +18,33 @@ export function milestoneEta(
     row.tagIds.map((id) => weights.get(id)).find((value) => value !== undefined) ?? defaultWeight;
   const totalComplexity = rows.reduce((total, row) => total + weight(row), 0);
   const completedComplexity = rows.filter(({ done }) => done).reduce((total, row) => total + weight(row), 0);
+  return { completedComplexity, totalComplexity };
+}
+
+export function projectPace(
+  rows: EstimateRow[],
+  tags: ComplexityTag[],
+  attempts: Pick<AttemptRecord, "ticketId" | "createdAt">[],
+  now: number,
+) {
+  const { completedComplexity } = complexityTotals(rows, tags);
   const ids = new Set(rows.map(({ id }) => id));
   const starts = attempts.filter(({ ticketId }) => ids.has(ticketId)).map(({ createdAt }) => Date.parse(createdAt));
   const start = Math.min(...starts);
-  const startedAt = Number.isFinite(start) ? new Date(start).toISOString() : null;
-  if (completedComplexity === totalComplexity)
-    return { remainingMs: 0, completedComplexity, totalComplexity, startedAt };
-  if (!completedComplexity || !startedAt || now <= start) return null;
+  if (!completedComplexity || !Number.isFinite(start) || now <= start) return null;
   // Wall-clock throughput already includes parallel work and time spent waiting.
-  const remainingMs = ((now - start) * (totalComplexity - completedComplexity)) / completedComplexity;
-  return { remainingMs, completedComplexity, totalComplexity, startedAt };
+  return { msPerComplexity: (now - start) / completedComplexity, startedAt: new Date(start).toISOString() };
+}
+
+export function milestoneEta(rows: EstimateRow[], tags: ComplexityTag[], pace: PlanPace | null) {
+  if (!rows.length) return null;
+  const { completedComplexity, totalComplexity } = complexityTotals(rows, tags);
+  const remaining = totalComplexity - completedComplexity;
+  if (remaining && !pace) return null;
+  return {
+    remainingMs: remaining * (pace?.msPerComplexity ?? 0),
+    completedComplexity,
+    totalComplexity,
+    startedAt: pace?.startedAt ?? null,
+  };
 }
