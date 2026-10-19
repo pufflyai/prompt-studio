@@ -44,13 +44,13 @@ test("opens a project from another Windows drive through the folder picker", asy
     const drive = picker.getByRole("button", { name: "Drive", exact: true });
     await drive.click();
     await page.getByRole("menuitem", { name: letter!, exact: true }).click();
-    await expect(picker.getByRole("textbox", { name: "Folder path", exact: true })).toHaveValue(
-      realpathSync(`${letter}\\`),
-    );
+    const folderPath = picker.getByRole("textbox", { name: "Folder path", exact: true });
+    // The picker may retain the selected drive alias; compare the filesystem identity.
+    await expect.poll(async () => realpathSync(await folderPath.inputValue())).toBe(realpathSync(`${letter}\\`));
     await picker.getByRole("option", { name: "My tools", exact: true }).press("Enter");
-    await expect(picker.getByRole("textbox", { name: "Folder path", exact: true })).toHaveValue(
-      realpathSync(join(folder, "My tools")),
-    );
+    await expect
+      .poll(async () => realpathSync(await folderPath.inputValue()))
+      .toBe(realpathSync(join(folder, "My tools")));
     await test.info().attach("windows-drive-picker", { body: await picker.screenshot(), contentType: "image/png" });
     const opening = page.waitForResponse(
       (response) => new URL(response.url()).pathname === "/v1/projects" && response.request().method() === "POST",

@@ -342,6 +342,8 @@ A sibling with `resolvedFrom: "resource"` stays hidden in the dialog, but
 `params.valueOf` can still reference it. Choices and submission use the same
 value: an explicit action argument takes priority over the active resource.
 Opening the dialog for another resource loads choices for that resource.
+Dashboard commands also resolve these hidden values before dispatch when no
+parameter form is needed. Explicit action arguments still take priority.
 
 Workspace provider `params` support the same command-backed choices in Create
 workspace and in nested `workspace` command fields. Changing the provider cancels
