@@ -43,7 +43,8 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       },
     },
     navigation: {
-      open: (target) => workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId })),
+      open: (target) =>
+        workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId })),
     },
     notifications: {
       show: (notice) => {

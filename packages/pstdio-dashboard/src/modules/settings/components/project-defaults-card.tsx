@@ -1,4 +1,5 @@
 import { Box, Card, HStack, Icon, Stack } from "@chakra-ui/react";
+import { filterHarnessParamValues, HarnessParamEditor, type HarnessParamValues } from "@pstdio/ui/param-editor";
 import { Bot } from "lucide-react";
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import { useTranslation } from "react-i18next";
@@ -6,8 +7,6 @@ import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
 import { useActionError } from "@/shared/components/use-action-error";
 import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
-import { HarnessParamEditor } from "@pstdio/ui/param-editor";
-import { filterHarnessParamValues, type HarnessParamValues } from "@pstdio/ui/param-editor";
 import {
   useHarnessParamDefaults,
   useUpdateHarnessParamDefaults,

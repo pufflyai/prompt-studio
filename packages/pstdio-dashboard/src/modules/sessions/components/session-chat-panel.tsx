@@ -1,6 +1,7 @@
 import { Box, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
 import { type ChatInputQuestionResponse, ChatSkeleton } from "@pstdio/ui/chat-ui";
+import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
@@ -28,7 +29,6 @@ import type { useDashboardSessionMessages } from "../hooks/use-dashboard-session
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useStopSession } from "../hooks/use-stop-session";
 import { canSubmitSessionMessage } from "../runtime/session-runtime-selection";
-import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import { useSessionLinks } from "./session-chat-links";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";

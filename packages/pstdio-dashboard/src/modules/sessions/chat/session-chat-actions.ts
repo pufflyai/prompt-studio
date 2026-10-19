@@ -1,10 +1,10 @@
 import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
+import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { createDashboardSessionResource } from "@/shared/app/resources";
-import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 import { toSessionNotice } from "../data/session-notice";
 import { rememberDashboardSessionResource } from "../state/session-selection";

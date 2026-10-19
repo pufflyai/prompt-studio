@@ -1,9 +1,9 @@
 import { Button, Flex, type HTMLChakraProps, Menu, Portal, Text } from "@chakra-ui/react";
+import { type HarnessParamValues, resolveHarnessParamText, updateHarnessParamOverride } from "@pstdio/ui/param-editor";
 import { Check, ChevronDown, Circle } from "lucide-react";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
 import { forwardRef, type ReactNode } from "react";
 import { HarnessParamOptionIcon } from "./harness-param-option-icon";
-import { type HarnessParamValues, resolveHarnessParamText, updateHarnessParamOverride } from "@pstdio/ui/param-editor";
 
 type HarnessParamDescriptor = HarnessParamsInfo[string];
 type SelectHarnessParamDescriptor = Extract<HarnessParamDescriptor, { type: "select" }>;

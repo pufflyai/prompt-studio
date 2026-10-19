@@ -1,7 +1,7 @@
 import type { QueuedFollowUp } from "@pstdio/ui/chat-ui";
+import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import { type Dispatch, type SetStateAction, useState } from "react";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
-import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import { deleteSessionAttachment, useSessionDraftAttachments } from "./use-session-draft-attachments";
 
 interface SavedSelection {
