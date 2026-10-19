@@ -49,6 +49,16 @@ export class ReferenceLinkNode extends DecoratorNode<ReactElement> {
     return `{{link('${label}')}}`;
   }
 
+  // Pasted reference text is parsed again as Markdown, so HTML import adds nothing.
+  static importDOM() {
+    return null;
+  }
+
+  // Copy writes HTML from this export. Keep the reference text so pasting keeps the link.
+  exportDOM() {
+    return { element: document.createTextNode(this.getTextContent()) };
+  }
+
   exportJSON(): SerializedReferenceLinkNode {
     return {
       type: ReferenceLinkNode.getType(),
@@ -63,7 +73,7 @@ export class ReferenceLinkNode extends DecoratorNode<ReactElement> {
   }
 
   decorate(_editor: LexicalEditor, _config: EditorConfig): ReactElement {
-    return <ReferenceLinkBadge href={this.__href} />;
+    return <ReferenceLinkBadge href={this.__href} target={this.__label ?? this.__href} />;
   }
 }
 

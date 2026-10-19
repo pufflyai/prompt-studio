@@ -30,12 +30,17 @@ labels, icons, and destinations. The host must not contain ticket-specific routi
 - Use the shared resource icon registry, with the resource kind's icon as the default.
   Show the icon with the resolved label. Bubbles have no tooltip or underline, including on hover.
 - Keep explicit web references on the native web-opening path, with mouse and keyboard activation.
-- Apply source positions to page destinations and every page in compound destinations,
-  replacing any competing section while retaining parent navigation.
+- Apply source positions to page destinations and every page in compound destinations
+  that open a document, replacing any competing section while retaining parent navigation.
+  A page that opens no document keeps the owner's destination without the position.
 - Detect ordinary file paths in prose without agent-specific link formatting.
   Support Markdown links, inline-code file references, and explicit reference links too.
+  Paths found in prose or inline code are guesses. Show one as a bubble only when its owner
+  resolves it or the file exists in the conversation workspace; otherwise keep the text as written.
+  Markdown links and explicit references stay links even when the file is missing.
   Preserve route-group parentheses and dynamic path segments; never turn a path suffix into a different file link.
   Preserve keyboard activation, web links, source positions, and editable Markdown.
+- Copying a message keeps every bubble's text and formatting in both plain text and HTML.
 - Keep completed bubbles stable while more text streams. Ignore late presentation
   results after a link changes or its view closes.
 - Let agents invoke the same owner command through the existing command API.
@@ -81,6 +86,8 @@ schema change, stored message rewrite, or migration.
 5. Share a plain ticket or saved-document path in prose and show its owner label and
    icon without requiring any link syntax. Support Markdown, inline-code, and explicit
    reference bubbles too. Activate them by keyboard and preserve ordinary web links.
+   Keep text such as `origin/main`, github.com and Node.js, and paths to missing files,
+   as plain text or code.
 6. Stream more text without recreating earlier bubbles. Edit Markdown without
    replacing its source with resolved labels or URLs.
 7. Load an independent extension's declaration through the packaged host, expose
