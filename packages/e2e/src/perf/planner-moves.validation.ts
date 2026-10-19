@@ -165,11 +165,19 @@ try {
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
+  let secondMoveSaved!: (ok: boolean) => void;
+  const secondMove = new Promise<boolean>((resolve) => {
+    secondMoveSaved = resolve;
+  });
   let moveCalls = 0;
   await page.route("**/pstdio.pstdio-planner.view.tickets.kanban.onMove/execute", async (route) => {
     moveCalls += 1;
     console.info(JSON.stringify({ move: moveCalls, payload: route.request().postDataJSON() }));
-    if (moveCalls > 1) return route.continue();
+    if (moveCalls > 1) {
+      const response = await route.fetch();
+      secondMoveSaved(response.ok());
+      return route.fulfill({ response });
+    }
     await gate;
     await route.fulfill({
       status: 400,
@@ -187,7 +195,8 @@ try {
   await drop(page, title, destination.id, beforeTitle);
   release();
   await page.waitForFunction(() => document.body.textContent?.includes("Synthetic move failure"));
-  await page.waitForTimeout(250);
+  // The error shows before the queued second move finishes, so read storage only after it saved.
+  assert(await secondMove);
   let saved = await executePlanner<StressTicket>(api, project.id, "get-ticket", { id: tickets[0].id });
   assert.equal(moveCalls, 2);
   assert.equal(saved.value.statusId, destination.id);

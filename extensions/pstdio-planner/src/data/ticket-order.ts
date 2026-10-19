@@ -1,5 +1,26 @@
+import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { sortedBySortOrder } from "../utils/sort";
 import type { StoredTicket } from "./types";
+import { withWriteGuard } from "./write-guard";
+
+const busy = Symbol("busy");
+const ORDER_WAIT_MS = 5_000;
+const ORDER_RETRY_MS = 25;
+
+/**
+ * Serializes ticket creation with other order writers. Board moves fail fast and
+ * the board shows the error, but a create must not fail because a move or another
+ * create holds the order for a moment. A crashed writer's claim still fails after the wait.
+ */
+export const withTicketOrder = async <T>(ctx: Pick<ExtensionContextBase, "storage">, write: () => Promise<T>) => {
+  const deadline = Date.now() + ORDER_WAIT_MS;
+  for (;;) {
+    const result = await withWriteGuard<T | typeof busy>(ctx, "ticket-order", write, () => busy);
+    if (result !== busy) return result;
+    if (Date.now() >= deadline) return withWriteGuard(ctx, "ticket-order", write);
+    await new Promise((resolve) => setTimeout(resolve, ORDER_RETRY_MS));
+  }
+};
 
 /** Places a row in the global order, including rows hidden by the current view. */
 export const ticketOrderChanges = (tickets: StoredTicket[], rowId: string, beforeRowId?: string) => {

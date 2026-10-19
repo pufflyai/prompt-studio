@@ -10,6 +10,7 @@ import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/r
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
+import { withTicketOrder } from "../data/ticket-order";
 
 // `pst tickets write`: create a draft ticket in extension storage and lay down its
 // local `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/ticket.md` via the host file primitive. The
@@ -31,14 +32,12 @@ export const writeTicketCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const { projectFiles, resolvePath } = await requireTicketDraftFiles(ctx);
-    const existing = await ticketsCollection(ctx.storage).list();
     const statuses = await seedDefaultStatuses(ctx.storage);
     if (commandParams.tags !== undefined) await seedDefaultTags(ctx.storage);
 
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
     const { id, shorthand } = await allocateTicketIdentity(ctx);
-    const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
 
     const statusId =
       commandParams.status !== undefined
@@ -49,23 +48,27 @@ export const writeTicketCommand = defineCommand({
     const parentId =
       commandParams.parent !== undefined ? await resolveTicketId(ctx.storage, commandParams.parent) : null;
 
-    const ticket = await putTicket(ctx.storage, {
-      id,
-      shorthand,
-      title: commandParams.title,
-      content: `# ${commandParams.title}\n`,
-      statusId,
-      tagIds,
-      attachments: [],
-      parentId,
-      dependsOn: [],
-      blockedReason: null,
-      userPrompt: commandParams.userPrompt ?? null,
-      draft: true,
-      archived: false,
-      sortOrder,
-      createdAt: now,
-      updatedAt: now,
+    const ticket = await withTicketOrder(ctx, async () => {
+      const existing = await ticketsCollection(ctx.storage).list();
+      const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
+      return putTicket(ctx.storage, {
+        id,
+        shorthand,
+        title: commandParams.title,
+        content: `# ${commandParams.title}\n`,
+        statusId,
+        tagIds,
+        attachments: [],
+        parentId,
+        dependsOn: [],
+        blockedReason: null,
+        userPrompt: commandParams.userPrompt ?? null,
+        draft: true,
+        archived: false,
+        sortOrder,
+        createdAt: now,
+        updatedAt: now,
+      });
     });
 
     await writeTicketMarkdown(projectFiles, ticket, await ticketToMarkdown(ctx.storage, ticket));
