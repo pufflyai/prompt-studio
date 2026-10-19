@@ -2,9 +2,10 @@ import { Icon } from "@chakra-ui/react";
 import type { ResourceContextAction, TreeListActionMenuItem } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { ResourceRef, WorkbenchCoreContributionContext } from "../../core";
-import { resourceContextMenuPath, workbenchBreadcrumbLocationMenuPath } from "../../core";
+import { workbenchBreadcrumbLocationMenuPath } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { type CreateMenuItemsInput, createMenuItems } from "./command-menu-items";
+import { resolveResourceActionMenu, subscribeResourceKinds } from "./resource-action-menu";
 
 const toResourceContextAction = (item: TreeListActionMenuItem): ResourceContextAction => ({
   key: item.id,
@@ -21,22 +22,11 @@ export const createWorkbenchResourceActions = (
   subject: ResourceRef,
   options: Pick<CreateMenuItemsInput, "onRequestParams" | "onCommandError"> = {},
 ) => {
-  const kind = workbench.resources.getKind(subject.type, subject.extensionId);
-  const current = kind?.resolve ? kind.resolve(subject) : subject;
-  const resource = current ? workbench.resources.preview.resolve(current) : undefined;
-  if (!resource) return [];
-  return createMenuItems({
-    menuPath: resourceContextMenuPath(resource.type),
-    workbench,
-    context: { resource },
-    onRequestParams: options.onRequestParams ?? (({ request }) => workbench.commandPalette.requestParams(request)),
-    onCommandError: options.onCommandError,
-  }).map((item) => ({
+  const menu = resolveResourceActionMenu(workbench, subject, options.onRequestParams);
+  if (!menu) return [];
+  return createMenuItems({ ...menu, onCommandError: options.onCommandError }).map((item) => ({
     ...toResourceContextAction(item),
-    group: item.group ?? {
-      id: `resource:${resource.extensionId ?? "pstdio"}:${resource.type}`,
-      label: kind?.label ?? resource.type,
-    },
+    group: item.group ?? menu.group,
   }));
 };
 export const createWorkbenchLocationActions = (
@@ -53,17 +43,7 @@ export const useWorkbenchResourceActionResolver = (workbench: WorkbenchCoreContr
   useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const kinds = useWorkbenchStore(workbench.resources.store, (state) => state.kinds);
   const [, refresh] = useState(0);
-  useEffect(() => {
-    const subscriptions = Object.values(kinds).flatMap((kind) =>
-      kind.subscribe ? [kind.subscribe(() => refresh((revision) => revision + 1))] : [],
-    );
-    return () => {
-      for (const subscription of subscriptions) {
-        if (typeof subscription === "function") subscription();
-        else subscription.dispose();
-      }
-    };
-  }, [kinds]);
+  useEffect(() => subscribeResourceKinds(Object.values(kinds), () => refresh((revision) => revision + 1)), [kinds]);
   useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   useWorkbenchStore(workbench.context.store, (state) => state.values);
   useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);

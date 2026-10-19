@@ -1,31 +1,12 @@
 import { Box, Image } from "@chakra-ui/react";
 import { PaletteShortcut, Tooltip, type TreeListActionMenuItem } from "@pstdio/ui";
-import type {
-  KeybindingSequence,
-  MenuPath,
-  WorkbenchCommandExecutionContext,
-  WorkbenchCoreContributionContext,
-} from "../../core";
-import { scopeWorkbenchResourceContextValues } from "../../core";
+import type { KeybindingSequence, WorkbenchCoreContributionContext } from "../../core";
 import { reportUserActionError } from "../../core/shared/run-user-action";
-import { hasCommandParameters, resolveCommandResourceParams } from "../command-palette/command-palette-params";
-import type { TreeActionParamsRequest } from "../renderers/tree/tree-actions";
 import { WorkbenchIcon } from "../shared/icon";
-import { resolveMenuItemState } from "./menu-item-state";
-export interface CreateMenuItemsInput {
-  workbench: WorkbenchCoreContributionContext;
-  menuPath: MenuPath;
-  context?: WorkbenchCommandExecutionContext;
+import { type MenuEntry, type ResolveMenuEntriesInput, resolveMenuEntries, withLeadingSeparator } from "./menu-entries";
+export interface CreateMenuItemsInput extends ResolveMenuEntriesInput {
   onCommandError?: (error: unknown) => void;
-  onRequestParams?: (request: TreeActionParamsRequest) => void;
 }
-const commandContextValues = (
-  workbench: WorkbenchCoreContributionContext,
-  context: WorkbenchCommandExecutionContext | undefined,
-) =>
-  context?.resource
-    ? scopeWorkbenchResourceContextValues(workbench.context.snapshot(), context.resource)
-    : workbench.context.snapshot();
 
 const createMenuIcon = (input: { icon?: string; iconSrc?: string }) => {
   const { icon, iconSrc } = input;
@@ -70,89 +51,43 @@ export const createMenuEndContent = (input: {
   return undefined;
 };
 
-export const withLeadingSeparator = <T extends TreeListActionMenuItem>(items: T[], enabled: boolean) => {
-  if (!enabled || items.length === 0) return items;
-  const [first, ...rest] = items;
-  return [{ ...first, separatorBefore: true }, ...rest];
-};
+const toMenuItem = (
+  workbench: WorkbenchCoreContributionContext,
+  entry: MenuEntry,
+  onCommandError: CreateMenuItemsInput["onCommandError"],
+): TreeListActionMenuItem => ({
+  id: entry.id,
+  label: entry.label,
+  group: entry.group,
+  commandId: entry.commandId,
+  description: entry.description,
+  icon: createMenuIcon(entry),
+  endContent: createMenuEndContent({
+    external: entry.external,
+    binding: entry.binding,
+    disabledReason: entry.description,
+    readOnly: entry.readOnly,
+  }),
+  disabled: entry.disabled,
+  readOnly: entry.readOnly,
+  separatorBefore: entry.separatorBefore,
+  onAction: entry.run
+    ? () => {
+        void entry.run?.().catch((error) => {
+          if (onCommandError) onCommandError(error);
+          else reportUserActionError(workbench, entry.label, error);
+        });
+      }
+    : undefined,
+});
 
-const isKernelMenuAction = (group: string | undefined) => group === "kernel";
 export const createMenuItemGroups = (input: CreateMenuItemsInput) => {
-  const { context, menuPath, onCommandError, onRequestParams, workbench } = input;
-  const contextValues = commandContextValues(workbench, context);
-  const shortcuts = new Map(workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]));
-  const regularItems: TreeListActionMenuItem[] = [];
-  const kernelItems: TreeListActionMenuItem[] = [];
-
-  for (const action of workbench.layout.listMenuItems(menuPath)) {
-    const record = workbench.commands.getCommand(action.commandId);
-    if (!record) continue;
-
-    const args = action.args;
-    const state = resolveMenuItemState(action, record, contextValues, context);
-    if (!state) continue;
-
-    const icon = action.icon ?? record.command.icon;
-    const binding = shortcuts.get(record.command.id);
-    const readOnly = state.readOnly;
-    const label = action.label ?? record.command.label;
-    const requestParams =
-      hasCommandParameters(record.command.params) && onRequestParams
-        ? () =>
-            onRequestParams({
-              request: {
-                record: { command: record.command },
-                label,
-                args,
-                context,
-              },
-              run: async (nextArgs) => {
-                await workbench.commands.executeCommand(record.command.id, nextArgs, context);
-              },
-            })
-        : undefined;
-    const item = {
-      id: action.id,
-      label,
-      group: action.resourceGroup,
-      commandId: action.sourceCommandId ?? record.command.id,
-      description: state.description,
-      icon: createMenuIcon({ icon, iconSrc: action.iconSrc }),
-      endContent: createMenuEndContent({
-        external: action.external,
-        binding,
-        disabledReason: state.description,
-        readOnly,
-      }),
-      disabled: state.disabled,
-      readOnly,
-      separatorBefore: action.separatorBefore,
-      onAction: readOnly
-        ? undefined
-        : () => {
-            if (requestParams) {
-              requestParams();
-              return;
-            }
-            const bound = resolveCommandResourceParams(record.command.params, args, context);
-            const resolvedArgs = Object.keys(bound).length
-              ? { ...(typeof args === "object" && args !== null ? args : {}), ...bound }
-              : args;
-            void workbench.commands.executeCommand(record.command.id, resolvedArgs, context).catch((error) => {
-              if (onCommandError) onCommandError(error);
-              else reportUserActionError(workbench, label, error);
-            });
-          },
-    };
-
-    if (isKernelMenuAction(action.group)) {
-      kernelItems.push(item);
-    } else {
-      regularItems.push(item);
-    }
-  }
-
-  return { regularItems, kernelItems };
+  const entries = resolveMenuEntries(input);
+  const itemsWhere = (kernel: boolean) =>
+    entries
+      .filter((entry) => entry.kernel === kernel)
+      .map((entry) => toMenuItem(input.workbench, entry, input.onCommandError));
+  return { regularItems: itemsWhere(false), kernelItems: itemsWhere(true) };
 };
 
 export const createMenuItems = (input: CreateMenuItemsInput) => {

@@ -19,7 +19,7 @@ interface CreateWorkbenchWebviewHostAdaptersInput {
 export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebviewHostAdaptersInput) => {
   const { workbench, placement, extensionId, projectId, hostEvents } = input;
   return {
-    resourceActions: createWebviewResourceActions(workbench, projectId, extensionId),
+    resourceActions: createWebviewResourceActions(workbench, projectId, hostEvents),
     hostEvents,
     executeCommand: async (request, signal) => ({
       outcome: {

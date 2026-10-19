@@ -245,7 +245,12 @@ export interface WebviewResourceAction {
   key: string;
   label: string;
   commandId?: string;
+  /** Workbench icon name. */
   icon?: string;
+  /** Image URL that replaces `icon` when present. */
+  iconSrc?: string;
+  /** Help text, or the reason the action is disabled. */
+  description?: string;
   isDisabled?: boolean;
   separatorBefore?: boolean;
   group?: { id: string; label?: string };

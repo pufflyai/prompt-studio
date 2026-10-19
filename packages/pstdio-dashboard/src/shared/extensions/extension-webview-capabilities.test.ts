@@ -21,6 +21,25 @@ test("dashboard adapters keep the shared capability contract without an owner", 
   }
 });
 
+test("dashboard adapters read project harnesses without a file owner", async () => {
+  const capabilities = createExtensionWebviewHostCapabilities(
+    createDashboardExtensionWebviewAdapters({
+      base: {},
+      extensionId: "pstdio.lab",
+      projectId: "project-1",
+      webviewId: "view-1",
+    }),
+  );
+  await expect(Promise.resolve().then(() => capabilities["harnesses.read"](null as never))).rejects.toMatchObject({
+    code: "invalid_params",
+  });
+  for (const capability of ["files.list", "artifacts.read"] as const) {
+    await expect(Promise.resolve().then(() => capabilities[capability]({} as never))).rejects.toMatchObject({
+      code: "unsupported",
+    });
+  }
+});
+
 test("dashboard adapters preserve command outcomes and qualify navigation once", async () => {
   const workbench = createWorkbench();
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
