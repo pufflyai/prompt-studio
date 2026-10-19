@@ -20,7 +20,7 @@ export const alertSlotRecipe = defineSlotRecipe({
         whiteSpace: "normal",
         overflowWrap: "anywhere",
         "&:not(:disabled, [data-disabled])": {
-          _hover: { bg: "currentColor/10" },
+          _hover: { "&:not(:active, [data-active])": { bg: "currentColor/10" } },
           _focusVisible: { bg: "currentColor/10", outlineColor: "currentColor" },
           _active: { bg: "currentColor/20" },
         },
