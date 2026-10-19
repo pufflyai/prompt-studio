@@ -4,7 +4,13 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "../commands/auto-build-mode";
 import { makeCommandContext } from "../commands/command-context.fixture";
 import { saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
-import { autoBuildSessionCompletedHook, enqueueAutoBuild } from "./auto-build";
+import { statusesCollection } from "../data/collections";
+import {
+  autoBuildSchedule,
+  autoBuildSessionCompletedHook,
+  checkAutoBuildCommand,
+  enqueueAutoBuild,
+} from "./auto-build";
 
 function fixture() {
   const runs: AutomationRun[] = [];
@@ -35,6 +41,18 @@ function fixture() {
   });
   return { ctx, runs };
 }
+
+test("the recurring check is eligible only while Auto Build is on and does not initialize an idle project", async () => {
+  const { ctx } = fixture();
+  const { enabledWhen } = autoBuildSchedule;
+  expect(await enabledWhen(ctx)).toBe(false);
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(await statusesCollection(ctx.storage).list()).toEqual([]);
+  await configureAutoBuildCommand.run(ctx, { enabled: true, prompt: "Choose relevant work." });
+  expect(await enabledWhen(ctx)).toBe(true);
+  await configureAutoBuildCommand.run(ctx, { enabled: false });
+  expect(await enabledWhen(ctx)).toBe(false);
+});
 
 test("enabling the project mode queues a background check", async () => {
   const { ctx, runs } = fixture();

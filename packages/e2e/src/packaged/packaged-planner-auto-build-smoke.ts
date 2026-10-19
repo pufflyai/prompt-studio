@@ -4,6 +4,8 @@ import { commandRunner, type PackagedPlanner } from "./packaged-planner-helpers"
 
 export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
   const execute = commandRunner(input);
+  // An off-mode scheduled check returns without refreshing attempts or starting work.
+  expect(await execute("auto-build.check", {})).toBeUndefined();
   // Empty ready work exercises the shipped action without starting real agents.
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
   expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false, blockOnReview: true });
@@ -29,6 +31,7 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
     enabled: false,
   });
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
+  expect(await execute("auto-build.check", {})).toBeUndefined();
   await expectPackagedDependencyBlockers({ ...input, execute });
 }
 

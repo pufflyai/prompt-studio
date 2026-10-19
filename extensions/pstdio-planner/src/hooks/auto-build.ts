@@ -10,7 +10,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { autoBuildCommand } from "../commands/auto-build";
 import { refreshAttemptTickets } from "../data/attempt-rollup";
-import { readAutoBuildMode } from "../data/auto-build-mode";
+import { readAutoBuildEnabled, readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withWriteGuard } from "../data/write-guard";
 import { plannerTicketsChanged } from "../events";
@@ -37,6 +37,7 @@ export const checkAutoBuildCommand = defineCommand({
   id: "auto-build.check",
   title: "Check Auto build",
   async run(ctx: CommandContext) {
+    if (!(await readAutoBuildEnabled(ctx))) return;
     await refreshAttemptTickets(ctx);
     await enqueueAutoBuild(ctx);
   },
@@ -47,6 +48,7 @@ export const autoBuildSchedule = defineSchedule({
   title: "Check Auto build",
   schedule: "*/3 * * * *",
   command: checkAutoBuildCommand.ref,
+  enabledWhen: readAutoBuildEnabled,
 });
 
 const checkAfter = <T extends object>(id: string, event: EventRef<T>) =>
