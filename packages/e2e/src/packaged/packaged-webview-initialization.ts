@@ -16,11 +16,16 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
             const menu = document.createElement("div");
             menu.dataset.mountOwner = "active";
             document.body.appendChild(menu);
-            return () => menu.remove();
+            const label = document.createElement("button");
+            label.textContent = "Short status";
+            label.onclick = () => { label.textContent = "A much longer status after an update"; };
+            element.appendChild(label);
+            return () => { menu.remove(); label.remove(); };
           }
         };
       `)}`;
       const message = {
+        sizing: "content-width",
         moduleUrl,
         extensionId: "test.initialization",
         styles: [],
@@ -33,6 +38,12 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
           { action: "RIMLESS/RPC_REQUEST", connectionID: "mount-probe", callName: "init", callID, args: [message] },
           "*",
         );
+      const resizeFromGuest = (data: MessageEvent["data"]) => {
+        if (data.action === "RIMLESS/RPC_REQUEST" && data.callName === "contentWidthChanged") {
+          frame.style.width = `${data.args[0]}px`;
+          frame.contentWindow?.postMessage({ ...data, action: "RIMLESS/RPC_RESOLVE", result: null }, "*");
+        }
+      };
       window.addEventListener("message", (event) => {
         if (event.source !== frame.contentWindow) return;
         const data = event.data;
@@ -42,7 +53,7 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
               action: "RIMLESS/HANDSHAKE_REPLY",
               connectionID: "mount-probe",
               schema: {},
-              methodNames: ["call", "ready", "runtimeError"],
+              methodNames: ["call", "ready", "runtimeError", "contentWidthChanged"],
             },
             "*",
           );
@@ -51,6 +62,7 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
           sendInit("first");
           sendInit("overlapping");
         }
+        resizeFromGuest(data);
         if (data.action === "RIMLESS/RPC_RESOLVE" && data.callID === "overlapping") sendInit("repeated");
         if (data.action === "RIMLESS/RPC_RESOLVE" && data.callID === "repeated") frame.dataset.initialized = "true";
       });
@@ -62,6 +74,13 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
     await expect(probe.frameLocator('iframe[title="Initialization probe"]').locator("[data-mount-owner]")).toHaveCount(
       1,
     );
+    const iframe = probe.locator('iframe[title="Initialization probe"]');
+    const before = (await iframe.boundingBox())!.width;
+    await probe
+      .frameLocator('iframe[title="Initialization probe"]')
+      .getByRole("button", { name: "Short status" })
+      .click();
+    await expect.poll(async () => (await iframe.boundingBox())!.width).toBeGreaterThan(before);
   } finally {
     await probe.close();
   }
