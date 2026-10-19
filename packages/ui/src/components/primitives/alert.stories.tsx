@@ -1,4 +1,4 @@
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
@@ -147,6 +147,20 @@ export const NarrowActions: Story = {
     const alert = canvas.getByRole("alert");
     await expect(alert.scrollWidth).toBeLessThanOrEqual(alert.clientWidth);
   },
+};
+
+export const WarningActions: Story = {
+  render: () => (
+    <AlertMessage status="warning" title="No connection available">
+      <Stack gap="xs">
+        <Text>Review the connection settings, then check again.</Text>
+        <Flex gap="xs" wrap="wrap">
+          <Button variant="outline">Review settings</Button>
+          <Button variant="outline">Check again</Button>
+        </Flex>
+      </Stack>
+    </AlertMessage>
+  ),
 };
 
 // A problem the user can act on can be closed; only a temporary failure offers Retry.

@@ -5,6 +5,7 @@ import type {
   WorkbenchModuleContext,
   WorkbenchPanelRegion,
 } from "../../core";
+import { resolveCommandResourceParams } from "../../core/registries/commands/command-resource-params";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import { runResourceMutation } from "./workbench-resource-mutation";
@@ -78,10 +79,11 @@ export const executeWorkbenchExtensionCommand = async (
   commandId: string,
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
-  const persist = async () =>
-    unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, input));
   const command = context.metadata?.commands.find((candidate) => candidate.id === commandId);
-  return command
-    ? runResourceMutation(context, command, input.params, { resource: input.resource }, persist)
-    : persist();
+  const params = command
+    ? { ...resolveCommandResourceParams(command.params, input.params, { resource: input.resource }), ...input.params }
+    : input.params;
+  const persist = async () =>
+    unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, { ...input, params }));
+  return command ? runResourceMutation(context, command, params, { resource: input.resource }, persist) : persist();
 };

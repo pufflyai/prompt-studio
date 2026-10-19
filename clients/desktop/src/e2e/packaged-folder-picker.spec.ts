@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, realpathSync } from "node:fs";
+import { mkdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
 import { registerPackagedCleanup, test } from "../testing/packaged-fixture";
@@ -10,6 +10,11 @@ import {
   type PackagedApp,
   removePackagedHome,
 } from "./packaged-app-helpers";
+
+const directoryIdentity = (path: string) => {
+  const { dev, ino } = statSync(path, { bigint: true });
+  return { dev, ino };
+};
 
 test("opens a project from another Windows drive through the folder picker", async () => {
   test.skip(process.platform !== "win32", "Drive-letter selection belongs to Windows hosts.");
@@ -44,13 +49,13 @@ test("opens a project from another Windows drive through the folder picker", asy
     const drive = picker.getByRole("button", { name: "Drive", exact: true });
     await drive.click();
     await page.getByRole("menuitem", { name: letter!, exact: true }).click();
-    await expect(picker.getByRole("textbox", { name: "Folder path", exact: true })).toHaveValue(
-      realpathSync(`${letter}\\`),
-    );
+    const folderPath = picker.getByRole("textbox", { name: "Folder path", exact: true });
+    // realpath can retain a SUBST alias, while file identifiers identify the same directory.
+    await expect.poll(async () => directoryIdentity(await folderPath.inputValue())).toEqual(directoryIdentity(folder));
     await picker.getByRole("option", { name: "My tools", exact: true }).press("Enter");
-    await expect(picker.getByRole("textbox", { name: "Folder path", exact: true })).toHaveValue(
-      realpathSync(join(folder, "My tools")),
-    );
+    await expect
+      .poll(async () => directoryIdentity(await folderPath.inputValue()))
+      .toEqual(directoryIdentity(join(folder, "My tools")));
     await test.info().attach("windows-drive-picker", { body: await picker.screenshot(), contentType: "image/png" });
     const opening = page.waitForResponse(
       (response) => new URL(response.url()).pathname === "/v1/projects" && response.request().method() === "POST",
@@ -61,10 +66,11 @@ test("opens a project from another Windows drive through the folder picker", asy
     const project = (await response.json()) as { id: string; name: string };
     expect(project.name).toBe("My tools");
     await expect(picker).toBeHidden();
-    const workspaces = await (
+    const workspaces = (await (
       await fetch(`${app.runtime.origin}/v1/workspaces?project_id=${project.id}`, { headers })
-    ).json();
-    expect(workspaces).toContainEqual(expect.objectContaining({ root_path: realpathSync(join(folder, "My tools")) }));
+    ).json()) as { root_path: string }[];
+    expect(workspaces).toHaveLength(1);
+    expect(directoryIdentity(workspaces[0]!.root_path)).toEqual(directoryIdentity(join(folder, "My tools")));
   } finally {
     try {
       await disposePackagedApp(app);

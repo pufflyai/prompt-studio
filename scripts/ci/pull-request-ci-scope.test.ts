@@ -178,8 +178,8 @@ test("relay changes select the isolated container check", () => {
   const scope = resolveCiScope({
     event: "pull_request",
     labels: [],
-    changedFiles: ["infra/relay/src/server.ts"],
-    packageDirs: [...packageDirs, "infra/relay"],
+    changedFiles: ["services/relay/src/server.ts"],
+    packageDirs: [...packageDirs, "services/relay"],
     affectedPackages: ["pstdio-relay"],
   });
   expect(scope.lernaFilter).toBe("--since HEAD~1");
@@ -188,12 +188,25 @@ test("relay changes select the isolated container check", () => {
   expect(pullRequest(["bun.lock"])).toHaveProperty("relaySmoke", true);
 });
 
+test("relay deployment setup changes select the isolated container check", () => {
+  for (const file of ["infra/relay/compose.test.yaml", "infra/relay/compose.local.yaml"]) {
+    const scope = resolveCiScope({
+      event: "pull_request",
+      labels: [],
+      changedFiles: [file],
+      packageDirs: [...packageDirs, "services/relay"],
+      affectedPackages: [],
+    });
+    expect(scope, file).toHaveProperty("relaySmoke", true);
+  }
+});
+
 test("private account manager changes select the isolated infrastructure check", () => {
   const scope = resolveCiScope({
     event: "pull_request",
     labels: [],
-    changedFiles: ["infra/account-manager/src/authority.ts"],
-    packageDirs: [...packageDirs, "infra/account-manager"],
+    changedFiles: ["services/account-manager/src/authority.ts"],
+    packageDirs: [...packageDirs, "services/account-manager"],
     affectedPackages: ["pstdio-account-manager"],
   });
   expect(scope.lernaFilter).toBe("--since HEAD~1");

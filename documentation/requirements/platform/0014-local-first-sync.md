@@ -258,9 +258,9 @@ Phase 1 builds the project and personal key split (R13) from the start, so phase
 
 | Area | Today on `main` | Decision |
 | --- | --- | --- |
-| Account manager (`infra/account-manager`) | Better Auth, Google login, accounts, grants and finite access tokens | Keep. Add devices, team members, key storage and key backup. Replace per-project enrollment with one login per device. |
-| Relay storage (`infra/relay/src/storage`) | PostgreSQL groups, candidate evaluation, receipts, conflict alternatives, restore | Replace with encrypted updates and latest states per document. |
-| Relay blobs (`infra/relay/src/assets`) | S3 asset storage with integrity checks | Keep and simplify. Content is encrypted and IDs are random. |
+| Account manager (`services/account-manager`) | Better Auth, Google login, accounts, grants and finite access tokens | Keep. Add devices, team members, key storage and key backup. Replace per-project enrollment with one login per device. |
+| Relay storage (`services/relay/src/storage`) | PostgreSQL groups, candidate evaluation, receipts, conflict alternatives, restore | Replace with encrypted updates and latest states per document. |
+| Relay blobs (`services/relay/src/assets`) | S3 asset storage with integrity checks | Keep and simplify. Content is encrypted and IDs are random. |
 | Relay transport | Authenticated HTTP and WebSocket subscriptions | Keep and simplify for encrypted updates and live messages. |
 | Protocol (`packages/pstdio-sync-contracts`) | Versioned groups, parents, receipts, covered checkpoints (PS-808) | Replace with a small protocol for encrypted updates, latest states, blobs and live messages. |
 | Client sync (`packages/pstdio-sync`) | Journal of grouped changes, recovery proofs, snapshot fetch | Replace with a CRDT document store plus encryption and relay transport. |

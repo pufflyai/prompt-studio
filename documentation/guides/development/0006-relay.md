@@ -1,6 +1,6 @@
 # Relay development
 
-The private `pstdio-relay` workspace under `infra/relay/` owns transactional PostgreSQL storage and verified S3 assets for shared extension groups. It serves authenticated HTTP and finite native WebSocket subscriptions. The native runtime adapter and two-dashboard launcher are described in [the local relay guide](0008-two-dashboard-relay.md). Public browser onboarding, live provider validation and deployment remain separate work.
+The private `pstdio-relay` workspace under `services/relay/` owns transactional PostgreSQL storage and verified S3 assets for shared extension groups. It serves authenticated HTTP and finite native WebSocket subscriptions. The native runtime adapter and two-dashboard launcher are described in [the local relay guide](0008-two-dashboard-relay.md). Public browser onboarding, live provider validation and deployment remain separate work.
 
 ## Build and check
 
@@ -24,10 +24,10 @@ The grouped-record schema has four tables: scoped stream metadata, current recor
 
 Snapshots and replay use repeatable-read transactions. Replay contains complete accepted groups. Invalid cursors, gaps, and old epochs require snapshots. Restore checks the scope, sealed receipt bodies, and assets needed by both current records and retained non-pending receipts. It replaces content atomically and creates a new epoch. Historical receipts retain their original acknowledgments; new replay starts at the restored boundary. Grants are outside content restore.
 
-Schema changes start in `infra/relay/src/storage/schema.ts` or `src/assets/schema.ts`. Generate migrations with:
+Schema changes start in `services/relay/src/storage/schema.ts` or `src/assets/schema.ts`. Generate migrations with:
 
 ```sh
-bun run --cwd infra/relay db:generate
+bun run --cwd services/relay db:generate
 ```
 
 Never edit generated SQL by hand. Operators call `migrateRelayStorage(databaseUrl, migrationsFolder)` before opening storage; the runtime image includes the generated `drizzle/` directory. The service does not run migrations or claim storage readiness through liveness.
@@ -35,7 +35,7 @@ Never edit generated SQL by hand. Operators call `migrateRelayStorage(databaseUr
 Run the focused real PostgreSQL checks and the shared cases with real local stores:
 
 ```sh
-bun run --cwd infra/relay test:storage
+bun run --cwd services/relay test:storage
 cd packages/pstdio-sync-contracts
 SYNC_TEST_ENTRY=../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts bun scripts/isolated.ts
 ```
@@ -80,7 +80,7 @@ can repeat cancellation to finish cleanup from the durable cancelled row.
 Run real-store coverage with the existing test allowances:
 
 ```sh
-bun run --cwd infra/relay test:assets
+bun run --cwd services/relay test:assets
 ```
 
 This starts disposable PostgreSQL and RustFS. It checks scoped reads, multipart resume, process kills, lost acknowledgments, corrupt and truncated bytes, denied credentials, cancellation, mixed group publication, restore checks and incremental transfer. Resource observations are diagnostic; this is not the parent's 10,000-record/5 GiB acceptance workload or a performance budget.
@@ -94,7 +94,7 @@ Probe cleanup discovers uploads for every owned key, including lost creation res
 For a later authorized Spaces or other provider check, supply an existing disposable bucket through environment variables and run:
 
 ```sh
-bun run --cwd infra/relay test:objects
+bun run --cwd services/relay test:objects
 ```
 
 Required variables are `RELAY_CONTRACT_ENDPOINT`, `RELAY_CONTRACT_BUCKET`, `RELAY_CONTRACT_REGION`, `RELAY_CONTRACT_ACCESS_KEY_ID`, and `RELAY_CONTRACT_SECRET_ACCESS_KEY`. Supply secrets through the environment, not command arguments or committed files. The probe does not create a bucket or change policy. The service needs object read/write/delete, multipart list/abort/part-list access, and bucket listing so missing objects can return 404. Provider access rules must be validated separately.
@@ -137,12 +137,12 @@ Subscriptions retain the verified access expiry and close with1008 at that deadl
 
 Responses use no-store and sanitized errors. Missing/invalid credentials return 401 with a generic Bearer challenge; identity mismatch returns 403, malformed input 400, method mismatch 405 with Allow, unavailable subscription 503, and rejected content operations 409. Missing assets return 404. Unsupported routes return 404.
 
-Run `bun run --cwd infra/relay test:transport` for real HTTP, native WebSockets, separate authority/content roles, overlapping account identities, multipart disconnect/resume/cancel, committed hints, idle expiry under content locks, manager outage, restore and failure coverage. It uses the existing conformance runner's disposable PostgreSQL/RustFS stack on default subnet 10.254.236.0/24. Run these fixtures sequentially. It adds no test allowance or reduced workload.
+Run `bun run --cwd services/relay test:transport` for real HTTP, native WebSockets, separate authority/content roles, overlapping account identities, multipart disconnect/resume/cancel, committed hints, idle expiry under content locks, manager outage, restore and failure coverage. It uses the existing conformance runner's disposable PostgreSQL/RustFS stack on default subnet 10.254.236.0/24. Run these fixtures sequentially. It adds no test allowance or reduced workload.
 
 ## Run the isolated smoke check
 
 ```sh
-bun run --cwd infra/relay test:isolated
+bun run --cwd services/relay test:isolated
 ```
 
 This command builds the Docker runtime and smoke images, starts PostgreSQL and RustFS, creates a test bucket, and checks:
@@ -169,7 +169,7 @@ Do not prune other projects' Docker resources to repair a failed run. Check Dock
 Build from the repository root:
 
 ```sh
-docker build -f infra/relay/Dockerfile -t pstdio-relay:local .
+docker build -f services/relay/Dockerfile -t pstdio-relay:local .
 ```
 
 The final runtime target contains Bun, the built service/storage library and generated relay migrations. It runs as the unprivileged bun user, without a source checkout or runtime install. Operator tooling must apply migrations before use. A logged-in native host initializes enabled extension scopes through the authenticated transport. The default build remains this production target; test-only authority code, private keys and fixture initialization exist only in separate smoke stages.
@@ -184,6 +184,6 @@ The smoke generates HTTPS trust inside each run's owned volumes, so cached image
 
 ## Infrastructure boundary
 
-Future Terraform configuration belongs under `infra/relay/terraform/`, separate from `src/`. This scaffold defines no resources, backend, remote state, provider credentials, or deployment workflow. Terraform state, local variable files, and working data are ignored by Git; the Terraform directory and relay environment files are excluded from Docker build contexts. Never commit application secrets or generated runtime data.
+Future Terraform configuration belongs under `infra/relay/terraform/`, next to the relay's Compose files and separate from the service code in `services/relay/`. This scaffold defines no resources, backend, remote state, provider credentials, or deployment workflow. Terraform state, local variable files, and working data are ignored by Git; the Terraform directory and relay environment files are excluded from Docker build contexts. Never commit application secrets or generated runtime data.
 
 CI runs the relay's ordinary package checks through Lerna and an isolated Docker smoke job when the relay or shared tooling changes. See [package boundaries](../../references/architecture/0013-package-boundaries.md) for dependency rules. The relay stays private and is excluded from Changesets publication. Shared model changes also require the packaged CLI checks because local storage and the SDK test adapter bundle that model.

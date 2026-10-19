@@ -4,12 +4,15 @@ import type {
   MarketplaceExtension,
   ProjectExtensionInstance,
   WorkbenchExtensionAutomationRecord,
+  WorkbenchExtensionHarnessRecord,
 } from "@pstdio/sdk/api";
 import { ArrowUpCircle, Search } from "lucide-react";
+import type { AgentInfo } from "pstdio-api-contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
+import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionListRow } from "./extension-list-row";
 import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 
@@ -18,6 +21,8 @@ export interface ExtensionsPanelViewProps {
   marketplace: MarketplaceExtension[];
   diagnostics: ExtensionDiagnostic[];
   automations: WorkbenchExtensionAutomationRecord[];
+  harnesses?: WorkbenchExtensionHarnessRecord[];
+  agents?: AgentInfo[];
   togglingInstanceId?: string;
   upgradingInstanceIds?: string[];
   onToggle?: (extension: ProjectExtensionInstance, enabled: boolean) => void;
@@ -69,6 +74,8 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     marketplace,
     diagnostics,
     automations,
+    harnesses,
+    agents,
     togglingInstanceId,
     upgradingInstanceIds = [],
     installingMarketplaceNames = [],
@@ -163,6 +170,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           extension={extension}
           diagnostics={diagnosticsByExtensionId.get(extension.extensionId) ?? []}
           automations={automations.filter((automation) => automation.extensionId === extension.extensionId)}
+          unavailableHarnesses={unavailableExtensionHarnesses(extension, harnesses, agents)}
           toggling={togglingInstanceId === extension.id}
           upgrading={upgradingInstanceIds.includes(extension.id)}
           onToggle={(enabled) => onToggle?.(extension, enabled)}
