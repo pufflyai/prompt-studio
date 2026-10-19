@@ -222,6 +222,45 @@ same revision checks without requiring a handler field. The relay authorizes cal
 and the native connection initializes each scope with the installed source revision.
 The fixture uses a publication marker.
 
+## Local read projections
+
+Accepted state and the immutable journal are the only durable storage authorities.
+The database storage service owns a disposable projection cache, with at most 32
+owner/environment entries per service. Each entry contains the working records,
+operation outcomes and conflicts derived by the same projector used for recovery.
+There is no writable working-record table.
+
+Each owner row has an opaque UUID revision. The storage transaction changes it
+when appending operations, changing acceptance or recovery evidence, or replacing
+accepted state. The token commits with those changes under the owner lock. A
+journal ordinal alone would miss acceptance-only changes; snapshot checkpoint
+counters would miss pending work and conflicts. A new owner receives a new token,
+so deleting and recreating an owner cannot revive its previous cached records.
+
+Ordinary record reads, outcomes, conflict summaries and deprecated KV/collection
+reads first fetch only this token. A matching projection serves the read without
+loading the journal or acquiring the owner write lock. Single-record work depends
+on that record's payload and revision ancestry, rather than unrelated retained
+history. Listing still scans current records. Callers receive
+copies of cached values and metadata.
+
+A committed local append advances existing projections through only the new
+operations. The service copies the derived view and appended payloads so issued
+views stay immutable. Copying this derived state still costs work during writes;
+only replay is limited to the appended operations. The new view becomes available
+after the transaction commits. Failed transactions publish no cache changes.
+Acceptance changes and accepted-state replacement discard old projections. This
+also covers epoch, snapshot frontier and document-generation changes represented
+by a replacement snapshot, even when checkpoint counters do not change. Any
+future history compaction must update the owner token in its storage transaction.
+
+A cache miss rebuilds from accepted state and the retained journal under the
+owner lock, including any legacy import in the same transaction. Eviction,
+independent service instances and process restart use this same recovery path.
+The cache does not change durability, stale-write guards, conflict retention or
+public storage contracts. Writes, branch inspection and recovery can still read
+retained history; this cache does not implement history compaction.
+
 ## Replay, snapshots, retention and restore
 
 A checkpoint is `(epoch, sequence)`, scoped to one extension/workbench/account stream.
