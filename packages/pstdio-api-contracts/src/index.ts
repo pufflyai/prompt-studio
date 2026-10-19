@@ -13,6 +13,7 @@ export * from "./files";
 export * from "./harness";
 export * from "./harness-commands";
 export * from "./history-reconciliation";
+export * from "./link-icons";
 export * from "./notifications/types";
 export * from "./pagination";
 export * from "./projects";

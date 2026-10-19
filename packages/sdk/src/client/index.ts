@@ -6,6 +6,7 @@ export { createClient, type PstdioClient } from "./client";
 export type { CommandStreamClientEvent } from "./extension-stream";
 export type { ExtensionClient } from "./extensions";
 export type { DirectoryEntry, FilesystemClient, FilesystemDrive } from "./filesystem";
+export type { LinkIconsClient } from "./link-icons";
 export type { NotificationsClient } from "./notifications";
 export type { ProjectClient } from "./projects";
 export {

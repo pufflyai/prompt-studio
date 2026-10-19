@@ -4,6 +4,7 @@ import { type ChatLinkCandidate, type ChatLinkHandler, isGuessedChatLink, parseC
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import { defaultPageResourceCodec, parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "pstdio-api-contracts";
+import { getApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { executeExtensionCommand } from "@/shared/extensions/api";
@@ -162,6 +163,21 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
       } catch {
         return null;
       }
+    },
+    // Sites usually share one icon, so each site is asked once. A failed answer is remembered as no icon,
+    // because messages render often and would otherwise ask again each time.
+    async resolveIcon(href) {
+      return getDashboardQueryClient().fetchQuery({
+        queryKey: ["link-icons", new URL(href).origin],
+        queryFn: ({ signal }) =>
+          getApiClient()
+            .linkIcons.get(href, { signal })
+            .then(
+              (icon) => icon.data_url,
+              () => null,
+            ),
+        staleTime: Number.POSITIVE_INFINITY,
+      });
     },
     describe(candidate) {
       return `Open ${candidate.source}${input.workspace ? ` in workspace ${input.workspace.title}` : ""}`;

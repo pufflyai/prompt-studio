@@ -7,3 +7,6 @@ export const ChatLinkProvider = (props: { handler?: ChatLinkHandler; children: R
   return <ChatLinkContext.Provider value={handler}>{children}</ChatLinkContext.Provider>;
 };
 export const useChatLinkHandler = () => useContext(ChatLinkContext);
+
+// Bare web links grow while a message streams, so their host names are final only when it ends.
+export const ChatLinkStreamingContext = createContext(false);

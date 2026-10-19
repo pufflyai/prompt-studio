@@ -10,6 +10,7 @@ import { createExtensionWebviewAssetRoutes } from "./features/extensions/extensi
 import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
+import { createLinkIconRoutes } from "./features/link-icons/routes";
 import { createNotificationsRoutes } from "./features/notifications/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createResourceAnchorRoutes } from "./features/resource-anchors/routes";
@@ -189,6 +190,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/v1", createBoardViewsRoutes(deps));
   app.route("/v1", createSessionRoutes(deps));
   app.route("/v1", createSettingsRoutes(deps));
+  app.route("/v1", createLinkIconRoutes());
   app.route("/v1", createWorkspaceRoutes(deps));
   app.route("/v1", createSyncRoutes(deps));
   app.route("/v1", createTerminalRoutes(deps, { allowedOrigins: terminalOrigins }));

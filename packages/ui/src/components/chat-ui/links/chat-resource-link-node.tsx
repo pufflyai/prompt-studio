@@ -6,7 +6,7 @@ import { CHAT_TEXT_FORMAT_TAGS, hasChatTextFormat } from "./chat-guess-text";
 import type { ChatLinkCandidate } from "./chat-link";
 import { ChatResourceLink } from "./chat-resource-link";
 
-interface SerializedChatResourceLink extends SerializedLexicalNode {
+export interface SerializedChatResourceLink extends SerializedLexicalNode {
   candidate: ChatLinkCandidate;
   label: string;
   format?: number;
@@ -35,7 +35,7 @@ export class ChatResourceLinkNode extends DecoratorNode<ReactElement> {
   exportJSON(): SerializedChatResourceLink {
     return {
       ...super.exportJSON(),
-      type: ChatResourceLinkNode.getType(),
+      type: this.getType(),
       version: 1,
       candidate: this.__candidate,
       label: this.__label,

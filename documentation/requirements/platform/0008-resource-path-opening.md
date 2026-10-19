@@ -30,6 +30,9 @@ labels, icons, and destinations. The host must not contain ticket-specific routi
 - Use the shared resource icon registry, with the resource kind's icon as the default.
   Show the icon with the resolved label. Bubbles have no tooltip or underline, including on hover.
 - Keep explicit web references on the native web-opening path, with mouse and keyboard activation.
+- Show web links in read-only rich messages as bubbles with the linked site's own icon, fetched by the runtime.
+  Show a globe while the icon loads and when the site has none. Web links still open in a new tab or the system browser.
+  See the [link icons reference](../../references/architecture/0028-link-icons.md).
 - Apply source positions to page destinations and every page in compound destinations
   that open a document, replacing any competing section while retaining parent navigation.
   A page that opens no document keeps the owner's destination without the position.

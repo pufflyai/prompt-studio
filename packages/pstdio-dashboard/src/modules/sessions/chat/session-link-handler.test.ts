@@ -141,3 +141,42 @@ test("chat paths use the session workspace while another workspace is selected",
   await handler.open(candidate);
   expect(workbench.pages.store.getState().location).toBe(before);
 });
+
+test("web link icons come from the runtime once per site", async () => {
+  const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
+  const requested: string[] = [];
+  const server = Bun.serve({
+    port: 0,
+    fetch: (request) => {
+      const url = new URL(request.url);
+      if (url.pathname !== "/v1/link-icons") return Response.json({ error: "Not found" }, { status: 404 });
+      const target = url.searchParams.get("url")!;
+      requested.push(target);
+      return new URL(target).hostname === "github.com"
+        ? Response.json({ data_url: "data:image/svg+xml;base64,PHN2Zy8+" })
+        : Response.json({ error: "No icon found." }, { status: 404 });
+    },
+  });
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.toString() };
+  try {
+    const handler = createSessionLinkHandler({
+      workbench: projectWorkbench(),
+      projectId,
+      workspace: workspace("workspace-a"),
+      origin: "http://local",
+      onError: () => {},
+    });
+
+    expect(await handler.resolveIcon!("https://github.com/pufflyai/prompt-studio")).toBe(
+      "data:image/svg+xml;base64,PHN2Zy8+",
+    );
+    expect(await handler.resolveIcon!("https://github.com/pufflyai")).toBe("data:image/svg+xml;base64,PHN2Zy8+");
+    expect(await handler.resolveIcon!("https://no-icon.example.com/page")).toBeNull();
+    expect(await handler.resolveIcon!("https://no-icon.example.com/other")).toBeNull();
+    expect(requested).toEqual(["https://github.com/pufflyai/prompt-studio", "https://no-icon.example.com/page"]);
+  } finally {
+    getDashboardQueryClient().clear();
+    server.stop(true);
+    delete runtime.__PSTDIO_CONFIG__;
+  }
+});
