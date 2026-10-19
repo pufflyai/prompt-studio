@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Place recovery controls in endElement for a wrapping bottom-right footer. Dismiss buttons stay at the top right, aligned with the icon and the first title line. Both use compact, themed outline buttons.",
+          "Place recovery controls in endElement for a wrapping bottom-right footer. Dismiss buttons stay at the top right, aligned with the icon and the first title line. Both use compact ghost buttons with hover, focus, and pressed backgrounds tinted by the alert's semantic color.",
       },
     },
   },

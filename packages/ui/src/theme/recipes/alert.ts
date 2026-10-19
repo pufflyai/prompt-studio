@@ -14,12 +14,16 @@ export const alertSlotRecipe = defineSlotRecipe({
       "& .chakra-button": {
         color: "inherit",
         bg: "transparent",
-        borderColor: "currentColor",
         maxWidth: "full",
         height: "auto",
         minHeight: "6",
         whiteSpace: "normal",
         overflowWrap: "anywhere",
+        "&:not(:disabled, [data-disabled])": {
+          _hover: { bg: "currentColor/10" },
+          _focusVisible: { bg: "currentColor/10", outlineColor: "currentColor" },
+          _active: { bg: "currentColor/20" },
+        },
       },
     },
     indicator: {
