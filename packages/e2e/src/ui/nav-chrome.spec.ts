@@ -42,7 +42,7 @@ const orderedCenters = async (locators: import("@playwright/test").Locator[]) =>
 const backgroundColor = (locator: import("@playwright/test").Locator) =>
   locator.evaluate((element) => getComputedStyle(element).backgroundColor);
 
-test("keeps navigation and region controls in one stable Nav Chrome", async ({ page, request }) => {
+test("keeps Main navigation in its header and global panel controls in the status bar", async ({ page, request }) => {
   test.setTimeout(45_000);
   await deleteAllProjects(request);
   const project = await createProject(request);
@@ -66,7 +66,8 @@ test("keeps navigation and region controls in one stable Nav Chrome", async ({ p
 
   const back = nav.getByRole("button", { name: "Navigate back" });
   const forward = nav.getByRole("button", { name: "Navigate forward" });
-  const showSecondary = nav.getByRole("button", { name: "Show Secondary Panel" });
+  const controls = page.getByRole("group", { name: "Panel controls" });
+  const showSecondary = controls.getByRole("button", { name: "Show Bottom Panel" });
 
   await expect(back).toBeVisible();
   await expect(forward).toBeVisible();
@@ -75,27 +76,26 @@ test("keeps navigation and region controls in one stable Nav Chrome", async ({ p
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
   const closedPanelBackground = await backgroundColor(showSecondary);
   await showSecondary.click();
-  const secondary = nav.getByRole("button", { name: "Hide Secondary Panel" });
+  const secondary = controls.getByRole("button", { name: "Hide Bottom Panel" });
   await expect(secondary).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => backgroundColor(secondary)).not.toBe(closedPanelBackground);
   await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
   // A session can be started from any project location, so the Tickets board offers the
-  // Side Panel exactly as the Workspaces view does. Its control belongs to the Nav
-  // Chrome, beside the other region controls.
-  await expect(nav.getByRole("button", { name: "Show Side Panel" })).toHaveAttribute("aria-pressed", "false");
-  await orderedCenters([back, forward, secondary]);
+  // Side Panel exactly as the Workspaces view does. Global controls stay in host chrome.
+  await expect(controls.getByRole("button", { name: "Show Side Panel" })).toHaveAttribute("aria-pressed", "false");
+  await orderedCenters([back, forward]);
 
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader.getByRole("button", { name: /Navigate (back|forward)/ })).toHaveCount(0);
-  await expect(mainHeader.getByRole("button", { name: /Secondary Panel|Side Panel|Sidenav/ })).toHaveCount(0);
+  await expect(mainHeader.getByRole("button", { name: /Bottom Panel|Side Panel|Sidenav/ })).toHaveCount(0);
 
   const sidenavSeparator = page.getByRole("separator", { name: "Resize sidenav" });
   await expect(sidenavSeparator).toBeVisible();
   await sidenavSeparator.press("Home");
-  const closedSidenav = nav.getByRole("button", { name: "Show Sidenav" });
+  const closedSidenav = controls.getByRole("button", { name: "Show Sidenav" });
   await expect(closedSidenav).toHaveAttribute("aria-pressed", "false");
   await expect.poll(() => backgroundColor(closedSidenav)).toBe(closedPanelBackground);
-  await orderedCenters([closedSidenav, back, forward, secondary]);
+  await orderedCenters([closedSidenav, secondary, controls.getByRole("button", { name: "Show Side Panel" })]);
 
   await page.getByText("Own navigation chrome", { exact: true }).click();
   await expect(page.getByRole("link", { name: `${ticket.shorthand} Own navigation chrome` })).toBeVisible();
@@ -117,12 +117,12 @@ test("keeps navigation and region controls in one stable Nav Chrome", async ({ p
   await forward.click();
   await expect(page.getByRole("link", { name: `${ticket.shorthand} Own navigation chrome` })).toBeVisible();
   await expect(nav.getByRole("button", { name: /Sidenav/ })).toHaveCount(0);
-  const side = nav.getByRole("button", { name: "Show Side Panel" });
+  const side = controls.getByRole("button", { name: "Show Side Panel" });
   await expect(side).toHaveAttribute("aria-pressed", "false");
   expect(await backgroundColor(side)).toBe(closedPanelBackground);
 
   await side.click();
-  const openSide = nav.getByRole("button", { name: "Hide Side Panel" });
+  const openSide = controls.getByRole("button", { name: "Hide Side Panel" });
   await expect(openSide).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => backgroundColor(openSide)).not.toBe(closedPanelBackground);
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
@@ -138,7 +138,7 @@ test("keeps navigation and region controls in one stable Nav Chrome", async ({ p
   expect(chatInputNode).not.toBeNull();
   await expect(page.getByRole("button", { name: "Open Side Panel" })).toHaveCount(0);
   await openSide.click();
-  const closedSide = nav.getByRole("button", { name: "Show Side Panel" });
+  const closedSide = controls.getByRole("button", { name: "Show Side Panel" });
   await expect(closedSide).toHaveAttribute("aria-pressed", "false");
   await expect.poll(() => backgroundColor(closedSide)).toBe(closedPanelBackground);
   const sessionLauncher = page.getByRole("button", { name: "Open Side Panel" });
@@ -177,7 +177,7 @@ test("keeps the Secondary Panel closed from Workspaces until requested", async (
   await page.goto(`/projects/${project.id}/tickets`);
 
   const nav = page.locator('[data-workbench-region="nav"]');
-  const showSecondary = nav.getByRole("button", { name: "Show Secondary Panel" });
+  const showSecondary = nav.getByRole("button", { name: "Show Bottom Panel" });
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
 
   await page.goto(`/projects/${project.id}/workspaces`);
@@ -185,7 +185,7 @@ test("keeps the Secondary Panel closed from Workspaces until requested", async (
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
   await showSecondary.click();
 
-  await expect(nav.getByRole("button", { name: "Hide Secondary Panel" })).toHaveAttribute("aria-pressed", "true");
+  await expect(controls.getByRole("button", { name: "Hide Bottom Panel" })).toHaveAttribute("aria-pressed", "true");
   const secondaryPanel = page.locator('[data-workbench-region="secondary"]');
   await expect(secondaryPanel).toBeVisible();
   await expect(secondaryPanel.getByRole("button", { name: "Add panel" })).toBeVisible();

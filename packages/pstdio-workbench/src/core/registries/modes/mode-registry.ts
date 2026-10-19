@@ -2,6 +2,7 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { WorkbenchLayout } from "../layout/layout-model";
+import { clampPanelSizes } from "../layout/panel-size-policy";
 import {
   applyModePanelAvailability,
   disposeReverse,
@@ -64,8 +65,11 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   const prepareScope = (mode: WorkbenchModeContribution) => {
     const context = input.resolveContext();
     const scopeKey = `${mode.id}\0${context.layout.getPersistenceScope() ?? "unscoped"}`;
-    const availableLayout = applyModePanelAvailability(context.layout.getLayout(), panelsForMode(mode));
-    context.layout.restoreLayout(availableLayout);
+    const availableLayout = clampPanelSizes(
+      applyModePanelAvailability(context.layout.getLayout(), panelsForMode(mode)),
+      context.layout.getRegionSize,
+    );
+    restoreModeLayout(context, availableLayout);
     context.layout.reconcilePanelMenus();
     if (!seededScopes.has(scopeKey) && !context.layout.enteredWithPersistedLayout()) {
       seedModeScope(mode, context, input.establishLocation);

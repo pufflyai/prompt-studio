@@ -169,6 +169,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     validateOpen: input.validateWidgetOpen,
   });
   const placementMethods = createLayoutPlacementMethods({
+    validateOpen: input.validateWidgetOpen,
     getLayout,
     requireWidget,
     setLayout,

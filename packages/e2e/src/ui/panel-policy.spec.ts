@@ -68,3 +68,34 @@ for (const name of [
     await waitForStoryPlayback(page);
   });
 }
+
+test("touch hold opens the header visibility action", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, `${prefix}hidden-headers`));
+  await waitForStoryPlayback(page);
+  const edge = page.getByLabel("Side header edge", { exact: true });
+  const box = (await edge.boundingBox())!;
+  await edge.dispatchEvent("pointerdown", {
+    pointerType: "touch",
+    pointerId: 1,
+    button: 0,
+    buttons: 1,
+    isPrimary: true,
+    clientX: box.x + 4,
+    clientY: box.y + 4,
+  });
+  await expect(page.getByRole("menuitem", { name: "Show header" })).toBeVisible();
+  await edge.dispatchEvent("pointerup", { pointerType: "touch", pointerId: 1 });
+  await page.getByRole("menuitem", { name: "Show header" }).click();
+  await expect(page.getByLabel("Side panel header", { exact: true })).toBeVisible();
+});
+
+test("desktop hosts place the same controls beside project tabs", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-title-bar--host-panel-controls"));
+  await waitForStoryPlayback(page);
+  await expect(page.getByRole("group", { name: "Panel controls" })).toHaveCount(1);
+  await expect(page.getByText("Project tabs", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Hide Side Panel" })).toBeVisible();
+  await expect(
+    page.locator('[data-workbench-region="status"]').getByRole("group", { name: "Panel controls" }),
+  ).toHaveCount(0);
+});

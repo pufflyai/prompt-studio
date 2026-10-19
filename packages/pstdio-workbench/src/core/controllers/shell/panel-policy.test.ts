@@ -102,3 +102,20 @@ test("low-level panel edits enforce the same policy", () => {
   expect(() => w.layout.setRegionSize("side", 555)).toThrow("cannot resize");
   expect(() => w.layout.openPanel("tool")).toThrow("accept tabs");
 });
+
+test("switching modes preserves each saved size within its own bounds", () => {
+  const w = createWorkbench();
+  for (const [id, minPx, maxPx] of [
+    ["small", 200, 300],
+    ["large", 600, 900],
+  ] as const)
+    w.modes.registerMode({ id, activate() {}, regionSettings: { side: { size: { minPx, maxPx } } } });
+  w.modes.setActiveMode("large");
+  w.shell.setRegionSize("side", 800);
+  w.modes.setActiveMode("small");
+  w.shell.setRegionSize("side", 250);
+  w.modes.setActiveMode("large");
+  expect(w.layout.getLayout().regions.side.size).toBe(800);
+  w.modes.setActiveMode("small");
+  expect(w.layout.getLayout().regions.side.size).toBe(250);
+});
