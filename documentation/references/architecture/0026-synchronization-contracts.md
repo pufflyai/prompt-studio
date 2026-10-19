@@ -327,3 +327,34 @@ and closes/reopens durable client stores. This suite alone does not establish OS
 recovery, WebSocket delivery, or revocation; the relay storage, transport, and account
 manager suites cover those. Production backups and Spaces behavior remain unproven.
 No production service from the prototype is imported.
+
+## Published extension distribution
+
+The platform owns one reserved `pstdio.published-extensions` record scope per workbench.
+It connects even when no extension is installed or enabled. Each catalog record binds
+an extension ID to one immutable package asset, its SHA-256 revision, and its shared
+automation enable choice. The normal grouped journal, receipt history, conflict rules,
+asset completion gate, authorization, and reconnect loop carry this data. There is no
+extension-specific relay setup and no replicated installed-source path or instance row.
+
+The relay validates catalog identity and package revision together. Handler validation
+and snapshots derive an extension's published revision from its accepted catalog record.
+A submitting handler holds a shared lock on the catalog scope, so publication and handler
+validation have a definite order. A local override or caller-provided initialization
+revision cannot replace this accepted publication. Runtime `loaded_revision` can change
+when webviews rebuild; the immutable package identity remains in `source_ref`.
+
+The host stages and validates a new source before atomically rebinding the existing
+workbench instance. Other workbenches keep their own sources. Local enable edits made
+during staging are preserved for personal extensions. Source ownership and source bytes
+are checked again before switching. Failed activation leaves the existing instance
+usable; one activation failure does not stop activation of other downloaded packages.
+Package bytes and history remain available for rollback. Data migrations keep their
+normal identity and compatibility rules; package rollback is not data rollback.
+
+See [publication commands and API](../extensions/0002-manifest-and-installation.md#publish-a-workbench-revision).
+The focused host scenario runs with `bun run --cwd packages/pstdio-api test:publications`.
+It uses three real local stores with disposable PostgreSQL and object storage through
+the independent reference relay. Production relay catalog validation and handler revision
+selection run in `infra/relay/src/storage/extension-publications.integration.ts` through
+`bun run --cwd infra/relay test:storage`. These checks do not claim a deployed release.

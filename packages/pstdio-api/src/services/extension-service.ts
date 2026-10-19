@@ -3,12 +3,14 @@ import type {
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
+import { publishedExtensionsId } from "pstdio-sync-contracts";
 import type {
   checkExtensionSource,
   hashExtensionSource,
   LoadedExtensionSnapshot,
 } from "../features/extensions/extension-runtime";
 import type { EventBus } from "../features/sync/event-bus";
+import { activatePublishedExtension } from "./activate-published-extension";
 import {
   type PruneProjectExtensionInstancesInput,
   pruneProjectExtensionInstances as pruneProjectExtensionInstancesImpl,
@@ -22,6 +24,7 @@ import {
   findInstalledSourceForRegistration,
   hasUnchangedInstalledSourceRegistration,
   refreshPathForRegistration,
+  registrationValues,
 } from "./extension-source-registration";
 import { uninstallProjectExtension as uninstallProjectExtensionImpl } from "./extension-uninstall";
 import type { createProjectService } from "./project-service";
@@ -86,24 +89,6 @@ type ExtensionServiceDeps = {
   ) => Promise<void>;
 };
 
-const registrationValues = (
-  input: RegisterInstalledSourceInput,
-  existing: Awaited<ReturnType<typeof findInstalledSourceForRegistration>>,
-) => ({
-  display_name: input.displayName,
-  extension_id: input.extensionId,
-  manifest_json: input.manifest,
-  source_hash: input.sourceHash ?? existing?.source_hash ?? null,
-  source_kind: input.sourceKind ?? existing?.source_kind ?? "local_path",
-  source_path: input.sourcePath,
-  // `null` means the new source has no git ref, so an older ref must not survive a reinstall.
-  source_ref: input.sourceRef === undefined ? (existing?.source_ref ?? null) : input.sourceRef,
-  status: "loaded" as const,
-  version: input.version ?? null,
-  last_loaded_at: new Date().toISOString(),
-  last_error_json: null,
-});
-
 export const createExtensionService = (deps: ExtensionServiceDeps) => {
   const emitInstalledSource = (source: unknown) => {
     deps.eventBus?.emit("installed_extension_sources", "set", source);
@@ -126,6 +111,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   const registerInstalledSource = async (input: RegisterInstalledSourceInput) => {
+    if (input.extensionId === publishedExtensionsId) throw new Error("Reserved platform extension identity");
     const existing = await findInstalledSourceForRegistration(deps.installedExtensionSourcesService, input);
     const values = registrationValues(input, existing);
 
@@ -322,6 +308,21 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   return {
+    activatePublishedExtension: (
+      input: Omit<
+        Parameters<typeof activatePublishedExtension>[0],
+        "sources" | "instances" | "refresh" | "emit" | "emitRemoved" | "emitInstance"
+      >,
+    ) =>
+      activatePublishedExtension({
+        ...input,
+        sources: deps.installedExtensionSourcesService,
+        instances: deps.extensionInstancesService,
+        emitRemoved: (row) => deps.eventBus?.emit("installed_extension_sources", "delete", row),
+        emitInstance: emitExtensionInstance,
+        refresh: notifyInstalledSourcesChanged,
+        emit: emitInstalledSource,
+      }),
     enableInstalledSourceForProject,
     getInstalledSource,
     getInstalledSourceById: deps.installedExtensionSourcesService.get,
