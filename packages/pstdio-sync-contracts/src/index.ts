@@ -1,8 +1,11 @@
 export type * from "./authoring";
+export * from "./checkpoint";
+export * from "./checkpoint-peer";
 export * from "./compatibility";
 export * from "./fingerprint";
 export * from "./identity";
 export * from "./replay";
+export * from "./retention";
 export * from "./state";
 export * from "./transport";
 export { relayInitializeSchema } from "./transport";
