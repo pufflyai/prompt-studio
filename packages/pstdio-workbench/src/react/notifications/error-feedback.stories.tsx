@@ -36,7 +36,7 @@ const ErrorFeedback = (props: { errorCount?: number; longMessages?: boolean; sta
           : "The extension process stopped unexpectedly. Restart it to recover.",
         actions: longMessages
           ? [{ title: `Restart ${"unbroken-service-name".repeat(8)}`, commandId: "restart-service" }]
-          : undefined,
+          : [{ title: "Restart service", commandId: "restart-service" }],
       });
     }
     return workbench;
@@ -126,6 +126,20 @@ export const TwelveSystemErrors: Story = {
     await expect(within(list).getAllByRole("button", { name: /^Dismiss / })).toHaveLength(12);
     await expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
     await expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth);
+  },
+};
+
+export const RecoveryActions: Story = {
+  args: { errorCount: 1 },
+  play: async ({ canvas, canvasElement }) => {
+    await userEvent.click(canvas.getByRole("button", { name: /^System errors:/ }));
+    const body = within(canvasElement.ownerDocument.body);
+    const list = await body.findByRole("region", { name: "System error list" });
+    await userEvent.click(within(list).getByRole("button", { name: "Restart service" }));
+    await expect(
+      within(list).getByText("The service could not be restarted. Try again when the connection recovers."),
+    ).toBeVisible();
+    await expect(body.getByText("System errors (1)", { exact: true })).toBeVisible();
   },
 };
 

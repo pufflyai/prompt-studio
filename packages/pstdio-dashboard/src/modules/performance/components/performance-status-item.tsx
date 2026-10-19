@@ -90,7 +90,7 @@ export const PerformanceStatusItem = (props: PerformanceStatusItemProps) => {
             maxH="70dvh"
             overflow="hidden"
           >
-            <Popover.Body paddingX="md" paddingY="sm" minH="0" display="flex" flexDirection="column">
+            <Popover.Body minH="0" display="flex" flexDirection="column">
               <ScrollArea minH="0">
                 <PerformancePopoverContent
                   snapshot={snapshot.data}
