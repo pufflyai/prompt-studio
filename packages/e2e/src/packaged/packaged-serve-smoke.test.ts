@@ -18,6 +18,7 @@ import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-vie
 // OpenAPI publishes recursive command causes without expanding forever.
 // Canonical and deprecated streams preserve full rejections through the SDK and compiled CLI.
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
+// Shared source checks retain transitive edits and reloads across concurrent projects.
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 // Independent hosts also bind one workbench identity to their own environment and folder.
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";

@@ -34,6 +34,29 @@ const transpilerLoader = (filePath: string) => {
   return "js" as const;
 };
 
+const transpilers = new Map<Bun.JavaScriptLoader, Bun.Transpiler>();
+const importsByPath = new Map<string, { digest: string; imports: string[] }>();
+
+const scanRuntimeImports = (filePath: string) => {
+  const contents = readFileSync(filePath);
+  const digest = createHash("sha256").update(contents).digest("hex");
+  const cached = importsByPath.get(filePath);
+  if (cached?.digest === digest) return cached.imports;
+
+  const loader = transpilerLoader(filePath);
+  let transpiler = transpilers.get(loader);
+  if (!transpiler) {
+    transpiler = new Bun.Transpiler({ loader });
+    transpilers.set(loader, transpiler);
+  }
+
+  const imports = transpiler.scanImports(contents).map(({ path }) => path);
+  // Keep one parse per path, without retaining source bytes or previous versions. Content
+  // checks catch edits even when timestamps match; import resolution below stays fresh.
+  importsByPath.set(filePath, { digest, imports });
+  return imports;
+};
+
 export const collectRuntimeModulePaths = (packagePath: string, entryPath: string) => {
   const pending = [entryPath];
   const modulePaths = new Set<string>();
@@ -50,9 +73,8 @@ export const collectRuntimeModulePaths = (packagePath: string, entryPath: string
     if (!executableExtensions.has(extname(filePath))) continue;
 
     try {
-      const imports = new Bun.Transpiler({ loader: transpilerLoader(filePath) }).scanImports(readFileSync(filePath));
-      for (const imported of imports) {
-        const resolvedPath = resolveLocalImport(filePath, imported.path);
+      for (const importPath of scanRuntimeImports(filePath)) {
+        const resolvedPath = resolveLocalImport(filePath, importPath);
         if (resolvedPath) pending.push(resolvedPath);
       }
     } catch {
