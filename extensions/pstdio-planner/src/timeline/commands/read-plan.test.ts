@@ -98,7 +98,12 @@ test("the plan reads one ticket snapshot without loading workspace session histo
     return { items: [], nextCursor: null };
   };
   const plan = await readPlanCommand.run(ctx, {});
-  expect(plan.ticketRows).toContainEqual(expect.objectContaining({ id: ticket.id }));
+  expect(plan.ticketRows).toContainEqual(
+    expect.objectContaining({
+      id: ticket.id,
+      resource: expect.objectContaining({ type: "ticket", id: ticket.id, projectId: ctx.projectId }),
+    }),
+  );
   expect(ticketReads).toBe(1);
   expect(sessionReads).toBe(0);
 });

@@ -39,3 +39,8 @@ export const ticketPageTarget = (resource: ResourceRef): NavigationTargetPage =>
     parent: ticketParent ? ticketPageTarget(ticketParent) : ticketsPageTarget,
   };
 };
+
+export const ticketActivationTarget = (resource: ResourceRef, pendingInput: boolean): NavigationTargetPage =>
+  pendingInput
+    ? { kind: "page", page: plannerPage("ticket-requests"), resource, parent: ticketPageTarget(resource) }
+    : ticketPageTarget(resource);

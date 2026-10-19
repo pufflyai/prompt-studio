@@ -96,7 +96,16 @@ function PlanContent(props: PlanContentProps) {
       />
       <Flex flex="1" minH="0" minW="0">
         <Box flex="1" minH="0" minW="0">
-          <PlanGraph {...viewProps} today={plan.today} />
+          <PlanGraph
+            {...viewProps}
+            today={plan.today}
+            cardInteraction={{
+              host,
+              client,
+              attributes: queryData.attributes,
+              rows: new Map(queryData.rows.map((row) => [row.id, row])),
+            }}
+          />
         </Box>
         {selected ? (
           <Suspense fallback={null}>

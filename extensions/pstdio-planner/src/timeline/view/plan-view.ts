@@ -3,6 +3,7 @@ import type { PlanRow, PlanSection } from "../contracts";
 import type { trackLayout } from "../model/tracks";
 import type { BackgroundContext } from "./background-menu";
 import type { DropTarget } from "./drag";
+import type { TicketCardInteraction } from "./ticket-card-interaction";
 
 // How a card relates to the selected ticket.
 export type Relation = "selected" | "needed-first" | "waits-on-selected";
@@ -15,6 +16,7 @@ export interface ViewSection {
 }
 
 export interface PlanViewProps {
+  cardInteraction?: TicketCardInteraction;
   sections: ViewSection[];
   tracks: ReturnType<typeof trackLayout>;
   relations: Map<string, Relation>;

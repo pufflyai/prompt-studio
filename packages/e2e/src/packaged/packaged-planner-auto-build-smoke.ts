@@ -16,12 +16,12 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
     eligible: { conjunction: "and", rules: [] },
   });
   const supervisorModel = { harnessId: "pstdio.harness-codex.harness.codex", model: "smoke-model" };
-  expect(await execute("auto-build.select-model", { supervisorModel })).toMatchObject({
+  expect(await execute("auto-build.configure", { enabled: false, supervisorModel })).toMatchObject({
     enabled: false,
     supervisorModel,
   });
   expect(await execute("auto-build.read", {})).toMatchObject({ supervisorModel });
-  await execute("auto-build.select-model", { supervisorModel: { harnessId: supervisorModel.harnessId } });
+  await execute("auto-build.configure", { enabled: false, supervisorModel: { harnessId: supervisorModel.harnessId } });
   const { selections, statusId } = await configurePlannerWorkflow(execute);
   expect(await execute("workflow-statuses.read", {})).toMatchObject({ selections, missingStatusIds: [] });
   expect((await execute("implementation-policy", {})).workflow.selections).toEqual(selections);

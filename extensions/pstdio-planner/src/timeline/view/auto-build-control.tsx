@@ -1,5 +1,4 @@
 import { type GuestHost, workbenchPanels } from "@pstdio/sdk/extensions";
-import { planner } from "../../public-command-refs";
 import { AutoBuildButton } from "./auto-build-button";
 import type { timelineQueryData } from "./timeline-query";
 import { useAutoBuild } from "./use-auto-build";
@@ -42,17 +41,14 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
           ? {
               prompt: autoBuild.mode.prompt,
               supervisorModel: autoBuild.mode.supervisorModel,
-              onSelectModel: () =>
-                void host.call("navigation.open", {
-                  target: { kind: "command", target: { command: planner.selectAutoBuildModel } },
-                }),
+              host,
               requireMergedDependencies: autoBuild.mode.requireMergedDependencies,
               eligible: autoBuild.mode.eligible,
               data,
               saving: autoBuild.saving,
               error: autoBuild.error,
-              onEnable: (prompt, requireMergedDependencies, eligible) =>
-                autoBuild.configure(true, prompt, requireMergedDependencies, eligible),
+              onEnable: (prompt, requireMergedDependencies, eligible, supervisorModel) =>
+                autoBuild.configure(true, prompt, requireMergedDependencies, eligible, supervisorModel),
             }
           : undefined
       }

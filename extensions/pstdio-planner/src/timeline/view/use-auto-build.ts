@@ -1,4 +1,4 @@
-import { eventRef, type ViewFilterGroup, viewDataEvents } from "@pstdio/sdk/extensions";
+import { type ExtensionHarnessInput, eventRef, type ViewFilterGroup, viewDataEvents } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { autoBuildChanged } from "../../data/auto-build-mode";
 import { plannerTicketsChanged } from "../../events";
@@ -22,6 +22,7 @@ export function useAutoBuild(client: PlanClient) {
     prompt?: string,
     requireMergedDependencies?: boolean,
     eligible?: ViewFilterGroup,
+    supervisorModel?: ExtensionHarnessInput,
   ) => {
     setSaving(true);
     setError(undefined);
@@ -31,6 +32,7 @@ export function useAutoBuild(client: PlanClient) {
         prompt,
         requireMergedDependencies,
         eligible,
+        supervisorModel,
       });
       // The saved configuration is authoritative. Live reads own session details
       // and their errors must not make a successful Start or Stop retryable.

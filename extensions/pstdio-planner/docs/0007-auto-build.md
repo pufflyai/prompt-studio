@@ -4,9 +4,9 @@ Auto Build uses a supervisor to assign valid, unassigned tickets using your prom
 
 ## Start Auto Build
 
-Open **Project Timeline** and click **Auto Build**. In the modal, describe how the supervisor should choose work, set **Eligible tickets**, and click the primary **Auto Build** button. The question mark next to the title opens an explanation and a documentation link.
+Open **Project Timeline** and click **Auto Build**. In the modal, describe how the supervisor should choose work, set **Eligible tickets**, and click the primary **Auto Build** button. The information icon next to the title opens an explanation and a documentation link.
 
-Click **Supervisor model** to open the native model picker used by Run attempt. Choose a harness, model, and its run options, then confirm. This choice saves immediately for the next supervisor conversation. Worker sessions still use the project default agent. Stop and start Auto Build to use a different model for an existing supervisor.
+Choose **Supervisor model**, its harness, and its run options directly in the same modal, using the controls from Run attempt. The prompt, model, options, and filters save together when you start Auto Build. Cancel leaves the saved configuration unchanged. Worker sessions still use the project default agent. Stop and start Auto Build to use a different model for an existing supervisor.
 
 Starting Auto Build immediately queues a check. The first check starts the supervisor as soon as it finds eligible work; the supervisor then queries its full scope before launching tickets. The queued startup status stays available while that check runs.
 
@@ -74,7 +74,6 @@ The supervisor uses public Planner commands:
 
 ```sh
 pst pstdio-planner auto-build read
-pst pstdio-planner auto-build select-model --supervisor-model '{"harnessId":"<harness>","model":"<model>"}'
 pst pstdio-planner auto-build scope --revision <mode-revision> --queries '[{"track":"Workbench"}]'
 pst tickets next --track Workbench
 pst tickets panel --id PS-123

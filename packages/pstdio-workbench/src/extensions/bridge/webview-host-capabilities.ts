@@ -43,21 +43,8 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       },
     },
     navigation: {
-      open: async (target) => {
-        const destination = toWorkbenchNavigationTarget(target, { extensionId, projectId });
-        if (destination.kind === "command" && target.kind === "command") {
-          const command = workbench.commands.getCommand(destination.commandId)?.command;
-          const args = target.target.params;
-          const needsInput =
-            command &&
-            Object.entries(command.params ?? {}).some(([key, param]) => param.required && args?.[key] === undefined);
-          if (needsInput) {
-            workbench.commandPalette.requestParams({ record: { command }, label: command.label, args });
-            return [];
-          }
-        }
-        return workbench.navigation.openTarget(destination);
-      },
+      open: (target) =>
+        workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId })),
     },
     notifications: {
       show: (notice) => {

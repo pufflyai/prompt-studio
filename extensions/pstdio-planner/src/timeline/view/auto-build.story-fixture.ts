@@ -6,7 +6,26 @@ export const autoBuildStoryConfiguration: Omit<AutoBuildFormProps, "onClose" | "
   requireMergedDependencies: false,
   eligible: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready"] }] },
   prompt: "Implement the calculator feature.",
-  onSelectModel: () => {},
+  host: {
+    call: async () =>
+      ({
+        harnesses: [{ id: "codex", name: "Codex", availability: { type: "INSTALLED" } }],
+        models: [{ id: "example-model", label: "Example model" }],
+        selection: { harnessId: "codex", model: "example-model" },
+        schema: {
+          effort: {
+            type: "select",
+            label: "Reasoning effort",
+            defaultValue: "medium",
+            options: [
+              { label: "Medium", value: "medium" },
+              { label: "High", value: "high" },
+            ],
+          },
+        },
+      }) as never,
+    onEvent: () => () => {},
+  },
   data: {
     rows: [],
     attributes: [

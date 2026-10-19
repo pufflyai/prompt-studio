@@ -27,7 +27,7 @@ import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
 import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
 import { ticketBoard, timelineBoard } from "./data/ticket-board";
-import { ticketDocumentPage, ticketPageTarget } from "./data/ticket-page-target";
+import { ticketActivationTarget, ticketDocumentPage } from "./data/ticket-page-target";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
@@ -142,11 +142,7 @@ export const createPlannerUi = (baseUrl: string) => {
       onRowActivate: async (ctx, { row }) => {
         if (!row.resource) return;
         const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, row.resource.id));
-        ctx.navigation.open(
-          pending
-            ? { kind: "page", page: requestsPage.ref, resource: row.resource, parent: ticketPageTarget(row.resource) }
-            : ticketPageTarget(row.resource),
-        );
+        ctx.navigation.open(ticketActivationTarget(row.resource, pending));
       },
       onAttributeChange: setTicketAttribute,
       onMove: moveTicketOnBoard,

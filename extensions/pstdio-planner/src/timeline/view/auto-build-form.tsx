@@ -1,24 +1,29 @@
-import { Button, Dialog, HStack, Stack, Text, useRecipe } from "@chakra-ui/react";
-import type { ExtensionHarnessInput, ViewFilterGroup } from "@pstdio/sdk/extensions";
+import { Button, Dialog, Stack, Text, useRecipe } from "@chakra-ui/react";
+import type { ExtensionHarnessInput, GuestHost, ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { Checkbox, ScrollArea } from "@pstdio/ui";
 import { CollectionFilter } from "@pstdio/ui/collection-view";
 import { buildFilterCategories } from "@pstdio/ui/kanban-renderer";
 import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { psTheme } from "@pstdio/ui/theme";
-import { ChevronDown, Cpu } from "lucide-react";
 import { useState } from "react";
+import { SupervisorModelField } from "./supervisor-model-field";
 import type { timelineQueryData } from "./timeline-query";
 
 export interface AutoBuildFormProps {
   prompt: string;
   eligible: ViewFilterGroup;
   supervisorModel?: ExtensionHarnessInput;
-  onSelectModel: () => void;
+  host: GuestHost;
   requireMergedDependencies: boolean;
   data: ReturnType<typeof timelineQueryData>;
   saving: boolean;
   error?: string;
-  onEnable: (prompt: string, requireMergedDependencies: boolean, eligible: ViewFilterGroup) => Promise<boolean>;
+  onEnable: (
+    prompt: string,
+    requireMergedDependencies: boolean,
+    eligible: ViewFilterGroup,
+    supervisorModel?: ExtensionHarnessInput,
+  ) => Promise<boolean>;
   onClose: () => void;
   t: (key: string, fallback?: string) => string;
 }
@@ -27,8 +32,8 @@ export function AutoBuildForm(props: AutoBuildFormProps) {
   const {
     prompt: initialPrompt,
     eligible: initialEligible,
-    supervisorModel,
-    onSelectModel,
+    supervisorModel: initialModel,
+    host,
     requireMergedDependencies: initialRequireMerged,
     data,
     saving,
@@ -38,35 +43,27 @@ export function AutoBuildForm(props: AutoBuildFormProps) {
     t,
   } = props;
   const [prompt, setPrompt] = useState(initialPrompt);
+  const [supervisorModel, setSupervisorModel] = useState(initialModel);
   const [eligible, setEligible] = useState(initialEligible);
   const [requireMergedDependencies, setRequireMerged] = useState(initialRequireMerged);
   const button = useRecipe({ recipe: psTheme.getRecipe("button") });
   const categories = buildFilterCategories(data.attributes, data.rows);
   const eligibleLabel = t("timeline.autoBuild.eligible", "Eligible tickets");
   const save = async () => {
-    if (await onEnable(prompt, requireMergedDependencies, eligible)) onClose();
+    if (await onEnable(prompt, requireMergedDependencies, eligible, supervisorModel)) onClose();
   };
   return (
     <>
       <Dialog.Body flex="1" minH="0" p="0">
         <ScrollArea h="full" contentProps={{ px: "lg", py: "md" }}>
           <Stack gap="md">
-            <HStack justifyContent="space-between" gap="md">
-              <Text textStyle="label/S/medium">{t("timeline.autoBuild.supervisorModel", "Supervisor model")}</Text>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={saving}
-                onClick={onSelectModel}
-                aria-label={t("timeline.autoBuild.supervisorModel", "Supervisor model")}
-              >
-                <Cpu />
-                {supervisorModel?.model ??
-                  supervisorModel?.harnessId.split(".").at(-1) ??
-                  t("timeline.autoBuild.defaultModel", "Project default")}
-                <ChevronDown />
-              </Button>
-            </HStack>
+            <SupervisorModelField
+              host={host}
+              value={supervisorModel}
+              onChange={setSupervisorModel}
+              disabled={saving}
+              label={t("timeline.autoBuild.supervisorModel", "Supervisor model")}
+            />
             <LazyMarkdownEditor
               autoFocus
               defaultState={prompt}

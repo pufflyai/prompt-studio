@@ -8,9 +8,11 @@ import {
   createTicketRowMapper,
   createTicketWorkspaceLookup,
 } from "../../data/mappers";
+import { hasPendingInput } from "../../data/review-request-storage";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
 import { timelineBoard } from "../../data/ticket-board";
+import { ticketActivationTarget } from "../../data/ticket-page-target";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import { sortedBySortOrder } from "../../utils/sort";
 import { buildPlan } from "../model/build-plan";
@@ -67,13 +69,20 @@ export const readPlanCommand = defineCommand({
       // Ordinary documents open on the ticket page; only gates display instructions in the canvas.
       sections: plan.sections.map((section) => ({
         ...section,
-        rows: section.rows.map((row) => (row.gate ? row : { ...row, instructions: "" })),
+        rows: section.rows.map((row) => ({
+          ...row,
+          instructions: row.gate ? row.instructions : "",
+          target: ticketActivationTarget(
+            row.target.resource!,
+            hasPendingInput({ requests: row.requests, errors: row.requestErrors }),
+          ),
+        })),
       })),
       projectId: ctx.projectId,
       savedViews: await ctx.views.list(timelineBoard),
       ticketRows: active.map((ticket) => {
-        const { id, title, attributes } = toRow(ticket);
-        return { id, title, attributes: { ...attributes, ...properties.values.get(ticket.id) } };
+        const row = toRow(ticket);
+        return { ...row, attributes: { ...row.attributes, ...properties.values.get(ticket.id) } };
       }),
       ticketAttributes: [...buildTicketAttributes(statuses, tags), ...properties.attributes],
     };

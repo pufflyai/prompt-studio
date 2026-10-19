@@ -2,14 +2,13 @@ import { expect, test } from "bun:test";
 import { autoBuildCommand } from "./auto-build";
 import { fixture } from "./auto-build.fixture";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
-import { selectAutoBuildModelCommand } from "./auto-build-model";
 
 const supervisor = { harnessId: "pstdio.harness-codex.harness.codex", model: "test-model", params: { effort: "high" } };
 
-test("choosing a supervisor model leaves Auto Build stopped", async () => {
+test("saving the supervisor configuration leaves Auto Build stopped", async () => {
   const { ctx } = await fixture();
   await configureAutoBuildCommand.run(ctx, { enabled: false });
-  await selectAutoBuildModelCommand.run(ctx, { supervisorModel: supervisor });
+  await configureAutoBuildCommand.run(ctx, { enabled: false, supervisorModel: supervisor });
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: false, supervisorModel: supervisor });
 });
 

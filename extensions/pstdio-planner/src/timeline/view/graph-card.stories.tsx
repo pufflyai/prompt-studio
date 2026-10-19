@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
 import { GraphCard } from "./graph-card";
+import { EditableCardPreview } from "./graph-card.story-fixture";
 
 const row: PlanRow = {
   id: "shared-card",
@@ -28,6 +29,7 @@ const row: PlanRow = {
 const meta: Meta<typeof GraphCard> = {
   title: "Extensions/Planner/Timeline card",
   component: GraphCard,
+  render: (args) => <EditableCardPreview {...args} />,
   decorators: [
     (Story) => (
       <Box position="relative" minH="300px">

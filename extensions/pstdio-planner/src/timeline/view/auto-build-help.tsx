@@ -1,5 +1,5 @@
 import { Icon, IconButton, Link, Popover, Stack, Text } from "@chakra-ui/react";
-import { ArrowUpRight, CircleHelp } from "lucide-react";
+import { ArrowUpRight, Info } from "lucide-react";
 
 interface AutoBuildHelpProps {
   t: (key: string, fallback?: string) => string;
@@ -11,7 +11,7 @@ export function AutoBuildHelp(props: AutoBuildHelpProps) {
     <Popover.Root positioning={{ placement: "bottom-start", strategy: "fixed", hideWhenDetached: true }}>
       <Popover.Trigger asChild>
         <IconButton size="xs" variant="ghost" aria-label={t("timeline.autoBuild.about", "About Auto Build")}>
-          <CircleHelp />
+          <Info />
         </IconButton>
       </Popover.Trigger>
       <Popover.Positioner>
