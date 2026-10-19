@@ -1,4 +1,4 @@
-import { Menu, Portal, VisuallyHidden } from "@chakra-ui/react";
+import { Menu, Portal, type UseMenuReturn, VisuallyHidden } from "@chakra-ui/react";
 import { type ResourceContextAction, ResourceMenuItems } from "@pstdio/ui";
 import { useId, useRef } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchWidgetPlacement } from "../../core";
@@ -9,16 +9,14 @@ import { WorkbenchIcon } from "../shared/icon";
 import { getPanelLabel } from "./panel-widget-open";
 
 interface RegionTabMenuProps {
-  anchor: { x: number; y: number; width: number; height: number; triggerId: string };
+  menu: UseMenuReturn;
   label: string;
-  open: boolean;
-  setOpen(open: boolean): void;
   groups: readonly WorkbenchTabMenuGroup[];
   placement: WorkbenchWidgetPlacement;
   workbench: WorkbenchCore;
 }
 export const RegionTabMenu = (props: RegionTabMenuProps) => {
-  const { anchor, label, open, setOpen, groups, placement, workbench } = props;
+  const { menu, label, groups, placement, workbench } = props;
   const labelId = useId();
   useWorkbenchResourceActionResolver(workbench);
   const pending = useRef<ResourceContextAction | null>(null);
@@ -54,32 +52,29 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     tabAction("reset-layout", "Reset layout", "RotateCcw", () => workbench.resetLayout()),
   ];
   return (
-    <Menu.Root
-      ids={{ trigger: anchor.triggerId }}
-      open={open}
-      onOpenChange={(details) => setOpen(details.open)}
+    <Menu.RootProvider
+      value={menu}
+      lazyMount
+      unmountOnExit
       onExitComplete={() => {
         const action = pending.current;
         pending.current = null;
         void action?.onClick?.();
       }}
-      positioning={{ placement: "bottom-start", getAnchorRect: () => anchor, offset: { mainAxis: 0 } }}
     >
       <Portal>
         <Menu.Positioner>
           <Menu.Content aria-labelledby={labelId}>
             <VisuallyHidden id={labelId}>{label} context menu</VisuallyHidden>
-            {open ? (
-              <ResourceMenuItems
-                actions={actions}
-                onSelect={(action) => {
-                  pending.current = action;
-                }}
-              />
-            ) : null}
+            <ResourceMenuItems
+              actions={actions}
+              onSelect={(action) => {
+                pending.current = action;
+              }}
+            />
           </Menu.Content>
         </Menu.Positioner>
       </Portal>
-    </Menu.Root>
+    </Menu.RootProvider>
   );
 };

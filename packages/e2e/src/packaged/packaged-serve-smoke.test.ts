@@ -88,6 +88,7 @@ import { registerStorageMigrationSmokeTests } from "./packaged-storage-migration
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
+// Guest pointer presses and clicks reach the host once, and dismiss tab menus across the sandbox boundary.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 // Its native Notes editor persists Select All heading changes across preserved blank lines and reload.
 // packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.

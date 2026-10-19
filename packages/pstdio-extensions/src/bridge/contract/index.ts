@@ -57,8 +57,24 @@ export type HostApi = {
   hostEvent: (message: HostEventMessage) => void;
 };
 
+export type WebviewPointerEvent = Pick<
+  PointerEvent,
+  | "clientX"
+  | "clientY"
+  | "button"
+  | "buttons"
+  | "pointerId"
+  | "pointerType"
+  | "isPrimary"
+  | "ctrlKey"
+  | "metaKey"
+  | "altKey"
+  | "shiftKey"
+> & { type: "pointerdown" | "click" };
+
 export type GuestApi = {
   contentWidthChanged: (width: number) => void;
+  dispatchPointerEvent: (event: WebviewPointerEvent) => void;
   dispatchKeyboardEvent: (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => Promise<void>;
   ready: (payload: ReadyPayload) => void;
   runtimeError: (payload: RuntimeErrorPayload) => void;

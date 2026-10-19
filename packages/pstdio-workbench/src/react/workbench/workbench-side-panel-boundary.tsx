@@ -23,6 +23,7 @@ const interactivePointerTargetSelector = [
   "input",
   "select",
   "textarea",
+  "iframe",
   "[contenteditable='true']",
   "[role='button']",
   "[role='checkbox']",

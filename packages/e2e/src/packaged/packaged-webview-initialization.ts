@@ -47,6 +47,13 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
           frame.contentWindow?.postMessage({ ...data, action: "RIMLESS/RPC_RESOLVE", result: null }, "*");
         }
       };
+      const pointerEvents: string[] = [];
+      const pointerFromGuest = (data: MessageEvent["data"]) => {
+        if (data.action !== "RIMLESS/RPC_REQUEST" || data.callName !== "dispatchPointerEvent") return;
+        pointerEvents.push(data.args[0].type);
+        frame.dataset.pointerEvents = pointerEvents.join(",");
+        frame.contentWindow?.postMessage({ ...data, action: "RIMLESS/RPC_RESOLVE", result: null }, "*");
+      };
       window.addEventListener("message", (event) => {
         if (event.source !== frame.contentWindow) return;
         const data = event.data;
@@ -56,7 +63,7 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
               action: "RIMLESS/HANDSHAKE_REPLY",
               connectionID: "mount-probe",
               schema: {},
-              methodNames: ["call", "ready", "runtimeError", "contentWidthChanged"],
+              methodNames: ["call", "ready", "runtimeError", "contentWidthChanged", "dispatchPointerEvent"],
             },
             "*",
           );
@@ -66,6 +73,7 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
           sendInit("overlapping");
         }
         resizeFromGuest(data);
+        pointerFromGuest(data);
         if (data.action === "RIMLESS/RPC_RESOLVE" && data.callID === "overlapping") sendInit("repeated");
         if (data.action === "RIMLESS/RPC_RESOLVE" && data.callID === "repeated") frame.dataset.initialized = "true";
       });
@@ -85,6 +93,7 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
       .getByRole("button", { name: "Short status" })
       .click();
     await expect.poll(async () => (await iframe.boundingBox())!.width).toBeGreaterThan(before);
+    await expect(iframe).toHaveAttribute("data-pointer-events", "pointerdown,click");
   } finally {
     await probe.close();
   }

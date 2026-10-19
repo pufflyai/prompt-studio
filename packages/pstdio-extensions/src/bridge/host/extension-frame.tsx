@@ -9,6 +9,7 @@ import type {
   HostCapabilityRequest,
   ThemePreference,
   WebviewCapabilityDiagnostic,
+  WebviewPointerEvent,
 } from "../contract";
 import { createHostCapabilityGate } from "../contract";
 import { createWebviewHostProps } from "../contract/host-props";
@@ -145,6 +146,24 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     reportDiagnostics(createCapabilityGate().diagnostics);
 
     const hostApi = {
+      dispatchPointerEvent: (event: WebviewPointerEvent) => {
+        if (iframeRef.current !== iframe || !iframe.isConnected) return;
+        if (event.type !== "pointerdown" && event.type !== "click") return;
+        const bounds = iframe.getBoundingClientRect();
+        if (!bounds.width || !bounds.height) return;
+        // Outside-interaction layers need the host iframe as their target, including
+        // when the iframe belongs to the menu itself. Guest DOM stays sandboxed.
+        iframe.dispatchEvent(
+          new PointerEvent(event.type, {
+            ...event,
+            bubbles: true,
+            composed: true,
+            cancelable: true,
+            clientX: bounds.left + event.clientX * (bounds.width / iframe.clientWidth),
+            clientY: bounds.top + event.clientY * (bounds.height / iframe.clientHeight),
+          }),
+        );
+      },
       contentWidthChanged: (width: number) => {
         if (sizing === "content-width" && Number.isFinite(width) && width >= 0) setContentWidth(width);
       },

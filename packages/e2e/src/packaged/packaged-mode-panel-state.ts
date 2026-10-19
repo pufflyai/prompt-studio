@@ -72,5 +72,11 @@ export const verifyExtensionModeSessionRestore = async (page: Page, projectId: s
   await tabAction(page, floating.getByRole("tab", { selected: true }), "Pin tab");
   await page.reload();
   await expect(composer).toHaveText("Keep this extension mode draft after reload");
+  const sessionTab = floating.getByRole("tab", { selected: true });
+  await sessionTab.click({ button: "right" });
+  const menu = page.getByRole("menu");
+  await expect(menu.getByRole("menuitem", { name: "Unpin tab", exact: true })).toBeVisible();
+  await page.frameLocator('iframe[title="Lab status"]:visible').getByText("Extension Lab", { exact: true }).click();
+  await expect(menu).toBeHidden();
   await page.goto(previous);
 };

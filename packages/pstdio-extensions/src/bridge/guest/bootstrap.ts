@@ -132,7 +132,7 @@ const start = async () => {
       dispose?.();
     };
   });
-  let keyboardForwarderInstalled = false;
+  let inputForwardersInstalled = false;
 
   const connection = await guest.connect({
     init: async (message: InitMessage) => {
@@ -141,8 +141,8 @@ const start = async () => {
         propsStore.set(message.props);
         await viewLifecycle.initialize(message);
 
-        if (!keyboardForwarderInstalled) {
-          keyboardForwarderInstalled = true;
+        if (!inputForwardersInstalled) {
+          inputForwardersInstalled = true;
           document.addEventListener(
             "keydown",
             (event) => {
@@ -163,6 +163,28 @@ const start = async () => {
             },
             true,
           );
+          for (const type of ["pointerdown", "click"] as const) {
+            document.addEventListener(
+              type,
+              (event) => {
+                connection.remote.dispatchPointerEvent({
+                  type,
+                  clientX: event.clientX,
+                  clientY: event.clientY,
+                  button: event.button,
+                  buttons: event.buttons,
+                  pointerId: event.pointerId,
+                  pointerType: event.pointerType,
+                  isPrimary: event.isPrimary,
+                  ctrlKey: event.ctrlKey,
+                  metaKey: event.metaKey,
+                  altKey: event.altKey,
+                  shiftKey: event.shiftKey,
+                });
+              },
+              true,
+            );
+          }
         }
       } catch (error) {
         const payload = normalizeRuntimeError(error);

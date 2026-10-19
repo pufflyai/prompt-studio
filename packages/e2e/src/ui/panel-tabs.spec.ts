@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
+import { getSharedStorybookBaseUrl } from "../scripts/storybook-server";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const getVerticalMenuGap = async (
@@ -32,6 +33,13 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
 };
+
+test("tab actions hand off dialogs and preserve focus after outside dismissal", async ({ page }) => {
+  const baseUrl = getSharedStorybookBaseUrl("pstdio-workbench");
+  await page.goto(`${baseUrl}/iframe.html?id=pstdio-workbench-guides-tab-actions--editable-title-and-bound-resource`);
+  await expect(page.getByText("Deleted note-1", { exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Draft outside the menu" })).toBeFocused();
+});
 
 test("opens the Session tab context menu while normal clicks only select", async ({ page, request }) => {
   await deleteAllProjects(request);
@@ -71,6 +79,41 @@ test("opens the Session tab context menu while normal clicks only select", async
   await expect(sessionMenu.getByRole("menuitem", { name: "Switch session" })).toBeVisible();
 
   await expect.poll(() => getVerticalMenuGap(sessionTab, sessionMenu)).toBeLessThanOrEqual(1);
+  await page.keyboard.press("Escape");
+  await expect(sessionMenu).toBeHidden();
+  await expect(sessionTab).toBeFocused();
+});
+
+test.describe("webview outside interactions", () => {
+  test.use({ hasTouch: true });
+
+  test("dismisses tab menus on webview clicks and taps while preserving guest focus", async ({ page, request }) => {
+    await deleteAllProjects(request);
+    const project = await createProject(request);
+    await page.addInitScript((id: string) => {
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("dashboard-wb2:selected-project:global", id);
+    }, project.id);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
+    const frame = page.frameLocator('iframe[title="Lab"]:visible');
+    const increment = frame.getByRole("button", { name: "Increment", exact: true });
+    await expect(increment).toBeVisible();
+    await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+    const header = page.locator('[data-workbench-panel-header="side"]');
+    await header.getByRole("button", { name: "Add panel", exact: true }).click();
+    const session = page.getByRole("menuitem", { name: "Session", exact: true });
+    if (await session.isVisible()) await session.click();
+    const tab = header.getByRole("tab", { name: /New session/, selected: true });
+    const menu = page.getByRole("menu", { name: "New session context menu", exact: true });
+    for (const interaction of ["click", "tap"] as const) {
+      await tab.click({ button: "right" });
+      await expect(menu).toBeVisible();
+      await increment[interaction]();
+      await expect(menu).toBeHidden();
+      await expect(page.locator('iframe[title="Lab"]:visible')).toBeFocused();
+    }
+    await expect(frame.getByText("2", { exact: true })).toBeVisible();
+  });
 });
 
 test("keeps the tab viewport unscrolled during drag and supports pointer and keyboard reorder", async ({
