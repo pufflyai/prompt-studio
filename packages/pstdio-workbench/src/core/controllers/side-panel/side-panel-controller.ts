@@ -15,6 +15,7 @@ export interface WorkbenchSidePanelController {
 
 export interface CreateWorkbenchSidePanelControllerInput {
   layout: Pick<LayoutModel, "getLayout" | "setSidePanelMode" | "store">;
+  validateMode?(mode: WorkbenchSidePanelMode): void;
   getFloatingPanels?(): "visible" | "hidden";
   onDidChangePolicy?(listener: () => void): Disposable;
   initialMode?: WorkbenchSidePanelMode;
@@ -34,7 +35,10 @@ export const createWorkbenchSidePanelController = (input: CreateWorkbenchSidePan
   return {
     canFloat,
     getMode,
-    setMode: (mode: WorkbenchSidePanelMode) => input.layout.setSidePanelMode(resolveMode(mode)),
+    setMode: (mode: WorkbenchSidePanelMode) => {
+      input.validateMode?.(mode);
+      input.layout.setSidePanelMode(resolveMode(mode));
+    },
     onDidChange(listener: WorkbenchSidePanelChangeListener) {
       let current = getMode();
       const notify = () => {

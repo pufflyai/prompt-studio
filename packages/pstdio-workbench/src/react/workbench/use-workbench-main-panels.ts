@@ -1,6 +1,7 @@
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
+import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useWorkbenchRegionContent } from "./use-workbench-region-content";
 import { resolvePanelCollapsible } from "./workbench-panel-state";
@@ -8,17 +9,18 @@ import { resolvePanelCollapsible } from "./workbench-panel-state";
 // The collapse/reveal state of one panel around the main editor region, bundled so
 // WorkbenchBody receives one object per panel instead of six flat props.
 const useSecondaryPanelView = (workbench: WorkbenchCore) => {
+  const policy = usePanelPolicy(workbench, "secondary");
   const hasContent = useWorkbenchRegionContent(workbench, "secondary", { locationScoped: true });
-  const hasHeader = useWorkbenchRegionContent(workbench, "secondary-header");
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
   const hasMenus = useWorkbenchPanelMenusPresent(workbench, "secondary");
+  const hasHeader = useWorkbenchRegionContent(workbench, "secondary-header");
   const collapsible = useWorkbenchStore(workbench.layout.store, () =>
     resolvePanelCollapsible(workbench, "secondary-header", "secondary"),
   );
   const open = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.visible);
 
   return {
-    has: hasContent || hasHeader || hasPanelHeader || hasMenus,
+    has: (policy.provided && !policy.canClose) || hasContent || hasHeader || hasPanelHeader || hasMenus,
     hasHeader,
     collapsible,
     collapsed: !open,

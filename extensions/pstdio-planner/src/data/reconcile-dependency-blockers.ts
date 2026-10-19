@@ -4,7 +4,9 @@ import { statusesCollection, ticketsCollection } from "./collections";
 import { dependencyBlockerIds, dependencyTicketIndex } from "./dependency-blockers";
 import { withWriteGuard } from "./write-guard";
 
-export const reconcileDependencyBlockers = async (ctx: Pick<ExtensionContextBase, "storage" | "events">) =>
+export const reconcileDependencyBlockers = async (
+  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId">,
+) =>
   withWriteGuard(
     ctx,
     "dependency-blockers",

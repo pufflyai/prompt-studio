@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { isNavigationTarget, type ResourceRef } from "@pstdio/sdk/extensions";
+import { isNavigationTarget, type PageRef, type ResourceRef } from "@pstdio/sdk/extensions";
 import { resolveResourcePath } from "./resource-path-resolution";
 
 const extensionId = "acme.planner";
@@ -13,6 +13,8 @@ const resolution = {
   resource: { type: "ticket", id: "t1", label: "T-1 Fix links" },
   target: { kind: "page", page: { kind: "page", id: "ticket" }, resource: { type: "ticket", id: "t1" } },
 };
+const documentKey = (page: PageRef) => (page.id === "ticket" ? "ticketDocument" : undefined);
+const savedDocument = { type: "ticket", id: "t1", metadata: { ticketDocument: "files/notes.md" } };
 
 test("a claimed path resolves to its owner's resource and qualified destination", async () => {
   const calls: unknown[] = [];
@@ -21,6 +23,7 @@ test("a claimed path resolves to its owner's resource and qualified destination"
     workspaceId: "workspace",
     path: "tickets/T-1/ticket.md",
     kinds: [kind],
+    documentKey,
     execute: async (command, params) => {
       calls.push({ command, params });
       return resolution;
@@ -41,6 +44,7 @@ test("a resource icon overrides its kind's default icon", async () => {
     workspaceId: "workspace",
     path: "tickets/T-1/files/notes.md",
     kinds: [kind],
+    documentKey,
     execute: async () => ({ ...resolution, resource: { ...resolution.resource, icon: "file-text" } }),
   });
   expect(result?.resource.icon).toBe("file-text");
@@ -52,6 +56,7 @@ test("the most specific prefix wins and unrelated paths do not invoke a handler"
     projectId: "project",
     workspaceId: "workspace",
     kinds: [kind, { ...kind, paths: [{ prefix: "tickets/special/", resolveCommand: "specific" }] }],
+    documentKey,
     execute: async (command: string) => {
       calls.push(command);
       return resolution;
@@ -64,7 +69,13 @@ test("the most specific prefix wins and unrelated paths do not invoke a handler"
 });
 
 test("missing resources fall back while foreign identities are rejected", async () => {
-  const input = { projectId: "project", workspaceId: "workspace", path: "tickets/T-1/ticket.md", kinds: [kind] };
+  const input = {
+    projectId: "project",
+    workspaceId: "workspace",
+    path: "tickets/T-1/ticket.md",
+    kinds: [kind],
+    documentKey,
+  };
   expect(await resolveResourcePath({ ...input, execute: async () => null })).toBeNull();
   await expect(
     resolveResourcePath({
@@ -113,6 +124,7 @@ for (const [name, target] of nestedTargets) {
         workspaceId: "workspace",
         path: "tickets/T-1/ticket.md",
         kinds: [kind],
+        documentKey,
         execute: async () => ({ ...resolution, target: target({ type: "document", id: "doc", [field]: "foreign" }) }),
       }),
     ).rejects.toThrow("owner or project");
@@ -125,6 +137,7 @@ test("qualifies local resources throughout a compound destination and its ancest
     workspaceId: "workspace",
     path: "tickets/T-1/ticket.md",
     kinds: [kind],
+    documentKey,
     execute: async () => ({
       ...resolution,
       target: {
@@ -148,10 +161,11 @@ test("source positions replace a page section and preserve its parent destinatio
     workspaceId: "workspace",
     path: "tickets/T-1/ticket.md",
     kinds: [kind],
+    documentKey,
     position: { line: 12, column: 4 },
     execute: async () => ({
       ...resolution,
-      target: { ...resolution.target, section, parent: { ...resolution.target, section } },
+      target: { ...resolution.target, resource: savedDocument, section, parent: { ...resolution.target, section } },
     }),
   });
   expect(result?.target).toMatchObject({ position: { line: 12, column: 4 }, parent: { section } });
@@ -168,14 +182,15 @@ test("source positions reach every page in compound destinations while panels st
     workspaceId: "workspace",
     path: "tickets/T-1/ticket.md",
     kinds: [kind],
+    documentKey,
     position: { line: 12 },
     execute: async () => ({
       ...resolution,
       target: {
         kind: "compound",
         targets: [
-          { ...resolution.target, section: { anchors: ["summary"] } },
-          { ...resolution.target, position: { line: 3 } },
+          { ...resolution.target, resource: savedDocument, section: { anchors: ["summary"] } },
+          { ...resolution.target, resource: savedDocument, position: { line: 3 } },
           panel,
         ],
       },
@@ -187,4 +202,20 @@ test("source positions reach every page in compound destinations while panels st
     result.target.targets.filter((target) => target.kind === "page").every((target) => target.section === undefined),
   ).toBe(true);
   expect(isNavigationTarget(result.target)).toBe(true);
+});
+
+test("source positions skip pages that open no document", async () => {
+  const section = { anchors: ["summary"] };
+  const result = await resolveResourcePath({
+    projectId: "project",
+    workspaceId: "workspace",
+    path: "tickets/T-1/ticket.md",
+    kinds: [kind],
+    documentKey,
+    position: { line: 40 },
+    execute: async () => ({ ...resolution, target: { ...resolution.target, section } }),
+  });
+  if (result?.target.kind !== "page") throw new Error("Expected a page destination");
+  expect(result.target.position).toBeUndefined();
+  expect(result.target).toMatchObject({ section });
 });

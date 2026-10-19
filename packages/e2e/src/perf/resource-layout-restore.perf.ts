@@ -36,7 +36,7 @@ test("restores a resource layout within the interaction budget", async ({ page, 
     const workspacesNavigation = await getSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
     await openWorkspace(page, shorthandA);
-    await page.getByRole("button", { name: "Show Secondary Panel" }).click();
+    await page.getByRole("button", { name: "Show Bottom Panel" }).click();
     await expect(page.getByRole("region", { name: "Secondary Panel" })).toBeVisible();
     await workspacesNavigation.click();
     await openWorkspace(page, shorthandB);

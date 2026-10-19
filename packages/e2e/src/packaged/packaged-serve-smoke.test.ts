@@ -55,6 +55,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // Private service diagnostics are checked in the manager image smoke with an owned capture endpoint.
 // Native relay coverage hydrates artifact mounts and attachment URLs, and restores foreign journal work after restart.
 import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
+// Navigation metadata preserves independent panel capabilities through the compiled host.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
 // The browser suite checks typed host props, page updates, structured capability errors and saved settings.
@@ -62,7 +63,7 @@ import { registerNotificationStatusSmokeTests } from "./packaged-notification-st
 // Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
-// Planner covers timeline state, complete board moves, dependency recovery and Git conflicts in separate packaged cases.
+// Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
@@ -87,6 +88,7 @@ import { registerStorageMigrationSmokeTests } from "./packaged-storage-migration
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
+// Guest pointer presses and clicks reach the host once, and dismiss tab menus across the sandbox boundary.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 // Its native Notes editor persists Select All heading changes across preserved blank lines and reload.
 // packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.
@@ -228,7 +230,7 @@ test(
   PACKAGED_TEST_TIMEOUT,
 );
 
-// Browser smoke also covers mode panel restoration and generic page-preview cleanup.
+// Browser smoke also covers mode panel restoration, extension-mode session reload, and generic page-preview cleanup.
 // Showcase resource checks include resolving an unknown Artifact without a failed command.
 registerPackagedShowcaseSmokeTests();
 registerPackagedPlannerSmokeTests();

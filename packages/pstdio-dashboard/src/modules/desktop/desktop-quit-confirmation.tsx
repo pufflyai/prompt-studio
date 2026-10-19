@@ -1,6 +1,13 @@
-import { Box, Button, Dialog, Portal, Stack, Text } from "@chakra-ui/react";
+import { Button, Dialog, HStack, Portal, Stack, Text } from "@chakra-ui/react";
+import { SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { useEffect, useRef, useState } from "react";
-import type { DesktopActivity, DesktopLifecycleBridge, DesktopLifecycleState } from "@/lib/desktop-lifecycle-bridge";
+import type {
+  DesktopActivity,
+  DesktopActivityItem,
+  DesktopLifecycleBridge,
+  DesktopLifecycleState,
+} from "@/lib/desktop-lifecycle-bridge";
 
 interface DesktopQuitConfirmationDialogProps {
   /** The work that quitting would cancel. The dialog is open while this is set. */
@@ -10,10 +17,31 @@ interface DesktopQuitConfirmationDialogProps {
 }
 
 const activityGroups = (activity: DesktopActivity) => [
-  { label: "Agent sessions", items: activity.sessions },
-  { label: "Terminals", items: activity.terminals },
-  { label: "Jobs", items: activity.jobs },
+  { label: "Agent session", icon: "message-square", items: activity.sessions },
+  { label: "Terminal", icon: "terminal", items: activity.terminals },
+  { label: "Automation", icon: "workflow", items: activity.jobs },
 ];
+
+const ActiveWorkCard = (props: { item: DesktopActivityItem; kind: string; icon: string }) => {
+  const { item, kind, icon } = props;
+  return (
+    <SimpleCard as="li">
+      <SimpleCardBody>
+        <HStack gap="sm">
+          <WorkbenchIcon name={icon} size={16} color="fg.muted" />
+          <Stack gap="none" minW="0" flex="1">
+            <Text textStyle="paragraph/S/medium" truncate title={item.label}>
+              {item.label}
+            </Text>
+            <Text textStyle="label/S/regular" color="fg.muted" truncate title={item.description}>
+              {item.description ? `${kind} · ${item.description}` : kind}
+            </Text>
+          </Stack>
+        </HStack>
+      </SimpleCardBody>
+    </SimpleCard>
+  );
+};
 
 export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDialogProps) => {
   const { activity, onKeepOpen, onQuit } = props;
@@ -23,6 +51,7 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
     <Dialog.Root
       role="alertdialog"
       open={activity !== null}
+      scrollBehavior="inside"
       initialFocusEl={() => keepOpenRef.current}
       closeOnInteractOutside={false}
       onOpenChange={(details) => {
@@ -39,29 +68,25 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
             <Dialog.Body>
               <Stack gap="sm">
                 <Dialog.Description color="fg.muted" textStyle="paragraph/M/regular">
-                  Canceling this work will stop the items below. This cannot be undone.
+                  Quitting will stop these activities.
                 </Dialog.Description>
-                {activity &&
-                  activityGroups(activity).map((group) => {
-                    if (group.items.length === 0) return null;
-                    return (
-                      <Box key={group.label} bg="bg.muted" borderRadius="xs" px="sm" py="xs">
-                        <Text textStyle="label/S/medium" color="fg.muted">
-                          {group.label}
-                        </Text>
-                        <Stack as="ul" gap="2xs" listStyle="none" padding="0" margin="0" mt="2xs">
-                          {group.items.map((item) => (
-                            <Text as="li" key={item.id} textStyle="paragraph/M/regular">
-                              {item.label}
-                            </Text>
-                          ))}
-                        </Stack>
-                      </Box>
-                    );
-                  })}
+                {activity && (
+                  <Stack as="ul" gap="xs" listStyle="none" padding="0" margin="0">
+                    {activityGroups(activity).flatMap((group) =>
+                      group.items.map((item) => (
+                        <ActiveWorkCard
+                          key={`${group.label}:${item.id}`}
+                          item={item}
+                          kind={group.label}
+                          icon={group.icon}
+                        />
+                      )),
+                    )}
+                  </Stack>
+                )}
               </Stack>
             </Dialog.Body>
-            <Dialog.Footer>
+            <Dialog.Footer flexWrap="wrap">
               <Button ref={keepOpenRef} size="sm" onClick={onKeepOpen}>
                 Keep Prompt Studio open
               </Button>

@@ -77,6 +77,7 @@ export const StaticWebviewSurface = (props: {
 };
 
 export const BridgedWebviewSurface = (props: {
+  sizing?: ExtensionFrameProps["sizing"];
   capabilities: ExtensionFrameProps["capabilities"];
   extensionProps: ExtensionFrameProps["props"];
   hostEvents?: ExtensionFrameProps["hostEvents"];
@@ -91,7 +92,7 @@ export const BridgedWebviewSurface = (props: {
   return (
     <Box
       position="relative"
-      width="100%"
+      width={props.sizing ? "max-content" : "full"}
       height="100%"
       minH="0"
       bg={webviewSurfaceBackground}
@@ -105,6 +106,7 @@ export const BridgedWebviewSurface = (props: {
         </Center>
       ) : null}
       <ExtensionFrame
+        sizing={props.sizing}
         view={view}
         props={extensionProps}
         theme={theme}

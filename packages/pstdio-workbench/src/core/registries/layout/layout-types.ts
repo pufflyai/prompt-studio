@@ -241,6 +241,8 @@ export interface WorkbenchRegionState {
   activeWidgetId?: string;
   /** Side region only: how the open Side Panel is shown. `visible` says whether it is open. */
   presentation?: Exclude<WorkbenchSidePanelMode, "closed">;
+  /** User choice scoped with this mode layout; reset clears it. */
+  headerVisible?: boolean;
 }
 
 export interface WorkbenchLayout {

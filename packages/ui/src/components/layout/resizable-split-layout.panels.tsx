@@ -15,6 +15,7 @@ interface ResizableSplitPanelsProps {
   bounds: { minSize: number; maxSize: number };
   collapsed: boolean;
   collapsible: boolean;
+  resizable: boolean;
   contentPanel: ReactNode;
   contentPanelId: string;
   contentPanelRef: RefObject<HTMLDivElement | null>;
@@ -39,6 +40,7 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
     bounds,
     collapsed,
     collapsible,
+    resizable,
     contentPanel,
     contentPanelId,
     contentPanelRef,
@@ -75,7 +77,7 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
       {contentPanel}
     </Box>
   );
-  const resizeTrigger = (
+  const resizeTrigger = resizable ? (
     <ResizeHandle
       css={styles.separator}
       key="resize-handle"
@@ -94,6 +96,8 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
       onResizeKeyDown={onResizeKeyDown}
       onResizeStart={onResizeStart}
     />
+  ) : (
+    <Box css={styles.separator} aria-hidden="true" />
   );
 
   if (axis.panelFirst) {

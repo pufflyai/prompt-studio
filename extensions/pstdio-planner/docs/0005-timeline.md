@@ -22,9 +22,11 @@ Use ticket filters for Status, Milestone, Milestone date, Milestone progress, an
 
 Each milestone shows its estimated time remaining to the left of its progress bar. The bar counts completed tickets. The ETA weights tickets by the configured Complexity options, ordered from simplest to most complex: 1, 2, 3, and so on. A ticket without a complexity uses the middle weight. Projects without complexity options use equal weights.
 
-Planner measures completed complexity against elapsed time since the milestone's first recorded attempt started. It applies that observed pace to the remaining complexity. Parallel work and waiting are already included in the elapsed time. Hover or focus the ETA to see its basis. Filters do not change the full milestone estimate.
+Planner measures completed complexity across active project tickets against elapsed time since the project's first recorded attempt started. It applies that observed pace to the remaining complexity in each milestone, including milestones that have not started. Parallel work and waiting are already included in the elapsed time. Hover or focus the ETA to see its basis.
 
-`ETA —` means there is not yet a completed ticket and a recorded start to measure. Completed milestones show `Done`. Unscheduled work has no milestone ETA. The estimate reflects past pace; it is not a promised deadline. The plan CLI returns the same derived ETA without storing another workflow state.
+Saved view filters and search update each milestone's ETA, progress, and review-requested count to include only matching tickets. Opening the review queue also includes only those tickets. Hiding completed tickets does not discard the completed work used to measure the project's pace. Collapsing a milestone or track does not change its totals.
+
+`ETA —` means the project does not yet have a completed ticket and a recorded start to measure, or the milestone is empty. Completed milestones show `Done`. Unscheduled work has no milestone ETA. The estimate reflects past pace; it is not a promised deadline. The plan CLI returns the unfiltered derived ETA without storing another workflow state.
 
 ## Auto Build
 
@@ -48,4 +50,6 @@ pst pstdio-planner timeline plan move --ticket PS-32 --deadline none
 
 ## Recover an interrupted write
 
-Timeline writes and attempt launches use temporary owner claims because the extension storage API does not provide transactions. The `attempt-launch` claim covers manual starts and Auto build. Stop the old writer before recovery. Run `pst pstdio-planner timeline write-claim read`, then release only the abandoned claim with `pst pstdio-planner timeline write-claim release --key <key> --expected-token <token>`. A different owner token refuses the release. Never release a running writer. See [the temporary write-claim decision](../../../documentation/adrs/0062-temporary-timeline-write-claims.md) and [the temporary launch-claim decision](../../../documentation/adrs/0070-temporary-planner-launch-claims.md).
+Timeline writes and attempt launches use guards owned by the running Planner runtime. A guard is released when its write succeeds or fails. A crash clears the guards when the process exits, so restarting and retrying cannot inherit a blocking lock. Existing persisted write claims no longer block work, and manual claim inspection or release is not needed.
+
+A slow active writer keeps its guard until it finishes. If another write is still running, retry after it finishes. If the runtime has stopped responding, restart Prompt Studio and retry. A partially saved ticket keeps its identity so placement can be retried without creating another ticket. See [the runtime write-guard decision](../../../documentation/adrs/0083-temporary-runtime-planner-write-guards.md).

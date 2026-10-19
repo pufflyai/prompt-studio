@@ -11,7 +11,7 @@ const openExample = async (page: Page, name: string, resource?: string) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", `pstdio.extension-lab.theme.${name}`);
 };
 const view = (page: Page, title: string) => page.frameLocator(`iframe[title="${title}"]:visible`);
-const hideAndReopen = async (page: Page, panel: "Side" | "Secondary", title: string) => {
+const hideAndReopen = async (page: Page, panel: "Side" | "Bottom", title: string) => {
   const frame = page.locator(`iframe[title="${title}"]`);
   const original = await frame.elementHandle();
   const url = page.url();
@@ -26,7 +26,7 @@ const floatAndReattach = async (page: Page) => {
   await page.getByRole("button", { name: "Float Side Panel", exact: true }).click();
   await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
   await page
-    .locator('[data-workbench-region="nav"]')
+    .getByRole("group", { name: "Panel controls" })
     .getByRole("button", { name: "Hide Side Panel", exact: true })
     .click();
   await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
@@ -105,7 +105,7 @@ test("Boombox retains its player across pages and disposes it when its extension
   expect(await playerFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
   await view(page, "Player").getByRole("button", { name: "Pause", exact: true }).click();
   await expect(view(page, "Player").getByRole("button", { name: "Play", exact: true })).toBeVisible();
-  await hideAndReopen(page, "Secondary", "Player");
+  await hideAndReopen(page, "Bottom", "Player");
   await expect(view(page, "Player").getByRole("button", { name: "Play", exact: true })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(homeUrl);
@@ -191,7 +191,7 @@ test("Kiln docks the inspector and persists object changes", async ({ page }) =>
   await expect(page.getByRole("tab")).toHaveCount(0);
   await expect(page.locator('[data-workbench-panel-header="secondary"]')).toBeHidden();
   await hideAndReopen(page, "Side", "Scene and properties");
-  await hideAndReopen(page, "Secondary", "Timeline");
+  await hideAndReopen(page, "Bottom", "Timeline");
   await inspector.getByRole("button", { name: "Hide Cube", exact: true }).click();
   await expect(inspector.getByRole("button", { name: "Show Cube", exact: true })).toBeVisible();
   const timeline = view(page, "Timeline");

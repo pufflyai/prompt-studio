@@ -27,7 +27,7 @@ test("each mode restores its own shared tabs, selection, panel visibility and si
   expect(s.w.layout.getLayout().regions.side).toEqual(beta.regions.side);
 });
 
-test("a mode with no panels hides every tray without deleting the previous mode's tabs", () => {
+test("a mode without auxiliary panels keeps Main available and preserves the previous mode's tabs", () => {
   const s = modePanelFixture();
   s.open("preview", "side");
   s.open("terminal", "secondary", "pin");
@@ -35,7 +35,8 @@ test("a mode with no panels hides every tray without deleting the previous mode'
   s.w.shell.setRegionOpen("secondary", true);
   const before = structuredClone(s.w.layout.getLayout());
   s.navigate("bare");
-  for (const region of ["main", "side", "secondary"] as const) {
+  expect(s.w.layout.getLayout().regions.main.visible).toBe(true);
+  for (const region of ["side", "secondary"] as const) {
     expect(s.w.layout.getLayout().regions[region].visible).toBe(false);
     expect(s.w.layout.listPanelInstances(region)).toEqual([]);
   }

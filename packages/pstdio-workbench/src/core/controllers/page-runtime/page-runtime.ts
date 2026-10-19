@@ -7,8 +7,9 @@ import {
   applyOwnedWidgetLayoutReconciliation,
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
+import { clampPanelSizes } from "../../registries/layout/panel-size-policy";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
-import { applyModePanelAvailability, panelsForMode } from "../../registries/modes/mode-layout";
+import { applyModePanelPolicy } from "../../registries/modes/mode-layout";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
@@ -159,7 +160,10 @@ const applyPageState = (
     };
     const layout = reconcilePageLayout(layoutInput, latest, restoresLayout);
     const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
-    input.layout.restoreLayout(mode ? applyModePanelAvailability(layout, panelsForMode(mode)) : layout);
+    const availableLayout = applyModePanelPolicy(layout, mode, (region) =>
+      input.layout.getRegionSettings(region, mode?.id),
+    );
+    input.layout.restoreLayout(clampPanelSizes(availableLayout, input.layout.getRegionSize));
     syncOwnedPanelMenus(input.layout);
     if (source === "transition") revealPagePlacements(input, layout, activation);
   });

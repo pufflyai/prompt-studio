@@ -5,11 +5,12 @@ import { useChatLinkHandler } from "@/components/chat-ui/links/chat-link-context
 import { ChatResourceLink } from "@/components/chat-ui/links/chat-resource-link";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
 
-export const ReferenceLinkBadge = (props: { href: string }) => {
-  const { href } = props;
+// `target` is the reference as written. `href` encodes relative targets for the editor (`#path`).
+export const ReferenceLinkBadge = (props: { href: string; target: string }) => {
+  const { href, target } = props;
   const handler = useChatLinkHandler();
-  const candidate = { source: href, origin: "reference" as const };
-  const label = href.split("/").pop() || "unknown";
+  const candidate = { source: target, origin: "reference" as const };
+  const label = target.split("/").pop() || "unknown";
   const parsed = parseChatLink(candidate, typeof window === "undefined" ? undefined : window.location.origin);
   if (parsed?.kind === "external")
     return (

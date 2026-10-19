@@ -5,7 +5,11 @@ export interface ChatLinkCandidate {
 
 export interface ChatLinkHandler {
   resolveHref(candidate: ChatLinkCandidate): string | null;
-  resolveResource?(candidate: ChatLinkCandidate): Promise<{ label: string; icon?: string; href: string | null } | null>;
+  // Paths guessed from prose or inline code become links only when this confirms a target.
+  // Omit `label` to keep the message text.
+  resolveResource?(
+    candidate: ChatLinkCandidate,
+  ): Promise<{ label?: string; icon?: string; href: string | null } | null>;
   resolveImageSource?(source: string): Promise<string | null>;
   describe?(candidate: ChatLinkCandidate): string;
   open(candidate: ChatLinkCandidate): void | Promise<void>;
@@ -26,6 +30,10 @@ export type ParsedChatLink =
   | { kind: "page"; href: string }
   | { kind: "external"; href: string }
   | { kind: "invalid"; reason: string };
+
+// Prose and inline code only look like paths. Show them as links only after the host confirms a target.
+export const isGuessedChatLink = (candidate: ChatLinkCandidate) =>
+  candidate.origin === "text" || candidate.origin === "inline-code";
 
 const invalid = (reason: string) => ({ kind: "invalid" as const, reason });
 const positive = (value: number) => Number.isSafeInteger(value) && value > 0;

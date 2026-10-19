@@ -28,7 +28,7 @@ import {
 } from "./controllers/page-runtime/workbench-layout-context";
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
 import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
-import { createWorkbenchSidePanelController } from "./controllers/side-panel/side-panel-controller";
+import { createModeSidePanel } from "./controllers/side-panel/mode-side-panel";
 import { createWorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
 import { createCommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
 import { createCommandRegistry } from "./registries/commands/command-registry";
@@ -111,6 +111,10 @@ const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefi
   persistence?.dispose?.();
 };
 
+import { layoutPanelGuards } from "./controllers/shell/layout-panel-policy";
+import { requirePanelOpen } from "./controllers/shell/panel-open-policy";
+import { restorePanelPolicy, workbenchPanelPolicy } from "./controllers/shell/workbench-panel-policy";
+
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   let core: WorkbenchCore;
   const context = createContextKeyService();
@@ -131,11 +135,12 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     },
     // The active mode owns region policy; the host input is the fallback. Resolved
     // lazily because the mode registry is created after the layout model.
-    getRegionSettings: (regionId) => {
-      const activeModeId = core?.modes.getActiveModeId();
+    getRegionSettings: (regionId, activeModeId = core?.modes.getActiveModeId()) => {
       const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
       return { ...input.regionSettings?.[regionId], ...activeMode?.regionSettings?.[regionId] };
     },
+    ...layoutPanelGuards(() => core),
+    normalizeLayout: (layout) => restorePanelPolicy(core, layout),
     persistence: layoutCache.layout,
   });
 
@@ -156,6 +161,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
   const modePlacements = createWorkbenchModePlacementRegistry({
     loadLayout: (context) => layoutCache.readMode(context.projectId, context.modeId),
+    validateOpen: (identity, region, options) => requirePanelOpen(core, region, { identity, ...options }),
     getProjectId: () => core?.pages.store.getState().projectId,
     views,
     viewMenus,
@@ -172,6 +178,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     getLayout: layout.getLayout,
     getScope: layout.getPersistenceScope,
     ...createShellLayoutContext(() => core),
+    validateOpen: (identity, region, options) => requirePanelOpen(core, region, { identity, ...options }),
     resolveScope: input.resolvePagePersistenceScope
       ? (context) =>
           input.resolvePagePersistenceScope!({
@@ -211,18 +218,12 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     resolveContext: () => core,
   });
 
-  const sidePanel = createWorkbenchSidePanelController({
-    getFloatingPanels: () => {
-      const activeModeId = modes.getActiveModeId();
-      return (
-        (activeModeId ? modes.getMode(activeModeId)?.floatingPanels : undefined) ?? input.floatingPanels ?? "visible"
-      );
-    },
-    onDidChangePolicy: modes.onDidChangeActive,
-    initialMode: input.initialSidePanelMode,
+  const sidePanel = createModeSidePanel(layout, modes, input, () => core);
+  const shell = createWorkbenchShellController({
     layout,
+    sidePanel,
+    getPolicy: (region) => workbenchPanelPolicy(core, region),
   });
-  const shell = createWorkbenchShellController({ layout, sidePanel });
 
   const pages = createLiveWorkbenchPageRegistry({
     ...createPageLayoutCacheHandlers(layoutCache),
