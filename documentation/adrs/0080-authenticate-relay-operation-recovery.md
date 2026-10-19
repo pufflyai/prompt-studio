@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-17
 
+Status: Superseded by [PRD 0014](../requirements/platform/0014-local-first-sync.md) on 2026-10-19.
+
 ## Problem
 
 After content restore, a native journal must replay missing operations and their captured ancestors with their original identities before submitting later work. Some operations belong to another environment. Normal authenticated submit correctly refuses an environment pretending to author those operations. Unsigned receipt hashes are not evidence that the relay previously stored a body.
