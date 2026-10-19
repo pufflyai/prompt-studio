@@ -147,6 +147,7 @@ test("includes extension development, smoke test, browser setup and update comma
   expect(updateResult.stdout).toContain("extensions update [name]");
 });
 
+// Includes host drive discovery and browsing through the packaged filesystem API.
 registerPackagedProjectSetupSmokeTests();
 
 test(
