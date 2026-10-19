@@ -118,6 +118,9 @@ test("a blob stays for the grace period after its last use, then is removed", as
   expect(missing.body).toEqual({ error: "missing-blobs", blobIds: [blob.blobId] });
   await sync.blobs.begin(blob, device, { sha256: sha256(bytes), byteLength: bytes.length });
   await sync.blobs.writePart(blob, 1, { sha256: sha256(bytes), byteLength: bytes.length, body: body(bytes) });
+  const changed = crypto.getRandomValues(new Uint8Array(32));
+  const resent = sync.blobs.writePart(blob, 1, { sha256: sha256(changed), byteLength: 32, body: body(changed) });
+  expect((await rejected(resent)).status).toBe(400);
   await sync.blobs.finish(blob);
   await sync.documents.appendUpdate(address, device, update(undefined, [blob.blobId]));
   // A new latest state no longer uses the blob, but the update it covers keeps it for the grace period.
@@ -151,4 +154,16 @@ test("size limits and the account quota are enforced from metadata", async () =>
   expect((await rejected(sync.documents.appendUpdate(address, device, update(new Uint8Array(9))))).status).toBe(413);
   await sync.documents.appendUpdate(address, device, update(new Uint8Array(8)));
   expect((await rejected(sync.documents.appendUpdate(address, device, update(new Uint8Array(5))))).status).toBe(507);
+});
+
+test("a latest state that frees space is accepted at the account quota", async () => {
+  const { sync } = fixture.open({ gracePeriodMs: day, accountQuotaBytes: 100 });
+  const address = document();
+  const device = caller();
+  await sync.documents.appendUpdate(address, device, update(new Uint8Array(40)));
+  const first = (await sync.documents.replaceState(address, device, state(null, 1, new Uint8Array(10)))).state;
+  await sync.documents.appendUpdate(address, device, update(new Uint8Array(40)));
+  // 90 bytes are stored. The new state removes the first update, so 65 bytes remain.
+  const second = await sync.documents.replaceState(address, device, state(first.stateId, 2, new Uint8Array(15)));
+  expect(second.state.through).toBe(2);
 });

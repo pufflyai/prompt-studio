@@ -1,7 +1,7 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { SyncError } from "pstdio-sync-contracts/protocol";
 import type { RelayTransaction } from "./database";
-import { syncBlobs, syncObjectDeletions, syncProjects } from "./document-schema";
+import { syncBlobs, syncProjects } from "./document-schema";
 
 /** A request the relay refuses. The transport returns its status and body unchanged. */
 export class SyncRejection extends Error {
@@ -66,24 +66,14 @@ export const requireBlobs = async (transaction: RelayTransaction, key: string, b
 };
 
 /**
- * Queues the bytes of removed update and state rows for deletion. The blobs they listed start their
- * grace period now, so a blob stays at least that long after its last use (R21).
+ * Deletes update or state rows and queues their bytes for deletion in one statement. The blobs they
+ * listed start their grace period now, so a blob stays at least that long after its last use (R21).
  */
-export const releaseRows = async (
-  transaction: RelayTransaction,
-  key: string,
-  rows: { objectKey: string; blobIds: string[] }[],
-  now: Date,
-) => {
-  if (!rows.length) return;
-  await transaction
-    .insert(syncObjectDeletions)
-    .values(rows.map(({ objectKey }) => ({ objectKey })))
-    .onConflictDoNothing();
-  const blobIds = [...new Set(rows.flatMap((row) => row.blobIds))];
-  if (blobIds.length)
-    await transaction
-      .update(syncBlobs)
-      .set({ lastUsedAt: now })
-      .where(and(eq(syncBlobs.projectKey, key), blobIn(blobIds)));
-};
+export const removeRows = (table: "relay_sync_updates" | "relay_sync_states", where: SQL | undefined, now: Date) => sql`
+  WITH gone AS (
+    DELETE FROM ${sql.identifier(table)} WHERE ${where} RETURNING "projectKey", "objectKey", "blobIds"
+  ), queued AS (
+    INSERT INTO relay_sync_object_deletions SELECT "objectKey" FROM gone ON CONFLICT DO NOTHING
+  )
+  UPDATE relay_sync_blobs b SET "lastUsedAt" = ${now} FROM gone
+  WHERE b."projectKey" = gone."projectKey" AND gone."blobIds" @> ARRAY[b."blobId"]`;

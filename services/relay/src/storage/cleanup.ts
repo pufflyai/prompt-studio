@@ -1,10 +1,10 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, lte, sql } from "drizzle-orm";
 import type { createRelayAssets } from "../assets/assets";
 import type { RelayLimits } from "../limits";
-import { lockAccount } from "./accounts";
+import { lockAccount, removeRows } from "./accounts";
 import { blobOwner } from "./blobs";
 import type { connectRelay } from "./database";
-import { syncBlobs, syncObjectDeletions } from "./document-schema";
+import { syncBlobs, syncObjectDeletions, syncStates, syncUpdates } from "./document-schema";
 import type { PayloadObjects } from "./payloads";
 
 const batchSize = 500;
@@ -20,22 +20,6 @@ const unusedBlob = (cutoff: Date) => sql`(
       WHERE s."projectKey" = b."projectKey" AND s."blobIds" @> ARRAY[b."blobId"]))
 )`;
 
-// Removes expired rows, queues their bytes and starts the grace period of the blobs they listed, in one statement.
-const expire = (
-  table: "relay_sync_updates" | "relay_sync_states",
-  column: "coveredAt" | "replacedAt",
-  cutoff: Date,
-  now: Date,
-) => sql`
-  WITH gone AS (
-    DELETE FROM ${sql.identifier(table)} WHERE ${sql.identifier(column)} <= ${cutoff}
-    RETURNING "projectKey", "objectKey", "blobIds"
-  ), queued AS (
-    INSERT INTO relay_sync_object_deletions SELECT "objectKey" FROM gone ON CONFLICT DO NOTHING
-  )
-  UPDATE relay_sync_blobs b SET "lastUsedAt" = ${now} FROM gone
-  WHERE b."projectKey" = gone."projectKey" AND gone."blobIds" @> ARRAY[b."blobId"]`;
-
 export interface SyncCleanupOptions {
   connection: ReturnType<typeof connectRelay>;
   payloads: PayloadObjects;
@@ -50,8 +34,14 @@ export const cleanupSync = async (
   signal?: AbortSignal,
 ) => {
   const cutoff = new Date(now.getTime() - limits.gracePeriodMs);
-  await connection.run((db) => db.execute(expire("relay_sync_updates", "coveredAt", cutoff, now)), signal);
-  await connection.run((db) => db.execute(expire("relay_sync_states", "replacedAt", cutoff, now)), signal);
+  await connection.run(
+    (db) => db.execute(removeRows("relay_sync_updates", lte(syncUpdates.coveredAt, cutoff), now)),
+    signal,
+  );
+  await connection.run(
+    (db) => db.execute(removeRows("relay_sync_states", lte(syncStates.replacedAt, cutoff), now)),
+    signal,
+  );
 
   const accounts = await connection.run(
     (db) =>

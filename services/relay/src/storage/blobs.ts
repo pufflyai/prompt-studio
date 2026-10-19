@@ -79,6 +79,10 @@ export const createSyncBlobs = (
       const partSize = multipartSize(blob.byteLength);
       if (input.byteLength !== Math.min(partSize, blob.byteLength - (number - 1) * partSize))
         throw rejection(400, "invalid-request");
+      // A stored part is immutable. The same bytes are already there; different bytes are a client error.
+      const stored = (await uploadStatus(address, blob)).parts.find((part) => part.number === number);
+      if (stored && stored.sha256 !== input.sha256) throw rejection(400, "invalid-request");
+      if (stored) return;
       await assets.writePart(blobOwner(address), address.blobId, number, input);
     },
     async finish(address: BlobAddress, signal?: AbortSignal) {

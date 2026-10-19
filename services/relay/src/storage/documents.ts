@@ -4,7 +4,7 @@ import type { RelayLimits } from "../limits";
 import {
   admitWrite,
   rejection,
-  releaseRows,
+  removeRows,
   requireBlobs,
   requireQuota,
   type SyncCaller,
@@ -83,15 +83,10 @@ const retire = async (
 ) => {
   if (current) {
     const document = and(eq(syncStates.projectKey, address.projectKey), eq(syncStates.documentId, address.documentId));
-    const states = await transaction
-      .delete(syncStates)
-      .where(and(document, isNotNull(syncStates.replacedAt)))
-      .returning({ objectKey: syncStates.objectKey, blobIds: syncStates.blobIds });
-    const updates = await transaction
-      .delete(syncUpdates)
-      .where(and(updateWhere(address), lte(syncUpdates.sequence, current.through)))
-      .returning({ objectKey: syncUpdates.objectKey, blobIds: syncUpdates.blobIds });
-    await releaseRows(transaction, address.projectKey, [...states, ...updates], now);
+    await transaction.execute(removeRows("relay_sync_states", and(document, isNotNull(syncStates.replacedAt)), now));
+    await transaction.execute(
+      removeRows("relay_sync_updates", and(updateWhere(address), lte(syncUpdates.sequence, current.through)), now),
+    );
     await transaction.update(syncStates).set({ replacedAt: now }).where(stateWhere(address, current.stateId));
   }
   await transaction
@@ -172,7 +167,6 @@ export const createSyncDocuments = ({ connection, payloads, limits, changed }: S
         const { current, retry } = await requireReplaceable(transaction, address, document, envelope);
         if (retry) return { stored: false, state: current!, document };
         await requireBlobs(transaction, address.projectKey, envelope.blobIds);
-        await requireQuota(transaction, caller.accountId, bytes.byteLength, limits.accountQuotaBytes);
         const [state] = await transaction
           .insert(syncStates)
           .values({
@@ -190,6 +184,8 @@ export const createSyncDocuments = ({ connection, payloads, limits, changed }: S
           })
           .returning();
         await retire(transaction, address, current, envelope.through, now);
+        // Checked after retiring, so a state that frees space is accepted at the quota.
+        await requireQuota(transaction, caller.accountId, 0, limits.accountQuotaBytes);
         await transaction.update(syncDocuments).set({ stateId: envelope.stateId }).where(documentWhere(address));
         return { stored: true, state: state!, document };
       });
