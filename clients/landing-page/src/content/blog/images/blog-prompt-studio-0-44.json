@@ -1,0 +1,25 @@
+{
+  "seed": "release-044-sessions-c",
+  "width": 1600,
+  "height": 400,
+  "layout": "scatter",
+  "kinds": [
+    "page",
+    "command",
+    "editor",
+    "skill",
+    "hook",
+    "automation"
+  ],
+  "count": 12,
+  "scale": 0.9,
+  "offsetX": 0,
+  "offsetY": 0,
+  "backgroundTop": "#0A0C10",
+  "backgroundBottom": "#141A28",
+  "bleed": 0.3,
+  "layers": 44,
+  "texture": 0.5,
+  "gradient": 0.5,
+  "grain": 0.3
+}
