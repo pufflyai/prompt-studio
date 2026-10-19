@@ -169,6 +169,12 @@ test.describe("packaged extension webviews", () => {
           });
           await page.reload();
           await expect(frame.getByText("1", { exact: true })).toBeVisible();
+          await frame.getByRole("button", { name: "Read native controls", exact: true }).click();
+          await expect(frame.getByTestId("native-controls-result")).toContainText('"model":"fake"');
+          expect(JSON.parse((await frame.getByTestId("native-controls-result").textContent())!)).toMatchObject({
+            model: "fake",
+            actions: expect.any(Array),
+          });
           await verifyPackagedWebviewRetention(page);
           await verifyPackagedShortcutReference(
             page,

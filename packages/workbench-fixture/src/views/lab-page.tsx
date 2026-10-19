@@ -3,6 +3,7 @@ import { ClipboardCard } from "../components/clipboard-card";
 import { CounterCard } from "../components/counter-card";
 import { FileCapabilitiesCard } from "../components/file-capabilities-card";
 import { HostNotificationCard } from "../components/host-notification-card";
+import { NativeControlsCard } from "../components/native-controls-card";
 import { ThemeCard } from "../components/theme-card";
 import { useLabHost, useLabHostProps } from "../hooks/host-context";
 
@@ -34,6 +35,7 @@ export const LabPage = () => {
           <ThemeCard />
           <HostNotificationCard />
           <FileCapabilitiesCard />
+          <NativeControlsCard />
         </Grid>
       </Stack>
     </Container>
