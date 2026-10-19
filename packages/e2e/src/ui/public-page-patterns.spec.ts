@@ -69,6 +69,8 @@ test("Scribble saves edits and creates documents", async ({ page }) => {
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await expect(sidenav.locator('iframe[title="Pages"]')).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Bottom Panel/ })).toHaveCount(0);
+  await expect(page.locator('[data-workbench-region="status"] iframe[title="Sync status"]')).toBeVisible();
   const pages = view(page, "Pages");
   const editor = () => view(page, "Document").locator('[contenteditable="true"]').first();
   await expect(editor()).toContainText("Why now");
@@ -88,6 +90,11 @@ test("Scribble saves edits and creates documents", async ({ page }) => {
   await expect(editor()).toContainText("Patterns");
   await pages.getByRole("button", { name: "Untitled page", exact: true }).click();
   await expect(editor()).toContainText("A new document");
+  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
+  await expect(
+    page.getByTestId("workbench-side-panel-floating").locator("[data-testid=content-editable][contenteditable=true]"),
+  ).toBeVisible();
 });
 
 test("Boombox retains its player across pages and disposes it when its extension is disabled", async ({
@@ -105,7 +112,9 @@ test("Boombox retains its player across pages and disposes it when its extension
   expect(await playerFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
   await view(page, "Player").getByRole("button", { name: "Pause", exact: true }).click();
   await expect(view(page, "Player").getByRole("button", { name: "Play", exact: true })).toBeVisible();
-  await hideAndReopen(page, "Bottom", "Player");
+  await expect(page.locator('[data-workbench-region="side"] iframe[title="Queue"]')).toBeVisible();
+  await expect(view(page, "Queue").getByText("Playing now", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Hide (Side|Bottom) Panel/ })).toHaveCount(0);
   await expect(view(page, "Player").getByRole("button", { name: "Play", exact: true })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(homeUrl);
@@ -156,11 +165,21 @@ test("Pigeon sends a local message and keeps it in Sent", async ({ page }) => {
   await openExample(page, "pigeon");
   const folders = view(page, "Folders");
   const inbox = view(page, "Inbox");
+  await expect(page.getByRole("button", { name: /Bottom Panel/ })).toHaveCount(0);
   await expect(folders.getByRole("button", { name: "Inbox 2", exact: true })).toBeVisible();
   await inbox.getByText("Launch notes for Friday", { exact: true }).click();
   await hideAndReopen(page, "Side", "Message");
   await floatAndReattach(page);
   await expect(folders.getByRole("button", { name: "Inbox 1", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+  const floating = page.getByTestId("workbench-side-panel-floating");
+  const composer = floating.locator('[data-testid="content-editable"][contenteditable="true"]');
+  await expect(composer).toBeVisible();
+  const messageTab = floating.getByRole("tab", { name: "Launch notes for Friday", exact: true });
+  await expect(messageTab).toBeVisible();
+  await messageTab.click();
+  await expect(view(page, "Message").getByText("Launch notes for Friday", { exact: true })).toBeVisible();
   await folders.getByRole("button", { name: "Compose", exact: true }).click();
   await inbox.getByRole("textbox", { name: "To", exact: true }).fill("alex@example.com");
   await inbox.getByRole("textbox", { name: "Subject", exact: true }).fill("Showcase review");
@@ -190,8 +209,7 @@ test("Kiln docks the inspector and persists object changes", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Float Side Panel", exact: true })).toHaveCount(0);
   await expect(page.getByRole("tab")).toHaveCount(0);
   await expect(page.locator('[data-workbench-panel-header="secondary"]')).toBeHidden();
-  await hideAndReopen(page, "Side", "Scene and properties");
-  await hideAndReopen(page, "Bottom", "Timeline");
+  await expect(page.getByRole("button", { name: /Hide (Side|Bottom) Panel/ })).toHaveCount(0);
   await inspector.getByRole("button", { name: "Hide Cube", exact: true }).click();
   await expect(inspector.getByRole("button", { name: "Show Cube", exact: true })).toBeVisible();
   const timeline = view(page, "Timeline");

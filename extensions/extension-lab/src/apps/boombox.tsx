@@ -1,4 +1,4 @@
-import { Box, Grid, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
 import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
 import { createExampleStore, useExampleStore, usePageResource } from "../example-store";
 import { ExampleIcon } from "../icon";
@@ -60,100 +60,89 @@ export const Playlist = (props: { input: ExampleViewInput }) => {
           <Text textStyle="paragraph/S/semibold">Ari Park · 5 songs · 19 min</Text>
         </Stack>
       </HStack>
-      <Grid flex="1" minH="0" gridTemplateColumns={{ base: "minmax(0, 1fr)", xl: "minmax(0, 1fr) 18rem" }}>
-        <Stack overflowY="auto" gap="xs" px={{ base: "md", md: "xl" }} py="lg">
-          <HStack px="sm" color="fg.muted" textStyle="label/XS">
-            <Text w="8">#</Text>
-            <Text flex="1">TITLE</Text>
-            <Text display={{ base: "none", lg: "block" }} flex="1">
-              ALBUM
-            </Text>
-            <ExampleIcon name="Clock3" />
-          </HStack>
-          {state.filter === "Search" ? (
-            <Input
-              aria-label="Search tracks"
-              placeholder="Search tracks"
-              value={state.query}
-              onChange={(event) => boomboxStore.setState({ query: event.target.value })}
-            />
-          ) : null}
-          {tracks.map((track) => {
-            const active = activeId === track.id;
-            return (
-              <HStack
-                key={track.id}
-                p="sm"
-                borderRadius="md"
-                bg={active ? "bg.active" : undefined}
-                _hover={{ bg: "bg.hover" }}
-                cursor="pointer"
-                onClick={() => play(track)}
+      <Stack overflowY="auto" gap="xs" px={{ base: "md", md: "xl" }} py="lg">
+        <HStack px="sm" color="fg.muted" textStyle="label/XS">
+          <Text w="8">#</Text>
+          <Text flex="1">TITLE</Text>
+          <Text display={{ base: "none", lg: "block" }} flex="1">
+            ALBUM
+          </Text>
+          <ExampleIcon name="Clock3" />
+        </HStack>
+        {state.filter === "Search" ? (
+          <Input
+            aria-label="Search tracks"
+            placeholder="Search tracks"
+            value={state.query}
+            onChange={(event) => boomboxStore.setState({ query: event.target.value })}
+          />
+        ) : null}
+        {tracks.map((track) => {
+          const active = activeId === track.id;
+          return (
+            <HStack
+              key={track.id}
+              p="sm"
+              borderRadius="md"
+              bg={active ? "bg.active" : undefined}
+              _hover={{ bg: "bg.hover" }}
+              cursor="pointer"
+              onClick={() => play(track)}
+            >
+              <IconButton
+                aria-label={`Play ${track.title} by ${track.artist}`}
+                size="xs"
+                variant="ghost"
+                color={active ? "fg.success" : "fg.muted"}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  play(track);
+                }}
               >
-                <IconButton
-                  aria-label={`Play ${track.title} by ${track.artist}`}
-                  size="xs"
-                  variant="ghost"
-                  color={active ? "fg.success" : "fg.muted"}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    play(track);
-                  }}
-                >
-                  <ExampleIcon name={active && state.playing ? "AudioLines" : "Play"} />
-                </IconButton>
-                <HStack flex="1" minW="0">
-                  <Artwork track={track} />
-                  <Stack gap="0" minW="0">
-                    <Text truncate color={active ? "fg.success" : "fg"} textStyle="paragraph/S/semibold">
-                      {track.title}
-                    </Text>
-                    <Text truncate color="fg.muted" textStyle="paragraph/XS/regular">
-                      {track.artist}
-                    </Text>
-                  </Stack>
-                </HStack>
-                <Text display={{ base: "none", lg: "block" }} flex="1" color="fg.muted" textStyle="paragraph/S/regular">
-                  {track.album}
-                </Text>
-                <IconButton
-                  aria-label={state.likedIds.includes(track.id) ? `Unlike ${track.title}` : `Like ${track.title}`}
-                  size="xs"
-                  variant="ghost"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    boomboxStore.setState((current) => ({
-                      ...current,
-                      likedIds: current.likedIds.includes(track.id)
-                        ? current.likedIds.filter((id) => id !== track.id)
-                        : [...current.likedIds, track.id],
-                    }));
-                  }}
-                >
-                  <ExampleIcon name="Heart" color={state.likedIds.includes(track.id) ? "fg.success" : "fg.muted"} />
-                </IconButton>
-                <Text w="10" color="fg.muted" textStyle="paragraph/S/regular">
-                  {track.duration}
-                </Text>
+                <ExampleIcon name={active && state.playing ? "AudioLines" : "Play"} />
+              </IconButton>
+              <HStack flex="1" minW="0">
+                <Artwork track={track} />
+                <Stack gap="0" minW="0">
+                  <Text truncate color={active ? "fg.success" : "fg"} textStyle="paragraph/S/semibold">
+                    {track.title}
+                  </Text>
+                  <Text truncate color="fg.muted" textStyle="paragraph/XS/regular">
+                    {track.artist}
+                  </Text>
+                </Stack>
               </HStack>
-            );
-          })}
-        </Stack>
-        <Box
-          display={{ base: "none", xl: "block" }}
-          minH="0"
-          overflowY="auto"
-          borderLeftWidth="1px"
-          borderColor="border.subtle"
-        >
-          <Queue host={input.host} />
-        </Box>
-      </Grid>
+              <Text display={{ base: "none", lg: "block" }} flex="1" color="fg.muted" textStyle="paragraph/S/regular">
+                {track.album}
+              </Text>
+              <IconButton
+                aria-label={state.likedIds.includes(track.id) ? `Unlike ${track.title}` : `Like ${track.title}`}
+                size="xs"
+                variant="ghost"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  boomboxStore.setState((current) => ({
+                    ...current,
+                    likedIds: current.likedIds.includes(track.id)
+                      ? current.likedIds.filter((id) => id !== track.id)
+                      : [...current.likedIds, track.id],
+                  }));
+                }}
+              >
+                <ExampleIcon name="Heart" color={state.likedIds.includes(track.id) ? "fg.success" : "fg.muted"} />
+              </IconButton>
+              <Text w="10" color="fg.muted" textStyle="paragraph/S/regular">
+                {track.duration}
+              </Text>
+            </HStack>
+          );
+        })}
+      </Stack>
     </Stack>
   );
 };
 
-const Queue = (props: { host: ExampleHost }) => {
+export const Queue = (props: { host: ExampleHost }) => {
   const state = useExampleStore(boomboxStore);
   const activeId = usePageResource(props.host)?.id ?? boomboxTracks[0].id;
   const queued = boomboxTracks.filter((track) => state.queueIds.includes(track.id));
