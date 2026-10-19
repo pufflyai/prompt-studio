@@ -150,7 +150,7 @@ anything.
 - R23. Relay storage for a document stays below twice the size of its latest state,
   plus the grace-period copy.
 - R24. The relay keeps no version history. Version history is a Prompt Studio feature
-  on the client, or an extension such as Artifacts keeps its own versions. Client
+  on the client (R53), or an extension such as Artifacts keeps its own versions. Client
   version history is also how a user recovers from a valid edit that deleted too much.
 - R25. Large files upload and download separately from small updates, so a large file
   does not delay other changes. Interrupted file transfers resume.
@@ -218,10 +218,14 @@ anything.
 
 - R46. After resetting or replacing a device, a user logs in with Google and gets every
   cloud project and personal space back.
+- R53. Each device keeps a daily snapshot of every cloud document for 30 days. A person
+  can restore a project, or one extension's data in it, to a snapshot. A restore is a
+  normal edit, so it syncs to every device.
 
 ### Running the relay
 
-- R47. The relay is one small service plus object storage. The total hosting target is
+- R47. The relay is one small service, a small PostgreSQL database for document metadata
+  and ordering, and object storage for encrypted payloads. The total hosting target is
   under US$50 per month for the reference workload.
 - R48. It is portable and can be self-hosted.
 
@@ -229,7 +233,7 @@ anything.
 
 | Phase | Includes | Requirements |
 | --- | --- | --- |
-| 1. One user, many devices | Encrypted CRDT sync of project data and files, latest state backup, Google login connects everything, device list, sync state, extension and automation sync, reset recovery | R1 to R31, R34, R35, R37 (devices), R43 to R52 |
+| 1. One user, many devices | Encrypted CRDT sync of project data and files, latest state backup, Google login connects everything, device list, sync state, extension and automation sync, reset recovery | R1 to R31, R34, R35, R37 (devices), R43 to R53 |
 | 2. Sessions follow you | Personal spaces, session and transcript sync, remote commands, cloud devices | R32, R33, R38 to R42 |
 | 3. Teams | Team accounts, members, per-project membership, member removal | R36, R37 (members) |
 
@@ -279,17 +283,17 @@ documented runtime behavior is a breaking change. Plan it as one breaking step:
 | `records.read`, `records.list`, `records.id` | Keep. `read` loses its `branch` argument. |
 | `records.commit` | Keep as the write call. `expectedRevision` is no longer required; edits merge (R2). |
 | `StorageSaveOutcome` | Report the R7 states. Remove `conflict` and the relay checkpoint. |
-| `records.outcome` | Keep only if a save can still be checked by operation ID; otherwise deprecate. |
+| `records.outcome` | Keep. It returns the R7 save states, so a caller can wait until a save has synced. |
 | `records.conflicts`, `records.inspect`, `records.resolve` | Deprecate, then remove. There are no conflicts to inspect. |
 | `storage.assets` retained versions and unresolved alternatives | Remove from the documented behavior. |
 
 Add the new shapes next to the old ones, mark the old ones `@deprecated` with their
 replacement, and remove them together in the next breaking release.
 
-The core functions from R49 to R52 are additions: the ID function, order positions, a
-way to read a resource's current number and aliases, and the SDK's two-device test
-helper. They ship next to the deprecations, in a release that does not break existing
-extensions.
+The core functions from R49 to R52 are additions that do not break existing extensions:
+`storage.ids.create()`, `migration.id(key)` inside `storage.migrate`,
+`storage.positions.between()`, `resources.identity()`, `resources.findByShorthand()`,
+the `resourceEvents.renumbered` event, and the SDK's two-device test helper.
 
 ### Documents that change
 
@@ -308,15 +312,12 @@ Phase 1 is done when:
 - One user works on one cloud project from three devices, offline and online. Every
   device ends with the same content for Notes, Artifacts, Planner and an unrelated
   extension. No extension source contains sync, merge or encryption code.
-- Two devices edit the same note offline and both edits survive the merge.
-- Two devices edit different fields, nested keys and list items of the same record
-  offline, and every edit survives the merge.
+- Two devices edit the same note, and different fields, nested keys and list items of
+  one record, offline. Every edit survives the merge.
 - Two devices create resources of the same kind offline. After the merge every resource
   has a unique number, the same on both devices, and its old number still opens it.
-- Two devices run the same data migration offline and end with the same records,
-  without duplicates.
-- Two devices move the same cards offline and end with the same order, with every card
-  once.
+- Two devices run the same data migration offline and end with the same records.
+- Two devices move the same cards offline and end with the same order, each card once.
 - A multi-record change appears completely or not at all on every device.
 - A device that missed several latest-state replacements catches up and keeps its own
   offline edits.
@@ -329,8 +330,9 @@ Phase 1 is done when:
   latest state size plus the grace-period copy.
 - A blob referenced by an offline edit is still available when that edit syncs within
   the grace period.
-- The reference workload stays under the hosting target. The workload is defined when
-  phase 1 is planned.
+- The reference workload stays under the hosting target: one user, two cloud projects,
+  three devices, 10,000 records and 5 GiB of files including one 1 GiB file, with a
+  second account syncing during the large transfer.
 
 Phases 2 and 3 get their own acceptance in their tickets.
 
