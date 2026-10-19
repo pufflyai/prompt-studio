@@ -194,7 +194,7 @@ describe("seedDefaultTags", () => {
     ]);
     for (const seeded of results) expect(seeded.find((tag) => tag.id === customized.id)).toEqual(customized);
     expect(await tagsCollection(storage).get(customized.id)).toEqual(customized);
-    expect(await seedDefaultTags(storage)).toEqual(results[0]);
+    expect(sortedBySortOrder(await seedDefaultTags(storage))).toEqual(results[0]);
   });
 
   test("repairs the required handoff option during an incomplete tag seed", async () => {
