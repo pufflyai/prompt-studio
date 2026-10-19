@@ -116,7 +116,7 @@ export const registerGroupedStorageSmokeTests = () => {
             ],
           },
         });
-        expect(stale.status).toBe("conflict");
+        expect(stale).toMatchObject({ status: "conflict", state: "needs-attention" });
         expect((await read(project.id)).caption.value).toBe("First caption");
         await stopProcess(host.child);
         host = await startPackagedServe(root, env);
@@ -150,16 +150,10 @@ export const registerGroupedStorageSmokeTests = () => {
         const later = await command<StorageSaveOutcome>(project.id, "commit", {
           group: {
             operationId: "after-resolution",
-            edits: [
-              {
-                recordId: final.caption.recordId,
-                expectedRevision: final.caption.revision,
-                replace: "Caption after resolution",
-              },
-            ],
+            edits: [{ recordId: final.caption.recordId, replace: "Caption after resolution" }],
           },
         });
-        expect(later.status).toBe("saved-locally");
+        expect(later.state).toBe("saved-locally");
         expect((await read(project.id)).caption.value).toBe("Caption after resolution");
       } finally {
         await stopProcess(host.child);

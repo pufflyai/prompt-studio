@@ -218,3 +218,14 @@ API 0.2 moves `ctx.extensionFiles` from `.pstdio/ext/<publisher>.<name>/` to `.p
 ## Independent panel permissions in API 0.2.1
 
 `ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Published extension header and tab behavior stays compatible until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
+
+## Storage conflict members deprecated in API 0.2.1
+
+Edits from several devices are moving to automatic merging. The storage API stops promising conflicts. These changes are additive and ship in the release after 0.44.0:
+
+- `StorageSaveOutcome` adds `state`: `saved-locally`, `waiting-to-sync`, `synced`, `offline`, or `needs-attention`. `records.commit` and `records.outcome` return it. The host always sets `state`, so a hand-written test double of an outcome must add it.
+- `expectedRevision` on a `records.commit` edit is optional. Without it, the edit applies to the record's current value.
+- `records.conflicts`, `records.inspect`, `records.resolve`, the `branch` argument of `records.read`, the outcome's `status`, `checkpoint`, `conflictId` and `conflictRevision`, and the `StorageConflict`, `StorageConflictInspection` and `StorageResolution` types are deprecated.
+- `storage.assets` no longer documents retained versions or unresolved alternatives.
+
+The next breaking release removes the deprecated members together. See [Deprecated conflict members](../sdk/0004-storage.md#deprecated-conflict-members).

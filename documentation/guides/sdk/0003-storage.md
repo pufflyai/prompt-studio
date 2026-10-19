@@ -1,6 +1,6 @@
 # Save related records
 
-Keep a caller's observed revision and save related changes as one durable group.
+Save related changes as one durable group, then read whether the group has synced.
 
 ## Availability
 
@@ -8,72 +8,68 @@ Keep a caller's observed revision and save related changes as one durable group.
 
 On 0.43.x, save data with `ctx.storage.get`, `set`, `delete`, and `collection`. These calls keep working after the release that adds records. That release marks them deprecated; see [Deprecated structured storage](../../references/sdk/0004-storage.md#deprecated-structured-storage).
 
-## Capture, stage, save
+The outcome `state` field, optional `expectedRevision`, and the deprecation of the conflict members are on `main`. They ship in the release after 0.44.0. On 0.44.0, read `status` and pass `expectedRevision` on every edit.
 
-Read records when opening an edit. Keep those revisions with the draft. Stage any
-new asset before committing the group:
+## Stage, then save
+
+Stage any new asset before committing the group. Every edit in a group applies
+together, or none does:
 
 ```ts
-const note = await ctx.storage.records.read(ctx.storage.records.id("note"));
-const caption = await ctx.storage.records.read(ctx.storage.records.id("caption"));
+const records = ctx.storage.records;
 const operationId = crypto.randomUUID();
 const asset = await ctx.storage.assets.stage({
   operationId: `${operationId}:image`,
   source: selectedImage,
 });
 
-const outcome = await ctx.storage.records.commit({
+const outcome = await records.commit({
   operationId,
   edits: [
     {
-      recordId: note.recordId,
-      expectedRevision: note.revision,
+      recordId: records.id("note"),
       shared: [{ kind: "text.insert", index: 0, text: "A new observation. " }],
       asset,
     },
-    {
-      recordId: caption.recordId,
-      expectedRevision: caption.revision,
-      replace: "Taken during the field visit",
-    },
+    { recordId: records.id("caption"), replace: "Taken during the field visit" },
   ],
 });
 ```
 
-If either record conflicts, the complete alternative stays retained. Neither
-member partially replaces current work. Keep the returned status visible to the
-command caller. A local save is useful without a relay; only `synchronized`
-includes real relay acceptance.
+An edit without `expectedRevision` applies to the record's current value on this
+device. Pass the `revision` from an earlier `read` only when the save must apply to
+exactly what a caller read. Until the deprecated conflict members are removed, a
+revision that no longer matches keeps the group aside and reports `needs-attention`
+when the edit replaces the value, deletes the record, changes its asset, or sets a
+map key that changed. Text and list edits still merge.
 
-For an open webview, return the records and revisions from a read command and send
-them with a save command. Do not reread current values just to replace the draft's
-expected revisions. Two open callers must keep their own observations.
+## Wait for sync
 
-## Resolve a retained group
+`outcome.state` is the save's sync state: `saved-locally`, `waiting-to-sync`,
+`synced`, `offline`, or `needs-attention`. In a project that does not sync,
+`saved-locally` is final. Keep the state visible to the command caller. To wait until a save has
+synced, read it again later:
 
 ```ts
-if (outcome.status === "conflict") {
-  const inspected = await ctx.storage.records.inspect(outcome.conflictId);
-  const resolved = await ctx.storage.records.resolve({
-    operationId: crypto.randomUUID(),
-    conflictId: inspected.conflictId,
-    expectedConflicts: inspected.expectedConflicts,
-    capturedOperationIds: inspected.capturedOperationIds,
-    expectedInputs: inspected.expectedInputs,
-    choose: "local",
-  });
+const latest = await ctx.storage.records.outcome(operationId);
+if (latest?.state === "synced") {
+  // The relay stored the whole group.
 }
 ```
 
-Run this after checking `outcome.status === "conflict"` and choosing the branch.
-Keep the inspection unchanged while a person decides. A stale resolution preserves
-its proposal; inspect again to make a new decision. Edits made after its capture
-remain retained separately.
+## Deprecated conflict members
+
+`records.conflicts`, `records.inspect`, `records.resolve`, the `branch` argument of
+`records.read`, and the outcome's `status`, `checkpoint`, `conflictId` and
+`conflictRevision` fields are deprecated. Edits are moving to automatic merging, so
+there are no conflicts to resolve. Read `state` instead of `status`, and save chosen
+values with `commit`. The next breaking release removes these members together. See
+[Deprecated conflict members](../../references/sdk/0004-storage.md#deprecated-conflict-members).
 
 ## Retry storage, not commands
 
 If a save response is lost, use `outcome(operationId)` or retry that exact storage
-request. Keep its ID, revisions, values, assets, and edit order. Do not retry an
+request. Keep its ID, any revisions, values, assets, and edit order. Do not retry an
 entire command that may already have sent a message, started a process, or changed
 an external service. The host's relay adapter retries immutable stored operations.
 
@@ -87,7 +83,7 @@ do not copy them into product records to make them sync.
 Use `ctx.workspaceFiles` for the active workspace's files and `ctx.packageFiles`
 for shipped code/assets. Extension-owned project drafts and evidence belong under
 the allocated extension directory through `ctx.extensionFiles` or artifact mounts.
-These file APIs do not add their contents to the record journal.
+These file APIs do not add their contents to records.
 
 See the [storage reference](../../references/sdk/0004-storage.md),
 [asset workflow](0002-assets.md), and
