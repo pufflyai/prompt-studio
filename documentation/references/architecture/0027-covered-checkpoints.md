@@ -4,6 +4,10 @@ PS-808 defines protocol 2 checkpoint, coverage, recovery, and retention contract
 Its executable owner is an isolated reference; production adoption belongs to
 PS-776, PS-780, and PS-781. See [ADR 0082](../../adrs/0082-covered-snapshots-and-checkpointed-editing.md).
 
+[PRD 0014](../../requirements/platform/0014-local-first-sync.md) replaces these
+contracts. Production adoption is stopped. This reference describes the code on `main`
+until it is removed.
+
 ## Scope and rollout
 
 The [checkpoint schemas](../../../packages/pstdio-sync-contracts/src/checkpoint.ts)
