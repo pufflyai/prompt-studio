@@ -108,8 +108,9 @@ breaking release:
 | `StorageConflict`, `StorageConflictInspection`, `StorageResolution` | None. |
 
 Until then they keep working. A stale `expectedRevision` still keeps the whole group as
-an alternative instead of applying it when the edit replaces the JSON value, deletes or
-restores the record, changes its asset, or sets a map key that changed. Its outcome has
+an alternative instead of applying it when the edit replaces a JSON value that changed,
+deletes or restores the record, changes an asset that changed, or sets a map key that
+changed. Its outcome has
 `status: "conflict"` and `state: "needs-attention"`. Stale text and list edits, and edits
 to other map keys, still merge. The old `status`
 values map to `state` like this: `saved-locally` to `saved-locally`, `pending` to

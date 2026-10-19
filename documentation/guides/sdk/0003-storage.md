@@ -40,8 +40,8 @@ An edit without `expectedRevision` applies to the record's current value on this
 device. Pass the `revision` from an earlier `read` only when the save must apply to
 exactly what a caller read. Until the deprecated conflict members are removed, a
 revision that no longer matches keeps the group aside and reports `needs-attention`
-when the edit replaces the value, deletes the record, changes its asset, or sets a
-map key that changed. Text and list edits still merge.
+when the edit replaces a value that changed, deletes or restores the record, changes
+an asset that changed, or sets a map key that changed. Text and list edits still merge.
 
 ## Wait for sync
 
