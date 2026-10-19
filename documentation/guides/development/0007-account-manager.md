@@ -4,11 +4,11 @@ The private account manager owns durable account and environment authority separ
 
 ## Boundary
 
-`infra/account-manager/` is a private Bun workspace. `createAccountManager(databaseUrl)` receives a separate manager PostgreSQL connection from the trusted manager process. Run `migrateAccountManager(databaseUrl, migrationsFolder)` with its generated migrations before opening authority operations. The manager and relay use separate databases and roles on the shared PostgreSQL server.
+`services/account-manager/` is a private Bun workspace. `createAccountManager(databaseUrl)` receives a separate manager PostgreSQL connection from the trusted manager process. Run `migrateAccountManager(databaseUrl, migrationsFolder)` with its generated migrations before opening authority operations. The manager and relay use separate databases and roles on the shared PostgreSQL server.
 
 The data owner's lifecycle methods remain internal. `createManagerAuthentication(config)` embeds Better Auth 1.7.10 for Google sign-in, persisted human sessions and signing keys. `createManagerHandler(auth, origin)` serves auth and scoped issuance/management. Never expose private lifecycle methods directly to untrusted bodies or send the manager connection to extensions or native clients. A supplied Google subject or account ID is not permission.
 
-The component implements part of PS-735. The relay verifies the manager's signed access tokens: `bun run --cwd infra/relay test:transport` and `test:isolated` run the relay against the actual manager with fixture keys and an owned HTTPS fixture. Live Google configuration, deployed role/network isolation, backups and production recovery remain separate proof. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
+The component implements part of PS-735. The relay verifies the manager's signed access tokens: `bun run --cwd services/relay test:transport` and `test:isolated` run the relay against the actual manager with fixture keys and an owned HTTPS fixture. Live Google configuration, deployed role/network isolation, backups and production recovery remain separate proof. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
 
 ## Internal operations
 
@@ -48,7 +48,7 @@ Management bodies use the existing registration/replacement/revocation fields wi
 
 The Bun listener requires DATABASE_URL, MANAGER_ORIGIN, RELAY_AUDIENCE, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_LIFETIME_SECONDS, SESSION_UPDATE_AGE_SECONDS and ACCESS_LIFETIME_SECONDS. Lifetimes are positive explicit policy, with update age below session lifetime. Origins use HTTPS. MANAGER_HOST/PORT select the listener; optional paired MANAGER_TLS_CERT/KEY paths supply TLS when it terminates in this process. A trusted HTTPS ingress can terminate TLS instead. Configure Google's callback for the trusted origin's /api/auth/callback/google path.
 
-Build the production image with `docker build -f infra/account-manager/Dockerfile .`. Apply generated migrations through operator tooling first. The slim runtime needs no source mount or dependency install. Never put secrets in command arguments, URLs or logs.
+Build the production image with `docker build -f services/account-manager/Dockerfile .`. Apply generated migrations through operator tooling first. The slim runtime needs no source mount or dependency install. Never put secrets in command arguments, URLs or logs.
 
 The independent verifier receives only issuer, audience and a public JWKS. It imports no manager database or signing configuration. Keep public keys available for all unexpired access they cover. The library persists signing material outside content; deploying or rotating trust is an operator responsibility. See [Google configuration](https://better-auth.com/docs/authentication/google), [JWT/session separation](https://better-auth.com/docs/plugins/jwt) and [Drizzle integration](https://better-auth.com/docs/adapters/drizzle).
 
@@ -72,9 +72,9 @@ From the repository root:
 
 ```sh
 bun install --frozen-lockfile
-bun run --cwd infra/account-manager test:isolated
-bun run --cwd infra/account-manager lint
-bun run --cwd infra/account-manager build
+bun run --cwd services/account-manager test:isolated
+bun run --cwd services/account-manager lint
+bun run --cwd services/account-manager build
 ```
 
 The isolated command starts its own PostgreSQL container, creates distinct manager and relay roles/databases, runs real-store tests, then builds and runs `Dockerfile.smoke`. It checks stable provider mapping with actual Better Auth verification against an owned HTTP key fixture, sessions/logout, renewal/revocation/expiry, scope, recovery and the original authority workload. The Google fixture routes only public-key transport to an owned server; it is not live Google evidence.

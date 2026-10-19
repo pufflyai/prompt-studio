@@ -12,7 +12,7 @@ The account manager is shared across accounts. Its private database and role sha
 
 ## Decision
 
-Keep the private authority owner in `infra/account-manager/`, separate from relay content and local runtime packages. Its lifecycle methods remain private operator APIs. An embedded Better Auth service verifies Google identities and human sessions. Session-authenticated management resolves the library's Google provider subject to the account's canonical issuer/subject, without using email. The caller selects an account; this adds no signup or account-cardinality policy.
+Keep the private authority owner in `services/account-manager/`, separate from relay content and local runtime packages. Its lifecycle methods remain private operator APIs. An embedded Better Auth service verifies Google identities and human sessions. Session-authenticated management resolves the library's Google provider subject to the account's canonical issuer/subject, without using email. The caller selects an account; this adds no signup or account-cardinality policy.
 
 Use Better Auth's MIT-licensed library with PostgreSQL/Drizzle and its persisted JWT keys. Product environment grants remain renewal authority. Current grant/account checks issue finite signed access, capped at grant expiry. The relay receives public verification trust and validates signature, issuer, audience, product token type, finite expiry and account/workbench/environment claims without a manager call or database. Reject generic human tokens as environment access.
 

@@ -8,7 +8,7 @@ services:
   relay:
     build:
       context: ../..
-      dockerfile: infra/relay/Dockerfile
+      dockerfile: services/relay/Dockerfile
       target: runtime
     environment:
       <<: *internal-hosts
@@ -77,7 +77,7 @@ services:
   smoke:
     build:
       context: ../..
-      dockerfile: infra/relay/Dockerfile
+      dockerfile: services/relay/Dockerfile
       target: smoke
     profiles: ["test"]
     environment:
@@ -103,7 +103,7 @@ services:
   tls:
     build:
       context: ../..
-      dockerfile: infra/relay/Dockerfile
+      dockerfile: services/relay/Dockerfile
       target: tls-fixture
     profiles: ["test"]
     volumes:
@@ -114,7 +114,7 @@ services:
   initialize:
     build:
       context: ../..
-      dockerfile: infra/relay/Dockerfile
+      dockerfile: services/relay/Dockerfile
       target: fixture
     profiles: ["test"]
     environment:
@@ -135,7 +135,7 @@ services:
   authority:
     build:
       context: ../..
-      dockerfile: infra/relay/Dockerfile
+      dockerfile: services/relay/Dockerfile
       target: fixture
     command: ["bun", "manager.js"]
     environment:
