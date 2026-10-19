@@ -51,5 +51,8 @@
   "timeline.autoBuild.about": "Auto Build について",
   "timeline.autoBuild.supervisorModel": "スーパーバイザーのモデル",
   "timeline.autoBuild.noMatchingTickets": "現在の対象範囲とフィルターに一致する未完了のチケットはありません。Auto Build を停止して設定を変更するか、一致するチケットを追加してください。",
-  "timeline.autoBuild.starting": "スーパーバイザーの開始を待っています"
+  "timeline.autoBuild.starting": "スーパーバイザーの開始を待っています",
+  "ticketProperties.reviewRequests": "レビュー依頼",
+  "ticketProperties.reviewRequested": "レビュー依頼中",
+  "ticketProperties.reviewAnswered": "レビュー回答済み"
 }

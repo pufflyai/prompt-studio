@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
 import { GraphCard } from "./graph-card";
-import { EditableCardPreview } from "./graph-card.story-fixture";
+import { cardReviewRequest, EditableCardPreview } from "./graph-card.story-fixture";
 
 const row: PlanRow = {
   id: "shared-card",
@@ -61,7 +61,20 @@ export const Selected: Story = { args: { relation: "selected" } };
 export const CustomStatus: Story = {
   args: { row: { ...row, status: { id: "queued", name: "Queued", icon: "flag", color: "purple" } } },
 };
-export const ReviewRequested: Story = { args: { row: { ...row, flags: ["human-needed"], state: "await-input" } } };
+export const ReviewRequested: Story = {
+  args: { row: { ...row, flags: ["human-needed"], state: "await-input", requests: [cardReviewRequest] } },
+};
+export const ReviewAnswered: Story = {
+  args: { row: { ...row, state: "input-received", requests: [{ ...cardReviewRequest, state: "answered" }] } },
+};
+export const AllProperties: Story = {
+  render: (args) => (
+    <EditableCardPreview
+      {...args}
+      displayProperties={["id", "status", "type", "workspace", "needsAttention", "reviewRequests"]}
+    />
+  ),
+};
 export const FullTitle: Story = {
   args: {
     row: {

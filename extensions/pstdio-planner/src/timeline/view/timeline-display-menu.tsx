@@ -3,6 +3,7 @@ import { ScrollArea, Tooltip } from "@pstdio/ui";
 import { useCollectionViewStore } from "@pstdio/ui/collection-view";
 import { type AttributeDescriptor, buildDisplayPropertyOptions } from "@pstdio/ui/kanban-renderer";
 import { Settings2 } from "lucide-react";
+import { useRef } from "react";
 import { timelineInitialState } from "./timeline-query";
 
 interface TimelineDisplayMenuProps {
@@ -14,11 +15,21 @@ export function TimelineDisplayMenu(props: TimelineDisplayMenuProps) {
   const { storageKey, attributes } = props;
   const { settings, setSettings } = useCollectionViewStore(storageKey, timelineInitialState, (state) => state);
   const properties = settings.displayProperties;
+  const triggerRef = useRef<HTMLButtonElement>(null);
   return (
-    <Popover.Root lazyMount unmountOnExit positioning={{ placement: "bottom-end" }}>
+    <Popover.Root
+      lazyMount
+      unmountOnExit
+      positioning={{
+        placement: "bottom-end",
+        strategy: "fixed",
+        offset: { mainAxis: 8 },
+        getAnchorElement: () => triggerRef.current,
+      }}
+    >
       <Tooltip content="Display">
         <Popover.Trigger asChild>
-          <IconButton aria-label="Display settings" variant="ghost" size="2xs">
+          <IconButton ref={triggerRef} aria-label="Display settings" variant="ghost" size="2xs">
             <Settings2 />
           </IconButton>
         </Popover.Trigger>

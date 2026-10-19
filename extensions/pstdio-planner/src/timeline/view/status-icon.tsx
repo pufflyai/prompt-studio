@@ -1,6 +1,6 @@
 import { Box, Icon } from "@chakra-ui/react";
 import { getIconComponent, Tooltip } from "@pstdio/ui";
-import { UserCheck, UserRound } from "lucide-react";
+import { CircleAlert, UserCheck, UserRound } from "lucide-react";
 import type { PlanRow } from "../contracts";
 
 export function StatusIcon(props: { row: PlanRow }) {
@@ -45,6 +45,26 @@ export function ReviewStatusIcon(props: { row: PlanRow }) {
         flexShrink="0"
       >
         <Icon as={pending ? UserRound : UserCheck} boxSize="4" />
+      </Box>
+    </Tooltip>
+  );
+}
+
+export function NeedsAttentionIcon(props: { row: PlanRow }) {
+  const { row } = props;
+  if (row.done || (!row.flags.length && !row.blocks.length)) return null;
+  return (
+    <Tooltip content={row.blockedReason ? `Needs attention · ${row.blockedReason}` : "Needs attention"}>
+      <Box
+        as="span"
+        role="img"
+        aria-label="Needs attention"
+        tabIndex={0}
+        color="orange.fg"
+        display="inline-flex"
+        flexShrink="0"
+      >
+        <Icon as={CircleAlert} boxSize="4" />
       </Box>
     </Tooltip>
   );

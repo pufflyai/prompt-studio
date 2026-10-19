@@ -191513,32 +191513,11 @@
                   "id": "LjKsA",
                   "name": "Visible property toggles",
                   "width": "fill_container",
+                  "layout": "vertical",
                   "gap": 4,
                   "children": [
                     {
                       "id": "C8whb",
-                      "type": "ref",
-                      "ref": "c24zV7",
-                      "name": "ID",
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "xs"
-                      },
-                      "height": 24,
-                      "descendants": {
-                        "DsEVd": {
-                          "enabled": false
-                        },
-                        "Hf4GT": {
-                          "content": "ID"
-                        },
-                        "khvEs": {
-                          "enabled": false
-                        }
-                      }
-                    },
-                    {
-                      "id": "X72gL6",
                       "type": "ref",
                       "ref": "c24zV7",
                       "name": "Status",
@@ -191560,10 +191539,10 @@
                       }
                     },
                     {
-                      "id": "RHvvJ",
+                      "id": "X72gL6",
                       "type": "ref",
                       "ref": "c24zV7",
-                      "name": "Priority",
+                      "name": "Needs attention",
                       "theme": {
                         "btn": "ghost",
                         "size": "xs"
@@ -191574,7 +191553,29 @@
                           "enabled": false
                         },
                         "Hf4GT": {
-                          "content": "Priority"
+                          "content": "Needs attention"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "RHvvJ",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Review requests",
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "height": 24,
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Review requests"
                         },
                         "khvEs": {
                           "enabled": false
@@ -191585,7 +191586,7 @@
                       "id": "a5VqbL",
                       "type": "ref",
                       "ref": "c24zV7",
-                      "name": "Type",
+                      "name": "ID",
                       "theme": {
                         "btn": "ghost",
                         "size": "xs"
@@ -191596,7 +191597,7 @@
                           "enabled": false
                         },
                         "Hf4GT": {
-                          "content": "Type"
+                          "content": "ID"
                         },
                         "khvEs": {
                           "enabled": false

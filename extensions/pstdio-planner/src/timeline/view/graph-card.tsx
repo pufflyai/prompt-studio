@@ -9,10 +9,12 @@ import {
 } from "@pstdio/ui/kanban-renderer";
 import { ShieldCheck } from "lucide-react";
 import type { TicketWorkspaceBadgeItem } from "../../data/mappers";
+import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES } from "../../data/ticket-board";
 import type { PlanRow } from "../contracts";
 import { card } from "./graph-geometry";
 import { graphLayers } from "./graph-layers";
 import type { Relation } from "./plan-view";
+import { NeedsAttentionIcon, ReviewStatusIcon } from "./status-icon";
 import { TicketCardError, type TicketCardInteraction, useTicketCardActions } from "./ticket-card-interaction";
 
 interface GraphCardProps {
@@ -33,11 +35,16 @@ export function GraphCard(props: GraphCardProps) {
   const source = interaction?.rows.get(row.id);
   const menu = useTicketCardActions(interaction, source);
   const fields = interaction?.attributes ?? [];
+  const properties = interaction?.displayProperties ?? DEFAULT_TIMELINE_DISPLAY_PROPERTIES;
   const statusBadges = row.status
     ? [{ attributeId: "status", label: row.status.name, icon: row.status.icon, color: row.status.color }]
     : [];
   const badges = source
-    ? collectDisplayBadges(source, fields, interaction?.displayProperties.filter((id) => id !== "id") ?? [])
+    ? collectDisplayBadges(
+        source,
+        fields,
+        properties.filter((id) => !["id", "needsAttention", "reviewRequests"].includes(id)),
+      )
     : statusBadges;
   const slots = source
     ? fields
@@ -101,7 +108,12 @@ export function GraphCard(props: GraphCardProps) {
           isSelected={relation === "selected"}
           badges={badges}
           onBadgeChange={interaction ? menu.onBadgeChange : undefined}
-          customSlots={[...slots, row.gate ? <GateMark key="gate" /> : null]}
+          customSlots={[
+            ...slots,
+            properties.includes("needsAttention") ? <NeedsAttentionIcon key="attention" row={row} /> : null,
+            properties.includes("reviewRequests") ? <ReviewStatusIcon key="review" row={row} /> : null,
+            row.gate ? <GateMark key="gate" /> : null,
+          ]}
           onClick={activate}
           draggable
           onDragStart={(event) => {

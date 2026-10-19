@@ -56,5 +56,8 @@
   "timeline.autoBuild.about": "À propos d’Auto Build",
   "timeline.autoBuild.supervisorModel": "Modèle du superviseur",
   "timeline.autoBuild.noMatchingTickets": "Aucun ticket inachevé ne correspond au périmètre et aux filtres actuels. Arrêtez Auto Build pour les modifier ou ajoutez des tickets correspondants.",
-  "timeline.autoBuild.starting": "En attente du démarrage du superviseur"
+  "timeline.autoBuild.starting": "En attente du démarrage du superviseur",
+  "ticketProperties.reviewRequests": "Demandes de révision",
+  "ticketProperties.reviewRequested": "Révision demandée",
+  "ticketProperties.reviewAnswered": "Révision répondue"
 }

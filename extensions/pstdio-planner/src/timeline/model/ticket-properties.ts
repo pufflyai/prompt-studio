@@ -57,6 +57,29 @@ export function timelineTicketAttributes(deadlines: readonly Deadline[]) {
       filterable: true,
       displayable: true,
     },
+    {
+      id: "reviewRequests",
+      label: l10n("ticketProperties.reviewRequests", "Review requests"),
+      type: {
+        kind: "enum",
+        options: [
+          {
+            value: "requested",
+            label: l10n("ticketProperties.reviewRequested", "Review requested"),
+            icon: "user-round",
+            color: "orange",
+          },
+          {
+            value: "answered",
+            label: l10n("ticketProperties.reviewAnswered", "Review answered"),
+            icon: "user-check",
+            color: "green",
+          },
+        ],
+      },
+      filterable: true,
+      displayable: true,
+    },
   ];
   return attributes;
 }
@@ -81,10 +104,18 @@ export function timelineTicketProperties(plan: Plan) {
               milestoneDate: deadline?.date ?? null,
               milestoneState,
               needsAttention: !row.done && (row.flags.length > 0 || row.blocks.length > 0) ? "yes" : "no",
+              reviewRequests:
+                row.requestErrors.length > 0 || row.requests.some(({ state }) => state === "open")
+                  ? "requested"
+                  : reviewRequestAnswer(row),
             },
           ] as const,
       );
     }),
   );
   return { attributes, values };
+}
+
+function reviewRequestAnswer(row: { requests: { state: string }[] }) {
+  return row.requests.some(({ state }) => state === "answered") ? "answered" : "";
 }

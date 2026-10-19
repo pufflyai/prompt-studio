@@ -6,10 +6,31 @@ import {
 } from "@pstdio/sdk/extensions";
 import type { ComponentProps } from "react";
 import { useState } from "react";
+import type { ReviewRequestView } from "../../data/review-request-types";
+import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES } from "../../data/ticket-board";
 import { GraphCard } from "./graph-card";
 import type { PlanClient } from "./use-plan";
 
-export function EditableCardPreview(props: ComponentProps<typeof GraphCard>) {
+export const cardReviewRequest: ReviewRequestView = {
+  id: "preview-review",
+  ticketId: "shared-card",
+  title: "Check the preview",
+  instructions: "Confirm the result.",
+  request: { kind: "task" },
+  requestedAt: "2026-10-20T09:00:00.000Z",
+  requestedBy: { type: "agent", id: "agent", displayName: "Agent" },
+  context: { reason: null, workspaceId: null, attemptRevision: null, sessionId: "chat", relatedSessionId: null },
+  state: "open",
+  outcome: null,
+  outcomeText: null,
+};
+
+interface EditableCardPreviewProps extends ComponentProps<typeof GraphCard> {
+  displayProperties?: string[];
+}
+
+export function EditableCardPreview(props: EditableCardPreviewProps) {
+  const { displayProperties = DEFAULT_TIMELINE_DISPLAY_PROPERTIES, ...cardProps } = props;
   const [values, setValues] = useState<Record<string, unknown>>({ status: props.row.status?.id, type: "feature" });
   const [host] = useState<GuestHost>(() => ({
     call: (async (method, request) => {
@@ -40,7 +61,7 @@ export function EditableCardPreview(props: ComponentProps<typeof GraphCard>) {
   };
   return (
     <GraphCard
-      {...props}
+      {...cardProps}
       interaction={{
         host,
         client: createWebviewClient(host) as PlanClient,
@@ -80,7 +101,7 @@ export function EditableCardPreview(props: ComponentProps<typeof GraphCard>) {
             },
           },
         ],
-        displayProperties: ["id", "status", "type", "workspace"],
+        displayProperties,
       }}
     />
   );

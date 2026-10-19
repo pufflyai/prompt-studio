@@ -26,7 +26,7 @@ import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
 import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
-import { ticketBoard, timelineBoard } from "./data/ticket-board";
+import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES, ticketBoard, timelineBoard } from "./data/ticket-board";
 import { ticketActivationTarget, ticketDocumentPage } from "./data/ticket-page-target";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
@@ -186,7 +186,11 @@ export const createPlannerUi = (baseUrl: string) => {
     id: timelineBoard.id,
     title: l10n("timeline.page.title", "Project Timeline"),
     icon: "chart-no-axes-gantt",
-    body: { ...tickets.body, query: timelineViewSchema },
+    body: {
+      ...tickets.body,
+      query: timelineViewSchema,
+      defaultSettings: { ...tickets.body.defaultSettings, displayProperties: DEFAULT_TIMELINE_DISPLAY_PROPERTIES },
+    },
   });
   const editor = defineView({
     id: "ticket-editor",

@@ -51,5 +51,8 @@
   "timeline.autoBuild.about": "Acerca de Auto Build",
   "timeline.autoBuild.supervisorModel": "Modelo del supervisor",
   "timeline.autoBuild.noMatchingTickets": "No hay tickets sin terminar que coincidan con el alcance y los filtros actuales. Detén Auto Build para cambiarlos o añade tickets que coincidan.",
-  "timeline.autoBuild.starting": "Esperando para iniciar el supervisor"
+  "timeline.autoBuild.starting": "Esperando para iniciar el supervisor",
+  "ticketProperties.reviewRequests": "Solicitudes de revisión",
+  "ticketProperties.reviewRequested": "Revisión solicitada",
+  "ticketProperties.reviewAnswered": "Revisión respondida"
 }

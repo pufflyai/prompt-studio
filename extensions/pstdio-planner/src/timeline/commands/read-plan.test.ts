@@ -101,7 +101,12 @@ test("the plan reads one ticket snapshot without loading workspace session histo
   expect(plan.ticketRows).toContainEqual(
     expect.objectContaining({
       id: ticket.id,
-      resource: expect.objectContaining({ type: "ticket", id: ticket.id, projectId: ctx.projectId }),
+      resource: expect.objectContaining({
+        type: "ticket",
+        id: ticket.id,
+        projectId: ctx.projectId,
+        extensionId: ctx.extensionId,
+      }),
     }),
   );
   expect(plan.sections.flatMap(({ rows }) => rows).find(({ id }) => id === ticket.id)?.target.resource).toEqual(
@@ -268,6 +273,9 @@ test("answering one request keeps another open request awaiting input", async ()
   const sessions = { create: async () => ({ type: "session", id: "chat", title: "Chat", status: "in_progress" }) };
   const [ctx] = makeCommandArgs({ storage, params: {}, overrides: { sessions: sessions as never } });
   const ticket = await createTicketCommand.run(ctx, { content: "# Mixed requests", statusId: "in-review" });
+  const reviewState = async () =>
+    (await readPlanCommand.run(ctx, {})).ticketRows.find((row) => row.id === ticket.id)?.attributes.reviewRequests;
+  expect(await reviewState()).toBe("");
   const handoff = {
     kind: "decision",
     questions: [{ id: "result", label: "Result", required: true, input: { kind: "text" } }],
@@ -291,10 +299,12 @@ test("answering one request keeps another open request awaiting input", async ()
   const row = plan.sections.flatMap((section) => section.rows).find((entry) => entry.id === ticket.id);
   expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["human-needed"]) });
   expect(row?.requests.map((request) => request.state).sort()).toEqual(["answered", "open"]);
+  expect(await reviewState()).toBe("requested");
   expect(plan.sections.find((section) => section.rows.includes(row!))?.counts.humanNeeded).toBe(1);
 
   const handoffId = row?.requests.find((request) => request.state === "open")?.id as string;
   await reviewCommand.run(ctx, { requestId: handoffId, response: { answers: { result: "Merged A1." } } });
+  expect(await reviewState()).toBe("answered");
   const stateWith = async (statusId: string) => {
     await putTicket(storage, { ...(await ticketsCollection(storage).get(ticket.id))!, statusId });
     const rows = (await readPlanCommand.run(ctx, {})).sections.flatMap((section) => section.rows);

@@ -66,7 +66,11 @@ export const readPlanCommand = defineCommand({
     );
     const ticketRows = active.map((ticket) => {
       const row = toRow(ticket);
-      return { ...row, attributes: { ...row.attributes, ...properties.values.get(ticket.id) } };
+      return {
+        ...row,
+        resource: { ...row.resource, extensionId: ctx.extensionId },
+        attributes: { ...row.attributes, ...properties.values.get(ticket.id) },
+      };
     });
     const resources = new Map(ticketRows.map(({ id, resource }) => [id, resource]));
     return {

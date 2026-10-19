@@ -216,11 +216,17 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
     .flatMap((section: { rows: Array<{ id: string }> }) => section.rows)
     .find((entry: { id: string }) => entry.id === ticket.id);
   expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["human-needed"]) });
+  expect(mixed.ticketRows).toContainEqual(
+    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ reviewRequests: "requested" }) }),
+  );
   expect(await execute("review-requests.list", { ticket: ticket.id, openOnly: true })).toMatchObject({
     requests: [{ id: handoff.id }],
   });
 
   await execute("review-requests.cancel", { requestId: handoff.id, reason: "Superseded by a new revision." });
+  expect((await execute("timeline.plan.read", {})).ticketRows).toContainEqual(
+    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ reviewRequests: "answered" }) }),
+  );
   const settled = await execute("review-requests.read", { requestId: decision.id });
   expect(settled).toMatchObject({ state: "answered", outcomeText: "Platforms: macOS, Windows" });
   const [stored] = (await execute("read-tickets", {})).filter((entry: { id: string }) => entry.id === ticket.id);

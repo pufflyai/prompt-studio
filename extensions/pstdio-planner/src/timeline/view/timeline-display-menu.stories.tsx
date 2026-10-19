@@ -9,6 +9,8 @@ const meta: Meta<typeof TimelineDisplayMenu> = {
     attributes: [
       { id: "id", label: "ID", type: { kind: "string" }, displayable: true },
       { id: "status", label: "Status", type: { kind: "enum", options: [] }, displayable: true },
+      { id: "needsAttention", label: "Needs attention", type: { kind: "enum", options: [] }, displayable: true },
+      { id: "reviewRequests", label: "Review requests", type: { kind: "enum", options: [] }, displayable: true },
       { id: "priority", label: "Priority", type: { kind: "enum", options: [] }, displayable: true },
       { id: "type", label: "Type", type: { kind: "enum", options: [] }, displayable: true },
       { id: "track", label: "Track", type: { kind: "enum", options: [] }, displayable: true },

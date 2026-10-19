@@ -25,30 +25,34 @@ export function useTicketCardActions(
   useEffect(() => {
     let active = true;
     if (!host || !resource) return;
-    void host
-      .call("resources.actions", { operation: "list", resource })
-      .then((actions) => {
-        if (!active) return;
-        setActions(
-          actions.map((action) => ({
-            ...action,
-            icon: action.icon ? <Icon as={getIconComponent(action.icon)} boxSize="4" /> : undefined,
-            onClick: async () => {
-              setError(undefined);
-              try {
-                await host.call("resources.actions", { operation: "execute", resource, key: action.key });
-              } catch (reason) {
-                setError(String(reason));
-              }
-            },
-          })),
-        );
-      })
-      .catch((reason) => {
-        if (active) setError(String(reason));
-      });
+    const readActions = () =>
+      host
+        .call("resources.actions", { operation: "list", resource })
+        .then((actions) => {
+          if (!active) return;
+          setActions(
+            actions.map((action) => ({
+              ...action,
+              icon: action.icon ? <Icon as={getIconComponent(action.icon)} boxSize="4" /> : undefined,
+              onClick: async () => {
+                setError(undefined);
+                try {
+                  await host.call("resources.actions", { operation: "execute", resource, key: action.key });
+                } catch (reason) {
+                  setError(String(reason));
+                }
+              },
+            })),
+          );
+        })
+        .catch((reason) => {
+          if (active) setError(String(reason));
+        });
+    const stop = host.onEvent("resources.actions", () => void readActions());
+    void readActions();
     return () => {
       active = false;
+      stop();
     };
   }, [host, resource]);
   const onBadgeChange = async (attributeId: string, value: unknown) => {
