@@ -58,9 +58,13 @@ keeps the conflict. Explicit human and agent resolutions remain available.
 
 Restoring an older relay preserves stable workbench identities. Returning clients
 first recover newer accepted work and its ancestry, then submit pending work.
-Compaction cannot make a missing receipt look like restore loss. Keep receipt
-identity, fingerprints, captured ancestry, tombstones, checkpoint lineage, and
-recoverable payloads. Production retention and compaction belong to later work.
+Compaction cannot make a retired receipt look like restore loss. PS-808 defines
+[covered checkpoints](../../references/architecture/0027-covered-checkpoints.md):
+active-generation outcomes remain exact, while covered history is replaced by
+writer floors and explicit retained branches. Every enrolled environment and an
+independent verified backup must cover a cut before retirement. Offline environments,
+active recovery and unresolved ancestry block advancement. Production adoption,
+automatic compaction, and backup scheduling belong to later work.
 Content recovery cannot restore account credentials or grants.
 
 ## Acceptance and evidence
@@ -82,6 +86,38 @@ It ports the grouped staging, ancestry and restore cases inspected in WS-272,
 commit `565ceab57`, without importing its services or deployment setup. The original
 20-test run and the failing restore/dependency logs are attached to PS-735.
 This child adds wire validation, map/list, third-client and compatibility evidence.
+
+## Checkpoint and retention acceptance
+
+PS-808 adds strict protocol 2 contracts and an isolated executable reference. It
+precedes production host editing (PS-776), backup capture (PS-780), automatic
+compaction (PS-781), and restore (PS-782). These contracts do not claim that those
+production owners are complete.
+
+- Freeze one recovery revision; capture unchanged extension save-handler mutations,
+  stage complete bytes, and publish them with the document delta once. A stale
+  observed revision preserves the whole alternative.
+- Acknowledge local edits only after durable recovery-file replacement. Live relay
+  messages do not imply durable acceptance. Later edits survive an older checkpoint.
+- Checkpoint every five minutes, dirty close, explicit Save, and graceful shutdown.
+- Require scoped authenticated environment coverage and verified independent backup
+  coverage. Preserve pending/conflict ancestry and report concrete cut blockers.
+- Bound settled receipts with writer floors and fenced stream generations. Reject
+  changed current identities and preserve retired submissions as recovery proposals.
+- Coordinate all writers before publishing one shared fresh document seed. Measure
+  real CRDT structures across insert/delete and session cycles.
+- Recheck live roots and publication/capture pins at deletion. Restore verified copies
+  without the live bucket into a fresh epoch. Preserve newer local content even when
+  its covered operation bodies are gone; report unavailable recovery bytes honestly.
+- A new enrollment downloads current and explicit recovery/conflict asset closure.
+  Retained independent backups and unresolved/offline work are separate storage costs.
+- Replace the alpha format directly, without migration, mixed-client support, or
+  fallback per-pause durable saves. Keep the fixed workload, quotas and time limits.
+
+The default isolated conformance command runs the checkpoint/coverage and POSIX
+recovery reference. The separate handler entry runs actual Notes and Planner save
+handlers against staging ports and a real PostgreSQL atomic publication. Commands
+and proof limits are in the [contract reference](../../references/architecture/0027-covered-checkpoints.md#executable-validation).
 
 ## Delivery record
 

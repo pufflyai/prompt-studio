@@ -18,7 +18,7 @@ export const emptySnapshot = (scope: Scope): Snapshot => ({
   publishedRevision: "published-1",
 });
 
-function recordOutcome(state: Snapshot, mutation: Mutation, staged: Awaited<ReturnType<typeof stage>>) {
+export function recordOutcome(state: Snapshot, mutation: Mutation, staged: Awaited<ReturnType<typeof stage>>) {
   for (const conflict of Object.values(state.conflicts)) {
     if (!conflict.resolvedBy && mutation.changes.some((change) => conflict.recordIds.includes(change.recordId)))
       conflict.revision++;
