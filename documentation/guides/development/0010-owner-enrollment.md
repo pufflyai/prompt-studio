@@ -24,6 +24,8 @@ An existing enrollment probes current renewal authority. Only explicit denial pe
 
 Authenticated host APIs live under `/v1/account`. `GET /v1/account/connections` returns safe enrollment metadata. `PUT /v1/projects/:id/enrollment` enrolls a locally created or bound project. Owner sessions and environment grants are never returned to callers or emitted as extension events.
 
+The public SDK `/client` account methods are additive API changes. API `0.2.1` records that step under [API versioning](../../references/extensions/0014-api-versioning.md#public-sdk-subpaths). Existing `^0.2.0` extension ranges still accept this version; no manifest range changes are needed.
+
 The account service provides `GET/POST /v1/owner/accounts`, `GET /v1/owner/configuration`, `GET /v1/accounts/:accountId/workbenches`, and existing environment registration/replacement/revocation routes. Current Better Auth sessions and account ownership guard management. Native requests use the library's bearer session support; renewal grants remain separate.
 
 The browser bridge uses Better Auth's [single-use token plugin](https://better-auth.com/docs/plugins/one-time-token) and [bearer session plugin](https://better-auth.com/docs/plugins/bearer). It adds no auth provider or hosted execution service.
