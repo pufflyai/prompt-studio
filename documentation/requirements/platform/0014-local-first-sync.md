@@ -14,7 +14,9 @@ project content.
 
 This fits the [mission](../../../MISSION.md): extensions own their data and edits, and
 the platform owns storage, sync and recovery. Extensions use the normal storage, file
-and editor APIs. They never handle encryption, merging or relay traffic.
+and editor APIs. They never handle encryption, merging or relay traffic, and they never
+write merge rules: data merges by its shape, and core provides record IDs, resource
+numbers and hand-arranged order.
 
 ## Why the earlier design is replaced
 
@@ -48,22 +50,55 @@ anything.
 
 - R1. Every device keeps a full local copy of every cloud project it can access and of
   its user's personal spaces, including file contents. It works fully offline.
-- R2. Clients merge changes with the CRDT. Text merges character by character. List
-  items merge. Each top-level field of a record merges on its own. When two edits to the
-  same field happen without either seeing the other, a fixed rule picks one. The rule
-  does not use clocks, so it gives the same result on every device. If an edit was made
-  after seeing another, the later edit wins. The relay never picks a winner.
+- R2. Clients merge changes with the CRDT, following the shape of the data. Extensions
+  do not declare merge rules, and a save does not need to say what changed: the client
+  compares the saved value with the current one.
+  - Objects merge key by key, at every depth.
+  - Lists merge item by item. Items that a device adds or removes stay added or
+    removed. A list of distinct values never gains a duplicate, and a moved item ends in
+    one place. List items that are objects with an `id` are matched by that ID, and
+    their fields merge like any object.
+  - A string merges character by character once it contains a line break. Files merge
+    the same way.
+  - Any other value, such as a number, a boolean or a single-line string, is replaced
+    as a whole.
+
+  When two edits to the same value happen without either seeing the other, a fixed rule
+  picks one. The rule does not use clocks, so it gives the same result on every device.
+  If an edit was made after seeing another, the later edit wins. The relay never picks a
+  winner. The only shape rule for authors: a setting that holds one value, such as a
+  single-select tag, is its own field, not an item in a list.
 - R3. The relay is never the source of truth. If the relay loses its data, any device
   with a full copy can upload it again.
 - R4. A change that writes several records or files together is delivered and applied
   as one unit on every client. A client never shows half of it.
-- R5. Merging does not keep rules that span records. Two offline edits can move the same
-  item twice or create two items with the same name or number. Extensions that need
-  unique or sequential values must handle duplicates. See
-  [open questions](#open-questions).
+- R5. Merging cannot keep rules that span records, such as "only one ticket is in
+  progress". Two offline edits can break such a rule, and the extension shows or repairs
+  the result. Unique resource numbers, record IDs and hand-arranged order do not fall
+  under this rule: core provides them (R49 to R51).
 - R6. A save is durable on the local device before the product reports it as saved.
 - R7. The product shows the sync state of a cloud project: saved locally, waiting to
   sync, synced, offline, or a problem that needs attention.
+
+### Core provides what merging cannot
+
+- R49. Core owns the number of every resource whose kind declares a prefix, such as
+  PS-12 or RP-4. `resources.allocate` hands out numbers on each device. When two devices
+  hand out the same number offline, core keeps it on the resource whose ID sorts first
+  and gives the other the next free number. The rule uses IDs, not clocks. The old
+  number stays an alias, so links, branch names and agent references still open the
+  resource; an alias shared by two resources shows both. Extensions read the current
+  number from core and do not keep their own copy.
+- R50. Extensions create record IDs with a core function. Outside a data migration it
+  returns a new random ID. Inside a data migration it derives the ID from the migration
+  version and a key the extension passes, such as the ID of the source record, so two
+  devices that run the same migration create the same records.
+- R51. Core provides order positions for lists that people arrange by hand. A position
+  can be created between any two others, is unique to the device that created it, and
+  never needs rebalancing. Two devices that move items at the same time end with the
+  same order, with every item once.
+- R52. The SDK lets extension authors test their data on two simulated devices that edit
+  offline and then merge. It reports which concurrent edits replaced each other.
 
 ### The relay cannot read project data
 
@@ -172,9 +207,10 @@ anything.
 - R43. The extensions a cloud project uses, with their versions, sync with the project,
   so every device runs the same code for it. Local development changes to extension
   code stay local.
-- R44. Extension data migrations give the same result when two devices run them. A
-  device with an older version of an extension can read that extension's data but
-  cannot change it until it updates.
+- R44. Extension data migrations give the same result when two devices run them. Records
+  a migration creates get their IDs from R50, so both devices create the same records
+  instead of duplicates. A device with an older version of an extension can read that
+  extension's data but cannot change it until it updates.
 - R45. Each automation is assigned to one device and runs only there. It never moves to
   another device.
 
@@ -193,7 +229,7 @@ anything.
 
 | Phase | Includes | Requirements |
 | --- | --- | --- |
-| 1. One user, many devices | Encrypted CRDT sync of project data and files, latest state backup, Google login connects everything, device list, sync state, extension and automation sync, reset recovery | R1 to R31, R34, R35, R37 (devices), R43 to R48 |
+| 1. One user, many devices | Encrypted CRDT sync of project data and files, latest state backup, Google login connects everything, device list, sync state, extension and automation sync, reset recovery | R1 to R31, R34, R35, R37 (devices), R43 to R52 |
 | 2. Sessions follow you | Personal spaces, session and transcript sync, remote commands, cloud devices | R32, R33, R38 to R42 |
 | 3. Teams | Team accounts, members, per-project membership, member removal | R36, R37 (members) |
 
@@ -223,7 +259,10 @@ Phase 1 builds the project and personal key split (R13) from the start, so phase
 | Relay transport | Authenticated HTTP and WebSocket subscriptions | Keep and simplify for encrypted updates and live messages. |
 | Protocol (`packages/pstdio-sync-contracts`) | Versioned groups, parents, receipts, covered checkpoints (PS-808) | Replace with a small protocol for encrypted updates, latest states, blobs and live messages. |
 | Client sync (`packages/pstdio-sync`) | Journal of grouped changes, recovery proofs, snapshot fetch | Replace with a CRDT document store plus encryption and relay transport. |
-| Local storage (`packages/pstdio-db/src/services/extension-storage/`) | Grouped record journal, accepted state, conflict branches and data migrations | Replace the journal and conflict branches with CRDT documents. Keep data migrations and make them repeatable (R44). |
+| Local storage (`packages/pstdio-db/src/services/extension-storage/`) | Grouped record journal, accepted state, conflict branches and data migrations | Replace the journal and conflict branches with CRDT documents that merge by shape (R2). Keep data migrations and make them repeatable (R44). |
+| Resource numbers (`resources.allocate`, `extension_resource_sequences`) | A local counter per project and resource kind. Planner and Reports store their own copy of each number. | Keep the API. Repair duplicate numbers after merges, keep old numbers as aliases, and make core the only owner of the current number (R49). |
+| Record IDs | Planner, Reports, Notes and Artifacts call `crypto.randomUUID()` themselves | Add a core ID function that is deterministic inside data migrations (R50). |
+| Hand-arranged order | Planner stores numeric positions and rebalances them when gaps run out | Add core order positions (R51). |
 | Public storage API (`storage.records`, `storage.assets`) | Released in 0.44 | Breaking change, see below. |
 | Local identity | One environment ID per runtime | Keep. The environment ID becomes the device ID on login. |
 | Redacted failure reporting (PS-785) | Merged | Keep (R11). |
@@ -247,6 +286,11 @@ documented runtime behavior is a breaking change. Plan it as one breaking step:
 Add the new shapes next to the old ones, mark the old ones `@deprecated` with their
 replacement, and remove them together in the next breaking release.
 
+The core functions from R49 to R52 are additions: the ID function, order positions, a
+way to read a resource's current number and aliases, and the SDK's two-device test
+helper. They ship next to the deprecations, in a release that does not break existing
+extensions.
+
 ### Documents that change
 
 - PRD 0007 is deleted. This PRD replaces it.
@@ -265,6 +309,14 @@ Phase 1 is done when:
   device ends with the same content for Notes, Artifacts, Planner and an unrelated
   extension. No extension source contains sync, merge or encryption code.
 - Two devices edit the same note offline and both edits survive the merge.
+- Two devices edit different fields, nested keys and list items of the same record
+  offline, and every edit survives the merge.
+- Two devices create resources of the same kind offline. After the merge every resource
+  has a unique number, the same on both devices, and its old number still opens it.
+- Two devices run the same data migration offline and end with the same records,
+  without duplicates.
+- Two devices move the same cards offline and end with the same order, with every card
+  once.
 - A multi-record change appears completely or not at all on every device.
 - A device that missed several latest-state replacements catches up and keeps its own
   offline edits.
@@ -287,7 +339,7 @@ Phases 2 and 3 get their own acceptance in their tickets.
 These defaults were chosen on 2026-10-19 so the phase tickets could be refined. The owner can change them.
 
 - A record deleted on one device while another device edits it stays deleted.
-- Planner renumbers duplicate ticket numbers after offline edits, using a rule based on ticket IDs, not clocks (PS-830).
+- Core renumbers duplicate resource numbers after offline edits (R49). The resource whose ID sorts first keeps the number, and the other gets the next free number and keeps the old one as an alias. Planner and Reports only read the current number from core.
 - The grace period for previous latest states and unused blobs is 7 days, set by the operator.
 - A device uploads a new latest state when the updates after the current one exceed 1 MiB or 1,000 updates.
 - A cloud project's data downloads without a local folder. The device asks for a folder, and offers to clone the project's git remote, the first time something needs files.
