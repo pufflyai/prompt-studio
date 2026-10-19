@@ -150,25 +150,22 @@ export const registerNativeRelaySmokeTests = () => {
         peer = createNativeRelayPeer(snapshot, bytes, (operationId) => {
           recovered = operationId === "remote-save";
         });
-        const configPath = join(root, "relay.json");
+        const accountPath = join(root, "native-account.json");
         writeFileSync(
-          configPath,
+          accountPath,
           JSON.stringify({
-            connections: [
-              {
-                accountId: scope.accountId,
-                workbenchId: scope.workbenchId,
-                environmentId: identity.environmentId,
-                managerOrigin: peer.url.origin,
-                relayOrigin: peer.url.origin,
-                renewalGrant: "owned-renewal-fixture",
-              },
-            ],
+            login: {
+              accountId: scope.accountId,
+              deviceId: identity.environmentId,
+              managerOrigin: peer.url.origin,
+              relayOrigin: peer.url.origin,
+              token: "owned-renewal-fixture",
+            },
           }),
           { mode: 0o600 },
         );
         await stopProcess(host.child);
-        host = await startPackagedServe(root, { ...env, PSTDIO_RELAY_CONFIG_FILE: configPath });
+        host = await startPackagedServe(root, { ...env, PSTDIO_ACCOUNT_FILE: accountPath });
         while ((await read(project.id)).value !== "From the native connection") await Bun.sleep(20);
         expect((await read(project.id)).value).toBe("From the native connection");
         const filesResponse = await post(
@@ -194,7 +191,7 @@ export const registerNativeRelaySmokeTests = () => {
           receipts: {},
           conflicts: {},
         });
-        host = await startPackagedServe(root, { ...env, PSTDIO_RELAY_CONFIG_FILE: configPath });
+        host = await startPackagedServe(root, { ...env, PSTDIO_ACCOUNT_FILE: accountPath });
         while (!recovered) await Bun.sleep(20);
         expect((await read(project.id)).value).toBe("From the native connection");
         await stopProcess(host.child);

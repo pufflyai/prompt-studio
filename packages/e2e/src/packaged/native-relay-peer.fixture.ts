@@ -64,6 +64,11 @@ export const createNativeRelayPeer = (
     async fetch(request, server) {
       const path = new URL(request.url).pathname;
       if (path === "/v1/environment-access") return environmentAccess(request);
+      // The device's account has one cloud project: the snapshot's workbench.
+      if (path === "/v1/workbenches")
+        return request.headers.get("authorization") === "Bearer owned-renewal-fixture"
+          ? Response.json([{ workbenchId: snapshot.scope.workbenchId }])
+          : new Response(null, { status: 401 });
       if (request.headers.get("authorization") !== "Bearer owned-access-fixture")
         return new Response(null, { status: 401 });
       const route = relayRoute(path);

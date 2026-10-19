@@ -1,54 +1,45 @@
 import type { RequestFn } from "./request";
 
-export interface WorkbenchEnrollment {
-  accountId: string;
-  workbenchId: string;
-  environmentId: string;
+/** This device's cloud login. The device credential stays in the native host. */
+export interface DeviceLogin {
   managerOrigin: string;
   relayOrigin: string;
-}
-export interface AccountSession {
-  user: { id: string; email: string; name: string };
-  session: { expiresAt: string };
-  accounts: { accountId: string }[];
-  connections: WorkbenchEnrollment[];
-}
-export interface OwnerEnvironment {
-  id: string;
   accountId: string;
-  workbenchId: string;
-  environmentId: string;
-  expiresAt: string;
-  revokedAt: string | null;
+  deviceId: string;
 }
+export interface AccountStatus {
+  login: DeviceLogin | null;
+  /** Cloud projects of the account. This device syncs the ones that exist on it. */
+  cloudProjects: string[];
+}
+export interface AccountDevice {
+  id: string;
+  name: string;
+  platform: string;
+  createdAt: string;
+  lastSeenAt: string;
+  /** True for the device that answered the request. */
+  current: boolean;
+}
+type Ok = { ok: boolean };
+
 export const createAccountClient = (request: RequestFn) => {
-  const query = (managerOrigin: string) => `?${new URLSearchParams({ managerOrigin })}`;
-  const account = (accountId: string) => `/v1/account/accounts/${encodeURIComponent(accountId)}`;
+  const device = (id: string) => `/v1/account/devices/${encodeURIComponent(id)}`;
+  const project = (id: string) => `/v1/account/projects/${encodeURIComponent(id)}`;
   return {
     login: (managerOrigin: string) =>
       request<{ id: string; url: string }>("/v1/account/login", { method: "POST", body: { managerOrigin } }),
     loginStatus: (id: string) =>
       request<{ status: "pending" | "complete" | "failed" }>(`/v1/account/login/${encodeURIComponent(id)}`),
-    inspect: (managerOrigin: string) => request<AccountSession>(`/v1/account${query(managerOrigin)}`),
-    signOut: (managerOrigin: string) =>
-      request<{ ok: boolean }>("/v1/account/sign-out", { method: "POST", body: { managerOrigin } }),
-    create: (managerOrigin: string) =>
-      request<{ accountId: string }>("/v1/account/accounts", { method: "POST", body: { managerOrigin } }),
-    workbenches: (managerOrigin: string, accountId: string) =>
-      request<{ workbenchId: string }[]>(`${account(accountId)}/workbenches${query(managerOrigin)}`),
-    environments: (managerOrigin: string, accountId: string) =>
-      request<OwnerEnvironment[]>(`${account(accountId)}/environments${query(managerOrigin)}`),
-    revoke: (managerOrigin: string, accountId: string, environmentId: string) =>
-      request<{ ok: boolean }>(`${account(accountId)}/environments/${encodeURIComponent(environmentId)}/revoke`, {
-        method: "POST",
-        body: { managerOrigin },
-      }),
-    connections: () => request<WorkbenchEnrollment[]>("/v1/account/connections"),
-    connect: (workbenchId: string, input: { managerOrigin: string; accountId: string; expiresAt: string }) =>
-      request<{ accountId: string; workbenchId: string; environmentId: string; connected: boolean }>(
-        `/v1/projects/${encodeURIComponent(workbenchId)}/enrollment`,
-        { method: "PUT", body: input },
-      ),
+    status: () => request<AccountStatus>("/v1/account"),
+    logout: () => request<Ok>("/v1/account/logout", { method: "POST" }),
+    devices: () => request<AccountDevice[]>("/v1/account/devices"),
+    renameDevice: (id: string, name: string) => request<Ok>(`${device(id)}/rename`, { method: "POST", body: { name } }),
+    removeDevice: (id: string) => request<Ok>(`${device(id)}/remove`, { method: "POST" }),
+    /** Makes a local project a cloud project of the logged-in account. */
+    syncProject: (projectId: string) => request<Ok>(project(projectId), { method: "PUT" }),
+    /** Stops syncing a cloud project. Every device keeps its local copy. */
+    stopProjectSync: (projectId: string) => request<Ok>(project(projectId), { method: "DELETE" }),
   };
 };
 export type AccountClient = ReturnType<typeof createAccountClient>;

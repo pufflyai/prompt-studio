@@ -3,4 +3,4 @@
 "@pstdio/sdk": minor
 ---
 
-Add native Google owner sign-in and persistent multi-workbench enrollment commands and host APIs.
+Log in once with Google to make a computer a device that syncs every cloud project, and manage devices with `pst devices`.
