@@ -15342,6 +15342,25 @@
                       "alignItems": "center",
                       "children": [
                         {
+                          "id": "kUCSG",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Sidenav control",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "width": 24,
+                          "height": 24,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "panel-left",
+                              "width": 12,
+                              "height": 12
+                            }
+                          }
+                        },
+                        {
                           "id": "LLPuw",
                           "type": "ref",
                           "ref": "nvvgg",
@@ -15371,7 +15390,7 @@
                           },
                           "width": 24,
                           "height": 24,
-                          "x": 42,
+                          "x": 74,
                           "y": 8,
                           "rotation": 0,
                           "descendants": {
@@ -15512,25 +15531,6 @@
                           "name": "Nav Chrome spacer",
                           "width": "fill_container",
                           "height": 1
-                        },
-                        {
-                          "id": "kUCSG",
-                          "type": "ref",
-                          "ref": "nvvgg",
-                          "name": "Sidenav control",
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          },
-                          "width": 24,
-                          "height": 24,
-                          "descendants": {
-                            "k7mgm": {
-                              "icon": "panel-left",
-                              "width": 12,
-                              "height": 12
-                            }
-                          }
                         },
                         {
                           "id": "q7B3uG",
@@ -67216,6 +67216,12 @@
                           "name": "Nav Chrome",
                           "width": "fill_container",
                           "descendants": {
+                            "kUCSG": {
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "theme": {
                                 "btn": "ghost",
@@ -67269,12 +67275,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -69889,6 +69889,12 @@
                   "name": "Nav Chrome · ownership strip",
                   "width": "fill_container",
                   "descendants": {
+                    "kUCSG": {
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      }
+                    },
                     "LLPuw": {
                       "theme": {
                         "btn": "ghost",
@@ -69942,12 +69948,6 @@
                       "theme": {
                         "btn": "ghost",
                         "size": "xs"
-                      }
-                    },
-                    "kUCSG": {
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
                       }
                     },
                     "q7B3uG": {
@@ -70136,6 +70136,12 @@
                       "name": "Nav Chrome · Panels open",
                       "width": "fill_container",
                       "descendants": {
+                        "kUCSG": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
                         "LLPuw": {
                           "theme": {
                             "btn": "ghost",
@@ -70189,12 +70195,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         },
                         "q7B3uG": {
@@ -70288,6 +70288,15 @@
                       "name": "Nav Chrome · Recovery state",
                       "width": "fill_container",
                       "descendants": {
+                        "kUCSG": {
+                          "enabled": false,
+                          "width": 1,
+                          "height": 1,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
                         "LLPuw": {
                           "theme": {
                             "btn": "ghost",
@@ -70346,15 +70355,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "enabled": false,
-                          "width": 1,
-                          "height": 1,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         },
                         "q7B3uG": {
@@ -74722,6 +74722,13 @@
                           ],
                           "gap": 4,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "enabled": false,
                               "theme": {
@@ -74816,13 +74823,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -75042,6 +75042,13 @@
                           ],
                           "gap": 4,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "enabled": false,
                               "theme": {
@@ -75152,13 +75159,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -75497,6 +75497,13 @@
                           ],
                           "gap": 4,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "enabled": false,
                               "theme": {
@@ -75607,13 +75614,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -78129,6 +78129,13 @@
                       "name": "Nav Chrome",
                       "width": "fill_container",
                       "descendants": {
+                        "kUCSG": {
+                          "enabled": false,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
                         "LLPuw": {
                           "theme": {
                             "btn": "ghost",
@@ -78205,13 +78212,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "enabled": false,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         },
                         "q7B3uG": {
@@ -78326,6 +78326,13 @@
                           ],
                           "gap": 5,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "theme": {
                                 "btn": "ghost",
@@ -78390,13 +78397,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -78997,6 +78997,13 @@
                           ],
                           "gap": 5,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "theme": {
                                 "btn": "ghost",
@@ -79061,13 +79068,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -79668,6 +79668,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -79799,13 +79806,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -79974,6 +79974,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -80125,13 +80132,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -80300,6 +80300,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -80431,13 +80438,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -80606,6 +80606,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -80737,13 +80744,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -80926,6 +80926,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -81057,13 +81064,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -81232,6 +81232,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -81383,13 +81390,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -81558,6 +81558,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -81731,13 +81738,6 @@
                                 "size": "xs"
                               }
                             },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
                             "q7B3uG": {
                               "enabled": false,
                               "theme": {
@@ -81904,6 +81904,13 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -82055,13 +82062,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -82244,6 +82244,9 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -82300,9 +82303,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
                               "enabled": false
                             },
                             "q7B3uG": {
@@ -82463,6 +82463,9 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -82562,9 +82565,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
                               "enabled": false
                             },
                             "q7B3uG": {
@@ -82725,6 +82725,9 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -82849,9 +82852,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
                               "enabled": false
                             },
                             "q7B3uG": {
@@ -83012,6 +83012,9 @@
                           ],
                           "gap": 3,
                           "descendants": {
+                            "kUCSG": {
+                              "enabled": false
+                            },
                             "LLPuw": {
                               "height": 20,
                               "width": 20,
@@ -83068,9 +83071,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
                               "enabled": false
                             },
                             "q7B3uG": {
@@ -83726,6 +83726,12 @@
                               "name": "Nav Chrome",
                               "width": "fill_container",
                               "descendants": {
+                                "kUCSG": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  }
+                                },
                                 "LLPuw": {
                                   "theme": {
                                     "btn": "ghost",
@@ -83779,12 +83785,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 },
                                 "q7B3uG": {
@@ -85339,6 +85339,12 @@
                               "name": "Nav Chrome",
                               "width": "fill_container",
                               "descendants": {
+                                "kUCSG": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  }
+                                },
                                 "LLPuw": {
                                   "theme": {
                                     "btn": "ghost",
@@ -85392,12 +85398,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 },
                                 "q7B3uG": {
@@ -86948,6 +86948,12 @@
                               "name": "Nav Chrome",
                               "width": "fill_container",
                               "descendants": {
+                                "kUCSG": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  }
+                                },
                                 "LLPuw": {
                                   "theme": {
                                     "btn": "ghost",
@@ -87001,12 +87007,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 },
                                 "q7B3uG": {
@@ -87445,6 +87445,12 @@
                               "name": "Nav Chrome",
                               "width": "fill_container",
                               "descendants": {
+                                "kUCSG": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  }
+                                },
                                 "LLPuw": {
                                   "theme": {
                                     "btn": "ghost",
@@ -87498,12 +87504,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 },
                                 "q7B3uG": {
@@ -87843,6 +87843,12 @@
                               "name": "Nav Chrome",
                               "width": "fill_container",
                               "descendants": {
+                                "kUCSG": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  }
+                                },
                                 "LLPuw": {
                                   "theme": {
                                     "btn": "ghost",
@@ -87896,12 +87902,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 },
                                 "q7B3uG": {
@@ -107462,6 +107462,12 @@
                       "name": "Nav Chrome",
                       "width": "fill_container",
                       "descendants": {
+                        "kUCSG": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
                         "LLPuw": {
                           "theme": {
                             "btn": "ghost",
@@ -107533,12 +107539,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         },
                         "q7B3uG": {
@@ -110197,6 +110197,12 @@
                       "name": "Nav Chrome",
                       "width": "fill_container",
                       "descendants": {
+                        "kUCSG": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
                         "LLPuw": {
                           "theme": {
                             "btn": "ghost",
@@ -110273,12 +110279,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         },
                         "q7B3uG": {
@@ -143142,6 +143142,12 @@
                           "name": "Nav Chrome",
                           "width": "fill_container",
                           "descendants": {
+                            "kUCSG": {
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
                             "LLPuw": {
                               "theme": {
                                 "btn": "ghost",
@@ -143195,12 +143201,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             },
                             "q7B3uG": {
@@ -190338,7 +190338,7 @@
               "type": "text",
               "id": "T7t0m",
               "fill": "$ds-fg",
-              "content": "Main context stays in the breadcrumb. Side and Bottom stay global.",
+              "content": "Web: Sidenav before history; Bottom and Side after breadcrumbs. Desktop: beside project tabs.",
               "fontFamily": "$font-label",
               "fontSize": 14,
               "fontWeight": "normal"
@@ -190384,7 +190384,7 @@
             {
               "type": "frame",
               "id": "R7pEK",
-              "name": "Host-owned status controls",
+              "name": "Web navigation controls",
               "width": "fill_container",
               "height": 32,
               "gap": 4,
@@ -190467,7 +190467,7 @@
               "type": "text",
               "id": "z9e5X",
               "fill": "$ds-fg",
-              "content": "Main context stays in the breadcrumb. Side and Bottom stay global.",
+              "content": "Web: Sidenav before history; Bottom and Side after breadcrumbs. Desktop: beside project tabs.",
               "fontFamily": "$font-label",
               "fontSize": 14,
               "fontWeight": "normal"
@@ -190513,7 +190513,7 @@
             {
               "type": "frame",
               "id": "p1Gu1s",
-              "name": "Host-owned status controls",
+              "name": "Web navigation controls",
               "width": "fill_container",
               "height": 32,
               "gap": 4,

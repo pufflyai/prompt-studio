@@ -30,7 +30,6 @@ import { WorkbenchOverlayLayer } from "./overlay-layer";
 import { useWorkbenchRegionContent } from "./use-workbench-region-content";
 import { WorkbenchBody } from "./workbench-body";
 import { resolvePanelCollapsible } from "./workbench-panel-state";
-import { useWorkbenchPanelToggles } from "./workbench-panel-toggles";
 import {
   WORKBENCH_STATUS_BAR_HEIGHT,
   WorkbenchActivityBar,
@@ -41,8 +40,8 @@ import { WorkbenchSidePanelBoundary } from "./workbench-side-panel-boundary";
 import { WorkbenchSidePanelRegionHeader, WorkbenchSidePanelRegionPortal } from "./workbench-side-panel-layout";
 
 interface WorkbenchProps {
-  /** The host renders WorkbenchPanelToggles outside the status bar. */
-  panelControlsPlacement?: "status" | "host";
+  /** The host renders WorkbenchPanelToggles outside the navigation header. */
+  panelControlsPlacement?: "nav" | "host";
   workbench: WorkbenchCore;
   /** Host chrome above all workbench regions, inside the current theme. */
   titleBar?: ReactNode;
@@ -134,9 +133,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   } = useWorkbenchLayoutFlags(workbench);
   const sidePolicy = usePanelPolicy(workbench, "side");
   const sidenavPolicy = usePanelPolicy(workbench, "sidenav");
-  const panelToggles = useWorkbenchPanelToggles(workbench);
-  const showPanelControls = panelControlsPlacement !== "host" && panelToggles.length > 0;
-  const hasStatus = hasStatusWidgets || showPanelControls;
   const hasSidePanel =
     (sidePolicy.provided && !sidePolicy.canClose) ||
     hasSideHeaderWidgets ||
@@ -169,7 +165,11 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 
   const contentWithHeader = (
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
-      <WorkbenchNavChrome workbench={workbench} hasNav={hasNavWidgets} />
+      <WorkbenchNavChrome
+        workbench={workbench}
+        hasNav={hasNavWidgets}
+        panelControls={panelControlsPlacement !== "host"}
+      />
       <Flex flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchBody workbench={workbench} />
       </Flex>
@@ -219,7 +219,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           overflow="hidden"
           pt="panel-gap"
           // The status bar owns the space under the panels, so its items center in it.
-          pb={hasStatus ? "0" : "panel-gap"}
+          pb={hasStatusWidgets ? "0" : "panel-gap"}
           pr="panel-gap"
           pl={hasActivityBarWidgets ? "0" : "panel-gap"}
         >
@@ -232,14 +232,14 @@ const WorkbenchContent = (props: WorkbenchProps) => {
             onAttachedSlotChange={setAttachedSidePanelSlot}
           />
         </Flex>
-        <WorkbenchStatusBar workbench={workbench} visible={hasStatus} panelControls={showPanelControls} />
+        <WorkbenchStatusBar workbench={workbench} visible={hasStatusWidgets} />
         <WorkbenchFloatingSidePanel
           workbench={workbench}
           available={hasSidePanel}
           bubbleIcon={sidePanelBubbleIcon}
           onOpen={onOpenSidePanel}
           contentSlotRef={setFloatingSidePanelSlot}
-          bottomOffset={hasStatus ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
+          bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
           header={sideHeader}
         />
         <WorkbenchCommandPalette

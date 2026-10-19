@@ -274,6 +274,8 @@ export const createWorkbenchModePlacementRegistry = (input: {
       );
       placements.set(registered.id, registered);
       refs.set(refKey, registered);
+      // A batched page replay can finish before its mode's remaining declarations arrive.
+      state = preparation.restore!({ modeId: registered.modeId, projectId: input.getProjectId?.() });
       emitChange();
       return createDisposable(() => {
         if (placements.get(registered.id) !== registered) return;

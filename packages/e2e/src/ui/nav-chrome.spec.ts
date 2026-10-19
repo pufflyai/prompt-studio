@@ -44,7 +44,7 @@ const backgroundColor = async (locator: import("@playwright/test").Locator) => {
   return locator.evaluate((element) => getComputedStyle(element).backgroundColor);
 };
 
-test("keeps Main navigation in its header and global panel controls in the status bar", async ({ page, request }) => {
+test("keeps history, breadcrumbs and panel controls in the navigation header", async ({ page, request }) => {
   test.setTimeout(45_000);
   await deleteAllProjects(request);
   const project = await createProject(request);
@@ -71,6 +71,10 @@ test("keeps Main navigation in its header and global panel controls in the statu
   const controls = page.getByRole("group", { name: "Panel controls" });
   const showSecondary = controls.getByRole("button", { name: "Show Bottom Panel" });
 
+  await expect(
+    page.locator('[data-workbench-region="status"]').getByRole("group", { name: "Panel controls" }),
+  ).toHaveCount(0);
+  await expect(nav.getByRole("group", { name: "Panel controls" })).toBeVisible();
   await expect(back).toBeVisible();
   await expect(forward).toBeVisible();
   await expect(nav.locator("[data-workbench-breadcrumb-action-slot]")).toBeVisible();
@@ -94,10 +98,16 @@ test("keeps Main navigation in its header and global panel controls in the statu
   const sidenavSeparator = page.getByRole("separator", { name: "Resize sidenav" });
   await expect(sidenavSeparator).toBeVisible();
   await sidenavSeparator.press("Home");
-  const closedSidenav = controls.getByRole("button", { name: "Show Sidenav" });
+  const closedSidenav = nav.getByRole("button", { name: "Show Sidenav" });
   await expect(closedSidenav).toHaveAttribute("aria-pressed", "false");
   await expect.poll(() => backgroundColor(closedSidenav)).toBe(closedPanelBackground);
-  await orderedCenters([closedSidenav, secondary, controls.getByRole("button", { name: "Show Side Panel" })]);
+  await orderedCenters([
+    closedSidenav,
+    back,
+    forward,
+    secondary,
+    controls.getByRole("button", { name: "Show Side Panel" }),
+  ]);
 
   await page.getByText("Own navigation chrome", { exact: true }).click();
   await expect(page.getByRole("link", { name: `${ticket.shorthand} Own navigation chrome` })).toBeVisible();

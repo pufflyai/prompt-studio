@@ -8,12 +8,14 @@ import { WorkbenchRegion } from "../region/region";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { WorkbenchPanelToggles } from "../workbench/workbench-panel-toggles";
 import { WorkbenchHeaderActions } from "./header-actions";
 import { WorkbenchBreadcrumbActions } from "./resource-actions";
 
 interface WorkbenchNavChromeProps {
   workbench: WorkbenchCore;
   hasNav: boolean;
+  panelControls?: boolean;
 }
 
 const WorkbenchNavigationControls = (props: { workbench: WorkbenchCore }) => {
@@ -49,8 +51,11 @@ const WorkbenchNavigationControls = (props: { workbench: WorkbenchCore }) => {
 };
 
 export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
-  const { workbench, hasNav } = props;
+  const { workbench, hasNav, panelControls = true } = props;
   const chrome = useModeChrome(workbench, "nav");
+  const sidenavOpen = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.visible);
+  const trailingRegions =
+    chrome && !sidenavOpen ? (["sidenav", "secondary", "side"] as const) : (["secondary", "side"] as const);
 
   return (
     <Header
@@ -67,6 +72,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
     >
       <Box display={chrome ? "none" : "contents"}>
         <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderLeadingMenuPath} />
+        {panelControls && !sidenavOpen ? <WorkbenchPanelToggles workbench={workbench} regions={["sidenav"]} /> : null}
         <WorkbenchNavigationControls workbench={workbench} />
       </Box>
       <Box
@@ -98,6 +104,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
         <Box flex="1" minW="0" />
         <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
       </Box>
+      {panelControls ? <WorkbenchPanelToggles workbench={workbench} regions={trailingRegions} /> : null}
     </Header>
   );
 };

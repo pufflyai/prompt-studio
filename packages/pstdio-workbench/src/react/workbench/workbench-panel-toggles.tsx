@@ -25,12 +25,20 @@ export const useWorkbenchPanelToggles = (workbench: WorkbenchCore) => {
 };
 
 /** Shared host controls. Desktop hosts mount these beside their project tabs. */
-export const WorkbenchPanelToggles = (props: { workbench: WorkbenchCore }) => {
-  const { workbench } = props;
-  const panels = useWorkbenchPanelToggles(workbench);
+export const WorkbenchPanelToggles = (props: {
+  workbench: WorkbenchCore;
+  regions?: readonly WorkbenchShellOpenRegion[];
+}) => {
+  const { workbench, regions } = props;
+  const panels = useWorkbenchPanelToggles(workbench).filter(({ region }) => !regions || regions.includes(region));
   if (!panels.length) return null;
   return (
-    <HStack role="group" aria-label="Panel controls" gap="2xs" flexShrink={0}>
+    <HStack
+      role="group"
+      aria-label={regions?.length === 1 && regions[0] === "sidenav" ? "Sidenav controls" : "Panel controls"}
+      gap="2xs"
+      flexShrink={0}
+    >
       {panels.map(({ region, label, icon, policy }) => {
         const action = `${policy.open ? "Hide" : "Show"} ${label}`;
         return (

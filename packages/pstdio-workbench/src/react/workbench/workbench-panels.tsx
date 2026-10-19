@@ -5,7 +5,6 @@ import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { WorkbenchRegion } from "../region/region";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
-import { WorkbenchPanelToggles } from "./workbench-panel-toggles";
 import { WorkbenchStatusBarItems } from "./workbench-status-bar-items";
 
 interface WorkbenchSidenavProps {
@@ -46,7 +45,6 @@ export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
 interface WorkbenchRegionPanelProps {
   workbench: WorkbenchCore;
   visible?: boolean;
-  panelControls?: boolean;
 }
 
 export const WORKBENCH_STATUS_BAR_HEIGHT = "2rem";
@@ -109,7 +107,6 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
             </Box>
           </Box>
         </Box>
-        {props.panelControls ? <WorkbenchPanelToggles workbench={workbench} /> : null}
       </Box>
     </WorkbenchFocusRegion>
   );

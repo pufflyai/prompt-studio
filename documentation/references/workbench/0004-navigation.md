@@ -86,7 +86,7 @@ The legacy public `onOpenFile` callback remains available and is deprecated in f
 
 ## Shared panel commands
 
-Global panel controls render in the web status bar. Desktop hosts use the exported `WorkbenchPanelToggles` beside project tabs and set `Workbench.panelControlsPlacement="host"`. Custom mode status chrome keeps these host controls. The breadcrumb stays with Main.
+Global panel controls render in the web navigation header: closed Sidenav recovery before history, and Bottom/Side controls after breadcrumbs. Desktop hosts use the exported `WorkbenchPanelToggles` beside project tabs and set `Workbench.panelControlsPlacement="host"`. Custom mode navigation chrome keeps these host controls. Session panels are available in each mode that allows Side or Bottom and retain that project/mode’s own tabs. The breadcrumb stays with Main.
 
 `shell.getPanelPolicy(region)` resolves availability, visibility, opening, closing, tab acceptance, resizing, floating and header visibility. UI controls, tab destinations, public commands and restoration use this policy. `workbench.movePanel` moves a tab; whole-panel docking is separate work.
 

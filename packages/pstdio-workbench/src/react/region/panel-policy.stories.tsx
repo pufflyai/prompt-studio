@@ -15,9 +15,11 @@ export const SharedControls: Story = {
   args: { workbench: createPolicyWorkbench() },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const nav = canvasElement.querySelector('[data-workbench-region="nav"]') as HTMLElement;
     const footer = canvasElement.querySelector('[data-workbench-region="status"]') as HTMLElement;
-    await expect(within(footer).getByRole("button", { name: "Hide Side Panel" })).toBeVisible();
-    await expect(within(footer).getByRole("button", { name: "Hide Bottom Panel" })).toBeVisible();
+    await expect(within(nav).getByRole("button", { name: "Hide Side Panel" })).toBeVisible();
+    await expect(within(nav).getByRole("button", { name: "Hide Bottom Panel" })).toBeVisible();
+    await expect(within(footer).queryByRole("group", { name: "Panel controls" })).toBeNull();
     await expect(canvas.getByText("Mode status content")).toBeVisible();
   },
 };
