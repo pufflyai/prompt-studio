@@ -64,6 +64,11 @@ export const readPlanCommand = defineCommand({
       createTicketWorkspaceLookup(workspaces),
       createTicketParentLookup(tickets),
     );
+    const ticketRows = active.map((ticket) => {
+      const row = toRow(ticket);
+      return { ...row, attributes: { ...row.attributes, ...properties.values.get(ticket.id) } };
+    });
+    const resources = new Map(ticketRows.map(({ id, resource }) => [id, resource]));
     return {
       ...plan,
       // Ordinary documents open on the ticket page; only gates display instructions in the canvas.
@@ -73,17 +78,14 @@ export const readPlanCommand = defineCommand({
           ...row,
           instructions: row.gate ? row.instructions : "",
           target: ticketActivationTarget(
-            row.target.resource!,
+            resources.get(row.id)!,
             hasPendingInput({ requests: row.requests, errors: row.requestErrors }),
           ),
         })),
       })),
       projectId: ctx.projectId,
       savedViews: await ctx.views.list(timelineBoard),
-      ticketRows: active.map((ticket) => {
-        const row = toRow(ticket);
-        return { ...row, attributes: { ...row.attributes, ...properties.values.get(ticket.id) } };
-      }),
+      ticketRows,
       ticketAttributes: [...buildTicketAttributes(statuses, tags), ...properties.attributes],
     };
   },

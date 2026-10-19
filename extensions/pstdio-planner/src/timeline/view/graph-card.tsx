@@ -35,7 +35,10 @@ export function GraphCard(props: GraphCardProps) {
         source,
         fields,
         fields
-          .filter((field) => field.displayable && (field.type.kind === "enum" || field.type.kind === "enum-multi"))
+          .filter(
+            (field) =>
+              field.displayable && field.editable && (field.type.kind === "enum" || field.type.kind === "enum-multi"),
+          )
           .map(({ id }) => id),
       )
     : statusBadges;

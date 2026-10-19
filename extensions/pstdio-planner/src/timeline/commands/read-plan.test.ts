@@ -104,6 +104,9 @@ test("the plan reads one ticket snapshot without loading workspace session histo
       resource: expect.objectContaining({ type: "ticket", id: ticket.id, projectId: ctx.projectId }),
     }),
   );
+  expect(plan.sections.flatMap(({ rows }) => rows).find(({ id }) => id === ticket.id)?.target.resource).toEqual(
+    plan.ticketRows.find(({ id }) => id === ticket.id)?.resource,
+  );
   expect(ticketReads).toBe(1);
   expect(sessionReads).toBe(0);
 });

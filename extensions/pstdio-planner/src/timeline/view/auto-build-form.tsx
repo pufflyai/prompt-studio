@@ -55,45 +55,49 @@ export function AutoBuildForm(props: AutoBuildFormProps) {
   return (
     <>
       <Dialog.Body flex="1" minH="0" p="0">
-        <ScrollArea h="full" contentProps={{ px: "lg", py: "md" }}>
+        <ScrollArea h="full" contentProps={{ py: "md" }}>
           <Stack gap="md">
-            <SupervisorModelField
-              host={host}
-              value={supervisorModel}
-              onChange={setSupervisorModel}
-              disabled={saving}
-              label={t("timeline.autoBuild.supervisorModel", "Supervisor model")}
-            />
-            <LazyMarkdownEditor
-              autoFocus
-              defaultState={prompt}
-              isEditable={!saving}
-              placeholder={t("timeline.autoBuild.prompt", "Describe the work to build…")}
-              onChange={setPrompt}
-            />
-            <Stack gap="xs" role="group" aria-label={eligibleLabel}>
-              <Text textStyle="label/S/medium">{eligibleLabel}</Text>
-              <CollectionFilter
-                filter={eligible}
-                onFilterChange={(filter) => !saving && setEligible(filter)}
-                itemLabel="Ticket"
-                fields={data.attributes}
-                optionsFor={(field) => categories.find(({ id }) => id === field.id)?.options ?? []}
+            <Stack gap="0" px="sm">
+              <SupervisorModelField
+                host={host}
+                value={supervisorModel}
+                onChange={setSupervisorModel}
+                disabled={saving}
+                label={t("timeline.autoBuild.supervisorModel", "Supervisor model")}
               />
             </Stack>
-            <Checkbox
-              size="sm"
-              checked={requireMergedDependencies}
-              disabled={saving}
-              onCheckedChange={({ checked }) => setRequireMerged(checked === true)}
-            >
-              {t("timeline.autoBuild.requireMerged", "Require merged dependencies")}
-            </Checkbox>
-            {error ? (
-              <Text role="alert" color="fg.error">
-                {error}
-              </Text>
-            ) : null}
+            <Stack gap="md" px="lg">
+              <LazyMarkdownEditor
+                autoFocus
+                defaultState={prompt}
+                isEditable={!saving}
+                placeholder={t("timeline.autoBuild.prompt", "Describe the work to build…")}
+                onChange={setPrompt}
+              />
+              <Stack gap="xs" role="group" aria-label={eligibleLabel}>
+                <Text textStyle="label/S/medium">{eligibleLabel}</Text>
+                <CollectionFilter
+                  filter={eligible}
+                  onFilterChange={(filter) => !saving && setEligible(filter)}
+                  itemLabel="Ticket"
+                  fields={data.attributes}
+                  optionsFor={(field) => categories.find(({ id }) => id === field.id)?.options ?? []}
+                />
+              </Stack>
+              <Checkbox
+                size="sm"
+                checked={requireMergedDependencies}
+                disabled={saving}
+                onCheckedChange={({ checked }) => setRequireMerged(checked === true)}
+              >
+                {t("timeline.autoBuild.requireMerged", "Require merged dependencies")}
+              </Checkbox>
+              {error ? (
+                <Text role="alert" color="fg.error">
+                  {error}
+                </Text>
+              ) : null}
+            </Stack>
           </Stack>
         </ScrollArea>
       </Dialog.Body>
