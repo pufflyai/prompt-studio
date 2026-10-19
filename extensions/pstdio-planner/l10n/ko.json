@@ -54,5 +54,9 @@
   "timeline.autoBuild.starting": "감독 에이전트 시작 대기 중",
   "ticketProperties.reviewRequests": "검토 요청",
   "ticketProperties.reviewRequested": "검토 요청됨",
-  "ticketProperties.reviewAnswered": "검토 답변됨"
+  "ticketProperties.reviewAnswered": "검토 답변됨",
+  "timeline.autoBuild.noReadyTickets": "시작할 준비가 된 티켓이 없습니다. 작업이 가능해지면 Auto Build가 다시 진행됩니다.",
+  "timeline.autoBuild.existingWork": "기존 작업이 있습니다. 티켓을 열어 확인하세요.",
+  "timeline.autoBuild.assignedWork": "에이전트가 이미 이 티켓을 작업하고 있습니다.",
+  "timeline.autoBuild.waitingWork": "선행 조건 완료 또는 에이전트의 여유를 기다리고 있습니다."
 }

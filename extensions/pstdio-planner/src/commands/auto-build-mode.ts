@@ -45,16 +45,18 @@ export const readAutoBuildCommand = defineCommand({
       !completed &&
       ticketSessions.length > 0 &&
       ticketSessions.every(({ status }) => status === "awaiting_input");
-    if (inspect && work) stuck ||= work.candidates.length === 0 && work.blockedTickets.length > 0;
+    if (inspect && work) stuck ||= work.readyTicketCount === 0 && work.blockedTickets.length > 0;
     return {
       ...mode,
       observations: work?.observations ?? [],
+      waitingTickets: work?.waitingTickets ?? [],
       configurationError: work?.configurationError ?? null,
       supervisor,
       sessions: ticketSessions,
       capacity,
       completed,
       matchingTicketCount: work?.matchingTicketCount,
+      readyTicketCount: work?.readyTicketCount,
       stuck,
       running,
       error: completed ? undefined : latest?.error?.message,

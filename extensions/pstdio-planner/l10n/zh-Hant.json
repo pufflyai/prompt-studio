@@ -54,5 +54,9 @@
   "timeline.autoBuild.starting": "正在等待啟動監督代理",
   "ticketProperties.reviewRequests": "審核請求",
   "ticketProperties.reviewRequested": "已請求審核",
-  "ticketProperties.reviewAnswered": "已回覆審核"
+  "ticketProperties.reviewAnswered": "已回覆審核",
+  "timeline.autoBuild.noReadyTickets": "沒有可開始的工單。有可用工作時，Auto Build 將繼續。",
+  "timeline.autoBuild.existingWork": "已有工作。請開啟工單查看。",
+  "timeline.autoBuild.assignedWork": "已有代理正在處理此工單。",
+  "timeline.autoBuild.waitingWork": "正在等待前置條件完成或代理有空閒容量。"
 }

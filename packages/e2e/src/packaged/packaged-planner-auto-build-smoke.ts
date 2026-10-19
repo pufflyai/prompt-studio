@@ -49,6 +49,8 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
     completed: false,
     supervisor: null,
     matchingTicketCount: 0,
+    readyTicketCount: 0,
+    waitingTickets: [],
   });
   await expectScopedAutoBuild(execute);
   expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({

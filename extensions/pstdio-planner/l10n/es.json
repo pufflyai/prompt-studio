@@ -54,5 +54,9 @@
   "timeline.autoBuild.starting": "Esperando para iniciar el supervisor",
   "ticketProperties.reviewRequests": "Solicitudes de revisión",
   "ticketProperties.reviewRequested": "Revisión solicitada",
-  "ticketProperties.reviewAnswered": "Revisión respondida"
+  "ticketProperties.reviewAnswered": "Revisión respondida",
+  "timeline.autoBuild.noReadyTickets": "No hay tickets listos para comenzar. Auto Build continuará cuando haya trabajo disponible.",
+  "timeline.autoBuild.existingWork": "Ya existe trabajo. Abre el ticket para revisarlo.",
+  "timeline.autoBuild.assignedWork": "Un agente ya está trabajando en este ticket.",
+  "timeline.autoBuild.waitingWork": "Esperando requisitos previos o capacidad de agentes."
 }

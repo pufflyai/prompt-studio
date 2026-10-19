@@ -2,6 +2,7 @@ import { Button, CloseButton, Dialog, HStack, Portal } from "@chakra-ui/react";
 import { installPrismGlobal } from "@pstdio/ui";
 import { Play } from "lucide-react";
 import { lazy, Suspense, useRef, useState } from "react";
+import type { WaitingTicket } from "../../commands/next-ticket-types";
 import { AutoBuildActivity } from "./auto-build-activity";
 import type { AutoBuildFormProps } from "./auto-build-form";
 import { AutoBuildHelp } from "./auto-build-help";
@@ -21,6 +22,8 @@ export interface AutoBuildButtonProps {
   running: number;
   capacity: number;
   matchingTicketCount?: number;
+  readyTicketCount?: number;
+  waitingTickets?: WaitingTicket[];
   starting?: boolean;
   error?: string;
   stuck?: boolean;

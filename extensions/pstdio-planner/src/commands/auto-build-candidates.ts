@@ -14,9 +14,11 @@ export async function readAutoBuildCandidates(
     .map(({ ticket }) => ticket);
   return {
     candidates: tickets.filter(({ action }) => action !== "update-stack"),
+    readyTicketCount: tickets.length,
     capacity,
     snapshot,
     blockedTickets,
+    waitingTickets: waiting,
     completed,
     matchingTicketCount,
     observations,

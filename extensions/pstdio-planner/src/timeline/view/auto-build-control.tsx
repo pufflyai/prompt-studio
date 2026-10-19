@@ -20,6 +20,8 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
       enabled={autoBuild.mode?.enabled ?? false}
       completed={autoBuild.mode?.completed}
       matchingTicketCount={autoBuild.mode?.matchingTicketCount}
+      readyTicketCount={autoBuild.mode?.readyTicketCount}
+      waitingTickets={autoBuild.mode?.waitingTickets}
       starting={autoBuild.mode?.running}
       supervisor={autoBuild.mode?.supervisor}
       sessions={autoBuild.mode?.sessions ?? []}

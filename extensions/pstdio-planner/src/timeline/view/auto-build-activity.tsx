@@ -19,6 +19,8 @@ interface AutoBuildActivityProps
     | "error"
     | "stuck"
     | "matchingTicketCount"
+    | "readyTicketCount"
+    | "waitingTickets"
     | "starting"
     | "disabled"
     | "onOpenSession"

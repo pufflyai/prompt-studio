@@ -28,6 +28,17 @@ export const StoppedWithLiveSessions: Story = {
 };
 export const Waiting: Story = { args: { enabled: true } };
 export const Starting: Story = { args: { enabled: true, starting: true } };
+export const ExistingWork: Story = {
+  args: {
+    enabled: true,
+    matchingTicketCount: 1,
+    readyTicketCount: 0,
+    waitingTickets: [{ id: "ticket", ticket: "P-1", title: "Greeting", reason: "existing-attempt", dependencyIds: [] }],
+  },
+};
+export const ReadyAlongsideExistingWork: Story = {
+  args: { ...ExistingWork.args, matchingTicketCount: 2, readyTicketCount: 1 },
+};
 export const NoMatchingTickets: Story = { args: { enabled: true, matchingTicketCount: 0 } };
 export const Running: Story = {
   args: {

@@ -68,7 +68,7 @@ An unfinished implementation whose session completed, was cancelled, or failed c
 
 Submitted work is also offered as a `repair` action when its PR has a merge conflict, its CI failed, or its PR head differs from the submitted revision. The owner repairs it in the same workspace and submits the new HEAD. Old review or CI results do not count for a new HEAD. Unavailable evidence stays a visible blocker. Waiting tickets include the current owner's state and next action. Submitted work is offered as `update-stack` when its workspace has an unrecorded HEAD, its required base differs from the latest revision, or it lacks the current selected dependency base. The supervisor follows up with the existing implementation owner. It does not create another attempt or change an old review verdict.
 
-If nothing starts, check the eligibility filters, prerequisites, default agent, and in-progress limit. The supervisor can also leave valid tickets unassigned when they do not match your prompt.
+If nothing starts, check the eligibility filters, prerequisites, default agent, and in-progress limit. The activity popover lists tickets that cannot start, including tickets with existing work. Restarting Auto Build preserves that work; it does not create another implementation for the same ticket. Open those tickets to inspect their work, or add new tickets to test another run. The startup message appears only while a background check is queued or running. The supervisor can also leave valid tickets unassigned when they do not match your prompt.
 
 ## Agent commands
 

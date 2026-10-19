@@ -1,9 +1,11 @@
 import { expect, test } from "bun:test";
+import { putAttempt } from "../data/attempt-storage";
 import { putTicket } from "../data/collections";
 import { fixture } from "./auto-build.fixture";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { autoBuildScopeCommand } from "./auto-build-scope";
 import { runAttemptCommand } from "./run-attempt";
+import { sessionRecord } from "./session-record.fixture";
 
 const scope = async (ctx: Awaited<ReturnType<typeof fixture>>["ctx"]) => {
   const { revision } = await readAutoBuildCommand.run(ctx, {});
@@ -72,6 +74,41 @@ test("Auto Build reports when eligible filters match no unfinished tickets", asy
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ matchingTicketCount: 0, completed: false });
   await configureAutoBuildCommand.run(ctx, { enabled: true, eligible: { conjunction: "and", rules: [] } });
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ matchingTicketCount: 1, completed: false });
+});
+
+test("an idle start reports tickets that already have work instead of a pending supervisor launch", async () => {
+  const { ctx, ticket, storage } = await fixture();
+  const task = await ticket("Build the greeting");
+  const started = await runAttemptCommand.run(ctx, { ticket: task.id });
+  await putAttempt(storage, {
+    ...started.variant,
+    revisions: [
+      {
+        revision: 1,
+        baseSha: "main-sha",
+        headSha: "main-sha",
+        changeRequestReportId: "report",
+        submittedAt: new Date().toISOString(),
+        submittedBy: { type: "agent", id: "owner", displayName: "Owner" },
+        reviews: [],
+      },
+    ],
+  });
+  ctx.sessions.get = async () =>
+    sessionRecord({ id: started.variant.implementationSessionId, title: "Implementation", status: "completed" });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({
+    enabled: true,
+    running: false,
+    supervisor: null,
+    matchingTicketCount: 1,
+    readyTicketCount: 0,
+    waitingTickets: [expect.objectContaining({ ticket: task.shorthand, reason: "existing-attempt" })],
+  });
+  await ticket("Fresh work");
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({
+    readyTicketCount: 1,
+    waitingTickets: [expect.objectContaining({ ticket: task.shorthand, reason: "existing-attempt" })],
+  });
 });
 
 test("Auto Build succeeds when its scoped tickets are completed", async () => {

@@ -54,5 +54,9 @@
   "timeline.autoBuild.starting": "スーパーバイザーの開始を待っています",
   "ticketProperties.reviewRequests": "レビュー依頼",
   "ticketProperties.reviewRequested": "レビュー依頼中",
-  "ticketProperties.reviewAnswered": "レビュー回答済み"
+  "ticketProperties.reviewAnswered": "レビュー回答済み",
+  "timeline.autoBuild.noReadyTickets": "開始できるチケットがありません。作業が可能になると Auto Build が再開します。",
+  "timeline.autoBuild.existingWork": "既存の作業があります。チケットを開いて確認してください。",
+  "timeline.autoBuild.assignedWork": "エージェントがこのチケットを処理しています。",
+  "timeline.autoBuild.waitingWork": "前提条件の完了またはエージェントの空きを待っています。"
 }

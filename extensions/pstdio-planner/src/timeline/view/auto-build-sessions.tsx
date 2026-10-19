@@ -2,6 +2,7 @@ import { Stack, Text } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import type { AutoBuildButtonProps } from "./auto-build-button";
 import { AutoBuildSessionRow } from "./auto-build-session-row";
+import { AutoBuildWaitingTickets } from "./auto-build-waiting-tickets";
 
 interface AutoBuildSessionsProps
   extends Pick<
@@ -17,6 +18,8 @@ interface AutoBuildSessionsProps
     | "onOpenSession"
     | "t"
     | "matchingTicketCount"
+    | "readyTicketCount"
+    | "waitingTickets"
     | "starting"
   > {
   failed: boolean;
@@ -35,7 +38,9 @@ export function AutoBuildSessions(props: AutoBuildSessionsProps) {
     onOpenSession,
     t,
     matchingTicketCount,
+    readyTicketCount,
     starting,
+    waitingTickets = [],
   } = props;
   const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
   return (
@@ -63,6 +68,9 @@ export function AutoBuildSessions(props: AutoBuildSessionsProps) {
           }
         />
       ) : null}
+      {enabled && !completed && !starting && running === 0 && readyTicketCount === 0 && waitingTickets.length > 0 ? (
+        <AutoBuildWaitingTickets tickets={waitingTickets} t={t} />
+      ) : null}
       <Stack gap="2xs">
         <Text textStyle="label/2XS/medium" color="fg.muted" textTransform="uppercase">
           {t("timeline.autoBuild.sessions", "Ongoing sessions")}
@@ -75,7 +83,7 @@ export function AutoBuildSessions(props: AutoBuildSessionsProps) {
           />
         ) : (
           <Text textStyle="paragraph/S/regular">
-            {enabled
+            {enabled && starting
               ? t("timeline.autoBuild.starting", "Waiting to start the supervisor")
               : t("timeline.autoBuild.noSupervisor", "No supervisor session")}
           </Text>
