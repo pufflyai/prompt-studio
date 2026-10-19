@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { fingerprint, publishedExtensionsId, sealMutation } from "pstdio-sync-contracts";
+import { fingerprint, publishedExtensionsId } from "pstdio-sync-contracts";
 import { createConformanceObjects } from "pstdio-sync-contracts/conformance";
+import { sealStoredMutation as sealMutation } from "./mutation.fixture";
 import { createRelayStorage, migrateRelayStorage } from "./storage";
 
 const databaseUrl = process.env.SYNC_TEST_DATABASE_URL!;
@@ -30,7 +31,7 @@ test("published packages gate visibility on complete bytes and serialize competi
   };
   const publication = { extensionId: "example.unrelated", revision: asset.sha256, automation: false, enabled: true };
   const sealed = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
     scope,
     operationId: crypto.randomUUID(),
     environmentId: "a",
@@ -50,7 +51,7 @@ test("published packages gate visibility on complete bytes and serialize competi
   await objects.put(scope, asset, bytes);
   expect((await owner.submit(sealed)).status).toBe("accepted");
   const second = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
     scope,
     operationId: crypto.randomUUID(),
     environmentId: "b",
@@ -85,7 +86,7 @@ test("the relay rejects catalog metadata that names different package bytes", as
   };
   await objects.put(scope, asset, bytes);
   const mutation = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
     scope,
     operationId: crypto.randomUUID(),
     environmentId: "a",

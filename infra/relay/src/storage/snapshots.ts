@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, lte } from "drizzle-orm";
+import { and, asc, eq, gt, lte, ne } from "drizzle-orm";
 import { type Checkpoint, replayBoundary, replaySchema, snapshotSchema } from "pstdio-sync-contracts";
 import { checkpoint, conflictFromRow, receiptFromRow } from "./codec";
 import type { RelayTransaction } from "./database";
@@ -21,7 +21,12 @@ export const readSnapshot = async (transaction: RelayTransaction, ownerId: strin
     .orderBy(asc(relayOperations.order));
   const conflicts = await transaction.select().from(relayConflicts).where(eq(relayConflicts.ownerId, ownerId));
   return snapshotSchema.parse({
-    protocolVersion: 1,
+    protocolVersion: 2,
+    generation: owner.generation,
+    covered: owner.covered,
+    writers: owner.writers,
+    documents: owner.documents,
+    retainedBranches: operations.filter((row) => row.status !== "accepted").map((row) => row.id),
     scope: owner.scope,
     journalSequence: owner.journalSequence,
     checkpoint: checkpoint(owner),
@@ -51,10 +56,26 @@ export const readReplay = async (transaction: RelayTransaction, ownerId: string,
     .orderBy(asc(relayOperations.acceptedSequence));
   if (operations.length !== through.sequence - after.sequence)
     return { status: "snapshot-required" as const, checkpoint: through };
+  const outstanding = await transaction
+    .select()
+    .from(relayOperations)
+    .where(and(eq(relayOperations.ownerId, ownerId), ne(relayOperations.status, "accepted")))
+    .orderBy(asc(relayOperations.order));
+  const conflicts = await transaction.select().from(relayConflicts).where(eq(relayConflicts.ownerId, ownerId));
+  const publication = await withPublishedRevision(transaction, owner);
   return {
     status: "replay" as const,
     batch: replaySchema.parse({
-      protocolVersion: 1,
+      protocolVersion: 2,
+      generation: owner.generation,
+      covered: owner.covered,
+      writers: owner.writers,
+      documents: owner.documents,
+      retainedBranches: outstanding.map((row) => row.id),
+      journalSequence: owner.journalSequence,
+      conflicts: Object.fromEntries(conflicts.map((row) => [row.id, conflictFromRow(row)])),
+      outstanding: Object.fromEntries(outstanding.map((row) => [row.id, receiptFromRow(row)])),
+      publishedRevision: publication.publishedRevision,
       scope: owner.scope,
       after,
       through,

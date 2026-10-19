@@ -18,11 +18,11 @@ Bun and Lerna discover the relay through the root workspace list. Nx caches its 
 
 `createRelayStorage(databaseUrl, assets)` creates the internal persistence service. An authenticated caller must derive the scope and published package revision from authoritative grants and catalog state. Calling `initialize(scope, publishedRevision)` creates a scope once; it does not grant access or overwrite an existing publication. `owner(scope)` opens that scope for submission, snapshots, replay, publication revision changes, and restore. Close the service when its owning process stops.
 
-The grouped-record schema has four tables: scoped stream metadata, current records, immutable operation bodies with receipts, and conflict metadata. The owner uses `pg` with Drizzle and stores JSONB objects so indexed resolution captures remain searchable. Each write locks the scope row. Candidate records, conflict revisions, receipt, and replay position commit together. Exact retries return the saved receipt; changed operation bodies cannot reuse an ID. Pending attempts keep their identity and journal order.
+The grouped-record owner persists scoped stream metadata, current records, immutable operation bodies with receipts, conflict metadata, coverage acknowledgements, and capture pins. The owner uses `pg` with Drizzle and stores JSONB objects so indexed resolution captures remain searchable. Each write locks the scope row. Candidate records, conflict revisions, receipt, and replay position commit together. Exact retries return the saved receipt; changed operation bodies cannot reuse an ID. Pending attempts keep their identity and journal order.
 
 `assets.complete(scope, asset)` must verify complete immutable bytes and keep them available through publication and retained history. The PostgreSQL owner checks this port before accepting references. Pass the production `createRelayAssets` service described below to this port.
 
-Snapshots and replay use repeatable-read transactions. Replay contains complete accepted groups. Invalid cursors, gaps, and old epochs require snapshots. Restore checks the scope, sealed receipt bodies, and assets needed by both current records and retained non-pending receipts. It replaces content atomically and creates a new epoch. Historical receipts retain their original acknowledgments; new replay starts at the restored boundary. Grants are outside content restore.
+Snapshots and replay use repeatable-read transactions. Protocol 2 seals the actual restore epoch, stream generation, and writer position. Generic groups do not require document fields. See [covered storage](../../references/architecture/0027-covered-checkpoints.md#generic-production-groups) for capture pins and coverage ownership. Replay contains complete accepted groups. Invalid cursors, gaps, and old epochs require snapshots. Restore checks the scope, sealed receipt bodies, and the current and retained-branch byte closure. It replaces content atomically and creates a new epoch. Historical receipts retain their original acknowledgments; new replay starts at the restored boundary. Grants are outside content restore.
 
 Schema changes start in `infra/relay/src/storage/schema.ts` or `src/assets/schema.ts`. Generate migrations with:
 
@@ -40,7 +40,7 @@ cd packages/pstdio-sync-contracts
 SYNC_TEST_ENTRY=../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts bun scripts/isolated.ts
 ```
 
-The storage checks use disposable PostgreSQL and RustFS. They cover independent connections, grouped conflicts, missing assets, scope isolation, historical asset requirements, replay/restore lineage, and killing a publishing process at the commit boundary. The shared cases also cover real local journals, late branches, resolutions, and recovery. Their Docker runner mounts repository source read-only and removes its own stack; it never opens the application's database.
+The storage checks use disposable PostgreSQL and RustFS. They cover independent connections, grouped conflicts, missing assets, scope isolation, current and retained-branch asset requirements, replay/restore lineage, and killing a publishing process at the commit boundary. The shared cases also cover real local journals, late branches, resolutions, and recovery. Their Docker runner mounts repository source read-only and removes its own stack; it never opens the application's database.
 
 `SYNC_TEST_ENTRY` selects the test file the runner starts. Without it, `bun run --cwd packages/pstdio-sync-contracts test:conformance` runs the reference relay suite (`src/conformance/reference.integration.ts`). CI runs only `grouped-production-relay.integration.ts` of the three grouped entries in `packages/pstdio-db/src/services/extension-storage/`. No script or CI job runs `grouped-conformance.integration.ts` (the shared cases with local stores against the reference relay) or `grouped-storage-sync.integration.ts` (the grouped storage adapter between three local databases). Run them by hand with the same command and a different `SYNC_TEST_ENTRY`.
 
@@ -104,13 +104,16 @@ No live Spaces endpoint, bucket or credentials are configured here. RustFS succe
 
 ## Authenticated HTTP and subscriptions
 
-Use `relayPath({ workbenchId, extensionId }, operation)` from `pstdio-sync-contracts`. Paths are `/v1/workbenches/~<encoded-id>/extensions/~<encoded-id>/<operation>`. The prefix keeps opaque dot identities from becoming traversal segments. Account identity and credentials never enter URLs. Native clients send `Authorization: Bearer <environment-token>`. The scheme is case-insensitive; credential bytes stay exact. URL queries are rejected.
+Use `relayPath({ workbenchId, extensionId }, operation)` from `pstdio-sync-contracts`. Paths are `/v2/workbenches/~<encoded-id>/extensions/~<encoded-id>/<operation>`. The prefix keeps opaque dot identities from becoming traversal segments. Account identity and credentials never enter URLs. Native clients send `Authorization: Bearer <environment-token>`. The scheme is case-insensitive; credential bytes stay exact. URL queries are rejected.
 
 Every protected operation verifies a signed environment access token locally against trusted manager public keys, issuer and relay audience. The verified account/workbench/environment scopes the existing data owners. A submitted mutation must already contain exactly that scope and environment; the relay rejects mismatches without rewriting its fingerprint. An authenticated `initialize` request creates the selected extension scope once using the installed package revision. The token must authorize its account and workbench. Retrying initialization leaves an existing published revision unchanged. No restore, administrative issuance, Google login or arbitrary revision setter is exposed.
 
 | Operation | Method and input | Result |
 | --- | --- | --- |
-| `snapshot` | GET | Existing strict snapshot |
+| `snapshot` | GET | Enroll the authenticated writer and return a strict protocol 2 snapshot |
+| `acknowledge` | POST exact coverage acknowledgement | Persist installed coverage evidence without advancing a backup frontier |
+| `capture` | POST `{}` | Consistent content snapshot, checksum, scoped references, and durable pin ID |
+| `captures/release` | POST `{ id }` | Release that scope's capture pin |
 | `submit` | POST existing sealed mutation | Durable receipt, including pending/conflict outcomes |
 | `recover` | POST `{ mutation, proof }` for an exact previously stored operation | Normal publication outcome after current authorization and relay proof verification; the original environment and operation ID stay unchanged |
 | `replay` | POST checkpoint | Strict replay result or snapshot-required boundary |
@@ -119,7 +122,7 @@ Every protected operation verifies a signed environment access token locally aga
 | `assets/finish` | POST `{ uploadId }` | Fully verified asset |
 | `assets/cancel` | POST `{ uploadId }` | Empty JSON acknowledgment after cancellation drains |
 | `assets/read` | POST `{ asset, offset }` | HTTP 200 with streamed bytes and explicit x-pstdio-offset / x-pstdio-byte-length metadata |
-| `changes` | GET with native WebSocket upgrade | Strict `{ protocolVersion: 1, type: "ready" | "changed" }` hints |
+| `changes` | GET with native WebSocket upgrade | Strict `{ protocolVersion: 2, type: "ready" | "changed" }` hints |
 
 A part supplies `x-pstdio-upload-id` (encodeURIComponent of its ID), `x-pstdio-part-number`, `x-pstdio-sha256` and exact `Content-Length`. Its body streams to the existing multipart owner with request cancellation. The listener accepts the existing S3 maximum part size; it does not buffer that body. Begin returns only acknowledged parts, so a dropped part retries the same immutable descriptor. Explicit cancellation removes unfinished bytes after the writer drains. Cleanup of an existing scoped upload uses the asset owner directly after current authorization; it does not repeat a content checkpoint that could block cancellation behind unrelated content reads.
 

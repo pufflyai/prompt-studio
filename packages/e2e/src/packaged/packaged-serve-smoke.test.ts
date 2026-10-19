@@ -22,7 +22,7 @@ import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-ext
 // Independent hosts also bind one workbench identity to their own environment and folder.
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
-// Core extension checks cover extension-owned draft storage and allocated file roots.
+// Core extension checks cover extension-owned draft storage, versioned template edits, and allocated file roots.
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // grouped ticket settings and icons, cleanup/merge settings, saved document links, and ticket/workspace navigation.
@@ -52,7 +52,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Shared record contracts remain covered through the compiled host. The separate relay
 // image checks authenticated HTTP, immutable asset ranges and finite native sockets.
-// Native relay coverage hydrates artifact mounts and attachment URLs, and restores foreign journal work after restart.
+// Protocol 2 relay coverage hydrates files and attachment URLs, and preserves local content across restore fencing.
 import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
@@ -62,6 +62,7 @@ import { registerNotificationStatusSmokeTests } from "./packaged-notification-st
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
 // Planner covers timeline state, dependency recovery and Git conflicts in separate packaged cases.
+// Its browser smoke also checks immediate ticket property edits while persistence is held open.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.

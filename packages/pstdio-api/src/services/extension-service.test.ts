@@ -9,7 +9,6 @@ import {
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
-  legacyTemplateOwnerSourcePath,
 } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
 import { createExtensionService, ProjectNotFoundError } from "./extension-service";
@@ -222,15 +221,15 @@ describe("extensionService extension id ownership", () => {
   });
 });
 
-describe("extensionService legacy template owner adoption", () => {
-  test("adopts a legacy template owner source without replacing its project instance", async () => {
+describe("extensionService source installation", () => {
+  test("materializes an unversioned source reference without replacing its project instance", async () => {
     const project = await projectService.create({ name: "Extension Project" });
     const migratedSource = await installedExtensionSourcesService.register({
       install_name: "pstdio-planner",
       extension_id: "pstdio.pstdio-planner",
       display_name: "pstdio-planner",
       source_kind: "local_path",
-      source_path: legacyTemplateOwnerSourcePath("pstdio.pstdio-planner"),
+      source_path: "registry:unresolved-package",
       manifest_json: { id: "pstdio.pstdio-planner" },
       status: "loaded",
     });

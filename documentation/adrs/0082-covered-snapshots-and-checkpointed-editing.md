@@ -23,6 +23,14 @@ is durable. The live relay carries memory-only updates; delivery is not a remote
 storage acknowledgement. Reconnect combines durable catch-up with peer state-vector
 exchange.
 
+Generic durable groups carry real record, map, asset, and immutable package
+publication changes without requiring a document. Every production group seals its
+restore epoch, stream generation, enrolled environment, writer sequence, operation
+ID, parents, and observed preconditions. Document checkpoint metadata is optional
+and requires the corresponding real document delta. The local journal owns frozen
+retry intent; relay storage owns enrollment, writer floors, accepted cuts, and
+coverage evidence. Neither side fabricates document facts for ordinary saves.
+
 A five-minute, dirty-close, explicit-save, or graceful-shutdown checkpoint freezes
 one recovery revision. Its document delta and all save-handler projection mutations
 form one sealed group. Capture storage writes in a fork, stage complete immutable
@@ -66,9 +74,13 @@ Yjs client ID across sessions is unsafe.
 
 ## Delivery
 
-PS-808 defines strict contracts and an isolated executable reference. PS-776 adopts
-host/live editing; PS-780 owns production backup capture; PS-781 owns automatic
-production retirement and deletion. This decision does not claim those production
+PS-808 defines strict contracts and an isolated document/retention reference.
+PS-815 adopts generic production host/relay groups, truthful snapshot and replay
+boundaries, durable coverage evidence, and capture pins for immutable assets and
+packages. Its covered cut remains zero until verified backup and retention owners
+supply the required evidence. PS-776 adopts host/live editing on that foundation;
+PS-780 owns backup scheduling, independent copies and complete verified manifests;
+PS-781 owns production retirement and deletion; PS-782 owns restore reconciliation. This decision does not claim those production
 owners are deployed. The runtime and relay must adopt protocol 2 together, without
 falling back to per-pause durable saves for collaborative documents. See
 [checkpoint contracts](../references/architecture/0027-covered-checkpoints.md).

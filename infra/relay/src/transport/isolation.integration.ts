@@ -1,10 +1,13 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { type RelayOperation, relayPath, sealMutation, snapshotSchema } from "pstdio-sync-contracts";
+import { type RelayOperation, relayPath, snapshotSchema } from "pstdio-sync-contracts";
 import { startRelay } from "../service";
+import { sealStoredMutation } from "../storage/mutation.fixture";
 import { createTransportFixture } from "./integration-fixture";
 import { connectSocket } from "./socket.fixture";
 
 const fixture = createTransportFixture();
+const sealMutation = (body: Parameters<typeof sealStoredMutation>[0]) =>
+  sealStoredMutation(body, fixture.relayDatabaseUrl);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
@@ -41,7 +44,7 @@ test("overlapping workbench, environment, record and upload IDs remain independe
       [second, b],
     ] as const) {
       const mutation = await sealMutation({
-        protocolVersion: 1,
+        protocolVersion: 2,
         scope: context.scope,
         environmentId: context.environmentId,
         operationId: "same-operation",

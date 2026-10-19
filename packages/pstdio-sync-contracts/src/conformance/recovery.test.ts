@@ -6,7 +6,10 @@ import { emptySnapshot } from "./relay";
 async function acceptedWork() {
   const scope = { accountId: "a", workbenchId: "w", extensionId: "x" };
   const mutation = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
+    epoch: "initial",
+    generation: 0,
+    sequence: 1,
     scope,
     environmentId: "e",
     operationId: "operation",

@@ -5,7 +5,12 @@ import { blank, cellFingerprint, sharedChange, visible } from "./documents";
 import { stage } from "./staging";
 
 const snapshot = (): Snapshot => ({
-  protocolVersion: 1,
+  protocolVersion: 2,
+  generation: 0,
+  covered: 0,
+  writers: {},
+  documents: {},
+  retainedBranches: [],
   journalSequence: 0,
   scope: { accountId: "a", workbenchId: "w", extensionId: "x" },
   checkpoint: { epoch: "e", sequence: 0 },
@@ -17,7 +22,10 @@ const snapshot = (): Snapshot => ({
 
 async function mutation(changes: Parameters<typeof sealMutation>[0]["changes"]) {
   return sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
+    epoch: "initial",
+    generation: 0,
+    sequence: 1,
     scope: snapshot().scope,
     environmentId: "local",
     operationId: crypto.randomUUID(),

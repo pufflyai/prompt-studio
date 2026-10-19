@@ -36,7 +36,18 @@ export const checkScope = (state: GroupedState, scope: Scope) => {
 
 export const sealOperation = async (state: GroupedState, operation: LocalOperation) => {
   if (!state.accepted) throw new Error("Storage has not received a relay snapshot");
-  return sealMutation({ ...operation, protocolVersion: 1, scope: state.accepted.scope });
+  if (!operation.position) {
+    const sequence =
+      Math.max(
+        state.accepted.writers[operation.environmentId]?.floor ?? 0,
+        ...state.journal
+          .filter((entry) => entry.mutation.environmentId === operation.environmentId)
+          .map((entry) => entry.mutation.position?.sequence ?? 0),
+      ) + 1;
+    operation.position = { epoch: state.accepted.checkpoint.epoch, generation: state.accepted.generation, sequence };
+  }
+  const { position, ...body } = operation;
+  return sealMutation({ ...body, ...position, protocolVersion: 2, scope: state.accepted.scope });
 };
 
 const snapshotVersion = (snapshot: Snapshot | null) => snapshot && canonicalJson(snapshot);
@@ -55,14 +66,23 @@ export const receiveSnapshot = async (state: GroupedState, snapshot: Snapshot, o
   for (const receipt of Object.values(snapshot.receipts)) {
     let entry = state.journal.find((entry) => entry.mutation.operationId === receipt.operationId);
     if (entry) {
-      const sealed = await sealMutation({ ...entry.mutation, protocolVersion: 1, scope: snapshot.scope });
+      const sealed = await sealOperation({ ...state, accepted: snapshot }, entry.mutation);
       if (sealed.fingerprint !== receipt.fingerprint)
         throw new Error("Received operation identity has changed content");
     } else {
-      const { operationId, environmentId, parents, changes, resolution } = receipt.mutation;
+      const { operationId, environmentId, parents, changes, resolution, document, epoch, generation, sequence } =
+        receipt.mutation;
       entry = {
         inputFingerprint: receipt.fingerprint,
-        mutation: { operationId, environmentId, parents, changes, resolution },
+        mutation: {
+          operationId,
+          environmentId,
+          parents,
+          changes,
+          resolution,
+          document,
+          position: { epoch, generation, sequence },
+        },
       };
       state.journal.push(entry);
     }

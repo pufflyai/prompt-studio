@@ -9,7 +9,7 @@ export function registerRecoveryCases(factory: ConformanceFactory) {
     [0, 1],
     [1, 0],
   ])
-    test(`old relay restore recovers newer accepted work before pending work in order ${order}`, async () => {
+    test(`old relay restore fences proposals and preserves their bytes in order ${order}`, async () => {
       const { clients, relay, scope } = factory();
       const [a, b] = clients;
       await seed(a, b);
@@ -21,17 +21,14 @@ export function registerRecoveryCases(factory: ConformanceFactory) {
       await a.restart();
       await b.restart();
       await relay.restore(saved);
-      await clients[order[0]].sync();
-      await clients[order[1]].sync();
-      await a.sync();
-      await b.sync();
+      await expect(clients[order[0]].sync()).rejects.toThrow("Resynchronization required");
+      await expect(clients[order[1]].sync()).rejects.toThrow("Resynchronization required");
       const current = await a.state();
       expect(current.records.note.text).toContain("accepted-later");
-      expect(current.records.note.text).toContain("pending-later");
-      expect(current.records.note).toEqual((await b.state()).records.note);
-      expect(current.accepted.checkpoint.epoch).not.toBe(saved.checkpoint.epoch);
+      expect((await b.state()).working.note.text).toContain("pending-later");
+      expect((await relay.snapshot(scope)).checkpoint.epoch).not.toBe(saved.checkpoint.epoch);
     });
-  test("restore replays captured conflict ancestry needed by an accepted resolution", async () => {
+  test("restore preserves captured conflict ancestry without executing old epoch proposals", async () => {
     const {
       clients: [a, b],
       relay,
@@ -48,10 +45,11 @@ export function registerRecoveryCases(factory: ConformanceFactory) {
     await b.edit([textEdit("note", "pending")]);
     await relay.restore(saved);
     await b.restart();
-    await b.sync();
+    await expect(b.sync()).rejects.toThrow("Resynchronization required");
     const state = await b.state();
-    for (const word of ["remote", "local", "pending"]) expect(state.records.note.text).toContain(word);
-    expect(state.pending).toHaveLength(0);
+    for (const word of ["remote", "local", "pending"]) expect(state.working.note.text).toContain(word);
+    expect(state.pending.length).toBeGreaterThan(0);
+    expect((await relay.snapshot(scope)).records).toEqual(saved.records);
   });
   test("unsupported peers leave durable queued work and bytes recoverable after restart", async () => {
     const {
@@ -62,7 +60,7 @@ export function registerRecoveryCases(factory: ConformanceFactory) {
     const asset = await a.asset("queued");
     await a.edit([{ ...textEdit("note", "queued"), asset }]);
     const before = await a.state();
-    const peer = { ...protocolPeer, release: "future-relay", protocolVersions: [2] };
+    const peer = { ...protocolPeer, release: "future-relay", protocolVersions: [1] };
     const outcome = await a.sync({ peer });
     expect(outcome.status).toBe("unsupported-protocol");
     expect("action" in outcome && outcome.action).toContain("Update");
@@ -90,7 +88,14 @@ export function registerRecoveryCases(factory: ConformanceFactory) {
       const other = { ...scope, [field]: "other" };
       expect((await relay.snapshot(other)).records).toEqual({});
       expect(await objects.get(other, asset)).toBeNull();
-      const isolated = await sealMutation({ ...group, scope: other, changes: [textOnly(group.changes[0])] });
+      const boundary = await relay.snapshot(other);
+      const isolated = await sealMutation({
+        ...group,
+        scope: other,
+        epoch: boundary.checkpoint.epoch,
+        generation: boundary.generation,
+        changes: [textOnly(group.changes[0])],
+      });
       expect((await relay.submit(isolated)).status).toBe("accepted");
     }
   });
@@ -101,7 +106,7 @@ function textOnly(change: Parameters<typeof sealMutation>[0]["changes"][number])
 }
 
 export function registerReceiptRollbackCase(factory: ConformanceFactory) {
-  test("restoring a pending receipt replays newer accepted bytes and records before pending work", async () => {
+  test("restoring a pending receipt preserves newer accepted and pending bytes for resynchronization", async () => {
     const {
       clients: [a],
       relay,
@@ -119,11 +124,11 @@ export function registerReceiptRollbackCase(factory: ConformanceFactory) {
     await a.edit([textEdit("note", "pending-later")]);
     await relay.restore(saved);
     await a.restart();
-    await a.sync();
+    await expect(a.sync()).rejects.toThrow("Resynchronization required");
     const state = await a.state();
-    expect(state.pending).toHaveLength(0);
+    expect(state.pending.length).toBeGreaterThan(0);
     expect(state.records.note.text).toContain("accepted-later");
-    expect(state.records.note.text).toContain("pending-later");
+    expect(state.working.note.text).toContain("pending-later");
     expect(state.records.grouped.text).toBe("also-accepted");
     expect(state.blobs[asset.sha256]).toBe(Buffer.from("durable-image").toString("base64"));
   });

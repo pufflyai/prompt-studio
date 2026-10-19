@@ -6,7 +6,10 @@ import { createRecoveryProofs } from "./recovery-proofs";
 test("recovery evidence authenticates the exact operation scope, environment, identity and full content", async () => {
   const recovery = createRecoveryProofs(randomBytes(32));
   const mutation = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
+    epoch: "initial",
+    generation: 0,
+    sequence: 1,
     scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
     environmentId: "writer",
     operationId: "original",

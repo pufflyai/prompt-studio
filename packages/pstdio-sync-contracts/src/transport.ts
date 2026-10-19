@@ -6,6 +6,9 @@ import { assetSchema, fingerprintSchema, identitySchema, mutationSchema } from "
 export const relayOperationSchema = z.enum([
   "initialize",
   "snapshot",
+  "acknowledge",
+  "capture",
+  "captures/release",
   "replay",
   "submit",
   "recover",
@@ -27,10 +30,10 @@ export const relayPath = (target: RelayTarget, operation: RelayOperation) => {
     workbenchId: target.workbenchId,
     extensionId: target.extensionId,
   });
-  return `/v1/workbenches/~${encodeURIComponent(workbenchId)}/extensions/~${encodeURIComponent(extensionId)}/${relayOperationSchema.parse(operation)}`;
+  return `/v2/workbenches/~${encodeURIComponent(workbenchId)}/extensions/~${encodeURIComponent(extensionId)}/${relayOperationSchema.parse(operation)}`;
 };
 export const relayRoute = (pathname: string) => {
-  const match = /^\/v1\/workbenches\/~([^/]+)\/extensions\/~([^/]+)\/(.+)$/.exec(pathname);
+  const match = /^\/v2\/workbenches\/~([^/]+)\/extensions\/~([^/]+)\/(.+)$/.exec(pathname);
   if (!match) return null;
   try {
     return {
@@ -65,6 +68,6 @@ export const relayAssetStatusSchema = z.strictObject({
     z.strictObject({ number: z.number().int().positive(), sha256: fingerprintSchema, byteLength: byteLengthSchema }),
   ),
 });
-export const relayEventSchema = z.strictObject({ protocolVersion: z.literal(1), type: z.enum(["ready", "changed"]) });
+export const relayEventSchema = z.strictObject({ protocolVersion: z.literal(2), type: z.enum(["ready", "changed"]) });
 
 export const relayInitializeSchema = z.strictObject({ publishedRevision: identitySchema });

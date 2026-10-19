@@ -71,7 +71,10 @@ try {
   assert.deepEqual(await part.json(), {});
   assert.deepEqual(await (await call("assets/finish", { uploadId: "network" })).json(), asset);
   const mutation = await sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
+    epoch: initial.checkpoint.epoch,
+    generation: initial.generation,
+    sequence: 1,
     scope,
     environmentId: process.env.SMOKE_ENVIRONMENT_ID!,
     operationId: "network-group",

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { sealMutation } from "pstdio-sync-contracts";
 import { entryFor } from "./authoring";
+import { sealOperation } from "./journal";
 import { projectGroups } from "./projection";
 import { applyRecordChange } from "./records";
 import { inspectConflict, resolutionEntry } from "./resolution";
@@ -86,7 +86,7 @@ test("a fresh competing choice guards resolved ancestry without treating it as a
   const late = await resolutionEntry(state, { ...proposal, operationId: "late", choose: "remote" }, "other");
   const snapshot = state.accepted!;
   state.journal.push(choice, late);
-  const seal = (entry: typeof choice) => sealMutation({ ...entry.mutation, protocolVersion: 1, scope: snapshot.scope });
+  const seal = (entry: typeof choice) => sealOperation({ ...state, accepted: snapshot }, entry.mutation);
   const accepted = await seal(choice);
   const rejected = await seal(late);
   snapshot.checkpoint = { epoch: "relay", sequence: 2 };

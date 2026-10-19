@@ -5,9 +5,13 @@ import { acceptedParent, type CoveredState, operationKey } from "./covered-state
 import { emptySnapshot, recordOutcome } from "./relay";
 import { stage } from "./staging";
 
-const legacyMutation = (group: CheckpointGroup) =>
+const recordMutation = (group: CheckpointGroup) =>
   sealMutation({
-    protocolVersion: 1,
+    protocolVersion: 2,
+    epoch: group.epoch,
+    generation: group.generation,
+    sequence: group.sequence,
+    document: group.document,
     scope: group.scope,
     environmentId: group.environmentId,
     operationId: operationKey(group),
@@ -18,7 +22,7 @@ const legacyMutation = (group: CheckpointGroup) =>
 
 // Reuse the existing reconciliation rules; the wire boundary remains strict protocol 2.
 export async function stageCovered(state: CoveredState, group: CheckpointGroup) {
-  const legacy: Snapshot = {
+  const projection: Snapshot = {
     ...emptySnapshot(state.scope),
     records: state.records,
     conflicts: state.conflicts,
@@ -26,8 +30,8 @@ export async function stageCovered(state: CoveredState, group: CheckpointGroup) 
     publishedRevision: state.publishedRevision,
   };
   for (const [key, receipt] of Object.entries(state.receipts)) {
-    const mutation = await legacyMutation(receipt.group);
-    legacy.receipts[key] = {
+    const mutation = await recordMutation(receipt.group);
+    projection.receipts[key] = {
       mutation,
       operationId: key,
       fingerprint: mutation.fingerprint,
@@ -37,14 +41,14 @@ export async function stageCovered(state: CoveredState, group: CheckpointGroup) 
       ...(receipt.status === "conflict" && { conflictId: key }),
     };
   }
-  const mutation = await legacyMutation(group);
+  const mutation = await recordMutation(group);
   const outcome = recordOutcome(
-    legacy,
+    projection,
     mutation,
-    await stage(legacy, mutation, (parent) => acceptedParent(state, parent)),
+    await stage(projection, mutation, (parent) => acceptedParent(state, parent)),
   );
-  state.records = legacy.records;
-  state.conflicts = legacy.conflicts;
-  state.cut = legacy.checkpoint.sequence;
+  state.records = projection.records;
+  state.conflicts = projection.conflicts;
+  state.cut = projection.checkpoint.sequence;
   return outcome.status;
 }

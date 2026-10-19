@@ -5,6 +5,7 @@ export * from "./compatibility";
 export * from "./extension-publications";
 export * from "./fingerprint";
 export * from "./identity";
+export * from "./production-coverage";
 export * from "./replay";
 export * from "./retention";
 export * from "./state";

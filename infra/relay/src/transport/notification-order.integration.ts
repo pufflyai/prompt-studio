@@ -1,11 +1,14 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { fingerprint, sealMutation } from "pstdio-sync-contracts";
+import { fingerprint } from "pstdio-sync-contracts";
 import { startRelay } from "../service";
+import { sealStoredMutation } from "../storage/mutation.fixture";
 import { withFixtureDatabase } from "./database.fixture";
 import { createTransportFixture } from "./integration-fixture";
 import { connectSocket } from "./socket.fixture";
 
 const fixture = createTransportFixture();
+const sealMutation = (body: Parameters<typeof sealStoredMutation>[0]) =>
+  sealStoredMutation(body, fixture.relayDatabaseUrl);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
@@ -72,7 +75,7 @@ test("pending and conflicting receipt commits both notify; duplicates keep their
     };
     const create = (operationId: string, parents: string[], next: string) =>
       sealMutation({
-        protocolVersion: 1,
+        protocolVersion: 2,
         scope: context.scope,
         environmentId: context.environmentId,
         operationId,

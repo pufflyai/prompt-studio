@@ -4,11 +4,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type AssetStore, createRecordStorage, type GroupedState, type StorageOwner } from "pstdio-sync";
 import { createRelayAdapter } from "pstdio-sync/relay";
-import { fingerprint, sealMutation } from "pstdio-sync-contracts";
+import { fingerprint } from "pstdio-sync-contracts";
 import { startRelay } from "../service";
+import { sealStoredMutation } from "../storage/mutation.fixture";
+import { withFixtureDatabase } from "./database.fixture";
 import { createTransportFixture } from "./integration-fixture";
 
 const fixture = createTransportFixture();
+const sealMutation = (body: Parameters<typeof sealStoredMutation>[0]) =>
+  sealStoredMutation(body, fixture.relayDatabaseUrl);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
@@ -119,25 +123,11 @@ test("two journal owners synchronize through the native HTTP adapter and retain 
     expect(beforeRestore.receipts["second-choice"].status).toBe("conflict");
     expect(beforeRestore.receipts["resolved-choice"].status).toBe("accepted");
     await context.storage.owner(context.scope).restore(backup);
-    expect((await observer.synchronize(adapter(observerAccess.token))).status).toBe("synchronized");
-    const recovered = await context.storage.owner(context.scope).snapshot();
-    for (const [id, receipt] of Object.entries(beforeRestore.receipts)) {
-      expect(recovered.receipts[id].mutation).toEqual(receipt.mutation);
-      expect(recovered.receipts[id].status).toBe(receipt.status);
-    }
+    await expect(observer.synchronize(adapter(observerAccess.token))).rejects.toThrow("Resynchronization required");
     expect((await observer.records.read("note")).value).toBe("second-choice");
-    await observer.records.commit({
-      operationId: "after-restore",
-      edits: [
-        {
-          recordId: "later",
-          expectedRevision: (await observer.records.read("later")).revision,
-          replace: "new local work",
-        },
-      ],
-    });
-    expect((await observer.synchronize(adapter(observerAccess.token))).status).toBe("synchronized");
-    expect((await context.storage.owner(context.scope).snapshot()).records.later.value).toBe("new local work");
+    const retained = await observer.readState();
+    expect(retained.journal.map((entry) => entry.mutation.operationId)).toContain("resolved-choice");
+    expect((await context.storage.owner(context.scope).snapshot()).records).toEqual(backup.records);
   } finally {
     controller.abort();
     await server.stop(true);
@@ -179,11 +169,11 @@ test("an unfinished foreign asset does not stop unrelated downloads or queued lo
     });
   try {
     const pending = await sealMutation({
-      protocolVersion: 1,
+      protocolVersion: 2,
       scope: context.scope,
       environmentId: context.environmentId,
       operationId: "unfinished-upload",
-      parents: [],
+      parents: ["toString"],
       changes: [
         {
           recordId: "image",
@@ -195,7 +185,7 @@ test("an unfinished foreign asset does not stop unrelated downloads or queued lo
     });
     expect((await adapter(context.token).submit(pending)).status).toBe("pending");
     const note = await sealMutation({
-      protocolVersion: 1,
+      protocolVersion: 2,
       scope: context.scope,
       environmentId: context.environmentId,
       operationId: "unrelated-note",
@@ -239,5 +229,46 @@ test("an unfinished foreign asset does not stop unrelated downloads or queued lo
     await server.stop(true);
     await context.close();
     await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("a concurrent publication declines coverage without failing completed content synchronization", async () => {
+  const context = await fixture.context();
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
+  const controller = new AbortController();
+  const adapter = createRelayAdapter({
+    origin: server.url.origin,
+    scope: context.scope,
+    token: async () => context.token,
+    signal: controller.signal,
+  });
+  const storage = local(context.scope, context.environmentId);
+  try {
+    await storage.records.commit({
+      operationId: "local-save",
+      edits: [
+        { recordId: "note", expectedRevision: (await storage.records.read("note")).revision, replace: "accepted" },
+      ],
+    });
+    const synchronized = await storage.synchronize({
+      ...adapter,
+      acknowledge: async (ack) => {
+        await context.storage.owner(context.scope).publishRevision("published-notes", "concurrent-publication");
+        return adapter.acknowledge(ack);
+      },
+    });
+    expect(synchronized.status).toBe("synchronized");
+    await withFixtureDatabase(fixture.relayDatabaseUrl, async (client) => {
+      const result = await client.query('SELECT * FROM relay_acknowledgements WHERE "ownerId"=$1', [
+        await fingerprint(context.scope),
+      ]);
+      expect(result.rows).toEqual([]);
+    });
+    expect((await storage.readState()).pending).toEqual([]);
+    expect((await context.storage.owner(context.scope).snapshot()).covered).toBe(0);
+  } finally {
+    controller.abort();
+    await server.stop(true);
+    await context.close();
   }
 });

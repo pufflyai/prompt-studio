@@ -89,7 +89,7 @@ test("expiry ends an idle socket without a content notification", async () => {
   try {
     expect((await connection.next()).type).toBe("ready");
     expect((await connection.closed).code).toBe(1008);
-    expect(connection.messages).toEqual([{ protocolVersion: 1, type: "ready" }]);
+    expect(connection.messages).toEqual([{ protocolVersion: 2, type: "ready" }]);
   } finally {
     connection.socket.close();
     await server.stop(true);

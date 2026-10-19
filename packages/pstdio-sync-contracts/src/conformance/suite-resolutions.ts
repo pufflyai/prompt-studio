@@ -97,6 +97,7 @@ export function registerJoinedResolutionCase(factory: ConformanceFactory) {
     const { sealMutation } = await import("../fingerprint");
     const incomplete = await sealMutation({
       ...proposal,
+      sequence: proposal.sequence + 1,
       operationId: crypto.randomUUID(),
       parents: [first.operationId, joined.operationId],
       resolution: {

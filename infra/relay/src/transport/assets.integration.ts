@@ -1,15 +1,12 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import {
-  type RelayOperation,
-  receiptSchema,
-  relayAssetStatusSchema,
-  relayPath,
-  sealMutation,
-} from "pstdio-sync-contracts";
+import { type RelayOperation, receiptSchema, relayAssetStatusSchema, relayPath } from "pstdio-sync-contracts";
 import { startRelay } from "../service";
+import { sealStoredMutation } from "../storage/mutation.fixture";
 import { createTransportFixture } from "./integration-fixture";
 
 const fixture = createTransportFixture();
+const sealMutation = (body: Parameters<typeof sealStoredMutation>[0]) =>
+  sealStoredMutation(body, fixture.relayDatabaseUrl);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
@@ -33,7 +30,7 @@ test("HTTP multipart resume publishes only verified assets and streams immutable
     expect(state.parts).toEqual([]);
     expect(Object.keys(state).sort()).toEqual(["asset", "completed", "partSize", "parts"]);
     const mutation = await sealMutation({
-      protocolVersion: 1,
+      protocolVersion: 2,
       scope: context.scope,
       environmentId: context.environmentId,
       operationId: "asset-group",

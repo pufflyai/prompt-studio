@@ -1,13 +1,16 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { fingerprint, type Mutation, type Receipt, relayPath, sealMutation } from "pstdio-sync-contracts";
+import { fingerprint, type Mutation, type Receipt, relayPath } from "pstdio-sync-contracts";
 import { startRelay } from "../service";
+import { sealStoredMutation } from "../storage/mutation.fixture";
 import { createTransportFixture } from "./integration-fixture";
 
 const fixture = createTransportFixture();
+const sealMutation = (body: Parameters<typeof sealStoredMutation>[0]) =>
+  sealStoredMutation(body, fixture.relayDatabaseUrl);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
-test("current authority recovers exact foreign operations after restore but cannot forge their identity", async () => {
+test("current authority verifies retained proof but fences old epoch operations after restore", async () => {
   const context = await fixture.context();
   const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   try {
@@ -28,7 +31,7 @@ test("current authority recovers exact foreign operations after restore but cann
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
     const mutation = await sealMutation({
-      protocolVersion: 1,
+      protocolVersion: 2,
       scope: context.scope,
       environmentId: context.environmentId,
       operationId: "original",
@@ -53,9 +56,9 @@ test("current authority recovers exact foreign operations after restore but cann
     await owner.restore(backup);
     expect((await request("submit", access.token, mutation)).status).toBe(403);
     const recovered = await request("recover", access.token, { mutation, proof });
-    expect(recovered.status).toBe(200);
-    expect(((await recovered.json()) as Receipt).status).toBe("accepted");
-    expect((await owner.snapshot()).records.note.value).toBe("saved");
+    expect(recovered.status).toBe(409);
+    await recovered.body?.cancel();
+    expect((await owner.snapshot()).records).toEqual(backup.records);
     const { fingerprint: _digest, ...original } = mutation;
     const changes: Partial<Mutation>[] = [
       { operationId: "forged" },
@@ -81,7 +84,7 @@ test("pending and conflicting ancestors carry durable replay proof without imply
   try {
     const submit = async (operationId: string, parents: string[]) => {
       const mutation = await sealMutation({
-        protocolVersion: 1,
+        protocolVersion: 2,
         scope: context.scope,
         environmentId: context.environmentId,
         operationId,

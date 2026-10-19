@@ -29,7 +29,7 @@ test("a closed socket cancels stalled synchronization before reconnecting withou
     },
     websocket: {
       open(socket) {
-        socket.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+        socket.send(JSON.stringify({ protocolVersion: 2, type: "ready" }));
         if (attempts === 0) void stalled.promise.then(() => socket.close());
       },
       message() {},

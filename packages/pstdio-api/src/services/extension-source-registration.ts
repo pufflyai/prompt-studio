@@ -1,4 +1,5 @@
-import { type createInstalledExtensionSourcesDBService, legacyTemplateOwnerSourcePath } from "pstdio-db";
+import { isAbsolute } from "node:path";
+import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 
 import type { RegisterInstalledSourceInput } from "./extension-service";
 
@@ -72,11 +73,18 @@ export const findInstalledSourceForRegistration = async (
 ) => {
   const existing = await service.getBySourcePath(input.sourcePath);
   if (existing) return existing;
-  return service.getBySourcePath(legacyTemplateOwnerSourcePath(input.extensionId));
+  const unresolved = (await service.list()).filter(
+    (source) =>
+      source.extension_id === input.extensionId &&
+      source.version === null &&
+      !isAbsolute(source.source_path) &&
+      URL.canParse(source.source_path),
+  );
+  return unresolved.length === 1 ? unresolved[0] : null;
 };
 
 export const refreshPathForRegistration = (existingPath: string, input: RegistrationIdentity) =>
-  existingPath === legacyTemplateOwnerSourcePath(input.extensionId) ? undefined : input.sourcePath;
+  existingPath === input.sourcePath ? input.sourcePath : undefined;
 
 export const registrationValues = (
   input: RegisterInstalledSourceInput,
