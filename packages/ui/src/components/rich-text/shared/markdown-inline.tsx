@@ -1,9 +1,10 @@
 import { Box, Code, Link, Text } from "@chakra-ui/react";
 import type { PhrasingContent } from "mdast";
 import { Fragment, type ReactNode } from "react";
-import { parseChatLink } from "@/components/chat-ui/links/chat-link";
+import { isChatWebLink, parseChatLink } from "@/components/chat-ui/links/chat-link";
 import { ChatLinkAnchor } from "@/components/chat-ui/links/chat-link-anchor";
 import { useChatLinkHandler } from "@/components/chat-ui/links/chat-link-context";
+import { ChatWebLink } from "@/components/chat-ui/links/chat-web-link";
 import { parseMarkdownInline } from "./markdown-ast";
 import { resolveMarkdownUrl } from "./markdown-url";
 import { useMarkdownUrlResolver } from "./markdown-url-context";
@@ -17,6 +18,15 @@ interface MarkdownInlineProps {
 interface InlineChildrenProps {
   nodes: PhrasingContent[];
 }
+
+// Bubble labels are plain text, like the message text of a link.
+const plainText = (nodes: PhrasingContent[]): string =>
+  nodes
+    .map((node) => {
+      if ("children" in node) return plainText(node.children);
+      return "value" in node ? node.value : "";
+    })
+    .join("");
 
 const InlineChildren = (props: InlineChildrenProps) => {
   const { nodes } = props;
@@ -57,6 +67,8 @@ const InlineChildren = (props: InlineChildrenProps) => {
         return <br key={key} />;
       case "link": {
         const candidate = { source: node.url, origin: "markdown" as const };
+        if (node.children.every((child) => child.type !== "image") && isChatWebLink(handler, candidate))
+          return <ChatWebLink key={key} source={node.url} label={plainText(node.children)} />;
         const parsed = parseChatLink(candidate, typeof window === "undefined" ? undefined : window.location.origin);
         if (handler && parsed && (parsed.kind !== "external" || handler.resolveHref(candidate)))
           return (
