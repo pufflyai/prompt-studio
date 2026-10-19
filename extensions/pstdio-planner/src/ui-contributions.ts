@@ -17,7 +17,7 @@ import { archiveTicketColumnAction } from "./commands/archive-ticket";
 import { attachTicketFileCommand } from "./commands/attach-ticket-file";
 import { createTicketCommand } from "./commands/create-ticket";
 import { getTicketContent } from "./commands/get-ticket-content";
-import { moveTicket } from "./commands/move-ticket";
+import { moveTicketOnBoard } from "./commands/move-ticket-on-board";
 import { queryTickets } from "./commands/query-tickets";
 import { saveTicketContent } from "./commands/save-ticket-content";
 import { setTicketAttribute } from "./commands/set-ticket-attribute";
@@ -28,7 +28,7 @@ import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STAT
 import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
 import { ticketBoard, timelineBoard } from "./data/ticket-board";
 import { ticketDocumentPage, ticketPageTarget } from "./data/ticket-page-target";
-import { plannerTicketsChanged } from "./events";
+import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
 import { timelineViewSchema } from "./timeline/commands/view-schema";
@@ -121,6 +121,7 @@ export const createPlannerUi = (baseUrl: string) => {
       kind: "kanban",
       attributes: buildTicketAttributes([]),
       query: queryTickets,
+      schemaRefreshEvents: [plannerSchemaChanged],
       refreshEvents: [
         plannerTicketsChanged,
         planChanged,
@@ -137,7 +138,7 @@ export const createPlannerUi = (baseUrl: string) => {
         );
       },
       onAttributeChange: setTicketAttribute,
-      onMove: moveTicket,
+      onMove: moveTicketOnBoard,
       onColumnAction: archiveTicketColumnAction,
       defaultFilter: {
         conjunction: "and",

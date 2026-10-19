@@ -52,7 +52,8 @@ test("returns the created ticket when releasing the write claim fails", async ()
     if (name !== "timeline.write-claims") return real;
     return {
       ...real,
-      deleteIfValue: async () => {
+      deleteIfValue: async (key: string, value: unknown) => {
+        if (key !== "plan") return real.deleteIfValue(key, value);
         throw new Error("Storage unavailable");
       },
     };
