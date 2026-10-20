@@ -102133,7 +102133,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Compact controls stay inline. Range values open from a compact summary; Markdown matches text input sizing; segmented choices and actions collapse into dropdowns; anchor grid is omitted. Uploads keep the space their real primitive requires.",
+                      "content": "Compact controls stay inline. Multiline text spans the editor width with its label above. Range values open from a compact summary; Markdown matches compact text input sizing; segmented choices and actions collapse into dropdowns; anchor grid is omitted. Uploads keep the space their real primitive requires.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 11,
@@ -102248,36 +102248,6 @@
                               "name": "Value",
                               "fill": "#F7F8F8",
                               "content": "Hello World",
-                              "fontFamily": "Inter",
-                              "fontSize": 11,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "L2CjH6",
-                          "name": "Prompt Template input",
-                          "width": 200,
-                          "height": 32,
-                          "fill": "#07090E",
-                          "cornerRadius": 4,
-                          "stroke": "#2E333F",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "padding": [
-                            0,
-                            10
-                          ],
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "KZtg6",
-                              "name": "Value",
-                              "fill": "#F7F8F8",
-                              "content": "This is a multiline text example",
                               "fontFamily": "Inter",
                               "fontSize": 11,
                               "fontWeight": "normal"
@@ -102952,6 +102922,54 @@
                                   ]
                                 }
                               ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "D9kt0",
+                      "name": "Multiline text block · full width",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "cls3v",
+                          "name": "Label",
+                          "fill": "#8B9099",
+                          "content": "Prompt Template",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "RIcJ8",
+                          "name": "Prompt Template textarea",
+                          "width": "fill_container",
+                          "height": 72,
+                          "fill": "#07090E",
+                          "cornerRadius": 4,
+                          "stroke": "#2E333F",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": 10,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "V9FiXf",
+                              "name": "Prompt value",
+                              "fill": "#F7F8F8",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "This is a multiline text example\nwith multiple lines",
+                              "lineHeight": 1.45,
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
