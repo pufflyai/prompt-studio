@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expectPackagedTicketImages } from "./packaged-ticket-images-smoke";
 
 export const expectPlannerWorkflow = async (
   baseUrl: string,
@@ -12,6 +13,7 @@ export const expectPlannerWorkflow = async (
   tempRoot: string,
 ) => {
   const headers = { ...authorization, "content-type": "application/json" };
+  await expectPackagedTicketImages({ baseUrl, projectId, headers });
   const settingsUrl = `${baseUrl}/v1/projects/${projectId}/extensions/${instanceId}/settings`;
   const commandsUrl = `${baseUrl}/v1/projects/${projectId}/extensions/commands`;
   const commandsResponse = await fetch(commandsUrl, { headers });

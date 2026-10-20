@@ -27,7 +27,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // Core extension checks cover extension-owned draft storage, versioned template edits, and allocated file roots.
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
-// grouped ticket settings and icons, cleanup/merge settings, saved document links, and ticket/workspace navigation.
+// grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 // Includes linked dependency loading and missing dependency diagnostics.
@@ -67,6 +67,7 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
 // Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
+// Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.

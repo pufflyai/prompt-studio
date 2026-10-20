@@ -155,7 +155,7 @@ function AutoBuildSessions(props: AutoBuildSessionsProps) {
               ? t("timeline.autoBuild.failed", "The supervisor failed. Open its session to inspect the error.")
               : t(
                   "timeline.autoBuild.stuck",
-                  "Auto Build is stuck. Check dependencies, blockers, and review requests.",
+                  "Auto Build is stuck. Check dependencies, blockers, and items that need attention.",
                 ))
           }
         />
