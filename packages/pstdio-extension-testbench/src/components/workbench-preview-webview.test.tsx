@@ -50,6 +50,8 @@ test("testbench webviews keep workspace, placement resource, metadata, and slot"
   }) as { props: { capabilities: Record<string, (request: unknown) => Promise<unknown>> } };
   expect(Object.keys(frame.props.capabilities).sort()).toEqual([...WEBVIEW_HOST_CAPABILITIES].sort());
   const supported = new Set([
+    "harnesses.read",
+    "resources.actions",
     "commands.execute",
     "navigation.open",
     "page.params.update",
@@ -80,4 +82,8 @@ test("testbench webviews keep workspace, placement resource, metadata, and slot"
       slot: { id: view.id, kind: "panel", context: { projectId: baseBench.projectId } },
     },
   ]);
+  expect(await frame.props.capabilities["harnesses.read"]!({ model: "bench-deep" })).toMatchObject({
+    selection: { harnessId: "bench.harness.scripted", model: "bench-deep" },
+    defaults: { effort: "medium" },
+  });
 });

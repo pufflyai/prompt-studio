@@ -7,9 +7,9 @@ import type { ExtensionRecordsApi } from "./storage-records";
 export interface ExtensionStorageCollectionApi<TItem = unknown> {
   get(id: string): Promise<TItem | undefined>;
   list(): Promise<TItem[]>;
-  /** @deprecated Use storage.records.commit with a caller-observed revision. */
+  /** @deprecated Use storage.records.commit. */
   put(id: string, value: TItem): Promise<void>;
-  /** @deprecated Use storage.records.commit with a caller-observed revision. Throws if the item was deleted. */
+  /** @deprecated Use storage.records.commit. Throws if the item was deleted. */
   update(id: string, value: TItem): Promise<void>;
   createIfAbsent(id: string, value: TItem): Promise<boolean>;
   deleteIfValue(id: string, value: TItem): Promise<boolean>;
@@ -34,9 +34,9 @@ export interface ExtensionStorageApi {
   files: ExtensionBlobsApi;
   /** @deprecated Use records.read to keep the observed revision with the value. */
   get<T = unknown>(key: string): Promise<T | undefined>;
-  /** @deprecated Use records.commit with the revision returned by records.read. */
+  /** @deprecated Use records.commit. */
   set<T = unknown>(key: string, value: T): Promise<void>;
-  /** @deprecated Use records.commit with deleted: true and the observed revision. */
+  /** @deprecated Use records.commit with deleted: true. */
   delete(key: string): Promise<void>;
   /** @deprecated Use records with stable record IDs and grouped commits. */
   collection<TItem = unknown>(name: string): ExtensionStorageCollectionApi<TItem>;

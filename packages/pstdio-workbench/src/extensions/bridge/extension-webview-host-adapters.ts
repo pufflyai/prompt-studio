@@ -11,6 +11,7 @@ import type {
   WebviewFilesDeleteParams,
   WebviewFilesListParams,
   WebviewFilesUploadParams,
+  WebviewHostCapabilityParams,
   WebviewHostCapabilityResults,
   WebviewNotificationActionParams,
   WebviewNotificationResolveParams,
@@ -53,6 +54,12 @@ export interface ExtensionWebviewFilesAdapter {
 }
 
 export interface ExtensionWebviewHostAdapters {
+  harnesses?: {
+    read(input: { harnessId?: string; model?: string }): MaybePromise<WebviewHostCapabilityResults["harnesses.read"]>;
+  };
+  resourceActions?: (
+    input: WebviewHostCapabilityParams["resources.actions"],
+  ) => MaybePromise<WebviewHostCapabilityResults["resources.actions"]>;
   executeCommand?(input: WebviewCommandsExecuteParams, signal?: AbortSignal): MaybePromise<unknown>;
   streamCommand?(input: WebviewCommandsExecuteParams, signal: AbortSignal): AsyncIterable<CommandStreamClientEvent>;
   commandCompleted?(response: CommandExecutionResult): void;

@@ -1,4 +1,10 @@
 import { HStack } from "@chakra-ui/react";
+import {
+  filterHarnessParamValues,
+  type HarnessParamValues,
+  harnessParamValuesEqual,
+  resolveHarnessParamDefaults,
+} from "@pstdio/ui/param-editor";
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect } from "react";
@@ -11,12 +17,6 @@ import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { useHarnessParamDefaults } from "../hooks/use-harness-param-defaults";
 import { resolveRuntimeAgentSelection, resolveRuntimeModelSelection } from "../runtime/session-runtime-selection";
 import { HarnessParamInlineControls } from "./harness-param-inline-controls";
-import {
-  filterHarnessParamValues,
-  type HarnessParamValues,
-  harnessParamValuesEqual,
-  resolveHarnessParamDefaults,
-} from "./harness-param-values";
 
 interface SessionModelControlsProps {
   selectionScope?: "draft" | "request";

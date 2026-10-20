@@ -1,8 +1,8 @@
+import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import { useEffect, useRef, useState } from "react";
 import { readRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
-import type { HarnessParamValues } from "./harness-param-values";
 
 // The chat panel is keyed by its view, so these picks always belong to one session or draft.
 export const useSessionModelSelection = (view: DashboardSessionView, projectId: string | undefined) => {

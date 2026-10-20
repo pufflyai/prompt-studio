@@ -1,4 +1,4 @@
-import { localOperationSchema } from "pstdio-sync-contracts";
+import { localOperationSchema, type SyncOutcome } from "pstdio-sync-contracts";
 import { entryFor, inputFingerprint } from "./authoring";
 import { readBranch, workingRecords } from "./branches";
 import { pendingOperations, sealOperation } from "./journal";
@@ -6,6 +6,15 @@ import { projectGroups } from "./projection";
 import { inspectConflict, resolutionEntry } from "./resolution";
 import { synchronize } from "./synchronize";
 import type { AssetStore, GroupCommit, GroupedStore, RelayAdapter, ResolutionCommit, StorageOwner } from "./types";
+
+// Relay conflicts still exist until the merging store replaces the journal; they need attention.
+const saveStates = {
+  "saved-locally": "saved-locally",
+  pending: "waiting-to-sync",
+  synchronized: "synced",
+  conflict: "needs-attention",
+} as const;
+const saveOutcome = (outcome: SyncOutcome) => ({ ...outcome, state: saveStates[outcome.status] });
 
 export const createRecordStorage = (input: {
   store: GroupedStore;
@@ -45,7 +54,11 @@ export const createRecordStorage = (input: {
             .sort()
             .map((id) => readRecord(view.read(id)));
         }),
-      outcome: (operationId: string) => projection().then((view) => structuredClone(view.outcomes.get(operationId))),
+      outcome: (operationId: string) =>
+        projection().then((view) => {
+          const outcome = view.outcomes.get(operationId);
+          return outcome && saveOutcome(structuredClone(outcome));
+        }),
       inspect: (conflictId: string) =>
         input.store.transaction(input.owner, (state) => inspectConflict(state, input.environmentId, conflictId)),
       resolve: (proposal: ResolutionCommit) =>
@@ -58,7 +71,7 @@ export const createRecordStorage = (input: {
             localOperationSchema.parse(entry.mutation);
             state.journal.push(entry);
           }
-          return (await projectGroups(state, input.environmentId)).outcomes.get(proposal.operationId)!;
+          return saveOutcome((await projectGroups(state, input.environmentId)).outcomes.get(proposal.operationId)!);
         }),
       read: (recordId: string, options?: { operationId: string }) => {
         if (!options) return projection().then((view) => readRecord(view.read(recordId)));
@@ -101,7 +114,7 @@ export const createRecordStorage = (input: {
             group.edits.map((edit) => view.read(edit.recordId)),
             outcome,
           );
-          return outcome;
+          return saveOutcome(outcome);
         });
       },
     },

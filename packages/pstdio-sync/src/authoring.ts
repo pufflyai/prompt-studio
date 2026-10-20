@@ -21,11 +21,11 @@ export const recordVersion = (state: GroupedState, recordId: string, captured: s
 
 export const authorGroup = async (state: GroupedState, input: GroupCommit, environmentId: string) => {
   const parents = new Set<string>();
-  const { completed } = await projectGroups(state, environmentId);
+  const view = await projectGroups(state, environmentId);
   const changes = await Promise.all(
     input.edits.map(async (edit) => {
-      const base = recordVersion(state, edit.recordId, edit.expectedRevision);
-      for (const id of base.operations) if (!completed.has(id)) parents.add(id);
+      const base = recordVersion(state, edit.recordId, edit.expectedRevision ?? view.read(edit.recordId).revision);
+      for (const id of base.operations) if (!view.completed.has(id)) parents.add(id);
       return {
         recordId: edit.recordId,
         expectedRevision: base.record.revision,

@@ -1,3 +1,14 @@
+export { HarnessModelPicker } from "./harness-model-picker";
+export { harnessParamOptionColor } from "./harness-param-colors";
+export { HarnessParamEditor } from "./harness-param-editor";
+export {
+  filterHarnessParamValues,
+  type HarnessParamValues,
+  harnessParamValuesEqual,
+  resolveHarnessParamDefaults,
+  resolveHarnessParamText,
+  updateHarnessParamOverride,
+} from "./harness-param-values";
 export { ActionInput } from "./inputs/action-input";
 export { ANCHOR_GRID_VALUES, isAnchorGridValue } from "./inputs/anchor-grid";
 export { AnchorGridInput } from "./inputs/anchor-grid-input";

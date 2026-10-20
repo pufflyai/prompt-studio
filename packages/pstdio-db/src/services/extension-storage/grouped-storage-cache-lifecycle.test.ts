@@ -61,12 +61,12 @@ test("acceptance and recovery-proof changes invalidate projections without new j
   });
   const observer = createGroupedStorageDBService(fixture.db).open({ owner, environmentId: "other" }).records;
   expect((await observer.read("note")).exists).toBe(false);
-  expect((await fixture.reader.outcome("local"))?.status).toBe("pending");
+  expect(await fixture.reader.outcome("local")).toMatchObject({ status: "pending", state: "waiting-to-sync" });
   await fixture.service.transaction(owner, async (state) => {
     state.journal[0].acceptance = { fingerprint: "accepted", order: 1, checkpoint: { epoch: "epoch", sequence: 1 } };
   });
   expect((await observer.read("note")).value).toBe("local");
-  expect((await fixture.reader.outcome("local"))?.status).toBe("synchronized");
+  expect(await fixture.reader.outcome("local")).toMatchObject({ status: "synchronized", state: "synced" });
   fixture.queries.length = 0;
   await fixture.service.transaction(owner, async (state) => {
     state.journal[0].recoveryProof = "proof";

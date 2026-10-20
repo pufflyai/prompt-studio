@@ -167,7 +167,7 @@ replacement once, rather than counting both it and its captured pending branch.
 ## Transaction and acknowledgment boundaries
 
 Local storage serializes callers and durably saves the full group, ordered pending
-journal entry, identity, and required bytes before reporting `saved-locally`. The public SDK must accept caller-observed revisions for read-modify-write. It must not infer the caller's base from a later value at save time. Local
+journal entry, identity, and required bytes before reporting `saved-locally`. The public SDK accepts caller-observed revisions for read-modify-write. An edit without `expectedRevision` bases on the record's current revision in the local working view when the group is authored. Local
 working state is derived from accepted state plus active pending branches. It is
 not a third authoritative stored copy. An online stale save still preserves the
 proposed work and returns revision/conflict information; core never reruns arbitrary
@@ -190,7 +190,9 @@ durable replay log.
 
 `Receipt` retains the sealed mutation, digest, outcome, stable journal order and
 acceptance checkpoint. `syncOutcomeSchema` names `saved-locally`, `pending`,
-`synchronized`, and `conflict`. A synchronized result describes relay acceptance;
+`synchronized`, and `conflict`. The public `StorageSaveOutcome` adds a `state` derived
+from that status: `saved-locally`, `waiting-to-sync`, `synced`, and `needs-attention`.
+A synchronized result describes relay acceptance;
 it does not mean every peer has received it or that initial download is complete.
 Offline readiness requires all records, packages and bytes to be locally complete.
 

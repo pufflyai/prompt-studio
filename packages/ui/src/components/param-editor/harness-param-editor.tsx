@@ -1,7 +1,10 @@
-import { type Param, ParamEditorRow, type ParamValueMap } from "@pstdio/ui/param-editor";
-import type { HarnessParamsInfo } from "pstdio-api-contracts";
-import { harnessParamOptionColor } from "./harness-param-option-icon";
+import type { AgentInfo } from "@pstdio/sdk/resources";
+import { harnessParamOptionColor } from "./harness-param-colors";
 import { type HarnessParamValues, resolveHarnessParamText, updateHarnessParamOverride } from "./harness-param-values";
+import type { Param, ParamValueMap } from "./param-editor.types";
+import { ParamEditorRow } from "./param-editor-row";
+
+type HarnessParamsInfo = NonNullable<AgentInfo["params"]>;
 
 interface HarnessParamEditorProps {
   schema: HarnessParamsInfo | undefined;
