@@ -7,6 +7,7 @@ const packageDirs = [
   "packages/pstdio",
   "packages/pstdio-api",
   "packages/pstdio-dashboard",
+  "packages/pstdio-workbench",
   "packages/pstdio-db",
   "packages/pstdio-logging",
   "packages/e2e",
@@ -30,6 +31,7 @@ const full = {
   publishedExtensions: true,
   harnessCli: true,
   databaseTests: true,
+  browserSmoke: true,
 };
 
 const everyLinuxCheck = { ...full, stage: "pull_request" };
@@ -43,6 +45,7 @@ const scoped = {
   publishedExtensions: false,
   harnessCli: false,
   databaseTests: false,
+  browserSmoke: false,
 };
 
 describe("CI stage", () => {
@@ -76,6 +79,7 @@ describe("CI stage", () => {
       publishedExtensions: false,
       harnessCli: false,
       databaseTests: false,
+      browserSmoke: false,
     });
   });
 
@@ -140,6 +144,23 @@ test("API and database tests run in their own shards when a change affects those
   );
   expect(pullRequest(["packages/pstdio-api/src/app.ts"], [], ["pstdio-api"]).databaseTests).toBe(true);
   expect(pullRequest(["packages/pstdio-dashboard/src/main.tsx"], [], ["pstdio-dashboard"]).databaseTests).toBe(false);
+});
+
+test("dashboard changes and its shared dependencies run basic browser E2E", () => {
+  for (const file of [
+    "packages/pstdio-dashboard/src/main.tsx",
+    "packages/pstdio-workbench/src/react/command-palette/command-palette.tsx",
+    "packages/ui/src/utils/theme-preference.tsx",
+    "packages/sdk/src/index.ts",
+  ]) {
+    expect(pullRequest([file], [], ["pstdio-dashboard"]), file).toHaveProperty("browserSmoke", true);
+  }
+  expect(pullRequest(["packages/e2e/src/ui/keyboard-shortcuts.spec.ts"])).toHaveProperty("browserSmoke", true);
+  expect(pullRequest(["packages/pstdio-dashboard/README.md"], [], ["pstdio-dashboard"])).toHaveProperty(
+    "browserSmoke",
+    false,
+  );
+  expect(pullRequest(["clients/landing-page/src/pages/index.astro"])).toHaveProperty("browserSmoke", false);
 });
 
 test("published extensions are checked for extension and public contract changes", () => {

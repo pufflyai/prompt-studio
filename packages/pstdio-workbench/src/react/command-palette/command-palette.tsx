@@ -88,9 +88,10 @@ const executePaletteCommand = async (input: {
   onClose: () => void;
 }) => {
   const { args, commandId, context, label, workbench, onClose } = input;
+  const closePalette = workbench.commandPalette.captureClose(onClose);
   await runUserAction(workbench, label, () => workbench.commands.executeCommand(commandId, args, context), {
     inlineTarget: "command-palette",
-    onSuccess: onClose,
+    onSuccess: closePalette,
   });
 };
 
@@ -202,6 +203,7 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   } = props;
   const { chosenThemePreference, themePreferences, setThemePreference, previewThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
+  const requestId = useWorkbenchStore(workbench.commandPalette.store, (state) => state.requestId);
   useWorkbenchStore(workbench.keybindings.store, (state) => state.keybindings);
   useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
@@ -259,9 +261,10 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   const activeViewMode = getPaletteViewMode(view);
   const activeViewModes = getPaletteViewModes(view);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new presentation resets provider queries even when its initial text is unchanged.
   useEffect(() => {
     if (open) setLiveQuery(initialQuery);
-  }, [initialQuery, open]);
+  }, [initialQuery, open, requestId]);
 
   useEffect(() => {
     if (!open || !isThemeView) previewThemePreference(null);
@@ -277,7 +280,7 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
           initialActiveIndex={initialActiveIndex}
           mode={activeViewMode}
           modes={activeViewModes}
-          resetKey={`${view}:${initialQuery}`}
+          resetKey={requestId}
           inputIcon={({ mode }) => getPaletteInputIcon({ view, mode })}
           placeholder={({ mode }) => getPalettePlaceholder({ view, mode })}
           emptyLabel="No results found."

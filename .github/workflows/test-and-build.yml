@@ -32,6 +32,7 @@ jobs:
       published_extensions: ${{ steps.scope.outputs.publishedExtensions }}
       harness_cli: ${{ steps.scope.outputs.harnessCli }}
       relay_smoke: ${{ steps.scope.outputs.relaySmoke }}
+      browser_smoke: ${{ steps.scope.outputs.browserSmoke }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -407,6 +408,47 @@ jobs:
             packages/pstdio-workbench/storybook-static
           if-no-files-found: error
 
+  browser_smoke:
+    needs: scope
+    if: needs.scope.outputs.browser_smoke == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build dashboard browser test dependencies
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+
+      - name: Test basic dashboard flows
+        run: bun run --cwd packages/e2e test:smoke
+
+      - name: Preserve browser smoke reports and failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-results-attempt-${{ github.run_attempt }}
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: warn
+
   e2e:
     needs: [scope, storybooks]
     if: needs.scope.outputs.stage == 'full'
@@ -750,6 +792,7 @@ jobs:
       - windows_test_and_build
       - windows_database_tests
       - storybooks
+      - browser_smoke
       - e2e
       - e2e_cli
       - packaged_and_vite_e2e
@@ -763,6 +806,7 @@ jobs:
       - name: Require every job of this stage to succeed
         if: >-
           contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') ||
+          (needs.scope.outputs.browser_smoke == 'true' && needs.browser_smoke.result != 'success') ||
           (needs.scope.outputs.stage == 'merge_queue' && (needs.static_checks.result != 'success' ||
           needs.build_clients.result != 'success' || needs.build_docker.result != 'success')) ||
           (needs.scope.outputs.stage == 'full' && contains(needs.*.result, 'skipped'))
