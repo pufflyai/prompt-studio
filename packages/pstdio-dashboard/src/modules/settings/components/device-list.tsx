@@ -54,7 +54,15 @@ const DeviceRow = (props: Omit<DeviceListProps, "devices"> & { device: AccountDe
         </HStack>
       ) : (
         <HStack gap="sm">
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => setEditing(true)}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => {
+              setName(device.name);
+              setEditing(true);
+            }}
+          >
             Rename
           </Button>
           <Button size="sm" variant="destructive-ghost" disabled={busy} onClick={() => setRemoving(true)}>
