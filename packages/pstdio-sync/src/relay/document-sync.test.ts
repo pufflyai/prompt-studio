@@ -271,3 +271,37 @@ test("a latest state behind the current page restarts reading at its own boundar
   first.sync.close();
   document.destroy();
 });
+
+test("an incomplete state ahead of the cursor cannot erase edits from a completed page", async () => {
+  const f = relayFixture();
+  const document = new Y.Doc();
+  for (const key of ["one", "two", "three"]) {
+    document.getMap("values").set(key, key);
+    await f.relay.update(await sealUpdate(space, documentId, Y.encodeStateAsUpdate(document), []));
+  }
+  const empty = new Y.Doc();
+  const incomplete = await sealState(space, documentId, {
+    baseStateId: null,
+    through: 3,
+    state: Y.encodeStateAsUpdate(empty),
+    summary: Y.encodeStateVector(empty),
+    blobIds: [],
+  });
+  let reads = 0;
+  const first = device({
+    ...f.relay,
+    read: async (after) => {
+      reads++;
+      if (reads === 2) await f.relay.replace(incomplete);
+      const result = await f.relay.read(after);
+      if (reads === 1 && result.status === "updates")
+        return { ...result, updates: result.updates.slice(0, 2), more: true };
+      return result;
+    },
+  });
+  await first.sync.synchronize();
+  expect(await first.values()).toEqual({ one: "one", two: "two" });
+  first.sync.close();
+  document.destroy();
+  empty.destroy();
+});

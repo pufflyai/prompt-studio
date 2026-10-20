@@ -88,6 +88,10 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
         continue;
       }
       if (await readUpdates(result)) return;
+      // A later page may introduce an incomplete state ahead of this cursor. Keep the edits we
+      // already received in the local owner before replacing the relay replica with that state.
+      const local = await mergeLocal();
+      local.destroy();
     }
   };
   const mergeLocal = async () => {

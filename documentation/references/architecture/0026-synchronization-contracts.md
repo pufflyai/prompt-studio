@@ -105,7 +105,9 @@ use verified asset references.
 A connection keeps an in-memory replica of what the relay holds and a sequence cursor.
 It opens the latest state, checks its encrypted Yjs state vector, and reads every later
 update. If a latest state changes during pagination, reading restarts at its boundary.
-The uploader may have seen fewer updates than this reader.
+The uploader may have seen fewer updates than this reader. Each completed page is
+saved locally before reading the next, so an incomplete replacement cannot erase edits
+that this device already received.
 
 Downloaded data merges into the durable local document. It never replaces it. The
 client compares its document with the relay replica and sends missing edits, even
