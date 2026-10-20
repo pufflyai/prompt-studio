@@ -6,13 +6,13 @@ import { packWorkspacePackageTarball } from "../local-workspace-registry";
 
 const repoRoot = join(import.meta.dirname, "../../../..");
 
-export async function preparePlannerSource(root: string, sourcePath = join(repoRoot, "extensions/pstdio-planner")) {
+export async function preparePlannerSource(root: string, options: { offline?: boolean; sourcePath?: string } = {}) {
   mkdirSync(root, { recursive: true });
   const source = join(root, "planner-source");
   rmSync(source, { recursive: true, force: true });
   // Unpublished UI APIs need the built packages, including a generated fixture
   // lockfile. Release lockfiles still name the published package tarballs.
-  cpSync(sourcePath, source, {
+  cpSync(options.sourcePath ?? join(repoRoot, "extensions/pstdio-planner"), source, {
     recursive: true,
     filter: (path) => !["node_modules", "bun.lock"].includes(basename(path)),
   });
@@ -27,6 +27,10 @@ export async function preparePlannerSource(root: string, sourcePath = join(repoR
     manifest.overrides[`@pstdio/${name}`] = tarball;
   }
   writeFileSync(path, JSON.stringify(manifest));
-  await promisify(execFile)("bun", ["install", "--lockfile-only", "--ignore-scripts"], { cwd: source });
+  await promisify(execFile)(
+    "bun",
+    ["install", "--lockfile-only", "--ignore-scripts", ...(options.offline ? ["--offline"] : [])],
+    { cwd: source },
+  );
   return source;
 }

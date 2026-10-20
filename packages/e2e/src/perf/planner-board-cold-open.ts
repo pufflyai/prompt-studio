@@ -77,7 +77,7 @@ const installPlanner = async (
   home: string,
   plannerSource?: string,
 ) => {
-  const source = await preparePlannerSource(join(home, "fixtures"), plannerSource);
+  const source = await preparePlannerSource(join(home, "fixtures"), { sourcePath: plannerSource });
   const env = { ...process.env, HOME: home, PSTDIO_HOME: home };
   const added = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "add", source, "--name", "pstdio-planner", "--force"], {
     cwd: join(home, "project"),

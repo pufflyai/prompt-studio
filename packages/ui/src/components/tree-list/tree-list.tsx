@@ -1,17 +1,16 @@
 import { Box, Stack, type StackProps } from "@chakra-ui/react";
 import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
-import { useVirtualizer } from "@/utils/use-virtualizer";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
 import { TreeListBackground } from "./tree-list-background";
-import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
+import { buildVirtualRows } from "./tree-list-model";
 import { TreeListMoveSurface } from "./tree-list-move-surface";
-import { TreeListNodeRow } from "./tree-list-node-row";
 import { TreeListNodes } from "./tree-list-nodes";
 import type { TreeListMovePolicy } from "./tree-list-reorder";
 import { TreeListReveal } from "./tree-list-reveal";
-import { TreeListSectionHeader } from "./tree-list-section-header";
+import { TreeListRow } from "./tree-list-row";
 import { TreeListSortable } from "./tree-list-sortable";
+import { VirtualTreeList } from "./tree-list-virtual";
 import { useTreeListKeyboardNavigation } from "./use-tree-list-keyboard-navigation";
 
 export { buildVirtualRows } from "./tree-list-model";
@@ -19,7 +18,7 @@ export { buildVirtualRows } from "./tree-list-model";
 type TreeListRowVariant = "compact" | "tree";
 
 /** Sectioned hierarchical list for files, resources, navigation, and customizable sidenavs. */
-interface TreeListProps {
+export interface TreeListProps {
   /** Ordered sections to render, each containing nested tree nodes. */
   sections: TreeListSection[];
   /** Controlled section ids that are currently expanded. */
@@ -39,10 +38,10 @@ interface TreeListProps {
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
-  /** Render large trees with virtual rows. Disable when using drag ordering. */
+  /** Render large trees with virtual rows, including customizable navigation. */
   virtualize?: boolean;
   scrollRef?: RefObject<HTMLDivElement | null>;
-  // Customizable trees bypass virtualization. Hosts persist their new order.
+  // Hosts persist customization moves; virtualization keeps visible rows mounted.
   draggable?: boolean;
   onReorderSections?: (nextSectionIds: string[]) => void;
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
@@ -53,166 +52,6 @@ interface TreeListProps {
   // Background actions sit behind item rows, which keep their own context menu.
   backgroundContextActions?: ResourceContextAction[];
 }
-
-const VIRTUAL_ROW_ESTIMATE = 32;
-const VIRTUAL_ROW_OVERSCAN = 4;
-
-interface TreeListRowProps {
-  row: VirtualRow;
-  expandedNodeIds: string[];
-  activeNodeId?: string | string[] | null;
-  focusRowId?: string;
-  rowVariant: TreeListRowVariant;
-  nodeGap: StackProps["gap"];
-  linkComponent?: TreeListLinkComponent;
-  onRowFocus: (rowId: string) => void;
-  onNavigate?: (event: TreeListNavigateEvent) => void;
-  onToggleSection?: (sectionId: string) => void;
-  onToggleNode?: (nodeId: string) => void;
-  onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
-  onMoveNode?: (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => void;
-}
-
-const TreeListRow = (props: TreeListRowProps) => {
-  const {
-    row,
-    expandedNodeIds,
-    activeNodeId,
-    focusRowId,
-    rowVariant,
-    nodeGap,
-    linkComponent,
-    onRowFocus,
-    onNavigate,
-    onToggleSection,
-    onToggleNode,
-    onSectionContextMenu,
-    onMoveNode,
-  } = props;
-
-  if (row.kind === "section-header") {
-    return (
-      <TreeListSectionHeader
-        section={row.section}
-        collapsible={row.collapsible}
-        expanded={row.expanded}
-        focusId={row.key}
-        tabIndex={row.key === focusRowId ? 0 : -1}
-        onFocus={() => onRowFocus(row.key)}
-        onToggle={() => onToggleSection?.(row.sectionId)}
-        onContextMenu={onSectionContextMenu}
-      />
-    );
-  }
-
-  if (row.kind === "section-empty") return row.emptyState ?? null;
-
-  return (
-    <TreeListNodeRow
-      sectionId={row.sectionId}
-      node={row.node}
-      level={row.level}
-      expandedNodeIds={expandedNodeIds}
-      activeNodeId={activeNodeId}
-      rowVariant={rowVariant}
-      nodeGap={nodeGap}
-      linkComponent={linkComponent}
-      tabIndex={row.node.id === focusRowId ? 0 : -1}
-      onFocus={() => onRowFocus(row.node.id)}
-      onNavigate={onNavigate}
-      onToggleNode={onToggleNode}
-      onMoveNode={onMoveNode}
-    />
-  );
-};
-
-interface VirtualTreeListProps extends TreeListProps {
-  rows: VirtualRow[];
-  scrollRef: RefObject<HTMLDivElement | null>;
-}
-
-const VirtualTreeList = (props: VirtualTreeListProps) => {
-  const {
-    rows,
-    expandedNodeIds = [],
-    activeNodeId,
-    rowVariant = "tree",
-    nodeGap = "0",
-    linkComponent,
-    onNavigate,
-    onToggleSection,
-    onToggleNode,
-    onSectionContextMenu,
-    onMoveNode,
-    scrollRef,
-  } = props;
-
-  const { virtualizer, virtualItems, totalSize } = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => VIRTUAL_ROW_ESTIMATE,
-    overscan: VIRTUAL_ROW_OVERSCAN,
-    getItemKey: (index) => rows[index]?.key ?? index,
-  });
-  const keyboard = useTreeListKeyboardNavigation({
-    rows,
-    activeNodeId,
-    expandedNodeIds,
-    onToggleNode,
-    onToggleSection,
-    scrollToRow: (index) => virtualizer.scrollToIndex(index, { align: "auto" }),
-  });
-
-  return (
-    <Box
-      ref={keyboard.rootRef}
-      data-tree-list-virtual=""
-      role="listbox"
-      w="full"
-      minW="0"
-      maxW="full"
-      position="relative"
-      style={{ height: totalSize }}
-      onKeyDown={keyboard.handleKeyDown}
-    >
-      {virtualItems.map((virtualItem) => {
-        const row = rows[virtualItem.index];
-        if (!row) return null;
-
-        return (
-          <Box
-            key={virtualItem.key}
-            ref={virtualizer.measureElement}
-            data-index={virtualItem.index}
-            data-tree-list-row={row.kind}
-            position="absolute"
-            top="0"
-            left="0"
-            w="full"
-            pb={virtualItem.index === rows.length - 1 ? "0" : nodeGap}
-            style={{ transform: `translateY(${virtualItem.start}px)` }}
-          >
-            <TreeListRow
-              row={row}
-              expandedNodeIds={expandedNodeIds}
-              activeNodeId={activeNodeId}
-              focusRowId={keyboard.focusRowId}
-              rowVariant={rowVariant}
-              nodeGap={nodeGap}
-              linkComponent={linkComponent}
-              onRowFocus={keyboard.onRowFocus}
-              onNavigate={onNavigate}
-              onToggleSection={onToggleSection}
-              onToggleNode={onToggleNode}
-              onSectionContextMenu={onSectionContextMenu}
-              onMoveNode={onMoveNode}
-            />
-          </Box>
-        );
-      })}
-    </Box>
-  );
-};
 
 const StackTreeList = (props: TreeListProps) => {
   const {
@@ -320,6 +159,8 @@ const StackTreeList = (props: TreeListProps) => {
 export const TreeList = (props: TreeListProps) => {
   const content = props.draggable ? (
     <TreeListSortable
+      virtualize={props.virtualize}
+      scrollRef={props.scrollRef}
       sections={props.sections}
       expandedSectionIds={props.expandedSectionIds}
       expandedNodeIds={props.expandedNodeIds}

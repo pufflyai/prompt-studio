@@ -31,6 +31,7 @@ import {
   resolveHostTreeHeaderNodes,
   treeViewsFor,
 } from "./tree-renderer-host-defaults";
+import { extensionTreeStructure } from "./tree-renderer-structure";
 export interface RegisterWorkbenchExtensionTreeRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   getHostTreeFooterNodes?: HostTreeDefaultNodesResolver;
@@ -203,6 +204,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     icon: record.icon,
     body: {
       kind: "tree",
+      getStructure: record.structure ? (ctx) => extensionTreeStructure(record, ctx.resource) : undefined,
       searchable: record.searchable,
       searchPlaceholder: text(record.searchPlaceholder, "Search files"),
       defaultExpandedNodeIds: record.defaultExpandedNodeIds,

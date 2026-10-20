@@ -106,7 +106,20 @@ export interface TreeViewSection {
   canHide?: boolean;
 }
 
+/** Layout the host can render before fetching the section's contents. */
+export interface TreeViewSectionStructure {
+  id: string;
+  label?: Localizable<string>;
+  collapsible?: boolean;
+  hiddenByDefault?: boolean;
+  canHide?: boolean;
+  /** Display the current resource using its already-known label. */
+  resourceNode?: { id: string; icon?: string };
+}
+
 export interface TreeRendererContribution extends RendererContributionBase {
+  /** Section layout sent with view metadata; no renderer callback is needed to display it. */
+  structure?: TreeViewSectionStructure[];
   searchable?: boolean;
   searchPlaceholder?: Localizable<string>;
   header?: RendererCallback<TreeRendererQueryParams, TreeViewSection[]>;

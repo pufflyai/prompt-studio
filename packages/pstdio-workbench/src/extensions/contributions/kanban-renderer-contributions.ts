@@ -1,4 +1,7 @@
-import type { KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
+import type {
+  KanbanRendererBoardColumnConfig as WireBoardColumnConfig,
+  KanbanRendererRow as WireRow,
+} from "@pstdio/sdk/extensions";
 import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
 import { kanbanBuiltInViews, type WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
@@ -6,6 +9,7 @@ import { createElement } from "react";
 import type { Disposable, KanbanRendererCreateSubmission, KanbanRendererQueryState, ResourceRef } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../react/renderers/kanban/kanban-presentation";
+import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { collectionBadgeTarget } from "./collection-badge-navigation";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "./kanban-renderer-adapter";
@@ -253,7 +257,21 @@ export const registerWorkbenchExtensionKanbanRenderers = (
                 const candidate = row as KanbanRendererRow;
                 const signature = JSON.stringify(row);
                 const cached = rowCache.get(candidate.id);
-                const mapped = cached?.signature === signature ? cached.row : toWorkbenchRow(row, rowResource);
+                const target = (row as WireRow).target;
+                const mapped =
+                  cached?.signature === signature
+                    ? cached.row
+                    : {
+                        ...toWorkbenchRow(row, rowResource),
+                        ...(target
+                          ? {
+                              target: toWorkbenchNavigationTarget(target, {
+                                extensionId: record.extensionId,
+                                projectId: context.projectId,
+                              }),
+                            }
+                          : {}),
+                      };
                 originalRows.set(mapped, candidate);
                 nextCache.set(mapped.id, { signature, row: mapped });
                 return mapped;
