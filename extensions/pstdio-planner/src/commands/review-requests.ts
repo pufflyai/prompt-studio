@@ -31,7 +31,7 @@ const attemptStates: AttemptState[] = [
 export const requestHumanCommand = defineCommand({
   id: "request-human",
   title: "Request human input",
-  cli: { description: "Ask a person for a task confirmation or a decision and set Review Needed." },
+  cli: { description: "Ask a person for a task confirmation or a decision and mark the ticket as needing attention." },
   mutating: true,
   params: {
     ticket: params.text({ required: true }),

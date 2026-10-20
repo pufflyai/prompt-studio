@@ -204,7 +204,7 @@ export const listTicketFilesTree = async (
   const summary = reviewRequestSummary(reviewRequests);
   const reviewRequestsNode: TreeNode = {
     id: REVIEW_REQUESTS_DOCUMENT,
-    label: l10n("requests.navigation.label", "Review requests"),
+    label: l10n("requests.navigation.label", "Needs attention"),
     icon: REVIEW_REQUEST_ICON,
     badge: summary ? { label: String(summary.count), color: summary.color } : undefined,
     tooltip: summary?.tooltip,

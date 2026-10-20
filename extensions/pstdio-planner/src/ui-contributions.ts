@@ -102,7 +102,7 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const requests = defineView({
     id: "ticket-requests",
-    title: l10n("requests.view.title", "Review requests"),
+    title: l10n("requests.view.title", "Needs attention"),
     icon: REVIEW_REQUEST_ICON,
     body: {
       kind: "webview",
@@ -112,7 +112,7 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const requestsPage = definePage({
     id: ticketRequestsPage.id,
-    title: l10n("requests.page.title", "Review requests"),
+    title: l10n("requests.page.title", "Needs attention"),
     icon: REVIEW_REQUEST_ICON,
     parent: { kind: "page", id: "tickets" },
     path: "ticket-requests",

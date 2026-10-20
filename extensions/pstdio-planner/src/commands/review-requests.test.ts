@@ -161,7 +161,7 @@ describe("review requests", () => {
     );
   });
 
-  test("Review Needed stays until the last open request is answered or cancelled", async () => {
+  test("the attention flag stays until the last open request is answered or cancelled", async () => {
     const { context, flagged } = await setup();
     const first = await requestHumanCommand.run(context(), task as never);
     const second = await requestHumanCommand.run(context(), decision as never);

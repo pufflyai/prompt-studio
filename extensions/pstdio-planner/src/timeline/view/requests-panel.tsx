@@ -13,7 +13,7 @@ export function RequestsPanel(props: RequestsPanelProps) {
   return (
     <Stack gap="sm">
       <Text textStyle="label/S/medium" color="fg.muted">
-        REQUESTS
+        NEEDS ATTENTION
       </Text>
       {row.requestErrors.map((error) => (
         <Text key={error} role="alert" color="fg.error">
@@ -28,7 +28,7 @@ export function RequestsPanel(props: RequestsPanelProps) {
       ))}
       {!row.requests.length && !row.requestErrors.length ? (
         <Text textStyle="label/S/regular" color="fg.muted">
-          No human input requested.
+          Nothing needs attention.
         </Text>
       ) : null}
     </Stack>

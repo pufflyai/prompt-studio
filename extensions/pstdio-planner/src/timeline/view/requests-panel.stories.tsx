@@ -157,7 +157,7 @@ const row: PlanRow = {
 };
 
 const meta: Meta<typeof RequestsPanel> = {
-  title: "Extensions/Planner/Timeline requests",
+  title: "Extensions/Planner/Needs attention",
   component: RequestsPanel,
   decorators: [
     (Story) => (

@@ -1,6 +1,8 @@
-# Review requests
+# Needs attention
 
-A review request asks a person for input on a ticket. Planner owns every request: attempt handoffs, timeline tasks, and decisions all use the same commands and storage. The **Review Needed** flag is derived from open or unreadable requests.
+**Needs attention** is the place for ticket actions that need a person. It currently contains review requests: tasks and decisions that ask for input on a ticket. Other agent actions can use this area as they are added.
+
+Planner owns every review request: attempt handoffs, timeline tasks, and decisions all use the same commands and storage. The **Needs attention** flag is derived from open or unreadable requests.
 
 "Review" here means a person's answer. Code reviews of an attempt use `run-review` and `submit-review` instead. See [Attempts](0002-attempts.md).
 
@@ -15,10 +17,10 @@ Attempt handoffs ask one required text question with the ID `result`. Its answer
 
 ## Lifecycle
 
-1. `request-human` saves the request, links a chat session, and sets Review Needed. A request from an attempt reuses the attempt's session when that session owns the work. Otherwise Planner starts a new chat for the ticket.
+1. `request-human` saves the request, links a chat session, and sets Needs attention. A request from an attempt reuses the attempt's session when that session owns the work. Otherwise Planner starts a new chat for the ticket.
 2. A person or an agent answers with `review` or cancels with `review-requests cancel`. Schedules, automations, and event handlers cannot do either.
 3. Each request gets exactly one outcome: an answer or a cancellation. If two answers race, the first one wins and the other caller sees the saved outcome.
-4. When no open request is left on the ticket, Planner clears Review Needed. Managed attempt tickets refresh their status: stopped implementations become Todo, and running implementations become In Progress. Open or unreadable requests keep managed tickets Blocked.
+4. When no open request is left on the ticket, Planner clears Needs attention. Managed attempt tickets refresh their status: stopped implementations become Todo, and running implementations become In Progress. Open or unreadable requests keep managed tickets Blocked.
 
 Requests do not change after they are saved. To correct one, cancel it and create a new request. Answers to one request never close another open request.
 
@@ -26,7 +28,7 @@ Saving a response records what the person decided. It does not merge, select an 
 
 New requests need a ticket that is not done. Answers and cancellations still work after the ticket is done, because a merge can finish the ticket before its approval request is answered. Deleting a ticket deletes its requests.
 
-Answering or cancelling the last open request clears Review Needed when no unreadable record remains. Board cards with pending input open the ticket's review requests directly. The ticket sidebar stays beside the forms, so the ticket body is one click away. The forms use the same question controls as questions an agent asks in chat: one step tab per question, with radio buttons or checkboxes for choices. Generic UI and CLI tag edits cannot create a false blocker or hide a real request.
+Answering or cancelling the last open request clears Needs attention when no unreadable record remains. Board cards with pending input open the ticket's **Needs attention** page directly. The ticket sidebar stays beside the forms, so the ticket body is one click away. The forms use the same question controls as questions an agent asks in chat: one step tab per question, with radio buttons or checkboxes for choices. Generic UI and CLI tag edits cannot create a false blocker or hide a real request.
 
 ## CLI
 

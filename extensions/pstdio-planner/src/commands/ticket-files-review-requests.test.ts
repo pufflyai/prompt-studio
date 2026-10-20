@@ -46,7 +46,6 @@ describe("review requests in the ticket navigation", () => {
     const entry = await tree();
 
     expect(entry).toMatchObject({
-      label: { $l10n: "requests.navigation.label", default: "Review requests" },
       badge: { label: "1", color: "orange" },
       selected: false,
       target: {

@@ -92,12 +92,12 @@ export function SectionHeader(props: Props) {
         </Text>
       )}
       {counts.humanNeeded > 0 ? (
-        <Tooltip content={`${counts.humanNeeded} tickets need human review · open them`}>
+        <Tooltip content={`${counts.humanNeeded} tickets need attention · open them`}>
           <IconButton
             size="2xs"
             variant="ghost"
             color="orange.fg"
-            aria-label={`Review ${counts.humanNeeded} tickets that need a person in ${label}`}
+            aria-label={`Open ${counts.humanNeeded} tickets needing attention in ${label}`}
             onClick={() => onReview(deadline?.id ?? null)}
           >
             <Icon as={MessageCircleWarning} />

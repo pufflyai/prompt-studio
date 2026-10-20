@@ -167,7 +167,7 @@ describe("seedDefaultTags", () => {
     expect(seeded.map((tag) => tag.id)).not.toContain("default-priority");
   });
 
-  test("restores the required Review Needed workflow tag after deletion", async () => {
+  test("restores the required attention workflow tag after deletion", async () => {
     const storage = createMemoryStorage();
     await seedDefaultTags(storage);
 
@@ -175,6 +175,31 @@ describe("seedDefaultTags", () => {
     const seeded = await seedDefaultTags(storage);
 
     expect(seeded.map((tag) => tag.id)).toContain("default-human-requested");
+  });
+
+  test("updates the old default attention label while preserving custom flag names and colors", async () => {
+    for (const savedName of ["Review Needed", "Needs my input"]) {
+      const storage = createMemoryStorage();
+      const flags = HUMAN_REQUESTED_TAG();
+      const saved = {
+        ...flags,
+        name: "Workflow",
+        options: [{ ...flags.options[0], name: savedName, color: "purple" }],
+      };
+      await tagsCollection(storage).put(saved.id, saved);
+
+      const seeded = (await seedDefaultTags(storage)).find((tag) => tag.id === saved.id);
+
+      expect(seeded).toEqual({
+        ...saved,
+        options: [
+          {
+            ...saved.options[0],
+            name: savedName === "Review Needed" ? flags.options[0].name : savedName,
+          },
+        ],
+      });
+    }
   });
 
   test("completes a partial tag seed without replacing customized records", async () => {

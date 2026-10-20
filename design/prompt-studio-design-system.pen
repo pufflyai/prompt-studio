@@ -190889,7 +190889,7 @@
       "id": "T1I0q",
       "x": 55230,
       "y": 0,
-      "name": "Review request indicators · PS-670",
+      "name": "Needs attention indicators · PS-670",
       "width": 500,
       "fill": "$ds-bg",
       "layout": "vertical",
@@ -190901,7 +190901,7 @@
           "id": "WrS3G",
           "name": "Title",
           "fill": "$ds-fg",
-          "content": "Review requests",
+          "content": "Needs attention",
           "fontFamily": "$font-body",
           "fontSize": 16,
           "fontWeight": "normal"
@@ -190930,7 +190930,7 @@
               "id": "UAaYB",
               "name": "Sidebar label",
               "fill": "$ds-fg",
-              "content": "Review requests",
+              "content": "Needs attention",
               "fontFamily": "$font-label",
               "fontSize": 12,
               "fontWeight": "normal"
@@ -191013,7 +191013,7 @@
               "id": "ruVGf",
               "name": "Sidebar label",
               "fill": "$ds-fg",
-              "content": "Review requests",
+              "content": "Needs attention",
               "fontFamily": "$font-label",
               "fontSize": 12,
               "fontWeight": "normal"
@@ -191079,7 +191079,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "No requests: no indicator. Orange: open count. Green: resolved total. Each indicator opens the ticket review requests page.",
+          "content": "No items: no indicator. Orange: items needing attention. Green: resolved total. Each indicator opens the ticket Needs attention page.",
           "fontFamily": "$font-label",
           "fontSize": 12,
           "fontWeight": "normal"

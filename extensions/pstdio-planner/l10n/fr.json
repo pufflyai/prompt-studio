@@ -1,5 +1,5 @@
 {
-  "requests.navigation.label": "Demandes de révision",
+  "requests.navigation.label": "Attention requise",
   "timeline.page.title": "Chronologie du projet",
   "timeline.view.title": "Chronologie du projet",
   "commands.autoBuild.title": "Construire automatiquement",
@@ -44,8 +44,8 @@
   "settings.tickets.deleteLinkedWorkspaces.description": "Lorsqu’un ticket est archivé ou supprimé, supprime ses espaces de travail dès qu’aucun ticket actif ne les utilise. Cela supprime l’arbre de travail, sa branche et les modifications non validées.",
   "settings.tickets.markDoneOnMerge.title": "Marquer comme terminé après fusion",
   "settings.tickets.markDoneOnMerge.description": "Déplace un ticket vers Terminé lorsque la branche de son espace de travail ou une demande de fusion liée est fusionnée.",
-  "requests.view.title": "Demandes de révision",
-  "requests.page.title": "Demandes de révision",
+  "requests.view.title": "Attention requise",
+  "requests.page.title": "Attention requise",
   "commands.autoBuild.configure": "Configurer la construction automatique",
   "timeline.autoBuild.start": "Construire automatiquement",
   "timeline.autoBuild.stop": "Arrêter la construction automatique",
