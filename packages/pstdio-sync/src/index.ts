@@ -2,6 +2,7 @@ export { captureCheckpoint } from "./checkpoint-capture";
 export { type DocumentHistory, documentHistory } from "./document-history";
 export { createDocumentStorage } from "./document-storage";
 export { type DocumentState, type DocumentStore, hasDocumentUserData, memoryDocumentState } from "./document-types";
+export * from "./encryption";
 export { createLegacyRecordStorage } from "./legacy";
 export { createMemoryDocumentStore } from "./memory-document-store";
 export { initialRecordRevision, scopeRecordStorage, storageRecordId } from "./namespaces";

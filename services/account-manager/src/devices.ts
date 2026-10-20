@@ -4,6 +4,7 @@ import { createCredential, digestCredential } from "./credential";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
 import { DeviceAccessDenied } from "./renewal-errors";
 import { accounts, devices, workbenches } from "./schema";
+import { createSpaceKeysInTransaction, rotateSpaceKeysInTransaction } from "./space-keys";
 
 type Reader = Pick<ManagerDatabase, "select">;
 
@@ -57,8 +58,14 @@ export const renameDeviceInTransaction = async (transaction: ManagerTransaction,
   return renamed.length > 0;
 };
 
-export const removeDeviceInTransaction = (transaction: ManagerTransaction, input: DeviceInput) =>
-  transaction.update(devices).set({ removedAt: sql`clock_timestamp()` }).where(activeDevice(input));
+export const removeDeviceInTransaction = async (transaction: ManagerTransaction, input: DeviceInput) => {
+  const removed = await transaction
+    .update(devices)
+    .set({ removedAt: sql`clock_timestamp()` })
+    .where(activeDevice(input))
+    .returning({ id: devices.id });
+  if (removed.length) await rotateSpaceKeysInTransaction(transaction, input.accountId);
+};
 
 export const listWorkbenches = (db: Reader, accountId: string) =>
   db
@@ -67,8 +74,13 @@ export const listWorkbenches = (db: Reader, accountId: string) =>
     .where(eq(workbenches.accountId, accountId))
     .orderBy(asc(workbenches.id));
 
-export const addWorkbenchInTransaction = (transaction: ManagerTransaction, input: WorkbenchInput) =>
-  transaction.insert(workbenches).values({ accountId: input.accountId, id: input.workbenchId }).onConflictDoNothing();
+export const addWorkbenchInTransaction = async (transaction: ManagerTransaction, input: WorkbenchInput) => {
+  await transaction
+    .insert(workbenches)
+    .values({ accountId: input.accountId, id: input.workbenchId })
+    .onConflictDoNothing();
+  await createSpaceKeysInTransaction(transaction, input);
+};
 
 export const removeWorkbenchInTransaction = (transaction: ManagerTransaction, input: WorkbenchInput) =>
   transaction
