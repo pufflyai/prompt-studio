@@ -1,4 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
+import { createStorageId } from "pstdio-api-contracts";
 import {
   nextResourceNumber,
   rememberResourceNumber,
@@ -16,6 +17,7 @@ interface AllocationInput {
   extensionId: string;
   kind: string;
   prefix: string;
+  idPrefix?: string;
 }
 
 export const createExtensionResourceSequencesDBService = (
@@ -43,6 +45,7 @@ export const createExtensionResourceSequencesDBService = (
     );
 
   const allocate = async (input: AllocationInput) => {
+    const id = createStorageId(input.idPrefix);
     const timestamp = new Date().toISOString();
     try {
       const [row] = await db
@@ -63,7 +66,7 @@ export const createExtensionResourceSequencesDBService = (
         .returning();
       return store.documentStore.transaction(owner(input.projectId), async ({ document }) => {
         const resource = {
-          id: crypto.randomUUID(),
+          id,
           extensionId: input.extensionId,
           kind: input.kind,
           prefix: row!.prefix,

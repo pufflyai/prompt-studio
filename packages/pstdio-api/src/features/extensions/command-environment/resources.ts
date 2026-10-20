@@ -39,7 +39,7 @@ export const createResourcesApi = (
       throw new Error(`Resource kind "${kind}" is not owned by ${input.extensionId}.`);
     return deps.extensionResourceSequencesService.findByShorthand({ ...input, kind, shorthand });
   },
-  allocate: async ({ kind }) => {
+  allocate: async ({ kind, idPrefix }) => {
     const { runtime, project } = await deps.extensionRuntimeCatalog.get(input.projectId);
     const declaration = runtime.resourceKinds.find(
       (record) => record.extensionId === input.extensionId && record.localId === kind,
@@ -50,6 +50,6 @@ export const createResourcesApi = (
     const resolved = typeof prefix === "string" ? prefix : project.shorthand;
     if (!/^[A-Z][A-Z0-9]{0,15}$/.test(resolved) || resolved === "WS")
       throw new Error(`Resource prefix "${resolved}" is invalid or reserved.`);
-    return deps.extensionResourceSequencesService.allocate({ ...input, kind, prefix: resolved });
+    return deps.extensionResourceSequencesService.allocate({ ...input, kind, prefix: resolved, idPrefix });
   },
 });

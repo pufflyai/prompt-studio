@@ -12,6 +12,16 @@ test("each context allocates with its own resource prefixes", async () => {
   expect((await second.resources.allocate({ kind: "ticket" })).shorthand).toBe("PS-2");
 });
 
+test("resource allocation opts into compact IDs without consuming numbers for invalid prefixes", async () => {
+  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {}, resourcePrefixes: { ticket: "PS" } });
+  await expect(ctx.resources.allocate({ kind: "ticket", idPrefix: "INVALID" })).rejects.toThrow("ID prefix");
+  const first = await ctx.resources.allocate({ kind: "ticket", idPrefix: "tk" });
+  expect(first).toMatchObject({ id: expect.stringMatching(/^tk_[0-9A-Za-z]{22}$/), shorthand: "PS-1" });
+  const second = await ctx.resources.allocate({ kind: "ticket" });
+  expect(second.shorthand).toBe("PS-2");
+  expect(second.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+
 test("contexts sharing storage query cross-owner links and committed removals", async () => {
   const storage = createMemoryStorage();
   const notes = makeCommandContext({ storage, params: {}, overrides: { extensionId: "example.notes" } });

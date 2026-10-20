@@ -29,9 +29,10 @@ export const verifyEmptyPanelAddition = async (page: Page) => {
   if (await showBottom.isVisible()) await showBottom.click();
   await expect(side).toBeVisible();
   const closeSelected = async (region: typeof side) => {
-    await region.getByRole("tab", { selected: true }).focus();
-    await page.keyboard.press("Shift+F10");
-    await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
+    await region
+      .getByRole("tab", { selected: true })
+      .getByRole("button", { name: /^Close / })
+      .click();
   };
   await expect(side.getByRole("tab")).toHaveCount(0);
   await expect(bottom.getByRole("tab")).toHaveCount(0);

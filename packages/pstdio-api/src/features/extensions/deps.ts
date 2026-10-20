@@ -20,6 +20,7 @@ export type ExtensionsRouteDeps = Pick<
   | "sessionQueueEntriesService"
   | "sessionQueueLifecycle"
   | "settingsService"
+  | "storagePositions"
   | "skillService"
   | "workspaceSessionService"
 > & {
