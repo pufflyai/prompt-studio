@@ -33,9 +33,10 @@ const answerText = (request: ReviewRequest, questionId: string, value: string | 
 const describeOutcome = (request: ReviewRequest, outcome: ReviewOutcome | null) => {
   if (!outcome) return null;
   if (outcome.kind === "cancelled") return `Cancelled: ${outcome.reason}`;
-  if ("confirmed" in outcome.response) return "Completion confirmed";
-  return Object.entries(outcome.response.answers)
-    .map(([id, value]) => answerText(request, id, value))
+  if (request.request.kind === "task" || "confirmed" in outcome.response) return "Completion confirmed";
+  const { answers } = outcome.response;
+  return request.request.questions
+    .flatMap(({ id }) => (answers[id] === undefined ? [] : [answerText(request, id, answers[id])]))
     .join("\n");
 };
 

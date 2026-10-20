@@ -1,7 +1,7 @@
 // Draw a milestone header as one line: toggle, editable name, status icons, a rule to the progress bar, and delete.
 import { Box, Flex, Icon, IconButton, Text, useRecipe } from "@chakra-ui/react";
 import { psTheme, Tooltip } from "@pstdio/ui";
-import { CheckCircle2, ChevronsDownUp, ChevronsUpDown, Trash2, UserRound } from "lucide-react";
+import { CheckCircle2, ChevronsDownUp, ChevronsUpDown, MessageCircleWarning, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { isComplete } from "../model/filter";
 import { formatDay } from "./flags";
@@ -92,15 +92,15 @@ export function SectionHeader(props: Props) {
         </Text>
       )}
       {counts.humanNeeded > 0 ? (
-        <Tooltip content={`${counts.humanNeeded} tickets need human review · open them`}>
+        <Tooltip content={`${counts.humanNeeded} tickets need attention · open them`}>
           <IconButton
             size="2xs"
             variant="ghost"
             color="orange.fg"
-            aria-label={`Review ${counts.humanNeeded} tickets that need a person in ${label}`}
+            aria-label={`Open ${counts.humanNeeded} tickets needing attention in ${label}`}
             onClick={() => onReview(deadline?.id ?? null)}
           >
-            <Icon as={UserRound} />
+            <Icon as={MessageCircleWarning} />
             <Text textStyle="label/XS/medium">{counts.humanNeeded}</Text>
           </IconButton>
         </Tooltip>

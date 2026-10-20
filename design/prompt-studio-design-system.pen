@@ -32206,7 +32206,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 658
+                  "y": 665
                 },
                 {
                   "type": "frame",
@@ -74952,7 +74952,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 72,
+                                      "x": 70,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -95585,7 +95585,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 696,
+              "y": 701,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -124571,7 +124571,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 40,
+                                          "y": 41,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -151065,7 +151065,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151087,7 +151087,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151811,7 +151811,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151833,7 +151833,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152447,7 +152447,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152469,7 +152469,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153814,7 +153814,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153836,7 +153836,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -190881,6 +190881,392 @@
               "content": "Remote helper is unavailable. Connect a machine in this extension’s settings."
             }
           }
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "T1I0q",
+      "x": 55230,
+      "y": 0,
+      "name": "Needs attention indicators · PS-670",
+      "width": 560,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "WrS3G",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Needs attention",
+          "fontFamily": "$font-body",
+          "fontSize": 16,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "CKPNd",
+          "name": "Sidebar · Open",
+          "width": "fill_container",
+          "height": 28,
+          "gap": 8,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "OEEhB",
+              "name": "Review request icon",
+              "width": 16,
+              "height": 16,
+              "icon": "message-circle-warning",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "text",
+              "id": "UAaYB",
+              "name": "Sidebar label",
+              "fill": "$ds-fg",
+              "content": "Needs attention",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "i7lUwR",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "uA6Ov",
+              "type": "ref",
+              "ref": "dbK8Z",
+              "name": "Sidebar count",
+              "theme": {
+                "badge": "subtle",
+                "palette": "orange",
+                "size": "sm"
+              },
+              "descendants": {
+                "ohhQY": {
+                  "enabled": false
+                },
+                "FaaBK": {
+                  "content": "3"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "p8olSW",
+          "type": "ref",
+          "ref": "dbK8Z",
+          "name": "Card and timeline · Open",
+          "theme": {
+            "badge": "subtle",
+            "palette": "orange",
+            "size": "sm"
+          },
+          "descendants": {
+            "ohhQY": {
+              "type": "icon",
+              "id": "iMhe5",
+              "name": "Review requests",
+              "width": 14,
+              "height": 14,
+              "icon": "message-circle-warning",
+              "library": "lucide",
+              "fill": "$badge-fg"
+            },
+            "FaaBK": {
+              "content": "3"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "AEBGE",
+          "name": "Sidebar · Resolved",
+          "width": "fill_container",
+          "height": 28,
+          "gap": 8,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "DfEUj",
+              "name": "Review request icon",
+              "width": 16,
+              "height": 16,
+              "icon": "message-circle-warning",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "text",
+              "id": "ruVGf",
+              "name": "Sidebar label",
+              "fill": "$ds-fg",
+              "content": "Needs attention",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "kepW2",
+              "name": "Spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "SRbxg",
+              "type": "ref",
+              "ref": "dbK8Z",
+              "name": "Sidebar count",
+              "theme": {
+                "badge": "subtle",
+                "palette": "green",
+                "size": "sm"
+              },
+              "descendants": {
+                "ohhQY": {
+                  "enabled": false
+                },
+                "FaaBK": {
+                  "content": "3"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ZQNxY",
+          "type": "ref",
+          "ref": "dbK8Z",
+          "name": "Card and timeline · Resolved",
+          "theme": {
+            "badge": "subtle",
+            "palette": "green",
+            "size": "sm"
+          },
+          "descendants": {
+            "ohhQY": {
+              "type": "icon",
+              "id": "mFtTF",
+              "name": "Review requests",
+              "width": 14,
+              "height": 14,
+              "icon": "message-circle-warning",
+              "library": "lucide",
+              "fill": "$badge-fg"
+            },
+            "FaaBK": {
+              "content": "3"
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "VyFTY",
+          "name": "Indicator behavior",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "No items: no indicator. Orange: items needing attention. Green: resolved total. Each indicator opens the ticket Needs attention page.",
+          "fontFamily": "$font-label",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "FNVYe",
+          "name": "Answered decision · editable",
+          "context": "Saved decision forms keep their selected choices and text. Change the controls and choose Update answer to replace the saved answer. Saving does not undo actions already taken. Cancelled requests stay closed.",
+          "width": "fill_container",
+          "fill": "$ds-bg-subtle",
+          "cornerRadius": 4,
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "a29qg",
+              "name": "Decision title",
+              "fill": "$ds-fg",
+              "content": "Choose the release scope",
+              "fontFamily": "$font-label",
+              "fontSize": 14,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "bvZjD",
+              "name": "Saved status",
+              "theme": {
+                "palette": "green",
+                "badge": "subtle"
+              },
+              "fill": "$badge-fg",
+              "content": "Answered",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "R40SeG",
+              "name": "Saved choices remain editable",
+              "context": "Measured from implementation: Onest 12px legend/choice labels, 18px line height, 20px radios with 10px label gap, choices spaced 8px, 12px field padding, 8px fieldset corners, 12px control bottom padding. Preserve native question steps and Other behavior.",
+              "width": "fill_container",
+              "layout": "vertical",
+              "padding": [
+                17,
+                0,
+                12,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "J70uh",
+                  "name": "Existing question fieldset",
+                  "width": "fill_container",
+                  "fill": "#00000000",
+                  "cornerRadius": 8,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": [
+                    21,
+                    12,
+                    12,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "id": "IwAtJ",
+                      "type": "ref",
+                      "ref": "KPHF7",
+                      "name": "Browser checks option",
+                      "theme": {
+                        "radio": "on"
+                      },
+                      "descendants": {
+                        "aAkIM": {
+                          "content": "1. Preview",
+                          "fontSize": 12,
+                          "fontFamily": "$font-label",
+                          "fontWeight": "normal",
+                          "lineHeight": 1.5
+                        }
+                      }
+                    },
+                    {
+                      "id": "TuMJ4",
+                      "type": "ref",
+                      "ref": "KPHF7",
+                      "name": "Native tests option",
+                      "theme": {
+                        "radio": "off"
+                      },
+                      "descendants": {
+                        "aAkIM": {
+                          "content": "2. Full release",
+                          "fontSize": 12,
+                          "fontFamily": "$font-label",
+                          "fontWeight": "normal",
+                          "lineHeight": 1.5
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "mjWun",
+                  "layoutPosition": "absolute",
+                  "x": 12,
+                  "y": 0,
+                  "name": "Existing fieldset legend",
+                  "fill": "$ds-bg",
+                  "padding": [
+                    0,
+                    4
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WU5k8",
+                      "name": "Question",
+                      "fill": "$ds-fg",
+                      "content": "Release scope",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "y9Gmu",
+              "name": "Answer actions",
+              "width": "fill_container",
+              "gap": 4,
+              "children": [
+                {
+                  "id": "IUayU",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Update answer",
+                  "height": 32,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Update answer"
+                    }
+                  }
+                },
+                {
+                  "id": "UQ67K",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Open linked chat",
+                  "height": 32,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "icon": "message-square"
+                    },
+                    "Hf4GT": {
+                      "content": "Open chat"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     }
