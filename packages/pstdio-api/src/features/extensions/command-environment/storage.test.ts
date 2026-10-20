@@ -6,7 +6,7 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createStorageApi } from "./storage";
 
-test("host storage exposes guarded groups, verified assets, legacy access, and isolated workbench scopes", async () => {
+test("host storage exposes document groups, verified assets, legacy access, and isolated workbench scopes", async () => {
   const root = await mkdtemp(join(tmpdir(), "storage-context-"));
   const previousHome = process.env.PSTDIO_HOME;
   const previousDefaults = process.env.PSTDIO_DEFAULT_EXTENSIONS;
@@ -83,14 +83,14 @@ test("host storage exposes guarded groups, verified assets, legacy access, and i
           edits: [{ recordId: first.records.id("setting"), expectedRevision: observed.revision, replace: "retained" }],
         })
       ).status,
-    ).toBe("conflict");
-    expect((await first.records.inspect("open-caller")).alternatives[0].records[0].value).toBe("retained");
+    ).toBe("saved-locally");
+    expect(await first.get<string>("setting")).toBe("retained");
     const scoped = first.scope({ type: "resource", resource: { type: "example.note", id: "note" } });
     await scoped.set("setting", "scoped");
     expect((await scoped.records.read(scoped.records.id("setting"))).value).toBe("scoped");
     const projectAgain = scoped.scope({ type: "project" });
     expect(projectAgain.records.id("setting")).toBe(first.records.id("setting"));
-    expect((await projectAgain.records.read(projectAgain.records.id("setting"))).value).toBe("new API");
+    expect((await projectAgain.records.read(projectAgain.records.id("setting"))).value).toBe("retained");
   } finally {
     await handle.close();
     if (previousHome === undefined) delete process.env.PSTDIO_HOME;

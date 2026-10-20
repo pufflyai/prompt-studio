@@ -24,12 +24,9 @@ export const createMemoryStorage = (options: MemoryStorageOptions = {}): Extensi
   const migrateFor = (scope: string) => {
     const existing = migrations.get(scope);
     if (existing) return existing;
-    let version = 0;
     const migrate = createDataMigrationRunner({
-      readVersion: async () => version,
-      writeVersion: async (next) => {
-        version = next;
-      },
+      readVersion: () => owner.dataVersion(scope),
+      writeVersion: (next) => owner.setDataVersion(scope, next),
     });
     migrations.set(scope, migrate);
     return migrate;
@@ -89,7 +86,10 @@ export const createMemoryStorage = (options: MemoryStorageOptions = {}): Extensi
     const { records, legacy } = owner.scope(scopeType, scopeId);
     const blobKey = JSON.stringify([scopeType, scopeId]);
     const api: ExtensionStorageApi = {
-      migrate: migrateFor(blobKey),
+      migrate: (version, run) =>
+        migrateFor(blobKey)(version, (previous) =>
+          owner.duringMigration(JSON.stringify(["test-extension", scopeType, scopeId, version]), () => run(previous)),
+        ),
       readLegacy: async (source) => structuredClone(options.legacyData?.[source]),
       records,
       assets,

@@ -230,7 +230,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0023 — Worktrees and Git operations](../references/architecture/0023-worktrees.md)
 - [0024 — Extension API version checks](../references/architecture/0024-extension-api-version-checks.md)
 - [0025 — Database upgrades](../references/architecture/0025-database-upgrades.md)
-- [0026 — Synchronization contracts](../references/architecture/0026-synchronization-contracts.md)
+- [0026 — Local CRDT storage](../references/architecture/0026-synchronization-contracts.md)
 
 ### CLI
 

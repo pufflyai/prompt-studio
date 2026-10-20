@@ -1,6 +1,8 @@
+import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { CircleAlert, CircleCheck, CircleDashed, CircleDot, CircleX, Play, Signal } from "lucide-react";
 import { useState } from "react";
+import { expect, waitFor, within } from "storybook/test";
 
 import { KanbanRendererList, type KanbanRendererListItem } from "./kanban-renderer-list";
 
@@ -139,5 +141,39 @@ export const DeepNesting: Story = {
         ],
       },
     ],
+  },
+};
+
+const largeItems: KanbanRendererListItem[] = Array.from({ length: 1_000 }, (_, index) => ({
+  id: `row-${index}`,
+  eyebrow: `PS-${index + 1}`,
+  title: `Ticket ${index + 1}`,
+  statusIcon: CircleDashed,
+  badges: [{ attributeId: "updated", label: "Oct 19" }],
+  contextMenuActions: [{ key: "open", label: "Open ticket", onClick: () => undefined }],
+}));
+
+// A long list mounts the rows near the viewport, so opening 1,000 tickets stays fast.
+export const LargeList: Story = {
+  tags: ["!manifest"],
+  args: { items: largeItems },
+  decorators: [
+    (Story) => (
+      <Box height="600px" display="flex" flexDirection="column">
+        <Story />
+      </Box>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Ticket 1", { exact: true })).toBeVisible();
+    expect(canvas.getAllByText(/^Ticket \d+$/).length).toBeLessThan(60);
+    const firstRow = canvas.getByRole("option", { name: /Ticket 1\b/ });
+    firstRow.focus();
+    const viewport = canvas.getByLabelText("Collection list");
+    viewport.scrollTop = viewport.scrollHeight;
+    await waitFor(() => expect(canvas.getByText("Ticket 1000", { exact: true })).toBeVisible());
+    expect(firstRow).toHaveFocus();
+    expect(canvas.getAllByText(/^Ticket \d+$/).length).toBeLessThan(60);
   },
 };

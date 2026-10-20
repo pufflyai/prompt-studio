@@ -1,17 +1,18 @@
 import { execFile } from "node:child_process";
-import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import { packWorkspacePackageTarball } from "../local-workspace-registry";
 
 const repoRoot = join(import.meta.dirname, "../../../..");
 
-export async function preparePlannerSource(root: string, options: { offline?: boolean } = {}) {
+export async function preparePlannerSource(root: string, options: { offline?: boolean; sourcePath?: string } = {}) {
   mkdirSync(root, { recursive: true });
   const source = join(root, "planner-source");
+  rmSync(source, { recursive: true, force: true });
   // Unpublished UI APIs need the built packages, including a generated fixture
   // lockfile. Release lockfiles still name the published package tarballs.
-  cpSync(join(repoRoot, "extensions/pstdio-planner"), source, {
+  cpSync(options.sourcePath ?? join(repoRoot, "extensions/pstdio-planner"), source, {
     recursive: true,
     filter: (path) => !["node_modules", "bun.lock"].includes(basename(path)),
   });

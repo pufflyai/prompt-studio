@@ -1,8 +1,6 @@
 import { createReadBoundary, resolveArtifactMountRoot } from "pstdio-extensions";
 import { createRelayAdapter, createRelayConnection } from "pstdio-sync/relay";
-import { canonicalJson } from "pstdio-sync-contracts";
 import { watchArtifactMount } from "../../features/extensions/artifact-mount-watch/mount-watcher";
-import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import { resolveWorkspaceFilesPath } from "../../features/extensions/command-environment/workspace-files";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { hashExtensionSource } from "../../features/extensions/extension-runtime";
@@ -25,10 +23,6 @@ export const startRelayExtension = async (input: {
   const owner = { workbenchId: config.workbenchId, extensionId };
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
-  const local = await deps.extensionStorageService.open({
-    owner,
-    assets: createRecordAssets(deps.assetTransferService, owner, signal),
-  });
   const access = () => createReadBoundary(signal)(input.access);
   const adapterFor = (signal: AbortSignal) =>
     createRelayAdapter({
@@ -95,12 +89,9 @@ export const startRelayExtension = async (input: {
         await adapter.initialize(revision);
         return issued;
       },
-      synchronize: async (attemptSignal) => {
+      synchronize: async (_attemptSignal) => {
         await refreshFiles();
-        const before = await local.readState();
-        await local.synchronize(adapterFor(attemptSignal));
-        await refreshFiles();
-        if (canonicalJson(before.accepted) !== canonicalJson((await local.readState()).accepted)) input.notify();
+        throw new Error("The journal relay cannot sync CRDT documents. Document transport is required.");
       },
       onError: () =>
         apiLogger.warn(

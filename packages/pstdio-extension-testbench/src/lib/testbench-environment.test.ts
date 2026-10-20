@@ -26,7 +26,7 @@ test("bench commands migrate once per storage scope and retry failed imports", a
   expect(await scoped.readLegacy("missing")).toBeUndefined();
 });
 
-test("testbench storage shares seeded and guarded records with deprecated storage calls", async () => {
+test("testbench storage shares seeded records and accepts stale revisions through deprecated storage calls", async () => {
   const { storage } = createBenchEnvironment({
     kv: { note: "seed" },
     collections: { notes: { a: { title: "Seeded" } } },
@@ -41,8 +41,8 @@ test("testbench storage shares seeded and guarded records with deprecated storag
         edits: [{ recordId: observed.recordId, expectedRevision: observed.revision, replace: "retained" }],
       })
     ).status,
-  ).toBe("conflict");
-  expect(await storage.get<string>("note")).toBe("newer");
+  ).toBe("saved-locally");
+  expect(await storage.get<string>("note")).toBe("retained");
   expect(await storage.collection("notes").get("a")).toEqual({ title: "Seeded" });
 });
 

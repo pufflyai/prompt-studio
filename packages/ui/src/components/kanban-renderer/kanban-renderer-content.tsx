@@ -2,7 +2,6 @@ import { Box } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
 import { EmptyState } from "@/components/primitives/empty-state";
-import { ScrollArea } from "@/components/primitives/scroll-area";
 import { CollectionFilterEmptyState } from "../collection-view/collection-filter-empty-state";
 import { CollectionViewEmptyState } from "../collection-view/collection-view-empty-state";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
@@ -128,15 +127,13 @@ export const KanbanRendererContent = (props: KanbanRendererContentProps) => {
     return (
       <>
         {filterMessage}
-        <ScrollArea flex="1" minH="0" viewportProps={{ "aria-label": "Collection list" }}>
-          <KanbanRendererList
-            key={listKey}
-            items={listItems}
-            selectedItemId={selectedRowId}
-            expandedGroups={listExpandedGroups}
-            onExpandedGroupChange={onListExpandedGroupChange}
-          />
-        </ScrollArea>
+        <KanbanRendererList
+          key={listKey}
+          items={listItems}
+          selectedItemId={selectedRowId}
+          expandedGroups={listExpandedGroups}
+          onExpandedGroupChange={onListExpandedGroupChange}
+        />
       </>
     );
   }
