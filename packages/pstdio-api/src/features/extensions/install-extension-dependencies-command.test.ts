@@ -27,13 +27,14 @@ test("cancellation waits for the extension child to exit", async () => {
     process.execPath,
     [
       "-e",
-      `require("node:fs").writeFileSync(${JSON.stringify(ready)}, String(process.pid)); setInterval(() => {}, 1000);`,
+      `const fs = require("node:fs"); const ready = ${JSON.stringify(ready)}; fs.writeFileSync(ready + ".tmp", String(process.pid)); fs.renameSync(ready + ".tmp", ready); setInterval(() => {}, 1000);`,
     ],
     { cwd: root, signal: controller.signal },
   );
   try {
     while (!existsSync(ready)) await Bun.sleep(0);
     const pid = Number(readFileSync(ready, "utf8"));
+    expect(pid).toBeGreaterThan(0);
     controller.abort();
     expect((await running).exitCode).not.toBe(0);
     expect(() => process.kill(pid, 0)).toThrow();
