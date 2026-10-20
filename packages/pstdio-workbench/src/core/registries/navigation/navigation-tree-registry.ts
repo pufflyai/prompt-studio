@@ -177,6 +177,24 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner), resource)),
   });
 
+  const structureOf = (
+    contribution: NavigationTreeContribution,
+    owner: NavigationTreeOwner,
+    context: NavigationTreeContext,
+  ) => {
+    const query = readContext(contribution, context);
+    const structure = contribution.viewId
+      ? input.getViewStructure?.(contribution.viewId, query)
+      : contribution.getStructure?.(query);
+    return (structure ?? []).map((section) => projectSection(section, contribution, owner, query.resource));
+  };
+
+  const mergeSections = (groups: TreeViewSection[][]) => {
+    const sections: TreeViewSection[] = [];
+    for (const section of groups.flat()) mergeSection(sections, section);
+    return sections;
+  };
+
   return {
     registerContribution(contribution) {
       if (contributions.has(contribution.id)) {
@@ -219,32 +237,14 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     },
 
     getStructure(owner, slot = "content", context = {}) {
-      const sections: TreeViewSection[] = [];
-      for (const contribution of matching(owner, slot)) {
-        const query = readContext(contribution, context);
-        const structure = contribution.viewId
-          ? input.getViewStructure?.(contribution.viewId, query)
-          : contribution.getStructure?.(query);
-        for (const section of structure ?? [])
-          mergeSection(sections, projectSection(section, contribution, owner, query.resource));
-      }
-      return sections;
+      return mergeSections(matching(owner, slot).map((contribution) => structureOf(contribution, owner, context)));
     },
 
     async getSections(owner, slot = "content", context = {}) {
       const selected = matching(owner, slot);
-      const available: TreeViewSection[][] = selected.map((contribution) => {
-        const query = readContext(contribution, context);
-        const structure = contribution.viewId
-          ? input.getViewStructure?.(contribution.viewId, query)
-          : contribution.getStructure?.(query);
-        return (structure ?? []).map((section) => projectSection(section, contribution, owner, query.resource));
-      });
-      const snapshot = () => {
-        const sections: TreeViewSection[] = [];
-        for (const section of available.flat()) mergeSection(sections, section);
-        return sections;
-      };
+      // Each contribution shows its declared structure until its own read replaces it.
+      const available = selected.map((contribution) => structureOf(contribution, owner, context));
+      const snapshot = () => mergeSections(available);
       await settleReadBatch(
         selected.map((contribution, index) => async (signal) => {
           const query = readContext(contribution, { ...context, signal });

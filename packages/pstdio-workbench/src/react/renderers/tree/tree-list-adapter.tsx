@@ -227,6 +227,9 @@ const toTreeListNode = (
   const commandContext = resource ? { resource } : undefined;
   const customPath = node.contextMenuPath ?? node.menuPath;
   const resourcePath = resource ? resourceContextMenuPath(resource.type) : undefined;
+  // Building a row menu resolves commands, context, and shortcuts. Large trees adapt every row but mount only
+  // the visible ones, so the getters below build a menu when the rendered row first reads it. Copying the
+  // node with a spread reads both getters immediately.
   let menuItems: TreeListActionMenuItem[] | undefined;
   const resolveMenuItems = () => {
     if (menuItems) return menuItems;

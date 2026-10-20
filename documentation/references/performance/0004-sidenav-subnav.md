@@ -1,6 +1,6 @@
 # Sessions and ticket subnavigation benchmark
 
-Benchmarked: 2026-10-19 and 2026-10-20. Application version: 0.44.0 with local changes.
+Benchmarked: 2026-10-20.
 
 The performance contract is **structure below 100 ms** and **complete subnavigation within 500 ms of the click**. Both limits apply to every sample. A fast median does not excuse a slow tail.
 
@@ -54,91 +54,33 @@ A 200 ms quiet interval confirms that requests and DOM changes settled. The quie
 
 First-visit results include ordinary browser module loading and page rendering caused by navigation. Requests and rendering for the main page can contend with subnavigation on the same browser thread. The benchmark keeps that contention because the user experiences it.
 
-## Structure-first build (2026-10-20)
+## Results (2026-10-20)
 
-The host now renders declared section structure synchronously before starting content reads after the React commit. Pending sections show a spinner; actual results replace them. Extension view metadata can supply section IDs, labels, and the bound resource row without a callback. Core contributions use the same synchronous path.
+Both builds ran back to back on the same machine, fixture, browser, and benchmark code: macOS arm64, Apple M5 with 10 CPUs, 32 GiB memory, and Chromium 148.0.7778.96. The main build is commit `51d544998` with this benchmark copied in unchanged. Each row has 30 samples. Times are milliseconds as median / p95 / max.
 
-Loaded renderer contents use React transitions so navigation and input retain priority. Main, Side, and Bottom contents mount after a browser paint opportunity; already-mounted views retain their identity and draft state. Empty tree-move state no longer triggers another render just because the navigation scope changed.
-
-Planner board rows now include page targets computed from their already-loaded review state. Clicking an existing row navigates locally without another command to choose its destination. Rows with pending review input target the requests page. Activation callbacks remain the fallback, including for newly created rows.
-
-This run uses the same fixed workload, unchanged clock and budgets, 30 fresh contexts, 120 clicks, and Chromium version as the previous optimized run. No builds, tests, or profiling ran during timing samples. Raw results use label `structure-first-30`; measured binary SHA-256: `75113ff0cb6a13e93053a218686e68fdd18b287543c34b957870960332d5672a`. These changes are local and are not in the released 0.44 build.
-
-These timing results precede the ticket/workspace continuity correction. The latest tree read identity follows the navigation owner's bound resource. Selecting a child workspace refreshes that owner's data while retaining its mounted rows; selecting another ticket starts with the new ticket's declared structure. The packaged workspace-selection regression and seven browser stories passed after this correction. That correction's latency has not been remeasured.
-
-| Navigation | Structure median / p95 / max | Complete median / p95 / max | Structure misses | Completion misses |
+| Navigation | Structure, main | Structure, this change | Complete, main | Complete, this change |
 | --- | ---: | ---: | ---: | ---: |
-| Sessions, first | 88 / 107 / 117 | 380 / 456 / 476 | 3/30 | 0/30 |
-| Sessions, repeat | 120 / 136 / 192 | 322 / 353 / 403 | 28/30 | 0/30 |
-| Ticket, first | 147 / 218 / 292 | 834 / 1009 / 1023 | 30/30 | 30/30 |
-| Ticket, repeat | 176 / 222 / 431 | 695 / 824 / 829 | 30/30 | 30/30 |
+| Sessions, first | 727 / 815 / 850 | 52 / 60 / 64 | 764 / 857 / 889 | 151 / 171 / 171 |
+| Sessions, repeat | 675 / 697 / 715 | 37 / 45 / 45 | 691 / 726 / 742 | 99 / 121 / 123 |
+| Ticket, first | 622 / 1,013 / 1,215 | 429 / 725 / 930 | 674 / 1,173 / 1,334 | 473 / 788 / 980 |
+| Ticket, repeat | 485 / 697 / 759 | 378 / 567 / 824 | 658 / 790 / 815 | 435 / 699 / 1,071 |
 
-**The strict performance gate still fails.** There are 91 structure misses and 60 completion misses. Sessions completes within 500 ms on all 60 visits; ticket completion exceeds 500 ms on all 60. Every ticket read returned all 120 related sessions. The oldest session remains reachable. There were no page errors or failed requests. Mounted option-row counts remain 32 for Sessions and 29 for tickets.
+Sessions now meets both budgets on all 60 visits; main missed both on every visit. The ticket still misses the structure budget on all 60 visits and the completion budget on 25. Its section structure comes from the Planner tree callback, so it cannot appear before that response until Planner declares `structure`. Neither build had page errors or failed requests, and every ticket read returned all 120 related sessions. Mounted option rows fall from 1,003 to 32 for Sessions and from 130 to 29 for the ticket.
 
-Compared with the previous optimized build, first-visit structure medians improve from 436 to 88 ms for Sessions and from 777 to 147 ms for tickets. Repeat medians improve from 450 to 120 ms and from 598 to 176 ms. Sessions completion improves, but ticket completion regresses from 810 to 834 ms on first visits and from 626 to 695 ms on repeat visits. A faster initial layout does not establish compliance with either tail-latency contract.
+## What each change contributes
 
-Ticket HTTP request duration is 424 / 510 / 548 ms on first visits and 290 / 440 / 455 ms on repeats. Completion from the click is 548 / 654 / 732 ms and 437 / 632 / 665 ms. The paired median request start is 121 ms after the first click and 145 ms on repeats. After response completion, the paired median remaining visible completion cost is 282 ms and 237 ms. Request dispatch, server work, and browser rendering all still need improvement.
+Each variant below removed one change from this build and reran the full 30-context benchmark.
 
-A three-context recheck of the previous optimized binary on the same fixture gave first-visit structure medians of 475 ms for Sessions and 743 ms for tickets, consistent with that build's earlier full run. This pilot is diagnostic and does not replace the 30-context comparison.
-
-Functional checks cover navigation ownership, workspace selection, panel retention, queued session recovery, public type exports, and package consumers. Browser stories also cover keyboard navigation, sorting, dragging into a group, inline renaming, and keeping a group menu open as nested contents arrive. Packaged verification and CI results are recorded in the pull requests. These checks do not change the performance budgets or establish a new timing result.
-
-## Previous optimized build (2026-10-19)
-
-Measured with Chromium 148.0.7778.96 on Linux x64, AMD EPYC 9V74, a four-CPU quota, and a 16 GiB memory limit. The browser used its normal CPU speed. No builds, tests, or profiling ran during timing samples.
-
-Each row has 30 samples. Times are milliseconds, rounded to the nearest millisecond.
-
-| Navigation | Structure median / p95 / max | Complete median / p95 / max | Structure misses | Completion misses |
+| Variant | Sessions structure, first / repeat median | Sessions complete, first / repeat median | Ticket complete, first / repeat median | Ticket completion misses |
 | --- | ---: | ---: | ---: | ---: |
-| Sessions, first | 436 / 512 / 556 | 465 / 520 / 565 | 30/30 | 3/30 |
-| Sessions, repeat | 450 / 504 / 582 | 474 / 532 / 584 | 30/30 | 5/30 |
-| Ticket, first | 777 / 942 / 948 | 810 / 969 / 1,008 | 30/30 | 30/30 |
-| Ticket, repeat | 598 / 719 / 721 | 626 / 739 / 743 | 30/30 | 30/30 |
+| This change | 52 / 37 | 151 / 99 | 473 / 435 | 25/60 |
+| Row menus built for every row | 70 / 52 | 185 / 135 | 478 / 442 | 18/60 |
+| Panels mount without waiting for a paint | 57 / 36 | 158 / 98 | 550 / 678 | 44/60 |
 
-**This build fails the contract.** All 120 structure measurements exceed 100 ms; 68 completion measurements exceed 500 ms. There were no page errors, failed navigation requests, or missing ticket history. Sessions mounted 32 total option rows at the measured viewport instead of mounting the entire list.
+The sortable tree previously skipped virtualization, so Sessions mounted all 1,000 rows with their drag and menu components. The shared tree now mounts only the visible range and keeps sorting, row and section dragging, and keyboard navigation.
 
-First-visit ticket requests took 407 ms median, 497 ms p95, and 524 ms maximum. Their completion measured from the click was 551 / 664 / 684 ms. Repeat request durations were 276 / 323 / 325 ms, and their completion from the click was 426 / 485 / 494 ms. Request latency alone does not explain the visible completion time: browser processing and rendering continue afterward. Sessions required no new tree HTTP request during the measured interval; its project session data was already available from normal project loading.
+The workbench adapter builds a tree row for every logical row. Building each row's menu resolves commands, context, and shortcuts, which adds 15 to 18 ms to the Sessions structure median on this workload. Menus are now built when a mounted row first reads them.
 
-For each ticket sample, subtracting request completion from visible completion leaves a median 255 ms on first visits and 212 ms on repeat visits. These are paired measurements from each click, not differences between independently selected percentile values.
+Main, Side, and Bottom panel contents mount after the browser paints the navigation. Without this, ticket completion medians rise by 77 ms on first visits and 243 ms on repeat visits, and completion misses almost double. Sessions does not change because its page mounts no new panels.
 
-The ticket tree request itself starts a median 149 ms after the first click and 150 ms on repeat visits. Structure currently waits for that response, so faster server queries alone cannot satisfy the 100 ms structure budget on this path.
-
-The raw current-build results use label `final-30`. These numbers describe the locally compiled changes, not an update already present in an installed 0.44 release.
-
-## Earlier-build control
-
-The control uses label `earlier-fixes-30`. Its preserved binary includes the earlier progressive navigation and nonblocking session-launch changes. It predates sortable virtualization and deferred row menus. Planner uses its previous ticket tree callback, which reads all project session history. This is a comparison with the earlier local fixes, not with an untouched released 0.44 binary.
-
-Both builds use the same persistent fixture, browser settings, latency measurement code, and sample count. Each has 30 first and 30 repeat visits per destination. The current run preceded the control run. Neither timing run enabled tracing or CPU profiling. Binary hashes are recorded in the raw results.
-
-| Navigation | Earlier structure median / p95 / max | Earlier complete median / p95 / max |
-| --- | ---: | ---: |
-| Sessions, first | 7,428 / 8,042 / 8,146 | 7,529 / 8,147 / 8,258 |
-| Sessions, repeat | 6,321 / 6,938 / 7,118 | 6,401 / 7,029 / 7,208 |
-| Ticket, first | 1,248 / 1,418 / 1,595 | 1,391 / 1,568 / 1,623 |
-| Ticket, repeat | 1,006 / 1,209 / 1,225 | 1,034 / 1,237 / 1,260 |
-
-All 120 control samples missed both budgets. The current changes reduce first-visit structure medians by 94.1% for Sessions and 37.7% for the ticket; repeat-visit reductions are 92.9% and 40.5%. The control mounted 1,003 total option rows for Sessions and 130 for the ticket; the current build mounted 32 and 29 respectively. Neither run had page errors, failed navigation requests, or missing ticket history.
-
-## Confirmed costs and changes
-
-The original sortable tree bypassed virtualization. On this workload it mounted all 1,000 session rows and their drag and menu components. The shared tree now mounts the visible range while retaining sorting, row and section dragging, and keyboard navigation.
-
-The workbench adapter also constructed menus for every logical row. A regression check counted 3,001 shortcut-list evaluations while adapting 1,000 rows with resource menus and no row actions. Empty action lists now return immediately, and resource menus resolve when their row requests them. The check now observes zero shortcut-list evaluations during adaptation and one for the requested row menu. Menu results remain shared between overflow and right-click access for that adapted row.
-
-Planner previously paged through all project session history when opening one ticket. It now queries the ticket anchor and linked workspace histories, and performs independent metadata reads in parallel. The benchmark verifies the resulting union contains all 120 sessions.
-
-These changes reduce work, but do not by themselves establish compliance with the budgets. The remaining browser profile includes route/page rendering, session widgets, editor modules, layout, and scroll measurement. Before the structure-first change above, ticket section structure came from the asynchronous tree callback and could not appear before that response.
-
-The local npm registry returned HTTP 503 during setup. Dependencies were already available in Bun's cache, so fixture preparation used offline lockfile generation and a populated isolated extension cache. This setup work is outside the timed interval. TLS validation remained enabled.
-
-## Previous validation
-
-- 19 workbench tree adapter/action tests and seven Planner ticket-file/history tests passed.
-- UI, workbench, Planner, and the standalone benchmark type checks passed. Changed TypeScript files passed Biome; changeset validation passed.
-- Playwright checked virtualization, row activation, Home/End navigation, row dragging, section dragging, existing sortable behavior, and dragging across a virtualized scroll range.
-- Linux package verification passed: 92 CLI/runtime tests, 13 browser tests, published type exports, package consumers, and the compiled Bun CLI smoke check. Four Firefox/WebKit browser checks were skipped because those browsers were unavailable.
-- A missing-browser failure was checked separately: the benchmark exits and closes its isolated runtime.
-
-The performance gate failed on both measured builds. Functional validation does not waive its 100 ms / 500 ms limits.
+Declared structure renders before contents for core navigation and for extension views that set `structure`. Loaded contents use React transitions, so navigation and input keep priority.

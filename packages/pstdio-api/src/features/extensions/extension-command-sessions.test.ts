@@ -56,7 +56,12 @@ interface StartedHarness {
   defaults?: Record<string, unknown>;
 }
 // Session-creation deps around one fake harness; `defaults` are the project's stored harness params.
-const createSessionEnvironment = (harness: StartedHarness, dispatchEntries: unknown[] = [], signal?: AbortSignal) => {
+const createSessionEnvironment = (
+  harness: StartedHarness,
+  dispatchEntries: unknown[] = [],
+  signal?: AbortSignal,
+  services: { removeQueueEntry?: () => Promise<void>; transitionStatus?: ReturnType<typeof mock> } = {},
+) => {
   const workspace = {
     id: "workspace",
     project_id: "project-1",
@@ -94,7 +99,7 @@ const createSessionEnvironment = (harness: StartedHarness, dispatchEntries: unkn
           dispatchEntries.push(input);
           return { queue_position: 1 };
         },
-        remove: async () => {},
+        remove: services.removeQueueEntry ?? (async () => {}),
       },
       sessionService: {
         create: async (input: Record<string, unknown>) => ({
@@ -108,7 +113,7 @@ const createSessionEnvironment = (harness: StartedHarness, dispatchEntries: unkn
         }),
         update: async () => null,
         get: async () => ({ id: "session-1", project_id: "project-1", status: "in_progress", agent: "fake-agent" }),
-        transitionStatus: async () => null,
+        transitionStatus: services.transitionStatus ?? (async () => null),
         store: createTrackedSessionStore(),
       },
       eventBus: { emit: () => {} },
@@ -157,6 +162,28 @@ describe("createCommandEnvironment sessions attachments", () => {
       pending.resolve(startedHarness()({}));
       await creating;
     }
+  });
+
+  test("a started session stays running when its saved start request cannot be removed", async () => {
+    const start = startedHarness();
+    const transitionStatus = mock(async () => null);
+    const removed = Promise.withResolvers<void>();
+    let removals = 0;
+    const env = createSessionEnvironment({ start }, [], new AbortController().signal, {
+      removeQueueEntry: async () => {
+        removals += 1;
+        removed.resolve();
+        if (removals === 1) throw new Error("Queue storage is briefly unavailable");
+      },
+      transitionStatus,
+    });
+
+    await env.sessions.create({ title: "Implement ticket", prompt: "Implement" });
+    await removed.promise;
+    await Bun.sleep(10);
+
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(transitionStatus).not.toHaveBeenCalledWith("session-1", "failed", expect.anything());
   });
 
   test("forwards attachment refs from extension-created sessions", async () => {

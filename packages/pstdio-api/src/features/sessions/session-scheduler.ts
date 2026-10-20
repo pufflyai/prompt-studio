@@ -1,5 +1,6 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
+import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import {
   ANSWER_WITH_FILES_ERROR,
@@ -145,7 +146,13 @@ const startScheduledSession = async (
         await fail(error);
       },
     )
-    .catch(fail);
+    // Startup has already succeeded or failed here. A queue bookkeeping error must not change that outcome.
+    .catch((err) =>
+      sessionLogger.error(
+        { err, event: "session.spawn.cleanup_failed", session_id: session.id, project_id: input.projectId },
+        "Agent session startup cleanup failed",
+      ),
+    );
 };
 
 const assertObservedRun = (input: StartExistingInput, fresh: ExistingSession) => {
