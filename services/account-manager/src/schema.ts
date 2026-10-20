@@ -22,8 +22,7 @@ export const workbenches = pgTable(
   (table) => [primaryKey({ columns: [table.accountId, table.id] })],
 );
 // Encryption keys for a cloud project's shared space and the owner's personal space. A new generation
-// is added whenever a device leaves; older generations stay so older data stays readable. Keys outlive
-// a workbench removal, so a project that syncs again can still read its relay data.
+// is added whenever a device leaves; older generations stay so older data stays readable.
 export const spaceKeys = pgTable(
   "manager_space_keys",
   {

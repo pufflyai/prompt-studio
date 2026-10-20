@@ -19,32 +19,37 @@ export const sealUpdate = async (
 export const openUpdate = (space: SyncSpace, documentId: string, update: { updateId: string; payload: string }) =>
   open(space, ["update", documentId, update.updateId], decodeBytes(update.payload));
 
+type StateHeader = { stateId: string; baseStateId: string | null; through: number };
+
+// The relay reads a state's base and last included update in the clear. Both are authenticated, so a
+// changed value fails the open instead of making a device skip updates it never received.
+const stateContext = (kind: "state" | "summary", documentId: string, state: StateHeader) => [
+  kind,
+  documentId,
+  state.stateId,
+  state.baseStateId,
+  state.through,
+];
+
 export const sealState = async (
   space: SyncSpace,
   documentId: string,
   input: { baseStateId: string | null; through: number; state: Uint8Array; summary: Uint8Array; blobIds: string[] },
 ): Promise<StateEnvelope> => {
-  const stateId = createSyncId();
+  const header = { stateId: createSyncId(), baseStateId: input.baseStateId, through: input.through };
   const [payload, summary] = await Promise.all([
-    seal(space, ["state", documentId, stateId], input.state),
-    seal(space, ["summary", documentId, stateId], input.summary),
+    seal(space, stateContext("state", documentId, header), input.state),
+    seal(space, stateContext("summary", documentId, header), input.summary),
   ]);
-  return {
-    stateId,
-    baseStateId: input.baseStateId,
-    through: input.through,
-    payload: encodeBytes(payload),
-    summary: encodeBytes(summary),
-    blobIds: input.blobIds,
-  };
+  return { ...header, payload: encodeBytes(payload), summary: encodeBytes(summary), blobIds: input.blobIds };
 };
 
-/** Opens latest state bytes as the relay returns them from the state route. */
-export const openState = (space: SyncSpace, documentId: string, stateId: string, bytes: Uint8Array) =>
-  open(space, ["state", documentId, stateId], bytes);
+/** Opens latest state bytes as the relay returns them from the state route, checked against its metadata. */
+export const openState = (space: SyncSpace, documentId: string, state: StateHeader, bytes: Uint8Array) =>
+  open(space, stateContext("state", documentId, state), bytes);
 
-export const openSummary = (space: SyncSpace, documentId: string, state: { stateId: string; summary: string }) =>
-  open(space, ["summary", documentId, state.stateId], decodeBytes(state.summary));
+export const openSummary = (space: SyncSpace, documentId: string, state: StateHeader & { summary: string }) =>
+  open(space, stateContext("summary", documentId, state), decodeBytes(state.summary));
 
 export const sealBlob = async (space: SyncSpace, bytes: Uint8Array) => {
   const blobId = createSyncId();

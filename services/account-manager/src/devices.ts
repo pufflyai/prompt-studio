@@ -4,7 +4,7 @@ import { createCredential, digestCredential } from "./credential";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
 import { DeviceAccessDenied } from "./renewal-errors";
 import { accounts, devices, workbenches } from "./schema";
-import { createSpaceKeysInTransaction, rotateSpaceKeysInTransaction } from "./space-keys";
+import { rotateSpaceKeysInTransaction } from "./space-keys";
 
 type Reader = Pick<ManagerDatabase, "select">;
 
@@ -74,13 +74,8 @@ export const listWorkbenches = (db: Reader, accountId: string) =>
     .where(eq(workbenches.accountId, accountId))
     .orderBy(asc(workbenches.id));
 
-export const addWorkbenchInTransaction = async (transaction: ManagerTransaction, input: WorkbenchInput) => {
-  await transaction
-    .insert(workbenches)
-    .values({ accountId: input.accountId, id: input.workbenchId })
-    .onConflictDoNothing();
-  await createSpaceKeysInTransaction(transaction, input);
-};
+export const addWorkbenchInTransaction = (transaction: ManagerTransaction, input: WorkbenchInput) =>
+  transaction.insert(workbenches).values({ accountId: input.accountId, id: input.workbenchId }).onConflictDoNothing();
 
 export const removeWorkbenchInTransaction = (transaction: ManagerTransaction, input: WorkbenchInput) =>
   transaction

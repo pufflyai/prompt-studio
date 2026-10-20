@@ -56,6 +56,8 @@ records the key model and its known limit.
 
 - `fetchSyncSpaces` (`pstdio-sync/relay`) reads the project key and the user's personal-space key
   from `GET /v1/workbenches/:id/keys` with the device credential. It returns one sync space each.
+  The document transport (not built yet) must call it again on every access renewal, so remaining
+  devices pick up a rotation.
 - `sealUpdate`, `sealState`, `sealBlob` and `sealLive` in `packages/pstdio-sync/src/encryption/`
   build the relay envelopes. The matching `open*` functions read them back and throw
   `UnreadableSyncData` when the device lacks the key or the bytes were changed or moved.

@@ -8,7 +8,6 @@ import {
   accountOfCredential,
   addWorkbenchInTransaction,
   findDevice,
-  findDeviceAccess,
   listDevices,
   listWorkbenches,
   registerDeviceInTransaction,
@@ -18,7 +17,7 @@ import {
 } from "./devices";
 import { DeviceAccessDenied } from "./renewal-errors";
 import { accounts } from "./schema";
-import { listSpaceKeys } from "./space-keys";
+import { spaceKeysInTransaction } from "./space-keys";
 import { withAccountTransaction } from "./transactions";
 
 const googleIssuer = "https://accounts.google.com";
@@ -88,11 +87,12 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
       apply(token, (transaction, device) => listWorkbenches(transaction, device.accountId)),
     /** The keys of a cloud project, or null when the account has no such project. */
     keys: (token: string, workbenchId: string) =>
-      apply(token, async (transaction, device) => {
-        const input = { accountId: device.accountId, workbenchId: identitySchema.parse(workbenchId) };
-        if (!(await findDeviceAccess(transaction, token, input.workbenchId))) return null;
-        return listSpaceKeys(transaction, input);
-      }),
+      apply(token, (transaction, device) =>
+        spaceKeysInTransaction(transaction, {
+          accountId: device.accountId,
+          workbenchId: identitySchema.parse(workbenchId),
+        }),
+      ),
     addWorkbench: (token: string, workbenchId: string) =>
       apply(token, async (transaction, device) => {
         await addWorkbenchInTransaction(transaction, {

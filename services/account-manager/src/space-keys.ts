@@ -1,19 +1,11 @@
 import { and, asc, eq, max } from "drizzle-orm";
 import type { SpaceKeys } from "pstdio-sync-contracts";
 import type { WorkbenchInput } from "./contracts";
-import type { ManagerDatabase, ManagerTransaction } from "./database";
-import { spaceKeys } from "./schema";
+import type { ManagerTransaction } from "./database";
+import { spaceKeys, workbenches } from "./schema";
 
-type Reader = Pick<ManagerDatabase, "select">;
 const spaces = ["project", "personal"] as const;
 const createSecret = () => Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
-
-// Adding a workbench again keeps its keys, so earlier relay data stays readable.
-export const createSpaceKeysInTransaction = (transaction: ManagerTransaction, input: WorkbenchInput) =>
-  transaction
-    .insert(spaceKeys)
-    .values(spaces.map((space) => ({ ...input, space, generation: 1, secret: createSecret() })))
-    .onConflictDoNothing();
 
 // A removed device keeps the keys it already has, so only data sealed with the next generation is closed to it.
 export const rotateSpaceKeysInTransaction = async (transaction: ManagerTransaction, accountId: string) => {
@@ -34,8 +26,25 @@ export const rotateSpaceKeysInTransaction = async (transaction: ManagerTransacti
   );
 };
 
-export const listSpaceKeys = async (db: Reader, input: WorkbenchInput): Promise<SpaceKeys> => {
-  const rows = await db
+/**
+ * The keys of a cloud project, or null when the account has no such project. The first request
+ * creates generation 1, so every cloud project gets keys in one place, whenever it became one.
+ */
+export const spaceKeysInTransaction = async (
+  transaction: ManagerTransaction,
+  input: WorkbenchInput,
+): Promise<SpaceKeys | null> => {
+  const [workbench] = await transaction
+    .select({ id: workbenches.id })
+    .from(workbenches)
+    .where(and(eq(workbenches.accountId, input.accountId), eq(workbenches.id, input.workbenchId)));
+  if (!workbench) return null;
+  // Keys outlive a workbench removal, so a project that syncs again keeps reading its relay data.
+  await transaction
+    .insert(spaceKeys)
+    .values(spaces.map((space) => ({ ...input, space, generation: 1, secret: createSecret() })))
+    .onConflictDoNothing();
+  const rows = await transaction
     .select({ space: spaceKeys.space, generation: spaceKeys.generation, secret: spaceKeys.secret })
     .from(spaceKeys)
     .where(and(eq(spaceKeys.accountId, input.accountId), eq(spaceKeys.workbenchId, input.workbenchId)))

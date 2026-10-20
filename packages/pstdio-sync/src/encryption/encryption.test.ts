@@ -93,10 +93,13 @@ test("latest states, summaries, blobs and live messages round-trip encrypted", a
     blobIds: [blob.blobId],
   });
   expect(state).toMatchObject({ baseStateId: null, through: 4, blobIds: [blob.blobId] });
-  expect(await openState(project, documentId, state.stateId, decodeBytes(state.payload))).toEqual(
-    new Uint8Array([1, 1, 2]),
-  );
+  expect(await openState(project, documentId, state, decodeBytes(state.payload))).toEqual(new Uint8Array([1, 1, 2]));
   expect(await openSummary(project, documentId, state)).toEqual(new Uint8Array([3, 5]));
+  // A relay that claims the state covers more updates would make devices skip them.
+  await expect(openSummary(project, documentId, { ...state, through: 9 })).rejects.toBeInstanceOf(UnreadableSyncData);
+  await expect(
+    openState(project, documentId, { ...state, baseStateId: "another-state-id" }, decodeBytes(state.payload)),
+  ).rejects.toBeInstanceOf(UnreadableSyncData);
   await expect(openBlob(project, blob.blobId, decodeBytes(state.payload))).rejects.toBeInstanceOf(UnreadableSyncData);
 
   const live = await sealLive(project, "device-a", new TextEncoder().encode("cursor 12"));

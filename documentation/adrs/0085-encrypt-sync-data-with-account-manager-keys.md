@@ -26,12 +26,16 @@ The account manager keeps keys in `manager_space_keys`, in its own database, apa
 relay. One row is one generation of one space: the account, the workbench, `project` or
 `personal`, the generation number and 32 random bytes.
 
-- Making a project a cloud project creates generation 1 of both keys. Adding it again keeps them.
+- The first key request for a cloud project creates generation 1 of both keys. Keys are created in
+  this one place, whenever the project became a cloud project.
 - Removing a device, including the removal of every device during operator reconciliation, adds
   the next generation of every key of the account.
 - `GET /v1/workbenches/:id/keys` with a device credential returns every generation of both keys,
   oldest first. The response shape is `spaceKeysSchema` in `pstdio-sync-contracts`.
 - Removing a cloud project keeps its keys, so a project that syncs again still reads its relay data.
+- The sync transport must fetch the keys again every time it renews relay access. A rotation reaches
+  every remaining device within one access lifetime. That is also how long the removed device's
+  issued access keeps working, so the removed device gains no extra window.
 - Manager snapshots (version 3) include every key, and restore puts them back. A restore that would
   change a stored key fails.
 
@@ -48,7 +52,9 @@ Phase 1 has one user per account, so the personal key belongs to the account. Te
   the header.
 - The authenticated context names the project, the space owner, the kind of data (update, latest
   state, summary, blob or live message) and its document, update, state, blob or sending device ID.
-  The relay cannot move sealed bytes to another place without the open failing.
+  For a latest state it also names the base state and the last included update, which the relay
+  reads in the clear. The relay cannot move sealed bytes to another place or change that metadata
+  without the open failing.
 - Data that cannot be opened raises `UnreadableSyncData`, so the transport can report it and set
   it aside (R30).
 
@@ -70,10 +76,16 @@ its own, and two devices that create the same document offline would create two 
 - A removed device keeps the keys it already had. It can read data written before its removal,
   not after (R15, R37).
 - A rotation that happens after the last manager snapshot is lost if the key store is lost.
-  Devices then still hold the newer data and can upload it again (R3). Operators should take a
-  snapshot after rotations.
+  Devices then still hold the newer data and can upload it again (R3). The header names only the
+  generation number, so the next rotation reuses the lost number with a new secret, and data
+  sealed with the lost key stays unreadable. Operators should take a snapshot after rotations.
+- Logging in again with Google undoes a device removal, and the device then gets every generation.
+  Google login is the trust root of this design.
+- The naming key never rotates. A removed device that also controls the relay can confirm which
+  known document names exist, but it cannot read their content.
 - The key generation in the sealed header is visible to the relay. It shows how often a space's
   keys changed, nothing more.
 - Random 96-bit nonces limit one key generation to about 2³² sealed messages. Rotations and the
   expected volume keep this far away.
-- Cloud projects created before this change have no keys. Adding the project again creates them.
+- Manager snapshots taken before this change (version 2) cannot be restored. No deployed manager
+  has users yet.

@@ -18,7 +18,7 @@ A device is one client runtime. Its environment ID is its device ID. Logging in 
 - Logging in again on the same device replaces its credential and undoes an earlier removal. The device keeps its name.
 - `manager_workbenches` lists the account's cloud projects. A device renews access only for those.
 - Removing a device stops its renewal. Removing a cloud project stops renewal for it on every device. Access already issued stays valid until it expires.
-- `manager_space_keys` holds the encryption keys of each cloud project: a project key and the owner's personal-space key, one row per generation. Making a project a cloud project creates generation 1. Removing a device adds the next generation of every key of the account, so the removed device cannot read data written afterward. Older generations stay. See [ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md).
+- `manager_space_keys` holds the encryption keys of each cloud project: a project key and the owner's personal-space key, one row per generation. The first key request for a cloud project creates generation 1. Removing a device adds the next generation of every key of the account, so the removed device cannot read data written afterward. Older generations stay. See [ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md).
 - Every renewal updates the device's last-seen time.
 
 ## Internal operations
@@ -28,7 +28,7 @@ A device is one client runtime. Its environment ID is its device ID. Logging in 
 | `provision(intent)` | Create a stable account with its current canonical Google issuer/subject owner. Reprovisioning cannot silently replace that owner or activate a disabled account. |
 | `registerDevice(input)` | Register or log in again a device of an active account. Returns `{ accountId, deviceId, token }`. The token is returned only here. |
 | `removeDevice(input)` | Remove a device. Its credential stops renewing access, and every key of the account gets a new generation. |
-| `addWorkbench(input)` / `removeWorkbench(input)` | Make a project a cloud project of the account and create its keys, or stop syncing it. Removing keeps the keys. |
+| `addWorkbench(input)` / `removeWorkbench(input)` | Make a project a cloud project of the account, or stop syncing it. Removing keeps the project's keys. |
 | `devices(accountId)` / `workbenches(accountId)` | List the account's active devices or cloud projects, without credential material. |
 | `authorize(token, workbenchId)` | Read current account, device and cloud project state. Return `{ accountId, workbenchId, deviceId }` or `null`. |
 | `disable(intent)` | Disable account authorization and new logins. |
@@ -54,7 +54,7 @@ Better Auth owns `/api/auth/*`, including Google sign-in/callback, sessions, sig
 | POST /v1/devices/:id/rename, /v1/devices/:id/remove | Device credential. Rename or remove a device of the same account. |
 | GET /v1/workbenches | Device credential. Lists the account's cloud projects. |
 | POST /v1/workbenches/:id, /v1/workbenches/:id/remove | Device credential. Make a project a cloud project, or stop syncing it. |
-| GET /v1/workbenches/:id/keys | Device credential. Returns `{ project, personal }`, each a list of `{ generation, secret }` from oldest to newest. 404 when the account has no such cloud project. |
+| GET /v1/workbenches/:id/keys | Device credential. Returns `{ project, personal }`, each a list of `{ generation, secret }` from oldest to newest, and creates generation 1 on the first request. 404 when the account has no such cloud project. |
 
 The Google session is needed only to log in. Login uses the account the Google user already owns. Without one, it creates an account whose ID comes from the Google issuer and subject, so every login of one user finds the same account. Devices of one account manage each other. A device can never see or change the devices or cloud projects of another account. Operator lifecycle and recovery remain private. See [device login development](0011-device-login.md) for the supported browser and CLI flow. Errors discard sensitive causes and responses use no-store.
 

@@ -74,6 +74,19 @@ test("removing a device creates new keys for future data and keeps older keys fo
     // Removing a device that is already gone is not a membership change.
     await manager.removeDevice({ accountId, deviceId: laptop.deviceId });
     expect(generations(await keys(desktop.token, laptop.workbenchId))).toEqual({ project: [1, 2], personal: [1, 2] });
+
+    // Operator reconciliation removes every device, so it closes future data to all of them.
+    await manager.reconcile({
+      requestId: `reconcile-${crypto.randomUUID()}`,
+      accountId,
+      owner: { issuer: "https://accounts.google.com", subject: accountId },
+      state: "active",
+    });
+    const returning = await manager.registerDevice({ accountId, ...deviceProfile() });
+    expect(generations(await keys(returning.token, laptop.workbenchId))).toEqual({
+      project: [1, 2, 3],
+      personal: [1, 2, 3],
+    });
   } finally {
     await close();
   }
