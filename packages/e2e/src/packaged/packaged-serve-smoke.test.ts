@@ -288,6 +288,7 @@ registerResourceRemovalSmokeTests();
 registerQueuedRequestSmokeTests();
 
 registerSessionQuerySmokeTests();
+// Migration smoke also checks stable import IDs, random UUIDv7 IDs, and core order positions.
 registerStorageMigrationSmokeTests();
 
 registerWorkspaceCapabilitiesSmokeTests();

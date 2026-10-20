@@ -78,7 +78,8 @@ export interface ExtensionResourcesApi {
   listAnchors(input: ResourceAnchorQuery): Promise<ResourceAnchorPage>;
   /** Publish a committed removal to clients displaying this project resource. */
   removed(resource: ResourceRef): Promise<void>;
-  allocate(input: { kind: string }): Promise<{ id: string; shorthand: string }>;
+  /** Allocate an ID and shorthand. idPrefix selects the same compact ID format as storage.ids.create. */
+  allocate(input: { kind: string; idPrefix?: string }): Promise<{ id: string; shorthand: string }>;
 }
 
 export interface ViewHierarchyParent {

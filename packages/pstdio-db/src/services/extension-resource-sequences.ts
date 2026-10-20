@@ -1,4 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
+import { createStorageId } from "pstdio-api-contracts";
 import type { DbClient } from "../db/connection.pglite";
 import { extension_resource_sequences as sequences } from "../db/schemas.pg";
 
@@ -7,10 +8,12 @@ interface AllocationInput {
   extensionId: string;
   kind: string;
   prefix: string;
+  idPrefix?: string;
 }
 
 export const createExtensionResourceSequencesDBService = (db: DbClient) => {
   const allocate = async (input: AllocationInput) => {
+    const id = createStorageId(input.idPrefix);
     const timestamp = new Date().toISOString();
     try {
       const [row] = await db
@@ -29,7 +32,7 @@ export const createExtensionResourceSequencesDBService = (db: DbClient) => {
           set: { next_value: sql`${sequences.next_value} + 1`, updated_at: timestamp },
         })
         .returning();
-      return { id: crypto.randomUUID(), shorthand: `${row!.prefix}-${row!.next_value}` };
+      return { id, shorthand: `${row!.prefix}-${row!.next_value}` };
     } catch (error) {
       const [owner] = await db
         .select()

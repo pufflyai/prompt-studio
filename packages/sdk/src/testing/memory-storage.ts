@@ -1,4 +1,9 @@
-import { createDataMigrationRunner } from "pstdio-api-contracts";
+import {
+  createDataMigrationRunner,
+  createStorageId,
+  createStorageMigration,
+  createStoragePositions,
+} from "pstdio-api-contracts";
 import type {
   ExtensionBlobRef,
   ExtensionBlobsApi,
@@ -13,12 +18,20 @@ import { createMemoryRecordOwner, type MemoryStorageSeed } from "./memory-record
 export type { MemoryStorageSeed } from "./memory-record-owner";
 
 interface MemoryStorageOptions extends MemoryStorageSeed {
+  /** Reuse these owner IDs to simulate the same extension and workbench on two devices. */
+  workbenchId?: string;
+  extensionId?: string;
+  deviceId?: string;
   legacyData?: Record<string, { version: string; records: JsonObject[] }>;
 }
 
 export const createMemoryStorage = (options: MemoryStorageOptions = {}): ExtensionStorageApi => {
   const assets = createMemoryAssets();
-  const owner = createMemoryRecordOwner(assets, options);
+  const owner = createMemoryRecordOwner(assets, options, {
+    workbenchId: options.workbenchId ?? crypto.randomUUID(),
+    extensionId: options.extensionId ?? "test-extension",
+  });
+  const positions = createStoragePositions(options.deviceId ?? crypto.randomUUID());
   const blobStores = new Map<string, Map<string, ExtensionBlobRef & { data: Uint8Array }>>();
   const migrations = new Map<string, ReturnType<typeof createDataMigrationRunner>>();
   const migrateFor = (scope: string) => {
@@ -88,8 +101,12 @@ export const createMemoryStorage = (options: MemoryStorageOptions = {}): Extensi
     const api: ExtensionStorageApi = {
       migrate: (version, run) =>
         migrateFor(blobKey)(version, (previous) =>
-          owner.duringMigration(JSON.stringify(["test-extension", scopeType, scopeId, version]), () => run(previous)),
+          owner.duringMigration(JSON.stringify([owner.extensionId, scopeType, scopeId, version]), () =>
+            run(previous, createStorageMigration([owner.extensionId, owner.workbenchId, scopeType, scopeId, version])),
+          ),
         ),
+      ids: { create: createStorageId },
+      positions,
       readLegacy: async (source) => structuredClone(options.legacyData?.[source]),
       records,
       assets,
