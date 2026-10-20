@@ -1,5 +1,6 @@
 import {
   Archive,
+  ArchiveRestore,
   Ban,
   Bell,
   Bookmark,
@@ -27,6 +28,7 @@ import {
   Lightbulb,
   Link,
   ListChecks,
+  ListTree,
   MessageSquare,
   Pause,
   Pencil,
@@ -45,6 +47,8 @@ import {
   Ticket,
   Timer,
   Trash2,
+  UserCheck,
+  UserRound,
   Users,
   Workflow,
   Wrench,
@@ -148,7 +152,16 @@ export const optionIcons = [
   { value: "settings", label: "settings", icon: Settings },
 ] satisfies IconColorPickerIconOption[];
 
-const actionIcons: Record<string, ComponentType> = { pause: Pause, pencil: Pencil, "trash-2": Trash2 };
+const actionIcons: Record<string, ComponentType> = {
+  pause: Pause,
+  pencil: Pencil,
+  trash: Trash2,
+  "trash-2": Trash2,
+  "list-tree": ListTree,
+  "archive-restore": ArchiveRestore,
+  "user-round": UserRound,
+  "user-check": UserCheck,
+};
 
 export const getIconComponent = (
   name: string | null | undefined,

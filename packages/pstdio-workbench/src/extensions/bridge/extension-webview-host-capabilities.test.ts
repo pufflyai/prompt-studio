@@ -3,6 +3,8 @@ import { WEBVIEW_HOST_CAPABILITIES } from "pstdio-api-contracts/extension-kernel
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 
 const requests = {
+  "harnesses.read": {},
+  "resources.actions": { operation: "list", resource: { type: "ticket", id: "one" } },
   "commands.execute": { commandId: "notes.read" },
   "commands.stream": { operation: "cancel", streamId: "stream" },
   "navigation.open": { target: { kind: "page", page: { kind: "page", id: "notes" } } },
@@ -94,6 +96,7 @@ test("workbench adapters route every capability through shared validation or uns
     createWorkbenchWebviewHostAdapters({ workbench: createWorkbench() }),
   );
   const supported = new Set([
+    "resources.actions",
     "commands.execute",
     "navigation.open",
     "page.params.update",

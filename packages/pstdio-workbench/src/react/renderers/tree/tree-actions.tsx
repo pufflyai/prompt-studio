@@ -1,4 +1,5 @@
-import { createMenuItemGroups, createMenuItems, withLeadingSeparator } from "../../menus/command-menu-items";
+import { createMenuItemGroups, createMenuItems } from "../../menus/command-menu-items";
+import { withLeadingSeparator } from "../../menus/menu-entries";
 export const createTreeMenuItems = createMenuItems;
 
 import { HStack, Text } from "@chakra-ui/react";
