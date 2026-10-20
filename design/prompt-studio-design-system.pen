@@ -15569,6 +15569,25 @@
                               "height": 12
                             }
                           }
+                        },
+                        {
+                          "id": "HXpEX",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Enter Main fullscreen",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "width": 24,
+                          "height": 24,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "maximize",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
                         }
                       ]
                     },
@@ -193244,6 +193263,327 @@
                     },
                     "Hf4GT": {
                       "content": "Open chat"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Wd8D8",
+      "x": 55870,
+      "y": 0,
+      "name": "PS-798 · Main fullscreen and temporary Side",
+      "width": 940,
+      "height": 740,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "a9oAE",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Main fullscreen · presentation only",
+          "fontFamily": "$font-label",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "XGiTc",
+          "name": "light",
+          "theme": {
+            "mode": "light"
+          },
+          "clip": true,
+          "width": "fill_container",
+          "height": 300,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "ssJzC",
+              "name": "Fullscreen header",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "mbhHQ",
+                  "name": "Main context spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "id": "lpusE",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Temporary Side toggle",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "FADse",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Exit Main fullscreen",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "minimize",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "YiMEi",
+              "name": "Retained Main with Side overlay",
+              "width": "fill_container",
+              "height": "fill_container",
+              "gap": 12,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Wo0t8",
+                  "name": "Main editor",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Main editor stays mounted. Saved tabs, sizes and docking are unchanged.",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "qY8Ab",
+                  "type": "ref",
+                  "ref": "MXmR5",
+                  "name": "Temporary Side overlay",
+                  "width": 320,
+                  "height": 224,
+                  "descendants": {
+                    "IBXDe": {
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "KKJPs",
+                          "name": "Side title",
+                          "fill": "$ds-fg",
+                          "content": "Side Panel",
+                          "fontFamily": "$font-label",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "k6R1UJ",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "id": "tnKJD",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Dismiss temporary Side",
+                          "width": 24,
+                          "height": 24,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "minus",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "js5QG",
+          "name": "dark",
+          "theme": {
+            "mode": "dark"
+          },
+          "clip": true,
+          "width": "fill_container",
+          "height": 300,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "EhQhn",
+              "name": "Fullscreen header",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "o0Krf",
+                  "name": "Main context spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "id": "YIlg1",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Temporary Side toggle",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "cWeXK",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Exit Main fullscreen",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "minimize",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "avCKO",
+              "name": "Retained Main with Side overlay",
+              "width": "fill_container",
+              "height": "fill_container",
+              "gap": 12,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "IPTnK",
+                  "name": "Main editor",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Main editor stays mounted. Saved tabs, sizes and docking are unchanged.",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "W4JnAy",
+                  "type": "ref",
+                  "ref": "MXmR5",
+                  "name": "Temporary Side overlay",
+                  "width": 320,
+                  "height": 224,
+                  "descendants": {
+                    "IBXDe": {
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tiJyu",
+                          "name": "Side title",
+                          "fill": "$ds-fg",
+                          "content": "Side Panel",
+                          "fontFamily": "$font-label",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "f34Rd",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "id": "sP3RQ",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Dismiss temporary Side",
+                          "width": 24,
+                          "height": 24,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "minus",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
+                        }
+                      ]
                     }
                   }
                 }

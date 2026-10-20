@@ -107,13 +107,14 @@ interface WorkbenchFloatingSidePanelProps extends WorkbenchSidePanelProps {
 export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProps) => {
   const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon, onOpen, available = true } = props;
   const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state);
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
   const policy = usePanelPolicy(workbench, "side");
-  const visible = available && canFloat && mode === "floating";
+  const visible = available && canFloat && (fullscreen.active ? fullscreen.sideOpen : mode === "floating");
 
   return (
     <>
-      {available && canFloat && policy.canOpen && mode !== "attached" ? (
+      {!fullscreen.active && available && canFloat && policy.canOpen && mode !== "attached" ? (
         <BubbleButton
           isOpen={visible}
           aria-label="Open Side Panel"
@@ -140,23 +141,27 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
           visible ? (
             <PanelHeader workbench={workbench} region="side" hasTabs variant="main" gap="sm">
               <WorkbenchSidePanelHeader header={header} />
-              <Tooltip content="Reattach Side Panel">
-                <IconButton
-                  size={PANEL_HEADER_CONTROL_SIZE}
-                  variant="ghost"
-                  aria-label="Reattach Side Panel"
-                  onClick={() => workbench.shell.setSidePanelPresentation("attached")}
-                >
-                  <SquareArrowOutUpRight size={16} />
-                </IconButton>
-              </Tooltip>
+              {!fullscreen.active ? (
+                <Tooltip content="Reattach Side Panel">
+                  <IconButton
+                    size={PANEL_HEADER_CONTROL_SIZE}
+                    variant="ghost"
+                    aria-label="Reattach Side Panel"
+                    onClick={() => workbench.shell.setSidePanelPresentation("attached")}
+                  >
+                    <SquareArrowOutUpRight size={16} />
+                  </IconButton>
+                </Tooltip>
+              ) : null}
               {policy.canClose ? (
                 <Tooltip content="Close Side Panel">
                   <IconButton
                     size={PANEL_HEADER_CONTROL_SIZE}
                     variant="ghost"
                     aria-label="Close Side Panel"
-                    onClick={() => workbench.shell.setRegionOpen("side", false)}
+                    onClick={() =>
+                      fullscreen.active ? workbench.fullscreen.hideSide() : workbench.shell.setRegionOpen("side", false)
+                    }
                   >
                     <Minus size={16} />
                   </IconButton>
@@ -169,7 +174,9 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         menu={visible ? <WorkbenchSidePanelHeader header={header} /> : undefined}
         overlay={<WorkbenchTabDropTarget region="side" />}
       >
-        <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
+        <WorkbenchFocusRegion workbench={workbench} region="side" display="flex" flex="1" minH="0">
+          <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
+        </WorkbenchFocusRegion>
       </BubblePanel>
     </>
   );

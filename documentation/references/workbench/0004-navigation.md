@@ -34,6 +34,14 @@ The routed page owns its breadcrumb and page actions. A collection page uses Mai
 
 ## Mounted views
 
+### Main fullscreen
+
+The fullscreen control at the end of the navigation header expands Main over the workbench. It stays reachable when panel headers or mode navigation chrome are hidden. Fullscreen hides the title bar, activity bar, Sidenav, Bottom, Main's tab header, and status bar as presentation. It does not replace or save the global layout, change the page URL, or create page panels.
+
+An open attached or floating Side becomes a temporary floating overlay when the mode allows floating. A closed Side stays closed. A mode without Side, or with a nonfloating Side, hides it. The fullscreen Side control and overlay close action change only the temporary presentation. They follow the mode's open and close permissions. Dismissing Side returns focus to its reopen control; exiting returns focus to the fullscreen entry control. Escape first lets nested menus and dialogs handle the key, then dismisses Side, then exits fullscreen.
+
+Page navigation keeps fullscreen active. A mode or project change, disposal, or a full reload clears it. Existing views and manual terminal processes remain mounted through these transitions. Automatic previews still follow the related-opening cleanup and remembered-closure rules above. On exit, the underlying tabs, selection, sizes, dock position, and visibility remain available, including ordinary user edits made during fullscreen.
+
 Main tabs belong to the current page, including pinned shell, mode and host tabs moved there. They hide on page leave and restore with that page. Side and Bottom keep shared tabs within the current mode. Moving a tab out of Main makes it shared again. Pinning controls retention, not scope.
 
 Visited registered views remain mounted when navigation hides them. Returning to a page or mode reuses its live view, including its iframe and local state. Docked views have stable portal hosts owned by the workbench. Moving a tab changes the host's DOM parent without remounting its React content. Hidden views do not take layout space or accept user input. A pinned Main terminal keeps its running process while its page is hidden.

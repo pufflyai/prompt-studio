@@ -7,9 +7,6 @@ import type { CommandParamFieldRenderer } from "../command-palette/command-param
 import { WorkbenchNavChrome } from "../header/workbench-nav-chrome";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
-import { useHasSystemErrors } from "../notifications/system-error-state";
-import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
-import { useModeChrome } from "../region/mode-chrome";
 import { movePanelHost } from "../region/move-panel-host";
 import { WorkbenchPanelViewHosts } from "../region/panel-view-hosts";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
@@ -27,8 +24,9 @@ import { useWorkbenchThemePreferences } from "../theme/use-workbench-theme-prefe
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
+import { FullscreenKeyboard } from "./fullscreen-controls";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
-import { useWorkbenchRegionContent } from "./use-workbench-region-content";
+import { useWorkbenchLayoutFlags } from "./use-workbench-layout-flags";
 import { WorkbenchBody } from "./workbench-body";
 import { resolvePanelCollapsible } from "./workbench-panel-state";
 import {
@@ -77,32 +75,6 @@ const createSidePanelHost = () => {
   return host;
 };
 
-const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
-  const statusChrome = useModeChrome(workbench, "status");
-  const statusBarItems = useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
-  const hasSystemErrors = useHasSystemErrors(workbench);
-  useWorkbenchStore(workbench.context.store, (state) => state.values);
-  const activeModeId = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
-  return {
-    hasNavWidgets: useWorkbenchRegionContent(workbench, "nav"),
-    hasActivityBarWidgets: useWorkbenchRegionContent(workbench, "activity"),
-    hasSidenavWidgets: useWorkbenchRegionContent(workbench, "sidenav"),
-    hasSecondaryHeaderWidgets: useWorkbenchRegionContent(workbench, "secondary-header"),
-    hasSecondaryWidgets: useWorkbenchRegionContent(workbench, "secondary", { locationScoped: true }),
-    hasSecondaryMenus: useWorkbenchPanelMenusPresent(workbench, "secondary"),
-    hasSideHeaderWidgets: useWorkbenchRegionContent(workbench, "side-header"),
-    hasSideWidgets: useWorkbenchRegionContent(workbench, "side", { locationScoped: true }),
-    hasSideMenus: useWorkbenchPanelMenusPresent(workbench, "side"),
-    hasStatusWidgets:
-      hasSystemErrors ||
-      (statusChrome !== undefined
-        ? statusChrome !== false
-        : activeModeId === workbench.modes.getActiveModeId() &&
-          Object.keys(statusBarItems).length > 0 &&
-          workbench.statusBar.listVisibleItems().length > 0),
-  };
-};
-
 const WorkbenchContent = (props: WorkbenchProps) => {
   const { workbench, renderParamField, sidePanelBubbleIcon, onOpenSidePanel, titleBar, panelControlsPlacement } = props;
   const [sidenavContextActions, setSidenavContextActions] = useState<ResourceContextAction[]>([]);
@@ -124,6 +96,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const sidenavOpen = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.visible);
   const hasSidePanelHeader = useWorkbenchPanelHeaderVisible(workbench, "side");
   const sidePanelMode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state);
+  let presentedSideMode = sidePanelMode;
+  if (fullscreen.active) presentedSideMode = fullscreen.sideOpen ? "floating" : "closed";
 
   const {
     hasActivityBarWidgets,
@@ -146,7 +121,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const sidenavCollapsible = resolvePanelCollapsible(workbench, "sidenav");
   const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
   const sidenavSize = resolveSidenavSize(workbench, persistedSidenavSize);
-  const showAttachedSidePanel = hasSidePanel && sidePanelMode === "attached";
+  const showAttachedSidePanel = hasSidePanel && presentedSideMode === "attached";
   // Closed removes the Side Panel's footprint, not its live region. Keeping the
   // portal in the hidden attached slot preserves provider and renderer state.
   const setPanelOpen = workbench.shell.setRegionOpen;
@@ -156,8 +131,8 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       <WorkbenchSidePanelRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />
     ) : undefined;
   let activeSidePanelSlot: HTMLElement | null = attachedSidePanelSlot;
-  if (sidePanelMode === "floating") activeSidePanelSlot = floatingSidePanelSlot;
-  else if (sidePanelMode === "closed")
+  if (presentedSideMode === "floating") activeSidePanelSlot = floatingSidePanelSlot;
+  else if (presentedSideMode === "closed")
     activeSidePanelSlot = sidePanelHostRef.current?.parentElement ?? attachedSidePanelSlot;
 
   useLayoutEffect(() => {
@@ -186,7 +161,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       minW="0"
       resizablePanel={<WorkbenchSidenav workbench={workbench} contextActions={sidenavContextActions} />}
       contentPanel={contentWithHeader}
-      collapsed={!showSidenav || !sidenavOpen}
+      collapsed={fullscreen.active || !showSidenav || !sidenavOpen}
       resizable={sidenavPolicy.resizable}
       collapsible={sidenavPolicy.canClose && sidenavCollapsible}
       defaultSizePx={sidenavSize.defaultPx}
@@ -203,7 +178,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 
   const contentFrame = (
     <Flex position="relative" h="full" minH="0" minW="0" w="full" bg={workbenchBackgrounds.main} color="fg">
-      <WorkbenchActivityBar workbench={workbench} visible={hasActivityBarWidgets} />
+      <WorkbenchActivityBar workbench={workbench} visible={!fullscreen.active && hasActivityBarWidgets} />
       <Flex flex="1" minH="0" minW="0" overflow="hidden" position="relative">
         {contentWithSidenav}
       </Flex>
@@ -214,7 +189,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   return (
     <WorkbenchThemeScope h="full" minH="0" minW="0" w="full">
       <Flex direction="column" h="full" minH="0" minW="0" position="relative" w="full">
-        {titleBar}
+        <Flex display={fullscreen.active ? "none" : "contents"}>{titleBar}</Flex>
         <Flex
           flex="1"
           minH="0"
@@ -235,7 +210,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
             onAttachedSlotChange={setAttachedSidePanelSlot}
           />
         </Flex>
-        <WorkbenchStatusBar workbench={workbench} visible={hasStatusWidgets} />
+        <WorkbenchStatusBar workbench={workbench} visible={!fullscreen.active && hasStatusWidgets} />
         <WorkbenchFloatingSidePanel
           workbench={workbench}
           available={hasSidePanel}
@@ -253,6 +228,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           onClose={() => workbench.commandPalette.close()}
         />
         <WorkbenchKeybindingDispatcher workbench={workbench} />
+        <FullscreenKeyboard workbench={workbench} />
         <WorkbenchNotificationHost workbench={workbench} />
       </Flex>
       <WorkbenchSidePanelRegionPortal workbench={workbench} sidePanelHost={sidePanelHostRef.current} />

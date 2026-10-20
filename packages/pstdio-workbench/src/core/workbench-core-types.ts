@@ -3,6 +3,7 @@ import type { WorkbenchBreadcrumbController } from "./controllers/breadcrumbs/br
 import type { WorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
 import type { WorkbenchCompositionController } from "./controllers/composition/composition-controller";
 import type { WorkbenchFocusController } from "./controllers/focus/focus-controller";
+import type { MainFullscreenController } from "./controllers/fullscreen/main-fullscreen";
 import type {
   WorkbenchPageLocationBrowser,
   WorkbenchPageLocationController,
@@ -101,6 +102,7 @@ export interface WorkbenchCoreContributionContext {
   composition: WorkbenchCompositionController;
   context: ContextKeyService;
   focus: WorkbenchFocusController;
+  fullscreen: MainFullscreenController;
   keybindings: KeybindingRegistry;
   layout: WorkbenchModuleLayoutModel;
   modes: WorkbenchModeRegistry;
