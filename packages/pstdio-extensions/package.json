@@ -2,6 +2,15 @@
   "name": "pstdio-extensions",
   "private": true,
   "type": "module",
+  "nx": {
+    "targets": {
+      "build": {
+        "outputs": [
+          "{projectRoot}/src/bridge/webview-runtime/runtime.bundle.js"
+        ]
+      }
+    }
+  },
   "main": "./src/index.ts",
   "files": [
     "src"

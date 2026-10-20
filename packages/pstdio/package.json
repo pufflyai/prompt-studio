@@ -18,6 +18,11 @@
     "url": "https://github.com/pufflyai/prompt-studio"
   },
   "nx": {
+    "targets": {
+      "build": {
+        "cache": false
+      }
+    },
     "implicitDependencies": [
       "@pstdio/ui"
     ]
