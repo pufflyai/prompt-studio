@@ -41,6 +41,7 @@ export interface ConnectWorkbenchPageRuntimeInput {
   saveModeLayout?(projectId: string | undefined, modeId: string, layout: WorkbenchLayout): void;
   savePageMain?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>, layout: WorkbenchLayout): void;
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
+  normalizeLayout?(layout: WorkbenchLayout): WorkbenchLayout;
   revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
   modes: WorkbenchModeRegistry;
@@ -160,9 +161,9 @@ const applyPageState = (
     };
     const layout = reconcilePageLayout(layoutInput, latest, restoresLayout);
     const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
-    const availableLayout = applyModePanelPolicy(layout, mode, (region) =>
-      input.layout.getRegionSettings(region, mode?.id),
-    );
+    const availableLayout =
+      input.normalizeLayout?.(layout) ??
+      applyModePanelPolicy(layout, mode, (region) => input.layout.getRegionSettings(region, mode?.id));
     input.layout.restoreLayout(clampPanelSizes(availableLayout, input.layout.getRegionSize));
     syncOwnedPanelMenus(input.layout);
     if (source === "transition") revealPagePlacements(input, layout, activation);
@@ -236,6 +237,7 @@ const toWidgetPlacement = (
   };
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
+  normalizeLayout?: ConnectWorkbenchPageRuntimeInput["normalizeLayout"];
   loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
   loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
   saveModeLayout?: ConnectWorkbenchPageRuntimeInput["saveModeLayout"];
@@ -289,6 +291,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     },
   });
   connectWorkbenchPageRuntime({
+    normalizeLayout: input.normalizeLayout,
     loadPageLayout: input.loadPageLayout,
     loadModeLayout: input.loadModeLayout,
     saveModeLayout: input.saveModeLayout,

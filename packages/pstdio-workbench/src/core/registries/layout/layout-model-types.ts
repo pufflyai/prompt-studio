@@ -41,6 +41,7 @@ export interface CreateLayoutModelInput {
   defaultRegionVisibility?: Partial<Record<WorkbenchRegion, boolean>>;
   persistence?: LayoutPersistenceAdapter;
   normalizeLayout?(layout: WorkbenchLayout): WorkbenchLayout;
+  normalizeRestoredLayout?(layout: WorkbenchLayout): WorkbenchLayout;
   validateRegionChange?(region: WorkbenchRegion, action: "open" | "close" | "resize"): void;
   validateWidgetOpen?(
     region: WorkbenchRegion,

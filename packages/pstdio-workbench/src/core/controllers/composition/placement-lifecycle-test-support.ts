@@ -1,4 +1,4 @@
-import type { WorkbenchLayout } from "../../registries/layout/layout-types";
+import type { WorkbenchLayout, WorkbenchPanelRegion } from "../../registries/layout/layout-types";
 import { createWorkbench } from "../../workbench-core";
 export const page = (id: string) => ({ kind: "page" as const, extensionId: "test", id });
 export const panel = { kind: "placement" as const, extensionId: "test", id: "shared" };
@@ -14,7 +14,7 @@ export const openFile = (id: string) => ({
   resource: resource(id),
   open: "preview" as const,
 });
-export function harness(saved = new Map<string | undefined, WorkbenchLayout>()) {
+export function harness(saved = new Map<string | undefined, WorkbenchLayout>(), movableTo?: WorkbenchPanelRegion[]) {
   const w = createWorkbench({
     layoutPersistence: { getLayout: (s) => saved.get(s), setLayout: (l, s) => saved.set(s, l) },
     resolvePagePersistenceScope: ({ projectId, resource }) => ({ scope: `${projectId}/${resource?.id ?? "home"}` }),
@@ -48,7 +48,8 @@ export function harness(saved = new Map<string | undefined, WorkbenchLayout>()) 
     id: "shared",
     ref: panel,
     modeId: "edit",
-    region: "side",
+    region: movableTo?.[0] ?? "side",
+    movableTo,
     item: {
       kind: "binding",
       binding: {

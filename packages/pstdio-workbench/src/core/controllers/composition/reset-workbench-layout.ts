@@ -1,94 +1,49 @@
-import { reconcileOwnedWidgetLayout } from "../../registries/layout/owned-placement-layout";
-import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
-import { emptyPageState } from "../../registries/pages/page-slot-lifecycle";
-import { pageStateKey } from "../../registries/pages/page-state-key";
-import { clearOwnedPlacementState } from "../../registries/placements/owned-placement-lifecycle";
-import { getOwnedPlacementPreparation } from "../../registries/placements/owned-placement-preparation";
-import { createDisposable } from "../../shared/disposable";
+import { type WorkbenchLayout, workbenchPanelRegions } from "../../registries/layout/layout-types";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
-import type { WorkbenchCore } from "../../workbench-core-types";
+import { createWorkbenchEvent } from "../../shared/workbench-event";
+import type { WorkbenchCore, WorkbenchPageChoicesTarget } from "../../workbench-core-types";
 
-export const resetWorkbenchLayout = (core: WorkbenchCore) => {
-  const current = core.pages.store.getState();
-  const page = current.activePageId ? current.pages[current.activePageId] : undefined;
-  if (!page || !current.projectId || !current.location) return;
-  const mode = getOwnedPlacementPreparation(core.modePlacements);
-  const shell = getOwnedPlacementPreparation(core.shellPlacements);
-  const modeState = {
-    staticOverrides: new Map(mode.getState().staticOverrides),
-    resourceInstances: new Map(mode.getState().resourceInstances),
-  };
-  const shellState = {
-    staticOverrides: new Map(shell.getState().staticOverrides),
-    resourceInstances: new Map(shell.getState().resourceInstances),
-  };
-  for (const declaration of core.modePlacements.listPlacements(current.activeModeId))
-    clearOwnedPlacementState(modeState, declaration.id);
-  for (const declaration of core.shellPlacements.listPlacements()) {
-    if (["main", "secondary", "side"].includes(declaration.region))
-      clearOwnedPlacementState(shellState, declaration.id);
-  }
-  const internals = getWorkbenchPageRegistryInternals(core.pages);
-  const next = internals.prepare.location(
-    {
-      pageId: page.id,
-      projectId: current.projectId,
-      location: current.location,
-      resource: current.location.resource,
-      action: "resetWorkbenchLayout",
-      pageStates: {
-        ...current.pageStates,
-        [pageStateKey(page, current.location, internals.resources)]: emptyPageState(page),
-      },
-    },
-    current,
-    { mode: mode.resolve(current.activeModeId, modeState), shell: shell.resolve(undefined, shellState) },
-  );
+// Reset presentation in place. The placement registries and live views still own
+// every resource, including tabs moved from their declared destinations.
+const resetPanelLayout = (core: WorkbenchCore, defaults: WorkbenchLayout) => {
   const layout = core.layout.getLayout();
-  const defaults = core.layout.store.getInitialState().layout;
-  const cleared = {
-    ...layout,
-    regions: Object.fromEntries(
-      Object.entries(layout.regions).map(([id, region]) => [
-        id,
-        ["main", "secondary", "side"].includes(id)
-          ? {
-              ...defaults.regions[id as keyof typeof defaults.regions],
-              widgets: [],
-              activeWidgetId: undefined,
-              headerVisible: undefined,
-            }
-          : region,
-      ]),
-    ) as typeof layout.regions,
-    locationSubPanelSelections: {},
-    activeWidgetId: undefined,
-    activeLocationWidgetId: undefined,
-  };
-  batchWorkbenchChanges(() => {
-    mode.apply(modeState);
-    shell.apply(shellState);
-    core.layout.restoreLayout(
-      reconcileOwnedWidgetLayout({
-        layout: cleared,
-        placements: next.placements,
-        activate: next.reconciliation.activate.map((p) => p.identity),
-      }),
-    );
-    internals.publish(next, "resetWorkbenchLayout");
-  });
+  const regions = { ...layout.regions };
+  for (const id of workbenchPanelRegions) {
+    const region = layout.regions[id];
+    const policy = core.shell.getPanelPolicy(id);
+    regions[id] = {
+      ...region,
+      size: defaults.regions[id].size,
+      headerVisible: undefined,
+      presentation: defaults.regions[id].presentation,
+      visible: policy.provided && (policy.canOpen || region.visible) && defaults.regions[id].visible,
+    };
+  }
+  core.layout.restoreLayout({ ...layout, regions });
 };
 
-export const createLayoutResetController = (resolve: () => WorkbenchCore) => {
-  const listeners = new Set<() => void>();
+export const createLayoutResetController = (resolve: () => WorkbenchCore, defaults: WorkbenchLayout) => {
+  const panels = createWorkbenchEvent<void>("panel layout reset");
+  const choices = createWorkbenchEvent<WorkbenchPageChoicesTarget>("page choices reset");
   return {
-    resetLayout() {
-      resetWorkbenchLayout(resolve());
-      for (const listener of listeners) listener();
+    resetPanelLayout() {
+      batchWorkbenchChanges(() => {
+        resetPanelLayout(resolve(), defaults);
+        // Observers take the restored snapshot before batched layout notifications
+        // so a reset never becomes a manual related-resource choice.
+        panels.notify();
+      });
     },
-    onDidResetLayout(listener: () => void) {
-      listeners.add(listener);
-      return createDisposable(() => listeners.delete(listener));
+    onDidResetPanelLayout: panels.subscribe,
+    resetPageChoices(target?: WorkbenchPageChoicesTarget) {
+      if (target) {
+        choices.notify(target);
+        return;
+      }
+      const { projectId, activePageId, location } = resolve().pages.store.getState();
+      if (projectId && activePageId && location?.resource)
+        choices.notify({ projectId, pageId: activePageId, resource: location.resource });
     },
+    onDidResetPageChoices: choices.subscribe,
   };
 };

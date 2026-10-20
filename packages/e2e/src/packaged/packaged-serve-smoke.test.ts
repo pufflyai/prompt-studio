@@ -109,6 +109,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // A page moved into Side/Bottom stays across page navigation and reload; moving it into Main scopes it to that page.
 // Related tabs select when revealing closed Side/Bottom panels; open panels keep their selection.
 // Related tabs are placed even when a remembered closure hides their panel; global tab selection remains stable.
+// Separate page-choice and panel-layout resets preserve manual terminal tabs and reuse related resources.
 // Only automatically revealed panels close on leave; pinning or adding a manual tab keeps the panel open.
 // Closing manual Bottom elsewhere stays closed on Workspace return, without creating a terminal automatically.
 // Dropping a session preview pins it and keeps the destination terminal preview open and leftmost.

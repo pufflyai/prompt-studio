@@ -83,6 +83,12 @@ export type WorkbenchTreeViews = Pick<
   "getTreeState" | "setNodeExpanded" | "setSectionExpanded" | "setSelectedNode"
 >;
 
+export interface WorkbenchPageChoicesTarget {
+  projectId: string;
+  pageId: string;
+  resource: ResourceRef;
+}
+
 export interface WorkbenchCoreContributionContext {
   pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity, pinned?: boolean): void;
   getPanelDestinations(instanceId: string): import("./registries/layout/layout-types").WorkbenchPanelRegion[];
@@ -91,8 +97,10 @@ export interface WorkbenchCoreContributionContext {
     region: import("./registries/layout/layout-types").WorkbenchPanelRegion,
     position?: import("./registries/layout/layout-types").WorkbenchTabPosition,
   ): void;
-  resetLayout(): void;
-  onDidResetLayout(listener: () => void): Disposable;
+  resetPageChoices(target?: WorkbenchPageChoicesTarget): void;
+  onDidResetPageChoices(listener: (target: WorkbenchPageChoicesTarget) => void): Disposable;
+  resetPanelLayout(): void;
+  onDidResetPanelLayout(listener: () => void): Disposable;
   closePlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity): void;
   breadcrumbs: WorkbenchBreadcrumbController;
   commandPalette: WorkbenchCommandPaletteController;

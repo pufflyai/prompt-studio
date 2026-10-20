@@ -138,6 +138,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     getRegionSettings: input.getRegionSettings,
   });
   const regionContentMethods = createLayoutRegionContentMethods({
+    normalizeRestoredLayout: input.normalizeRestoredLayout,
     defaultRegionVisibility: input.defaultRegionVisibility,
     getLayout,
     setLayout,

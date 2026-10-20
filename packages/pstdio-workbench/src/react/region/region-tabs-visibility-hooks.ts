@@ -71,7 +71,7 @@ export const useWorkbenchRegionTabsState = (
   const storageKey = visibilityStorageKey ?? `${workbench.layout.getPersistenceScope() ?? "unscoped"}/${region}`;
   const tabStore = useTabVisibilityStore(storageKey, (state) => state);
   useEffect(() => {
-    const subscription = workbench.onDidResetLayout(() => getTabVisibilityStore(storageKey).getState().reset());
+    const subscription = workbench.onDidResetPanelLayout(() => getTabVisibilityStore(storageKey).getState().reset());
     return () => subscription.dispose();
   }, [workbench, storageKey]);
   const regionState = layoutState.layout.regions[region];

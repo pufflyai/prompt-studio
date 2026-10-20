@@ -1,17 +1,26 @@
 import type { WorkbenchPanelRegion, WorkbenchTabPosition } from "../../registries/layout/layout-types";
-import type { WorkbenchCore } from "../../workbench-core-types";
+import type { WorkbenchCore, WorkbenchPageChoicesTarget } from "../../workbench-core-types";
 import { registerPanelCommands } from "../shell/panel-commands";
 
 export const registerArrangementCommands = (core: WorkbenchCore) => {
   registerPanelCommands(core);
   core.commands.registerCommand(
     {
-      id: "workbench.resetLayout",
-      label: "Reset workbench layout",
+      id: "workbench.resetPanelLayout",
+      label: "Reset panel layout",
       category: "Workbench",
       icon: "RotateCcw",
     },
-    { execute: () => core.resetLayout() },
+    { execute: () => core.resetPanelLayout() },
+  );
+  core.commands.registerCommand<WorkbenchPageChoicesTarget | undefined>(
+    {
+      id: "workbench.resetPageChoices",
+      label: "Reset page choices",
+      category: "Workbench",
+      icon: "RotateCcw",
+    },
+    { execute: (target) => core.resetPageChoices(target) },
   );
   core.commands.registerCommand<{ instanceId: string; region: WorkbenchPanelRegion; position?: WorkbenchTabPosition }>(
     {

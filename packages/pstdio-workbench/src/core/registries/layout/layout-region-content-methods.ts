@@ -16,6 +16,7 @@ import {
 } from "./layout-types";
 
 export interface CreateLayoutRegionContentMethodsInput {
+  normalizeRestoredLayout?(layout: WorkbenchLayout): WorkbenchLayout;
   defaultRegionVisibility?: Partial<Record<WorkbenchRegion, boolean>>;
   getLayout(): WorkbenchLayout;
   setLayout(layout: WorkbenchLayout): void;
@@ -118,7 +119,8 @@ export const createLayoutRegionContentMethods = (
 
     restoreLayout(layout) {
       restoring.notify();
-      setLayout(mergeWithDefaultRegions(layout, input.defaultRegionVisibility));
+      const restored = mergeWithDefaultRegions(layout, input.defaultRegionVisibility);
+      setLayout(input.normalizeRestoredLayout?.(restored) ?? restored);
       persistLayout();
     },
   };

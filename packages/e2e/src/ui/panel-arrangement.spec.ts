@@ -55,7 +55,12 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   expect(page.url()).toBe(originalUrl);
   await expect(secondary.getByRole("tab")).toHaveCount(0);
   await moved.click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
-  await expect(mainHeader).not.toBeVisible();
-  await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+  await page.getByRole("menuitem", { name: "Reset panel layout", exact: true }).click();
+  await expect(moved).toBeVisible();
+  expect(
+    await terminal.evaluate(
+      (element) => element === (window as Window & { retainedTerminal?: Element }).retainedTerminal,
+    ),
+  ).toBe(true);
+  await expect(terminal.locator(".xterm-rows")).toContainText("__arrangement_kept__");
 });

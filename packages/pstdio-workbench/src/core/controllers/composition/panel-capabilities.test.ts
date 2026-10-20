@@ -128,7 +128,7 @@ test("reset clears header choices read from persisted layout", async () => {
   w.modes.getMode("edit")!.regionSettings = { side: { showHeader: false } };
   await w.navigation.openTarget(navigate("alpha"));
   w.shell.setHeaderVisible("side", true);
-  w.resetLayout();
+  w.resetPanelLayout();
   expect(w.layout.getLayout().regions.side.headerVisible).toBeUndefined();
   expect(w.shell.getPanelPolicy("side").showHeader).toBe(false);
 });

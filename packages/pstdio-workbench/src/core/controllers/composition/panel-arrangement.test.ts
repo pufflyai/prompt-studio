@@ -204,7 +204,7 @@ test("unpinning keeps the preview before pinned tabs", async () => {
   expect(w.layout.getLayout().regions.main.widgets.map((t) => t.resource?.id)).toEqual(["preview", "pinned"]);
 });
 
-test("Add opens an active mode panel in the chosen region and reset restores its declared defaults", async () => {
+test("Add reuses a declared tool and presentation reset preserves its chosen destination", async () => {
   const w = harness();
   w.modePlacements.registerPlacement({
     id: "notes",
@@ -220,12 +220,12 @@ test("Add opens an active mode panel in the chosen region and reset restores its
   expect(addable).toBeDefined();
   await addable.open?.();
   expect(w.layout.getLayout().regions.side.widgets[0]?.placementIdentity).toEqual(notes.placementIdentity);
-  w.resetLayout();
-  expect(w.layout.getLayout().regions.secondary.widgets[0]?.placementIdentity).toEqual(notes.placementIdentity);
-  expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
+  w.resetPanelLayout();
+  expect(w.layout.getLayout().regions.side.widgets[0]?.placementIdentity).toEqual(notes.placementIdentity);
+  expect(w.layout.getLayout().regions.secondary.widgets).toEqual([]);
 });
 
-test("reset clears shared auxiliary tabs even when another page created them", async () => {
+test("reset preserves shared auxiliary tabs created on another page", async () => {
   const saved = new Map();
   const w = harness(saved);
   await w.navigation.openTarget(navigate("alpha"));
@@ -235,9 +235,9 @@ test("reset clears shared auxiliary tabs even when another page created them", a
   w.movePanel(file.widgetId, "secondary");
   await w.navigation.openTarget(navigate("beta"));
   await w.navigation.openTarget({ kind: "panel", panel, resource: resource("session"), open: "pin" });
-  w.resetLayout();
-  expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
+  w.resetPanelLayout();
+  expect(w.layout.getLayout().regions.side.widgets[0]?.resource?.id).toBe("session");
   await w.navigation.openTarget(navigate("alpha"));
-  expect(w.layout.getLayout().regions.secondary.widgets).toEqual([]);
-  expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
+  expect(w.layout.getLayout().regions.secondary.widgets[0]?.widgetId).toBe(file.widgetId);
+  expect(w.layout.getLayout().regions.side.widgets[0]?.resource?.id).toBe("session");
 });

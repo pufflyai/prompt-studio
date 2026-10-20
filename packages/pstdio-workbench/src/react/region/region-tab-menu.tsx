@@ -20,6 +20,11 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
   const labelId = useId();
   useWorkbenchResourceActionResolver(workbench);
   const pending = useRef<ResourceContextAction | null>(null);
+  const { projectId, activePageId, location } = workbench.pages.store.getState();
+  const pageChoiceTarget =
+    projectId && activePageId && location?.resource
+      ? { projectId, pageId: activePageId, resource: location.resource }
+      : undefined;
   const currentRegion = findPlacementByWidgetId(workbench.layout.getLayout(), placement.widgetId)?.regionId;
   const destinations = workbench.getPanelDestinations(placement.widgetId).filter((region) => region !== currentRegion);
   const pin = () => {
@@ -49,7 +54,14 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
       ),
     ),
     ...(placement.closable ? [tabAction("close", "Close tab", "x", close)] : []),
-    tabAction("reset-layout", "Reset layout", "RotateCcw", () => workbench.resetLayout()),
+    ...(pageChoiceTarget
+      ? [
+          tabAction("reset-page-choices", "Reset page choices", "RotateCcw", () =>
+            workbench.resetPageChoices(pageChoiceTarget),
+          ),
+        ]
+      : []),
+    tabAction("reset-panel-layout", "Reset panel layout", "RotateCcw", () => workbench.resetPanelLayout()),
   ];
   return (
     <Menu.RootProvider

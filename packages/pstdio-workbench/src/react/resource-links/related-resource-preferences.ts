@@ -1,6 +1,6 @@
 import { type RelatedResourceOpening, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext, WorkbenchRegionState } from "../../core";
-import { relatedResourcePageKey } from "./related-resource-page-key";
+import { relatedResourceChoiceKey, relatedResourcePageKey } from "./related-resource-page-key";
 
 const regions = ["side", "secondary"] as const;
 interface PanelChoice {
@@ -37,8 +37,7 @@ export const createRelatedResourcePreferences = (
     writes.get(scope().scopeId)?.value ??
     (ctx.preferences.getOwnedValue("workbench.related-resources", "panels", scope()) as PageChoices | undefined) ??
     {};
-  const write = (value: PageChoices) => {
-    const destination = scope();
+  const write = (value: PageChoices, destination = scope()) => {
     const queued = writes.get(destination.scopeId);
     const save = () => {
       try {
@@ -128,8 +127,16 @@ export const createRelatedResourcePreferences = (
     if (!relatedRegions) pendingChoices = choices;
     else if (relatedChanges.length) void write(choices);
   });
-  const reset = ctx.onDidResetLayout(() => {
-    void write({});
+  const reset = ctx.onDidResetPageChoices((target) => {
+    const resource = canonicalize({ ...target.resource, projectId: target.projectId });
+    const key = relatedResourceChoiceKey({ ...target, resource }, ctx.pages.getPage(target.pageId));
+    void write({}, { scope: "user", scopeId: key });
+    if (key === pageKey()) {
+      pendingChoices = {};
+      previous = snapshot();
+    }
+  });
+  const panelsReset = ctx.onDidResetPanelLayout(() => {
     previous = snapshot();
   });
   const removing = ctx.resources.onWillRemove((resource) => {
@@ -188,6 +195,7 @@ export const createRelatedResourcePreferences = (
     dispose() {
       unsubscribe();
       reset.dispose();
+      panelsReset.dispose();
       removing.dispose();
       removed.dispose();
     },

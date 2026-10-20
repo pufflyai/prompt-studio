@@ -1,7 +1,7 @@
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
-import type { WorkbenchCore } from "../../workbench-core-types";
+import type { createWorkbenchInput, WorkbenchCore } from "../../workbench-core-types";
 import { pageContextChanged, pageLayoutContext } from "./page-main-tabs";
 import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 
@@ -64,4 +64,24 @@ export const connectModeLayoutCache = (core: WorkbenchCore, cache: ReturnType<ty
       save();
   });
   core.pages.store.subscribe(save);
+};
+
+export const createPagePersistenceScopeHandler = (
+  input: createWorkbenchInput,
+  layout: Pick<WorkbenchCore["layout"], "getPersistenceScope" | "setPersistenceScope">,
+  panelMenuState: WorkbenchCore["panelMenuState"],
+) => {
+  const resolveScope = input.resolvePagePersistenceScope;
+  if (!resolveScope) return undefined;
+  return (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) => {
+    const resolved = resolveScope({
+      currentScope: layout.getPersistenceScope(),
+      modeId: state.activeModeId,
+      pageId: state.activePageId,
+      projectId: state.projectId,
+      resource: state.location?.resource,
+    });
+    panelMenuState.setPersistenceScope(resolved.scope);
+    layout.setPersistenceScope(resolved.scope, { carryRegionState: resolved.carryRegions });
+  };
 };

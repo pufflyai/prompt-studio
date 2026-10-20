@@ -105,7 +105,7 @@ Only destinations in the current owner's automatic results have resource-page ch
 
 If a page has no automatic opening for Bottom, manually opening a terminal there does not give it a Bottom preference. Open a terminal on Workspace, leave for Tickets, close Bottom, and return: Bottom stays closed. Workspace returns only its latest session in Side. Terminals open manually. Old saved choices for destinations no longer returned by the owner are ignored.
 
-Choices use existing user preference storage and belong to the qualified resource page, including project and owner. They survive reloads. **Reset layout** clears the current page's choices. **Open related resources** disables automatic placement without deleting choices. There is no customization editor or new extension API.
+Choices use existing user preference storage and belong to the qualified resource page, including project and owner. They survive reloads. **Reset page choices** clears only the current resource page's remembered resources and manual closures. Current tabs and unsaved work remain; owner defaults apply on its next related opening or revisit. **Reset panel layout** changes active mode presentation without clearing these choices. **Open related resources** disables automatic placement without deleting choices. There is no customization editor or new extension API.
 
 Automatic placement, reveal, cleanup, metadata refresh and extension teardown do not create manual preferences. When edits happen during a pending owner lookup, only edits for its returned automatic destinations become page choices. Navigation, project changes, disablement and owner removal invalidate stale results. Layout reconciliation and ordinary tab selection do not cancel a valid page-entry placement.
 

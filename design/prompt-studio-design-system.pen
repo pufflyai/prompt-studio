@@ -157855,6 +157855,26 @@
                   "fontFamily": "$font-body",
                   "fontSize": 12,
                   "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "LAPYm",
+                  "name": "Reset page choices",
+                  "fill": "$ds-fg",
+                  "content": "Reset page choices",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "XnZQn",
+                  "name": "Reset panel layout",
+                  "fill": "$ds-fg",
+                  "content": "Reset panel layout",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             },
@@ -157945,7 +157965,7 @@
             {
               "type": "frame",
               "id": "dLh3O",
-              "name": "Reset layout",
+              "name": "Separate resets",
               "width": "fill_container",
               "cornerRadius": 4,
               "stroke": "$ds-border",
@@ -157959,7 +157979,9 @@
                   "id": "UafbY",
                   "name": "Reset layout title",
                   "fill": "$ds-fg",
-                  "content": "Reset layout",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Reset page choices / Reset panel layout",
                   "fontFamily": "$font-body",
                   "fontSize": 16,
                   "fontWeight": "normal"
@@ -157969,7 +157991,9 @@
                   "id": "GHWTl",
                   "name": "Restore active page and mode defaults",
                   "fill": "$ds-fg",
-                  "content": "Restore active page and mode defaults",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Page choices: forget only this resource page’s related choices; apply owner defaults on its next opening.",
                   "fontFamily": "$font-body",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -157979,7 +158003,9 @@
                   "id": "hB17a",
                   "name": "Retain sessions, notes and terminal data",
                   "fill": "$ds-fg",
-                  "content": "Retain sessions, notes and terminal data",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Panel layout: restore active mode sizes, headers and floating presentation; keep tab identities and destinations.",
                   "fontFamily": "$font-body",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -157989,7 +158015,9 @@
                   "id": "c5XM2D",
                   "name": "Keep other projects and modes unchanged",
                   "fill": "$ds-fg",
-                  "content": "Keep other projects and modes unchanged",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Both preserve live resources, unsaved work, other projects and modes.",
                   "fontFamily": "$font-body",
                   "fontSize": 12,
                   "fontWeight": "normal"

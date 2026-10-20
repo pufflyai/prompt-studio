@@ -1,4 +1,8 @@
-import { type WorkbenchRegion, workbenchPanelRegions } from "../../registries/layout/layout-types";
+import {
+  type WorkbenchLayout,
+  type WorkbenchRegion,
+  workbenchPanelRegions,
+} from "../../registries/layout/layout-types";
 import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import type { WorkbenchModeContribution } from "../../registries/modes/mode-registry";
 import { modePlacementContributionId } from "../../registries/views/view-placement";
@@ -10,32 +14,40 @@ interface PanelDestinationPolicy {
   allowedRegions?: readonly WorkbenchRegion[];
 }
 
-export const allowedPanelDestinations = (policy: PanelDestinationPolicy) =>
+export const authoredPanelDestinations = (policy: PanelDestinationPolicy) =>
   workbenchPanelRegions.filter(
     (region) =>
       isWorkbenchModePanelAvailable(policy.mode, region) &&
-      policy.mode?.regionSettings?.[region]?.acceptsTabs !== false &&
       (!policy.movableTo || policy.movableTo.includes(region)) &&
       (!policy.allowedRegions || policy.allowedRegions.includes(region)),
   );
 
-export const panelDestinations = (core: WorkbenchCore, contributionId: string) => {
-  const widget = core.layout.getWidget(contributionId);
-  if (!widget || !workbenchPanelRegions.some((region) => region === widget.region)) return [];
+export const allowedPanelDestinations = (policy: PanelDestinationPolicy) =>
+  authoredPanelDestinations(policy).filter((region) => policy.mode?.regionSettings?.[region]?.acceptsTabs !== false);
+
+export const panelDestinationPolicy = (core: WorkbenchCore, contributionId: string, layout: WorkbenchLayout) => {
   const modeId = core.modes.getActiveModeId();
   const mode = modeId ? core.modes.getMode(modeId) : undefined;
   const declaration = core.modePlacements
     .listPlacements(modeId)
     .find((p) => modePlacementContributionId(p.id) === contributionId);
   const legacyPanel = mode
-    ?.listAddablePanels?.({ layout: core.layout.getLayout(), resource: core.getPrimaryResource() })
+    ?.listAddablePanels?.({ layout, resource: core.getPrimaryResource() })
     .find((p) => p.panelId === contributionId);
-  return allowedPanelDestinations({
+  return {
     mode,
     movableTo: declaration?.movableTo,
     allowedRegions: legacyPanel?.allowedRegions,
-  }).filter((region) => {
-    const policy = core.shell.getPanelPolicy(region);
-    return policy.acceptsTabs && (policy.open || policy.canOpen);
-  });
+  };
+};
+
+export const panelDestinations = (core: WorkbenchCore, contributionId: string) => {
+  const widget = core.layout.getWidget(contributionId);
+  if (!widget || !workbenchPanelRegions.some((region) => region === widget.region)) return [];
+  return allowedPanelDestinations(panelDestinationPolicy(core, contributionId, core.layout.getLayout())).filter(
+    (region) => {
+      const policy = core.shell.getPanelPolicy(region);
+      return policy.acceptsTabs && (policy.open || policy.canOpen);
+    },
+  );
 };

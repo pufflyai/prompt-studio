@@ -6,6 +6,8 @@ const tabAction = async (page: Page, tab: Locator, name: string) => {
   await tab.focus();
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name, exact: true }).click();
+  const action = page.getByRole("menuitem", { name, exact: true, includeHidden: true });
+  await expect(page.locator('[role="menu"]').filter({ has: action })).toHaveCount(0);
 };
 
 export const verifyClosedSidePreference = async (page: Page, preview: Locator, leave: Navigate, reopen: Navigate) => {
@@ -21,11 +23,19 @@ export const verifyClosedSidePreference = async (page: Page, preview: Locator, l
     await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
     await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
     const bottomTab = page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab").first();
-    await tabAction(page, bottomTab, "Reset layout");
-    await expect(bottomTab).toHaveCount(0);
+    await tabAction(page, bottomTab, "Reset page choices");
+    await expect(bottomTab).toBeVisible();
     await leave();
     await reopen();
     await expect(preview).toBeVisible();
+    await tabAction(page, bottomTab, "Reset panel layout");
+    for (const name of ["Show Bottom Panel", "Show Side Panel"]) {
+      const show = page.getByRole("button", { name, exact: true });
+      if (await show.isVisible()) await show.click();
+    }
+    await expect(bottomTab).toBeVisible();
+    await expect(preview).toBeVisible();
+    await tabAction(page, bottomTab, "Close tab");
   };
   await expect(side).toHaveCount(0);
   await page.reload();
