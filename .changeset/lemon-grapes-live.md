@@ -1,6 +1,7 @@
 ---
 "@pstdio/ui": patch
+"@pstdio/workbench": patch
 "pstdio": patch
 ---
 
-Align desktop panel controls to the right and separate them from Windows and Ubuntu window controls.
+Keep desktop and browser panel controls together at the right edge and separate Windows and Ubuntu window controls.
