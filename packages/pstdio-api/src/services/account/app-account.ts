@@ -10,6 +10,7 @@ export const createAppAccount = (
 ) => {
   const accountService = createNativeAccount({
     file: nativeAccountFile(config.database.path, config.storage.root, config.accountFile),
+    managerOrigin: config.accountManagerOrigin,
     environment,
     projects,
   });
@@ -32,7 +33,7 @@ export const createAppAccount = (
           stopEvents = app.deps.eventBus.subscribe((event) => {
             if (event.table === "projects") void accountService.refresh();
           });
-          accountService.start(relay.update);
+          accountService.start(relay.update, relay.status);
         },
       },
     );

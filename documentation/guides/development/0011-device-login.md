@@ -1,6 +1,6 @@
 # Device login development
 
-The native host keeps one device credential per login. The account manager owns Google sign-in, accounts, devices, cloud projects and renewal ([PRD 0014](../../requirements/platform/0014-local-first-sync.md), R34, R35, R37). Extensions keep their normal storage, file and editor APIs. The dashboard UI is separate work in PS-784.
+The native host keeps one device credential per login. The account manager owns Google sign-in, accounts, devices, cloud projects and renewal ([PRD 0014](../../requirements/platform/0014-local-first-sync.md), R34, R35, R37). Extensions keep their normal storage, file and editor APIs. The dashboard exposes account, devices and project sync settings.
 
 See [Log in and sync cloud projects](../sdk/0004-device-login.md) for the commands, the native file path and SDK usage.
 
@@ -63,3 +63,13 @@ bun run --cwd services/account-manager test:isolated src/native-devices.test.ts 
 The relay runtime test checks that adding a cloud project keeps earlier sockets, that a changed credential discards stale in-flight starts, and that removed projects stop syncing. The packaged smoke checks full-host account wiring and that projects stay local without a login.
 
 These checks use owned provider and session fixtures. They do not prove live Google sign-in. Verify the browser flow separately with two owned Google accounts and the real service URLs: log in on two devices, list, rename and remove devices, turn a project's sync on and off, and restart. Record the service URLs, account IDs, device IDs and project IDs in the evidence, with secrets left out.
+
+## Dashboard connection and sync status
+
+Set `PSTDIO_ACCOUNT_MANAGER_ORIGIN` on the native runtime to the owned HTTPS account service. The dashboard's **Account and devices** page uses that service for its normal Google entry. A caller may still pass an explicit manager origin to `account.login`. The browser completing sign-in must reach the native host's loopback callback.
+
+`POST /v1/account/login` accepts an omitted `managerOrigin` in its JSON body. `DELETE /v1/account/login/:id` cancels a pending login. `GET /v1/account/projects/:id/sync` returns `state` and `offlineReady` from the relay document and connection owners. The dashboard never persists a second sync status.
+
+The document owner verifies blob bytes before marking a download complete. Status compares durable local edits against the relay replica, so later local changes stop reporting synced. The project aggregate waits for every enabled extension's records document and discovered text documents. Quarantined data reports needs attention. A missing account project list is unknown, rather than evidence that every project is local-only.
+
+The device API supplies last-seen timestamps, not live presence. The dashboard labels remote presence unavailable rather than inferring online state from a recent renewal.

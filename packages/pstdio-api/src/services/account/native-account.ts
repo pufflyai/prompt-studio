@@ -1,5 +1,6 @@
 import { hostname } from "node:os";
 import { dirname, join } from "node:path";
+import type { ProjectSyncStatus } from "pstdio-api-contracts";
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
@@ -35,13 +36,20 @@ export class AccountRequestError extends Error {}
 
 export const createNativeAccount = (input: {
   file: string;
+  managerOrigin?: string;
   environment: RouteDeps["environmentService"];
   projects: Pick<RouteDeps["projectService"], "get">;
 }) => {
   const store = createNativeStore(input.file);
   const logins = new Map<string, ReturnType<typeof startNativeLogin>>();
-  let cloudProjects: string[] = [];
+  let cloudProjects: { credential: string; ids: string[] } | undefined;
+  const projectsFor = (login: DeviceLogin | null) =>
+    login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
+  let projectStatus: (projectId: string) => Promise<ProjectSyncStatus> = async () => ({
+    state: "first-download-incomplete",
+    offlineReady: false,
+  });
   let retry: ReturnType<typeof setTimeout> | undefined;
   let refreshing = Promise.resolve();
   let queued: Promise<void> | undefined;
@@ -76,7 +84,9 @@ export const createNativeAccount = (input: {
 
   // Syncs every cloud project that also exists on this device. Others start once they are created or bound here.
   const publish = async (login: DeviceLogin | null) => {
-    const local = await Promise.all(cloudProjects.map(async (id) => ((await input.projects.get(id)) ? id : null)));
+    const local = await Promise.all(
+      (projectsFor(login) ?? []).map(async (id) => ((await input.projects.get(id)) ? id : null)),
+    );
     await update(
       login
         ? local
@@ -98,22 +108,29 @@ export const createNativeAccount = (input: {
     let login = await readLogin();
     try {
       cloudProjects = login
-        ? workbenchesSchema
-            .parse(await managerRequest(login.managerOrigin, "/v1/workbenches", login.token))
-            .map((row) => row.workbenchId)
-        : [];
+        ? {
+            credential: login.token,
+            ids: workbenchesSchema
+              .parse(await managerRequest(login.managerOrigin, "/v1/workbenches", login.token))
+              .map((row) => row.workbenchId),
+          }
+        : undefined;
     } catch (error) {
       if (login && denied(error)) {
         // Another device removed this one. A newer login saved meanwhile stays.
         await store.forget(login.token);
         login = await readLogin();
-        cloudProjects = [];
+        cloudProjects = undefined;
       } else if (!closed) {
         // Local work continues offline. The list loads once the account service is reachable.
         apiLogger.warn({ event: "account.cloud_projects.unavailable" }, "Cloud projects will load later");
-        retry = setTimeout(() => void refresh(), RETRY_MS);
-        retry.unref?.();
       }
+    }
+    // Another device can enable or disable a project while this host is idle.
+    // Refresh successful lists too; local database events cannot announce remote membership changes.
+    if (login && !closed) {
+      retry = setTimeout(() => void refresh(), RETRY_MS);
+      retry.unref?.();
     }
     await publish(login);
   };
@@ -142,41 +159,67 @@ export const createNativeAccount = (input: {
     await refresh();
     return { ok: true, removed };
   };
-  const finishLogin = async (origin: string, session: string, signal: AbortSignal) => {
+  const finishLogin = async (origin: string, session: string, signal: AbortSignal, user: { email: string }) => {
     const { environmentId } = await input.environment.get();
     const device = { deviceId: environmentId, name: hostname(), platform: process.platform };
     const login = loginSchema.parse(await managerRequest(origin, "/v1/device-login", session, device, signal));
     // The Google session is only needed to log in; the device credential replaces it.
     await managerRequest(origin, "/api/auth/sign-out", session, {}, signal).catch(() => {});
     signal.throwIfAborted();
-    await store.save({ managerOrigin: origin, ...login });
-    await refresh();
+    await store.save({ managerOrigin: origin, ...login, email: user.email });
+    if (signal.aborted) {
+      await store.forget(login.token);
+      signal.throwIfAborted();
+    }
+    // Cloud discovery can wait for the network. Credential persistence completes
+    // sign-in, so a later cancellation must not turn a successful login into failure.
+    void refresh();
   };
 
   return {
-    start(relay: (connections: RelayWorkbench[]) => Promise<void>) {
+    start(relay: (connections: RelayWorkbench[]) => Promise<void>, status?: typeof projectStatus) {
       update = relay;
+      if (status) projectStatus = status;
       void refresh();
     },
     refresh,
-    async login(managerOrigin: string) {
-      const origin = managerOriginSchema.parse(managerOrigin);
+    async login(managerOrigin?: string) {
+      const selected = managerOrigin ?? input.managerOrigin ?? (await readLogin())?.managerOrigin;
+      if (!selected) throw new AccountRequestError("Cloud sign-in is not available on this runtime yet.");
+      const origin = managerOriginSchema.parse(selected);
       for (const [id, login] of logins)
         if (login.status() !== "pending") {
           login.close();
           logins.delete(id);
         }
       const id = crypto.randomUUID();
-      const login = startNativeLogin(origin, (session, signal) => finishLogin(origin, session, signal));
+      const login = startNativeLogin(origin, (session, signal, user) => finishLogin(origin, session, signal, user));
       logins.set(id, login);
       return { id, url: login.url };
     },
     loginStatus: (id: string) => ({ status: logins.get(id)?.status() ?? "failed" }),
+    async cancelLogin(id: string) {
+      const login = logins.get(id);
+      if (login?.status() === "complete") return { ok: false, status: "complete" as const };
+      await login?.close();
+      logins.delete(id);
+      return { ok: true, status: "failed" as const };
+    },
     async status() {
       const login = await readLogin();
-      if (!login) return { login: null, cloudProjects: [] };
+      if (!login)
+        return { login: null, cloudProjects: [], cloudProjectsLoaded: true, signInAvailable: !!input.managerOrigin };
       const { token: _, ...device } = login;
-      return { login: device, cloudProjects };
+      const projects = projectsFor(login);
+      return { login: device, cloudProjects: projects ?? [], cloudProjectsLoaded: !!projects, signInAvailable: true };
+    },
+    async projectSyncStatus(projectId: string) {
+      if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
+      const login = await readLogin();
+      const projects = projectsFor(login);
+      if (login && !projects) return { state: "offline" as const, offlineReady: false };
+      if (!projects?.includes(projectId)) return { state: "saved-locally" as const, offlineReady: false };
+      return projectStatus(projectId);
     },
     logout,
     async devices() {

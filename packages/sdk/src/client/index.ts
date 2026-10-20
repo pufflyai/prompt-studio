@@ -1,3 +1,4 @@
+export type { ProjectSyncState, ProjectSyncStatus } from "pstdio-api-contracts";
 export type { AccountClient, AccountDevice, AccountStatus, DeviceLogin } from "./account";
 export type { AgentClient } from "./agents";
 export type { AssetClientOwner, AssetsClient, AssetUploadInput } from "./assets";

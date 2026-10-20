@@ -19,6 +19,17 @@ export const createExtensionDocumentSync = (input: {
   };
   return {
     close,
+    async status() {
+      const names = await input.deps.extensionStorageService.documents.list(input.owner);
+      const statuses = await Promise.all(
+        [...new Set(["records", ...names])].map((name) => documents.get(name)?.status()),
+      );
+      return {
+        downloaded: statuses.every((status) => status?.downloaded),
+        pending: statuses.some((status) => status?.pending),
+        needsAttention: statuses.some((status) => status?.needsAttention),
+      };
+    },
     async synchronize(signal: AbortSignal) {
       const { config, owner, deps } = input;
       const { project: space } = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal });

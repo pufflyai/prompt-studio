@@ -8,6 +8,7 @@ import {
 import { createWorkbenchSettingsModule, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { subscribeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
+import { CloudStatusItem } from "@/shared/cloud/cloud-status-item";
 import { machineTokensEnabled } from "@/shared/settings/synced-settings";
 import {
   dashboardNavigationSections,
@@ -50,6 +51,12 @@ export const createSettingsModule = () =>
     id: "dashboard.settings",
     activate(ctx) {
       registerDashboardSettingsContributions(ctx);
+      ctx.views.registerView({
+        id: "dashboard.cloud-sync",
+        title: "Project sync",
+        body: { kind: "react", render: () => <CloudStatusItem ctx={ctx} /> },
+      });
+      ctx.statusBar.registerItem({ id: "dashboard.cloud-sync", viewId: "dashboard.cloud-sync", slot: "trailing" });
 
       const surface = createWorkbenchSettingsModule({
         resolveScopeId: (scope) => (scope === "project" ? getDashboardSelectedProjectId(ctx) : undefined),

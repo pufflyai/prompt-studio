@@ -30,7 +30,7 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
       method: "post",
       path: "/account/login",
       tags,
-      request: { body: json(z.object({ managerOrigin: managerOriginSchema })) },
+      request: { body: json(z.object({ managerOrigin: managerOriginSchema.optional() })) },
       responses,
     }),
     async (c) => c.json(await service.login(c.req.valid("json").managerOrigin), 200),
@@ -38,6 +38,14 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
   routes.openapi(
     createRoute({ method: "get", path: "/account/login/{id}", tags, request: { params }, responses }),
     (c) => c.json(service.loginStatus(c.req.valid("param").id), 200),
+  );
+  routes.openapi(
+    createRoute({ method: "delete", path: "/account/login/{id}", tags, request: { params }, responses }),
+    async (c) => c.json(await service.cancelLogin(c.req.valid("param").id), 200),
+  );
+  routes.openapi(
+    createRoute({ method: "get", path: "/account/projects/{id}/sync", tags, request: { params }, responses }),
+    async (c) => c.json(await service.projectSyncStatus(c.req.valid("param").id), 200),
   );
   routes.openapi(createRoute({ method: "get", path: "/account", tags, responses }), async (c) =>
     c.json(await service.status(), 200),

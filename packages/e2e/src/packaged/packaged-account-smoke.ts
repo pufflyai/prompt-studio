@@ -15,9 +15,13 @@ export const registerAccountSmokeTests = () =>
       let host = await startPackagedServe(root);
       try {
         let client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
-        const loggedOut = { login: null, cloudProjects: [] };
+        const loggedOut = { login: null, cloudProjects: [], cloudProjectsLoaded: true, signInAvailable: false };
         expect(await client.account.status()).toEqual(loggedOut);
         const project = await client.projects.create(folderProjectInput({ name: "Local without owner" }, root));
+        expect(await client.account.projectSyncStatus(project.id)).toEqual({
+          state: "saved-locally",
+          offlineReady: false,
+        });
         const environment = await client.runtime.environment();
         const login = await client.account.login("https://manager.fixture.test");
         const url = new URL(login.url);
@@ -25,6 +29,8 @@ export const registerAccountSmokeTests = () =>
         expect(url.pathname).toBe("/v1/native-login");
         expect(new URL(url.searchParams.get("callback")!).hostname).toBe("127.0.0.1");
         expect(await client.account.loginStatus(login.id)).toEqual({ status: "pending" });
+        await client.account.cancelLogin(login.id);
+        expect(await client.account.loginStatus(login.id)).toEqual({ status: "failed" });
         await expect(client.account.syncProject(project.id)).rejects.toThrow();
         await expect(client.account.devices()).rejects.toThrow();
         expect(await client.account.status()).toEqual(loggedOut);

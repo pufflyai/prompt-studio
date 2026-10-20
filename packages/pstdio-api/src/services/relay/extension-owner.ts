@@ -86,11 +86,13 @@ export const startRelayExtension = async (input: {
           "Relay connection will retry",
         ),
     });
+    const active = connection;
     return {
       owner,
       contextKey: input.contextKey,
       wake: connection.wake,
       done: connection.done.finally(documents.close),
+      status: async () => ({ ...(await documents.status()), ...active.status() }),
       close: () => {
         for (const watch of watches) watch.close();
         controller.abort();

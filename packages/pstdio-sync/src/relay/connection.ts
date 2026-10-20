@@ -127,7 +127,11 @@ const createRelaySocket = (input: RelaySocketInput) => {
     }
     input.signal.removeEventListener("abort", abort);
   })();
-  return { wake, done };
+  return {
+    wake,
+    done,
+    status: () => ({ connected, busy: dirty || !!running }),
+  };
 };
 
 export const createRelayConnection = (

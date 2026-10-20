@@ -1,3 +1,4 @@
+import type { ProjectSyncStatus } from "pstdio-api-contracts";
 import type { RequestFn } from "./request";
 
 /** This device's cloud login. The device credential stays in the native host. */
@@ -6,11 +7,17 @@ export interface DeviceLogin {
   relayOrigin: string;
   accountId: string;
   deviceId: string;
+  /** Verified by the Google sign-in exchange. Older logins may not include it. */
+  email?: string;
 }
 export interface AccountStatus {
   login: DeviceLogin | null;
   /** Cloud projects of the account. This device syncs the ones that exist on it. */
   cloudProjects: string[];
+  /** Whether this runtime has a configured Google sign-in service. */
+  signInAvailable?: boolean;
+  /** False until this login's Cloud project list has been read from the account service. */
+  cloudProjectsLoaded?: boolean;
 }
 export interface AccountDevice {
   id: string;
@@ -27,10 +34,15 @@ export const createAccountClient = (request: RequestFn) => {
   const device = (id: string) => `/v1/account/devices/${encodeURIComponent(id)}`;
   const project = (id: string) => `/v1/account/projects/${encodeURIComponent(id)}`;
   return {
-    login: (managerOrigin: string) =>
+    login: (managerOrigin?: string) =>
       request<{ id: string; url: string }>("/v1/account/login", { method: "POST", body: { managerOrigin } }),
     loginStatus: (id: string) =>
       request<{ status: "pending" | "complete" | "failed" }>(`/v1/account/login/${encodeURIComponent(id)}`),
+    cancelLogin: (id: string) =>
+      request<Ok & { status: "complete" | "failed" }>(`/v1/account/login/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
+    projectSyncStatus: (projectId: string) => request<ProjectSyncStatus>(`${project(projectId)}/sync`),
     status: () => request<AccountStatus>("/v1/account"),
     /** `removed` is false when the account service could not be reached; remove the device from another one. */
     logout: () => request<Ok & { removed: boolean }>("/v1/account/logout", { method: "POST" }),

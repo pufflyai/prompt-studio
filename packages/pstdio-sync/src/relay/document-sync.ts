@@ -23,6 +23,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
   let bytes = 0;
   let updates = 0;
   let incomplete = false;
+  let downloaded = false;
   const rejected = new Set<string>();
   const quarantine = async (failure: SyncFailure) => {
     incomplete = true;
@@ -31,6 +32,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     rejected.add(failure.id);
   };
   const loadState = async (state: StateInfo) => {
+    downloaded = false;
     let next = new Y.Doc();
     const payload = await relay.state(state);
     try {
@@ -52,6 +54,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     updates = 0;
   };
   const applyUpdate = async (update: StoredUpdate) => {
+    downloaded = false;
     const next = cloneDocument(remote);
     try {
       Y.applyUpdate(next, await openUpdate(space, documentId, update));
@@ -150,12 +153,21 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
             const blobIds = await uploadDocumentBlobs(input, remote);
             if (!(await replace(remote, blobIds))) continue;
           }
+          downloaded = !incomplete;
           return;
         } finally {
           local.destroy();
         }
       }
     },
+    // Compare against the relay replica, including delete-only edits. A durable local
+    // transaction after synchronization must immediately stop reporting synced.
+    status: () =>
+      store.transaction(owner, async ({ document }) => ({
+        downloaded,
+        pending: !!missingUpdate(document, remote),
+        needsAttention: incomplete,
+      })),
     close: () => remote.destroy(),
   };
 };

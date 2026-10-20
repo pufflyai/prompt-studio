@@ -61,3 +61,5 @@ await client.account.syncProject("PROJECT_ID");
 ```
 
 See [AccountClient](../../../packages/sdk/src/client/account.ts) for the exact methods and response types.
+
+On current `main`, the dashboard also provides [Cloud settings and sync status](../getting-started/0006-cloud-sync.md). `account.login()` without an origin uses the runtime's configured service. `account.cancelLogin(id)` cancels a pending native login. `account.projectSyncStatus(projectId)` returns one of the six project states and whether all known content has been verified locally. These additions use the same API 0.2.1 additive step as device login.

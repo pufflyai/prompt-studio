@@ -3,6 +3,7 @@ import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
 import { startRelayExtension } from "./extension-owner";
+import { projectSyncStatus } from "./project-status";
 
 export type RelayWorkbench = {
   accountId: string;
@@ -113,6 +114,24 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
   });
   await refresh();
   return {
+    async status(workbenchId: string) {
+      const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
+      const statuses = await Promise.all(
+        snapshot.enabledSources.map(async ({ installedSource }) => {
+          const connection = connections.get(JSON.stringify([workbenchId, installedSource.extension_id]));
+          return (
+            connection?.status() ?? {
+              downloaded: false,
+              pending: false,
+              needsAttention: false,
+              connected: false,
+              busy: false,
+            }
+          );
+        }),
+      );
+      return projectSyncStatus(statuses);
+    },
     // Replaces the synced workbenches. Only workbenches whose login changed restart their connections.
     async update(next: RelayWorkbench[]) {
       const desired = new Map(next.map((connection) => [connection.workbenchId, connection]));
