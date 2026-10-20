@@ -2,15 +2,16 @@ import { Button, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { createWorkbench, type Disposable } from "../../../core";
+import { createLevelNavigation, createWorkbench, type Disposable } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
-const createFixture = (pageOwned: boolean) => {
+const createFixture = (pageOwned: boolean, composed: boolean) => {
   const workbench = createWorkbench();
+  const navigation = createLevelNavigation(workbench);
   const pending = Promise.withResolvers<void>();
   const owners: Disposable[] = [];
   const sections = async (id: string) => {
-    if (id === "second") await pending.promise;
+    if (id === "second" && !composed) await pending.promise;
     return [{ id: "navigation", nodes: [{ id: "destination", label: `${id} page action` }] }];
   };
   const open = (id: string) =>
@@ -21,7 +22,9 @@ const createFixture = (pageOwned: boolean) => {
     body: {
       kind: "tree",
       getChildren: () => [],
-      getBody: async () => {
+      ...(composed ? { getReadKey: () => navigation.getReadKey() } : {}),
+      getBody: async (context) => {
+        if (composed) return navigation.getSections("content", context.signal, context.onProgress);
         const id = workbench.pages.store.getState().activePageId!;
         return pageOwned
           ? workbench.navigationTrees.getSections({ kind: "page", id, extensionId: "storybook" })
@@ -77,6 +80,18 @@ const createFixture = (pageOwned: boolean) => {
       );
     }
   }
+  if (composed) {
+    workbench.navigationTrees.registerContribution({
+      id: "project-files",
+      owner: { kind: "mode", id: "first", extensionId: "pstdio" },
+      sourceExtensionId: "pstdio",
+      declarationIndex: 0,
+      getSections: async () => {
+        if (workbench.pages.store.getState().activePageId === "second") await pending.promise;
+        return [];
+      },
+    });
+  }
   workbench.pages.store.subscribe(() => workbench.views.refreshView("navigation-tree"));
   workbench.shellPlacements.registerPlacement({
     id: "navigation-tree",
@@ -87,9 +102,9 @@ const createFixture = (pageOwned: boolean) => {
   open("first");
   return workbench;
 };
-const TreeNavigationLoading = (props: { pageOwned: boolean }) => {
-  const { pageOwned } = props;
-  const [workbench] = useState(() => createFixture(pageOwned));
+const TreeNavigationLoading = (props: { pageOwned: boolean; composed?: boolean }) => {
+  const { pageOwned, composed = false } = props;
+  const [workbench] = useState(() => createFixture(pageOwned, composed));
   return <WorkbenchStory workbench={workbench} />;
 };
 const meta = {
@@ -106,12 +121,24 @@ export const PageChange: Story = {
     await expect(await canvas.findByRole("option", { name: "first page action" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Switch page" }));
     await waitFor(() => expect(canvas.queryByRole("option", { name: "first page action" })).not.toBeInTheDocument());
-    await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
+    await userEvent.click(await canvas.findByRole("button", { name: "Finish loading" }));
     await expect(await canvas.findByRole("option", { name: "second page action" })).toBeVisible();
   },
 };
 
 export const PageOwnedActions: Story = { args: { pageOwned: true }, play: PageChange.play };
+
+export const SlowProjectNavigation: Story = {
+  args: { pageOwned: true, composed: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("option", { name: "first page action" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Switch page" }));
+    await expect(await canvas.findByRole("option", { name: "second page action" })).toBeVisible();
+    await expect(canvas.queryByRole("option", { name: "first page action" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
+  },
+};
 
 export const OwnerRemoval: Story = {
   args: { pageOwned: true },

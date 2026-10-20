@@ -6,11 +6,11 @@ import {
   applyKanbanMove,
   isAttributesSource,
   KanbanRenderer,
-  type KanbanRendererRow,
   useKanbanRendererStore,
 } from "@pstdio/ui/kanban-renderer";
 import { type ReactNode, useSyncExternalStore } from "react";
 import type {
+  KanbanRendererRow,
   RegisteredKanbanRendererContribution,
   ResourceRef,
   WorkbenchCore,
@@ -144,6 +144,10 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const rows = read.value ?? [];
 
   const handleOpenRow = (row: KanbanRendererRow) => {
+    if (row.target) {
+      void runUserAction(workbench, "Open row", () => workbench.navigation.openTarget(row.target!));
+      return;
+    }
     if (contribution.onRowActivate) void runUserAction(workbench, "Open row", () => contribution.onRowActivate!(row));
   };
 
@@ -192,7 +196,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         emptyDescription={contribution.emptyDescription}
         getBoardColumnConfig={contribution.getBoardColumnConfig}
         hideToolbar={contribution.hideToolbar}
-        onRowClick={contribution.onRowActivate ? handleOpenRow : undefined}
+        onRowClick={contribution.onRowActivate || rows.some((row) => row.target) ? handleOpenRow : undefined}
         onActionError={(error, action) => reportUserActionError(workbench, action, error)}
         onAttributeChange={
           contribution.onAttributeChange

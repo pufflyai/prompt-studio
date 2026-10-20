@@ -120,17 +120,20 @@ export const createSubmittedDispatchEntry = async (
     sessionId: string;
     prompt: string;
     requestKind: "start" | "follow_up";
+    model?: string;
     questionResponse?: QuestionResponse;
     attachmentRefs?: SessionAttachmentRef[];
     params?: HarnessParams;
   },
 ) => {
-  if (!hasAttachmentRefs(input.attachmentRefs)) return undefined;
+  // Initial requests must survive a restart while the harness is still starting.
+  if (input.requestKind === "follow_up" && !hasAttachmentRefs(input.attachmentRefs)) return undefined;
 
   const entry = await deps.sessionQueueEntriesService.createDispatchStarted({
     session_id: input.sessionId,
     prompt: input.prompt,
     request_kind: input.requestKind,
+    model: input.model,
     question_response_json: input.questionResponse ?? null,
     attachments_json: input.attachmentRefs,
     params_json: input.params,
@@ -155,6 +158,7 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
     sessionId: session.id,
     prompt,
     requestKind: "follow_up",
+    model,
     questionResponse: input.questionResponse,
     attachmentRefs: input.attachmentRefs,
     params,
