@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import { createTicketParentLookup, createTicketWorkspaceLookup, TICKET_RESOURCE_KIND, ticketToRow } from "./mappers";
-import type { StoredTag, StoredTicket } from "./types";
+import type { StoredTag, Ticket } from "./types";
 
-const ticket: StoredTicket = {
+const ticket: Ticket = {
   id: "t1",
   shorthand: "T-1",
   title: "Fix the thing",
@@ -135,7 +135,7 @@ describe("createTicketWorkspaceLookup", () => {
         ["workspace-1", { id: "session-1", status: "completed" as const }],
         ["workspace-2", { id: "session-2", status: "in_progress" as const }],
       ]),
-    ).get("T-1");
+    ).get("ticket-1");
 
     // Newest workspace first, each carrying the session of that same workspace.
     expect(items?.map((item) => [item.id, item.session])).toEqual([
@@ -146,7 +146,7 @@ describe("createTicketWorkspaceLookup", () => {
 
   test("omits the session field for workspaces without sessions", () => {
     const items = createTicketWorkspaceLookup([workspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z")]).get(
-      "T-1",
+      "ticket-1",
     );
 
     expect(items?.[0]).not.toHaveProperty("session");
@@ -167,7 +167,7 @@ describe("createTicketWorkspaceLookup", () => {
       const items = createTicketWorkspaceLookup(
         [workspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z")],
         new Map([["workspace-1", { id: "session-1", status }]]),
-      ).get("T-1");
+      ).get("ticket-1");
 
       expect(items?.[0]?.session).toEqual({ id: "session-1", status });
     }

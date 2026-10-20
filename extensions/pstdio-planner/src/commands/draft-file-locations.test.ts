@@ -3,8 +3,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
 import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
+import { ticketsCollection } from "../data/ticket-context.fixture";
 import { applyTicketTemplateCommand } from "./apply-ticket-template";
 import { makeCommandArgs } from "./command-context.fixture";
 import { listTicketFilesCommand } from "./list-ticket-files";
@@ -107,8 +107,8 @@ test("ticket draft commands return usable project paths when the selected worksp
   const files = await listTicketFilesCommand.run(
     ...makeCommandArgs({ storage, params: { id: written.shorthand }, overrides }),
   );
-  expect(files[0].path).toBe(join(projectRoot, attachment));
-  expect(await readFile(files[0].path, "utf8")).toBe("Project evidence");
+  expect("path" in files[0]! ? files[0]!.path : "").toBe(join(projectRoot, attachment));
+  expect(await readFile("path" in files[0]! ? files[0]!.path : "", "utf8")).toBe("Project evidence");
 });
 
 test.each([

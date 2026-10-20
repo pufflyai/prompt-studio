@@ -1,8 +1,9 @@
+import { putTicket } from "../data/ticket-context.fixture";
 import { expect, test } from "bun:test";
 import type { StorageGroup } from "@pstdio/sdk/extensions";
 import { putAttempt } from "../data/attempt-storage";
 import { type AutoBuildMode, autoBuildChanged } from "../data/auto-build-mode";
-import { putTicket } from "../data/collections";
+
 import { fixture } from "./auto-build.fixture";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { autoBuildScopeCommand } from "./auto-build-scope";

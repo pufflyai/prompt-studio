@@ -23,6 +23,7 @@ import { autoBuildHooks, autoBuildSchedule } from "./src/hooks/auto-build";
 import { dependencyBlockerHooks } from "./src/hooks/dependency-blockers";
 import { gitMergedHook } from "./src/hooks/git-merged";
 import { reviewRequestCleanupHook } from "./src/hooks/review-request-cleanup";
+import { ticketRenumberedHook } from "./src/hooks/ticket-renumbered";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked } from "./src/planner-notifications";
 import { readStatusSettings, saveStatusSettings } from "./src/ticket-status-settings";
@@ -171,7 +172,7 @@ export default defineExtension({
       event: sessionEvents.awaitingInput,
       async run(ctx, payload) {
         const ticketRef = ticketRefFromLifecyclePayload(payload);
-        const ticket = ticketRef ? await findTicket(ctx.storage, ticketRef) : null;
+        const ticket = ticketRef ? await findTicket(ctx, ticketRef) : null;
         if (ticket) await notifyBlocked(ctx, ticket, payload.sessionId);
       },
     }),

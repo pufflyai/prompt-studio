@@ -7,12 +7,12 @@ import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
 
 export const saveTicketContent = async (
-  ctx: Pick<ExtensionContextBase, "events" | "storage">,
+  ctx: Pick<ExtensionContextBase, "events" | "storage" | "resources">,
   input: { id?: string; content: string; resource?: ResourceRef },
 ) => {
   const ticketId = input.id ?? (input.resource?.type === "ticket" ? input.resource.id : undefined);
   if (!ticketId) return null;
-  const existing = await findTicket(ctx.storage, ticketId);
+  const existing = await findTicket(ctx, ticketId);
   if (!existing) return null;
 
   const documentId = selectedDocumentFromResource(input.resource);
@@ -21,6 +21,7 @@ export const saveTicketContent = async (
     if (!existing.files?.some((file) => file.id === documentId)) return null;
     const ticket = await updateTicketFile({
       storage: ctx.storage,
+      resources: ctx.resources,
       ticketId: existing.id,
       fileId: documentId,
       content: input.content,
@@ -35,7 +36,7 @@ export const saveTicketContent = async (
     title: deriveTitle(input.content),
     updatedAt: new Date().toISOString(),
   };
-  await ticketsCollection(ctx.storage).update(existing.id, next);
+  await ticketsCollection(ctx).update(existing.id, next);
   await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
   return { revision: next.updatedAt };
 };

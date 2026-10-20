@@ -1,13 +1,14 @@
+import { ticketContext, ticketsCollection } from "./ticket-context.fixture";
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "./collections";
+
 import { createTicketParentLookup, createTicketWorkspaceLookup, ticketToRow } from "./mappers";
 import { observeStorageReads } from "./storage-reads.fixture";
 import { readTicketParentLookup } from "./ticket-resource-hierarchy";
 import { ticketSummary } from "./ticket-summary";
-import type { StoredTag, StoredTicket } from "./types";
+import type { StoredTag, Ticket } from "./types";
 
-const ticket = (id: string, parentId?: string): StoredTicket => ({
+const ticket = (id: string, parentId?: string): Ticket => ({
   id,
   shorthand: `T-${id}`,
   title: id,
@@ -67,7 +68,10 @@ test("selected hierarchy retains summaries without retaining bodies or rereading
   await ticketsCollection(storage).put("unrelated", ticket("unrelated"));
   const observed = observeStorageReads(storage);
 
-  const lookup = await readTicketParentLookup(observed.storage, new Map([[child.id, child]]));
+  const lookup = await readTicketParentLookup(
+    { ...ticketContext(storage), storage: observed.storage },
+    new Map([[child.id, child]]),
+  );
 
   expect(observed.reads).toEqual(["tickets/parent"]);
   expect([...lookup.keys()]).toEqual(["child", "parent"]);

@@ -14,6 +14,7 @@ import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
 import { timelineBoard } from "../../data/ticket-board";
 import { ticketActivationTarget } from "../../data/ticket-page-target";
+import { resolveWorkspaceTicketAnchors } from "../../data/workspace-ticket-link";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import { sortedBySortOrder } from "../../utils/sort";
 import { buildPlan } from "../model/build-plan";
@@ -34,7 +35,7 @@ export const readPlanCommand = defineCommand({
     await migratePlannerStorage(ctx);
     const [{ tickets, requests }, { statuses }, { tags }, stored, gates, attempts, workspaces, selections] =
       await Promise.all([
-        readTicketSnapshot(ctx.storage),
+        readTicketSnapshot(ctx),
         readTicketStatuses(ctx.storage),
         readTicketTags(ctx.storage),
         readStoredPlan(ctx.storage),
@@ -63,7 +64,7 @@ export const readPlanCommand = defineCommand({
     const toRow = createTicketRowMapper(
       ctx.projectId,
       tags,
-      createTicketWorkspaceLookup(workspaces),
+      createTicketWorkspaceLookup(await resolveWorkspaceTicketAnchors(ctx, workspaces)),
       createTicketParentLookup(tickets),
     );
     const ticketRows = active.map((ticket) => {

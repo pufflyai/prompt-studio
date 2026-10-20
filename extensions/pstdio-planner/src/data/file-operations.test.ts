@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket, ticketsCollection } from "./collections";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "./file-operations";
-import type { StoredTicket } from "./types";
+import { putTicket, ticketContext, ticketsCollection } from "./ticket-context.fixture";
+import type { Ticket } from "./types";
 
-const ticket = (overrides: Partial<StoredTicket> = {}): StoredTicket => ({
+const ticket = (overrides: Partial<Ticket> = {}): Ticket => ({
   id: "ticket-1",
   shorthand: "T-1",
   title: "Ticket",
@@ -31,11 +31,13 @@ describe("ticket file operations", () => {
   ])("rejects unsafe file name %j without changing stored files", async (name) => {
     const storage = createMemoryStorage();
     await putTicket(storage, ticket());
-    const file = await createTicketFile({ storage, ticketId: "ticket-1", name: "notes.md" });
-    await expect(createTicketFile({ storage, ticketId: "ticket-1", name })).rejects.toThrow("Invalid ticket file name");
-    await expect(updateTicketFile({ storage, ticketId: "ticket-1", fileId: file.id, name })).rejects.toThrow(
+    const file = await createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", name: "notes.md" });
+    await expect(createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", name })).rejects.toThrow(
       "Invalid ticket file name",
     );
+    await expect(
+      updateTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", fileId: file.id, name }),
+    ).rejects.toThrow("Invalid ticket file name");
     expect((await ticketsCollection(storage).get("ticket-1"))?.files).toEqual([file]);
   });
 
@@ -43,7 +45,7 @@ describe("ticket file operations", () => {
     const storage = createMemoryStorage();
     await putTicket(storage, ticket());
 
-    const file = await createTicketFile({ storage, ticketId: "ticket-1", name });
+    const file = await createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", name });
 
     expect(file).toMatchObject({ name, content: "" });
     const stored = await ticketsCollection(storage).get("ticket-1");
@@ -54,8 +56,8 @@ describe("ticket file operations", () => {
     const storage = createMemoryStorage();
     await putTicket(storage, ticket());
 
-    const first = await createTicketFile({ storage, ticketId: "ticket-1" });
-    const second = await createTicketFile({ storage, ticketId: "ticket-1" });
+    const first = await createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1" });
+    const second = await createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1" });
 
     expect(first.name).toBe("untitled.md");
     expect(second.name).toBe("untitled-1.md");
@@ -64,10 +66,10 @@ describe("ticket file operations", () => {
   test("updateTicketFile writes the file content without touching siblings", async () => {
     const storage = createMemoryStorage();
     await putTicket(storage, ticket());
-    const first = await createTicketFile({ storage, ticketId: "ticket-1", name: "a.md" });
-    const second = await createTicketFile({ storage, ticketId: "ticket-1", name: "b.md" });
+    const first = await createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", name: "a.md" });
+    const second = await createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", name: "b.md" });
 
-    await updateTicketFile({ storage, ticketId: "ticket-1", fileId: first.id, content: "hello" });
+    await updateTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", fileId: first.id, content: "hello" });
 
     const stored = await ticketsCollection(storage).get("ticket-1");
     expect(stored?.files?.find((entry) => entry.id === first.id)?.content).toBe("hello");
@@ -77,10 +79,10 @@ describe("ticket file operations", () => {
   test("deleteTicketFile removes only the targeted file", async () => {
     const storage = createMemoryStorage();
     await putTicket(storage, ticket());
-    const first = await createTicketFile({ storage, ticketId: "ticket-1", name: "a.md" });
-    const second = await createTicketFile({ storage, ticketId: "ticket-1", name: "b.md" });
+    const first = await createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", name: "a.md" });
+    const second = await createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", name: "b.md" });
 
-    await deleteTicketFile({ storage, ticketId: "ticket-1", fileId: first.id });
+    await deleteTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", fileId: first.id });
 
     const stored = await ticketsCollection(storage).get("ticket-1");
     expect(stored?.files?.map((entry) => entry.id)).toEqual([second.id]);

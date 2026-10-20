@@ -1,12 +1,14 @@
+
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
+
 import { runTicketsQuery } from "../data/query";
 import {
   listTicketReviewRequests,
   reviewOutcomesCollection,
   reviewRequestsCollection,
 } from "../data/review-request-storage";
+import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import { readPlanCommand } from "../timeline/commands/read-plan";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { makeCommandContext } from "./command-context.fixture";
@@ -43,7 +45,7 @@ test("unreadable requests block launch and dependent work without a flag", async
     });
   }
   expect(
-    (await runTicketsQuery({ storage, projectId: ctx.projectId })).rows.find(({ id }) => id === ticket.id)?.attributes
+    (await runTicketsQuery({ storage, resources: ctx.resources, projectId: ctx.projectId })).rows.find(({ id }) => id === ticket.id)?.attributes
       ?.reviewRequestItems,
   ).toEqual([expect.objectContaining({ label: "1", color: "orange" })]);
 });

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { fixture } from "../commands/auto-build.fixture";
-import { ticketsCollection } from "../data/collections";
+import { ticketsCollection } from "../data/ticket-context.fixture";
+
 import { dependencyBlockerHooks } from "./dependency-blockers";
 
 for (const hook of dependencyBlockerHooks) {

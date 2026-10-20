@@ -1,12 +1,14 @@
 import { expect, test } from "bun:test";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import { attemptSelectionsCollection, listAttempts, putAttempt, readAttempt } from "../data/attempt-storage";
-import { putTicket } from "../data/collections";
+import { putTicket } from "../data/ticket-context.fixture";
+
 import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { nextTicketsCommand } from "./next-tickets";
 import { runAttemptCommand } from "./run-attempt";
 import { sessionQuery } from "./session-query.fixture";
+import { sessionRecord } from "./session-record.fixture";
 import { recoverySessionInput } from "./workspace-recovery";
 
 async function lostWorkspace(source = "revision") {
@@ -43,7 +45,8 @@ async function lostWorkspace(source = "revision") {
       },
     ],
   });
-  f.ctx.sessions.get = async (id) => (source === "missing owner" ? null : { ...old.session, id, status: "completed" });
+  f.ctx.sessions.get = async (id) =>
+    source === "missing owner" ? null : sessionRecord({ ...old.session, id, status: "completed" });
   f.ctx.sessions.query = sessionQuery(async () => []);
   f.ctx.workspaces.get = async () =>
     source === "branch"
@@ -84,7 +87,7 @@ test("workspace recovery preserves a user stop after its final eligibility check
         detail: "Missing workspace",
       },
       async () => {
-        f.ctx.sessions.get = async () => ({
+        f.ctx.sessions.get = async () => sessionRecord({
           ...f.old.session,
           status: "cancelled",
           last_exit: { cause: "user_stop", startedAt: null, endedAt: "2026-10-22T10:00:00.000Z" },
@@ -152,7 +155,7 @@ test.each([
     const prerequisite = await createTicketCommand.run(f.ctx, { title: "Unfinished prerequisite", statusId: "ready" });
     await putTicket(f.storage, { ...f.ticket, dependsOn: [prerequisite.id] });
   }
-  if (reason === "live owner") f.ctx.sessions.get = async () => ({ ...f.old.session, status: "in_progress" });
+  if (reason === "live owner") f.ctx.sessions.get = async () => sessionRecord({ ...f.old.session, status: "in_progress" });
   if (reason === "ambiguous") await putAttempt(f.storage, { ...f.previous, workspaceId: "other" });
   expect((await nextTicketsCommand.run(f.ctx, {})).tickets.some(({ id }) => id === f.ticket.id)).toBe(false);
   expect(await autoBuildDispatchCommand.run(f.ctx, { ticket: f.ticket.id, revision: "test" })).toMatchObject({
@@ -166,7 +169,7 @@ test("recovery does not replace an owner that resumes during workspace creation"
   const create = f.ctx.workspaces.create;
   f.ctx.workspaces.create = async (input) => {
     const workspace = await create(input);
-    f.ctx.sessions.get = async () => ({ ...f.old.session, status: "in_progress" });
+    f.ctx.sessions.get = async () => sessionRecord({ ...f.old.session, status: "in_progress" });
     return workspace;
   };
   await expect(autoBuildDispatchCommand.run(f.ctx, { ticket: f.ticket.id, revision: "test" })).rejects.toThrow(

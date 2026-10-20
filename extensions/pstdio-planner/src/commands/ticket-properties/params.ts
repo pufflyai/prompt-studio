@@ -7,7 +7,7 @@ import {
   type ResourceOption,
 } from "@pstdio/sdk/extensions";
 import { isSingleSelectTicketTag, ticketTagAttributeId } from "../../data/mappers";
-import type { StoredStatus, StoredTag, StoredTicket } from "../../data/types";
+import type { StoredStatus, StoredTag, Ticket } from "../../data/types";
 import type { StoredPlan } from "../../timeline/contracts";
 import { reviewLinkLabel, reviewLinkTooltip } from "../../views/review-link-values";
 
@@ -17,7 +17,7 @@ export interface TicketRef {
 }
 
 export interface TicketPropertiesInput {
-  ticket: StoredTicket;
+  ticket: Ticket;
   statuses: StoredStatus[];
   tags: StoredTag[];
   dependencies: TicketRef[];
@@ -55,7 +55,7 @@ const timestampControl = (id: string, name: Localizable, value: string): WireDat
   defaultValue: value,
 });
 
-const idParam = (ticket: StoredTicket): WireResource => ({
+const idParam = (ticket: Ticket): WireResource => ({
   id: "id",
   name: l10n("displayMenu.orderingOptions.shorthand", "ID"),
   type: "resource",
@@ -63,7 +63,7 @@ const idParam = (ticket: StoredTicket): WireResource => ({
   options: [{ id: ticket.shorthand, name: ticket.shorthand, icon: "circle", copyText: ticket.shorthand }],
 });
 
-const statusParam = (ticket: StoredTicket, statuses: StoredStatus[]): WireResource => ({
+const statusParam = (ticket: Ticket, statuses: StoredStatus[]): WireResource => ({
   id: "status",
   name: l10n("displayMenu.propertyOptions.status", "Status"),
   type: "resource",
@@ -78,7 +78,7 @@ const statusParam = (ticket: StoredTicket, statuses: StoredStatus[]): WireResour
   })),
 });
 
-const tagParam = (ticket: StoredTicket, tag: StoredTag): WireResource => {
+const tagParam = (ticket: Ticket, tag: StoredTag): WireResource => {
   const single = isSingleSelectTicketTag(tag);
   const optionIds = new Set(tag.options.map((option) => option.id));
   const selected = (ticket.tagIds ?? []).filter((id) => optionIds.has(id));
@@ -102,7 +102,7 @@ const tagParam = (ticket: StoredTicket, tag: StoredTag): WireResource => {
   };
 };
 
-const reviewLinksParam = (ticket: StoredTicket): WireResource => {
+const reviewLinksParam = (ticket: Ticket): WireResource => {
   const links = ticket.reviewLinks ?? [];
   return {
     id: "review-links",

@@ -8,7 +8,7 @@ export const gateCleanup = defineHook({
   id: "timeline.gate-cleanup",
   event: plannerTicketsChanged,
   async run(ctx, { ticketId }) {
-    if (!ticketId || (await findTicket(ctx.storage, ticketId))) {
+    if (!ticketId || (await findTicket(ctx, ticketId))) {
       return;
     }
     await gates(ctx).delete(ticketId);

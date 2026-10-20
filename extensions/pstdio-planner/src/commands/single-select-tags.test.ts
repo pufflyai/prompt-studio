@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTag, putTicket, tagsCollection, ticketsCollection } from "../data/collections";
-import type { StoredTag, StoredTicket } from "../data/types";
+import { putTag, tagsCollection } from "../data/collections";
+import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
+import type { StoredTag, Ticket } from "../data/types";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { setTicketAttributeCommand } from "./set-ticket-attribute";
@@ -26,7 +27,7 @@ const track: StoredTag = {
 };
 const area: StoredTag = { id: "area", name: "Area", type: "multi_select", sortOrder: 51, options: [option("ui", 0)] };
 
-const ticket = (shorthand: string, tagIds: string[], overrides: Partial<StoredTicket> = {}): StoredTicket => ({
+const ticket = (shorthand: string, tagIds: string[], overrides: Partial<Ticket> = {}): Ticket => ({
   id: `id-${shorthand}`,
   shorthand,
   title: shorthand,

@@ -1,8 +1,9 @@
+import { ticketsCollection } from "../data/ticket-context.fixture";
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
-import { ticketsCollection } from "../data/collections";
+
 import { createSessionResource, makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";

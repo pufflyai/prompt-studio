@@ -37,7 +37,7 @@ export const writeTicketCommand = defineCommand({
 
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
-    const { id, shorthand } = await allocateTicketIdentity(ctx);
+    const { id } = await allocateTicketIdentity(ctx);
 
     const statusId =
       commandParams.status !== undefined
@@ -45,15 +45,13 @@ export const writeTicketCommand = defineCommand({
         : (defaultStatus?.id ?? null);
     const tagIds = commandParams.tags !== undefined ? await resolveTagOptionIds(ctx.storage, commandParams.tags) : [];
     await assertSingleSelectTagIds(ctx.storage, tagIds);
-    const parentId =
-      commandParams.parent !== undefined ? await resolveTicketId(ctx.storage, commandParams.parent) : null;
+    const parentId = commandParams.parent !== undefined ? await resolveTicketId(ctx, commandParams.parent) : null;
 
     const ticket = await withTicketOrder(ctx, async () => {
-      const existing = await ticketsCollection(ctx.storage).list();
+      const existing = await ticketsCollection(ctx).list();
       const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
-      return putTicket(ctx.storage, {
+      return putTicket(ctx, {
         id,
-        shorthand,
         title: commandParams.title,
         content: `# ${commandParams.title}\n`,
         statusId,
@@ -71,7 +69,7 @@ export const writeTicketCommand = defineCommand({
       });
     });
 
-    await writeTicketMarkdown(projectFiles, ticket, await ticketToMarkdown(ctx.storage, ticket));
+    await writeTicketMarkdown(projectFiles, ticket, await ticketToMarkdown(ctx, ticket));
     return { shorthand: ticket.shorthand, path: resolvePath(ticketMarkdownPath(ticket.shorthand)) };
   },
 });

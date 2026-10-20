@@ -1,7 +1,7 @@
 import { normalizeTicketDependencies } from "./ticket-dependencies";
-import type { StoredTicket } from "./types";
+import type { Ticket } from "./types";
 
-type DependencyTicket = Pick<StoredTicket, "id" | "shorthand" | "dependsOn" | "blockedReason">;
+type DependencyTicket = Pick<Ticket, "id" | "shorthand" | "dependsOn" | "blockedReason">;
 
 // Recognize only the reported dependency-only sentence. Additional instructions are independent blockers.
 export const dependencyBlockerRefs = (reason: string | null | undefined) => {

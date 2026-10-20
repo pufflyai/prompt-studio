@@ -1,10 +1,10 @@
 import { strict as assert } from "node:assert";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
 import { runTicketsQuery } from "../data/query";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
-import type { StoredTicket } from "../data/types";
+import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
+import type { Ticket } from "../data/types";
 import { reorderTicket } from "./reorder-ticket";
 
 // Diagnostic only: no timing budget. Real browser/database measurements live in e2e/src/perf.
@@ -14,7 +14,7 @@ for (const count of [50, 500, 1_000]) {
   const collection = ticketsCollection(storage);
   const now = new Date().toISOString();
   for (let index = 0; index < count; index += 1) {
-    const ticket: StoredTicket = {
+    const ticket: Ticket = {
       id: `ticket-${index}`,
       shorthand: `ST-${index + 1}`,
       title: `Stress ticket ${index + 1}`,
@@ -66,7 +66,7 @@ for (const count of [50, 500, 1_000]) {
   );
   assert.equal(new Set(ordered.map(({ sortOrder }) => sortOrder)).size, count);
   const queryStart = performance.now();
-  const query = await runTicketsQuery({ storage, projectId: "stress-project" });
+  const query = await runTicketsQuery({ ...ticketContext(storage), projectId: "stress-project" });
   assert.equal(query.rows.length, count);
   console.info(
     JSON.stringify({ count, writes, unchangedWrites, bytes, reorderMs, queryMs: performance.now() - queryStart }),

@@ -15,16 +15,18 @@ import {
   resolveTicketId,
 } from "../data/resolve";
 import { assertSingleSelectTagIds } from "../data/tag-cardinality";
+import { refreshTicketCheckout } from "../data/ticket-checkout";
 import { normalizeTicketDependencies, validateTicketDependencies } from "../data/ticket-dependencies";
 import { validateTicketFileName } from "../data/ticket-file-name";
+import type { TicketContext } from "../data/ticket-identity";
 import { writeTicketImageCheckout } from "../data/ticket-image-checkout";
 import { isImagePath, saveTicketImages } from "../data/ticket-images";
-import type { StoredTicket, StoredTicketFile } from "../data/types";
+import type { StoredTicketFile, Ticket } from "../data/types";
 import { deriveTitle } from "../utils/derive-title";
 
 // Reads the local text files back into stored ticket files, preserving a
 // file's id across saves when its name is unchanged.
-const readTicketFiles = async (projectFiles: ArtifactMount, ticket: StoredTicket, paths: string[]) => {
+const readTicketFiles = async (projectFiles: ArtifactMount, ticket: Ticket, paths: string[]) => {
   const now = new Date().toISOString();
   const previous = new Map((ticket.files ?? []).map((file) => [file.name, file]));
 
@@ -43,11 +45,8 @@ const readTicketFiles = async (projectFiles: ArtifactMount, ticket: StoredTicket
 const resolveTags = async (storage: ExtensionStorageApi, tagNames: string[] | undefined, fallback: string[]) =>
   tagNames === undefined ? fallback : resolveTagOptionIds(storage, tagNames);
 
-const resolveDependencies = async (
-  storage: ExtensionStorageApi,
-  dependencyRefs: string[] | undefined,
-  fallback: string[],
-) => (dependencyRefs === undefined ? fallback : resolveDependencyIds(storage, dependencyRefs));
+const resolveDependencies = async (ctx: TicketContext, dependencyRefs: string[] | undefined, fallback: string[]) =>
+  dependencyRefs === undefined ? fallback : resolveDependencyIds(ctx, dependencyRefs);
 
 // `pst tickets save`: reconcile the edited local ticket.md (body + frontmatter +
 // files) back into extension storage and clear the draft flag.
@@ -65,9 +64,10 @@ export const saveTicketCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const { projectFiles } = await requireTicketDraftFiles(ctx);
-    const ticket = await findTicket(ctx.storage, commandParams.id);
+    const ticket = await findTicket(ctx, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
+    await refreshTicketCheckout(projectFiles, ticket);
     const raw = await readTicketMarkdown(projectFiles, ticket.shorthand);
     if (raw === null) throw new Error(`No local ticket file for ${ticket.shorthand}`);
 
@@ -79,14 +79,14 @@ export const saveTicketCommand = defineCommand({
     const tagIds = await resolveTags(ctx.storage, frontmatter.tagNames, ticket.tagIds ?? []);
     await assertSingleSelectTagIds(ctx.storage, tagIds, ticket.tagIds);
     const dependsOn = await resolveDependencies(
-      ctx.storage,
+      ctx,
       frontmatter.dependsOn,
       normalizeTicketDependencies(ticket.dependsOn),
     );
-    if (frontmatter.dependsOn !== undefined) await validateTicketDependencies(ctx.storage, ticket, dependsOn);
+    if (frontmatter.dependsOn !== undefined) await validateTicketDependencies(ctx, ticket, dependsOn);
     const parentId =
       frontmatter.parentShorthand !== undefined
-        ? await resolveTicketId(ctx.storage, frontmatter.parentShorthand)
+        ? await resolveTicketId(ctx, frontmatter.parentShorthand)
         : ticket.parentId;
     const paths = (await projectFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) => entry.path);
     const files = await readTicketFiles(
@@ -96,7 +96,7 @@ export const saveTicketCommand = defineCommand({
     );
     const images = await saveTicketImages(ctx.storage, projectFiles, ticket, paths.filter(isImagePath));
 
-    const next: StoredTicket = {
+    const next: Ticket = {
       ...ticket,
       content,
       title: deriveTitle(content),
@@ -111,7 +111,7 @@ export const saveTicketCommand = defineCommand({
       draft: false,
       updatedAt: new Date().toISOString(),
     };
-    await putTicket(ctx.storage, next);
+    await putTicket(ctx, next);
     await writeTicketImageCheckout(projectFiles, ticket.shorthand, images.checkout);
     // Delete replaced images only after the ticket stops pointing at them.
     for (const id of images.replacedIds) await ctx.storage.files.delete(id);

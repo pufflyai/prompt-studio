@@ -1,3 +1,4 @@
+
 import { expect, test } from "bun:test";
 import type { BoardView } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
@@ -5,11 +6,12 @@ import { makeCommandArgs } from "../../commands/command-context.fixture";
 import { createTicketCommand } from "../../commands/create-ticket";
 import { requestHumanCommand, reviewCommand } from "../../commands/review-requests";
 import { putAttempt } from "../../data/attempt-storage";
-import { putTicket, statusesCollection, ticketsCollection } from "../../data/collections";
+import { statusesCollection } from "../../data/collections";
 import { migratePlannerStorage } from "../../data/migrate-storage";
 import { DEFAULT_STATUSES } from "../../data/seed";
 import { createTicketTag } from "../../data/tag-operations";
 import { timelineBoard } from "../../data/ticket-board";
+import { putTicket, ticketContext, ticketsCollection } from "../../data/ticket-context.fixture";
 import { createDeadlineCommand } from "./deadline-commands";
 import { registerGate } from "./gate-store";
 import { moveTicketCommand } from "./move-ticket";
@@ -17,7 +19,7 @@ import { readPlanCommand } from "./read-plan";
 
 test("an invalid Track stops the snapshot before saved views can be initialized", async () => {
   const storage = createMemoryStorage();
-  await createTicketTag({ storage, name: "Track", type: "multi_select" });
+  await createTicketTag({ ...ticketContext(storage), name: "Track", type: "multi_select" });
   let viewReads = 0;
   const [ctx] = makeCommandArgs({
     storage,

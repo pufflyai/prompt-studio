@@ -1,4 +1,4 @@
-import { defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
+import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { statusesCollection, updateTicket } from "../data/collections";
 import {
   findTicket,
@@ -9,7 +9,8 @@ import {
 } from "../data/resolve";
 import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { validateTicketDependencies } from "../data/ticket-dependencies";
-import type { StoredTicket } from "../data/types";
+import type { TicketContext } from "../data/ticket-identity";
+import type { Ticket } from "../data/types";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { plannerTicketsChanged } from "../events";
 import { notifyBlocked, resolveBlockedNotification } from "../planner-notifications";
@@ -42,7 +43,7 @@ export const updateTicketCommand = defineCommand({
     blockedReason: params.text(),
   },
   async run(ctx, commandParams) {
-    const existing = await findTicket(ctx.storage, commandParams.id);
+    const existing = await findTicket(ctx, commandParams.id);
     if (!existing) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
     const statusId =
@@ -54,9 +55,9 @@ export const updateTicketCommand = defineCommand({
         ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
         : commandParams.tagIds;
     if (tagIds !== undefined) await assertSingleSelectTagIds(ctx.storage, tagIds, existing.tagIds);
-    const parentId = await resolveParentUpdate(ctx.storage, commandParams.parent, commandParams.unlinkParent);
-    const dependsOn = await resolveDependencyUpdate(ctx.storage, commandParams.dependsOn, commandParams.clearDependsOn);
-    if (dependsOn !== undefined) await validateTicketDependencies(ctx.storage, existing, dependsOn);
+    const parentId = await resolveParentUpdate(ctx, commandParams.parent, commandParams.unlinkParent);
+    const dependsOn = await resolveDependencyUpdate(ctx, commandParams.dependsOn, commandParams.clearDependsOn);
+    if (dependsOn !== undefined) await validateTicketDependencies(ctx, existing, dependsOn);
 
     const draft = {
       ...existing,
@@ -70,7 +71,7 @@ export const updateTicketCommand = defineCommand({
       ...(commandParams.blockedReason !== undefined ? { blockedReason: commandParams.blockedReason || null } : {}),
       updatedAt: new Date().toISOString(),
     };
-    const next = await updateTicket(ctx.storage, draft);
+    const next = await updateTicket(ctx, draft);
     await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     await syncBlockedNotificationSafely(ctx, existing, next);
     return next;
@@ -79,7 +80,7 @@ export const updateTicketCommand = defineCommand({
 
 const isBlockedTicket = async (
   ctx: Pick<Parameters<typeof updateTicketCommand.run>[0], "storage" | "settings">,
-  ticket: StoredTicket,
+  ticket: Ticket,
 ) => {
   if (ticket.blockedReason) return true;
   const status = ticket.statusId ? await statusesCollection(ctx.storage).get(ticket.statusId) : null;
@@ -92,8 +93,8 @@ const isBlockedTicket = async (
 
 const syncBlockedNotification = async (
   ctx: Parameters<typeof updateTicketCommand.run>[0],
-  previous: StoredTicket,
-  next: StoredTicket,
+  previous: Ticket,
+  next: Ticket,
 ) => {
   const [wasBlocked, isBlocked] = await Promise.all([isBlockedTicket(ctx, previous), isBlockedTicket(ctx, next)]);
   if (isBlocked) {
@@ -109,8 +110,8 @@ const syncBlockedNotification = async (
 // (autosave, CLI). Swallow toast failures too, even if delivery is unavailable.
 const syncBlockedNotificationSafely = async (
   ctx: Parameters<typeof updateTicketCommand.run>[0],
-  previous: StoredTicket,
-  next: StoredTicket,
+  previous: Ticket,
+  next: Ticket,
 ) => {
   try {
     await syncBlockedNotification(ctx, previous, next);
@@ -128,13 +129,9 @@ const syncBlockedNotificationSafely = async (
 };
 
 // undefined → leave the parent untouched; null → unlink; string → resolve the shorthand.
-const resolveParentUpdate = async (
-  storage: ExtensionStorageApi,
-  parent: string | undefined,
-  unlink: boolean | undefined,
-) => {
+const resolveParentUpdate = async (ctx: TicketContext, parent: string | undefined, unlink: boolean | undefined) => {
   if (unlink) return null;
-  if (parent !== undefined) return resolveTicketId(storage, parent);
+  if (parent !== undefined) return resolveTicketId(ctx, parent);
   return undefined;
 };
 
@@ -142,11 +139,11 @@ const resolveParentUpdate = async (
 // from "supplied empty": undefined leaves dependencies untouched, and clearing
 // takes its own flag rather than an empty list a routine update could produce.
 const resolveDependencyUpdate = async (
-  storage: ExtensionStorageApi,
+  ctx: TicketContext,
   dependsOn: string[] | undefined,
   clear: boolean | undefined,
 ) => {
   if (clear) return [];
-  if (dependsOn !== undefined) return resolveDependencyIds(storage, dependsOn);
+  if (dependsOn !== undefined) return resolveDependencyIds(ctx, dependsOn);
   return undefined;
 };

@@ -16,8 +16,7 @@ test("ticket properties expose milestone, date, progress, and attention from the
   const completed = await createTicketCommand.run(ctx, { content: "# Completed release work", statusId: "done" });
   const open = await createTicketCommand.run(ctx, { content: "# Waiting for release", statusId: "ready" });
   await moveTicketCommand.run(ctx, { ticket: completed.id, deadline: milestone.id });
-  const query = await runTicketsQuery({
-    storage,
+  const query = await runTicketsQuery({ storage, resources: ctx.resources,
     projectId: ctx.projectId,
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
   });
@@ -36,8 +35,7 @@ test("ticket properties expose milestone, date, progress, and attention from the
     milestoneState: "unscheduled",
   });
   await moveTicketCommand.run(ctx, { ticket: open.id, deadline: milestone.id });
-  const next = await runTicketsQuery({
-    storage,
+  const next = await runTicketsQuery({ storage, resources: ctx.resources,
     projectId: ctx.projectId,
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
   });
@@ -48,8 +46,7 @@ test("ticket properties expose milestone, date, progress, and attention from the
   await deleteDeadlineCommand.run(ctx, { deadline: milestone.id });
   expect(
     (
-      await runTicketsQuery({
-        storage,
+      await runTicketsQuery({ storage, resources: ctx.resources,
         projectId: ctx.projectId,
         workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
       })
@@ -75,8 +72,7 @@ test("ticket inline milestone edits update the plan without adding tag ids", asy
   await setTicketAttributeCommand.run(ctx, { rowId: ticket.id, attributeId: "milestone", value: "" });
   expect(
     (
-      await runTicketsQuery({
-        storage,
+      await runTicketsQuery({ storage, resources: ctx.resources,
         projectId: ctx.projectId,
         workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
       })
@@ -85,8 +81,7 @@ test("ticket inline milestone edits update the plan without adding tag ids", asy
   await setTicketAttributeCommand.run(ctx, { rowId: ticket.id, attributeId: "milestone", value: milestone.id });
   expect(
     (
-      await runTicketsQuery({
-        storage,
+      await runTicketsQuery({ storage, resources: ctx.resources,
         projectId: ctx.projectId,
         workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
       })
@@ -103,8 +98,7 @@ test("archived work does not change the active milestone progress", async () => 
   await moveTicketCommand.run(ctx, { ticket: done.id, deadline: milestone.id });
   await moveTicketCommand.run(ctx, { ticket: archived.id, deadline: milestone.id });
   await storage.collection("tickets").update(archived.id, { ...archived, archived: true });
-  const query = await runTicketsQuery({
-    storage,
+  const query = await runTicketsQuery({ storage, resources: ctx.resources,
     projectId: ctx.projectId,
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
   });

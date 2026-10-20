@@ -3,7 +3,7 @@ import type { AttemptRecord, AttemptTimelineEvent, TicketAttemptSelection } from
 import { hasPendingImplementationInput } from "../data/implementation-input";
 import type { TicketReviewRequests } from "../data/review-request-types";
 import { readSessionHistory } from "../data/session-history";
-import type { StoredTicket } from "../data/types";
+import type { Ticket } from "../data/types";
 import { isUnexpectedExit } from "./auto-build-resume";
 import { isLiveSession } from "./auto-build-sessions";
 import { WorkspaceUnavailableError, workspaceHead } from "./change-requests";
@@ -41,7 +41,7 @@ const observation = (attempt: AttemptRecord, reason: string, nextAction: string,
   },
 });
 const candidate = (
-  ticket: StoredTicket,
+  ticket: Ticket,
   attempt: AttemptRecord,
   reason: string,
   extra: Pick<WorkCandidate, "expectedHeadSha" | "evidenceKey">,
@@ -60,7 +60,7 @@ const candidate = (
 
 const observeSubmittedWork = async (
   ctx: CommandContext,
-  ticket: StoredTicket,
+  ticket: Ticket,
   attempt: AttemptRecord,
   events: AttemptTimelineEvent[],
 ) => {
@@ -118,7 +118,7 @@ const runSnapshot = (session: Session): SessionRunSnapshot => ({
 // Unfinished work and one lost run resume through Auto Build resumptions. Submitted work needs PR and CI evidence.
 const observeStoppedWork = async (
   ctx: CommandContext,
-  ticket: StoredTicket,
+  ticket: Ticket,
   attempt: AttemptRecord,
   input: ObserveInput,
   session: Session,
@@ -159,7 +159,7 @@ const observeStoppedWork = async (
 
 const observeVariant = async (
   ctx: CommandContext,
-  ticket: StoredTicket,
+  ticket: Ticket,
   attempt: AttemptRecord,
   input: ObserveInput,
 ) => {
@@ -196,7 +196,7 @@ const observeVariant = async (
 // Callers pass project history they already loaded, so observing many tickets reads it once.
 export async function observeTicketWork(
   ctx: CommandContext,
-  ticket: StoredTicket,
+  ticket: Ticket,
   input: {
     requests: Map<string, TicketReviewRequests>;
     completedStatusIds: string[];

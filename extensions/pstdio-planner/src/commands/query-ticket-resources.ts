@@ -11,8 +11,11 @@ const matchesQuery = (haystack: string, query: string) => {
 
 export const queryTicketResources: CommandPaletteResourceContribution["query"] = async (ctx, input) => {
   const query = input.query ?? "";
+  const matches = await ctx.resources.findByShorthand({ kind: "ticket", shorthand: query.trim().toUpperCase() });
+  const matchedIds = new Set(matches.map(({ id }) => id));
   const { rows } = await runTicketsQuery({
     storage: ctx.storage,
+    resources: ctx.resources,
     projectId: ctx.projectId,
     filter: {
       conjunction: "and",
@@ -27,11 +30,11 @@ export const queryTicketResources: CommandPaletteResourceContribution["query"] =
   });
 
   const items = rows
-    .filter((row) => matchesQuery(row.title, query))
+    .filter((row) => matchedIds.has(row.id) || matchesQuery(`${row.resource?.shorthand ?? ""} ${row.title}`, query))
     .slice(0, input.limit ?? rows.length)
     .map((row) => ({
       id: row.id,
-      label: row.title,
+      label: `${row.resource?.shorthand ?? ""} ${row.title}`.trim(),
       icon: TICKET_RESOURCE_ICON,
       target: row.resource
         ? ticketPageTarget(row.resource)

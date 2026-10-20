@@ -1,10 +1,12 @@
+
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { fixture } from "../commands/auto-build.fixture";
 import { makeCommandContext } from "../commands/command-context.fixture";
 import { createTicketCommand } from "../commands/create-ticket";
-import { statusesCollection, ticketsCollection } from "./collections";
+import { statusesCollection } from "./collections";
 import { markTicketsDone } from "./mark-tickets-done";
+import { ticketsCollection } from "./ticket-context.fixture";
 
 test("completion clears only dependency blocker text backed by the completed dependency links", async () => {
   const { ctx, ticket, storage } = await fixture();

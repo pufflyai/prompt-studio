@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
 import { runTicketsQuery } from "../data/query";
+import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import { archiveTicketCommand } from "./archive-ticket";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -18,7 +18,7 @@ describe("archiveTicketCommand", () => {
 
     expect((await ticketsCollection(storage).get(created.id))?.archived).toBe(true);
     const result = await runTicketsQuery({
-      storage,
+      ...ticketContext(storage),
       projectId: "proj-1",
       filter: { conjunction: "and", rules: [{ attributeId: "archived", condition: "is-any-of", value: ["active"] }] },
     });

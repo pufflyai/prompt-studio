@@ -11,7 +11,7 @@ export const attachTicketFileCommand = defineCommand({
     ref: params.json<StoredTicketAttachment, { required: true }>({ required: true }),
   },
   async run(ctx, commandParams) {
-    const collection = ticketsCollection(ctx.storage);
+    const collection = ticketsCollection(ctx);
     const existing = await collection.get(commandParams.ticketId);
     if (!existing) return null;
 
@@ -37,7 +37,7 @@ export const detachTicketFileCommand = defineCommand({
     fileId: params.text({ required: true }),
   },
   async run(ctx, commandParams) {
-    const collection = ticketsCollection(ctx.storage);
+    const collection = ticketsCollection(ctx);
     const existing = await collection.get(commandParams.ticketId);
     if (!existing) return null;
 

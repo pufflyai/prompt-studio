@@ -1,3 +1,4 @@
+
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandContext } from "../commands/command-context.fixture";
@@ -5,9 +6,10 @@ import { queryTicketProperties } from "../commands/ticket-properties/query";
 import { readTicketTagsCommand } from "../commands/ticket-tags";
 import { readPlanCommand } from "../timeline/commands/read-plan";
 import { timelineViewSchema } from "../timeline/commands/view-schema";
-import { putTicket, tagsCollection, ticketsCollection } from "./collections";
+import { tagsCollection } from "./collections";
 import { migratePlannerStorage } from "./migrate-storage";
-import type { StoredTicket } from "./types";
+import { putTicket, ticketsCollection } from "./ticket-context.fixture";
+import type { Ticket } from "./types";
 
 const ticket = {
   id: "ticket-1",
@@ -20,7 +22,7 @@ const ticket = {
   createdAt: "2026-10-02T09:00:00.000Z",
   updatedAt: "2026-10-02T09:00:00.000Z",
   parallelizable: "no",
-} as StoredTicket;
+} as Ticket;
 
 test("a project that already imported its templates gets the remaining cleanups once", async () => {
   const storage = createMemoryStorage({

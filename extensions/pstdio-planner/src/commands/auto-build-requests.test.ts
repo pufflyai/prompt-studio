@@ -44,6 +44,6 @@ test("supervisor-linked input stays visible after an unstarted ticket leaves eli
     request: { kind: "task" },
     sessionId: owner,
   });
-  await putTicket(storage, { ...task, statusId: "blocked", blockedReason: "Waiting for input" });
+  await putTicket(ctx, { ...task, statusId: "blocked", blockedReason: "Waiting for input" });
   expect((await readAutoBuildCommand.run(ctx, {})).reviewRequests.map((request) => request.id)).toContain(request.id);
 });

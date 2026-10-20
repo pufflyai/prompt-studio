@@ -4,6 +4,7 @@ import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "./collections";
 import { isSingleSelectTicketTag } from "./mappers";
 import { seedDefaultTags } from "./seed";
+import type { TicketContext } from "./ticket-identity";
 import type { StoredTag } from "./types";
 
 const selectedOptions = (tag: Pick<StoredTag, "options">, tagIds: readonly string[] = []) => {
@@ -13,12 +14,12 @@ const selectedOptions = (tag: Pick<StoredTag, "options">, tagIds: readonly strin
 
 // Checks every stored ticket, including archived ones and drafts, before the type changes.
 export const assertSingleSelectConversion = async (
-  storage: ExtensionStorageApi,
+  ctx: TicketContext,
   tag: StoredTag,
   nextType: StoredTag["type"] | undefined,
 ) => {
   if (nextType !== "single_select" || tag.type === "single_select") return;
-  const conflicts = (await ticketsCollection(storage).list()).filter(
+  const conflicts = (await ticketsCollection(ctx).list()).filter(
     (ticket) => selectedOptions(tag, ticket.tagIds).length > 1,
   );
   if (conflicts.length === 0) return;

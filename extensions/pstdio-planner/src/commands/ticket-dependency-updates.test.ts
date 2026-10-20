@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
 import { ticketMarkdownPath } from "../data/draft-storage";
-import type { StoredTicket } from "../data/types";
+import { ticketsCollection } from "../data/ticket-context.fixture";
+import type { Ticket } from "../data/types";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { saveTicketCommand } from "./save-ticket";
@@ -13,7 +13,7 @@ const setup = (mode: "update" | "save") => {
   const projectFiles = createMemoryRepoFiles();
   const create = (title: string, dependsOn: string[] = []) =>
     createTicketCommand.run(...makeCommandArgs({ storage, params: { title, dependsOn } }));
-  const setDependencies = async (ticket: StoredTicket, dependsOn: string[]) => {
+  const setDependencies = async (ticket: Ticket, dependsOn: string[]) => {
     if (mode === "update") {
       await updateTicketCommand.run(
         ...makeCommandArgs({ storage, params: { id: ticket.shorthand, dependsOn, content: "# Edited" } }),

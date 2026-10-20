@@ -1,6 +1,7 @@
 import { expect, setSystemTime, test } from "bun:test";
 import { listAttempts, putAttempt } from "../data/attempt-storage";
-import { putTicket } from "../data/collections";
+import { putTicket } from "../data/ticket-context.fixture";
+
 import { autoBuildCommand } from "./auto-build";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";

@@ -4,16 +4,18 @@ import { migratePlannerStorage } from "../data/migrate-storage";
 import { runTicketsQuery } from "../data/query";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { loadLatestWorkspaceSessions } from "../data/workspace-sessions";
+import { resolveWorkspaceTicketAnchors } from "../data/workspace-ticket-link";
 
 export const queryTickets = async (
-  ctx: Pick<ExtensionContextBase, "files" | "projectId" | "sessions" | "storage" | "workspaces" | "settings">,
+  ctx: Pick<ExtensionContextBase, "files" | "projectId" | "sessions" | "storage" | "workspaces" | "settings" | "resources">,
   input: { filter?: ViewFilterGroup },
 ) => {
   await migratePlannerStorage(ctx);
-  const workspaces = await ctx.workspaces.list();
+  const workspaces = await resolveWorkspaceTicketAnchors(ctx, await ctx.workspaces.list());
 
   return runTicketsQuery({
     storage: ctx.storage,
+    resources: ctx.resources,
     projectId: ctx.projectId,
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
     filter: input.filter,

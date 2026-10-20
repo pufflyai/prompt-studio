@@ -36,7 +36,7 @@ export const blockAttempt = async (
     commitSha: attempt.revisions.at(-1)?.headSha ?? null,
     metadata: { phase: input.phase, reason: input.reason, retryCount: input.retryCount },
   });
-  const ticket = await ticketsCollection(ctx.storage).get(attempt.ticketId);
+  const ticket = await ticketsCollection(ctx).get(attempt.ticketId);
   if (!ticket) throw new Error(`Unknown ticket "${attempt.ticketId}"`);
   await createReviewRequest(ctx, {
     ticket: attempt.ticketId,

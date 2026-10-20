@@ -1,8 +1,9 @@
+import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
 import { describe, expect, test } from "bun:test";
 import type { CommandSource } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt, readAttempt } from "../data/attempt-storage";
-import { putTicket, ticketsCollection } from "../data/collections";
+
 import { hasPendingImplementationInput } from "../data/implementation-input";
 import {
   hasPendingInput,

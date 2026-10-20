@@ -1,7 +1,9 @@
+
 import { expect, test } from "bun:test";
 import { appendAttemptEvent, putAttempt, readAttempt } from "../data/attempt-storage";
-import { ticketsCollection } from "../data/collections";
+
 import { listTicketReviewRequests } from "../data/review-request-storage";
+import { ticketsCollection } from "../data/ticket-context.fixture";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { submitChangeRequestCommand } from "./change-requests";
 import { prepareDependencyBase } from "./dependency-base";

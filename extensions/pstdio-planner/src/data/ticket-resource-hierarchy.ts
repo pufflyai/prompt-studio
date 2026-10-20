@@ -1,11 +1,12 @@
-import type { ExtensionStorageApi, JsonObject } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "./collections";
+import type { JsonObject } from "@pstdio/sdk/extensions";
+import { type TicketContext, withTicketIdentities } from "./ticket-identity";
+import { ticketRecords } from "./ticket-records";
 import { type TicketSummary, ticketSummary } from "./ticket-summary";
 
 export type TicketParentLookup = Map<string, TicketSummary>;
 
 export const readTicketParentLookup = async (
-  storage: ExtensionStorageApi,
+  ctx: TicketContext,
   selected: ReadonlyMap<string, TicketSummary | undefined>,
 ) => {
   const lookup: TicketParentLookup = new Map(
@@ -13,7 +14,7 @@ export const readTicketParentLookup = async (
   );
   const visited = new Set(selected.keys());
   let pending = [...lookup.values()];
-  const collection = ticketsCollection(storage);
+  const collection = ticketRecords(ctx.storage);
   while (pending.length > 0) {
     const ids = new Set(
       pending.flatMap((ticket) => (ticket.parentId && !visited.has(ticket.parentId) ? [ticket.parentId] : [])),
@@ -21,7 +22,7 @@ export const readTicketParentLookup = async (
     // Missing parents are visited too, so another branch cannot fetch them again.
     for (const id of ids) visited.add(id);
     const ancestors = await Promise.all([...ids].map((id) => collection.get(id)));
-    pending = ancestors.filter((ticket) => ticket !== undefined).map(ticketSummary);
+    pending = (await withTicketIdentities(ctx, ancestors.filter((ticket) => ticket !== undefined))).map(ticketSummary);
     for (const ticket of pending) lookup.set(ticket.id, ticket);
   }
   return lookup;

@@ -104,7 +104,12 @@ export const createTicketFileCommand = defineCommand({
   async run(ctx, commandParams) {
     const ticketId = selectedTicketId(ctx, commandParams);
     if (!ticketId) throw new Error("Ticket resource is required.");
-    const file = await createTicketFile({ storage: ctx.storage, ticketId, name: commandParams.name });
+    const file = await createTicketFile({
+      storage: ctx.storage,
+      resources: ctx.resources,
+      ticketId,
+      name: commandParams.name,
+    });
     await ctx.events.emit(plannerTicketsChanged, { ticketId });
     // ticketId travels with the result so the editor can filter the broadcast.
     return { ...file, ticketId };
@@ -123,6 +128,7 @@ export const updateTicketFileCommand = defineCommand({
   async run(ctx, commandParams) {
     const ticket = await updateTicketFile({
       storage: ctx.storage,
+      resources: ctx.resources,
       ticketId: commandParams.ticketId,
       fileId: commandParams.fileId,
       content: commandParams.content,
@@ -141,10 +147,11 @@ export const renameTicketFileCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const input = commandParams as typeof commandParams & { ticketId: string; fileId: string };
-    const ticket = await ticketsCollection(ctx.storage).get(input.ticketId);
+    const ticket = await ticketsCollection(ctx).get(input.ticketId);
     const file = ticket?.files?.find((entry) => entry.id === input.fileId);
     const updated = await updateTicketFile({
       storage: ctx.storage,
+      resources: ctx.resources,
       ticketId: input.ticketId,
       fileId: input.fileId,
       name: renameWithCurrentFileEnding(input.name, file?.name ?? ""),
@@ -163,12 +170,12 @@ export const deleteTicketFileCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const { ticketId, fileId } = commandParams;
-    await deleteTicketFile({ storage: ctx.storage, ticketId, fileId });
+    await deleteTicketFile({ storage: ctx.storage, resources: ctx.resources, ticketId, fileId });
     await ctx.events.emit(plannerTicketsChanged, { ticketId });
     if (selectedDocumentFromResource(ctx.resource) !== fileId) return { ticketId, fileId };
 
     // The open document is gone, so the page moves back to the ticket body.
-    const tickets = await ticketsCollection(ctx.storage).list();
+    const tickets = await ticketsCollection(ctx).list();
     const ticket = tickets.find((entry) => entry.id === ticketId);
     if (!ticket) return { ticketId, fileId };
     ctx.navigation.open(ticketPageTarget(ticketResourceReference(ticket, createTicketParentLookup(tickets))));
@@ -177,7 +184,7 @@ export const deleteTicketFileCommand = defineCommand({
 });
 
 export const listTicketFilesTree = async (
-  ctx: Pick<ExtensionContextBase, "extensionId" | "projectId" | "sessions" | "storage" | "workspaces">,
+  ctx: Pick<ExtensionContextBase, "extensionId" | "projectId" | "sessions" | "storage" | "workspaces" | "resources">,
   input: { renderer?: RendererContext },
 ) => {
   const renderer = input.renderer ?? { rendererId: "pstdio.pstdio-planner.view.ticket-files" };
@@ -185,7 +192,7 @@ export const listTicketFilesTree = async (
   const ticketId = resource?.type === "ticket" ? resource.id : undefined;
   if (!ticketId) return [emptyFilesSection()];
 
-  const ticket = await ticketsCollection(ctx.storage).get(ticketId);
+  const ticket = await ticketsCollection(ctx).get(ticketId);
   if (!ticket) return [emptyFilesSection()];
 
   const selectedDocument = selectedDocumentFromResource(resource);
@@ -267,7 +274,7 @@ export const listTicketFilesTree = async (
 
   // Linked workspaces open as native workspace tabs from the same sidenav.
   const visibleWorkspaces = workspaces.filter(
-    (workspace) => workspace.is_default || linkedWorkspaces.includes(workspace),
+    (workspace) => workspace.is_default || linkedWorkspaces.some(({ id }) => id === workspace.id),
   );
 
   const maybeSubTicketsSection = buildSubTicketsSection({

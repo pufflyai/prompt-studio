@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTag, putTicket } from "./collections";
+import { putTag } from "./collections";
 import { runTicketsQuery } from "./query";
-import type { StoredTag, StoredTicket } from "./types";
+import { putTicket, ticketContext } from "./ticket-context.fixture";
+import type { StoredTag, Ticket } from "./types";
 
-const ticket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+const ticket = (overrides: Partial<Ticket>): Ticket => ({
   id: crypto.randomUUID(),
   shorthand: "T-1",
   title: "Ticket",
@@ -42,7 +43,7 @@ describe("runTicketsQuery with a timeline Track that the timeline cannot use", (
       ticket({ shorthand: "T-2", sortOrder: 1, archived: true, tagIds: ["track-product", "track-platform"] }),
     );
 
-    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
+    const result = await runTicketsQuery({ ...ticketContext(storage), projectId: "proj-1" });
 
     expect(result.rows.map((row) => row.resource?.shorthand)).toEqual(["T-1", "T-2"]);
     expect(result.rows[0]?.attributes).toMatchObject({ milestone: "", milestoneState: "unscheduled" });

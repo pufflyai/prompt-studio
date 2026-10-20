@@ -1,10 +1,11 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { ticketsCollection, updateTicket } from "./collections";
 import { validateTicketFileName } from "./ticket-file-name";
+import type { TicketContext } from "./ticket-identity";
 import type { StoredTicketFile } from "./types";
 
-const loadTicket = async (storage: ExtensionStorageApi, ticketId: string) => {
-  const ticket = await ticketsCollection(storage).get(ticketId);
+const loadTicket = async (ctx: TicketContext, ticketId: string) => {
+  const ticket = await ticketsCollection(ctx).get(ticketId);
   if (!ticket) throw new Error(`Unknown ticket: ${ticketId}`);
   return ticket;
 };
@@ -19,8 +20,13 @@ const nextUntitledName = (files: StoredTicketFile[]) => {
   return `untitled-${index}.md`;
 };
 
-export const createTicketFile = async (input: { storage: ExtensionStorageApi; ticketId: string; name?: string }) => {
-  const ticket = await loadTicket(input.storage, input.ticketId);
+export const createTicketFile = async (input: {
+  storage: ExtensionStorageApi;
+  resources: TicketContext["resources"];
+  ticketId: string;
+  name?: string;
+}) => {
+  const ticket = await loadTicket(input, input.ticketId);
   const now = new Date().toISOString();
   const file: StoredTicketFile = {
     id: crypto.randomUUID(),
@@ -29,19 +35,20 @@ export const createTicketFile = async (input: { storage: ExtensionStorageApi; ti
     createdAt: now,
     updatedAt: now,
   };
-  await updateTicket(input.storage, { ...ticket, files: [...(ticket.files ?? []), file], updatedAt: now });
+  await updateTicket(input, { ...ticket, files: [...(ticket.files ?? []), file], updatedAt: now });
   return file;
 };
 
 export const updateTicketFile = async (input: {
   storage: ExtensionStorageApi;
+  resources: TicketContext["resources"];
   ticketId: string;
   fileId: string;
   content?: string;
   name?: string;
 }) => {
   if (input.name !== undefined) validateTicketFileName(input.name);
-  const ticket = await loadTicket(input.storage, input.ticketId);
+  const ticket = await loadTicket(input, input.ticketId);
   const now = new Date().toISOString();
   const files = (ticket.files ?? []).map((file) =>
     file.id === input.fileId
@@ -53,13 +60,18 @@ export const updateTicketFile = async (input: {
         }
       : file,
   );
-  await updateTicket(input.storage, { ...ticket, files, updatedAt: now });
+  await updateTicket(input, { ...ticket, files, updatedAt: now });
   return files.find((file) => file.id === input.fileId) ?? null;
 };
 
-export const deleteTicketFile = async (input: { storage: ExtensionStorageApi; ticketId: string; fileId: string }) => {
-  const ticket = await loadTicket(input.storage, input.ticketId);
+export const deleteTicketFile = async (input: {
+  storage: ExtensionStorageApi;
+  resources: TicketContext["resources"];
+  ticketId: string;
+  fileId: string;
+}) => {
+  const ticket = await loadTicket(input, input.ticketId);
   const files = (ticket.files ?? []).filter((file) => file.id !== input.fileId);
-  await updateTicket(input.storage, { ...ticket, files, updatedAt: new Date().toISOString() });
+  await updateTicket(input, { ...ticket, files, updatedAt: new Date().toISOString() });
   return { fileId: input.fileId };
 };

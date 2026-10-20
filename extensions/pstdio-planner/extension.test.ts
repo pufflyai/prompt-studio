@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { viewDataEvents } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import extension from "./extension";
-import { putTicket } from "./src/data/collections";
 import { ticketMarkdownPath } from "./src/data/draft-storage";
-import type { StoredTicket } from "./src/data/types";
+import { putTicket, ticketContext } from "./src/data/ticket-context.fixture";
+import type { Ticket } from "./src/data/types";
 
 const command = (id: string) => extension.commands?.find((contribution) => contribution.id === id);
 const hook = (id: string) => extension.hooks?.find((contribution) => contribution.id === id);
@@ -41,7 +41,7 @@ const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>
     sortOrder: 0,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
-  } satisfies StoredTicket);
+  } satisfies Ticket);
 describe("pstdio planner extension contributions", () => {
   test("registers each command once", () => {
     const ids = (extension.commands ?? []).map(({ id }) => id);
@@ -181,7 +181,7 @@ describe("pstdio planner workspace contributions", () => {
     try {
       await hook("worktree-created")?.run(
         {
-          storage,
+          ...ticketContext(storage),
           projectFiles: fileMount(worktreePath),
           workspaceFiles: fileMount(worktreePath),
         } as never,
@@ -222,7 +222,7 @@ describe("pstdio planner workspace contributions", () => {
     try {
       await hook("worktree-created")?.run(
         {
-          storage,
+          ...ticketContext(storage),
           projectFiles: fileMount(repoPath),
           workspaceFiles: fileMount(worktreePath),
         } as never,
@@ -346,7 +346,7 @@ describe("pstdio planner notification hooks", () => {
     const notifications: unknown[] = [];
     await hook("session-awaiting-input")?.run(
       {
-        storage,
+        ...ticketContext(storage),
         notify: {
           action: async (input: unknown) => {
             notifications.push(input);

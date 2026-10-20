@@ -1,25 +1,27 @@
+import { resolveTicketId } from "../../data/resolve";
 // Move a ticket in the execution order, into another deadline, or both.
 
 import { defineCommand, type ExtensionContextBase, params } from "@pstdio/sdk/extensions";
 import { withWriteGuard } from "../../data/write-guard";
 import { moveTicket } from "../model/edit-plan";
-import { deadlineOrNone, findTicket, loadPlan, savePlan } from "./plan-store";
+import { deadlineOrNone, loadPlan, savePlan } from "./plan-store";
 export const moveTicketInPlan = async (
-  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId" | "settings">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId" | "settings" | "resources">,
   input: { ticket: string; deadline?: string; before?: string },
 ) => {
   const { ticket: ticketKey, deadline, before } = input;
   return withWriteGuard(ctx, "plan", async () => {
     const { tickets, plan } = await loadPlan(ctx);
-    const ticket = findTicket(tickets, ticketKey);
-    const current = plan.order.find(({ ticketId }) => ticketId === ticket.id)?.deadlineId ?? null;
+    const ticketId = await resolveTicketId(ctx, ticketKey);
+    if (!tickets.some(({ id }) => id === ticketId)) throw new Error(`Unknown ticket "${ticketKey}".`);
+    const current = plan.order.find((entry) => entry.ticketId === ticketId)?.deadlineId ?? null;
     const moved = moveTicket(plan, {
-      ticketId: ticket.id,
+      ticketId,
       deadlineId: deadline === undefined ? current : deadlineOrNone(plan, deadline),
-      ...(before ? { beforeId: findTicket(tickets, before).id } : {}),
+      ...(before ? { beforeId: await resolveTicketId(ctx, before) } : {}),
     });
     await savePlan(ctx, moved, "move");
-    return moved.order.find(({ ticketId }) => ticketId === ticket.id);
+    return moved.order.find((entry) => entry.ticketId === ticketId);
   });
 };
 

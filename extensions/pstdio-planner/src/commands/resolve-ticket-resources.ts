@@ -18,9 +18,9 @@ export const resolveTicketResourcesCommand = defineCommand({
   async run(ctx, input) {
     const resources = input.resources ?? [];
     const ids = new Set(resources.filter((resource) => resource.type === "ticket").map((resource) => resource.id));
-    const collection = ticketsCollection(ctx.storage);
+    const collection = ticketsCollection(ctx);
     const byId = new Map(await Promise.all([...ids].map(async (id) => [id, await collection.get(id)] as const)));
-    const parentLookup = await readTicketParentLookup(ctx.storage, byId);
+    const parentLookup = await readTicketParentLookup(ctx, byId);
     return resources.flatMap<ResourceResolution>((resource) => {
       const ticket = resource.type === "ticket" ? byId.get(resource.id) : undefined;
       if (!ticket) return [];

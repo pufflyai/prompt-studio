@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { ticketsCollection } from "../data/ticket-context.fixture";
 import { plannerTicketsChanged } from "../events";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -40,7 +40,7 @@ describe("get/update ticket commands", () => {
     const found = await getTicketCommand.run(...makeCommandArgs({ storage, params: { id: created.id } }));
     const missing = await getTicketCommand.run(...makeCommandArgs({ storage, params: { id: "nope" } }));
 
-    expect(found?.id).toBe(created.id);
+    expect(Array.isArray(found) ? undefined : found?.id).toBe(created.id);
     expect(missing).toBeNull();
   });
 

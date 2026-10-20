@@ -1,12 +1,18 @@
 import { expect, test } from "bun:test";
 import { parsePageUrl } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
+import { ticketsCollection } from "../data/ticket-context.fixture";
+
 import { ticketDocumentPage } from "../data/ticket-page-target";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { documentLinkCommand } from "./document-link";
 import { createTicketFileCommand, updateTicketFileCommand } from "./ticket-files";
+
+const singleLink = (result: Awaited<ReturnType<typeof documentLinkCommand.run>>) => {
+  if (Array.isArray(result)) throw new Error("Expected one document link");
+  return result;
+};
 
 test("saved document links resolve shorthand and file names to stable IDs", async () => {
   const storage = createMemoryStorage();
@@ -14,11 +20,13 @@ test("saved document links resolve shorthand and file names to stable IDs", asyn
   const file = await createTicketFileCommand.run(
     ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "research.md" } }),
   );
-  const link = await documentLinkCommand.run(
-    ...makeCommandArgs({
-      storage,
-      params: { id: ticket.shorthand, file: file.name },
-    }),
+  const link = singleLink(
+    await documentLinkCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { id: ticket.shorthand, file: file.name },
+      }),
+    ),
   );
   const location = parsePageUrl({ url: link.href, projectId: "proj-1", pages: [ticketDocumentPage] });
   expect(location?.resource).toMatchObject({ type: "ticket", id: ticket.id, metadata: { documentId: file.id } });
@@ -45,15 +53,17 @@ test("menu links use the bound document and unselected ticket links open the bod
   const file = await createTicketFileCommand.run(
     ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
   );
-  const selected = await documentLinkCommand.run(
-    ...makeCommandArgs({
-      storage,
-      params: {},
-      overrides: { resource: { type: "ticket", id: ticket.id, metadata: { documentId: file.id } } },
-    }),
+  const selected = singleLink(
+    await documentLinkCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: {},
+        overrides: { resource: { type: "ticket", id: ticket.id, metadata: { documentId: file.id } } },
+      }),
+    ),
   );
   expect(selected.href).toContain(`document=${file.id}`);
-  const body = await documentLinkCommand.run(...makeCommandArgs({ storage, params: { id: ticket.id } }));
+  const body = singleLink(await documentLinkCommand.run(...makeCommandArgs({ storage, params: { id: ticket.id } })));
   expect(body.href).not.toContain("document=");
 });
 
@@ -82,7 +92,7 @@ test("a deleted or foreign saved document cannot produce a link", async () => {
         params: { id: ticket.id },
       }),
     ),
-  ).rejects.toThrow("Ticket unavailable");
+  ).rejects.toThrow("Unknown ticket");
 });
 
 test("duplicate file names require a document ID instead of choosing another file", async () => {
@@ -105,11 +115,13 @@ test("duplicate file names require a document ID instead of choosing another fil
     ),
   ).rejects.toThrow("ambiguous");
   for (const file of files) {
-    const link = await documentLinkCommand.run(
-      ...makeCommandArgs({
-        storage,
-        params: { id: ticket.id, file: file.id },
-      }),
+    const link = singleLink(
+      await documentLinkCommand.run(
+        ...makeCommandArgs({
+          storage,
+          params: { id: ticket.id, file: file.id },
+        }),
+      ),
     );
     expect(link.href).toContain(`document=${file.id}`);
   }

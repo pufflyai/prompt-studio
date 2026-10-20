@@ -4,9 +4,9 @@ import { makeCommandArgs } from "../commands/command-context.fixture";
 import { pullTicketCommand } from "../commands/pull-ticket";
 import { saveTicketCommand } from "../commands/save-ticket";
 import { writeTicketCommand } from "../commands/write-ticket";
-import { ticketsCollection } from "./collections";
 import { ticketFilesDir } from "./draft-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
+import { ticketsCollection } from "./ticket-context.fixture";
 import { writeTicketImageCheckout } from "./ticket-image-checkout";
 import { pullTicketImages, saveTicketImages } from "./ticket-images";
 

@@ -1,5 +1,6 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { tagsCollection, ticketsCollection } from "./collections";
+import { tagsCollection } from "./collections";
+import { ticketRecords } from "./ticket-records";
 
 // Requests own pending input. Retire its old tag projection while keeping custom flags.
 export const cleanupAttentionTag = async (storage: ExtensionStorageApi) => {
@@ -13,7 +14,7 @@ export const cleanupAttentionTag = async (storage: ExtensionStorageApi) => {
       await tags.put(tag.id, { ...tag, options });
     }
   }
-  const tickets = ticketsCollection(storage);
+  const tickets = ticketRecords(storage);
   for (const listed of await tickets.list()) {
     if (!listed.tagIds?.includes(optionId)) continue;
     const ticket = await tickets.get(listed.id);
