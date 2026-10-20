@@ -46,8 +46,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remote-workspaces": "workspace:*",
-    "workbench-fixture": "workspace:*",
-    "pstdio-sync": "workspace:*",
-    "pstdio-sync-contracts": "workspace:*"
+    "workbench-fixture": "workspace:*"
   }
 }

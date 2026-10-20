@@ -1,12 +1,15 @@
+import { and, eq } from "drizzle-orm";
 import {
   type AssetStore,
   createDocumentStorage,
   createTextDocumentStorage,
   type DocumentStore,
+  hasDocumentUserData,
   type StorageObserver,
   type StorageOwner,
 } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
+import { storage_documents } from "../../db/schemas.pg";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { runDocumentTransaction } from "./document-persistence";
@@ -40,6 +43,21 @@ export const createDocumentStorageDBService = (db: DbClient, observer?: StorageO
     transaction,
     observer,
     getEnvironment,
+    async hasData(owner: StorageOwner) {
+      const documents = await db
+        .select({ id: storage_documents.document_id })
+        .from(storage_documents)
+        .where(
+          and(
+            eq(storage_documents.workbench_id, owner.workbenchId),
+            eq(storage_documents.extension_id, owner.extensionId),
+          ),
+        );
+      for (const { id } of documents) {
+        if (await transactionFor(id)(owner, async ({ document }) => hasDocumentUserData(document))) return true;
+      }
+      return false;
+    },
     watch(listener: (owner: StorageOwner) => void) {
       listeners.add(listener);
       return () => {

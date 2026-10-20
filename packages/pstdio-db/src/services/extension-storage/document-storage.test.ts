@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { extension_storage_journal, storage_document_updates, storage_documents } from "../../db/schemas.pg";
+import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { createGroupedStorageDBService } from "./grouped-storage";
@@ -17,6 +18,18 @@ const fixture = async () => {
   const storage = service.open({ owner });
   return { ...f, owner, service, storage };
 };
+
+test("clearing owner data refreshes every open store and allows operation IDs to be reused", async () => {
+  const f = await fixture();
+  const other = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  await f.storage.records.commit({ operationId: "save", edits: [{ recordId: "old", replace: "Private data" }] });
+  expect((await other.records.read("old")).value).toBe("Private data");
+  await createExtensionUserDataDBService(f.db).deleteForInstance(f.instanceAId);
+  expect((await other.records.read("old")).exists).toBe(false);
+  await f.storage.records.commit({ operationId: "save", edits: [{ recordId: "new", replace: "New data" }] });
+  expect((await other.records.list()).map(({ value }) => value)).toEqual(["New data"]);
+  expect((await f.storage.records.read("old")).exists).toBe(false);
+});
 
 test("a durable multi-record update survives a new service and folds without replaying the journal", async () => {
   const f = await fixture();

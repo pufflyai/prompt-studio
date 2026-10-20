@@ -153,6 +153,11 @@ const measureColdOpen = async (home: string, fixture: Fixture) => {
     const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
     await page.addInitScript(() => {
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
+      const tasks: number[] = [];
+      Object.assign(window, { coldOpenLongTasks: tasks });
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) tasks.push(Math.round(entry.duration));
+      }).observe({ type: "longtask", buffered: true });
     });
     await signInBrowser(page, { origin: runtime.baseUrl, token: runtime.descriptor.token });
     const started = performance.now();
@@ -165,7 +170,20 @@ const measureColdOpen = async (home: string, fixture: Fixture) => {
       if (rawLabels.test(await page.locator("body").innerText())) rawLabelsShown = true;
       await page.waitForTimeout(25);
     }
-    return { firstTicketMs: Math.round(performance.now() - started), rawLabelsShown };
+    const firstTicketMs = Math.round(performance.now() - started);
+    const diagnostics = await page.evaluate(() => ({
+      longTasksMs: (window as Window & { coldOpenLongTasks: number[] }).coldOpenLongTasks,
+      resources: performance
+        .getEntriesByType("resource")
+        .sort((a, b) => b.duration - a.duration)
+        .slice(0, 12)
+        .map((entry) => ({
+          path: new URL(entry.name).pathname,
+          startMs: Math.round(entry.startTime),
+          durationMs: Math.round(entry.duration),
+        })),
+    }));
+    return { firstTicketMs, rawLabelsShown, diagnostics };
   } finally {
     await browser.close();
     await stopProcess(runtime.child);
@@ -216,11 +234,13 @@ Reports every sample against the ${targetMs} ms target. Seeding takes several mi
           withinTarget: firstTicket.max <= targetMs,
           firstTicketMs: firstTicket,
           rawLabelsShown: samples.some((sample) => sample.rawLabelsShown),
+          samples,
         },
         null,
         2,
       )}\n`,
     );
+    if (firstTicket.max > targetMs || samples.some((sample) => sample.rawLabelsShown)) process.exitCode = 1;
   } finally {
     if (!kept) rmSync(home, { recursive: true, force: true });
   }

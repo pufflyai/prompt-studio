@@ -14,6 +14,9 @@ export interface DocumentStore {
   transaction<T>(owner: StorageOwner, action: (state: DocumentState) => Promise<T>): Promise<T>;
 }
 
+export const hasDocumentUserData = (document: Y.Doc) =>
+  document.getMap("records").size > 0 || document.getMap("deleted").size > 0 || document.getText("content").length > 0;
+
 export const memoryDocumentState = (document: Y.Doc) => {
   const operations = new Map<string, string>();
   return {

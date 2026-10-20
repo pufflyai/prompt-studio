@@ -79,6 +79,11 @@ discards the cached document. Another service checks the database revision befor
 its own cache. A save returns `state: "saved-locally"` only after the local transaction
 commits. Relay save states will come from document transport.
 
+An explicit extension data purge replaces its documents with empty snapshots and
+clears their updates and retry identities. Revisions keep increasing across the purge,
+so every running service drops its old cache. Migration metadata resets with the
+content. An empty migration checkpoint alone does not count as user data for uninstall.
+
 Assets remain immutable, verified content references. The asset service verifies bytes
 before a record can refer to them. Shared artifact mounts and attachments keep their
 existing public APIs. File projections still check workspace permission and on-disk
