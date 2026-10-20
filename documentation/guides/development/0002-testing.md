@@ -47,6 +47,8 @@ bun run --cwd packages/e2e playwright install --with-deps chromium firefox webki
 
 For manual app validation, use `bun run dev:playwright`, open the printed dashboard URL, and stop it with `bun run dev:playwright:down`. Do not start a development server directly or use the developer database.
 
+Run `bun run --cwd packages/e2e test:smoke` for basic dashboard browser E2E. It runs the real dashboard with isolated runtime data, without starting Storybook. Tests tagged `@smoke` cover the empty and selected project startup flows, project switching, keyboard navigation and creation forms, theme preview cancellation, and choosing a theme through the command palette with persistence after reload. These tests also run in the full UI suite.
+
 ## Unused code
 
 `bun run knip` reports unused files, exports, and dependencies across the workspace. CI runs it in the `static_checks` job, so a pull request fails when it leaves dead code or an unused dependency behind. Configure it in `knip.jsonc`:
@@ -68,7 +70,7 @@ Test and Build runs one stage per event. The `scope` job runs `scripts/ci/pull-r
 
 | Stage | Event | Runs | `ci_passed` requires |
 | --- | --- | --- | --- |
-| Pull request | Opening, reopening, a new push, or a new label on a pull request | Linux only: static checks, and lint and unit tests scoped to the changed packages. The published extension, harness CLI, license and Docker checks run when their files change. | No job failed |
+| Pull request | Opening, reopening, a new push, or a new label on a pull request | Linux only: static checks, and lint and unit tests scoped to the changed packages. Basic browser E2E runs for dashboard changes and dependencies that affect it. The published extension, harness CLI, license and Docker checks run when their files change. | No job failed; selected browser smoke passed |
 | Merge queue | `merge_group` | Static checks, an unsigned build of every client, Docker image builds, and the relay and account Docker checks. No package tests and no lint. | The static check, client build and Docker jobs passed, and no job failed |
 | Full | A push to `main`, a manual run, or a pull request with the `ci:full` label | Every job, including Windows, e2e, the desktop tests and the packaged toolchain check | Every job passed |
 
@@ -80,13 +82,14 @@ The pull request stage is meant to finish in a few minutes, so it runs only Linu
 
 - `static_checks` runs the whole-repo checks: formatting, documentation links (`bun run --cwd scripts verify:docs-links`), SDK reference coverage (`bun run --cwd scripts verify:sdk-reference`), package boundaries, knip, the lockfile, the extension API version and report, changesets, the monorepo build, committed build outputs, and translations. The documentation checks are offline, so every stage runs them.
 - `lint_and_test` builds, lints and tests the changed packages and the packages that depend on them. It compares the merge commit with the target branch.
+- `browser_smoke` runs basic dashboard browser E2E when code changes affect `pstdio-dashboard`, including its shared UI and workbench dependencies, or when E2E files change. Repository tooling and shared build inputs also select it. Documentation-only changes do not. The required `ci_passed` check rejects a skipped browser smoke job when the scope selected it. The full stage also runs this job.
 - `database_tests` runs the `pstdio-api` tests in four shards and the `pstdio-db` tests in three, when a change affects either package. Together these suites took 6 to 8 minutes in one job, so each shard runs on its own runner. The `pstdio-db` shards use `bun test --shard`; the API test runner accepts the same `--shard=<index>/<count>` argument.
 - `published_extensions` runs for extension, SDK, UI, and API contract changes. `harness_cli_support` runs the minimum supported agent CLIs for harness changes. Documentation files (Markdown, `design/`, and `LICENSE`) do not select either job. `license_check` runs when a `package.json` or `bun.lock` changes.
 - `build_docker` builds both images when a `package.json`, `bun.lock`, or `Dockerfile` changes. This catches container install failures before the merge queue.
 - `relay_smoke` runs when `pstdio-relay`, `pstdio-db`, or `pstdio-account-manager` or a package that depends on them changes. It runs the PGlite container lock check, `services/relay` `test:isolated`, `test:storage`, `test:assets`, and `test:transport`, the production relay conformance entry, and `services/account-manager` `test:isolated`. See [Relay development](0006-relay.md).
 - A change under `scripts/` or any other file outside the workspace packages lints and tests every package and runs the checks above, including Docker builds. This covers `.dockerignore`, `bunfig.toml`, and `.npmrc`. Markdown files, files under `design/`, and `LICENSE` do not count.
 
-Windows, e2e, packaged, and desktop jobs do not run in the scoped pull request stage. Add the `ci:full` label to a risky pull request to run the full stage, for example a change to process launching, the database, a harness, or packaging. Adding the label starts a full run, and each later push to the pull request runs the full stage too. Removing the label starts no run; the next push runs the scoped checks.
+Windows, the full E2E suites, packaged, and desktop jobs do not run in the scoped pull request stage. Add the `ci:full` label to a risky pull request to run the full stage, for example a change to process launching, the database, a harness, or packaging. Adding the label starts a full run, and each later push to the pull request runs the full stage too. Removing the label starts no run; the next push runs the scoped checks.
 
 ### Merge queue stage
 
