@@ -2,7 +2,7 @@
 
 A mode is a workbench context with its own docked regions, chrome, and theme. This page covers modes, mode placements, chrome, and region settings.
 
-A page declares its base mode, so opening a page always selects the correct mode.
+By default, opening a page selects its declared mode. Pages can also declare the modes in which they are available.
 
 Use `definePlacement` only for content that should remain across pages in that mode:
 
@@ -17,9 +17,9 @@ definePlacement({
 
 A placement can show a static view or bind a resource kind to a view. A static item declares `presence`: `fixed` (always open, not closable), `open` (open until the user closes it), or `closed` (opened from the Add panel). A binding item declares `cardinality` (`one` rebinds a single instance, `many` opens one instance per resource) and an optional `add` action for the Add panel. A placement may also declare `order` and `movableTo`. Region size and collapsibility belong to the mode's `regionSettings`, not to placements. Region choices are `main`, `secondary`, and `side`; navigation normally belongs in the shared Sidenav tree.
 
-Use `definePage` for routed content. Do not model a page as a mode placement, and do not switch a mode as a separate navigation step. A page target activates the page and its declared mode as one transaction.
+Use `definePage` for routed content. Do not model a page as a mode placement, and do not switch a mode as a separate navigation step. A page target validates and activates its page and mode as one transaction.
 
-Mode and page placements are additive. If both use `side`, both appear. Leaving the page removes only the page placement. User open state is stored against the complete owner identity and cannot leak into another page or mode.
+Mode and page placements are additive. If both use `side`, both appear. Main tabs belong to the page. Pinned tabs moved into Side or Bottom remain shared across pages within the mode. Unpinned tabs close on page leave. User open state stays within its project and mode.
 
 ## Themes and custom chrome
 
@@ -97,3 +97,19 @@ The host's Project mode and the workbench's [showcase examples](../../../package
 | Scribble | Custom sidebar keeps its mode size and disables drag collapse. |
 
 Host modes and extension modes use the same settings.
+
+## Page availability and mode history
+
+On `main` (extension API 0.2.1), a page can declare `modes: [mode.ref, otherMode.ref]`. The list must be non-empty, unique, and include its existing `mode` default. Without `modes`, opening the page keeps the established behavior of selecting its declared mode. With `modes`, navigation stays in the current allowed mode unless the target supplies an explicit `mode` reference. Unsupported page/mode pairs fail before navigation changes state.
+
+A mode can declare `basePage: page.ref`. Switching modes restores that mode's last allowed page, or its base page when the saved page is unavailable. The base page must support the mode. Navigation trees, resource search, direct opens, copied URLs, reload and Back/Forward apply the same availability rule. Page locations and copied URLs retain the selected mode; `_mode` is the URL transport key, separate from page parameters such as `mode`.
+
+## Unique resource editors
+
+On `main` (extension API 0.2.1), a view can declare `instancePolicy: "per-resource"`. One editor then owns each full resource identity for that view within a project and mode. Different extensions, projects, resource kinds and declared documents remain distinct. This policy is independent of binding `cardinality`, which controls how many resources one binding holds. Omitting the policy, or choosing `"multiple"`, preserves placement-based behavior.
+
+Explicit opening selects the existing editor in Main, Side or Bottom. Its mounted view, unsaved content, tray and retention remain intact. A hidden Main editor returns with its owning page. Its page Main snapshot captures that route and its ancestry together with the tray. Navigation, restore and layout reset use the same identity rules.
+
+Moving the final routed Main document to another tray returns Main to its contextual parent or collection. The moved editor keeps its resource binding. Automatic related previews do not trigger this fallback. A moved editor follows its tray's project/mode lifetime rather than inheriting its source page's availability restriction.
+
+Publish the SDK and host before separately released extensions adopt these fields.

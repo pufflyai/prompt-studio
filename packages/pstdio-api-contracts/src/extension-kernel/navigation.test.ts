@@ -54,3 +54,15 @@ test("validates source ranges consistently at the navigation and metadata bounda
     false,
   );
 });
+
+test("qualifies and validates requested page modes at every navigation boundary", () => {
+  const target = {
+    kind: "page" as const,
+    page: { kind: "page" as const, id: "home" },
+    mode: { kind: "mode" as const, id: "review" },
+  };
+  expect(qualifyNavigationTarget(target, "test.tools")).toMatchObject({
+    mode: { extensionId: "test.tools", kind: "mode", id: "review" },
+  });
+  expect(isNavigationTarget({ ...target, mode: { kind: "view", id: "review" } })).toBe(false);
+});

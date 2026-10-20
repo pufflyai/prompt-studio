@@ -1,16 +1,20 @@
 import type { PageSlotRef, PlacementIdentity } from "@pstdio/sdk/extensions";
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { WorkbenchRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { type PlacementDestination, placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
+import type { WorkbenchEditorOpen } from "../../registries/pages/page-registry-types";
 import type { OwnedPlacementState } from "../../registries/placements/owned-placement-lifecycle";
 import { getOwnedPlacementPreparation } from "../../registries/placements/owned-placement-preparation";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { requirePanelOpen } from "../shell/panel-open-policy";
+
+import { hiddenEditorPageForPanel } from "./resource-editor-lookup";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
 
@@ -83,6 +87,73 @@ const prepareSharedPanel = (
   return { modeState, shellState: prepared.state, identity: prepared.identity };
 };
 
+const preparePageNavigation = (
+  core: WorkbenchCore,
+  target: NavigationTargetPage,
+  current: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  modeState: OwnedPlacementState,
+  shellState: OwnedPlacementState,
+  activate: readonly PlacementIdentity[] = [],
+  editorOpens: readonly WorkbenchEditorOpen[] = [],
+) => {
+  const pages = getWorkbenchPageRegistryInternals(core.pages);
+  const locations = getPageLocationPreparation<WorkbenchWidgetPlacement>(core.pageLocations);
+  const mode = getOwnedPlacementPreparation(core.modePlacements);
+  const shell = getOwnedPlacementPreparation(core.shellPlacements);
+  if (!current.projectId) throw new Error("Cannot navigate before a project is active");
+  const resolved = locations.resolve(target, current.activeModeId);
+  const page = current.pages[resolved.pageId]!;
+  const modeId = resolved.location.mode ? contributionRefId(resolved.location.mode) : page.modeId;
+  shellState =
+    shell.restore?.(
+      { modeId, pageId: page.id, projectId: current.projectId, location: resolved.location },
+      shellState,
+      placementContext(current),
+    ) ?? shellState;
+  modeState =
+    mode.restore?.({ modeId, pageId: page.id, location: resolved.location, projectId: current.projectId }, modeState) ??
+    modeState;
+  const proposed = pages.prepare.location(
+    {
+      pageId: page.id,
+      projectId: current.projectId,
+      location: resolved.location,
+      resource: resolved.location.resource,
+      section: resolved.location.section,
+      open: resolved.open,
+      activate: [...(resolved.activate ?? []), ...activate],
+      editorOpens: [...(resolved.editorOpens ?? []), ...editorOpens],
+      action: "preparePageNavigation",
+    },
+    current,
+    { shell: shell.resolve(undefined, shellState), mode: mode.resolve(modeId, modeState) },
+  );
+
+  return { proposed, modeState, shellState, editorOpens: [...(resolved.editorOpens ?? []), ...editorOpens] };
+};
+
+const resolveEditorNavigationTarget = (
+  core: WorkbenchCore,
+  requested: NavigationOperation,
+  proposed: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+) => {
+  if (requested.kind === "page") return { target: requested, activate: undefined, editorOpens: undefined };
+  panelModeId(core, requested, proposed.activeModeId);
+  if (requested.region)
+    requirePanelOpen(core, requested.region, {
+      modeId: proposed.activeModeId,
+      requestedRegion: requested.region,
+      proposed,
+    });
+  return (
+    hiddenEditorPageForPanel(core, requested, proposed.activeModeId, proposed.activePageId) ?? {
+      target: requested,
+      activate: undefined,
+      editorOpens: undefined,
+    }
+  );
+};
+
 export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonly NavigationOperation[]) => {
   if (!targets.length) throw new Error("Compound navigation requires at least one page or panel target");
   const pages = getWorkbenchPageRegistryInternals(core.pages);
@@ -97,41 +168,33 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   let proposed = original;
   const activate = new Map<WorkbenchRegion, PlacementIdentity>();
   const destinations = new Map<string, PlacementDestination>();
+  const editorOpens = new Map<string, WorkbenchEditorOpen>();
   const owned = (modeId = proposed.activeModeId) => ({
     shell: shell.resolve(undefined, shellState),
     mode: mode.resolve(modeId, modeState),
   });
 
-  for (const target of targets) {
+  for (const requested of targets) {
+    const {
+      target,
+      activate: editorActivation,
+      editorOpens: editorRequests,
+    } = resolveEditorNavigationTarget(core, requested, proposed);
     const beforeOpen = proposed;
     if (target.kind === "page") {
-      if (!proposed.projectId) throw new Error("Cannot navigate before a project is active");
-      const resolved = locations.resolve(target);
-      const page = proposed.pages[resolved.pageId]!;
-      shellState =
-        shell.restore?.(
-          { modeId: page.modeId, pageId: page.id, projectId: proposed.projectId, location: resolved.location },
-          shellState,
-          placementContext(proposed),
-        ) ?? shellState;
-      modeState =
-        mode.restore?.(
-          { modeId: page.modeId, pageId: page.id, location: resolved.location, projectId: proposed.projectId },
-          modeState,
-        ) ?? modeState;
-      proposed = pages.prepare.location(
-        {
-          pageId: page.id,
-          projectId: proposed.projectId,
-          location: resolved.location,
-          resource: resolved.location.resource,
-          section: resolved.location.section,
-          open: resolved.open,
-          action: "preparePageNavigation",
-        },
+      const next = preparePageNavigation(
+        core,
+        target,
         proposed,
-        owned(page.modeId),
+        modeState,
+        shellState,
+        editorActivation,
+        editorRequests,
       );
+      for (const request of next.editorOpens) editorOpens.set(placementIdentityKey(request.identity), request);
+      proposed = next.proposed;
+      modeState = next.modeState;
+      shellState = next.shellState;
     } else if (target.kind === "panel") {
       const modeId = panelModeId(core, target, proposed.activeModeId);
       const panel = target.panel;
@@ -175,6 +238,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
       ...proposed,
       activate: [...activate.values()].filter((identity) => present.has(placementIdentityKey(identity))),
       destinations: [...destinations.values()],
+      editorOpens: [...editorOpens.values()],
       action: "prepareCompoundNavigation",
     },
     owned(),

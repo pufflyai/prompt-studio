@@ -36,6 +36,7 @@ export interface WorkbenchPageContribution {
   icon?: string;
   path: string;
   modeId: string;
+  modeIds?: readonly string[];
   parentId?: string;
   resource?: ResourceConstraint;
   document?: PageDocumentDeclaration;
@@ -62,7 +63,15 @@ export interface WorkbenchPagePlacementInput {
   closable: boolean;
 }
 
+export interface WorkbenchEditorOpen {
+  identity: PlacementIdentity;
+  resource: ResourceRef;
+  section?: FileRendererSectionTarget;
+}
+
 export interface WorkbenchPageOpenInput {
+  editorOpens?: readonly WorkbenchEditorOpen[];
+  activate?: readonly PlacementIdentity[];
   pageId: string;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
@@ -126,6 +135,12 @@ export interface CreateWorkbenchPageRegistryInput<Value> {
   resolvePagePlacement(input: WorkbenchPagePlacementInput): Value;
   resources: WorkbenchPageResourceCodec;
   valuesEqual(current: Value, desired: Value): boolean;
+  prepareState?(
+    state: WorkbenchPageRegistryStoreState<Value>,
+    current: WorkbenchPageRegistryStoreState<Value>,
+    activate?: readonly PlacementIdentity[],
+    editorOpens?: readonly WorkbenchEditorOpen[],
+  ): WorkbenchPageRegistryStoreState<Value>;
   registerPagePlacements?(page: WorkbenchPageContribution): { dispose(): void };
 }
 
@@ -134,6 +149,7 @@ export interface WorkbenchPageRegistry<Value> {
   registerPage(page: WorkbenchPageContribution): { dispose(): void };
   getPage(pageId: string): WorkbenchPageContribution | undefined;
   listPages(): WorkbenchPageContribution[];
+  listAvailablePages(modeId: string): WorkbenchPageContribution[];
   resourceReferenceKey(resource: ResourceRef): string;
   refreshResource(resource: ResourceRef): void;
   pinPlacement(identity: PlacementIdentity, open?: PageOpenIntent): void;

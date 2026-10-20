@@ -97,3 +97,18 @@ describe("extension page URLs", () => {
     expect(parsePageUrl({ url, projectId: resource.projectId, pages: [] })).toBeUndefined();
   });
 });
+
+test("mode-aware URLs keep the existing page parameter named mode", () => {
+  const shared = { ...page, params: { mode: { type: "string" as const } } };
+  const url = serializePageUrl({
+    projectId: resource.projectId,
+    page: shared,
+    mode: { kind: "mode", extensionId: "test.tools", id: "review" },
+    params: { mode: "grid" },
+  });
+  expect(parsePageUrl({ url, projectId: resource.projectId, pages: [shared] })).toMatchObject({
+    mode: { kind: "mode", extensionId: "pstdio", id: "test.tools.mode.review" },
+    params: { mode: "grid" },
+  });
+  expect(parsePageUrl({ url: `${url}&_mode=other`, projectId: resource.projectId, pages: [shared] })).toBeUndefined();
+});

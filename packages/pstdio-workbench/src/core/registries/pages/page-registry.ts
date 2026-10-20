@@ -3,6 +3,7 @@ import { resourceMatchesConstraint } from "../../shared/contributions/reference-
 import { createDisposable } from "../../shared/disposable";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { composeOwnedPlacements, reconcileOwnedPlacements } from "../layout/placement-reconciliation";
+import { pageAllowsMode, validatePageModes } from "./page-availability";
 import { resolvePagePlacementClose } from "./page-placement-close";
 import { pinPagePlacement } from "./page-placement-pin";
 import { createPagePreparation } from "./page-preparation";
@@ -88,6 +89,7 @@ export const createWorkbenchPageRegistry = <Value>(
 
     registerPage(page) {
       validatePageParamDefinitions(page.params);
+      validatePageModes(page);
       return registerWorkbenchPage({
         page,
         registryInput: input,
@@ -104,6 +106,10 @@ export const createWorkbenchPageRegistry = <Value>(
 
     listPages() {
       return Object.values(store.getState().pages).sort((left, right) => left.id.localeCompare(right.id));
+    },
+
+    listAvailablePages(modeId) {
+      return registry.listPages().filter((page) => pageAllowsMode(page, modeId));
     },
 
     resourceReferenceKey(resource) {

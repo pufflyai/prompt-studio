@@ -240,6 +240,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     },
 
     setActiveMode(id, setActiveInput = {}) {
+      if (id && id !== store.getState().activeModeId && input.navigateMode?.(id)) return;
       if (id === store.getState().activeModeId) {
         // Reselecting the active mode reconciles its layout without disposing or
         // rerunning enter, so a missing required placement can recover.

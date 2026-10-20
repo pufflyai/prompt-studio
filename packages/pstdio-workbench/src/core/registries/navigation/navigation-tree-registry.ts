@@ -50,6 +50,7 @@ export interface NavigationTreeContribution {
 }
 
 export interface CreateNavigationTreeRegistryInput {
+  isTargetAvailable?(target: NavigationTarget | undefined): boolean;
   subscribeViewRefresh?(viewId: string, listener: () => void): Disposable;
   getViewDefaultExpandedSectionIds?(viewId: string): readonly string[] | undefined;
   getViewSections?(viewId: string, context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
@@ -140,6 +141,9 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       .filter((contribution) => ownersEqual(contribution.owner, owner) && (contribution.slot ?? "content") === slot)
       .sort(contributionOrder(owner));
 
+  const availableNodes = (nodes: TreeNode[]) =>
+    nodes.filter((node) => input.isTargetAvailable?.(node.target) !== false);
+
   const projectNode = (
     node: TreeNode,
     contribution: NavigationTreeContribution,
@@ -154,7 +158,9 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       // or sessions, which keep the order their owner gives them unless a row opts in.
       canHide: node.canHide ?? contribution.owner.kind === "mode",
       canReorder: node.canReorder ?? contribution.owner.kind === "mode",
-      children: node.children?.map((child) => projectNode(child, contribution, moveScope, resource)),
+      children:
+        node.children &&
+        availableNodes(node.children).map((child) => projectNode(child, contribution, moveScope, resource)),
     };
     setNavigationTreeNodeSource(projected, { contribution, node, resource, registryToken });
     return projected;
@@ -174,7 +180,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     moveScope: ownerId(owner),
     canHide: section.canHide ?? true,
     canReorder: section.canReorder ?? true,
-    nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner), resource)),
+    nodes: availableNodes(section.nodes).map((node) => projectNode(node, contribution, ownerId(owner), resource)),
   });
 
   const structureOf = (
@@ -274,7 +280,9 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
         ? await input.getViewChildren?.(source.contribution.viewId, source.node, query)
         : await source.contribution.getChildren?.(source.node, query);
       if (!children) return node.children ?? [];
-      return children.map((child) => projectNode(child, source.contribution, moveScope, source.resource));
+      return availableNodes(children).map((child) =>
+        projectNode(child, source.contribution, moveScope, source.resource),
+      );
     },
 
     async moveNode(sourceNode, targetNode, context = {}) {
@@ -307,10 +315,12 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     },
     listActions() {
       return [...contributions.values()].flatMap((contribution) =>
-        (contribution.listActions?.() ?? []).map((action) => ({
-          ...action,
-          ownerId: contribution.sourceExtensionId,
-        })),
+        (contribution.listActions?.() ?? [])
+          .filter((entry) => input.isTargetAvailable?.(entry.action) !== false)
+          .map((action) => ({
+            ...action,
+            ownerId: contribution.sourceExtensionId,
+          })),
       );
     },
   };

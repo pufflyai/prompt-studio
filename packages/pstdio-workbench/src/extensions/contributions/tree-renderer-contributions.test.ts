@@ -134,7 +134,9 @@ describe("extension tree resource navigation", () => {
       ),
     ).toEqual([]);
   });
+});
 
+describe("extension tree selection and actions", () => {
   test.each([
     "body",
     "first-file",
@@ -142,6 +144,15 @@ describe("extension tree resource navigation", () => {
   ])("preserves the declared document selection in a composed navigation tree: %s", async (documentId) => {
     const workbench = createWorkbench();
     const page = { kind: "page", extensionId: "pstdio.lab", id: "ticket" } as const;
+    workbench.views.registerView({ id: "ticket", body: { kind: "react", render: () => null } });
+    workbench.pages.registerPage({
+      id: "ticket",
+      ref: page,
+      path: "ticket",
+      modeId: "project",
+      main: { kind: "view", view: { kind: "view", id: "ticket" }, cardinality: "one" },
+      slots: [],
+    });
     const resource = {
       type: "ticket",
       id: "ticket-1",

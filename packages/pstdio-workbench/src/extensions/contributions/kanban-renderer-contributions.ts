@@ -212,6 +212,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         id: record.id,
         title: localize(record.title, record.id),
         icon: record.icon,
+        instancePolicy: record.instancePolicy,
         body: {
           kind: "kanban",
           resourceKind: record.resourceKind,

@@ -131,7 +131,7 @@ const canRestoreSharedPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPl
   return (
     identity?.kind === "page" &&
     Boolean(input.getWidget(widget.contributionId)) &&
-    input.state.pages[identity.pageId]?.modeId === input.state.activeModeId &&
+    Boolean(input.state.pages[identity.pageId]) &&
     !(leavingPage && widget.tabRetention === "preview") &&
     !pagePlacementClosed(widget, input.state, input.previous)
   );

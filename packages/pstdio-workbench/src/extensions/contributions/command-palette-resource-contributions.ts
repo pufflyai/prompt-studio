@@ -2,6 +2,7 @@ import type { WorkbenchExtensionCommandPaletteResourceRecord } from "@pstdio/sdk
 import type { NavigationTarget, ResourceRef } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { CommandPaletteResourceResult, Disposable } from "../../core";
+import { pageTargetAvailable } from "../../core/registries/pages/page-availability";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
@@ -104,7 +105,15 @@ export const registerWorkbenchExtensionCommandPaletteResources = (
             },
           });
           if (!isProviderQueryResult(value)) return [];
-          return (value.items ?? []).map((item) => toResult(context, record, groupLabel, item));
+          return (value.items ?? [])
+            .filter((item) =>
+              pageTargetAvailable(
+                toWorkbenchNavigationTarget(item.target, { extensionId: record.extensionId }),
+                context.workbench.pages.listPages(),
+                context.workbench.modes.getActiveModeId(),
+              ),
+            )
+            .map((item) => toResult(context, record, groupLabel, item));
         },
       }),
     );

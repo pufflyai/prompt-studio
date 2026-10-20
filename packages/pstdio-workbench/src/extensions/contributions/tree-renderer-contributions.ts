@@ -202,6 +202,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     id: record.id,
     title: text(record.title, record.id),
     icon: record.icon,
+    instancePolicy: record.instancePolicy,
     body: {
       kind: "tree",
       getStructure: record.structure ? (ctx) => extensionTreeStructure(record, ctx.resource) : undefined,

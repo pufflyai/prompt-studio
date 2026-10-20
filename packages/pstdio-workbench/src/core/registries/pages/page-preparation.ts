@@ -4,6 +4,7 @@ import {
   type ResolvedOwnedPlacement,
   reconcileOwnedPlacements,
 } from "../layout/placement-reconciliation";
+import { resolvePageMode } from "./page-availability";
 import { pageFollowerIdentities, pagePlacementIdentity, resolvePagePlacements } from "./page-placement-resolver";
 import type { WorkbenchPageLocationCommitInput } from "./page-registry-internals";
 import { type PageRegistryCommitInput, resolveModePlacementSet } from "./page-registry-state";
@@ -88,10 +89,14 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
       current: current.placements,
       desired: composed.placements,
       destinations: next.destinations,
-      activate: next.activate,
+      activate: input.prepareState
+        ? next.activate?.filter((identity) =>
+            composed.placements.some((entry) => JSON.stringify(entry.identity) === JSON.stringify(identity)),
+          )
+        : next.activate,
       valuesEqual: input.valuesEqual,
     });
-    return {
+    const state = {
       ...current,
       pageStates: next.pageStates,
       projectId: next.projectId,
@@ -101,6 +106,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
       placements: composed.placements,
       reconciliation,
     };
+    return input.prepareState?.(state, current, next.activate, next.editorOpens) ?? state;
   };
   const location = (
     target: WorkbenchPageLocationCommitInput,
@@ -109,6 +115,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
   ) => {
     const pageStates = target.pageStates ?? current.pageStates;
     const page = requirePage(current, target.pageId);
+    const modeId = resolvePageMode(page, target.location.mode, current.activeModeId);
     const resourceKey = (resource: ResourceRef) => pageResourceInstanceKey(page, resource, input.resources);
     const normalizedTarget = {
       ...target,
@@ -137,11 +144,13 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
         projectId: target.projectId,
         location: target.location,
         activePageId: page.id,
-        activeModeId: page.modeId,
+        activeModeId: modeId,
         activate: [
           ...(primary && instanceKey ? [pagePlacementIdentity(page.id, primary.id, instanceKey)] : []),
           ...followers,
+          ...(target.activate ?? []),
         ],
+        editorOpens: target.editorOpens,
         action: target.action,
       },
       owned,
@@ -198,8 +207,9 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
       projectId: target.projectId,
       location: target.location,
       activePageId: page.id,
-      activeModeId: page.modeId,
+      activeModeId: resolvePageMode(page, target.location.mode, current.activeModeId),
       activate: [],
+      editorOpens: target.editorOpens,
       action: target.action,
     });
   };

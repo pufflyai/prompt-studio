@@ -1,3 +1,4 @@
+import type { PageRef } from "@pstdio/sdk/extensions";
 import type { Disposable } from "../../shared/disposable";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCoreContributionContext } from "../../workbench-core";
@@ -28,6 +29,7 @@ export interface WorkbenchModeAddablePanelContext {
 export interface WorkbenchModeContribution {
   id: string;
   label?: string;
+  basePage?: PageRef;
   defaultTheme?: string;
   floatingPanels?: "visible" | "hidden";
   /** Published extension headers retain their existing implicit tab visibility. */
@@ -77,6 +79,7 @@ export interface WorkbenchModeRegistry {
 
 export interface CreateWorkbenchModeRegistryInput {
   establishLocation?(instanceId: string): void;
+  navigateMode?(modeId: string): boolean;
   layout: Pick<WorkbenchCoreContributionContext["layout"], "onDidChangePersistenceScope">;
   resolveContext(): WorkbenchModeActivationContext;
 }

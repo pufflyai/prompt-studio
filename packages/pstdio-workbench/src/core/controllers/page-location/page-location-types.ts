@@ -8,6 +8,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageRegistry, WorkbenchPageRuntimeState } from "../../registries/pages/page-registry";
+import type { WorkbenchEditorOpen } from "../../registries/pages/page-registry-types";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type { NavigationLevelModes } from "./navigation-level";
 
@@ -29,6 +30,7 @@ export interface PersistedWorkbenchPageLocation {
   location: PageLocation;
   // The last location outside every Sidenav level. Users return here when a level hides the project rows.
   rootLevel?: PageLocation;
+  modeLocations?: Readonly<Record<string, PageLocation>>;
 }
 
 export interface WorkbenchPageLocationPersistence {
@@ -62,6 +64,14 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   persistence: WorkbenchPageLocationPersistence;
   startPage: PageRef;
   reportDiagnostic?(diagnostic: WorkbenchPageLocationDiagnostic): void;
+  resolvePageTarget?(
+    target: NavigationTargetPage,
+    modeId?: string,
+  ): {
+    target: NavigationTargetPage;
+    activate?: readonly PlacementIdentity[];
+    editorOpens?: readonly WorkbenchEditorOpen[];
+  };
 }
 
 export interface WorkbenchPageLocationController {
@@ -76,6 +86,7 @@ export interface WorkbenchPageLocationController {
   switchProject(projectId: string): WorkbenchPageNavigationResult;
   onDidNavigate(listener: (location: PageLocation) => void): { dispose(): void };
   navigate(target: NavigationTargetPage): WorkbenchPageNavigationResult;
+  switchMode(modeId: string): WorkbenchPageNavigationResult;
   updateParams(patch: Readonly<Record<string, PageParamValue | null>>): PageLocation;
   replay(location: PageLocation): WorkbenchPageNavigationResult;
   navigateToParent(): WorkbenchPageNavigationResult;
@@ -94,6 +105,8 @@ export interface WorkbenchPageLocationHistoryState {
 }
 
 export interface ResolvedPageLocation {
+  editorOpens?: readonly WorkbenchEditorOpen[];
+  activate?: readonly PlacementIdentity[];
   pageId: string;
   location: PageLocation;
   open?: NavigationTargetPage["open"];

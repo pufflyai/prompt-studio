@@ -97,3 +97,32 @@ test.each([
   expect(workbench.layout.listPanelInstances(region)).toEqual([]);
   expect(workbench.shell.getRegionState(region).open).toBe(false);
 });
+
+test("moving a final document preview carries its tab into the parent collection", () => {
+  const { workbench: w } = setup();
+  w.pages.registerPage({
+    id: "preview",
+    ref: { kind: "page", extensionId: "test", id: "preview" },
+    path: "preview",
+    modeId: "project",
+    parentId: "workspace",
+    resource: { kinds: [{ kind: "resource-kind", id: "document" }] },
+    document: { metadataKey: "document" },
+    main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "many" },
+    slots: [],
+  });
+  const target = {
+    kind: "page" as const,
+    page: { kind: "page" as const, extensionId: "test", id: "preview" },
+    resource: { type: "document", id: "layout", metadata: { document: "a" } },
+    open: "preview" as const,
+  };
+  w.pageLocations.navigate(target);
+  w.pageLocations.navigate({ ...target, resource: { ...target.resource, metadata: { document: "b" } } });
+  w.pageLocations.navigate(target);
+  const editor = w.layout.getActivePanel("main")!;
+  w.movePanel(editor.instanceId, "side");
+  expect(w.shell.getRegionState("side").open).toBe(true);
+  expect(w.pages.store.getState().activePageId).toBe("workspace");
+  expect(w.layout.getActivePanel("side")).toMatchObject({ instanceId: editor.instanceId, tabRetention: "persistent" });
+});

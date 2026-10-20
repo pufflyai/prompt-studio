@@ -33,6 +33,7 @@ interface PageLocationControllerActionsInput<Value> {
   ): WorkbenchPageNavigationResult;
   fail(source: WorkbenchPageLocationDiagnostic["source"], error: unknown): WorkbenchPageNavigationResult;
   closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
+  modeTarget(modeId: string): ResolvedPageLocation;
   removeResource(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
   canGoBack(): boolean;
   canGoForward(): boolean;
@@ -97,6 +98,18 @@ export const createPageLocationControllerActions = <Value>(
           ? "none"
           : "push";
         return navigated(actions.commit(projectId, resolved, history, "navigatePageLocation"));
+      } catch (error) {
+        return actions.fail("navigation", error);
+      }
+    },
+    switchMode(modeId) {
+      const current = input.registry.store.getState();
+      if (!current.projectId)
+        return actions.fail("navigation", new Error("Cannot switch mode before a project is active"));
+      try {
+        const resolved = actions.modeTarget(modeId);
+        const history = actions.locationsEqual(current.location, resolved.location) ? "none" : "push";
+        return navigated(actions.commit(current.projectId, resolved, history, "switchPageMode"));
       } catch (error) {
         return actions.fail("navigation", error);
       }

@@ -41,6 +41,7 @@ export interface InternalWorkbenchExtensionPanel {
   extensionId: string;
   title: MetadataView["title"];
   icon?: string;
+  instancePolicy?: MetadataView["instancePolicy"];
   webview?: MetadataWebview;
   renderer?: { kind: MetadataRendererKind; id: string };
   panelMenus?: InternalWorkbenchExtensionPanelMenu[];
@@ -58,6 +59,7 @@ export interface InternalWorkbenchExtensionMetadata {
     label: WorkbenchExtensionMetadata["modes"][number]["label"];
     icon?: string;
     defaultTheme?: string;
+    basePage?: WorkbenchExtensionMetadata["modes"][number]["basePage"];
     chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", string | false>>;
     panelRegions: WorkbenchExtensionMetadata["modes"][number]["regions"];
     regionSettings?: WorkbenchExtensionMetadata["modes"][number]["regionSettings"];

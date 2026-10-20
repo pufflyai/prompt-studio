@@ -50,6 +50,7 @@ const registerControlsRenderer = (
     id: record.id,
     title: localize(record.title, record.id),
     icon: record.icon,
+    instancePolicy: record.instancePolicy,
     body: {
       kind: "controls",
       emptyTitle: localize(record.emptyTitle, ""),

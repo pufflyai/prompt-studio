@@ -8,8 +8,10 @@ export const modePanelFixture = (
   saved = new Map<string | undefined, WorkbenchLayout>(),
   scoped = true,
   extraPages: WorkbenchPageContribution[] = [],
+  input: import("../../workbench-core-types").createWorkbenchInput = {},
 ) => {
   const w = createWorkbench({
+    ...input,
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
     layoutPersistence: {

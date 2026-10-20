@@ -11,9 +11,12 @@ interface RootLevelLocationTrackerInput {
   start(): ResolvedPageLocation;
 }
 
-const usesResource = (location: PageLocation | undefined, matches: (resource: ResourceRef) => boolean): boolean => {
+export const locationUsesResource = (
+  location: PageLocation | undefined,
+  matches: (resource: ResourceRef) => boolean,
+): boolean => {
   if (!location) return false;
-  return Boolean(location.resource && matches(location.resource)) || usesResource(location.parent, matches);
+  return Boolean(location.resource && matches(location.resource)) || locationUsesResource(location.parent, matches);
 };
 
 // Holds the last location inside the project navigation for the active project. Navigation inside a
@@ -35,7 +38,8 @@ export const createRootLevelLocationTracker = (input: RootLevelLocationTrackerIn
     // A removed resource cannot be opened again, so the project falls back to its start page.
     forget(resource: ResourceRef) {
       const removed = input.resourceKey(resource);
-      if (saved && usesResource(saved, (candidate) => input.resourceKey(candidate) === removed)) saved = undefined;
+      if (saved && locationUsesResource(saved, (candidate) => input.resourceKey(candidate) === removed))
+        saved = undefined;
     },
 
     // A saved location stops resolving once its page is gone, which leaves the start page.

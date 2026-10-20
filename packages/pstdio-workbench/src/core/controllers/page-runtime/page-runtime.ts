@@ -35,6 +35,7 @@ import { pageContextChanged, scopePageMainTabs } from "./page-main-tabs";
 import { closeDepartingPagePreviews, departingPagePreviews } from "./page-preview-lifetime";
 import { connectTrayPreviewRemoval } from "./tray-preview-removal";
 import { retainTrayPreviews } from "./tray-preview-retention";
+import { createResourceEditorPreparation } from "./unique-resource-editors";
 export interface ConnectWorkbenchPageRuntimeInput {
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
@@ -255,6 +256,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
   const resources = input.resources ?? defaultPageResourceCodec;
   const registry = createWorkbenchPageRegistry<WorkbenchWidgetPlacement>({
     restorePageState: input.restorePageState,
+    prepareState: createResourceEditorPreparation(input),
     validateMode: (modeId) => {
       if (!input.modes.getMode(modeId)) throw new Error(`Workbench mode not registered: ${modeId}`);
     },

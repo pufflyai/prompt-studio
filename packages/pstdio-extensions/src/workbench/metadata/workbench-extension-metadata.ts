@@ -144,6 +144,7 @@ export const createWorkbenchExtensionMetadata = (
     localId: mode.localId,
     extensionId: mode.extensionId,
     label: mode.contribution.label,
+    ...(mode.contribution.basePage ? { basePage: normalizedRef(mode.contribution.basePage, mode.extensionId) } : {}),
     icon: mode.contribution.icon,
     regions: [...mode.contribution.regions],
     regionSettings: mode.contribution.regionSettings,

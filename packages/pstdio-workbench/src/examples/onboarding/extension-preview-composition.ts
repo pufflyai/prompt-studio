@@ -17,6 +17,7 @@ type MetadataPage = WorkbenchExtensionMetadata["pages"][number];
 const pageTarget = (target: NavigationTargetPage): Extract<MetadataTarget, { kind: "page" }> => ({
   ...target,
   page: previewRef(target.page),
+  mode: target.mode ? previewRef(target.mode) : undefined,
   parent: target.parent ? pageTarget(target.parent) : undefined,
 });
 export const previewNavigationTarget = (target: NavigationTarget): MetadataTarget => {

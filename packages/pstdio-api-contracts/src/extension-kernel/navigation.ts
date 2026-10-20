@@ -16,6 +16,7 @@ const isOpenIntent = (value: unknown) => value === undefined || value === "previ
 
 const isPageTarget = (value: unknown, ancestors = new Set<unknown>()): boolean => {
   if (!isRecord(value) || value.kind !== "page" || !isContributionRef(value.page, "page")) return false;
+  if (value.mode !== undefined && !isContributionRef(value.mode, "mode")) return false;
   if (ancestors.has(value)) return false;
   if (value.resource !== undefined && !isResource(value.resource)) return false;
   if (value.section !== undefined && !isRecord(value.section)) return false;
@@ -68,6 +69,7 @@ const toPageTarget = (
 ): Extract<NavigationTarget, { kind: "page" }> => ({
   ...target,
   page: withExtensionOwner(target.page, extensionId),
+  ...(target.mode ? { mode: withExtensionOwner(target.mode, extensionId) } : {}),
   ...(target.resource ? { resource: qualifyResource(target.resource, extensionId, projectId) } : {}),
   ...(target.parent ? { parent: toPageTarget(target.parent, extensionId, projectId) } : {}),
 });

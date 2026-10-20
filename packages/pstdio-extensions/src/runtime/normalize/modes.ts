@@ -24,6 +24,7 @@ export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionS
       contribution: {
         ...mode,
         ref: normalizeContributionRef(ext, mode.ref),
+        ...(mode.basePage ? { basePage: normalizeContributionRef(ext, mode.basePage) } : {}),
         ...(mode.defaultTheme ? { defaultTheme: normalizeContributionRef(ext, mode.defaultTheme) } : {}),
         ...(mode.chrome
           ? {

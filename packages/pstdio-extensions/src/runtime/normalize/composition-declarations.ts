@@ -55,6 +55,7 @@ export const pageDeclarationSchema = z
     path: z.string(),
     params: pageParamDefinitionsSchema.optional(),
     mode: localRefSchema("mode"),
+    modes: z.array(localRefSchema("mode")).min(1).optional(),
     parent: localRefSchema("page").optional(),
     resource: resource.optional(),
     document: z
@@ -98,6 +99,7 @@ export const placementDeclarationSchema = z
   });
 export const modeDeclarationSchema = z
   .object({
+    basePage: localRefSchema("page").optional(),
     id: z.string(),
     ref: localRefSchema("mode"),
     label: localizableStringSchema,

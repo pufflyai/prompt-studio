@@ -74,6 +74,15 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
 
 test("keeps canonical resource identity from owner navigation results", async () => {
   const workbench = createWorkbench();
+  workbench.views.registerView({ id: "empty", title: "Empty", body: { kind: "react", render: () => null } });
+  workbench.pages.registerPage({
+    id: "slides",
+    ref: { extensionId: "pstdio.lab", kind: "page", id: "slides" },
+    path: "slides",
+    modeId: "project",
+    main: { kind: "view", view: { kind: "view", id: "empty" }, cardinality: "one" },
+    slots: [],
+  });
   registerWorkbenchExtensionCommandPaletteResources(
     {
       projectId: "p1",
@@ -120,4 +129,35 @@ test("passes search cancellation to the owner command", async () => {
   );
   await workbench.commandPaletteResources.queryProviders({ query: "", limit: 25, signal });
   expect(received).toBe(signal);
+});
+
+test("resource search includes only pages available in the active mode", async () => {
+  const workbench = createWorkbench();
+  workbench.views.registerView({ id: "empty", title: "Empty", body: { kind: "react", render: () => null } });
+  for (const id of ["project", "review"]) workbench.modes.registerMode({ id, activate() {} });
+  workbench.pages.registerPage({
+    id: "slides",
+    ref: { kind: "page", extensionId: record.extensionId, id: "slides" },
+    path: "slides",
+    modeId: "review",
+    modeIds: ["review"],
+    main: { kind: "view", view: { kind: "view", id: "empty" }, cardinality: "one" },
+    slots: [],
+  });
+  registerWorkbenchExtensionCommandPaletteResources(
+    {
+      workbench,
+      projectId: "p1",
+      executeCommand: () => ({
+        items: [{ id: "intro", label: "Intro", target: { kind: "page", page: { kind: "page", id: "slides" } } }],
+      }),
+    },
+    [record],
+  );
+  workbench.modes.setActiveMode("project");
+  expect((await workbench.commandPaletteResources.queryProviders({ query: "", limit: 10 }))[0]?.results).toEqual([]);
+  workbench.modes.setActiveMode("review");
+  expect((await workbench.commandPaletteResources.queryProviders({ query: "", limit: 10 }))[0]?.results).toHaveLength(
+    1,
+  );
 });

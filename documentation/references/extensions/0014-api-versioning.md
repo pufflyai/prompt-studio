@@ -230,3 +230,7 @@ Edits from several devices are moving to automatic merging. The storage API stop
 - `storage.assets` no longer documents retained versions or unresolved alternatives.
 
 The next breaking release removes the deprecated members together. See [Deprecated conflict members](../sdk/0004-storage.md#deprecated-conflict-members).
+
+## Page availability and unique editors in API 0.2.1
+
+`PageContribution.modes` and `ModeContribution.basePage` add opt-in page availability and mode fallback. Navigation targets, page locations and URL helpers retain the chosen mode. `ViewContribution.instancePolicy` can opt into one editor per resource independently from binding cardinality. Existing declarations keep their behavior when these fields are omitted. See [modes and layout](0009-modes-and-layout.md#page-availability-and-mode-history). These additions share the existing 0.2.1 step on `main`; they do not advance it again before release.

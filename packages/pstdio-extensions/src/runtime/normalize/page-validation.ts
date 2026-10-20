@@ -3,6 +3,7 @@ import { isValidLocalContributionId, workbenchModeDefinitions, workbenchPageDefi
 import type { RuntimePageRecord, RuntimePageSlot } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { Accumulator } from "./accumulator";
+import { validatePageModeLists } from "./page-mode-validation";
 
 export interface PageDiagnosticInput {
   code: string;
@@ -275,4 +276,5 @@ export const validatePageDefinitions = (runtime: Accumulator) => {
   for (const record of runtime.pages) validatePageStructure(runtime, record);
   validatePaths(runtime);
   validateParentCycles(runtime);
+  validatePageModeLists(runtime);
 };

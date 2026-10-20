@@ -1,4 +1,4 @@
-import type { PageLocation } from "@pstdio/sdk/extensions";
+import { contributionRefId, type PageLocation } from "@pstdio/sdk/extensions";
 import type { WorkbenchModeContribution } from "../../registries/modes/mode-registry";
 import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry";
@@ -11,7 +11,7 @@ interface NavigationLevelsInput {
 
 // The part of the mode registry that tells whether a mode replaces the project Sidenav.
 export interface NavigationLevelModes {
-  getMode(id: string): Pick<WorkbenchModeContribution, "chrome"> | undefined;
+  getMode(id: string): Pick<WorkbenchModeContribution, "chrome" | "basePage"> | undefined;
 }
 
 // The registries that decide whether a page leaves the project navigation.
@@ -38,7 +38,9 @@ export const leavesProjectNavigation = (location: PageLocation, input: ProjectNa
   const page = findPage(location, input.pages);
   if (!page) return false;
   if (input.navigationTrees.resolveOwner("page", page.id, "content")) return true;
-  return input.modes.getMode(page.modeId)?.chrome?.sidenav !== undefined;
+  return (
+    input.modes.getMode(location.mode ? contributionRefId(location.mode) : page.modeId)?.chrome?.sidenav !== undefined
+  );
 };
 
 // A page with a content navigation tree starts a Sidenav level. Levels nest along the location's

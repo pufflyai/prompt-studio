@@ -7,8 +7,12 @@ import type {
 } from "./page-location-types";
 
 interface PageLocationPreparation<Value> {
-  resolve(target: NavigationTargetPage): ResolvedPageLocation;
-  commit(state: WorkbenchPageRegistryStoreState<Value>, beforePublish?: () => void): WorkbenchPageNavigationResult;
+  resolve(target: NavigationTargetPage, modeId?: string): ResolvedPageLocation;
+  commit(
+    state: WorkbenchPageRegistryStoreState<Value>,
+    beforePublish?: () => void,
+    history?: "push" | "replace" | "none",
+  ): WorkbenchPageNavigationResult;
 }
 const preparations = new WeakMap<WorkbenchPageLocationController, PageLocationPreparation<unknown>>();
 export const setPageLocationPreparation = <Value>(

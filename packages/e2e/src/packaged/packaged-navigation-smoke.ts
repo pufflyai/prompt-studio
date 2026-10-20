@@ -20,14 +20,14 @@ export const writeNavigationExtension = (root: string) => {
   writeFileSync(
     join(source, "extension.ts"),
     `export default {
-      modes: [{ id: "policy", ref: { kind: "mode", id: "policy" }, label: "Policy", regions: ["main", "side", "secondary"], regionSettings: { side: { canOpen: true, canClose: false, acceptsTabs: true, resizable: false, floatable: false } } }],
+      modes: [{ id: "policy", ref: { kind: "mode", id: "policy" }, label: "Policy", basePage: { kind: "page", id: "home" }, regions: ["main", "side", "secondary"], regionSettings: { side: { canOpen: true, canClose: false, acceptsTabs: true, resizable: false, floatable: false } } }],
       resourceKinds: [{ id: "record", ref: { kind: "resource-kind", id: "record" } }],
-      views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: { kind: "file", resourceKind: { kind: "resource-kind", id: "record" }, load: () => ({ content: "probe", editable: false }) } }],
-      pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, slots: [], panels: {} }],
+      views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", instancePolicy: "per-resource", body: { kind: "file", resourceKind: { kind: "resource-kind", id: "record" }, load: () => ({ content: "probe", editable: false }) } }],
+      pages: [{ id: "home", ref: { kind: "page", id: "home" }, title: "Home", path: "home", mode: { kind: "mode", id: "policy" }, modes: [{ kind: "mode", id: "policy" }], main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, slots: [], panels: {} }, { id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, modes: [{ kind: "mode", extensionId: "pstdio", id: "project" }, { kind: "mode", id: "policy" }], resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, slots: [], panels: {} }],
       commands: [{
       id: "open-document", ref: { kind: "command", id: "open-document" }, title: "Open document",
       run(ctx: { navigation: { open(target: unknown): void } }) {
-        ctx.navigation.open({ kind: "page", page: { kind: "page", id: "record" }, resource: { type: "record", id: "record-1", metadata: { documentId: "file-1" } }, position: { line: 2, column: 3 } });
+        ctx.navigation.open({ kind: "page", page: { kind: "page", id: "record" }, mode: { kind: "mode", id: "policy" }, resource: { type: "record", id: "record-1", metadata: { documentId: "file-1" } }, position: { line: 2, column: 3 } });
       },
     }, {
       id: "open", ref: { kind: "command", id: "open" }, title: "Open", cli: true,
@@ -53,9 +53,19 @@ export const expectPackagedNavigation = async (input: {
   expect(metadata.pages).toContainEqual(
     expect.objectContaining({ localId: "record", document: { metadataKey: "documentId" } }),
   );
+  expect(metadata.views).toContainEqual(
+    expect.objectContaining({ localId: "document", instancePolicy: "per-resource" }),
+  );
+  expect(metadata.pages).toContainEqual(
+    expect.objectContaining({
+      localId: "record",
+      modes: expect.arrayContaining([{ kind: "mode", extensionId: "test.navigation-probe", id: "policy" }]),
+    }),
+  );
   expect(metadata.modes).toContainEqual(
     expect.objectContaining({
       localId: "policy",
+      basePage: { kind: "page", extensionId: "test.navigation-probe", id: "home" },
       regionSettings: {
         side: { canOpen: true, canClose: false, acceptsTabs: true, resizable: false, floatable: false },
       },
@@ -76,6 +86,7 @@ export const expectPackagedNavigation = async (input: {
       navigationRequests: [
         {
           kind: "page",
+          mode: { kind: "mode", extensionId: "test.navigation-probe", id: "policy" },
           page: { extensionId: "test.navigation-probe", id: "record" },
           resource: { metadata: { documentId: "file-1" } },
           position: { line: 2, column: 3 },

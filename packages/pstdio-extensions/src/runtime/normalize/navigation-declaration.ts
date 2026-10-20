@@ -23,6 +23,7 @@ const pageTarget: z.ZodType<Extract<NavigationTarget, { kind: "page" }>> = z.laz
     .object({
       kind: z.literal("page"),
       page: localRefSchema("page"),
+      mode: localRefSchema("mode").optional(),
       resource: extensionResourceRefSchema.optional(),
       open: z.enum(["preview", "pin"]).optional(),
       section: z

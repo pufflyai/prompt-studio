@@ -42,6 +42,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
         id: panel.id,
         title: text(panel.title, panel.id),
         icon: panel.icon,
+        instancePolicy: panel.instancePolicy,
         body: {
           kind: "react",
           render: (renderInput) => {

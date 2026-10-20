@@ -11,10 +11,19 @@ export const createPageLayoutCacheHandlers = (cache: ReturnType<typeof createWor
   savePageMain: (
     state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
     layout: Parameters<typeof cache.savePageMain>[1],
-  ) => cache.savePageMain(pageLayoutContext(state), layout, state.pages[state.activePageId ?? ""]),
+  ) => cache.savePageMain(pageLayoutContext(state), layout, state.pages[state.activePageId ?? ""], state.location),
 });
 
 const caches = new WeakMap<WorkbenchCore, ReturnType<typeof createWorkbenchLayoutCache>>();
+
+export const findCachedMainEditor = (
+  core: WorkbenchCore,
+  modeId: string,
+  matches: (placement: WorkbenchWidgetPlacement) => boolean,
+) => {
+  const projectId = core.pages.store.getState().projectId;
+  return projectId ? caches.get(core)?.findMainEditor(projectId, modeId, matches) : undefined;
+};
 
 /** Query the same owners that restoration uses, without publishing navigation. */
 export const getWorkbenchPanelLayout = (
@@ -53,7 +62,12 @@ export const connectModeLayoutCache = (core: WorkbenchCore, cache: ReturnType<ty
     const state = core.pages.store.getState();
     if (state.activeModeId) cache.saveMode(state.projectId, state.activeModeId, core.layout.getLayout());
     if (state.activeModeId === core.modes.getActiveModeId())
-      cache.savePageMain(pageLayoutContext(state), core.layout.getLayout(), state.pages[state.activePageId ?? ""]);
+      cache.savePageMain(
+        pageLayoutContext(state),
+        core.layout.getLayout(),
+        state.pages[state.activePageId ?? ""],
+        state.location,
+      );
   };
   core.layout.store.subscribe(() => {
     // The page runtime saves the outgoing mode before publishing the incoming layout.

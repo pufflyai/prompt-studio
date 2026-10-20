@@ -48,6 +48,7 @@ const panels = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensio
       extensionId: view.extensionId,
       title: view.title,
       icon: view.icon,
+      instancePolicy: view.instancePolicy,
       panelMenus: menus.length > 0 ? menus : undefined,
       ...viewBody(view),
     };
@@ -73,6 +74,7 @@ const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenc
         extensionId: view.extensionId,
         title: view.title,
         icon: view.icon,
+        instancePolicy: view.instancePolicy,
         resourceKind: body.resourceKind ?? resourceKindForView(metadata, view.id),
         createRow: body.createRow
           ? {
@@ -110,6 +112,7 @@ const dataTableRenderers = (
         extensionId: view.extensionId,
         title: view.title,
         icon: view.icon,
+        instancePolicy: view.instancePolicy,
         resourceKind: body.resourceKind ?? resourceKindForView(metadata, view.id),
         selectionActions: commandActions(body.selectionActions),
         rowActions: commandActions(body.rowActions),
@@ -127,6 +130,7 @@ const treeRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchE
             extensionId: view.extensionId,
             title: view.title,
             icon: view.icon,
+            instancePolicy: view.instancePolicy,
             resourceKind: view.body.resourceKind ?? resourceKindForView(metadata, view.id),
           },
         ]
@@ -142,6 +146,7 @@ const fileRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchE
             extensionId: view.extensionId,
             title: view.title,
             icon: view.icon,
+            instancePolicy: view.instancePolicy,
             resourceKind: view.body.resourceKind ?? resourceKindForView(metadata, view.id),
           },
         ]
@@ -159,6 +164,7 @@ const controlsRenderers = (
             extensionId: view.extensionId,
             title: view.title,
             icon: view.icon,
+            instancePolicy: view.instancePolicy,
             resourceKind: view.body.resourceKind ?? resourceKindForView(metadata, view.id),
           },
         ]
@@ -172,6 +178,7 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
     label: mode.label,
     icon: mode.icon,
     panelRegions: mode.regions,
+    basePage: mode.basePage,
     regionSettings: mode.regionSettings,
     floatingPanels: mode.floatingPanels,
     ...(mode.defaultTheme ? { defaultTheme: contributionRefId(mode.defaultTheme) } : {}),

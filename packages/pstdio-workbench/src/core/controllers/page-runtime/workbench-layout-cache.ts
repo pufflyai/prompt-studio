@@ -169,12 +169,27 @@ export const createWorkbenchLayoutCache = (
       context: WorkbenchPagePersistenceScopeInput,
       layout: WorkbenchLayout,
       page: WorkbenchPageContribution | undefined,
+      location?: PageLocation,
     ) {
       if (context.pageId && context.modeId)
         write(
-          selectPlacements(layout, (_widget, region) => region === "main"),
+          {
+            ...selectPlacements(layout, (_widget, region) => region === "main"),
+            ownerLocation: location,
+          } as WorkbenchLayout,
           mainScope(context, page),
         );
+    },
+    findMainEditor(projectId: string, modeId: string, matches: (placement: WorkbenchWidgetPlacement) => boolean) {
+      for (const scope of scopes) {
+        if (!scope?.startsWith("workbench-main:")) continue;
+        const [project, mode] = JSON.parse(scope.slice("workbench-main:".length));
+        if (project !== projectId || mode !== modeId) continue;
+        const snapshot = read(scope) as (WorkbenchLayout & { ownerLocation?: PageLocation }) | undefined;
+        const placement = snapshot?.regions.main.widgets.find(matches);
+        if (placement && snapshot?.ownerLocation) return { placement, location: snapshot.ownerLocation };
+      }
+      return undefined;
     },
     removeResource(resource: ResourceRef) {
       for (const scope of scopes) {

@@ -44,6 +44,9 @@ export const toPageRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMeta
     document: page.contribution.document,
     params: page.contribution.params,
     mode: normalizedRef(page.contribution.mode, page.extensionId),
+    ...(page.contribution.modes
+      ? { modes: page.contribution.modes.map((ref) => normalizedRef(ref, page.extensionId)) }
+      : {}),
     parent: page.contribution.parent ? normalizedRef(page.contribution.parent, page.extensionId) : undefined,
     resource: page.contribution.resource
       ? { kinds: page.contribution.resource.kinds.map((kind) => normalizedRef(kind, page.extensionId)) }

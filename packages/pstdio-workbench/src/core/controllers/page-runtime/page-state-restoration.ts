@@ -1,4 +1,4 @@
-import type { PageLocation, ResourceRef } from "@pstdio/sdk/extensions";
+import { contributionRefId, type PageLocation, type ResourceRef } from "@pstdio/sdk/extensions";
 import { defaultPageResourceCodec } from "pstdio-api-contracts";
 import type { LayoutModel } from "../../registries/layout/layout-model-types";
 import { carryWorkbenchRegionState } from "../../registries/layout/layout-scope";
@@ -101,7 +101,7 @@ export const createPageStateRestorer =
   (page: WorkbenchPageContribution, location: PageLocation, projectId: string) => {
     const layout = loadLayout(
       {
-        modeId: page.modeId,
+        modeId: location.mode ? contributionRefId(location.mode) : page.modeId,
         pageId: page.id,
         projectId,
         resource: location.resource,

@@ -78,5 +78,6 @@ export const viewDeclarationSchema = z
     title: localizableStringSchema,
     icon: z.string().optional(),
     body,
+    instancePolicy: z.enum(["per-resource", "multiple"]).optional(),
   })
   .strict();

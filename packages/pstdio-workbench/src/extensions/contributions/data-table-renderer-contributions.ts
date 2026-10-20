@@ -102,6 +102,7 @@ const registerRenderer = (
     id: record.id,
     title: localize(record.title, record.id),
     icon: record.icon,
+    instancePolicy: record.instancePolicy,
     body: {
       kind: "dataTable",
       resourceKind: record.resourceKind,

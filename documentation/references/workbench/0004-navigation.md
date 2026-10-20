@@ -100,3 +100,7 @@ Global panel controls render in the web navigation header: closed Sidenav recove
 | `workbench.setSidePanelPresentation` | `presentation: attached, floating, closed` |
 
 The matching shell methods enforce the same permissions. Header show/hide also has a context menu on the header or hidden top edge with keyboard and touch access. Header choices stay in the mode layout and layout reset clears them. Optional panels collapse after their last tab closes, including panels previously opened empty.
+
+## Page modes and unique editors
+
+On `main`, pages can declare their allowed modes, and views can opt into one editor per resource. Explicit opens reuse the editor's current tray and live mount, including an editor hidden in another page's Main. Moving Main's last routed document returns to its parent collection without rebinding the moved editor. Mode switches restore an allowed remembered page or the declared mode base page. Copied URLs and browser history retain the mode. See [page availability and unique editors](../extensions/0009-modes-and-layout.md#page-availability-and-mode-history) for the extension contract.

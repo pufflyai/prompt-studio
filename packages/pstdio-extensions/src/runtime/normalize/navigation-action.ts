@@ -13,6 +13,7 @@ function normalizeItem(ext: NormalizedExtension, action: NavigationTargetItem): 
     const normalizePageTarget = (target: typeof action): typeof action => ({
       ...target,
       page: normalizeContributionRef(ext, target.page),
+      ...(target.mode ? { mode: normalizeContributionRef(ext, target.mode) } : {}),
       ...(target.parent ? { parent: normalizePageTarget(target.parent) } : {}),
     });
     return normalizePageTarget(action);

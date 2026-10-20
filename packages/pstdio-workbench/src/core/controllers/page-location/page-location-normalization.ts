@@ -1,13 +1,14 @@
 import type {
   FileRendererSectionTarget,
   FileSourcePosition,
+  ModeRef,
   NavigationTargetPage,
   PageLocation,
   PageParams,
   PageRef,
   ResourceRef,
 } from "@pstdio/sdk/extensions";
-import { isFileSourcePosition } from "@pstdio/sdk/extensions";
+import { contributionRefId, isFileSourcePosition } from "@pstdio/sdk/extensions";
 import { normalizePageParams } from "pstdio-api-contracts";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
 
@@ -74,6 +75,7 @@ export const workbenchPageLocationRouteKey = (
   const document = declaration ? location.resource?.metadata?.[declaration.metadataKey] : undefined;
   return JSON.stringify([
     workbenchPageRefKey(location.page),
+    location.mode ? contributionRefId(location.mode) : null,
     resourceKey(location, resources),
     document ?? null,
     location.position
@@ -133,6 +135,7 @@ const createLocation = (input: {
   section?: FileRendererSectionTarget;
   position?: FileSourcePosition;
   params?: PageParams;
+  mode?: ModeRef;
   parent?: PageLocation;
   resources: WorkbenchPageResourceCodec;
 }) => {
@@ -144,6 +147,7 @@ const createLocation = (input: {
     throw new Error("Page location has an invalid source position");
   return Object.freeze({
     page: canonicalPageRef(input.page),
+    ...(input.mode ? { mode: Object.freeze({ ...input.mode }) } : {}),
     ...(input.params ? { params: input.params } : {}),
     ...(input.resource ? { resource: canonicalResource(input.resource, input.resources) } : {}),
     ...(input.section ? { section: canonicalSection(input.section) } : {}),
@@ -173,7 +177,8 @@ const declaredParent = (input: {
   });
 };
 
-const locationFields = (location: Pick<PageLocation, "resource" | "section" | "position" | "params">) => ({
+const locationFields = (location: Pick<PageLocation, "mode" | "resource" | "section" | "position" | "params">) => ({
+  mode: location.mode,
   resource: location.resource,
   section: location.section,
   position: location.position,
@@ -189,11 +194,13 @@ const normalizeResolvedLocation = (input: {
   section?: FileRendererSectionTarget;
   position?: FileSourcePosition;
   params?: PageParams;
+  mode?: ModeRef;
   parent?: PageLocation;
 }): PageLocation => {
   const candidate = createLocation({
     page: input.page,
     resources: input.resources,
+    ...(input.mode ? { mode: input.mode } : {}),
     ...(input.resource ? { resource: input.resource } : {}),
     ...(input.section ? { section: input.section } : {}),
     ...(input.position ? { position: input.position } : {}),
@@ -207,6 +214,8 @@ const normalizeResolvedLocation = (input: {
   return createLocation({
     page: input.page,
     resources: input.resources,
+    ...(input.mode ? { mode: input.mode } : {}),
+    ...(candidate.mode ? { mode: candidate.mode } : {}),
     ...(candidate.resource ? { resource: candidate.resource } : {}),
     ...(candidate.section ? { section: candidate.section } : {}),
     ...(candidate.position ? { position: candidate.position } : {}),
@@ -235,6 +244,7 @@ const normalizePageTarget = (input: {
   const candidate = createLocation({
     page,
     resources: input.resources,
+    ...(input.target.mode ? { mode: input.target.mode } : {}),
     ...(input.target.resource ? { resource: input.target.resource } : {}),
     ...(input.target.section ? { section: input.target.section } : {}),
     ...(input.target.position ? { position: { ...input.target.position } } : {}),
@@ -252,6 +262,7 @@ const normalizePageTarget = (input: {
     pages: input.pages,
     resources: input.resources,
     seen: input.seen,
+    ...(candidate.mode ? { mode: candidate.mode } : {}),
     ...(candidate.resource ? { resource: candidate.resource } : {}),
     ...(candidate.section ? { section: candidate.section } : {}),
     ...(candidate.position ? { position: candidate.position } : {}),
@@ -279,6 +290,7 @@ export const normalizeWorkbenchPageLocation = (input: {
     const candidate = createLocation({
       page,
       resources: input.resources,
+      ...(location.mode ? { mode: location.mode } : {}),
       ...(location.resource ? { resource: location.resource } : {}),
       ...(location.section ? { section: location.section } : {}),
       ...(location.position ? { position: location.position } : {}),
@@ -311,6 +323,7 @@ export const normalizeDirectWorkbenchPageLocation = (input: {
   section?: FileRendererSectionTarget;
   position?: FileSourcePosition;
   params?: PageParams;
+  mode?: ModeRef;
 }) => {
   const page = pageForId(input.pages, input.pageId);
   if (!page) throw new Error(`Unknown page: ${input.pageId}`);
@@ -320,6 +333,7 @@ export const normalizeDirectWorkbenchPageLocation = (input: {
       page,
       pages: input.pages,
       resources: input.resources,
+      ...(input.mode ? { mode: input.mode } : {}),
       seen: new Set(),
       ...(input.resource ? { resource: input.resource } : {}),
       ...(input.section ? { section: input.section } : {}),

@@ -8,6 +8,7 @@ import {
 } from "../layout/placement-reconciliation";
 import type {
   CreateWorkbenchPageRegistryInput,
+  WorkbenchEditorOpen,
   WorkbenchPageRegistryStoreState,
   WorkbenchPageRuntimeState,
 } from "./page-registry-types";
@@ -28,6 +29,7 @@ export interface PageRegistryCommitInput<Value> {
   activeModeId?: string;
   modePlacements?: readonly ResolvedOwnedPlacement<Value>[];
   activate?: readonly PlacementIdentity[];
+  editorOpens?: readonly WorkbenchEditorOpen[];
   destinations?: readonly PlacementDestination[];
   action: string;
 }

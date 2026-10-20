@@ -37,6 +37,7 @@ export const workbenchExtensionPageRecordSchema = z.object({
   params: pageParamDefinitionsSchema.optional(),
   document: z.object({ metadataKey: z.string().refine((key) => key.trim().length > 0) }).optional(),
   mode: modeRefSchema,
+  modes: z.array(modeRefSchema).optional(),
   parent: pageRefSchema.optional(),
   resource: resourceConstraintSchema.optional(),
   main: mainSchema,

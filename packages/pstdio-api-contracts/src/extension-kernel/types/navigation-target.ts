@@ -1,5 +1,5 @@
 import type { CommandTarget } from "./commands";
-import type { PageRef } from "./contribution-identity";
+import type { ModeRef, PageRef } from "./contribution-identity";
 import type { FileRendererSectionTarget } from "./file-renderer";
 import type { JsonObject } from "./json";
 import type { FileSourcePosition, PageOpenIntent, PageParams, PanelRef } from "./pages";
@@ -8,6 +8,7 @@ import type { ResourceRef } from "./resources";
 export interface NavigationTargetPage {
   kind: "page";
   page: PageRef;
+  mode?: ModeRef;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
   position?: FileSourcePosition;

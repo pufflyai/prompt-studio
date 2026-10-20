@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import { getActiveLocationPlacement } from "../../registries/layout/layout-operations";
 import { createWorkbench } from "../../workbench-core";
 import { harness, navigate, openFile, panel, resource } from "./placement-lifecycle-test-support";
 
@@ -87,7 +86,7 @@ test("moving a preview preserves ownership, content identity and the page route"
   });
 });
 
-test("moving the page view keeps its primary anchor and selection in Side", async () => {
+test("moving the final page view returns Main to its contextual collection", async () => {
   const w = harness();
   const pageRef = { kind: "page", extensionId: "test", id: "page-view" } as const;
   w.pages.registerPage({
@@ -100,12 +99,18 @@ test("moving the page view keeps its primary anchor and selection in Side", asyn
     main: { kind: "view", view: { kind: "view", id: "editor" }, cardinality: "one" },
     slots: [],
   });
-  await w.navigation.openTarget({ kind: "page", page: pageRef, resource: { type: "workspace", id: "alpha" } });
+  await w.navigation.openTarget({
+    kind: "page",
+    page: pageRef,
+    resource: { type: "workspace", id: "alpha" },
+    parent: navigate("alpha"),
+  });
   const original = w.layout.getLayout().regions.main.widgets[0]!;
   await w.navigation.openTarget({ kind: "panel", panel, resource: resource("session"), open: "pin" });
   w.movePanel(original.widgetId, "side");
   expect(w.layout.getLayout().regions.side.activeWidgetId).toBe(original.widgetId);
-  expect(getActiveLocationPlacement(w.layout.getLayout())?.widgetId).toBe(original.widgetId);
+  expect(w.pages.store.getState().activePageId).toBe("workspace");
+  expect(w.layout.getActivePanel("side")?.instanceId).toBe(original.widgetId);
   expect(w.getPrimaryResource()?.id).toBe("alpha");
   w.layout.setRegionActiveWidget("side", original.widgetId);
   expect(w.layout.getLayout().activeLocationWidgetId).toBe(original.widgetId);
@@ -124,7 +129,12 @@ test("moving a page selects it over its remembered auxiliary tab", async () => {
     main: { kind: "view", view: { kind: "view", id: "editor" }, cardinality: "one" },
     slots: [],
   });
-  await w.navigation.openTarget({ kind: "page", page: pageRef, resource: { type: "workspace", id: "alpha" } });
+  await w.navigation.openTarget({
+    kind: "page",
+    page: pageRef,
+    resource: { type: "workspace", id: "alpha" },
+    parent: navigate("alpha"),
+  });
   const pageView = w.layout.getLayout().regions.main.widgets[0]!;
   await w.navigation.openTarget({ kind: "panel", panel, resource: resource("session"), open: "pin" });
   const session = w.layout.getLayout().regions.side.widgets[0]!;

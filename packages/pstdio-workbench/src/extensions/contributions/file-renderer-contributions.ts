@@ -99,6 +99,7 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
     id: record.id,
     title: text(record.title, record.id),
     icon: record.icon,
+    instancePolicy: record.instancePolicy,
     body: {
       kind: "file",
       resourceKind: record.resourceKind,

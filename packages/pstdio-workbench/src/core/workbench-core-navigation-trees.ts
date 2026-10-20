@@ -5,8 +5,12 @@ import {
 import type { TreeNode } from "./registries/renderers/tree-renderer-types";
 import type { createCoreRenderers } from "./workbench-core-renderers";
 
-export const createWorkbenchNavigationTrees = (renderers: ReturnType<typeof createCoreRenderers>) =>
+export const createWorkbenchNavigationTrees = (
+  renderers: ReturnType<typeof createCoreRenderers>,
+  isTargetAvailable?: import("./registries/navigation/navigation-tree-registry").CreateNavigationTreeRegistryInput["isTargetAvailable"],
+) =>
   createNavigationTreeRegistry({
+    isTargetAvailable,
     subscribeViewRefresh: (viewId, listener) =>
       renderers.onDidRefresh(({ treeId }) => {
         if (treeId === viewId) listener();

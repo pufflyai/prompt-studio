@@ -5,6 +5,7 @@ import type { RendererCallback } from "./context";
 import type {
   ContributionDefinition,
   ModeRef,
+  PageRef,
   ResourceKindRef,
   SettingsSectionRef,
   SettingsSlotRef,
@@ -96,6 +97,8 @@ export interface ModeRegionSettings {
 }
 
 export interface ModeContribution extends ContributionDefinition<"mode"> {
+  /** Page to show when this mode has no allowed remembered page. */
+  readonly basePage?: PageRef;
   label: Localizable<string>;
   icon?: string;
   regions: readonly ExtensionPanelRegion[];
