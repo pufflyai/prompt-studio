@@ -4,6 +4,7 @@ export * from "./checkpoint-peer";
 export * from "./compatibility";
 export * from "./fingerprint";
 export * from "./identity";
+export * from "./protocol";
 export * from "./replay";
 export * from "./retention";
 export * from "./state";
