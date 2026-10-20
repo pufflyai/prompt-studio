@@ -18,9 +18,9 @@ using `storage.records`, the deprecated KV and collection methods, and the file 
 The [blind relay](0029-blind-relay.md) stores encrypted payloads. Clients seal them with
 the functions in `packages/pstdio-sync/src/encryption/` and keys from the account manager
 ([ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md)). Document
-transport and latest-state uploads are separate work. The old journal relay cannot
-sync this store. Its runtime connection reports that document transport is required.
-Local reads and saves keep working.
+transport and latest-state uploads run in `pstdio-sync/src/relay/`. The runtime starts
+encrypted document sync for each enabled extension. Local reads and saves do not wait
+for the relay.
 
 ## Data merges by shape
 
@@ -83,7 +83,7 @@ same Uint8Array database contract.
 The cache is published and listeners run after database commit. A failed transaction
 discards the cached document. Another service checks the database revision before using
 its own cache. A save returns `state: "saved-locally"` only after the local transaction
-commits. Relay save states will come from document transport.
+commits. Relay synchronization runs separately from that local save outcome.
 
 An explicit extension data purge replaces its documents with empty snapshots and
 clears their updates and retry identities. Revisions keep increasing across the purge,
@@ -99,6 +99,47 @@ identity before replacing bytes downloaded while an editor was saving.
 Yjs text document even for single-line content. Binding native editor collaboration to
 that port is separate from this storage implementation; ordinary artifact files still
 use verified asset references.
+
+## Encrypted document transport
+
+A connection keeps an in-memory replica of what the relay holds and a sequence cursor.
+It opens the latest state, checks its encrypted Yjs state vector, and reads every later
+update. If a latest state changes during pagination, reading restarts at its boundary.
+The uploader may have seen fewer updates than this reader.
+
+Downloaded data merges into the durable local document. It never replaces it. The
+client compares its document with the relay replica and sends missing edits, even
+without a new local save. The comparison also includes Yjs deletion sets, since state
+vectors alone cannot describe deletions. This repairs an incomplete latest state and
+keeps edits made while a device was offline across several state replacements.
+
+After more than 1 MiB or 1,000 updates beyond the current latest state, a caught-up
+client uploads a full state and encrypted state vector. It names the previous state
+and its last included sequence. A stale compare-and-swap response makes the client
+read the winner and try again. An offline diff larger than the relay update limit uses
+the same state channel with the merged local document. Concurrent tail updates remain.
+
+The records document carries an encrypted directory of local text-document names.
+After syncing records, a new device opens those text documents with the same keyed
+IDs. Neither filenames nor extension record names appear in relay routing metadata.
+
+Each asset hash has a random blob ID in an encrypted `sync-blobs` map. The local asset
+service stores the sealed ciphertext before that ID enters the durable document.
+Multipart retries reuse the same bytes. Every outgoing update and latest state lists
+its active blob IDs, and every listed blob finishes uploading first. Receivers verify
+and decrypt blobs before publishing records locally. Inactive mappings remain for
+offline reuse, without keeping their relay blobs alive. If cleanup removed a blob,
+the client seals a new one from complete local plaintext.
+
+Unreadable ciphertext, invalid Yjs updates, mismatched state vectors, and invalid blob
+metadata are checked on disposable documents. The runtime saves the encrypted envelope
+under `PSTDIO_HOME/state/sync-quarantine/` and logs only its opaque identity. Later
+healthy updates continue. A client that skipped an update does not compact it away;
+large healthy uploads keep that envelope in the update tail.
+
+Blob encryption currently buffers whole files. Uploads resume verified parts, while
+interrupted encrypted downloads restart from offset zero. Streaming encryption and
+resumable downloads remain separate transport work.
 
 ## Upgrade and data migrations
 

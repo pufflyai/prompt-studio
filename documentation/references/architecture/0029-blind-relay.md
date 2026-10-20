@@ -6,8 +6,8 @@ keeps one latest state per document and the updates after it, and it checks acce
 quotas from metadata alone.
 
 This replaces the grouped relay in the [synchronization contracts](0026-synchronization-contracts.md).
-Both run side by side until the client sync work (PS-819, PS-822) moves clients to the new
-protocol. PS-824 then removes the grouped relay.
+Clients use the encrypted document protocol. The grouped relay remains for upgrade and
+legacy test coverage until PS-824 removes it.
 
 ## Protocol
 
@@ -56,8 +56,8 @@ records the key model and its known limit.
 
 - `fetchSyncSpaces` (`pstdio-sync/relay`) reads the project key and the user's personal-space key
   from `GET /v1/workbenches/:id/keys` with the device credential. It returns one sync space each.
-  The document transport (not built yet) must call it again on every access renewal, so remaining
-  devices pick up a rotation.
+  The document transport calls it on every synchronization pass, including after access renewal,
+  so remaining devices pick up a rotation.
 - `sealUpdate`, `sealState`, `sealBlob` and `sealLive` in `packages/pstdio-sync/src/encryption/`
   build the relay envelopes. The matching `open*` functions read them back and throw
   `UnreadableSyncData` when the device lacks the key or the bytes were changed or moved.

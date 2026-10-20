@@ -43,6 +43,27 @@ export const createDocumentStorageDBService = (db: DbClient, observer?: StorageO
     transaction,
     observer,
     getEnvironment,
+    documents: {
+      open: (documentId: string) => ({ transaction: transactionFor(documentId) }),
+      list: async (owner: StorageOwner) => {
+        const local = await db
+          .select({ id: storage_documents.document_id })
+          .from(storage_documents)
+          .where(
+            and(
+              eq(storage_documents.workbench_id, owner.workbenchId),
+              eq(storage_documents.extension_id, owner.extensionId),
+            ),
+          );
+        return transaction(owner, async ({ document }) => {
+          // This directory is encrypted with the records document. A new device discovers text
+          // documents without revealing filenames or requiring a relay listing API.
+          const directory = document.getMap<boolean>("sync-documents");
+          for (const { id } of local) if (id !== "records" && !directory.has(id)) directory.set(id, true);
+          return ["records", ...[...directory.keys()].filter((id) => id !== "records").sort()];
+        });
+      },
+    },
     async hasData(owner: StorageOwner) {
       const documents = await db
         .select({ id: storage_documents.document_id })

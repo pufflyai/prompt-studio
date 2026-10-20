@@ -1,0 +1,165 @@
+import { expect } from "bun:test";
+
+// A wire-level peer for the compiled host. Real PostgreSQL/object-store behavior is checked in
+// services/relay/src/transport/document-client.integration.ts.
+export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFile }) => {
+  const projects = new Set<string>();
+  const blobs = new Map<string, { parts: Set<number>; complete: boolean }>();
+  const documents = new Map<
+    string,
+    { state: Record<string, unknown> | null; payload?: string; updates: Record<string, unknown>[] }
+  >();
+  let deviceId = "";
+  let storedStates = 0;
+  const document = (id: string) => {
+    let value = documents.get(id);
+    if (!value) {
+      value = { state: null, updates: [] };
+      documents.set(id, value);
+    }
+    return value;
+  };
+  const json = (body: unknown) => Response.json(body);
+  const managerRequest = async (request: Request, path: string, origin: string) => {
+    const input = async () => (await request.json()) as Record<string, unknown>;
+    if (path === "/api/auth/one-time-token/verify")
+      return json({
+        session: { token: "session", expiresAt: new Date(Date.now() + 60_000) },
+        user: { id: "owner", email: "owner@example.test" },
+      });
+    if (path === "/v1/device-login") {
+      deviceId = String((await input()).deviceId);
+      return json({ accountId: "owner", deviceId, token: "device-credential", relayOrigin: origin });
+    }
+    if (path === "/api/auth/sign-out") return json({ ok: true });
+    if (path === "/v1/environment-access")
+      return json({ token: "relay-access", expiresAt: new Date(Date.now() + 60_000).toISOString() });
+    if (path.endsWith("/keys"))
+      return json({
+        project: [{ generation: 1, secret: "A".repeat(43) }],
+        personal: [{ generation: 1, secret: "B".repeat(43) }],
+      });
+    if (path === "/v1/workbenches") return json([...projects].map((workbenchId) => ({ workbenchId })));
+    if (path.startsWith("/v1/workbenches/")) {
+      projects.add(decodeURIComponent(path.split("/").at(-1)!));
+      return json({ ok: true });
+    }
+
+    return null;
+  };
+  const blobRequest = async (request: Request, path: string, parts: string[]) => {
+    const id = parts[5]!;
+    let blob = blobs.get(id);
+    if (path.endsWith("/begin")) {
+      blob ??= { parts: new Set(), complete: false };
+      blobs.set(id, blob);
+      return json({ partSize: 1_048_576, completed: blob.complete, parts: [] });
+    }
+    if (path.endsWith("/finish")) {
+      blob!.complete = true;
+      return json({ ok: true });
+    }
+    if (parts[6] === "parts") {
+      await request.arrayBuffer();
+      blob!.parts.add(Number(parts[7]));
+      return json({ ok: true });
+    }
+    return new Response(null, { status: 404 });
+  };
+  const documentRequest = async (request: Request, path: string, parts: string[]) => {
+    const id = parts[5]!;
+    const input = async () => (await request.json()) as Record<string, unknown>;
+    const doc = document(id);
+    if (path.endsWith("/read")) {
+      const { after } = await input();
+      return json({
+        status: "updates",
+        state: doc.state,
+        lastSequence: doc.updates.length,
+        more: false,
+        updates: doc.updates.filter((update) => Number(update.sequence) > Number(after)),
+      });
+    }
+    if (parts[6] === "states") return new Response(Buffer.from(String(doc.payload), "base64"));
+    const body = await input();
+    for (const blobId of body.blobIds as string[]) expect(blobs.get(`~${blobId}`)?.complete).toBe(true);
+    expect(String(body.payload)).not.toContain("packaged-secret");
+    if (path.endsWith("/updates")) {
+      const sequence = doc.updates.length + 1;
+      doc.updates.push({
+        updateId: body.updateId,
+        payload: body.payload,
+        sequence,
+        deviceId,
+        createdAt: new Date().toISOString(),
+      });
+      return json({ sequence, duplicate: false });
+    }
+    expect(body.summary).toBeString();
+    storedStates++;
+    doc.payload = String(body.payload);
+    doc.state = {
+      stateId: body.stateId,
+      baseStateId: body.baseStateId,
+      through: body.through,
+      summary: body.summary,
+      byteLength: Buffer.from(String(body.payload), "base64").length,
+      deviceId,
+      createdAt: new Date().toISOString(),
+    };
+    return json({ state: doc.state });
+  };
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    tls,
+    async fetch(request, server) {
+      const path = new URL(request.url).pathname;
+      const managed = await managerRequest(request, path, server.url.origin);
+      if (managed) return managed;
+      if (!path.startsWith("/sync/")) return new Response(null, { status: 404 });
+      expect(request.headers.get("pstdio-sync-protocol")).toBe("1");
+      expect(request.headers.get("authorization")).toBe("Bearer relay-access");
+      if (path.endsWith("/live")) {
+        if (server.upgrade(request)) return;
+        return new Response(null, { status: 426 });
+      }
+      const parts = path.split("/");
+      if (parts[4] === "blobs") return blobRequest(request, path, parts);
+      return documentRequest(request, path, parts);
+    },
+    websocket: {
+      open(socket) {
+        socket.subscribe("changed");
+        socket.send(JSON.stringify({ type: "ready", protocolVersion: 1 }));
+      },
+      message() {},
+    },
+  });
+  return {
+    server,
+    documents,
+    states: () => storedStates,
+    corrupt() {
+      for (const [documentId, doc] of documents) {
+        doc.updates.push({
+          updateId: "invalidciphertext000000",
+          payload: "AAAA",
+          sequence: doc.updates.length + 1,
+          deviceId,
+          createdAt: new Date().toISOString(),
+        });
+        server.publish(
+          "changed",
+          JSON.stringify({
+            type: "changed",
+            spaceOwner: null,
+            documentId: documentId.slice(1),
+            lastSequence: doc.updates.length,
+            stateId: doc.state?.stateId ?? null,
+          }),
+        );
+      }
+    },
+  };
+};
