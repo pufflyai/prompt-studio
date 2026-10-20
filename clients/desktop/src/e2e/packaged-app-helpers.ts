@@ -49,7 +49,10 @@ export const readDescriptor = (home: string) => {
   return JSON.parse(readFileSync(path, "utf8")) as RuntimeDescriptor;
 };
 
-export const waitForDescriptor = async (home: string, predicate = (_descriptor: RuntimeDescriptor) => true) => {
+export const waitForDescriptor = async (
+  home: string,
+  predicate: (descriptor: RuntimeDescriptor) => boolean | Promise<boolean> = () => true,
+) => {
   let descriptor: RuntimeDescriptor | null = null;
   // The test owns the startup deadline. A shorter cap here would end a slow first launch
   // before its startup benchmark or functional check can finish. A steady interval keeps
