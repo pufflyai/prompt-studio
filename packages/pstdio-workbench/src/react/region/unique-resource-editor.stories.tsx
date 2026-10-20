@@ -130,3 +130,18 @@ export const CrossModeNavigation: Story = {
     await expect(await canvas.findByRole("textbox", { name: "Unsaved note" })).toBeVisible();
   },
 };
+
+export const AddExistingEditor: Story = {
+  args: { workbench: createEditorWorkbench() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Open note" }));
+    const draft = await canvas.findByRole("textbox", { name: "Unsaved note" });
+    await userEvent.clear(draft);
+    await userEvent.type(draft, "Keep this unsaved draft");
+    await userEvent.click(canvas.getAllByRole("button", { name: "Add panel" })[0]);
+    await expect(canvas.getByRole("textbox", { name: "Unsaved note" })).toBe(draft);
+    await expect(draft).toHaveValue("Keep this unsaved draft");
+    await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
+  },
+};

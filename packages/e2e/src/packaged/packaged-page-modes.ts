@@ -27,4 +27,18 @@ export const verifyPackagedPageModes = async (page: Page, origin: string, projec
   await expect(breadcrumb).toHaveText(previous);
   await navigate(home.href);
   await expect(breadcrumb.getByRole("link", { name: "Home", exact: true })).toBeVisible();
+  const record = new URL(`/projects/${projectId}/extensions/test.navigation-probe/record`, origin);
+  record.searchParams.set(
+    "resource",
+    `pstdio://extension-resource/record/record-1?extensionId=test.navigation-probe&projectId=${projectId}`,
+  );
+  record.searchParams.set("document", "file-1");
+  await navigate(record.href);
+  const main = page.locator('[data-workbench-panel-header="main"]');
+  const tab = main.locator("[data-workbench-tab]");
+  await expect(tab).toHaveCount(1);
+  const instanceId = await tab.getAttribute("data-workbench-tab");
+  await main.getByRole("button", { name: "Add panel", exact: true }).click();
+  await expect(tab).toHaveAttribute("data-workbench-tab", instanceId!);
+  await expect(page.getByRole("alert")).toHaveCount(0);
 };
