@@ -1,7 +1,7 @@
 import { Badge, Box, Spinner } from "@chakra-ui/react";
 import type { PageLocation, PageRef } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { Tooltip, type TreeListActionMenuItem, type TreeListNode, type TreeListSection } from "@pstdio/ui";
+import { Tooltip, type TreeListActionMenuItem, type TreeListNode } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { ReactNode } from "react";
 import {
@@ -135,10 +135,6 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
   if (selectedResourceKey) return undefined;
   return selectedNodeId;
 };
-const canVirtualizeTreeNode = (node: TreeListNode) =>
-  node.inlineInput === undefined && node.isContainer !== true && (node.children ?? []).length === 0;
-export const canVirtualizeTreeSections = (sections: TreeListSection[]) =>
-  sections.every((section) => section.nodes.every(canVirtualizeTreeNode));
 const findNode = (nodes: TreeNode[], nodeId: string, childrenByNodeId: Record<string, TreeNode[]>): TreeNode | null => {
   for (const node of nodes) {
     if (node.id === nodeId) return node;

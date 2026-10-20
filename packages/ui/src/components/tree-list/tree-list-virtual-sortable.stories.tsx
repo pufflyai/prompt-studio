@@ -93,3 +93,27 @@ const VirtualSections = () => {
 };
 
 export const ReorderSections: Story = { render: () => <VirtualSections /> };
+
+const VirtualGroups = () => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [orders, setOrders] = useState<Record<string, string[]>>({ navigation: ["search"], research: [] });
+  return (
+    <Box w="80">
+      <ScrollArea height="64" viewportRef={scrollRef}>
+        <TreeList
+          virtualize
+          draggable
+          scrollRef={scrollRef}
+          sections={[
+            { id: "navigation", nodes: orders.navigation.map((id) => ({ id, label: "Search" })) },
+            { id: "research", label: "Research", nodes: orders.research.map((id) => ({ id, label: "Search" })) },
+          ]}
+          expandedSectionIds={["research"]}
+          onReorderNodes={(sectionId, ids) => setOrders((current) => ({ ...current, [sectionId]: ids }))}
+        />
+      </ScrollArea>
+    </Box>
+  );
+};
+
+export const MoveIntoGroup: Story = { render: () => <VirtualGroups /> };

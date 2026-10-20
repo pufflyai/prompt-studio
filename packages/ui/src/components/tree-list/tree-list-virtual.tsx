@@ -7,7 +7,7 @@ import type { TreeListDropIndicator } from "./tree-list-drop-indicator";
 import type { VirtualRow } from "./tree-list-model";
 import { toSectionDragId } from "./tree-list-reorder";
 import { TreeListRow } from "./tree-list-row";
-import { SectionGap, SortableHost } from "./tree-list-sortable-host";
+import { DropLine, SectionGap, SortableHost } from "./tree-list-sortable-host";
 import { useTreeListKeyboardNavigation } from "./use-tree-list-keyboard-navigation";
 
 const VIRTUAL_ROW_ESTIMATE = 32;
@@ -27,11 +27,25 @@ const VirtualRowContent = (props: {
   children: ReactNode;
 }) => {
   const { sortable, row, indicator, children } = props;
-  if (!sortable || row.kind === "section-empty" || (row.kind === "node" && row.level > 0)) return children;
+  if (!sortable || row.kind === "section-empty") return children;
+  if (row.kind === "node" && row.level > 0)
+    return (
+      <Box position="relative" minW="0">
+        {children}
+        {indicator?.lineId === row.node.id ? <DropLine edge={indicator.edge} /> : null}
+      </Box>
+    );
   const id = row.kind === "node" ? row.node.id : toSectionDragId(row.sectionId);
   const disabled = row.kind === "node" ? row.node.canReorder === false : row.section.canReorder === false;
   return (
-    <SortableHost id={id} disabled={disabled} indicator={indicator} handle="self" liftedBg="bg.hover">
+    <SortableHost
+      id={id}
+      disabled={disabled}
+      indicator={indicator}
+      handle="self"
+      liftedBg="bg.hover"
+      highlighted={row.kind === "section-header" && indicator?.groupId === row.sectionId}
+    >
       {() => children}
     </SortableHost>
   );

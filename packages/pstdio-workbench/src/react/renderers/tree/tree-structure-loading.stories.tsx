@@ -1,7 +1,7 @@
 import { Button, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, fireEvent, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
@@ -81,5 +81,63 @@ export const PendingContents: Story = {
     await userEvent.click(await canvas.findByRole("button", { name: "Complete fetch" }));
     await expect(await canvas.findByText("README.md")).toBeVisible();
     await expect(canvas.queryByText("Loading…")).not.toBeInTheDocument();
+  },
+};
+
+const GroupMenuDuringLoading = () => {
+  const [{ workbench, pending }] = useState(() => {
+    const workbench = createWorkbench();
+    const pending = Promise.withResolvers<void>();
+    const navigation = { id: "navigation", nodes: [{ id: "search", label: "Search", canHide: true }] };
+    workbench.views.registerView({
+      id: "group-navigation",
+      title: "Group navigation",
+      body: {
+        kind: "tree",
+        getStructure: () => [navigation],
+        getChildren: () => [],
+        getBody: async () => {
+          await pending.promise;
+          return [navigation, { id: "files", nodes: [{ id: "folder", label: "Folder", collapsible: true }] }];
+        },
+      },
+    });
+    workbench.shellPlacements.registerPlacement({
+      id: "group-navigation",
+      region: "sidenav",
+      item: { kind: "view", presence: "fixed", view: { kind: "view", id: "group-navigation" } },
+    });
+    workbench.pageLocations.setProject("groups-loading");
+    return { workbench, pending };
+  });
+  return (
+    <div
+      onContextMenuCapture={(event) => {
+        if ((event.target as HTMLElement).textContent === "Research") pending.resolve();
+      }}
+    >
+      <WorkbenchStory workbench={workbench} />
+    </div>
+  );
+};
+
+export const GroupMenuWhileContentsArrive: Story = {
+  tags: ["!manifest"],
+  render: () => <GroupMenuDuringLoading />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    fireEvent.contextMenu(await canvas.findByText("Search", { exact: true }));
+    await userEvent.click(await body.findByRole("menuitem", { name: "New group" }));
+    const input = await canvas.findByRole("textbox", { name: "Group name" });
+    await userEvent.type(input, "Research{Enter}");
+    fireEvent.contextMenu(await canvas.findByText("Research", { exact: true }));
+    await expect(await canvas.findByText("Folder", { exact: true })).toBeVisible();
+    await userEvent.click(await body.findByRole("menuitem", { name: "Rename group" }));
+    const rename = await canvas.findByRole("textbox", { name: "Group name" });
+    await expect(rename).toHaveFocus();
+    await userEvent.clear(rename);
+    await userEvent.type(rename, "Product research{Enter}");
+    await expect(await canvas.findByText("Product research", { exact: true })).toBeVisible();
   },
 };

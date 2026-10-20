@@ -64,7 +64,7 @@ Planner board rows now include page targets computed from their already-loaded r
 
 This run uses the same fixed workload, unchanged clock and budgets, 30 fresh contexts, 120 clicks, and Chromium version as the previous optimized run. No builds, tests, or profiling ran during timing samples. Raw results use label `structure-first-30`; measured binary SHA-256: `75113ff0cb6a13e93053a218686e68fdd18b287543c34b957870960332d5672a`. These changes are local and are not in the released 0.44 build.
 
-These timing results precede the ticket/workspace continuity correction. The latest tree read identity follows the navigation owner's bound resource. Selecting a child workspace refreshes that owner's data while retaining its mounted rows; selecting another ticket starts with the new ticket's declared structure. The packaged workspace-selection regression and seven browser stories passed after this correction. The interactive test instance uses that corrected build; its latency has not been remeasured.
+These timing results precede the ticket/workspace continuity correction. The latest tree read identity follows the navigation owner's bound resource. Selecting a child workspace refreshes that owner's data while retaining its mounted rows; selecting another ticket starts with the new ticket's declared structure. The packaged workspace-selection regression and seven browser stories passed after this correction. That correction's latency has not been remeasured.
 
 | Navigation | Structure median / p95 / max | Complete median / p95 / max | Structure misses | Completion misses |
 | --- | ---: | ---: | ---: | ---: |
@@ -81,7 +81,7 @@ Ticket HTTP request duration is 424 / 510 / 548 ms on first visits and 290 / 440
 
 A three-context recheck of the previous optimized binary on the same fixture gave first-visit structure medians of 475 ms for Sessions and 743 ms for tickets, consistent with that build's earlier full run. This pilot is diagnostic and does not replace the 30-context comparison.
 
-Latest functional verification after the continuity correction: workbench type checking, seven browser stories, the packaged workspace-selection regression, public type exports, package consumers, and all 92 packaged CLI/runtime tests passed. The full package check remains unsuccessful: 10 browser checks passed, four were skipped for unavailable Firefox/WebKit, two Planner setups failed on a registry HTTP 503 for `@types/trusted-types`, and the Chromium webview check lost the retained Bottom terminal tab after browser Back in `packaged-mode-panel-state.ts`. The compiled Bun CLI smoke step did not run because the browser phase failed. These failures still need resolution; they do not change the performance budgets.
+Functional checks cover navigation ownership, workspace selection, panel retention, queued session recovery, public type exports, and package consumers. Browser stories also cover keyboard navigation, sorting, dragging into a group, inline renaming, and keeping a group menu open as nested contents arrive. Packaged verification and CI results are recorded in the pull requests. These checks do not change the performance budgets or establish a new timing result.
 
 ## Previous optimized build (2026-10-19)
 

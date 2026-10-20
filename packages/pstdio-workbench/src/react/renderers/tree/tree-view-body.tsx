@@ -7,7 +7,6 @@ import {
   type TreeListSection,
 } from "@pstdio/ui";
 import type { RefObject } from "react";
-import { canVirtualizeTreeSections } from "./tree-list-adapter";
 
 const TREE_SKELETON_WIDTHS = ["70%", "50%", "82%", "60%", "44%", "76%"];
 
@@ -83,7 +82,8 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
       rowVariant="compact"
       sectionGap="md"
       nodeGap="1px"
-      virtualize={canVirtualizeTreeSections(sections)}
+      // Late children and inline editors must not switch renderers and remount open menus.
+      virtualize
       scrollRef={scrollRef}
       onToggleSection={onToggleSection}
       onToggleNode={onToggleNode}

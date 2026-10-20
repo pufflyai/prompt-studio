@@ -121,7 +121,7 @@ export const PageChange: Story = {
     await expect(await canvas.findByRole("option", { name: "first page action" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Switch page" }));
     await waitFor(() => expect(canvas.queryByRole("option", { name: "first page action" })).not.toBeInTheDocument());
-    await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
+    await userEvent.click(await canvas.findByRole("button", { name: "Finish loading" }));
     await expect(await canvas.findByRole("option", { name: "second page action" })).toBeVisible();
   },
 };

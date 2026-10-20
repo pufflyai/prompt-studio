@@ -10,7 +10,8 @@ interface WorkbenchWidgetContentsProps {
 
 export const WorkbenchWidgetContents = (props: WorkbenchWidgetContentsProps) => {
   const { input, renderer, defer } = props;
-  const [mounted, setMounted] = useState(!defer);
+  // Static rendering has no browser paint cycle to wait for.
+  const [mounted, setMounted] = useState(!defer || typeof requestAnimationFrame !== "function");
   useEffect(() => {
     if (mounted) return;
     const controller = new AbortController();
