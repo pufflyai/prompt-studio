@@ -178,11 +178,11 @@ export class DesktopWindowController {
 
   async #loadWorkbench(descriptor: RuntimeDescriptor) {
     this.#runtimeOrigin = descriptor.origin;
-    // Creating a second renderer must not compete with showing the startup window.
-    // Its remaining resources can continue loading alongside the workbench.
-    await this.#shown;
+    // Prepare login while the startup window loads, but keep the second renderer from
+    // competing with showing that window. Its remaining resources can load alongside the workbench.
+    const [loginUrl] = await Promise.all([createRuntimeLoginUrl(fetch, descriptor), this.#shown]);
     const view = this.#workbench ?? this.createWorkbench();
-    await view.webContents.loadURL(await createRuntimeLoginUrl(fetch, descriptor));
+    await view.webContents.loadURL(loginUrl);
     view.setVisible(true);
     view.webContents.focus();
   }
