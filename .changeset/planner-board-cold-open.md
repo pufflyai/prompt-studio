@@ -4,4 +4,4 @@
 "@pstdio/workbench": patch
 ---
 
-Open large Planner boards faster after a restart, and show a board or list skeleton until saved views and field labels are ready.
+Open large Planner boards faster after a restart, show loading placeholders until views and field labels are ready, and keep visible navigation mounted during refreshes.

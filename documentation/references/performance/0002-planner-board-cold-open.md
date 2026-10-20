@@ -45,6 +45,8 @@ stays 2,000 ms for every sample.
 The harness and loading fixes come from `bugfix/planner-cold-load`. The workbench
 waits for saved views and field labels behind a board or list skeleton. Lists mount
 only the rows near their viewport and keep focused or dragged rows mounted.
+Progressive navigation reads keep their visible rows during a replacement read,
+even when the earlier read has not finished loading every section.
 
 The Planner cleanup change is delivered separately in [PR #1260](https://github.com/pufflyai/prompt-studio/pull/1260).
 Use `--planner-source <directory>` to measure that extension with this runtime. The
