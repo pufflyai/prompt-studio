@@ -22,9 +22,10 @@ import {
   TICKET_ARCHIVE_STATE_ARCHIVED,
   TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
 } from "./mappers";
-import { readTicketReviewRequests, withReviewNeededFlag } from "./review-request-storage";
+import { hasPendingInput, readTicketReviewRequests, withReviewNeededFlag } from "./review-request-storage";
 import { REVIEW_REQUEST_ITEMS_ATTRIBUTE, reviewRequestBadgeItems } from "./review-request-summary";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
+import { ticketPageTarget, ticketRequestsTarget } from "./ticket-page-target";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
 interface TicketsQueryInput {
@@ -94,6 +95,9 @@ export const runTicketsQuery = async ({
     const row = toTicketRow(ticket);
     return {
       ...row,
+      target: hasPendingInput(requests.get(ticket.id) ?? { requests: [], errors: [] })
+        ? ticketRequestsTarget(row.resource)
+        : ticketPageTarget(row.resource),
       attributes: {
         ...row.attributes,
         ...(timeline.values.get(ticket.id) ?? {

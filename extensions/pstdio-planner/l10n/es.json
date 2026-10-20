@@ -1,4 +1,7 @@
 {
+  "navigation.files": "Archivos",
+  "navigation.workspaces": "Espacios de trabajo",
+  "navigation.sessions": "Sesiones",
   "timeline.page.title": "Cronología del proyecto",
   "timeline.view.title": "Cronología del proyecto",
   "commands.autoBuild.title": "Construir automáticamente",

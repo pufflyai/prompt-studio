@@ -37,6 +37,7 @@ import {
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
+import { ticketNavigationStructure } from "./ticket-navigation-structure";
 import { timelineViewSchema } from "./timeline/commands/view-schema";
 import { planChanged } from "./timeline/contracts";
 
@@ -130,17 +131,17 @@ export const createPlannerUi = (baseUrl: string) => {
       attributes: buildTicketAttributes([]),
       query: queryTickets,
       schemaRefreshEvents: [plannerSchemaChanged],
+      onRowActivate: async (ctx, { row }) => {
+        if (!row.resource) return;
+        const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, row.resource.id));
+        ctx.navigation.open(pending ? ticketRequestsTarget(row.resource) : ticketPageTarget(row.resource));
+      },
       refreshEvents: [
         plannerTicketsChanged,
         planChanged,
         viewDataEvents.sessionsChanged,
         viewDataEvents.workspacesChanged,
       ],
-      onRowActivate: async (ctx, { row }) => {
-        if (!row.resource) return;
-        const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, row.resource.id));
-        ctx.navigation.open(pending ? ticketRequestsTarget(row.resource) : ticketPageTarget(row.resource));
-      },
       onAttributeChange: setTicketAttribute,
       onMove: moveTicketOnBoard,
       onColumnAction: archiveTicketColumnAction,
@@ -201,6 +202,7 @@ export const createPlannerUi = (baseUrl: string) => {
     icon: "Files",
     body: {
       kind: "tree",
+      structure: ticketNavigationStructure,
       body: listTicketFilesTree,
       refreshEvents: [plannerTicketsChanged, viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
       defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],

@@ -1,4 +1,7 @@
 {
+  "navigation.files": "파일",
+  "navigation.workspaces": "작업 공간",
+  "navigation.sessions": "세션",
   "timeline.page.title": "프로젝트 타임라인",
   "timeline.view.title": "프로젝트 타임라인",
   "commands.autoBuild.title": "자동 빌드",

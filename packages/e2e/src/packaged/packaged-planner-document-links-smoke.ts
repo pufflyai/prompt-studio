@@ -12,6 +12,16 @@ export const expectPlannerDocumentLinks = async (
   expect(
     metadata.resourceKinds.find((kind) => kind.id === "ticket" && kind.extensionId === "pstdio.pstdio-planner"),
   ).toMatchObject({ resolveManyCommand: "pstdio.pstdio-planner.command.resolve-ticket-resources" });
+  const navigation = metadata.views.find((view) => view.id === "pstdio.pstdio-planner.view.ticket-files");
+  expect(navigation?.body).toMatchObject({
+    kind: "tree",
+    structure: [
+      { id: "ticket", resourceNode: { id: "__ticket__" } },
+      { id: "files" },
+      { id: "workspaces" },
+      { id: "sessions" },
+    ],
+  });
   const execute = async (name: string, params: Record<string, unknown>, resource?: Record<string, unknown>) => {
     const response = await fetch(
       `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${name}/execute`,
@@ -26,6 +36,16 @@ export const expectPlannerDocumentLinks = async (
   };
   const ticket = await execute("create-ticket", { title: "Packaged document links" });
   expect(ticket.outcome.ok).toBe(true);
+  const rows = await execute("query-tickets", {});
+  expect(
+    (rows.outcome.value as unknown as { rows: { id: string; target?: unknown }[] }).rows.find(
+      (row) => row.id === ticket.outcome.value.id,
+    )?.target,
+  ).toMatchObject({
+    kind: "page",
+    page: { id: "ticket" },
+    resource: { id: ticket.outcome.value.id },
+  });
   const file = await execute("create-ticket-file", { ticketId: ticket.outcome.value.id, name: "notes.md" });
   expect(file.outcome.ok).toBe(true);
   const link = await execute("document-link", { id: ticket.outcome.value.shorthand, file: "notes.md" });

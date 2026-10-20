@@ -65,7 +65,7 @@ const emptyFilesNode = (): TreeNode => ({
 
 const emptyFilesSection = (): TreeViewSection => ({
   id: "files",
-  label: "Files",
+  label: l10n("navigation.files", "Files"),
   collapsible: true,
   nodes: [emptyFilesNode()],
 });
@@ -193,7 +193,13 @@ export const listTicketFilesTree = async (
   if (!ticket) return [emptyFilesSection()];
 
   const selectedDocument = selectedDocumentFromResource(resource);
-  const tickets = await ticketsCollection(ctx.storage).list();
+  const [tickets, workspaces, providers, statuses, ticketSessions] = await Promise.all([
+    ticketsCollection(ctx.storage).list(),
+    ctx.workspaces.list(),
+    ctx.workspaces.listProviders(),
+    statusesCollection(ctx.storage).list(),
+    readSessionHistory(ctx.sessions, { anchor: { type: "ticket", id: ticket.id } }),
+  ]);
 
   const parentLookup = createTicketParentLookup(tickets);
   const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup);
@@ -262,13 +268,12 @@ export const listTicketFilesTree = async (
   };
 
   // Linked workspaces open as native workspace tabs from the same sidenav.
-  const [workspaces, providers] = await Promise.all([ctx.workspaces.list(), ctx.workspaces.listProviders()]);
   const linkedWorkspaces = workspaces.filter((workspace) => isWorkspaceLinkedToTicket(workspace, ticket.shorthand));
   const visibleWorkspaces = workspaces.filter(
     (workspace) => workspace.is_default || linkedWorkspaces.includes(workspace),
   );
 
-  const statusesById = new Map((await statusesCollection(ctx.storage).list()).map((status) => [status.id, status]));
+  const statusesById = new Map(statuses.map((status) => [status.id, status]));
   const maybeSubTicketsSection = buildSubTicketsSection({
     tickets,
     parentTicketId: ticket.id,
@@ -295,7 +300,7 @@ export const listTicketFilesTree = async (
     )
   ).flat();
   const sessionsSection = buildSessionsSection({
-    sessions: await readSessionHistory(ctx.sessions),
+    sessions: ticketSessions,
     ticketId: ticket.id,
     workspaceSessions,
   });
