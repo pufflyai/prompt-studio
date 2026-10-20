@@ -304,10 +304,21 @@ jobs:
       versions: '["minimum"]'
 
   windows_test_and_build:
+    name: windows_test_and_build (${{ matrix.check }})
     needs: scope
     if: needs.scope.outputs.stage == 'full'
     runs-on: windows-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { check: lint, lane: lint }
+          - { check: native, lane: native }
+          - { check: unit-1, lane: unit, shard: 1/4 }
+          - { check: unit-2, lane: unit, shard: 2/4 }
+          - { check: unit-3, lane: unit, shard: 3/4 }
+          - { check: unit-4, lane: unit, shard: 4/4 }
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -327,44 +338,55 @@ jobs:
         uses: ./.github/actions/setup-ci-cache
 
       - name: Test dependency installs, workspace links, watchers, and attachments
+        if: matrix.lane == 'native'
         run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-extensions/src/authoring/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts
 
       # A fresh runner's first Windows PowerShell start prepares its modules and C# compiler. That one-time cost
       # is usually about 4 s but has stalled past the 15 s test limit, so pay it before the tests that use PowerShell.
       - name: Warm up Windows PowerShell
+        if: matrix.lane != 'lint'
         run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
 
       - name: Test Windows desktop platform integrations
+        if: matrix.lane == 'native'
         run: bun test --timeout 15000 clients/desktop/src/cli clients/desktop/src/performance/performance-endpoint.test.ts
 
       - name: Check formatting
+        if: matrix.lane == 'lint'
         run: bun run format:check
 
       - name: Build monorepo
         run: bun run build
 
       - name: Test Windows npm command shims
+        if: matrix.lane == 'native'
         run: bun --conditions=source test --timeout 15000 packages/pstdio-api/src/features/extensions/process-command.test.ts packages/pstdio-api/src/features/extensions/process-command.windows.test.ts packages/pstdio-api/src/features/extensions/process-discovery.test.ts packages/pstdio-extensions/src/runtime/process-environment.test.ts packages/pstdio-api-runtime-host/src/harness-registry.test.ts
 
       - name: Compile Windows runtime for harness detection
+        if: matrix.lane == 'native'
         env:
           PSTDIO_BUILD_PLATFORM_PKG: cli-win-x64
         run: bun run --cwd scripts build:all
 
       - name: Test packaged Windows npm harness detection
+        if: matrix.lane == 'native'
         env:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe
         run: bun test packages/e2e/src/packaged/harness-npm-detection.test.ts --timeout 30000
 
       - name: Lint monorepo
+        if: matrix.lane == 'lint'
         run: bunx lerna run lint
 
-      - name: Test monorepo (non-e2e)
+      - name: Test monorepo shard ${{ matrix.shard }} (non-e2e)
+        if: matrix.lane == 'unit'
         # ADR 0044: hosted Windows runner variance exceeds Bun's 5 s default.
-        run: bunx lerna run test --ignore e2e --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream --concurrency=1 -- --timeout=15000
+        # Every package uses bun test; split its files without adding workers on the same runner.
+        run: bunx lerna run test --ignore e2e --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream --concurrency=1 -- --shard=${{ matrix.shard }} --timeout=15000
 
-      - name: Test Git worktrees with their existing 30-second limit
-        run: bun run --cwd packages/pstdio-wt test
+      - name: Test Git worktree shard ${{ matrix.shard }} with its existing 30-second limit
+        if: matrix.lane == 'unit'
+        run: bun run --cwd packages/pstdio-wt test --shard=${{ matrix.shard }}
 
   windows_database_tests:
     name: windows_database_tests (${{ matrix.package }} ${{ matrix.shard }})
