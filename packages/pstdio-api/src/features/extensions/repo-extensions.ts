@@ -6,10 +6,7 @@ import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
 
 type ExtensionService = Pick<
   ReturnType<typeof createExtensionService>,
-  | "enableInstalledSourceForProject"
-  | "listProjectExtensionInstances"
-  | "setProjectExtensionEnabled"
-  | "syncInstalledSourceForProject"
+  "listProjectExtensionInstances" | "setProjectExtensionEnabled" | "syncInstalledSourceForProject"
 >;
 
 type InstalledSourcesService = Pick<
@@ -47,6 +44,26 @@ const listExtensionDirs = (root: string) => {
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right));
+};
+
+const markMissingSources = async (
+  input: SyncRepoExtensionsForProjectInput,
+  root: string,
+  presentSourcePaths: Set<string>,
+  instances: Awaited<ReturnType<ExtensionService["listProjectExtensionInstances"]>>,
+) => {
+  const missing: string[] = [];
+  const sources = await input.installedExtensionSourcesService.listBySourcePathPrefix(root);
+  for (const source of sources) {
+    if (presentSourcePaths.has(source.source_path)) continue;
+    const updated = await input.installedExtensionSourcesService.markStatus(source.id, "missing");
+    const instance = instances.find((record) => record.installedSource.id === source.id);
+    if (instance?.instance.enabled) {
+      await input.extensionService.setProjectExtensionEnabled(instance.instance.id, false);
+    }
+    missing.push(updated?.install_name ?? source.install_name);
+  }
+  return missing;
 };
 
 export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForProjectInput) => {
@@ -88,8 +105,9 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
       version: loaded.metadata.version,
     } satisfies SyncInstalledSourceInput;
     const existing = instancesBySourcePath.get(sourcePath);
+    const synced = await input.extensionService.syncInstalledSourceForProject(sourceInput);
+    if (!synced) continue;
     if (existing) {
-      await input.extensionService.syncInstalledSourceForProject(sourceInput);
       if (existing.instance.enabled) enabled.push(name);
       continue;
     }
@@ -98,29 +116,16 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     // folder that claims one is registered disabled, and the extension panel is where a user
     // decides which copy provides it.
     if (providedExtensionIds.has(loaded.metadata.id)) {
-      await input.extensionService.syncInstalledSourceForProject(sourceInput);
       conflicting.push(name);
       continue;
     }
 
-    await input.extensionService.enableInstalledSourceForProject(sourceInput);
+    await input.extensionService.setProjectExtensionEnabled(synced.instance.id, true);
     providedExtensionIds.add(loaded.metadata.id);
     enabled.push(name);
   }
 
-  const missing: string[] = [];
-  const sources = await input.installedExtensionSourcesService.listBySourcePathPrefix(root);
-  for (const source of sources) {
-    if (presentSourcePaths.has(source.source_path)) continue;
-
-    const updated = await input.installedExtensionSourcesService.markStatus(source.id, "missing");
-    const instance = instances.find((record) => record.installedSource.id === source.id);
-    if (instance?.instance.enabled) {
-      await input.extensionService.setProjectExtensionEnabled(instance.instance.id, false);
-    }
-    missing.push(updated?.install_name ?? source.install_name);
-  }
-
+  const missing = await markMissingSources(input, root, presentSourcePaths, instances);
   return { conflicting, enabled, missing, skipped };
 };
 

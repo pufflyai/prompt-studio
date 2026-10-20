@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Preserve retained view state, finish asynchronous navigation rendering, and keep focus on outside menu interactions.
+Preserve retained views and menu focus, finish navigation rendering, prevent extension discovery from undoing uninstall, and wait for extension command exit on cancellation.
