@@ -22,8 +22,8 @@ On macOS arm64, this implementation measured:
 
 | Earlier edits | Mean save | Largest remaining incremental update |
 | ---: | ---: | ---: |
-| 100 | 0.98 ms | 39 bytes |
-| 20,000 | 0.67 ms | 44 bytes |
+| 100 | 2.12 ms | 39 bytes |
+| 20,000 | 0.86 ms | 44 bytes |
 
 These are local observations, not new performance budgets. Save retry IDs are stored
 in an indexed local table instead of the Yjs document. This keeps a fold from copying
@@ -50,5 +50,17 @@ option installs the selected source even when reusing a seeded `--home`. Interru
 setup resumes from existing tickets and their generated edit contents. Measurement
 always restarts the runtime and opens a fresh browser for every sample.
 
-Results for this revision are being collected with 1,000 tickets and three edits each;
-earlier branch results do not prove this revision meets the browser target.
+Local macOS arm64 measurements used the same 1,000-ticket fixture with all 3,000 edits:
+
+| Runtime revision | First visible ticket, every sample | Raw loading IDs |
+| --- | --- | --- |
+| Before the latest main merge | 604, 636, 592 ms | None |
+| After the latest main merge (`578cb8737`) | 715, **2,722**, 741 ms | None |
+| Purge fix and timing diagnostics (`13b93e537`) | 549, 536, 547 ms | None |
+
+The 2,722 ms sample exceeds the unchanged budget by 722 ms. Its cause is unresolved;
+the later diagnostic run does not erase that failure or establish acceptance. During
+the diagnostic run, Planner queries took 89–109 ms. The harness now reports slow
+resource requests and browser long tasks for each sample, and exits with failure if
+any sample exceeds the budget or shows raw loading IDs. No workload or time limit
+was reduced or increased.
