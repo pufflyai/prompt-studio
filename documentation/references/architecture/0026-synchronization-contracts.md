@@ -15,7 +15,9 @@ using `storage.records`, the deprecated KV and collection methods, and the file 
 | `@pstdio/sdk/testing` | The same document engine with an in-memory store. |
 | Extensions | Domain data and validation, without merge rules or relay code. |
 
-The [blind relay](0029-blind-relay.md) stores encrypted payloads. Encryption, document
+The [blind relay](0029-blind-relay.md) stores encrypted payloads. Clients seal them with
+the functions in `packages/pstdio-sync/src/encryption/` and keys from the account manager
+([ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md)). Document
 transport and latest-state uploads are separate work. The old journal relay cannot
 sync this store. Its runtime connection reports that document transport is required.
 Local reads and saves keep working.
