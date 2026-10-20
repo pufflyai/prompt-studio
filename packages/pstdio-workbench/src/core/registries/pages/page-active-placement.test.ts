@@ -43,6 +43,20 @@ test("a page without a selected Main document has no document context", () => {
   expect(resolvePageActivePlacement(layout, page)).toBeUndefined();
 });
 
+test("a collection uses its selected Main document after it moves from another page", () => {
+  const layout = createDefaultWorkbenchLayout();
+  const document = {
+    ...tab("moved"),
+    placementIdentity: { kind: "page", pageId: "note", slotId: "$main", instanceKey: "moved" },
+  } satisfies WorkbenchWidgetPlacement;
+  layout.regions.main.widgets = [document];
+  layout.regions.main.activeWidgetId = document.widgetId;
+  layout.regions.side.widgets = [tab("side")];
+  layout.activeWidgetId = "side";
+  expect(resolvePageActivePlacement(layout, page)).toBe(document);
+  expect(resolvePageBreadcrumbPlacement(layout, page)).toBe(document);
+});
+
 test("a routed resource view exposes its placement presentation to breadcrumbs", () => {
   const workbench = createWorkbench();
   workbench.modes.registerMode({ id: "project", label: "Project", activate() {} });

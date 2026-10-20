@@ -165,7 +165,8 @@ export const scopePageMainTabs = (input: PageTabsInput) => {
   const changingPage = pageContextChanged(state, previous);
   const sameMode = state.projectId === previous.projectId && state.activeModeId === previous.activeModeId;
   const sharedLayout = sameMode ? layout : modeLayout;
-  const departing = previous.activePageId ? sharedKeys(layout, true) : new Set<string>();
+  // Outgoing Main membership only scopes page changes within the same project and mode.
+  const departing = sameMode && previous.activePageId ? sharedKeys(layout, true) : new Set<string>();
   const shared = sharedKeys(sharedLayout, false);
   const activated = new Set(state.reconciliation.activate.map((entry) => placementIdentityKey(entry.identity)));
   const retained = state.placements.filter((entry) => {

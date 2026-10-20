@@ -54,7 +54,8 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Navigation metadata preserves panel permissions, supported page modes, mode fallbacks and unique editor policy.
-// Packaged browser checks exercise cross-mode opens, explicit invalid mode rejection and reopening an editor from Add panel or another tray.
+// Packaged browser checks exercise shared-page mode restoration, invalid modes and editor reuse across trays.
+// Moving an editor back into Main restores its collection breadcrumb document context.
 import { writeNavigationExtension } from "./packaged-navigation-fixture";
 import { expectPackagedNavigation } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";

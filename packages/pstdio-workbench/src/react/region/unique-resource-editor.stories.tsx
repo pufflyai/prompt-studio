@@ -58,6 +58,7 @@ const createEditorWorkbench = () => {
   w.pages.registerPage({
     id: "home",
     ref: home,
+    title: "Notes",
     path: "home",
     modeId: "project",
     modeIds: ["project", "review"],
@@ -164,5 +165,38 @@ export const ReopenMovedEditor: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Open through another tool" }));
     await expect(open).toBeVisible();
     await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
+  },
+};
+
+export const MovedEditorRoundTrip: Story = {
+  args: { workbench: createEditorWorkbench() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const main = within(canvas.getByRole("main"));
+    await userEvent.click(await canvas.findByRole("button", { name: "Open note" }));
+    const draft = await canvas.findByRole("textbox", { name: "Unsaved note" });
+    await userEvent.clear(draft);
+    await userEvent.type(draft, "Keep this unsaved draft");
+    await userEvent.click(canvas.getByRole("button", { name: "Move to Side" }));
+    for (let visit = 0; visit < 2; visit++) {
+      await userEvent.click(canvas.getByRole("button", { name: "Review mode" }));
+      await expect(canvas.getByRole("button", { name: "Open note" })).toBeVisible();
+      await userEvent.click(canvas.getByRole("button", { name: "Project mode" }));
+      await expect(canvas.getByRole("button", { name: "Open note" })).toBeVisible();
+      await expect(canvas.getByRole("textbox", { name: "Unsaved note" })).toBe(draft);
+    }
+    await userEvent.pointer({ target: canvas.getByRole("tab", { name: "Working note" }), keys: "[MouseRight]" });
+    await userEvent.click(await body.findByRole("menuitem", { name: "Move to Main" }));
+    await expect(await main.findByRole("textbox", { name: "Unsaved note" })).toBe(draft);
+    const breadcrumb = within(canvas.getByRole("navigation", { name: "breadcrumb" }));
+    await expect(breadcrumb.getByText("Working note", { exact: true })).toBeVisible();
+    await userEvent.click(canvas.getByRole("tab", { name: "Notes" }));
+    await expect(main.getByRole("button", { name: "Open note" })).toBeVisible();
+    await expect(breadcrumb.queryByText("Working note", { exact: true })).not.toBeInTheDocument();
+    await userEvent.click(main.getByRole("button", { name: "Open note" }));
+    await expect(main.getByRole("textbox", { name: "Unsaved note" })).toBe(draft);
+    await expect(draft).toHaveValue("Keep this unsaved draft");
+    await expect(breadcrumb.getByText("Working note", { exact: true })).toBeVisible();
   },
 };

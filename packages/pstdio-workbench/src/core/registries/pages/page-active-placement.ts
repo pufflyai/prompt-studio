@@ -7,6 +7,7 @@ export const resolvePageActivePlacement = (layout: WorkbenchLayout, page?: Workb
   if (!page) return;
   const main = layout.regions.main;
   const selected = main.widgets.find((entry) => entry.widgetId === main.activeWidgetId) ?? main.widgets[0];
+  if (!page.resource) return selected;
   return selected?.placementIdentity?.kind === "page" && selected.placementIdentity.pageId === page.id
     ? selected
     : undefined;

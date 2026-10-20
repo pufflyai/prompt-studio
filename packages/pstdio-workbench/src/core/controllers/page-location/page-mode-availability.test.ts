@@ -182,6 +182,17 @@ test("mode switches restore their last allowed page or their base page", () => {
   expect(workbench.pages.store.getState().activePageId).toBe("music");
 });
 
+test("returning to a shared page in another mode restores its Main content", () => {
+  const { workbench } = harness();
+  const original = workbench.layout.getActivePanel("main")!;
+  expect(original).toBeDefined();
+  workbench.modes.setActiveMode("boombox");
+  expect(workbench.layout.getActivePanel("main")?.instanceId).toBe(original.instanceId);
+  workbench.modes.setActiveMode("project");
+  expect(workbench.pages.store.getState().activePageId).toBe("home");
+  expect(workbench.layout.getActivePanel("main")?.instanceId).toBe(original.instanceId);
+});
+
 test("legacy singleton pages still switch to their declared mode", () => {
   const { workbench } = harness();
   workbench.pages.registerPage({
