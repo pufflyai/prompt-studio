@@ -20,6 +20,8 @@ const inspected = await storage.records.inspect(conflict.conflictId);
 await storage.records.resolve({ operationId: "resolve", conflictId: inspected.conflictId, expectedConflicts: inspected.expectedConflicts, capturedOperationIds: inspected.capturedOperationIds, expectedInputs: inspected.expectedInputs, choose: "local" });
 if (await storage.get("note") !== "second") throw new Error("Public resolution lost legacy interoperability");
 if (await new Response(await storage.assets.read(asset)).text() !== "retained") throw new Error("Asset bytes were lost");
+const current = await storage.records.commit({ operationId: "current", edits: [{ recordId: note.recordId, replace: "third" }] });
+if (current.state !== "saved-locally" || await storage.get("note") !== "third") throw new Error("Save without a revision did not edit the current value");
 `,
   );
 };

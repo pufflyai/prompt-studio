@@ -101,3 +101,15 @@ test("public records and deprecated KV calls share one local owner and scope", a
   expect((await storage.records.read(storage.records.id("setting"))).value).toEqual({ enabled: true });
   expect((await other.records.read(other.records.id("setting"))).value).toBe("scoped");
 });
+
+test("a save without an observed revision edits the current record and reports its sync state", async () => {
+  const { records } = createMemoryStorage();
+  await records.commit({ operationId: "first", edits: [{ recordId: "note", replace: { title: "first" } }] });
+  const saved = await records.commit({
+    operationId: "second",
+    edits: [{ recordId: "note", replace: { title: "second" } }],
+  });
+  expect(saved).toMatchObject({ operationId: "second", state: "saved-locally" });
+  expect((await records.read("note")).value).toEqual({ title: "second" });
+  expect((await records.outcome("first"))?.state).toBe("saved-locally");
+});

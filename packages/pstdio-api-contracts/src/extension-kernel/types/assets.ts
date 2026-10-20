@@ -2,7 +2,7 @@ import type { AssetReference, AssetTransfer } from "../../assets";
 
 export type { AssetReference, AssetTransfer } from "../../assets";
 
-/** Immutable bytes shared by pending work, accepted content, and unresolved alternatives. */
+/** Immutable bytes that records refer to. */
 export interface ExtensionAssetsApi {
   /** Reuse the operation identity and the same source to resume after interruption. */
   stage(input: { operationId: string; source: Blob }): Promise<AssetReference>;
@@ -10,6 +10,6 @@ export interface ExtensionAssetsApi {
   cancel(operationId: string): Promise<AssetTransfer | undefined>;
   /** Consume the stream to its end before treating the download as verified. */
   read(asset: AssetReference): Promise<ReadableStream<Uint8Array>>;
-  /** Verify required retained versions before publishing a reference to them. */
+  /** Verify that the bytes are complete before a record refers to them. */
   verifyComplete(assets: AssetReference[]): Promise<void>;
 }
