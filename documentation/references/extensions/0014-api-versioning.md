@@ -230,3 +230,12 @@ Edits from several devices are moving to automatic merging. The storage API stop
 - `storage.assets` no longer documents retained versions or unresolved alternatives.
 
 The next breaking release removes the deprecated members together. See [Deprecated conflict members](../sdk/0004-storage.md#deprecated-conflict-members).
+
+## Storage IDs and positions in API 0.2.1
+
+`storage.ids.create()`, `storage.positions.between()`, and the second migration
+callback argument, `migration.id(key)`, are additive. Existing migration callbacks
+keep working. The test storage options add optional `workbenchId`, `extensionId`,
+and `deviceId` values for simulating the same owner on two devices. These additions
+ship in the release after 0.44.0. See the
+[storage guide](../../guides/sdk/0003-storage.md#create-records-and-arrange-items).

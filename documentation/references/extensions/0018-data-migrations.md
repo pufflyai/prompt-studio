@@ -29,6 +29,14 @@ Call the helper before accessing the extension's data. Use the same migration en
 
 The helper does not roll back callback writes. Make each step safe to retry and preserve newer user data with conditional creation. Do not call `migrate` recursively on the same storage scope.
 
+On `main`, the callback also receives `migration` as its second argument. Use
+`migration.id(sourceKey)` for records created by a migration. It derives the ID
+from the extension, workbench, storage scope, target version and stable key, so
+two devices and failed retries create the same records. Existing one-argument
+callbacks keep working. `storage.ids.create()` always returns a random ID.
+These additions ship in the release after 0.44.0. See the
+[ID and ordering guide](../../guides/sdk/0003-storage.md#create-records-and-arrange-items).
+
 ## Read retained source records
 
 `readLegacy(source)` returns `{ version, records }` or `undefined`. The version names the schema immediately before the table was removed. Records keep their original column names and JSON values. Your extension validates and interprets them.

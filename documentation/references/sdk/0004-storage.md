@@ -29,6 +29,27 @@ an extension cannot manufacture an acceptance checkpoint.
 
 ## Methods
 
+### IDs, positions and migration identity
+
+These additive APIs are on `main` and ship in the release after 0.44.0.
+The [storage declarations](../../../packages/pstdio-api-contracts/src/extension-kernel/types/storage.ts)
+define their exact types.
+
+| Method | Result |
+| --- | --- |
+| `storage.ids.create()` | A random UUIDv7 ordered by creation millisecond. |
+| `storage.positions.between(before?, after?)` | A unique position strictly between the supplied neighbours. Omit either end, or both for a first position. |
+| `storage.migrate(version, run)` | Runs `run(previousVersion, migration)` once for a scope version. Existing one-argument callbacks remain supported. |
+| `migration.id(key)` | An ID derived from the extension, workbench, scope, target migration version and stable source key. |
+
+Compare positions with ordinary string comparison (`<`, `>`, or default string
+`sort()`), never `localeCompare`. The complete string includes device identity
+and a random suffix. Concurrent positions remain distinct and divisible without
+rebalancing. Store one position per stable item record so concurrent moves merge
+to one item. See [Create records and arrange items](../../guides/sdk/0003-storage.md#create-records-and-arrange-items).
+
+### Records
+
 The [public declarations](../../../packages/pstdio-api-contracts/src/extension-kernel/types/storage-records.ts)
 define the exact types exported by `@pstdio/sdk/extensions`.
 
@@ -160,5 +181,9 @@ same record rules. Seeds are ready before the first read. Each
 instance has an isolated owner. It is an in-memory test adapter and provides no
 relay acknowledgment. Real database tests cover durable process restart. In
 `@pstdio/sdk` 0.43.1, `createMemoryStorage()` takes no options and has no records.
+
+The optional `workbenchId`, `extensionId`, and `deviceId` settings let tests use the
+same logical owner on different devices. Without them, each store has a random
+workbench and device ID and uses `test-extension` as its extension ID.
 
 See the [save workflow](../../guides/sdk/0003-storage.md) for examples.

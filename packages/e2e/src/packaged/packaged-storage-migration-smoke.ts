@@ -45,13 +45,22 @@ export const registerStorageMigrationSmokeTests = () => {
         id: "import", ref: { kind: "command", id: "import" }, title: "Import",
         params: { version: { type: "number", required: true }, fail: { type: "boolean" } },
         async run(ctx, params) {
-          await ctx.storage.migrate(params.version, async (previous) => {
+          await ctx.storage.migrate(params.version, async (previous, migration) => {
+            const id = migration.id("source");
+            await ctx.storage.records.commit({
+              operationId: migration.id("import"), edits: [{ recordId: id, replace: { source: "imported" } }]
+            });
+            await ctx.storage.set("sourceId", id);
             await ctx.storage.set("attempts", (await ctx.storage.get("attempts") ?? 0) + 1);
             if (params.fail) throw new Error("Import interrupted");
             await Bun.sleep(20);
             await ctx.storage.set("previous", previous);
           });
-          return { attempts: await ctx.storage.get("attempts"), previous: await ctx.storage.get("previous"),
+          const position = ctx.storage.positions.between();
+          return { id: ctx.storage.ids.create(), positions: [position, ctx.storage.positions.between(position)],
+            sourceId: await ctx.storage.get("sourceId"),
+            imports: (await ctx.storage.records.list()).filter(record => record.value?.source === "imported").length,
+            attempts: await ctx.storage.get("attempts"), previous: await ctx.storage.get("previous"),
             recordAttempts: (await ctx.storage.records.read(ctx.storage.records.id("attempts"))).value,
             legacy: await ctx.storage.readLegacy("missing") ?? null };
         }
@@ -65,23 +74,33 @@ export const registerStorageMigrationSmokeTests = () => {
         sourcePath,
         manifest: { name: "migrations" },
       });
-      const execute = (params: Record<string, unknown>) =>
-        request(`/v1/projects/${project.id}/extensions/commands/test.migrations.command.import/execute`, { params });
+      const execute = async (params: Record<string, unknown>) => {
+        const result = await request(
+          `/v1/projects/${project.id}/extensions/commands/test.migrations.command.import/execute`,
+          { params },
+        );
+        if (result.outcome.ok) {
+          const { id, positions } = result.outcome.value;
+          expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+          expect(positions[0] < positions[1]).toBe(true);
+        }
+        return result;
+      };
       expect(await execute({ version: 1, fail: true })).toMatchObject({ outcome: { ok: false } });
       expect(await execute({ version: 1 })).toMatchObject({
-        outcome: { ok: true, value: { attempts: 2, recordAttempts: 2, previous: 0, legacy: null } },
+        outcome: { ok: true, value: { attempts: 2, recordAttempts: 2, previous: 0, legacy: null, imports: 1 } },
       });
       const concurrent = await Promise.all([execute({ version: 2 }), execute({ version: 2 })]);
       for (const result of concurrent)
         expect(result).toMatchObject({
-          outcome: { ok: true, value: { attempts: 3, recordAttempts: 3, previous: 1 } },
+          outcome: { ok: true, value: { attempts: 3, recordAttempts: 3, previous: 1, imports: 2 } },
         });
       await stopProcess(child);
       child = undefined;
       runtime = await startPackagedServe(root);
       child = runtime.child;
       expect(await execute({ version: 2 })).toMatchObject({
-        outcome: { ok: true, value: { attempts: 3, recordAttempts: 3, previous: 1 } },
+        outcome: { ok: true, value: { attempts: 3, recordAttempts: 3, previous: 1, imports: 2 } },
       });
     } finally {
       if (child) await stopProcess(child);

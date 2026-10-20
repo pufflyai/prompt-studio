@@ -17,7 +17,7 @@ together, or none does:
 
 ```ts
 const records = ctx.storage.records;
-const operationId = crypto.randomUUID();
+const operationId = ctx.storage.ids.create();
 const asset = await ctx.storage.assets.stage({
   operationId: `${operationId}:image`,
   source: selectedImage,
@@ -56,6 +56,59 @@ if (latest?.state === "synced") {
   // The relay stored the whole group.
 }
 ```
+
+## Create records and arrange items
+
+`storage.ids.create()`, `migration.id(key)`, and `storage.positions.between()` are
+additive APIs on `main`. They ship in the release after 0.44.0.
+
+Use `ctx.storage.ids.create()` for new record IDs and operation IDs. It returns a
+random UUIDv7 ordered by its creation millisecond. IDs created within the same
+millisecond have no promised order.
+
+When importing data, pass a stable source key to the migration callback's ID helper:
+
+```ts
+await ctx.storage.migrate(1, async (_previousVersion, migration) => {
+  const legacy = await ctx.storage.readLegacy("old_notes");
+  for (const source of legacy?.records ?? []) {
+    if (typeof source.id !== "string") continue;
+    const id = migration.id(source.id);
+    await ctx.storage.records.commit({
+      operationId: migration.id(`import:${source.id}`),
+      edits: [{ recordId: id, replace: source }],
+    });
+  }
+});
+```
+
+The same extension, workbench, scope, migration version and key give the same ID
+on every device and on retries. Keep source keys stable. `storage.ids.create()`
+still makes random IDs inside a migration; use `migration.id(key)` for imported records.
+Existing callbacks that take only the previous version keep working.
+
+For lists arranged by hand, store one `position` string on each item's record:
+
+```ts
+const first = ctx.storage.positions.between();
+const last = ctx.storage.positions.between(first);
+const middle = ctx.storage.positions.between(first, last);
+const earlier = ctx.storage.positions.between(undefined, first);
+```
+
+Omit either neighbour to insert at an end. Compare strings with `<` and `>` or
+default string `sort()`. Do not use `localeCompare` or parse positions as numbers.
+Positions include the creating device's identity and a random ID. Concurrent
+positions remain distinct, and a new position can fit between them. Existing
+positions never need rebalancing; strings can grow as gaps are divided.
+
+Keep each item once, keyed by its stable record ID, and update its position when
+moving it. The record merge chooses one position for concurrent moves of the same
+item. Sort the resulting records by position on every device.
+
+Tests can simulate the same owner on two devices with
+`createMemoryStorage({ workbenchId: "shared", extensionId: "example.notes", deviceId: "device-a" })`
+and a second store with the same owner IDs and a different `deviceId`.
 
 ## Deprecated conflict members
 
