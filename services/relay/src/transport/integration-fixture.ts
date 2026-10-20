@@ -91,7 +91,6 @@ export const createTransportFixture = () => {
       options: {
         workbenchId?: string;
         environmentId?: string;
-        expiresAt?: string;
         accessLifetimeSeconds?: number;
         limits?: RelayLimits;
       } = {},
@@ -134,14 +133,14 @@ export const createTransportFixture = () => {
           accountId: scope.accountId,
           owner: { issuer: "https://accounts.google.com", subject: scope.accountId },
         });
-        const grant = await manager.register({
-          requestId: "register",
+        await manager.addWorkbench({ accountId: scope.accountId, workbenchId: scope.workbenchId });
+        const device = await manager.registerDevice({
           accountId: scope.accountId,
-          workbenchId: scope.workbenchId,
-          environmentId,
-          expiresAt: options.expiresAt ?? new Date(Date.now() + 60_000).toISOString(),
+          deviceId: environmentId,
+          name: "Transport fixture",
+          platform: "linux",
         });
-        const access = await auth.renew(grant.token!, scope.workbenchId);
+        const access = await auth.renew(device.token, scope.workbenchId);
         const trust = {
           issuer: "https://manager.fixture.test",
           audience: "https://relay.fixture.test",
@@ -156,17 +155,16 @@ export const createTransportFixture = () => {
           scope,
           environmentId,
           token: access.token,
-          expiresAt: access.expiresAt,
           storage,
           assets,
           ...sync,
           verifyAccess: createEnvironmentAccessVerifier(trust),
           managerHandler: createManagerHandler(auth, "https://manager.fixture.test"),
           recovery: createRecoveryProofs(recoveryKey),
-          renew: () => auth.renew(grant.token!, scope.workbenchId),
+          renew: () => auth.renew(device.token, scope.workbenchId),
           issue: (token: string) => auth.renew(token, scope.workbenchId),
           manager,
-          grant,
+          device,
           stopAuthority: () => auth.close(),
           serverEnv: {
             DATABASE_URL: relayDatabase.url,

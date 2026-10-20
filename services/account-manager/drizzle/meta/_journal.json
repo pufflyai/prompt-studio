@@ -15,6 +15,13 @@
       "when": 1792156076915,
       "tag": "0001_majestic_sasquatch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792444374371,
+      "tag": "0002_short_annihilus",
+      "breakpoints": true
     }
   ]
 }

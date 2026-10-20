@@ -141,8 +141,8 @@ service, not part of the local API host or the CLI bundle. It consumes the share
 `pstdio-sync` record/branch rules and `pstdio-sync-contracts` wire schemas, including the
 blind sync protocol in `src/protocol/`. Its production
 access verification uses only the database-free `pstdio-account-manager/access` entry;
-the relay receives public issuer/audience/JWKS trust, without the manager database role, signing secret or renewal grants. Isolated integration fixtures may
-use the manager's operator exports to create disposable accounts and grants. Production
+the relay receives public issuer/audience/JWKS trust, without the manager database role, signing secret or device credentials. Isolated integration fixtures may
+use the manager's operator exports to create disposable accounts and devices. Production
 modules never import the test-only conformance export. It must not import the API
 host, UI, clients, database implementation, or prototype. PostgreSQL persistence
 belongs to the relay; the real local adapter belongs to `pstdio-db`.

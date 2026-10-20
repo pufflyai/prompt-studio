@@ -43,14 +43,13 @@ const open = async (options: Parameters<typeof fixture.context>[0] = {}) => {
     /** A second device of the same account. */
     async device() {
       const environmentId = crypto.randomUUID();
-      const grant = await context.manager.register({
-        requestId: `register-${environmentId}`,
+      const device = await context.manager.registerDevice({
         accountId: context.scope.accountId,
-        workbenchId: context.scope.workbenchId,
-        environmentId,
-        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        deviceId: environmentId,
+        name: "Second sync device",
+        platform: "linux",
       });
-      return { environmentId, token: (await context.issue(grant.token!)).token };
+      return { environmentId, token: (await context.issue(device.token)).token };
     },
     connect(token = context.token) {
       const url = new URL(syncPath({ kind: "live", projectId: context.scope.workbenchId }), server.url);

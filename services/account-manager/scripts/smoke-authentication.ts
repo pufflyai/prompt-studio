@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { createServer } from "node:net";
-import { registration } from "../src/authority.fixture";
+import { connectDevice } from "../src/authority.fixture";
 import type * as Implementation from "../src/index";
 import { createOwnedTls } from "../src/owned-tls.fixture";
 
@@ -46,7 +46,7 @@ export const smokeAuthentication = async (
     assert.ok(!ready.done, "Built manager must start");
     reader.releaseLock();
     const ca = await Bun.file(tls.cert).text();
-    const grant = await manager.register(registration(accountId));
+    const grant = await connectDevice(manager, accountId);
     const renew = () =>
       fetch(`${origin}/v1/environment-access`, {
         method: "POST",
@@ -74,7 +74,7 @@ export const smokeAuthentication = async (
       assert.equal(JSON.parse(new TextDecoder().decode(result.stdout)).accountId, accountId);
     };
     verify();
-    await manager.revoke({ requestId: "built-revoke-renewal", accountId, environmentId: grant.environmentId });
+    await manager.removeDevice({ accountId, deviceId: grant.deviceId });
     assert.equal((await renew()).status, 401);
     verify();
     child.kill("SIGTERM");

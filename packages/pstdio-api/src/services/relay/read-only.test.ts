@@ -65,23 +65,17 @@ test("a read-only workspace keeps receiving structured storage without creating 
     });
     expect(enabled.status).toBe(200);
     const environment = await app.deps.environmentService.get();
-    const path = join(root, "relay.json");
-    await writeFile(
-      path,
-      JSON.stringify({
-        connections: [
-          {
-            accountId: "account",
-            workbenchId: project.id,
-            environmentId: environment.environmentId,
-            relayOrigin: wire.peer.url.origin,
-            managerOrigin: wire.peer.url.origin,
-            renewalGrant: "owned-grant",
-          },
-        ],
-      }),
-    );
-    runtime = await startRelayRuntime({ path, environment: app.deps.environmentService, deps: app.deps });
+    runtime = await startRelayRuntime({ deps: app.deps });
+    await runtime.update([
+      {
+        accountId: "account",
+        workbenchId: project.id,
+        environmentId: environment.environmentId,
+        relayOrigin: wire.peer.url.origin,
+        managerOrigin: wire.peer.url.origin,
+        renewalGrant: "owned-grant",
+      },
+    ]);
     await until(async () => wire.connected().includes("example.documents"));
     const snapshot = wire.snapshots.get(JSON.stringify([project.id, "example.documents"]))!;
     const owner = { workbenchId: project.id, extensionId: "example.documents" };

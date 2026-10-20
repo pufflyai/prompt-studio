@@ -23,11 +23,7 @@ test("access expiry closes even while relay data is locked", async () => {
       headers: { authorization: `Bearer ${context.token}` },
     });
     await fixture.waitForBlockedData();
-    await context.manager.revoke({
-      requestId: "blocked-revoke",
-      accountId: context.scope.accountId,
-      environmentId: context.environmentId,
-    });
+    await context.manager.removeDevice({ accountId: context.scope.accountId, deviceId: context.environmentId });
     expect((await connection.closed).code).toBe(1008);
     await release();
     release = async () => {};
@@ -107,11 +103,7 @@ test("content restore and restart preserve finite access while stale manager res
     expect((await connection.next()).type).toBe("ready");
     await context.storage.owner(context.scope).restore(saved);
     expect((await connection.next()).type).toBe("changed");
-    await context.manager.revoke({
-      requestId: "revoke",
-      accountId: context.scope.accountId,
-      environmentId: context.environmentId,
-    });
+    await context.manager.removeDevice({ accountId: context.scope.accountId, deviceId: context.environmentId });
     await expect(context.renew()).rejects.toThrow("Environment access unavailable");
     connection.socket.close();
     await context.storage.owner(context.scope).restore(saved);
@@ -122,18 +114,18 @@ test("content restore and restart preserve finite access while stale manager res
         headers: { authorization: `Bearer ${context.token}` },
       });
     expect((await snapshot()).status).toBe(200);
-    const fresh = await context.manager.register({
-      requestId: "new",
+    // Logging the removed device in again issues a new token.
+    const fresh = await context.manager.registerDevice({
       accountId: context.scope.accountId,
-      workbenchId: context.scope.workbenchId,
-      environmentId: context.environmentId,
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      deviceId: context.environmentId,
+      name: "Returning device",
+      platform: "linux",
     });
-    const access = await context.issue(fresh.token!);
+    const access = await context.issue(fresh.token);
     const current = connectSocket(server.url, context.scope, access.token);
     expect((await current.next()).type).toBe("ready");
     await context.manager.restore("owned-stale-restore", authority);
-    await expect(context.issue(fresh.token!)).rejects.toThrow("Environment access unavailable");
+    await expect(context.issue(fresh.token)).rejects.toThrow("Environment access unavailable");
     expect(current.socket.readyState).toBe(WebSocket.OPEN);
     current.socket.close();
     expect((await snapshot()).status).toBe(200);

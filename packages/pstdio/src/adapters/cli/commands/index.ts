@@ -3,8 +3,11 @@ import * as authCommand from "./auth";
 import * as automationCommand from "./automation";
 import * as closeCommand from "./close";
 import * as connectionsCommand from "./connections";
+import * as devicesCommand from "./devices";
 import * as extensionsCommand from "./extensions";
 import * as inboxCommand from "./inbox";
+import * as loginCommand from "./login";
+import * as logoutCommand from "./logout";
 import * as logsCommand from "./logs";
 import * as notificationsCommand from "./notifications";
 import * as performanceCommand from "./performance";
@@ -22,8 +25,11 @@ export const topLevelCommandModules = [
   automationCommand,
   closeCommand,
   connectionsCommand,
+  devicesCommand,
   extensionsCommand,
   inboxCommand,
+  loginCommand,
+  logoutCommand,
   logsCommand,
   notificationsCommand,
   performanceCommand,

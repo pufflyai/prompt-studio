@@ -34,11 +34,7 @@ export const checkBuiltTransport = async () => {
         process.stdout.write(`${line}\n`);
         if (!ready && line === "READY_FOR_REVOCATION") {
           ready = true;
-          await manager.revoke({
-            requestId: "built-network-revoke",
-            accountId: scope.accountId,
-            environmentId: saved.environmentId,
-          });
+          await manager.removeDevice({ accountId: scope.accountId, deviceId: saved.environmentId });
           await assert.rejects(renewFixtureAccess(saved.token, scope.workbenchId));
         }
         boundary = pending.indexOf("\n");

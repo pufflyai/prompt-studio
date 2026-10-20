@@ -28,8 +28,8 @@ test-only export. Its development dependencies are not a runtime implementation.
 | Assets, PS-747 | Immutable content references, streamed persistence, integrity, completion and recovery. |
 | Storage/SDK, PS-746 | Journal, accepted state, atomic local saves, authoring operations and conflict inspection/resolution. |
 | Relay, `services/relay` | Authorization, immutable publication checks, atomic PostgreSQL publication, durable replay/snapshots and restore epochs. |
-| Account manager, `services/account-manager` | Account lifecycle and current environment grants; independent from content restore. |
-| Native connection, `pstdio-sync/relay` and `pstdio-api` | Opt-in runtime enrollment, access renewal, snapshot download, submission, recovery and view refresh. |
+| Account manager, `services/account-manager` | Account lifecycle, devices and cloud projects; independent from content restore. |
+| Native connection, `pstdio-sync/relay` and `pstdio-api` | Device login, access renewal, snapshot download, submission, recovery and view refresh. |
 | Extensions | Data models, domain validation and pure local handlers from published packages. |
 
 The [kernel storage API](../../../packages/pstdio-api-contracts/src/extension-kernel/types/storage.ts)
@@ -99,7 +99,7 @@ The exported `dataOwnership` map is the explicit relay boundary. Workbench conte
 
 The dashboard's local SSE stream sends 11 tables: `board_views`, `board_default_views`, `settings`, `projects`, `installed_extension_sources`, `notifications`, `extension_instances`, `sessions`, `workspaces`, `files`, and `workspace_sessions` ([source](../../../packages/pstdio-api/src/features/sync/get-full-state.ts)). A delete sends its `sync:delete` events, including rows removed by cascade, only after the database delete succeeds; see [real-time updates](../../requirements/platform/0003-realtime-updates.md). These tables mirror one runtime for its UI and are not a replication allow-list. A relay must never copy those tables as shared workbench content. Dashboard collection data, indexes, readiness, and subscriptions belong to the API connection; disposing a connection closes its stream and releases its collection store. Browser credentials are scoped to the selected API origin, including its port. CLI clients capture their runtime URL and credential together.
 
-A runtime starts relay synchronization only when `PSTDIO_RELAY_CONFIG_FILE` names a connection file with account, workbench, environment, relay origin, manager origin, and renewal grant. Without it, the runtime stays local. An account ID in a protocol envelope remains data, not proof of authorization.
+A runtime starts relay synchronization only after `pst login` registers it as a device. It then syncs every cloud project of the account that exists locally ([device login](../../guides/development/0011-device-login.md)). Without a login, the runtime stays local. An account ID in a protocol envelope remains data, not proof of authorization.
 
 ## Identity and immutable requests
 

@@ -1,4 +1,4 @@
-import { foreignKey, index, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { Json } from "pstdio-sync-contracts";
 
 export const accounts = pgTable("manager_accounts", {
@@ -21,24 +21,24 @@ export const workbenches = pgTable(
   },
   (table) => [primaryKey({ columns: [table.accountId, table.id] })],
 );
-export const credentials = pgTable(
-  "manager_credentials",
+// A device is one client runtime; its environment ID is the device ID. Each login replaces the credential digest.
+export const devices = pgTable(
+  "manager_devices",
   {
-    id: text().primaryKey(),
-    accountId: text().notNull(),
-    workbenchId: text().notNull(),
-    environmentId: text().notNull(),
+    accountId: text()
+      .notNull()
+      .references(() => accounts.id),
+    id: text().notNull(),
+    name: text().notNull(),
+    platform: text().notNull(),
     digest: text().notNull(),
-    expiresAt: timestamp({ withTimezone: true }).notNull(),
-    revokedAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    removedAt: timestamp({ withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("manager_credentials_digest").on(table.digest),
-    index("manager_credentials_account_environment").on(table.accountId, table.environmentId),
-    foreignKey({
-      columns: [table.accountId, table.workbenchId],
-      foreignColumns: [workbenches.accountId, workbenches.id],
-    }),
+    primaryKey({ columns: [table.accountId, table.id] }),
+    uniqueIndex("manager_devices_digest").on(table.digest),
   ],
 );
 export const requests = pgTable(

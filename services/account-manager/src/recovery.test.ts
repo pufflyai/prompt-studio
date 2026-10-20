@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { SQL } from "bun";
 import { Client } from "pg";
-import { createAuthorityFixture, provisionAccount, registration } from "./authority.fixture";
+import { connectDevice, createAuthorityFixture, deviceProfile, provisionAccount } from "./authority.fixture";
 import * as implementation from "./index";
 
 const fixture = createAuthorityFixture(implementation);
@@ -20,72 +20,66 @@ test("retrying a completed manager restore does not revoke newly established aut
       owner: { issuer: "https://accounts.google.com", subject: accountId },
       state: "active",
     });
-    const fresh = await owner.register(registration(accountId));
+    const fresh = await connectDevice(owner, accountId);
     await owner.restore("restore-retry", snapshot);
-    expect(await owner.authorize(fresh.token!, fresh.workbenchId)).not.toBeNull();
+    expect(await owner.authorize(fresh.token, fresh.workbenchId)).not.toBeNull();
     await expect(
-      owner.restore("restore-retry", { version: 1, accounts: [], workbenches: [], requests: [] }),
+      owner.restore("restore-retry", { version: 2, accounts: [], workbenches: [], requests: [] }),
     ).rejects.toThrow("changed intent");
-    expect(await owner.authorize(fresh.token!, fresh.workbenchId)).not.toBeNull();
+    expect(await owner.authorize(fresh.token, fresh.workbenchId)).not.toBeNull();
   } finally {
     await owner.close();
   }
 });
 
-test("operator reconciliation cannot carry credentials into changed ownership", async () => {
+test("operator reconciliation cannot carry devices into changed ownership", async () => {
   const owner = fixture.owner();
   try {
     const accountId = await provisionAccount(owner);
-    const intent = registration(accountId);
-    const grant = await owner.register(intent);
+    const grant = await connectDevice(owner, accountId);
     await owner.reconcile({
       requestId: "current-ownership",
       accountId,
       owner: { issuer: "https://accounts.google.com", subject: "current-google-owner" },
       state: "active",
     });
-    expect(await owner.authorize(grant.token!, intent.workbenchId)).toBeNull();
-    expect((await owner.register(intent)).token).toBeNull();
-    const fresh = await owner.register(registration(accountId));
-    expect(await owner.authorize(fresh.token!, fresh.workbenchId)).not.toBeNull();
+    expect(await owner.authorize(grant.token, grant.workbenchId)).toBeNull();
+    const fresh = await owner.registerDevice({ accountId, ...deviceProfile(grant.deviceId) });
+    expect(await owner.authorize(fresh.token, grant.workbenchId)).not.toBeNull();
   } finally {
     await owner.close();
   }
 });
 
-test("old manager restore invalidates credentials and requires explicit current reconciliation", async () => {
+test("old manager restore removes every device and requires explicit current reconciliation", async () => {
   const owner = fixture.owner();
   try {
     const accountId = await provisionAccount(owner);
-    const intent = registration(accountId);
-    const old = await owner.register(intent);
+    const old = await connectDevice(owner, accountId);
     const snapshot = await owner.snapshot();
-    expect(JSON.stringify(snapshot)).not.toContain(old.token!);
-    await owner.revoke({ requestId: "revoke-after-backup", accountId, environmentId: intent.environmentId });
-    const newer = await owner.register(registration(accountId));
+    expect(JSON.stringify(snapshot)).not.toContain(old.token);
+    await owner.removeDevice({ accountId, deviceId: old.deviceId });
+    const newer = await connectDevice(owner, accountId);
     await owner.restore("old-manager-state", snapshot);
-    expect(await owner.authorize(old.token!, intent.workbenchId)).toBeNull();
-    expect(await owner.authorize(newer.token!, newer.workbenchId)).toBeNull();
-    expect(await owner.environments(accountId)).toHaveLength(0);
-    await expect(owner.register(registration(accountId))).rejects.toThrow("not active");
-    const retry = await owner.register(intent);
-    expect(retry.token).toBeNull();
-    expect(retry.id).toBe(old.id);
+    expect(await owner.authorize(old.token, old.workbenchId)).toBeNull();
+    expect(await owner.authorize(newer.token, newer.workbenchId)).toBeNull();
+    expect(await owner.devices(accountId)).toHaveLength(0);
+    await expect(owner.registerDevice({ accountId, ...deviceProfile() })).rejects.toThrow("Device access");
     await owner.reconcile({
       requestId: "current-operator-reconciliation",
       accountId,
       owner: { issuer: "https://accounts.google.com", subject: accountId },
       state: "active",
     });
-    expect(await owner.authorize(old.token!, intent.workbenchId)).toBeNull();
-    const fresh = await owner.register(registration(accountId));
+    expect(await owner.authorize(old.token, old.workbenchId)).toBeNull();
+    const fresh = await owner.registerDevice({ accountId, ...deviceProfile() });
     const reopened = fixture.owner();
     try {
-      expect(await reopened.authorize(old.token!, intent.workbenchId)).toBeNull();
-      expect(await reopened.authorize(fresh.token!, fresh.workbenchId)).toEqual({
+      expect(await reopened.authorize(old.token, old.workbenchId)).toBeNull();
+      expect(await reopened.authorize(fresh.token, old.workbenchId)).toEqual({
         accountId,
-        workbenchId: fresh.workbenchId,
-        environmentId: fresh.environmentId,
+        workbenchId: old.workbenchId,
+        deviceId: fresh.deviceId,
       });
     } finally {
       await reopened.close();
@@ -99,17 +93,17 @@ test("an invalid manager snapshot leaves live authority intact", async () => {
   const owner = fixture.owner();
   try {
     const accountId = await provisionAccount(owner);
-    const grant = await owner.register(registration(accountId));
+    const grant = await connectDevice(owner, accountId);
     const snapshot = await owner.snapshot();
-    await expect(owner.restore("unsupported-version", { ...snapshot, version: 2 })).rejects.toThrow();
-    expect(await owner.authorize(grant.token!, grant.workbenchId)).not.toBeNull();
+    await expect(owner.restore("unsupported-version", { ...snapshot, version: 1 })).rejects.toThrow();
+    expect(await owner.authorize(grant.token, grant.workbenchId)).not.toBeNull();
     await expect(
       owner.restore("invalid-relationships", {
         ...snapshot,
         workbenches: [...snapshot.workbenches, { accountId: "missing-account", id: "orphan-workbench" }],
       }),
     ).rejects.toThrow();
-    expect(await owner.authorize(grant.token!, grant.workbenchId)).not.toBeNull();
+    expect(await owner.authorize(grant.token, grant.workbenchId)).not.toBeNull();
   } finally {
     await owner.close();
   }

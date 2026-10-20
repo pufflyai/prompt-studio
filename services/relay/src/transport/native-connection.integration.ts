@@ -17,7 +17,7 @@ test("native renewal and sockets renew at finite expiry without overlapping sync
   const access = createRelayAccess({
     managerOrigin: manager.url.origin,
     workbenchId: context.scope.workbenchId,
-    renewalGrant: context.grant.token!,
+    renewalGrant: context.device.token,
     signal: controller.signal,
   });
   const adapter = createRelayAdapter({
@@ -52,14 +52,10 @@ test("native renewal and sockets renew at finite expiry without overlapping sync
     for (let index = 0; index < 100; index++) connection.wake();
     await renewed.promise;
     expect(maximum).toBe(1);
-    await context.manager.revoke({
-      requestId: "end-renewal",
-      accountId: context.scope.accountId,
-      environmentId: context.environmentId,
-    });
+    await context.manager.removeDevice({ accountId: context.scope.accountId, deviceId: context.environmentId });
     const response = await fetch(new URL("/v1/environment-access", manager.url), {
       method: "POST",
-      headers: { authorization: `Bearer ${context.grant.token}` },
+      headers: { authorization: `Bearer ${context.device.token}` },
       body: JSON.stringify({ workbenchId: context.scope.workbenchId }),
     });
     expect(response.status).toBe(401);
