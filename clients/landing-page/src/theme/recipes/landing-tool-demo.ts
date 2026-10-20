@@ -211,7 +211,7 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
         shaderControl: { gap: "xs" },
         session: { p: "sm", gap: "xs" },
         sessions: { gap: "xs" },
-        agentBoard: { width: "calc(100% / 0.72)", height: "64", zoom: 0.72 },
+        agentBoard: { height: "64", zoom: 0.72 },
       },
     },
   },

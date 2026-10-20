@@ -215,6 +215,7 @@ export const createAssemblyAgents = (
       });
     },
     resize: (now: number) => {
+      interactions.resize(now);
       for (const agent of agents) {
         agent.drift = undefined;
         if (agent.job) {

@@ -22,7 +22,7 @@ export const DraggableAgents: Story = {
     docs: {
       description: {
         story:
-          "All 28 shapes appear in a settled pile directly in the static HTML. Physics starts from those resting positions, independently of desktop downloads. Shape positions, slots, and the loop survive navigation. The board grows with available width and height while its five slots and shapes keep their physical size. Claude, Codex, and OpenCode assemble tools, use the editor, and clear it again. Idle cursors move slowly over short distances. Cursors become compact single-line chat bubbles while typing CLI commands that update the local editor state. People can take a shape while the cursors keep working.",
+          "Pull an exposed shape slowly from beneath the pile, then try a fast pull and release. Neighbours move immediately without an explosive release. Escape or pointer cancellation returns the held shape. People can take a shape from an active cursor while the other cursors keep working. All 28 shapes start settled. Positions and the loop survive navigation. The board grows with available space while slots and shapes keep their size. Claude, Codex, and OpenCode assemble tools, use visible controls, and clear the board again. Watch OpenCode after Rename icon, and resize during the agent board session clicks. Reduced motion hides cursors and preserves manual dragging.",
       },
     },
   },

@@ -186,6 +186,12 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
     step: (delta: number) => {
       accumulator += Math.min(delta, 48);
       while (accumulator >= 1000 / 120) {
+        // Sleeping neighbours act like fixed obstacles until a pull is fast enough to wake them.
+        // Keep the small shared pile awake during drags so slow pulls move it from the first step.
+        if (grips.size)
+          pieces.forEach(({ body }) => {
+            Matter.Sleeping.set(body, false);
+          });
         // Limit spring travel per step so a fast pointer cannot tunnel a body through a wall.
         for (const { constraint, target } of grips.values()) {
           const delta = Matter.Vector.sub(target, constraint.pointA);

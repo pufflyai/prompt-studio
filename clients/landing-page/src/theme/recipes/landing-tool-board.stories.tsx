@@ -48,6 +48,9 @@ export const LargeShadersComplete: Story = {
 export const AgentsComplete: Story = {
   args: { view: { example: "agents", parts: ["page", "command", "skill", "hook", "automation"] } },
 };
+export const NarrowAgentsComplete: Story = {
+  args: { scale: 0.5, view: { example: "agents", parts: ["page", "command", "skill", "hook", "automation"] } },
+};
 export const AgentSlotOutlines: Story = { args: { view: { example: "agents", parts: [] } } };
 export const NarrowFiveSlots: Story = { args: { scale: 0.5, view: { example: "agents", parts: [] } } };
 export const FormulasComplete: Story = {
