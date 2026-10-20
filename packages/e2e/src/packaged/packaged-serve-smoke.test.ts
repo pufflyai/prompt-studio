@@ -82,6 +82,8 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 // Includes resource path prefixes, owner resolver commands, and resolution through HTTP.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { registerResourcePageSmokeTests } from "./packaged-resource-pages-smoke";
+// A delayed owner resolution cannot resurrect a deleted target or save cleanup as a manual closure.
+import { registerResourceRemovalSmokeTests } from "./packaged-resource-removal-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // Packaged browser coverage also checks shared Session action groups and lazy title search in the tab menu.
@@ -280,6 +282,7 @@ registerResourceLinksSmokeTests();
 
 registerCommandStreamSmokeTests();
 registerResourceChoicesSmokeTests();
+registerResourceRemovalSmokeTests();
 // Includes edit recovery after dispatch with draft, model, parameter, and file ownership checks.
 registerQueuedRequestSmokeTests();
 

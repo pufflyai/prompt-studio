@@ -124,6 +124,7 @@ export interface ResourceRegistry {
   preview: ReturnType<typeof createResourcePreview>;
   removed(resource: ResourceRef): void;
   onWillRemove(listener: (resource: ResourceRef) => readonly PlacementIdentity[]): Disposable;
+  onDidRemove(listener: (resource: ResourceRef) => void): Disposable;
   store: WorkbenchStore<ResourceRegistryStoreState>;
   registerKind(kind: ResourceKindContribution, metadata?: ContributionMetadata): Disposable;
   getKind(kind: string, extensionId?: string): RegisteredResourceKind | undefined;
@@ -150,6 +151,7 @@ export interface CreateResourceRegistryInput {
 }
 export const createResourceRegistry = (input: CreateResourceRegistryInput = {}): ResourceRegistry => {
   const removalListeners = new Set<(resource: ResourceRef) => readonly PlacementIdentity[]>();
+  const removedListeners = new Set<(resource: ResourceRef) => void>();
   const cycleListeners = new Set<(cycle: ResourceHierarchyCycle) => void>();
   const store = createWorkbenchStore<ResourceRegistryStoreState>({
     name: "workbench.resources",
@@ -159,14 +161,20 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
     store,
     preview: createResourcePreview(),
     removed(resource) {
-      input.remove?.(
-        resource,
-        [...removalListeners].flatMap((listener) => listener(resource)),
-      );
+      const retained = [...removalListeners].flatMap((listener) => listener(resource));
+      try {
+        input.remove?.(resource, retained);
+      } finally {
+        for (const listener of removedListeners) listener(resource);
+      }
     },
     onWillRemove(listener) {
       removalListeners.add(listener);
       return createDisposable(() => removalListeners.delete(listener));
+    },
+    onDidRemove(listener) {
+      removedListeners.add(listener);
+      return createDisposable(() => removedListeners.delete(listener));
     },
     registerKind(kind, metadata) {
       const snapshot = store.getState();
