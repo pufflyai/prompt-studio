@@ -212,3 +212,20 @@ test("collection fixtures are forked once and offline migrations agree", async (
   });
   expect(rerun).toBe(false);
 });
+
+test("the devices share migration identities while keeping random IDs and order positions distinct", async () => {
+  const pair = await createMemoryStorageDevices({ workbenchId: "shared", extensionId: "notes", deviceId: "first" });
+  const ids: string[] = [];
+  for (const storage of pair.devices) {
+    await storage.migrate(1, async (_, migration) => {
+      const id = migration.id("source", "nt");
+      ids.push(id);
+      await storage.records.commit({ operationId: id, edits: [{ recordId: id, replace: { title: "Imported" } }] });
+    });
+  }
+  expect(ids[0]).toBe(ids[1]);
+  expect(await pair.merge()).toEqual([]);
+  for (const storage of pair.devices) expect(await storage.records.list()).toHaveLength(1);
+  expect(pair.devices[0].ids.create()).not.toBe(pair.devices[1].ids.create());
+  expect(pair.devices[0].positions.between()).not.toBe(pair.devices[1].positions.between());
+});

@@ -15,7 +15,11 @@ export interface MemoryStorageReplacement {
 /** Two offline devices for one extension. Finish writes before calling merge. */
 export const createMemoryStorageDevices = async (options: MemoryStorageOptions = {}) => {
   const first = createMemoryStorageDevice(options);
-  const second = createMemoryStorageDevice({ legacyData: options.legacyData }, first.workbenchId);
+  const second = createMemoryStorageDevice({
+    legacyData: options.legacyData,
+    workbenchId: first.workbenchId,
+    extensionId: options.extensionId,
+  });
   await second.applyUpdate(await first.exportUpdate());
   const devices: [ExtensionStorageApi, ExtensionStorageApi] = [first.storage, second.storage];
   let base = await first.snapshot();

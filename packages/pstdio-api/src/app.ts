@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
+import { createStoragePositions } from "pstdio-api-contracts";
 import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase } from "./app-database";
@@ -94,6 +95,8 @@ const buildApp = async (
   ensureStorageRoot(storageRoot);
 
   const dbs = createAppDatabaseServices(db);
+  const { environmentId } = await dbs.environmentDBService.get();
+  const storagePositions = createStoragePositions(environmentId);
   const {
     activityEventsDBService,
     automationDBService,
@@ -177,35 +180,7 @@ const buildApp = async (
   });
 
   const sessionQueueLifecycle = createSessionQueueLifecycle();
-  const sessionHookDeps = (): SessionHookDeps => ({
-    assetTransferService,
-    artifactMountWrites,
-    boardViewsService: boardViewsDBService,
-    automationService,
-    extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,
-    resourceLinksService: dbs.resourceLinksDBService,
-    activityEventsService: activityEventsDBService,
-    eventBus,
-    extensionAutomationPreferencesService,
-    extensionConnectionService,
-    extensionFileService,
-    extensionRuntimeCatalog,
-    extensionService,
-    extensionSettingsDBService,
-    extensionSettingsService,
-    extensionStorageService: extensionStorageDBService,
-    fileService,
-    harnessRegistry,
-    projectService,
-    sessionQueueEntriesService,
-    sessionQueueLifecycle,
-    sessionService,
-    skillService,
-    notificationService,
-    settingsService,
-    workspaceService,
-    workspaceSessionService,
-  });
+  const sessionHookDeps = (): SessionHookDeps => deps;
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
 
@@ -229,6 +204,7 @@ const buildApp = async (
     accountService: account.accountService,
     assetTransferService,
     environmentService: dbs.environmentDBService,
+    storagePositions,
     artifactMountWrites,
     resourceLinksService: dbs.resourceLinksDBService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,

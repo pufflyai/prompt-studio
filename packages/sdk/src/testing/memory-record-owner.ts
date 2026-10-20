@@ -16,9 +16,9 @@ export interface MemoryStorageSeed {
 export const createMemoryRecordOwner = (
   assets: ReturnType<typeof createMemoryAssets>,
   seed: MemoryStorageSeed = {},
-  workbenchId: string = crypto.randomUUID(),
+  identity: { workbenchId?: string; extensionId?: string } = {},
 ) => {
-  const owner = { workbenchId, extensionId: "test-extension" };
+  const owner = { workbenchId: crypto.randomUUID(), extensionId: "test-extension", ...identity };
   const baseStore = createMemoryDocumentStore();
   const seedStorage = createLegacyRecordStorage({ store: baseStore, owner }).scope("project", owner.workbenchId);
   const initialized = Promise.all([
@@ -47,6 +47,7 @@ export const createMemoryRecordOwner = (
   const legacy = createLegacyRecordStorage({ store, owner });
   return {
     workbenchId: owner.workbenchId,
+    extensionId: owner.extensionId,
     dataVersion: storage.dataVersion,
     setDataVersion: storage.setDataVersion,
     exportUpdate: storage.exportUpdate,

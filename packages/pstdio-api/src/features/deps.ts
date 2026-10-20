@@ -1,4 +1,4 @@
-import type { ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel";
+import type { ExtensionStoragePositionsApi, ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel";
 import type {
   createActivityEventsDBService,
   createBoardViewsDBService,
@@ -50,6 +50,7 @@ export interface RouteDeps {
   accountService: ReturnType<typeof createNativeAccount>;
   assetTransferService: ReturnType<typeof createAssetTransferService>;
   environmentService: ReturnType<typeof createEnvironmentDBService>;
+  storagePositions: ExtensionStoragePositionsApi;
   boardViewsService: ReturnType<typeof createBoardViewsDBService>;
   extensionWebviewAccess: ExtensionWebviewAccess;
   readiness: ReadinessChecks;
