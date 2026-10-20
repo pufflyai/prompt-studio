@@ -78,7 +78,7 @@ A newer event on the same pull request cancels the older run. Every merge queue 
 
 ### Pull request stage
 
-The normal pull request stage targets five minutes through relevant selection, parallel jobs and build reuse. `ci:full` keeps the longer complete stage. [ADR 0085](../../adrs/0085-run-relevant-pr-checks-before-merging.md) records this design.
+The normal pull request stage targets five minutes through relevant selection, parallel jobs and build reuse. `ci:full` keeps the longer complete stage. [ADR 0087](../../adrs/0087-run-relevant-pr-checks-before-merging.md) records this design.
 
 The selector compares the PR merge commit with its target parent. Workspace dependencies and explicit Nx dependencies select the changed packages and their transitive consumers. This includes consumers whose dependency ranges name a released SDK or UI version. Unknown shared tooling inputs select all scoped checks.
 

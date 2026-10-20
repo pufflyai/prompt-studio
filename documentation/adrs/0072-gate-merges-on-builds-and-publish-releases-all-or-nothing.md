@@ -2,7 +2,7 @@
 
 Proposed: 2026-10-12
 
-Status: Accepted. The PR and merge-queue stage decisions are superseded by [ADR 0085](0085-run-relevant-pr-checks-before-merging.md). The release decisions still apply.
+Status: Accepted. The PR and merge-queue stage decisions are superseded by [ADR 0087](0087-run-relevant-pr-checks-before-merging.md). The release decisions still apply.
 
 ## Context
 
