@@ -50,12 +50,15 @@ test("enabled extensions allocate declared prefixes and reject conflicting insta
       [expect.objectContaining({ op: "set", data: preference })],
     );
     const api = (extensionId: string, projectId = project.id) => ({
-      allocate: ({ kind }: { kind: string }) =>
+      allocate: ({ kind, idPrefix }: { kind: string; idPrefix?: string }) =>
         createResourcesApi(app.deps, { projectId, extensionId }).allocate({
           kind: kind === "item" ? extensionId.split(".")[1]! : kind,
+          idPrefix,
         }),
     });
-    const first = await api("example.planner").allocate({ kind: "item" });
+    await expect(api("example.planner").allocate({ kind: "item", idPrefix: "INVALID" })).rejects.toThrow("ID prefix");
+    const first = await api("example.planner").allocate({ kind: "item", idPrefix: "tk" });
+    expect(first.id).toMatch(/^tk_[0-9A-Za-z]{22}$/);
     expect(first.shorthand).toBe(`${project.shorthand}-1`);
     expect(extensionResourceRefSchema.parse({ type: "item", ...first }).shorthand).toBe(first.shorthand);
     expect((await api("example.reports").allocate({ kind: "item" })).shorthand).toBe("RP-1");

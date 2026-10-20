@@ -8,8 +8,9 @@ test("two devices import the same source records with the same migration IDs", a
       const ids: string[] = [];
       await storage.migrate(1, async (_, migration) => {
         for (const key of ["one", "two"]) {
-          const id = migration.id(key);
-          expect(migration.id(key)).toBe(id);
+          const id = migration.id(key, "nt");
+          expect(id).toMatch(/^nt_[0-9A-Za-z]{22}$/);
+          expect(migration.id(key, "nt")).toBe(id);
           ids.push(id);
           await storage.records.commit({ operationId: id, edits: [{ recordId: id, replace: { key } }] });
         }
@@ -43,13 +44,24 @@ test("migration IDs separate versions and scopes and stay stable after a failed 
   });
 });
 
+test("existing UUIDs and case-distinct compact IDs remain separate record identities", async () => {
+  const storage = createMemoryStorage();
+  const ids = ["7d3c8b35-62f1-4b72-9714-1f697d843a20", "tk_00egMz01XBDRok8fF", "tk_00egMz01XBDRok8ff"];
+  await storage.records.commit({
+    operationId: storage.ids.create("op"),
+    edits: ids.map((recordId) => ({ recordId, replace: { original: recordId } })),
+  });
+  expect((await storage.records.list()).map(({ recordId }) => recordId).sort()).toEqual([...ids].sort());
+  for (const id of ids) expect((await storage.records.read(id)).value).toEqual({ original: id });
+});
+
 test("memory storage creates random time-ordered IDs and distinct concurrent positions", async () => {
   const first = createMemoryStorage();
   const second = createMemoryStorage();
-  const id = first.ids.create();
+  const id = first.ids.create("nt");
   await Bun.sleep(2);
-  expect(first.ids.create() > id).toBe(true);
-  expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  expect(first.ids.create("nt") > id).toBe(true);
+  expect(id).toMatch(/^nt_[0-9A-Za-z]{22}$/);
   const concurrent = [first.positions.between(), second.positions.between()].sort();
   expect(concurrent[0]).not.toBe(concurrent[1]);
   const middle = first.positions.between(concurrent[0], concurrent[1]);

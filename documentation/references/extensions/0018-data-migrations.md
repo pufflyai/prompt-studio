@@ -34,6 +34,10 @@ On `main`, the callback also receives `migration` as its second argument. Use
 from the extension, workbench, storage scope, target version and stable key, so
 two devices and failed retries create the same records. Existing one-argument
 callbacks keep working. `storage.ids.create()` always returns a random ID.
+Pass an optional prefix, such as `migration.id(sourceKey, "nt")`, for a lossless
+22-character Base62 body. Keep that prefix choice fixed across devices and retries;
+changing it changes the record ID. Migration IDs hash stable inputs without using
+the current time and do not sort by creation time. Existing record IDs stay unchanged.
 These additions ship in the release after 0.44.0. See the
 [ID and ordering guide](../../guides/sdk/0003-storage.md#create-records-and-arrange-items).
 

@@ -37,10 +37,24 @@ define their exact types.
 
 | Method | Result |
 | --- | --- |
-| `storage.ids.create()` | A random UUIDv7 ordered by creation millisecond. |
+| `storage.ids.create(prefix?)` | A random UUIDv7. An optional prefix selects a lossless, case-sensitive 22-character Base62 body; omitting it returns a canonical UUID. |
 | `storage.positions.between(before?, after?)` | A unique position strictly between the supplied neighbours. Omit either end, or both for a first position. |
 | `storage.migrate(version, run)` | Runs `run(previousVersion, migration)` once for a scope version. Existing one-argument callbacks remain supported. |
-| `migration.id(key)` | An ID derived from the extension, workbench, scope, target migration version and stable source key. |
+| `migration.id(key, prefix?)` | A UUIDv8 derived from the extension, workbench, scope, target migration version and stable source key. The optional prefix selects the same compact format. |
+
+`storage.ids.create("tk")` returns `tk_` followed by 22 Base62 characters, retaining
+all 128 UUID bits. Prefixes match `[a-z][a-z0-9]{0,15}`; an empty string is invalid.
+Without a prefix, both helpers keep canonical UUID output. Keep existing IDs
+unchanged. Compact IDs require exact, case-sensitive lookup and binary ordering;
+do not lowercase them or use locale sorting. The alphabet is
+`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`.
+
+Random IDs sort by encoded millisecond only within the same prefix when timestamps
+increase. There is no same-millisecond, clock-rollback or cross-device chronological
+guarantee. Migration IDs have no time order. The prefix affects only their encoding;
+keep it fixed for every device and retry of a migration. It does not establish
+resource ownership. Numbered resources use the same generator through
+`resources.allocate({ kind, idPrefix? })`; see [Resource identities](0002-resources.md#resource-identities).
 
 Compare positions with ordinary string comparison (`<`, `>`, or default string
 `sort()`), never `localeCompare`. The complete string includes device identity

@@ -8,6 +8,15 @@ Normalization reports duplicate literal or project-derived declarations. Project
 
 `ResourceRef.shorthand` carries display identity alongside the UUID. It is a value, not a persisted resource registry.
 
+On `main`, the allocator accepts `idPrefix`, such as
+`ctx.resources.allocate({ kind: "ticket", idPrefix: "tk" })`. It uses the shared
+storage ID generator: a UUIDv7 encoded losslessly as `tk_` plus 22 case-sensitive
+Base62 characters. Calls without `idPrefix` keep canonical UUID text, and existing
+IDs are never rewritten. This optional label is independent of the declared
+uppercase shorthand prefix. The core resource allocator remains the owner of
+number allocation; extensions keep the returned ID instead of generating another.
+See [Resource identities](../sdk/0002-resources.md#resource-identities).
+
 ## Planner migration
 
 Existing projects must run `pst pstdio-planner migrate-ticket-identities` from their repository before creating tickets with the updated Planner. Stop ticket writers and automation first, and run one migration command at a time. This maintenance operation renumbers saved tickets in stable order, beginning at 1 in a project with no previous host allocations. UUIDs remain unchanged.

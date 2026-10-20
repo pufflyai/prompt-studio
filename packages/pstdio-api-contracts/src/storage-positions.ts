@@ -1,5 +1,4 @@
 import { bytesToHex } from "@noble/hashes/utils.js";
-import { createStorageId } from "./storage-identities";
 
 const digits = "0123456789abcdef";
 
@@ -24,7 +23,8 @@ export const createStoragePositions = (deviceId: string) => {
         if (high - low > 1) {
           // Include the suffix in future midpoint calculations. Concurrent neighbours stay divisible.
           // A final nonzero digit keeps every finite position strictly above its zero-padded prefix.
-          return `${prefix}${digits[Math.floor((low + high) / 2)]}${device}0${createStorageId().replaceAll("-", "")}1`;
+          const suffix = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
+          return `${prefix}${digits[Math.floor((low + high) / 2)]}${device}0${suffix}1`;
         }
         prefix += digits[low];
         if (low < high) upper = undefined;

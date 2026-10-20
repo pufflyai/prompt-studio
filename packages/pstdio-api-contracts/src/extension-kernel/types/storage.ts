@@ -24,8 +24,8 @@ export type StorageScope =
   | { type: string; id: string };
 
 export interface ExtensionStorageMigration {
-  /** Derive the same ID on every device from this migration and a stable source key. */
-  id(key: string): string;
+  /** Derive the same ID from a stable source key. A prefix selects lossless, case-sensitive Base62 output. */
+  id(key: string, prefix?: string): string;
 }
 
 export interface ExtensionStoragePositionsApi {
@@ -39,8 +39,8 @@ export interface ExtensionStorageApi {
     version: number,
     run: (previousVersion: number, migration: ExtensionStorageMigration) => Promise<void>,
   ): Promise<void>;
-  /** Create a random UUIDv7, ordered by creation millisecond. Use migration.id(key) when importing data. */
-  ids: { create(): string };
+  /** Create a UUIDv7. A prefix selects lossless, case-sensitive Base62 output. Use migration.id for imports. */
+  ids: { create(prefix?: string): string };
   positions: ExtensionStoragePositionsApi;
   /** Read retained records from a removed schema, restricted to this project and instance. */
   readLegacy(source: string): Promise<{ version: string; records: JsonObject[] } | undefined>;

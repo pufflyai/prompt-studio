@@ -1,3 +1,4 @@
+import { createStorageId } from "pstdio-api-contracts";
 import type { ExtensionResourcesApi } from "pstdio-api-contracts/extension-kernel";
 import { createMemoryResourceLinks } from "./memory-resource-links";
 
@@ -9,11 +10,12 @@ export const createMemoryResources = (
   links = createMemoryResourceLinks({ projectId: "proj-1", extensionId: "test.extension", edges: new Map() }),
 ): ExtensionResourcesApi => ({
   ...links,
-  allocate: async ({ kind }) => {
+  allocate: async ({ kind, idPrefix }) => {
     const prefix = prefixes[kind];
     if (!prefix) throw new Error(`Undeclared resource kind: ${kind}`);
+    const id = createStorageId(idPrefix);
     const next = (sequences.get(kind) ?? 0) + 1;
     sequences.set(kind, next);
-    return { id: crypto.randomUUID(), shorthand: `${prefix}-${next}` };
+    return { id, shorthand: `${prefix}-${next}` };
   },
 });

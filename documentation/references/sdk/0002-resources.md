@@ -52,6 +52,26 @@ const identity = resourceKey(document);
 not affect identity. URI conversion belongs to host routing and persistence.
 See the [composition cookbook](../../guides/extensions/0002-workbench-cookbook.md) for page and panel targets.
 
+## Resource identities
+
+`ctx.resources.allocate({ kind })` assigns a new UUID and the next human shorthand
+for a declared resource kind, such as `PS-123`. The extension stores its data under
+the returned ID. Keep that ID attached to its shorthand; do not replace it with a
+second generated ID.
+
+On `main`, `resources.allocate({ kind, idPrefix: "tk" })` selects `tk_` plus a
+22-character Base62 body. This additive option ships in the release after 0.44.0.
+It uses the same UUIDv7 generator and compact encoding as `storage.ids.create("tk")`.
+Omitting `idPrefix` preserves canonical UUID output. Invalid ID prefixes fail before
+allocating a shorthand number. The resource kind's declared uppercase shorthand
+prefix and this lowercase ID prefix are separate: `idPrefix` never changes `PS-123`.
+
+Treat IDs as exact, case-sensitive strings and retain owner fields in references.
+An ID prefix is a readable label, not a globally registered resource type. Existing
+UUIDs are not rewritten, and existing core extension callers keep UUID output until
+their separate adoption change. See [IDs and migration identity](0004-storage.md#ids-positions-and-migration-identity)
+for prefix rules and ordering limits.
+
 ## Related resources
 
 The shared workbench **Related resources** action lists incoming and outgoing links

@@ -41,14 +41,14 @@ export const registerStorageMigrationSmokeTests = () => {
       );
       writeFileSync(
         join(sourcePath, "extension.ts"),
-        `export default { commands: [{
+        `export default { resourceKinds: [{ id: "note", ref: {kind:"resource-kind",id:"note"}, prefix: "NT" }], commands: [{
         id: "import", ref: { kind: "command", id: "import" }, title: "Import",
         params: { version: { type: "number", required: true }, fail: { type: "boolean" } },
         async run(ctx, params) {
           await ctx.storage.migrate(params.version, async (previous, migration) => {
-            const id = migration.id("source");
+            const id = migration.id("source", "nt");
             await ctx.storage.records.commit({
-              operationId: migration.id("import"), edits: [{ recordId: id, replace: { source: "imported" } }]
+              operationId: migration.id("import", "op"), edits: [{ recordId: id, replace: { source: "imported" } }]
             });
             await ctx.storage.set("sourceId", id);
             await ctx.storage.set("attempts", (await ctx.storage.get("attempts") ?? 0) + 1);
@@ -57,7 +57,8 @@ export const registerStorageMigrationSmokeTests = () => {
             await ctx.storage.set("previous", previous);
           });
           const position = ctx.storage.positions.between();
-          return { id: ctx.storage.ids.create(), positions: [position, ctx.storage.positions.between(position)],
+          return { id: ctx.storage.ids.create("nt"), allocated: await ctx.resources.allocate({kind: "note", idPrefix: "nt"}),
+            positions: [position, ctx.storage.positions.between(position)],
             sourceId: await ctx.storage.get("sourceId"),
             imports: (await ctx.storage.records.list()).filter(record => record.value?.source === "imported").length,
             attempts: await ctx.storage.get("attempts"), previous: await ctx.storage.get("previous"),
@@ -80,8 +81,11 @@ export const registerStorageMigrationSmokeTests = () => {
           { params },
         );
         if (result.outcome.ok) {
-          const { id, positions } = result.outcome.value;
-          expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+          const { id, positions, sourceId, allocated } = result.outcome.value;
+          expect(id).toMatch(/^nt_[0-9A-Za-z]{22}$/);
+          expect(sourceId).toMatch(/^nt_[0-9A-Za-z]{22}$/);
+          expect(allocated.id).toMatch(/^nt_[0-9A-Za-z]{22}$/);
+          expect(allocated.shorthand).toMatch(/^NT-\d+$/);
           expect(positions[0] < positions[1]).toBe(true);
         }
         return result;
@@ -99,7 +103,9 @@ export const registerStorageMigrationSmokeTests = () => {
       child = undefined;
       runtime = await startPackagedServe(root);
       child = runtime.child;
-      expect(await execute({ version: 2 })).toMatchObject({
+      const restarted = await execute({ version: 2 });
+      expect(restarted.outcome.value.sourceId).toBe(concurrent[0].outcome.value.sourceId);
+      expect(restarted).toMatchObject({
         outcome: { ok: true, value: { attempts: 3, recordAttempts: 3, previous: 1, imports: 2 } },
       });
     } finally {

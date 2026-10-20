@@ -66,6 +66,37 @@ Use `ctx.storage.ids.create()` for new record IDs and operation IDs. It returns 
 random UUIDv7 ordered by its creation millisecond. IDs created within the same
 millisecond have no promised order.
 
+Pass a short prefix to select the compact format:
+
+```ts
+const recordId = ctx.storage.ids.create("nt");
+const operationId = ctx.storage.ids.create("op");
+const ticket = await ctx.resources.allocate({ kind: "ticket", idPrefix: "tk" });
+```
+
+Both APIs use the same core generator. A compact ID contains the prefix, `_`, and
+22 Base62 characters: 25 characters with `tk_`. It preserves all 128 UUID bits,
+including the timestamp and 74 random bits. It does not shorten the random field.
+Prefixes contain 1 to 16 lowercase ASCII letters or digits and start with a letter.
+An empty prefix is invalid. Omit the prefix to keep canonical UUID output.
+`resources.allocate` still requires a declared resource kind with a shorthand prefix;
+its optional `idPrefix` does not change human references such as `PS-123`.
+
+Compact IDs are case-sensitive. Keep the complete ID unchanged and use exact
+comparison for lookups. Normalize human shorthands separately. The encoding alphabet
+is `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`; compare with
+ordinary `<`, `>` or default string `sort()`, using binary collation in a database.
+The time-order promise applies only to random IDs under the same prefix and with
+increasing timestamps. Clock rollback can produce an earlier-sorting ID, and device
+clocks do not establish a global creation order. Use stored creation times or
+positions for product ordering. Mixed UUIDs, prefixes and migration IDs do not form
+one chronological sequence.
+
+Prefixes are readable labels, not extension ownership or routing information. Keep
+resource owner fields in references. Existing IDs remain unchanged; core extensions
+adopt compact IDs separately after their case-sensitive lookup paths are ready.
+The format alone does not add a search index or speed up record listing.
+
 When importing data, pass a stable source key to the migration callback's ID helper:
 
 ```ts
@@ -73,9 +104,9 @@ await ctx.storage.migrate(1, async (_previousVersion, migration) => {
   const legacy = await ctx.storage.readLegacy("old_notes");
   for (const source of legacy?.records ?? []) {
     if (typeof source.id !== "string") continue;
-    const id = migration.id(source.id);
+    const id = migration.id(source.id, "nt");
     await ctx.storage.records.commit({
-      operationId: migration.id(`import:${source.id}`),
+      operationId: migration.id(`import:${source.id}`, "op"),
       edits: [{ recordId: id, replace: source }],
     });
   }
@@ -86,6 +117,14 @@ The same extension, workbench, scope, migration version and key give the same ID
 on every device and on retries. Keep source keys stable. `storage.ids.create()`
 still makes random IDs inside a migration; use `migration.id(key)` for imported records.
 Existing callbacks that take only the previous version keep working.
+
+Migration IDs use a SHA-256-derived UUIDv8 and the same lossless encoding. The
+prefix changes only the text representation, not the hashed namespace or UUID
+bits. Keep the key, prefix choice and migration version stable across devices and
+retries: switching between omitted and supplied prefixes creates different record
+IDs. Migration IDs use no current time, device ID or random input, and have no
+creation-time order. Keep existing record IDs when transforming those records;
+use `migration.id` when a migration creates records from stable source data.
 
 For lists arranged by hand, store one `position` string on each item's record:
 
@@ -98,7 +137,7 @@ const earlier = ctx.storage.positions.between(undefined, first);
 
 Omit either neighbour to insert at an end. Compare strings with `<` and `>` or
 default string `sort()`. Do not use `localeCompare` or parse positions as numbers.
-Positions include the creating device's identity and a random ID. Concurrent
+Positions include the creating device's identity and a random hexadecimal suffix. Concurrent
 positions remain distinct, and a new position can fit between them. Existing
 positions never need rebalancing; strings can grow as gaps are divided.
 

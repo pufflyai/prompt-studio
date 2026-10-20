@@ -47,6 +47,7 @@ test("host storage exposes document groups, verified assets, legacy access, and 
     };
     const [first, other] = await Promise.all([context("First"), context("Other")]);
     expect(first.ids.create()).toMatch(/^[0-9a-f-]{14}7[0-9a-f-]{21}$/);
+    expect(first.ids.create("nt")).toMatch(/^nt_[0-9A-Za-z]{22}$/);
     const firstPosition = first.positions.between();
     const nextPosition = first.positions.between(firstPosition);
     expect(firstPosition < nextPosition).toBe(true);
@@ -56,6 +57,7 @@ test("host storage exposes document groups, verified assets, legacy access, and 
       expect(previous).toBe(0);
       const id = migration.id("source");
       expect(migration.id("source")).toBe(id);
+      expect(migration.id("source", "nt")).toMatch(/^nt_[0-9A-Za-z]{22}$/);
       await first.records.commit({ operationId: id, edits: [{ recordId: id, replace: { imported: true } }] });
       expect((await first.records.read(id)).value).toEqual({ imported: true });
       await other.migrate(1, async (_, otherMigration) => {
