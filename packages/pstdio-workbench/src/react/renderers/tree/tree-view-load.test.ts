@@ -62,6 +62,28 @@ test("a failed section aborts its siblings and waits for them to settle", async 
   expect(settled).toBe(true);
 });
 describe("loadTreeData", () => {
+  test("publishes completed slots while another slot is still loading", async () => {
+    const trees = createTrees();
+    const pending = Promise.withResolvers<[]>();
+    const body = [{ id: "sessions", nodes: [{ id: "session", label: "Session" }] }];
+    trees.registerTreeRenderer({
+      id: "navigation",
+      title: "Navigation",
+      getBody: () => body,
+      getHeader: () => pending.promise,
+      getChildren: () => [],
+    });
+    const published: unknown[] = [];
+    const reading = loadTreeData(trees, "navigation", {}, (data) => published.push(data.body));
+    await Bun.sleep(0);
+    try {
+      expect(published).toContainEqual(body);
+    } finally {
+      pending.resolve([]);
+      await reading;
+    }
+  });
+
   test("passes the widget resource to tree renderer loaders", async () => {
     const trees = createTrees();
     const resource = {

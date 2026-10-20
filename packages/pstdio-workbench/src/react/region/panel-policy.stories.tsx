@@ -36,7 +36,7 @@ export const RestrictedPanels: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("Session content")).toBeVisible();
+    await expect(await canvas.findByText("Session content")).toBeVisible();
     await expect(canvas.queryByRole("button", { name: "Hide Side Panel" })).toBeNull();
     await expect(canvas.queryByRole("button", { name: "Hide Bottom Panel" })).toBeNull();
     await expect(canvas.queryByRole("button", { name: "Float Side Panel" })).toBeNull();

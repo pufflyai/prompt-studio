@@ -71,6 +71,10 @@ The queue entry is the durable intent to run the session. The session row is the
 
 ## Dispatch Safety
 
+Session creation saves the initial prompt, model, options, and attachment references before returning. Both REST and
+extension commands return the session while the host starts the harness. Startup errors update that session. The saved
+request lets startup recovery retry a launch interrupted before harness acceptance.
+
 Queue dispatch keeps the claimed entry while resolving the harness and waiting for its
 workspace. Entries without attachments are removed only when start or resume accepts
 the run. Retryable workspace readiness failures release the claim and keep the prompt

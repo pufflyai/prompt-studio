@@ -13,6 +13,8 @@ export const createWorkbenchNavigationTrees = (renderers: ReturnType<typeof crea
       }),
     getViewDefaultExpandedSectionIds: (viewId) => renderers.getTreeRenderer(viewId)?.defaultExpandedSectionIds,
     getViewSections: (viewId, context) => renderers.getBody(viewId, { ...context, viewId }),
+    getViewStructure: (viewId, context) =>
+      renderers.getTreeRenderer(viewId)?.getStructure?.({ ...context, viewId }) ?? [],
     getViewChildren: (viewId, node, context) => renderers.getChildren(viewId, node, { ...context, viewId }),
     moveViewNode: (viewId, source, target, context) => moveNavigationNode(renderers, viewId, source, target, context),
   });

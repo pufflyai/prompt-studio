@@ -70,6 +70,12 @@ describe("buildSessionsLevelSections", () => {
       resource: sessionResource("session-1"),
     });
   });
+  test("shows the Sessions section as loading before its sessions arrive", () => {
+    const [loading] = buildSessionsLevelSections();
+    const [loaded] = buildSessionsLevelSections([]);
+    expect(loading).toMatchObject({ id: loaded?.id, label: loaded?.label, loading: true, nodes: [] });
+    expect(loaded?.loading).toBe(false);
+  });
   test("creates an unscoped session from the Sessions section", () => {
     expect(buildSessionsLevelSections([])[0]?.actions).toEqual([
       { id: "sessions.create", label: "New session", icon: "Plus", commandId: dashboardCommandIds.createSession },

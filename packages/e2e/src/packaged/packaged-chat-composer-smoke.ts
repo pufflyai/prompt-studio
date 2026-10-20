@@ -29,8 +29,8 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
     await page.goto(`${baseUrl}/projects/${project.id}/sessions`);
-    const editor = page.getByTestId("content-editable").last();
-    const send = page.getByTestId("send-message-button").last();
+    const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
+    const send = page.getByTestId("send-message-button").filter({ visible: true }).last();
     let release!: () => void;
     const held = new Promise<void>((resolve) => {
       release = resolve;

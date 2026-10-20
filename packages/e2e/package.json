@@ -15,6 +15,7 @@
     "perf:frontend": "bun run --cwd ../.. build -- --scope e2e --scope pstdio-dashboard --include-dependencies && bun run src/scripts/run-playwright.ts -c playwright.perf.config.ts",
     "perf:frontend:trace": "PLAYWRIGHT_TRACE=on bun run perf:frontend",
     "test:planner-stress": "bun src/perf/planner-stress.ts",
+    "perf:subnav": "bun src/perf/subnav-benchmark.ts",
     "report": "playwright show-report"
   },
   "devDependencies": {
