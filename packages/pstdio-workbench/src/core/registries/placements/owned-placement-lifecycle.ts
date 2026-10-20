@@ -79,9 +79,13 @@ const retainResourceInstances = (
 };
 // An instance keeps the key it opened with while updates change its resource, so an open
 // resource is found by what the instance shows now. A new instance never reuses a taken key.
-const resourceInstanceKey = (current: readonly OwnedResourceInstance[], resource: ResourceRef) => {
+const resourceInstanceKey = (
+  current: readonly OwnedResourceInstance[],
+  resource: ResourceRef,
+  referenceKey: (resource: ResourceRef) => string,
+) => {
   const key = resourceKey(resource);
-  const shown = current.find((instance) => resourceKey(instance.resource) === key);
+  const shown = current.find((instance) => referenceKey(instance.resource) === referenceKey(resource));
   if (shown) return shown.instanceKey;
   const taken = new Set(current.map((instance) => instance.instanceKey));
   let instanceKey = key;
@@ -93,6 +97,7 @@ export const openResourcePlacement = (input: {
   id: string;
   item: WorkbenchOwnedPlacementItem;
   state: OwnedPlacementState;
+  resourceReferenceKey?: (resource: ResourceRef) => string;
   resource?: ResourceRef;
   open?: PageOpenIntent;
   title?: string;
@@ -110,7 +115,9 @@ export const openResourcePlacement = (input: {
   const current = state.resourceInstances.get(id) ?? [];
   const instance: OwnedResourceInstance = {
     instanceKey:
-      item.binding.cardinality === "one" ? SINGLE_RESOURCE_INSTANCE_KEY : resourceInstanceKey(current, input.resource),
+      item.binding.cardinality === "one"
+        ? SINGLE_RESOURCE_INSTANCE_KEY
+        : resourceInstanceKey(current, input.resource, input.resourceReferenceKey ?? resourceKey),
     resource: input.resource,
     ...(item.binding.cardinality === "many" ? { open: input.open ?? ("preview" as const) } : {}),
     ...(input.title ? { title: input.title } : {}),

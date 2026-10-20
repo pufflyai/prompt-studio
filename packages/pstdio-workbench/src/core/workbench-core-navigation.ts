@@ -36,11 +36,7 @@ export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =
         canOpenPanel: (target) => canOpenCorePanel(core, target),
         canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
         openPanelTarget: (target) => openCorePanelTarget(core, target),
-        openPageTarget: (target) => {
-          const result = core.pageLocations.navigate(target);
-          if (!result.ok) throw new Error(result.diagnostic.message);
-          return result;
-        },
+        openPageTarget: (target) => prepareWorkbenchNavigation(core, [target]).commit(),
         executeCommand: (commandId, args, region) =>
           core.commands.executeCommand(commandId, args, region ? { region, source: "panel-add" } : undefined),
         openHref: (href) => globalThis.open(href, "_blank", "noopener,noreferrer"),

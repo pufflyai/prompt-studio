@@ -1,6 +1,10 @@
 import type { PageSlotRef, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
-import { type PlacementDestination, placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import {
+  type PlacementDestination,
+  placementIdentityKey,
+  reconcileOwnedPlacements,
+} from "../../registries/layout/placement-reconciliation";
 import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
@@ -11,6 +15,8 @@ import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { requirePanelOpen } from "../shell/panel-open-policy";
+
+import { findExistingEditor } from "./existing-editor";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
 
@@ -32,6 +38,24 @@ const recordPanelOpenings = (
   for (const placement of placements) {
     activate.set(region ?? placement.region, placement.identity);
     if (region) destinations.set(placementIdentityKey(placement.identity), { identity: placement.identity, region });
+  }
+};
+
+const requireTargetPanels = (
+  core: WorkbenchCore,
+  target: NavigationOperation,
+  proposed: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  beforeOpen: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+) => {
+  if (target.kind === "panel") {
+    for (const placement of proposed.reconciliation.activate)
+      requirePanelOpen(core, target.region ?? placement.region, {
+        modeId: proposed.activeModeId,
+        identity: placement.identity,
+        resource: target.resource,
+        requestedRegion: target.region,
+        proposed: beforeOpen,
+      });
   }
 };
 
@@ -95,6 +119,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   let modeState = originalMode;
   let shellState = originalShell;
   let proposed = original;
+  let navigatesPage = false;
   const activate = new Map<WorkbenchRegion, PlacementIdentity>();
   const destinations = new Map<string, PlacementDestination>();
   const owned = (modeId = proposed.activeModeId) => ({
@@ -104,6 +129,8 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
 
   for (const target of targets) {
     const beforeOpen = proposed;
+    const beforeMode = modeState;
+    const beforeShell = shellState;
     if (target.kind === "page") {
       if (!proposed.projectId) throw new Error("Cannot navigate before a project is active");
       const resolved = locations.resolve(target);
@@ -156,29 +183,35 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     } else {
       throw new Error("Compound navigation accepts only page and panel targets");
     }
-    if (target.kind === "panel") {
-      for (const placement of proposed.reconciliation.activate)
-        requirePanelOpen(core, target.region ?? placement.region, {
-          modeId: proposed.activeModeId,
-          identity: placement.identity,
-          resource: target.resource,
-          requestedRegion: target.region,
-          proposed: beforeOpen,
-        });
+    const existing = findExistingEditor(core, target, beforeOpen, proposed, [...destinations.values()]);
+    if (existing) {
+      requirePanelOpen(core, existing.region, {
+        modeId: beforeOpen.activeModeId,
+        identity: existing.identity,
+        requestedRegion: target.kind === "panel" ? target.region : undefined,
+        proposed: beforeOpen,
+      });
+      proposed = beforeOpen;
+      modeState = beforeMode;
+      shellState = beforeShell;
+      activate.set(existing.region, existing.identity);
+      continue;
     }
+    if (target.kind === "page") navigatesPage = true;
+    requireTargetPanels(core, target, proposed, beforeOpen);
     recordPanelOpenings(target, proposed.reconciliation.activate, activate, destinations);
   }
   const present = new Set(proposed.placements.map((placement) => placementIdentityKey(placement.identity)));
-  const final = pages.prepare.compose(
-    original,
-    {
-      ...proposed,
+  const final = {
+    ...proposed,
+    reconciliation: reconcileOwnedPlacements({
+      current: original.placements,
+      desired: proposed.placements,
       activate: [...activate.values()].filter((identity) => present.has(placementIdentityKey(identity))),
       destinations: [...destinations.values()],
-      action: "prepareCompoundNavigation",
-    },
-    owned(),
-  );
+      valuesEqual: (left, right) => JSON.stringify(left) === JSON.stringify(right),
+    }),
+  };
   return {
     commit: () =>
       batchWorkbenchChanges(() => {
@@ -190,7 +223,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
           applyOwners();
           return pages.publish(final, "navigateCompoundTarget");
         };
-        const result = final.location ? locations.commit(final, applyOwners) : publishWithoutLocation();
+        const result = final.location ? locations.commit(final, applyOwners, navigatesPage) : publishWithoutLocation();
         if (modeState !== originalMode) mode.publish();
         if (shellState !== originalShell) shell.publish();
         return result;

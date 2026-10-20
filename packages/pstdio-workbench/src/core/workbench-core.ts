@@ -160,6 +160,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const pageResources = input.pageResources ?? defaultPageResourceCodec;
 
   const modePlacements = createWorkbenchModePlacementRegistry({
+    resourceReferenceKey: (resource) => core.pages.resourceReferenceKey(resource),
     loadLayout: (context) => layoutCache.readMode(context.projectId, context.modeId),
     validateOpen: (identity, region, options) => requirePanelOpen(core, region, { identity, ...options }),
     getProjectId: () => core?.pages.store.getState().projectId,
@@ -170,6 +171,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const shellPlacements = createWorkbenchShellPlacementRegistry({
+    resourceReferenceKey: (resource) => core.pages.resourceReferenceKey(resource),
     views,
     viewMenus,
     getPanel: layout.getWidget,

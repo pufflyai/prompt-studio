@@ -258,7 +258,7 @@ export const createWorkbenchPageLocationController = <Value>(
         resources: internals.resources,
         active: input.registry.store.getState().location,
       }),
-    commit: (state, beforePublish) => {
+    commit: (state, beforePublish, notifyNavigation) => {
       if (!state.projectId || !state.location) throw new Error("Cannot navigate before a project is active");
       const history = workbenchPageLocationsEqual(
         input.registry.store.getState().location,
@@ -268,7 +268,9 @@ export const createWorkbenchPageLocationController = <Value>(
       )
         ? "none"
         : "push";
-      return publish(state.projectId, state, history, "navigateCompoundTarget", beforePublish);
+      const result = publish(state.projectId, state, history, "navigateCompoundTarget", beforePublish);
+      if (notifyNavigation && result.ok) navigation.notify(result.location);
+      return result;
     },
   });
   return controller;

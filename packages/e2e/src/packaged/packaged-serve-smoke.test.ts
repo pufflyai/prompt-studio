@@ -97,6 +97,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Guest pointer presses and clicks reach the host once, and dismiss tab menus across the sandbox boundary.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 // Its native Notes editor persists Select All heading changes across preserved blank lines and reload.
+// Reopening Notes from their collection keeps one mounted editor in Side or Bottom and preserves the route.
 // A context-menu deletion resolves its hidden note identifier without opening a parameter form.
 // packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.

@@ -28,7 +28,10 @@ export interface PreparedOwnedPlacements<Value> {
   shell: readonly ResolvedOwnedPlacement<Value>[];
   mode: readonly ResolvedOwnedPlacement<Value>[];
 }
-export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryInput<Value>) => {
+export const createPagePreparation = <Value>(
+  input: CreateWorkbenchPageRegistryInput<Value>,
+  resourceReferenceKey: (resource: ResourceRef) => string,
+) => {
   const normalizeResource = input.resources.normalize;
   const requirePage = (current: WorkbenchPageRegistryStoreState<Value>, pageId: string) => {
     const page = current.pages[pageId];
@@ -125,11 +128,18 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
         pageResourceContextKey(page, normalizedTarget.resource) ||
       current.pageStates[stateKey]?.activePrimaryInstanceKey !== primaryState.activePrimaryInstanceKey;
     const pageState = openFollowers
-      ? openPageResourceBindings({ page, state: primaryState, target: normalizedTarget, resourceKey })
+      ? openPageResourceBindings({
+          page,
+          state: primaryState,
+          target: normalizedTarget,
+          resourceKey: resourceReferenceKey,
+        })
       : primaryState;
     const primary = primarySlot(page);
     const instanceKey = pageState.activePrimaryInstanceKey;
-    const followers = openFollowers ? pageFollowerIdentities(page, normalizedTarget.resource, resourceKey) : [];
+    const followers = openFollowers
+      ? pageFollowerIdentities(page, normalizedTarget.resource, resourceReferenceKey)
+      : [];
     return compose(
       current,
       {
@@ -154,7 +164,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
   ) => {
     if (current.activePageId !== target.pageId) throw new Error(`Page is not active: ${target.pageId}`);
     const page = requirePage(current, target.pageId);
-    const resourceKey = (resource: ResourceRef) => pageResourceInstanceKey(page, resource, input.resources);
+    const resourceKey = resourceReferenceKey;
     const slot = requirePageSlot(page, target.slotId);
     if (slot.role !== "auxiliary") throw new Error(`Page slot is not an auxiliary panel: ${page.id}.${slot.id}`);
     const stateKey = pageStateKey(page, current.location, input.resources);

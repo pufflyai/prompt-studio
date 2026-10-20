@@ -91,6 +91,7 @@ const tabState = (open: PageOpenIntent | undefined) => {
 };
 interface CreateWorkbenchShellPlacementRegistryInput {
   views: WorkbenchViewRegistry;
+  resourceReferenceKey?: (resource: ResourceRef) => string;
   viewMenus?: WorkbenchViewMenuRegistry;
   validateOpen?(
     identity: PlacementIdentity,
@@ -221,6 +222,7 @@ export const createWorkbenchShellPlacementRegistry = (
         label,
         target,
         item: placement.item,
+        resourceReferenceKey: input.resourceReferenceKey,
         current,
         identityFor: (instanceKey) => identityFor(placement.id, instanceKey),
       });

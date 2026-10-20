@@ -65,9 +65,11 @@ for (const source of ["side", "secondary"] as const) {
       const existing = w.layout.getActivePanel(destination)!;
       w.movePanel(existing.instanceId, source);
       await panel!.open!({ type: "tool", id: "current" });
-      expect(w.layout.listPanelInstances(destination).map((tab) => tab.instanceId)).toEqual([existing.instanceId]);
-      expect(w.layout.listPanelInstances(source)).toEqual([]);
-      expect(w.shell.getRegionState(source).open).toBe(false);
+      const reusedRegion = addCommand ? destination : source;
+      const emptyRegion = addCommand ? source : destination;
+      expect(w.layout.listPanelInstances(reusedRegion).map((tab) => tab.instanceId)).toEqual([existing.instanceId]);
+      expect(w.layout.listPanelInstances(emptyRegion)).toEqual([]);
+      expect(w.shell.getRegionState(source).open).toBe(!addCommand);
     });
   }
 }

@@ -77,7 +77,7 @@ export const createWorkbenchPageRegistry = <Value>(
     return page;
   };
 
-  const prepare = createPagePreparation(input);
+  const prepare = createPagePreparation(input, (resource) => registry.resourceReferenceKey(resource));
   const commit = (next: PageRegistryCommitInput<Value>) =>
     publishState(prepare.compose(publishingState ?? store.getState(), next), next.action);
   const activatePageWithStates = (target: WorkbenchPageLocationCommitInput) =>

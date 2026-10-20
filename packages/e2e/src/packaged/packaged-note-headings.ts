@@ -54,6 +54,31 @@ export const verifyPackagedNoteHeadings = async (
     name: "Heading formatting",
     exact: true,
   });
+  await editor.evaluate((node) => node.setAttribute("data-editor-reuse-proof", "retained"));
+  for (const region of ["side", "secondary"] as const) {
+    const tab = page.getByRole("tab", { name: "Heading formatting", exact: true });
+    await tab.focus();
+    await page.keyboard.press("Shift+F10");
+    const destination = region === "side" ? "Move to Side" : "Move to Secondary";
+    await page.getByRole("menuitem", { name: destination, exact: true }).click();
+    const listing = `${origin}/projects/${projectId}/extensions/pstdio.pstdio-notes/notes`;
+    await page.evaluate((url) => {
+      history.pushState(null, "", url);
+      dispatchEvent(new PopStateEvent("popstate"));
+    }, listing);
+    await expect(row).toBeVisible();
+    await row.click();
+    await expect(page).toHaveURL(listing);
+    await expect(
+      page.locator(`[data-workbench-panel-header="${region}"]`).getByRole("tab", {
+        name: "Heading formatting",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(tab).toHaveCount(1);
+    await expect(editor).toHaveAttribute("data-editor-reuse-proof", "retained");
+    await expect(editor).toContainText("Third paragraph.");
+  }
   await row.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();

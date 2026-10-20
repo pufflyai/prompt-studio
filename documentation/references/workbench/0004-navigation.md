@@ -16,6 +16,8 @@ The workbench navigates only to explicit targets. This page lists the target kin
 
 A page target may carry `resource`, `section` or `position`, `open`, and contextual `parent`. A panel target may carry `resource` and `open`. A target never carries a region or activation callback.
 
+Explicit page and panel opens, including **Add panel**, first select an already open view of the same resource and declared document in the current project and mode. This applies across page, mode and shell owners. The existing editor keeps its tray, mounted content, draft and pin state. Selecting it in Side or Bottom keeps Main’s route, breadcrumbs and history. Different views, resources and documents open separately. Hidden Main tabs still belong to their page; reopening one follows normal page navigation.
+
 ## Related resources
 
 Appearance's **Open related resources** setting is on by default. Opening a resource or selecting its tab evaluates its owner's optional `relatedOpenings` command. Only entries with `autoOpen: true` open automatically. Targets use their normal owner resolvers; automatic openings do not recursively open their own related resources.

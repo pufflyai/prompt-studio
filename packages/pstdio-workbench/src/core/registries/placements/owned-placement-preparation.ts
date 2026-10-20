@@ -56,6 +56,7 @@ export const prepareOwnedPlacement = (input: {
   label: string;
   target: OwnedPlacementOpenInput;
   item: WorkbenchOwnedPlacementItem;
+  resourceReferenceKey?: (resource: ResourceRef) => string;
   current: OwnedPlacementState;
   identityFor(instanceKey: string): PlacementIdentity;
 }) => {
@@ -63,7 +64,14 @@ export const prepareOwnedPlacement = (input: {
     staticOverrides: new Map(input.current.staticOverrides),
     resourceInstances: new Map(input.current.resourceInstances),
   };
-  const operation = { ...input.target, label: input.label, id: input.target.placementId, item: input.item, state };
+  const operation = {
+    ...input.target,
+    label: input.label,
+    id: input.target.placementId,
+    item: input.item,
+    state,
+    resourceReferenceKey: input.resourceReferenceKey,
+  };
   let instanceKey = "default";
   if (input.item.kind === "view") openStaticPlacement(operation);
   else instanceKey = openResourcePlacement(operation);
