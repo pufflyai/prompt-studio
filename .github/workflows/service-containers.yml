@@ -76,4 +76,5 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
+      - run: bun test infra/container-entrypoint.test.ts
       - run: bun infra/relay/smoke-portable.ts
