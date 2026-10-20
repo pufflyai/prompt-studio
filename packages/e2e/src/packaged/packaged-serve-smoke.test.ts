@@ -63,6 +63,7 @@ import { registerNotificationStatusSmokeTests } from "./packaged-notification-st
 // Real React Query subscriptions cover matching events, reconnect deduplication and unmount cleanup.
 // Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
+import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
 // Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
@@ -298,3 +299,4 @@ registerPageParamsSmokeTests();
 registerResourcePageSmokeTests();
 
 registerDocumentSyncSmokeTests();
+registerPersonalHistorySmokeTests();

@@ -32,7 +32,10 @@ export const createCoreDomainServices = (input: {
   const filesStorageService = createFilesStorageService(storageRoot);
   const fileService = createFileService({ filesDBService: dbs.filesDBService, filesStorageService, eventBus });
 
-  const syncService = createSyncService({ db });
+  const syncService = createSyncService({
+    db,
+    personalState: () => input.getCommandDeps().personalHistoryService.fullState(),
+  });
   const assetTransferService = createAssetTransferService({
     transfers: dbs.assetTransfersDBService,
     bytes: createAssetBytesStorage(storageRoot),

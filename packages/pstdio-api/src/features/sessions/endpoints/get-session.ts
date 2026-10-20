@@ -37,6 +37,9 @@ export const getSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<type
     const session = await deps.sessionService.get(id);
 
     if (!session) {
+      const personal = await deps.personalHistoryService.getSession(id);
+      if (personal)
+        return c.json({ ...toSessionResponse(personal, personal.workspace_id), lastExit: null, last_exit: null }, 200);
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
@@ -44,10 +47,11 @@ export const getSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<type
     const lastExit = session.project_id
       ? await readSessionExit(deps.activityEventsService, { ...session, project_id: session.project_id })
       : null;
+    const workspaceId = workspace?.project_id === session.project_id ? workspace.id : null;
     return c.json(
       {
         ...session,
-        ...toSessionResponse(session, workspace?.project_id === session.project_id ? workspace.id : null),
+        ...toSessionResponse(session, workspaceId),
         lastExit,
         last_exit: lastExit,
       },

@@ -6,7 +6,7 @@ import { getSessionHarness } from "./get-session-harness";
 import { resolveSessionWorkspaceContext } from "./session-workspace-context";
 
 type HistoryDeps = Pick<SessionsRouteDeps, "sessionService" | "fileService" | "harnessRegistry"> &
-  Partial<Pick<SessionsRouteDeps, "workspaceSessionService">>;
+  Partial<Pick<SessionsRouteDeps, "workspaceSessionService" | "personalHistoryService">>;
 
 export class SessionNotFoundError extends Error {
   constructor() {
@@ -74,6 +74,11 @@ export const loadSessionHistory = async (
 };
 
 export const getSessionHistory = async (sessionId: string, deps: HistoryDeps) => {
+  if (deps.personalHistoryService && !(await deps.sessionService.get(sessionId))) {
+    const remote = await deps.personalHistoryService.getSession(sessionId);
+    if (!remote?.project_id) throw new SessionNotFoundError();
+    return (await deps.personalHistoryService.messages(sessionId, remote.project_id)) ?? [];
+  }
   while (true) {
     const entry = deps.sessionService.store.get(sessionId);
     if (entry) {

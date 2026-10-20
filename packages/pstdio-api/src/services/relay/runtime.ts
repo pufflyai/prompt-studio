@@ -3,6 +3,7 @@ import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
 import { startRelayExtension } from "./extension-owner";
+import { startRelayPersonalHistory } from "./personal";
 
 export type RelayWorkbench = {
   accountId: string;
@@ -20,6 +21,7 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
   const controller = new AbortController();
   const { deps } = input;
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
+  const personal = new Map<string, ReturnType<typeof startRelayPersonalHistory>>();
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
     await connection.done;
@@ -35,6 +37,11 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
     });
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
+    if (!personal.has(workbenchId))
+      personal.set(
+        workbenchId,
+        startRelayPersonalHistory({ config, deps, signal: controller.signal, access: access.get(workbenchId)! }),
+      );
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
     if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
     const workspace = await deps.workspaceService.getDefault(workbenchId);
@@ -115,6 +122,7 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
   return {
     // Replaces the synced workbenches. Only workbenches whose login changed restart their connections.
     async update(next: RelayWorkbench[]) {
+      await deps.personalHistoryService.refreshIdentity();
       const desired = new Map(next.map((connection) => [connection.workbenchId, connection]));
       const changed = new Set(
         [...workbenches]
@@ -122,6 +130,10 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
           .map(([id]) => id),
       );
       for (const id of changed) {
+        const previous = personal.get(id);
+        previous?.close();
+        if (previous) await previous.done;
+        personal.delete(id);
         workbenches.delete(id);
         access.delete(id);
       }
@@ -142,8 +154,10 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
       clearTimeout(retry);
       controller.abort();
       for (const connection of connections.values()) connection.close();
+      for (const connection of personal.values()) connection.close();
       await running;
       await Promise.all([...connections.values()].map((connection) => connection.done));
+      await Promise.all([...personal.values()].map((connection) => connection.done));
     },
   };
 };

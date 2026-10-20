@@ -5,6 +5,8 @@ import type { ParamObjectSchema } from "./params";
 import type { ResourceAnchor, ResourceRef } from "./resources";
 
 export interface ExtensionWorkspace {
+  /** The device that owns this personal workspace. */
+  device?: { ownerId: string; id: string; name: string };
   id: string;
   name?: string;
   projectId?: string;

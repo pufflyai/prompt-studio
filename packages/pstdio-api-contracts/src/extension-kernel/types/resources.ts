@@ -23,6 +23,8 @@ export type RelatedResourceOpenings = readonly RelatedResourceOpening[];
 export type ResourceRole = "primary" | "context" | "source" | "result";
 
 export interface ResourceRef {
+  /** Personal session/workspace ownership. Other users can see this pointer only. */
+  device?: { ownerId: string; id: string; name: string };
   type: string;
   id: string;
   shorthand?: string;

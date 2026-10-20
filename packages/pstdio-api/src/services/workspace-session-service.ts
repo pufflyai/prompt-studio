@@ -19,5 +19,6 @@ export const createWorkspaceSessionService = (deps: WorkspaceSessionServiceDeps)
     link,
     getWorkspaceBySessionId: raw.getWorkspaceBySessionId,
     listByWorkspace: raw.listByWorkspace,
+    listLinks: raw.listLinks,
   };
 };

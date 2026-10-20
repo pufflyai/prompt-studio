@@ -33,6 +33,7 @@ import { useSessionLinks } from "./session-chat-links";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";
 import { SessionHarnessUnavailable } from "./session-harness-unavailable";
+import { SessionPersonalDevice } from "./session-personal-device";
 import { SessionQueuedChatPanel } from "./session-queued-chat-panel";
 import { useCommandComposer } from "./use-command-composer";
 import { usePendingSessionFollowUp } from "./use-pending-session-follow-up";
@@ -198,9 +199,13 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     chatDraft.change("");
     draftAttachments.clearSubmittedAttachments();
   });
-  const interrupt = sessionId && canInterrupt ? () => stopSession.mutate(sessionId) : undefined;
+  const interrupt = sessionId && canInterrupt && !view.device ? () => stopSession.mutate(sessionId) : undefined;
   const reviewExtensions = () =>
     void input.workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "extensions" });
+  let composerFallback: ReactNode;
+  if (view.device) composerFallback = <SessionPersonalDevice name={view.device.name} />;
+  else if (noHarnessAvailable)
+    composerFallback = <SessionHarnessUnavailable onInterrupt={interrupt} onReviewExtensions={reviewExtensions} />;
 
   return (
     // The widget host sizes itself to its content, so the chat panel is pinned
@@ -253,11 +258,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             onChatInputChange={chatDraft.change}
             chatInputCommands={commandComposer.suggestions}
             composerDecision={decision}
-            composerFallback={
-              noHarnessAvailable ? (
-                <SessionHarnessUnavailable onInterrupt={interrupt} onReviewExtensions={reviewExtensions} />
-              ) : undefined
-            }
+            composerFallback={composerFallback}
             attachedResources={attachedResources}
             projectId={projectId}
             sessionId={sessionId}
@@ -277,7 +278,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               setHarnessParamOverrides,
               children: commandComposer.controls,
             }}
-            submitDisabled={!canSubmit}
+            submitDisabled={!canSubmit || Boolean(view.device)}
+            inputDisabled={Boolean(view.device)}
             workspaceHub={
               <SessionChatWorkspaceHub
                 view={view}
@@ -294,7 +296,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
                 action={workspaceAction}
               />
             }
-            onSubmitMessage={submit}
+            onSubmitMessage={view.device ? undefined : submit}
             onInterrupt={interrupt}
           />
         </Box>

@@ -5,6 +5,8 @@ import type { ExtensionWebviewUrlIssuer } from "./extension-webview-access";
 export type ExtensionsRouteDeps = Pick<
   RouteDeps,
   | "artifactMountWrites"
+  | "personalHistoryService"
+  | "accountService"
   | "assetTransferService"
   | "harnessRegistry"
   | "eventBus"
