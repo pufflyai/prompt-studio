@@ -12,6 +12,8 @@ import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
+// Chat checks retain all replay chunks, cached history, and panel animation and resize behavior.
+import { registerPackagedChatMotionSmokeTests } from "./packaged-chat-motion-smoke";
 // Localized parameter guidance is readable in compiled CLI help.
 import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
 // Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
@@ -160,6 +162,7 @@ test("includes extension development, smoke test, browser setup and update comma
 
 // Includes host drive discovery and browsing through the packaged filesystem API.
 registerPackagedProjectSetupSmokeTests();
+registerPackagedChatMotionSmokeTests();
 registerSessionLaunchSmokeTests();
 
 test(

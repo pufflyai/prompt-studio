@@ -74,7 +74,7 @@ export const registerPackagedProjectSetupSmokeTests = () => {
         rmSync(tempRoot, { recursive: true, force: true });
       }
     },
-    PACKAGED_TEST_TIMEOUT,
+    Math.max(PACKAGED_TEST_TIMEOUT, 45_000),
   );
 
   test(

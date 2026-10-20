@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, type Page } from "@playwright/test";
 import { expectPackagedChatHistory } from "./packaged-chat-history-smoke";
 
@@ -76,6 +78,7 @@ export const expectPackagedStreamingMotion = async (
   baseUrl: string,
   projectId: string,
   headers: Record<string, string>,
+  projectRoot: string,
 ) => {
   const response = await fetch(`${baseUrl}/v1/sessions`, {
     method: "POST",
@@ -83,7 +86,7 @@ export const expectPackagedStreamingMotion = async (
     body: JSON.stringify({
       project_id: projectId,
       title: "Motion replay",
-      prompt: "Replay __fake_long_stream__",
+      prompt: "Replay __fake_long_stream__ __fake_hold__",
       agent: "pstdio.workbench-fixture.harness.fake",
     }),
   });
@@ -98,7 +101,8 @@ export const expectPackagedStreamingMotion = async (
     .first();
   await expect(text).toBeVisible();
   const earlier = await text.elementHandle();
-  await expect(page.locator(".streaming-text-chunk").first()).toBeAttached();
+  // Release the remaining chunks only after the first visible response is observed.
+  writeFileSync(join(projectRoot, ".fake-hold-release-1"), "release");
   await expect(
     page
       .getByText(/^Step 2\./)
@@ -106,6 +110,8 @@ export const expectPackagedStreamingMotion = async (
       .first(),
   ).toBeVisible();
   expect(await earlier?.evaluate((element) => element.isConnected)).toBe(true);
+  writeFileSync(join(projectRoot, ".fake-hold-release-2"), "release");
+  await expect(page.locator(".streaming-text-chunk").first()).toBeAttached();
   await expect
     .poll(
       async () => {

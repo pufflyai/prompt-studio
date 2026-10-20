@@ -108,10 +108,11 @@ const syncSnapshotForProject = async (
   const synced: SyncedInstalledExtension[] = [];
 
   for (const extension of discovered) {
-    await deps.extensionService.syncInstalledSourceForProject({
+    const result = await deps.extensionService.syncInstalledSourceForProject({
       ...extension,
       projectId: deps.projectId,
     });
+    if (result === null) continue;
     // The hash of the folder as it is on disk, which the caller compares against the adopted hash.
     synced.push({ installName: extension.installName, sourceHash: extension.sourceHash ?? null });
   }

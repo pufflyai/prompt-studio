@@ -69,7 +69,7 @@ describe("session attachment delete guard", () => {
       const createRes = await createPromise;
       expect(createRes.status).toBe(201);
       const created = (await createRes.json()) as { id: string };
-      await waitForCompleted(isolated.app, created.id);
+      await waitForCompleted(isolated, created.id);
     } finally {
       marker.release();
       await isolated.close();
@@ -117,7 +117,7 @@ describe("session attachment delete guard", () => {
       marker.release();
       const followUpRes = await followUpPromise;
       expect(followUpRes.status).toBe(200);
-      await waitForCompleted(isolated.app, session.id);
+      await waitForCompleted(isolated, session.id);
     } finally {
       marker.release();
       await isolated.close();
@@ -159,7 +159,7 @@ describe("session attachment delete guard", () => {
 
       const created = (await createRes.json()) as { id: string };
       isolated.harness.releaseHarnessResolution();
-      await waitForCompleted(isolated.app, created.id);
+      await waitForCompleted(isolated, created.id);
     } finally {
       isolated.harness.releaseHarnessResolution();
       await isolated.close();
@@ -205,7 +205,7 @@ describe("session attachment delete guard", () => {
       expect(existsSync(uploadedFile!.storage_path)).toBe(true);
 
       isolated.harness.releaseHarnessResolution();
-      await waitForCompleted(isolated.app, session.id);
+      await waitForCompleted(isolated, session.id);
     } finally {
       isolated.harness.releaseHarnessResolution();
       await isolated.close();
@@ -253,7 +253,7 @@ describe("session attachment delete guard", () => {
 
       isolated.harness.completeAll();
       const created = (await createRes.json()) as { id: string };
-      await waitForCompleted(isolated.app, created.id);
+      await waitForCompleted(isolated, created.id);
     } finally {
       await isolated.close();
     }

@@ -2,11 +2,13 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { expectPackagedCollapsedMessage } from "./packaged-collapsed-message-smoke";
-import { expectPackagedPanelMotion, expectPackagedStreamingMotion } from "./packaged-motion-smoke";
 
 export const expectPackagedChatComposer = async (baseUrl: string, headers: Record<string, string>, root: string) => {
+  const startedAt = Date.now();
+  const phase = (name: string) => logTestPhase(`Packaged composer: ${name} (${Date.now() - startedAt}ms)`);
   const folder = join(root, "chat-project");
   // Guessed paths in chat become links only when the files exist.
   mkdirSync(join(folder, "src", "app", "(dashboard)"), { recursive: true });
@@ -29,6 +31,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
     await page.goto(`${baseUrl}/projects/${project.id}/sessions`);
+    phase("dashboard opened");
     const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
     const send = page.getByTestId("send-message-button").filter({ visible: true }).last();
     let release!: () => void;
@@ -54,6 +57,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     }
     await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
     await page.unroute(`${baseUrl}/v1/sessions`);
+    phase("creation draft handed off");
     const next = "Packaged composer follow-up";
     let releaseFollowUp!: () => void;
     const heldFollowUp = new Promise<void>((resolve) => {
@@ -76,6 +80,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(editor).toHaveAttribute("contenteditable", "true");
     await expect(editor).toBeFocused();
     await page.unroute("**/follow-up");
+    phase("follow-up draft handed off");
 
     const equations =
       "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nRead src/app.ts and src/app/(dashboard)/page.ts, not src/missing.ts. Open {{link('https://example.com')}}. End equations.";
@@ -120,6 +125,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(detail).toHaveCSS("white-space", "nowrap");
     await page.getByText("Wrap rows", { exact: true }).click();
     await page.keyboard.press("Escape");
+    phase("rich messages checked");
 
     const idleResponse = await fetch(`${baseUrl}/v1/sessions`, {
       method: "POST",
@@ -146,8 +152,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await editor.press("Enter");
     await expect(page.getByText('Fake Agent: completed "First idle-session message"').first()).toBeVisible();
     await expectPackagedCollapsedMessage(page, editor);
-    await expectPackagedStreamingMotion(page, baseUrl, project.id, headers);
-    await expectPackagedPanelMotion(page);
+    phase("idle session and collapsed message checked");
   } finally {
     await browser.close();
   }
