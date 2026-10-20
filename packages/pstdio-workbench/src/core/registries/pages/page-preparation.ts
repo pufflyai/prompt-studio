@@ -137,9 +137,7 @@ export const createPagePreparation = <Value>(
       : primaryState;
     const primary = primarySlot(page);
     const instanceKey = pageState.activePrimaryInstanceKey;
-    const followers = openFollowers
-      ? pageFollowerIdentities(page, normalizedTarget.resource, resourceReferenceKey)
-      : [];
+    const followers = openFollowers ? pageFollowerIdentities(page, normalizedTarget.resource, pageState) : [];
     return compose(
       current,
       {

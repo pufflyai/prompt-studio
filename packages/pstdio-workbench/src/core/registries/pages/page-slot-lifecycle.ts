@@ -46,10 +46,12 @@ export const openResourceSlot = (input: {
     throw new Error(`Page slot "${slot.id}" does not accept resource kind "${target.resource.type}"`);
   if (target.open && binding.cardinality !== "many")
     throw new Error(`Page slot "${slot.id}" accepts open intent only with many cardinality`);
+  const key = input.resourceKey(target.resource);
+  const existing = state.resourceInstances[slot.id]?.find((instance) => input.resourceKey(instance.resource) === key);
   const instanceKey =
     binding.cardinality === "one" && slot.role !== "primary"
       ? SINGLE_RESOURCE_INSTANCE_KEY
-      : input.resourceKey(target.resource);
+      : (existing?.instanceKey ?? key);
   const instance: WorkbenchPageSlotInstance = {
     instanceKey,
     resource: target.resource,

@@ -129,14 +129,10 @@ test("closing auxiliary and inactive Main panels preserves current page params",
   for (const id of ["PS-1", "PS-2"])
     h.registry.openSlot({ pageId: "resource-board", slotId: "cards", resource: { type: "ticket", id }, open: "pin" });
   const resourceUrl = h.browser.current().url;
-  expect(
-    h.controller.closePlacement({
-      kind: "page",
-      pageId: "resource-board",
-      slotId: "cards",
-      instanceKey: "pstdio://ticket/PS-1",
-    }).ok,
-  ).toBe(true);
+  const inactive = h.registry.store
+    .getState()
+    .placements.find((placement) => placement.value === "resource-board:ticket:PS-1")!;
+  expect(h.controller.closePlacement(inactive.identity).ok).toBe(true);
   expect(h.registry.store.getState().location?.resource?.id).toBe("PS-2");
   expect(h.registry.store.getState().location?.params).toEqual({ range: "now-24h" });
   expect(h.persistence.values.get("p1")?.location.params).toEqual({ range: "now-24h" });

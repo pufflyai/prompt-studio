@@ -14,6 +14,27 @@ import { SINGLE_RESOURCE_INSTANCE_KEY } from "../../registries/placements/placem
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { createWorkbenchInput, WorkbenchPagePersistenceScopeInput } from "../../workbench-core-types";
 import { workbenchPageLocationsEqual } from "../page-location/page-location-normalization";
+import { restoreModePanelLayout } from "./mode-panel-layout";
+
+const restorePageOwnerLayout = (page: WorkbenchLayout | undefined, mode: WorkbenchLayout | undefined) => {
+  if (!mode) return page;
+  const defaults = createDefaultWorkbenchLayout();
+  return restoreModePanelLayout(page ?? defaults, mode, defaults, page ?? defaults);
+};
+
+const hasPagePlacement = (
+  layout: WorkbenchLayout | undefined,
+  pageId: string,
+  matchesResource: (resource: ResourceRef | undefined) => boolean,
+) =>
+  Object.values(layout?.regions ?? {}).some((region) =>
+    region.widgets.some(
+      (placement) =>
+        placement.placementIdentity?.kind === "page" &&
+        placement.placementIdentity.pageId === pageId &&
+        matchesResource(placement.resource),
+    ),
+  );
 
 // The layout already persists instance resources, retention, and selection. Rebuild
 // the page owner's state from that cache instead of storing a second copy.
@@ -97,9 +118,10 @@ export const createPageStateRestorer =
       context: WorkbenchPagePersistenceScopeInput,
       page: WorkbenchPageContribution,
     ) => WorkbenchLayout | undefined = (context) => loadWorkbenchLocationLayout(input, context),
+    loadModeLayout?: (projectId: string | undefined, modeId: string) => WorkbenchLayout | undefined,
   ) =>
   (page: WorkbenchPageContribution, location: PageLocation, projectId: string) => {
-    const layout = loadLayout(
+    const pageLayout = loadLayout(
       {
         modeId: page.modeId,
         pageId: page.id,
@@ -108,16 +130,20 @@ export const createPageStateRestorer =
       },
       page,
     );
+    const modeLayout = loadModeLayout?.(projectId, page.modeId);
+    const layout = restorePageOwnerLayout(pageLayout, modeLayout);
     const saved = input.pageLocationPersistence?.load(projectId)?.location;
     const restoresSavedLocation = workbenchPageLocationsEqual(saved, location, defaultPageResourceCodec, [page]);
     if (
       !layout ||
       (!restoresSavedLocation &&
-        !Object.values(layout.regions).some((region) =>
-          region.widgets.some(
-            (placement) =>
-              placement.placementIdentity?.kind === "page" && placement.placementIdentity.pageId === page.id,
-          ),
+        !hasPagePlacement(pageLayout, page.id, () => true) &&
+        !hasPagePlacement(
+          modeLayout,
+          page.id,
+          (resource) =>
+            !page.resource ||
+            pageResourceContextKey(page, resource) === pageResourceContextKey(page, location.resource),
         ))
     )
       return undefined;

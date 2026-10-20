@@ -1,7 +1,6 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
-import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
 import { isPageSlotClosable, PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
 import type {
   WorkbenchPageContribution,
@@ -20,21 +19,13 @@ export const pagePlacementIdentity = (pageId: string, slotId: string, instanceKe
 export const pageFollowerIdentities = (
   page: WorkbenchPageContribution,
   resource: ResourceRef | undefined,
-  resourceKey: (resource: ResourceRef) => string,
+  state: WorkbenchPageRuntimeState,
 ) => {
   if (!resource) return [];
   return pageResourceBindingSlots(page, resource)
     .filter((slot) => slot.region !== "main")
     .filter((slot, index, slots) => slots.findIndex((candidate) => candidate.region === slot.region) === index)
-    .map((slot) =>
-      pagePlacementIdentity(
-        page.id,
-        slot.id,
-        slot.item.kind === "binding" && slot.item.binding.cardinality === "one"
-          ? SINGLE_RESOURCE_INSTANCE_KEY
-          : resourceKey(resource),
-      ),
-    );
+    .map((slot) => pagePlacementIdentity(page.id, slot.id, state.resourceInstances[slot.id]!.at(-1)!.instanceKey));
 };
 
 const validatePageSlots = (page: WorkbenchPageContribution) => {

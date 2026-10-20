@@ -43,7 +43,7 @@ test("a single-resource slot rebinds its resource without replacing its placemen
   expect(next.resourceInstances.preview).toHaveLength(1);
   expect(next.resourceInstances.preview[0].resource.id).toBe("next");
   expect(next.resourceInstances.preview[0].instanceKey).toBe(first.resourceInstances.preview[0].instanceKey);
-  expect(pageFollowerIdentities(page, { type: "animation", id: "next" }, resourceKey)[0]?.instanceKey).toBe(
+  expect(pageFollowerIdentities(page, { type: "animation", id: "next" }, next)[0]?.instanceKey).toBe(
     next.resourceInstances.preview[0].instanceKey,
   );
   const closed = closePageSlot({ page, slot, state: next, instanceKey: next.resourceInstances.preview[0].instanceKey });
