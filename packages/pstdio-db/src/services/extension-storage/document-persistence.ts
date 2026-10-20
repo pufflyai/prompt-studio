@@ -39,14 +39,22 @@ const loadDocument = async (
     .values({ ...address, state: new Uint8Array([0, 0]) })
     .onConflictDoNothing()
     .returning();
-  const [row] = await tx.select().from(storage_documents).where(documentWhere(address)).for("update");
-  if (inserted.length && address.document_id === "records") {
-    row.state = await importOwnerDocument(tx, owner, environmentId);
-    await tx.update(storage_documents).set({ state: row.state }).where(documentWhere(address));
-  }
+  const [row] = await tx
+    .select({ revision: storage_documents.revision, folded_revision: storage_documents.folded_revision })
+    .from(storage_documents)
+    .where(documentWhere(address))
+    .for("update");
   if (cached?.revision === row.revision) return { row, document: cached.document };
+  const [saved] = await tx
+    .select({ state: storage_documents.state })
+    .from(storage_documents)
+    .where(documentWhere(address));
+  if (inserted.length && address.document_id === "records") {
+    saved.state = await importOwnerDocument(tx, owner, environmentId);
+    await tx.update(storage_documents).set({ state: saved.state }).where(documentWhere(address));
+  }
   const document = new Y.Doc();
-  Y.applyUpdate(document, row.state);
+  Y.applyUpdate(document, saved.state);
   const updates = await tx
     .select()
     .from(storage_document_updates)
@@ -90,7 +98,7 @@ const localOperations = (tx: Transaction, address: DocumentAddress) => {
 const appendUpdates = async (
   tx: Transaction,
   address: DocumentAddress,
-  row: typeof storage_documents.$inferSelect,
+  row: Pick<typeof storage_documents.$inferSelect, "revision" | "folded_revision">,
   document: Y.Doc,
   updates: Uint8Array[],
 ) => {

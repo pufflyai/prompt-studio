@@ -48,4 +48,5 @@ for (const count of [100])
     );
     expect(queries.filter((query) => query.includes('from "extension_storage_journal"'))).toHaveLength(0);
     expect(queries.filter((query) => query.includes('from "storage_document_updates"'))).toHaveLength(0);
+    expect(queries.filter((query) => /^select .*"state".*from "storage_documents"/.test(query))).toHaveLength(0);
   });

@@ -72,26 +72,42 @@ const saveFilteredView = async (runtime: Awaited<ReturnType<typeof startRuntime>
   });
 };
 
-// Seeds 1,000 tickets, a saved filtered view, and edit history so a restart has a real journal to replay.
-const seedHome = async (home: string, edits: number) => {
+const installPlanner = async (
+  runtime: Awaited<ReturnType<typeof startRuntime>>,
+  home: string,
+  plannerSource?: string,
+) => {
+  const source = await preparePlannerSource(join(home, "fixtures"), plannerSource);
+  const env = { ...process.env, HOME: home, PSTDIO_HOME: home };
+  const added = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "add", source, "--name", "pstdio-planner", "--force"], {
+    cwd: join(home, "project"),
+    env: { ...env, PSTDIO_API_URL: runtime.baseUrl, PSTDIO_API_TOKEN: runtime.descriptor.token },
+    stdio: ["ignore", "ignore", "inherit"],
+  });
+  if (added.status !== 0) throw new Error("Installing Planner failed.");
+};
+
+const editedContent = (title: string, edit: number) =>
+  `# ${title}\n\n${"Revised plan details. ".repeat(60)}\n\nEdit ${edit}`;
+
+// Seeds 1,000 tickets, a saved filtered view, and edit history before restarting the runtime.
+const seedHome = async (home: string, edits: number, plannerSource?: string) => {
   const runtime = await startRuntime(home);
   try {
     const folder = join(home, "project");
     mkdirSync(folder, { recursive: true });
-    const created = await fetch(`${runtime.baseUrl}/v1/projects`, {
-      method: "POST",
-      headers: runtime.headers,
-      body: JSON.stringify(folderProjectInput({ name: "project" }, folder)),
-    });
-    if (!created.ok) throw new Error(`Creating the project failed: HTTP ${created.status}`);
-    const source = await preparePlannerSource(join(home, "fixtures"));
-    const env = { ...process.env, HOME: home, PSTDIO_HOME: home };
-    const added = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "add", source, "--name", "pstdio-planner"], {
-      cwd: folder,
-      env: { ...env, PSTDIO_API_URL: runtime.baseUrl, PSTDIO_API_TOKEN: runtime.descriptor.token },
-      stdio: ["ignore", "ignore", "inherit"],
-    });
-    if (added.status !== 0) throw new Error("Installing Planner failed.");
+    const projects = await fetch(`${runtime.baseUrl}/v1/projects`, { headers: runtime.headers });
+    if (!projects.ok) throw new Error(`Reading projects failed: HTTP ${projects.status}`);
+    const existing = ((await projects.json()) as { name: string }[]).some((project) => project.name === "project");
+    if (!existing) {
+      const created = await fetch(`${runtime.baseUrl}/v1/projects`, {
+        method: "POST",
+        headers: runtime.headers,
+        body: JSON.stringify(folderProjectInput({ name: "project" }, folder)),
+      });
+      if (!created.ok) throw new Error(`Creating the project failed: HTTP ${created.status}`);
+    }
+    await installPlanner(runtime, home, plannerSource);
     const connection = join(home, "connection.json");
     const port = Number(new URL(runtime.baseUrl).port);
     writeFileSync(
@@ -105,12 +121,20 @@ const seedHome = async (home: string, edits: number) => {
     if (seeded.status !== 0) throw new Error("Seeding tickets failed.");
     const fixture = JSON.parse(seeded.stdout.trim()) as Fixture;
     await saveFilteredView(runtime, fixture.projectId);
-    const tickets = await runtime.execute<{ id: string; title: string }[]>(fixture.projectId, "read-tickets", {});
+    const tickets = await runtime.execute<{ id: string; title: string; content: string }[]>(
+      fixture.projectId,
+      "read-tickets",
+      {},
+    );
     for (const [index, ticket] of tickets.entries()) {
-      for (let edit = 1; edit <= edits; edit++)
+      const completed =
+        Array.from({ length: edits }, (_, index) => index + 1).findLast(
+          (edit) => ticket.content === editedContent(ticket.title, edit),
+        ) ?? 0;
+      for (let edit = completed + 1; edit <= edits; edit++)
         await runtime.execute(fixture.projectId, "update-ticket", {
           id: ticket.id,
-          content: `# ${ticket.title}\n\n${"Revised plan details. ".repeat(60)}\n\nEdit ${edit}`,
+          content: editedContent(ticket.title, edit),
         });
       if (index % 100 === 99) process.stderr.write(`Edited ${index + 1}/${tickets.length} tickets\n`);
     }
@@ -155,6 +179,7 @@ async function main() {
 bun run --cwd packages/e2e perf:planner-board-cold-open
 bun run --cwd packages/e2e perf:planner-board-cold-open -- --home <dir>   # keep and reuse the seeded home
 bun run --cwd packages/e2e perf:planner-board-cold-open -- --samples 5 --edits 3
+bun run --cwd packages/e2e perf:planner-board-cold-open -- --planner-source <dir>
 
 Reports every sample against the ${targetMs} ms target. Seeding takes several minutes.
 `);
@@ -165,9 +190,19 @@ Reports every sample against the ${targetMs} ms target. Seeding takes several mi
   const home = kept ?? mkdtempSync(join(tmpdir(), "pstdio-planner-cold-open-"));
   try {
     const fixturePath = join(home, "fixture.json");
-    const fixture = existsSync(fixturePath)
+    const seeded = existsSync(fixturePath);
+    const plannerSource = process.argv.includes("--planner-source") ? option("--planner-source", 0) : undefined;
+    const fixture = seeded
       ? (JSON.parse(readFileSync(fixturePath, "utf8")) as Fixture)
-      : await seedHome(home, Number(option("--edits", 3)));
+      : await seedHome(home, Number(option("--edits", 3)), plannerSource);
+    if (seeded && plannerSource) {
+      const runtime = await startRuntime(home);
+      try {
+        await installPlanner(runtime, home, plannerSource);
+      } finally {
+        await stopProcess(runtime.child);
+      }
+    }
     const samples = [];
     for (let sample = 0; sample < Number(option("--samples", 3)); sample++)
       samples.push(await measureColdOpen(home, fixture));

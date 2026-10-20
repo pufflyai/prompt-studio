@@ -1,5 +1,5 @@
-import { Box, Skeleton, Stack } from "@chakra-ui/react";
-import { type ResourceContextAction, ScrollArea } from "@pstdio/ui";
+import { Box, Stack } from "@chakra-ui/react";
+import type { ResourceContextAction } from "@pstdio/ui";
 import {
   type AttributeDescriptor,
   type AttributesSource,
@@ -7,6 +7,7 @@ import {
   isAttributesSource,
   KanbanRenderer,
   type KanbanRendererRow,
+  KanbanRendererSkeleton,
   useKanbanRendererStore,
 } from "@pstdio/ui/kanban-renderer";
 import { type ReactNode, useSyncExternalStore } from "react";
@@ -37,27 +38,18 @@ interface WorkbenchKanbanViewProps {
 
 interface WorkbenchKanbanViewFrameProps {
   children: ReactNode;
-  usesInternalScroll: boolean;
 }
 
-const kanbanViewScrollContentProps = { display: "flex", flexDirection: "column", minH: "100%" } as const;
-
+// Board columns and the list own vertical scrolling, so the renderer always gets a bounded height.
+// The workbench region's outer ScrollArea must not become the scroll owner, or the list mounts every row.
 const WorkbenchKanbanViewFrame = (props: WorkbenchKanbanViewFrameProps) => {
-  const { children, usesInternalScroll } = props;
+  const { children } = props;
 
   return (
-    <Stack h="full" minH="0" gap="0" bg="bg" overflow="hidden" position={usesInternalScroll ? "relative" : undefined}>
-      {usesInternalScroll ? (
-        // Board columns own vertical scrolling; do not let their content height
-        // make the workbench region's outer ScrollArea become the scroll owner.
-        <Box position="absolute" inset="0" minH="0" minW="0" overflow="hidden">
-          {children}
-        </Box>
-      ) : (
-        <ScrollArea flex="1" minH="0" minW="0" w="full" size="xs" contentProps={kanbanViewScrollContentProps}>
-          {children}
-        </ScrollArea>
-      )}
+    <Stack h="full" minH="0" gap="0" bg="bg" overflow="hidden" position="relative">
+      <Box position="absolute" inset="0" minH="0" minW="0" overflow="hidden" display="flex" flexDirection="column">
+        {children}
+      </Box>
     </Stack>
   );
 };
@@ -155,32 +147,28 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     }));
     return mergeKanbanViewRowActions(resourceActions, contributionActions);
   };
-  const contentPlaceholder = read.error ? (
-    <RendererReadNotice error={read.error} retry={read.retry} />
-  ) : (
-    <Skeleton minH="12rem" w="full" />
-  );
-
-  const readNotice = read.error && read.value ? <RendererReadNotice error={read.error} retry={read.retry} /> : null;
-  if (provider && !viewsSource) {
+  // Tabs, filter pills, and columns read their labels from the views and the query's fields.
+  // Until both arrive, show the view's shape instead of controls that would print raw ids.
+  if ((provider && !viewsSource) || (!read.value && !read.error)) {
     return (
-      <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
-        {readNotice}
-        <Skeleton minH="12rem" w="full" />
+      <WorkbenchKanbanViewFrame>
+        <KanbanRendererSkeleton viewMode={settings.viewMode} />
       </WorkbenchKanbanViewFrame>
     );
   }
 
+  const readNotice = read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null;
+
   return (
-    <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
-      {readNotice}
+    <WorkbenchKanbanViewFrame>
+      {read.value ? readNotice : null}
       <KanbanRenderer
         itemLabel={
           contribution.resourceKind ? workbench.resources.getKind(contribution.resourceKind)?.label : undefined
         }
         viewsSource={viewsSource}
         rows={rows}
-        contentPlaceholder={read.value ? undefined : contentPlaceholder}
+        contentPlaceholder={read.value ? undefined : readNotice}
         storageKey={storageKey}
         attributes={attributes}
         defaultSettings={contribution.defaultSettings}
