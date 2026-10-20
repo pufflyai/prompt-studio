@@ -193248,7 +193248,7 @@
       "y": 0,
       "name": "PS-796 · Shared panel placement and closed edges",
       "width": 940,
-      "height": 360,
+      "height": 420,
       "fill": "$ds-bg-subtle",
       "layout": "vertical",
       "gap": 16,
@@ -193259,7 +193259,7 @@
           "id": "UAdoc",
           "name": "Placement rules",
           "fill": "$ds-fg",
-          "content": "Side left/right · Navigation far left/right · Main/Bottom order · Action bar on outer edges",
+          "content": "Panel insertion · nearest valid target wins · current position has no target",
           "fontFamily": "$font-body",
           "fontSize": 14,
           "fontWeight": "normal"
@@ -193269,51 +193269,125 @@
           "id": "Z3GAG7",
           "name": "Closed eligible panel edge targets",
           "width": "fill_container",
-          "height": 260,
+          "height": 320,
           "gap": 16,
           "children": [
             {
               "type": "frame",
               "id": "rvkzF",
               "name": "light · Closed Side and Bottom edges",
+              "context": "Insertion slots occupy layout space. Outline at rest; accent fill and a centered insertion line for the nearest target. Side target sits between Navigation and Main; Bottom target stays inside Main.",
               "theme": {
                 "mode": "light"
               },
               "width": 430,
-              "height": 260,
+              "height": 320,
               "fill": "$ds-bg",
               "cornerRadius": 4,
-              "layout": "none",
+              "gap": 4,
+              "padding": 4,
               "children": [
                 {
-                  "id": "ntoaN",
-                  "type": "ref",
-                  "ref": "XMJjf",
-                  "name": "Closed Side target · full rounded outline",
-                  "x": 382,
-                  "y": 0,
-                  "width": 48,
-                  "height": 260
-                },
-                {
-                  "id": "hjNBy",
-                  "type": "ref",
-                  "ref": "XMJjf",
-                  "name": "Closed Bottom target · full rounded outline",
-                  "x": 0,
-                  "y": 212,
-                  "width": 378,
-                  "height": 48
+                  "type": "frame",
+                  "id": "HIE0E",
+                  "name": "Navigation",
+                  "width": 72,
+                  "height": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 4
                 },
                 {
                   "type": "frame",
-                  "id": "pAHVI",
-                  "x": 386,
-                  "y": 4,
-                  "name": "Tab insertion marker",
-                  "width": 2,
-                  "height": 24,
-                  "fill": "$ds-accent"
+                  "id": "q0ye6F",
+                  "name": "Side insertion target · selected",
+                  "width": 48,
+                  "height": "fill_container",
+                  "padding": 2,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "OP2g3",
+                      "name": "Selected target",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "opacity": 0.2,
+                        "rotation": 0,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "$ds-accent",
+                            "position": 0
+                          },
+                          {
+                            "color": "$ds-accent",
+                            "position": 1
+                          }
+                        ]
+                      },
+                      "cornerRadius": 6,
+                      "stroke": "$ds-accent",
+                      "strokeWidth": 1,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "xkGoX",
+                          "name": "Vertical insertion line",
+                          "width": 2,
+                          "height": "fill_container",
+                          "fill": "$ds-accent",
+                          "cornerRadius": 2
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "UU9Rz",
+                  "name": "Main and Bottom",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "h22eL",
+                      "name": "Bottom insertion target · idle",
+                      "width": "fill_container",
+                      "height": 48,
+                      "padding": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "uyQ7I",
+                          "name": "Idle target",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "cornerRadius": 6,
+                          "stroke": "$ds-accent",
+                          "strokeWidth": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "frfOR",
+                      "name": "Main content",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 4
+                    }
+                  ]
                 }
               ]
             },
@@ -193321,44 +193395,118 @@
               "type": "frame",
               "id": "EnM65",
               "name": "dark · Closed Side and Bottom edges",
+              "context": "Insertion slots occupy layout space. Outline at rest; accent fill and a centered insertion line for the nearest target. Side target sits between Navigation and Main; Bottom target stays inside Main.",
               "theme": {
                 "mode": "dark"
               },
               "width": 430,
-              "height": 260,
+              "height": 320,
               "fill": "$ds-bg",
               "cornerRadius": 4,
-              "layout": "none",
+              "gap": 4,
+              "padding": 4,
               "children": [
                 {
-                  "id": "w2zvc",
-                  "type": "ref",
-                  "ref": "XMJjf",
-                  "name": "Closed Side target · full rounded outline",
-                  "x": 382,
-                  "y": 0,
-                  "width": 48,
-                  "height": 260
-                },
-                {
-                  "id": "dp4qA",
-                  "type": "ref",
-                  "ref": "XMJjf",
-                  "name": "Closed Bottom target · full rounded outline",
-                  "x": 0,
-                  "y": 212,
-                  "width": 378,
-                  "height": 48
+                  "type": "frame",
+                  "id": "XnHP7",
+                  "name": "Navigation",
+                  "width": 72,
+                  "height": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 4
                 },
                 {
                   "type": "frame",
-                  "id": "dlPFY",
-                  "x": 386,
-                  "y": 4,
-                  "name": "Tab insertion marker",
-                  "width": 2,
-                  "height": 24,
-                  "fill": "$ds-accent"
+                  "id": "nCkhf",
+                  "name": "Side insertion target · selected",
+                  "width": 48,
+                  "height": "fill_container",
+                  "padding": 2,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "LwcOO",
+                      "name": "Selected target",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "opacity": 0.2,
+                        "rotation": 0,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "$ds-accent",
+                            "position": 0
+                          },
+                          {
+                            "color": "$ds-accent",
+                            "position": 1
+                          }
+                        ]
+                      },
+                      "cornerRadius": 6,
+                      "stroke": "$ds-accent",
+                      "strokeWidth": 1,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "fs1Y3",
+                          "name": "Vertical insertion line",
+                          "width": 2,
+                          "height": "fill_container",
+                          "fill": "$ds-accent",
+                          "cornerRadius": 2
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ftwZH",
+                  "name": "Main and Bottom",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "zyZvW",
+                      "name": "Bottom insertion target · idle",
+                      "width": "fill_container",
+                      "height": 48,
+                      "padding": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "R8zK9m",
+                          "name": "Idle target",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "cornerRadius": 6,
+                          "stroke": "$ds-accent",
+                          "strokeWidth": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nAqyQ",
+                      "name": "Main content",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 4
+                    }
+                  ]
                 }
               ]
             }

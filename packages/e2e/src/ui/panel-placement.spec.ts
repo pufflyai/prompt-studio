@@ -68,7 +68,8 @@ test("whole Side panel drag and keyboard placement preserve its tabs", async ({ 
   await page.mouse.move(box.x + 15, box.y + box.height / 2, { steps: 3 });
   const target = page.locator('[data-workbench-edge-drop="panel-left"]');
   await expect(target).toBeVisible();
-  await target.hover();
+  const insertion = (await target.boundingBox())!;
+  await page.mouse.move(insertion.x + insertion.width / 2, insertion.y + insertion.height / 2);
   await page.mouse.up();
   await expect.poll(async () => (await side.boundingBox())!.x - (await main.boundingBox())!.x).toBeLessThan(0);
   await expect(side.getByRole("tab")).toHaveCount(2);
@@ -76,6 +77,117 @@ test("whole Side panel drag and keyboard placement preserve its tabs", async ({ 
   await header.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Move panel to right", exact: true }).click();
   await expect.poll(async () => (await side.boundingBox())!.x - (await main.boundingBox())!.x).toBeGreaterThan(0);
+});
+
+for (const [region, story, edge] of [
+  ["side", "interactive", "left"],
+  ["secondary", "interactive", "top"],
+  ["side", "reversed", "right"],
+  ["secondary", "reversed", "bottom"],
+  ["side", "dark", "left"],
+  ["secondary", "dark", "top"],
+] as const) {
+  test(`${region} ${story} insertion takes space and accepts the nearest drop`, async ({ page }) => {
+    await page.goto(storyUrl(baseUrl, `pstdio-workbench-reference-core-api-whole-panel-placement--${story}`));
+    await waitForStoryPlayback(page);
+    const header = page.getByLabel(region === "side" ? "Side panel header" : "Bottom panel header", { exact: true });
+    const main = page.locator('[data-workbench-panel="main"]');
+    const before = (await main.boundingBox())!;
+    const source = (await header.boundingBox())!;
+    await page.mouse.move(source.x + 3, source.y + source.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(source.x + 15, source.y + source.height / 2, { steps: 3 });
+    const target = page.locator(`[data-workbench-edge-drop="panel-${edge}"]`);
+    await expect(target).toBeVisible();
+    const slot = (await target.boundingBox())!;
+    const during = (await main.boundingBox())!;
+    if (region === "side") {
+      const nav = (await page.locator('[data-workbench-region="sidenav"]').boundingBox())!;
+      if (edge === "left") {
+        expect(slot.x).toBeGreaterThanOrEqual(nav.x + nav.width);
+        expect(slot.x + slot.width).toBeLessThanOrEqual(during.x);
+      } else {
+        expect(slot.x).toBeGreaterThanOrEqual(during.x + during.width);
+        expect(slot.x + slot.width).toBeLessThanOrEqual(nav.x);
+      }
+      expect(during.width).toBeLessThan(before.width);
+    } else {
+      if (edge === "top") expect(slot.y + slot.height).toBeLessThanOrEqual(during.y);
+      else expect(slot.y).toBeGreaterThanOrEqual(during.y + during.height);
+      expect(during.height).toBeLessThan(before.height);
+    }
+    expect(await page.locator('[data-workbench-edge-drop^="panel-"]').count()).toBe(1);
+    // Release in the content near the insertion, without having to reach the narrow target.
+    await page.mouse.move(during.x + during.width / 3, during.y + during.height / 3, { steps: 6 });
+    await expect(target).toHaveAttribute("data-drop-active", "true");
+    const fill = await target.evaluate((element) => getComputedStyle(element, "::after").backgroundColor);
+    expect(fill).not.toBe("rgba(0, 0, 0, 0)");
+    const line = target.locator("[data-workbench-insertion-line]");
+    await expect(line).toBeVisible();
+    const marker = (await line.boundingBox())!;
+    expect(region === "side" ? marker.height > marker.width : marker.width > marker.height).toBe(true);
+    await page.screenshot({ path: test.info().outputPath(`${region}-${story}-insertion.png`) });
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+    await expect.poll(async () => (await main.boundingBox())!.width).toBe(before.width);
+    await expect.poll(async () => (await main.boundingBox())!.height).toBe(before.height);
+    const restored = (await header.boundingBox())!;
+    await page.mouse.move(restored.x + 3, restored.y + restored.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(restored.x + 15, restored.y + restored.height / 2, { steps: 3 });
+    await page.mouse.move(during.x + during.width / 3, during.y + during.height / 3, { steps: 6 });
+    await expect(target).toHaveAttribute("data-drop-active", "true");
+    await page.mouse.up();
+    const moved = (await page.locator(`[data-workbench-panel="${region}"]:visible`).boundingBox())!;
+    const placedMain = (await main.boundingBox())!;
+    const delta = region === "side" ? moved.x - placedMain.x : moved.y - placedMain.y;
+    expect(edge === "left" || edge === "top" ? delta < 0 : delta > 0).toBe(true);
+  });
+}
+
+test("the action bar selects the nearest insertion without overlapping targets", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-whole-panel-placement--interactive"));
+  await waitForStoryPlayback(page);
+  await beginDrag(page, page.locator('[data-workbench-panel-drag="activity"]'));
+  const top = page.locator('[data-workbench-edge-drop="panel-top"]');
+  const right = page.locator('[data-workbench-edge-drop="panel-right"]');
+  const bottom = page.locator('[data-workbench-edge-drop="panel-bottom"]');
+  const t = (await top.boundingBox())!;
+  const r = (await right.boundingBox())!;
+  const b = (await bottom.boundingBox())!;
+  expect(t.y + t.height).toBeLessThanOrEqual(r.y);
+  expect(r.y + r.height).toBeLessThanOrEqual(b.y);
+  await page.mouse.move(r.x - 80, r.y + r.height / 2, { steps: 6 });
+  await expect(right).toHaveAttribute("data-drop-active", "true");
+  await page.mouse.move(t.x + t.width / 2, t.y + t.height + 80, { steps: 6 });
+  await expect(top).toHaveAttribute("data-drop-active", "true");
+  await expect(right).not.toHaveAttribute("data-drop-active");
+  await page.mouse.move(b.x + b.width / 2, b.y - 80, { steps: 6 });
+  await expect(bottom).toHaveAttribute("data-drop-active", "true");
+  await expect(page.locator('[data-workbench-edge-drop^="panel-"]')).toHaveCount(3);
+  await page.mouse.move(0, 0, { steps: 6 });
+  await expect(page.locator("[data-workbench-edge-drop][data-drop-active]")).toHaveCount(0);
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await page.locator('[data-workbench-panel-drag="activity"]').boundingBox())!.x)
+    .toBe(0);
+});
+
+test("whole-panel drags finish over embedded Navigation content", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-whole-panel-placement--embedded-navigation"));
+  await waitForStoryPlayback(page);
+  const header = (await page.getByLabel("Side panel header", { exact: true }).boundingBox())!;
+  await page.mouse.move(header.x + 3, header.y + header.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(header.x + 15, header.y + header.height / 2, { steps: 3 });
+  const view = (await page.getByTitle("Navigation view").boundingBox())!;
+  await page.mouse.move(view.x + view.width / 2, view.y + view.height / 2, { steps: 6 });
+  await expect(page.locator('[data-workbench-edge-drop="panel-left"]')).toHaveAttribute("data-drop-active", "true");
+  await page.mouse.up();
+  await expect(page.locator("[data-workbench-panel-drag-shield]")).toHaveCount(0);
+  const side = (await page.locator('[data-workbench-panel="side"]:visible').boundingBox())!;
+  const main = (await page.locator('[data-workbench-panel="main"]').boundingBox())!;
+  expect(side.x).toBeLessThan(main.x);
 });
 
 for (const [region, edge] of [
@@ -88,18 +200,21 @@ for (const [region, edge] of [
   ["activity", "right"],
 ] as const) {
   test(`move whole ${region} by pointer to ${edge}`, async ({ page }) => {
-    await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-whole-panel-placement--interactive"));
+    const story = region === "activity" && edge === "left" ? "reversed" : "interactive";
+    await page.goto(storyUrl(baseUrl, `pstdio-workbench-reference-core-api-whole-panel-placement--${story}`));
     await waitForStoryPlayback(page);
     const surface = page.locator(`[data-workbench-panel-drag="${region}"]:visible`);
     const source = region === "main" ? surface.locator("[data-workbench-breadcrumb-action-slot] + div") : surface;
     const box = (await source.boundingBox())!;
-    const startX = region === "main" ? box.x + box.width / 2 : box.x + 3;
+    let startX = box.x + 3;
+    if (region === "main" || (region === "activity" && box.width > box.height)) startX = box.x + box.width / 2;
     await page.mouse.move(startX, box.y + box.height / 2);
     await page.mouse.down();
     await page.mouse.move(startX + 12, box.y + box.height / 2, { steps: 3 });
     const target = page.locator(`[data-workbench-edge-drop="panel-${edge}"]`);
     await expect(target).toBeVisible();
-    await target.hover();
+    const insertion = (await target.boundingBox())!;
+    await page.mouse.move(insertion.x + insertion.width / 2, insertion.y + insertion.height / 2);
     await page.mouse.up();
     const main = page.locator('[data-workbench-panel="main"]');
     const secondary = page.locator('[data-workbench-panel="secondary"]');

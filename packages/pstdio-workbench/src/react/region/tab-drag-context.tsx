@@ -15,6 +15,7 @@ import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchTabPosition } from "
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
 import type { WorkbenchPanelPosition, WorkbenchPositionedRegion } from "../../core/registries/layout/panel-positions";
 import { planTrayDrop } from "../../core/registries/layout/tray-tabs";
+import { panelDropCollision } from "./panel-drop-collision";
 
 interface TabDrop {
   region: WorkbenchPanelRegion;
@@ -90,10 +91,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
       <DndContext
         sensors={sensors}
         collisionDetection={(args) => {
-          if (args.active.data.current?.panelRegion)
-            return pointerWithin(args).filter(
-              (c) => c.data?.droppableContainer.data.current?.panelRegion === args.active.data.current?.panelRegion,
-            );
+          if (args.active.data.current?.panelRegion) return panelDropCollision(args);
           const collisions = pointerWithin(args);
           const closed = collisions.filter((c) => c.data?.droppableContainer.data.current?.closed);
           if (closed.length) return closed;

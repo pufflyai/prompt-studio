@@ -107,10 +107,12 @@ The shared shell owns whole-panel positions in the existing project and mode lay
 
 Drag empty Side or Bottom header space to an allowed edge. Drag empty breadcrumb-row space to move Main. Navigation and the action bar also accept drags from empty space. Buttons, tabs and resource controls keep their own gestures. The header context menu offers the same placement actions through right-click, Shift+F10, the Context Menu key and touch hold. Unavailable moves are omitted.
 
+Insertion targets reserve space at the boundary that owns the panel: Side sits between Navigation and Main, and Bottom stays within Main's column. The current placement has no target. During a whole-panel drag, the nearest allowed target in the workbench is selected even when the pointer has not reached its outline. It fills with the accent color and shows an insertion line along the correct axis. Leaving the workbench or cancelling preserves the placement.
+
 Agents use the same shell operations through these commands:
 
 - `workbench.repositionPanel` takes `region` (`main`, `secondary`, `side` or `sidenav`) and `position` (`left`, `right`, `top` or `bottom`). The controller rejects unsupported combinations and mode restrictions before changing the layout.
 - `workbench.setActionBarPosition` takes `position` on any outer edge.
 - `workbench.movePanel` continues to move a single tab. It respects the destination policy and the placement's allowed trays.
 
-During a tab drag, a closed eligible Side or Bottom shows a target at its saved edge, including before its first opening. A valid drop opens the panel and inserts the pinned tab in one step. Closed Side opens attached. Cancelling or dropping elsewhere leaves visibility and tab retention unchanged. The target has a complete rounded outline and an insertion marker, without guidance text. An existing destination preview stays open and leftmost; the dropped tab never replaces it. Removed page panels have no targets.
+During a tab drag, a closed eligible Side or Bottom reserves a target at its saved edge, including before its first opening. A valid drop opens the panel and inserts the pinned tab in one step. Closed Side opens attached. Cancelling or dropping elsewhere leaves visibility and tab retention unchanged. The target has a complete rounded outline, with a filled background and an insertion marker when selected, without guidance text. An existing destination preview stays open and leftmost; the dropped tab never replaces it. Removed page panels have no targets.

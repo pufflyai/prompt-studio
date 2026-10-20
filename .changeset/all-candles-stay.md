@@ -4,4 +4,4 @@
 "@pstdio/sdk": patch
 ---
 
-Allow panel placement changes and pin tabs dropped onto closed panel edges.
+Allow panel placement changes with clear insertion targets and pin tabs dropped onto closed panels.

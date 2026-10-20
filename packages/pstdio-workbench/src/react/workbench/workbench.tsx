@@ -11,6 +11,7 @@ import { useHasSystemErrors } from "../notifications/system-error-state";
 import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useModeChrome } from "../region/mode-chrome";
 import { movePanelHost } from "../region/move-panel-host";
+import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
 import { WorkbenchPanelViewHosts } from "../region/panel-view-hosts";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
 import { WorkbenchTabDragProvider } from "../region/tab-drag-context";
@@ -177,35 +178,37 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   );
 
   const contentWithSidenav = (
-    <ResizableSplitLayout
-      flex="1"
-      minH="0"
-      minW="0"
-      resizablePanel={<WorkbenchSidenav workbench={workbench} contextActions={sidenavContextActions} />}
-      resizableSide={arrangement.sidenav}
-      contentPanel={
-        <WorkbenchSidePanelBoundary
-          workbench={workbench}
-          showAttachedSidePanel={showAttachedSidePanel}
-          contentFrame={contentWithHeader}
-          sideHeader={sideHeader}
-          contentMinSizePx={CONTENT_MIN_SIZE_PX}
-          onAttachedSlotChange={setAttachedSidePanelSlot}
-        />
-      }
-      collapsed={!showSidenav || !sidenavOpen}
-      resizable={sidenavPolicy.resizable}
-      collapsible={sidenavPolicy.canClose && sidenavCollapsible}
-      defaultSizePx={sidenavSize.defaultPx}
-      minSizePx={sidenavSize.minPx}
-      maxSizePx={sidenavSize.maxPx}
-      contentMinSizePx={CONTENT_MIN_SIZE_PX}
-      resizeLabel="Resize sidenav"
-      onSizeChange={(width) => workbench.shell.setRegionSize("sidenav", width)}
-      onCollapsedChange={(collapsed) => {
-        if (!collapsed || sidenavCollapsible) setPanelOpen("sidenav", !collapsed);
-      }}
-    />
+    <WorkbenchPanelDropFrame workbench={workbench} region="sidenav">
+      <ResizableSplitLayout
+        flex="1"
+        minH="0"
+        minW="0"
+        resizablePanel={<WorkbenchSidenav workbench={workbench} contextActions={sidenavContextActions} />}
+        resizableSide={arrangement.sidenav}
+        contentPanel={
+          <WorkbenchSidePanelBoundary
+            workbench={workbench}
+            showAttachedSidePanel={showAttachedSidePanel}
+            contentFrame={contentWithHeader}
+            sideHeader={sideHeader}
+            contentMinSizePx={CONTENT_MIN_SIZE_PX}
+            onAttachedSlotChange={setAttachedSidePanelSlot}
+          />
+        }
+        collapsed={!showSidenav || !sidenavOpen}
+        resizable={sidenavPolicy.resizable}
+        collapsible={sidenavPolicy.canClose && sidenavCollapsible}
+        defaultSizePx={sidenavSize.defaultPx}
+        minSizePx={sidenavSize.minPx}
+        maxSizePx={sidenavSize.maxPx}
+        contentMinSizePx={CONTENT_MIN_SIZE_PX}
+        resizeLabel="Resize sidenav"
+        onSizeChange={(width) => workbench.shell.setRegionSize("sidenav", width)}
+        onCollapsedChange={(collapsed) => {
+          if (!collapsed || sidenavCollapsible) setPanelOpen("sidenav", !collapsed);
+        }}
+      />
+    </WorkbenchPanelDropFrame>
   );
 
   const contentFrame = (

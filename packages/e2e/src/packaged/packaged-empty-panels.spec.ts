@@ -7,6 +7,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyEmptyPanelAddition } from "./packaged-empty-panel-addition";
 import { buildBinary } from "./packaged-helpers";
+import { verifyPanelInsertionTargets } from "./packaged-panel-insertion";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 test.afterEach(stopPendingTestProcesses);
@@ -38,6 +39,7 @@ test("adding a tool keeps the other empty panel open", async () => {
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
     await expect(page.getByText("Project home", { exact: true })).toBeVisible();
     await verifyEmptyPanelAddition(page);
+    await verifyPanelInsertionTargets(page);
   } finally {
     await browser?.close();
     if (child) await stopProcess(child);

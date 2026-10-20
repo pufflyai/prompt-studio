@@ -53,6 +53,20 @@ export const layerStyles = defineLayerStyles({
       },
     },
   },
+  panelDropZone: {
+    value: {
+      _after: {
+        content: '""',
+        position: "absolute",
+        inset: "3xs",
+        borderWidth: "1px",
+        borderColor: "bg.accent-primary.default",
+        borderRadius: "compact",
+        pointerEvents: "none",
+      },
+      "&[data-drop-active]::after": { bg: "bg.accent-primary.default/20" },
+    },
+  },
   filterPicker: {
     value: {
       height: "min({sizes.filter-picker-height}, calc(100dvh - {spacing.xl}))",
