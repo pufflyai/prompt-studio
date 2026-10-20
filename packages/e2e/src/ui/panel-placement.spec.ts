@@ -18,6 +18,13 @@ const beginDrag = async (page: Page, source: Locator) => {
   await page.mouse.move(box.x + box.width / 2 + 12, box.y + box.height / 2, { steps: 3 });
 };
 
+for (const story of ["sidenav-open", "sidenav-closed"]) {
+  test(`browser panel controls stay aligned with ${story}`, async ({ page }) => {
+    await page.goto(storyUrl(baseUrl, `pstdio-workbench-reference-core-api-browser-panel-controls--${story}`));
+    await waitForStoryPlayback(page);
+  });
+}
+
 for (const [story, sourceRegion, targetRegion] of [
   ["closed-bottom", "side", "secondary"],
   ["closed-side", "main", "side"],

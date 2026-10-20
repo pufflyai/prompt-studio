@@ -2,7 +2,7 @@ import { defineSlotRecipe } from "@chakra-ui/react";
 
 export const windowTitleBarRecipe = defineSlotRecipe({
   className: "ps-window-title-bar",
-  slots: ["root", "content"],
+  slots: ["root", "content", "actions"],
   base: {
     root: {
       position: "relative",
@@ -23,6 +23,14 @@ export const windowTitleBarRecipe = defineSlotRecipe({
       paddingInline: "compact",
       "& button, & a, & input, & [role=tab]": { WebkitAppRegion: "no-drag" },
     },
+    actions: {
+      display: "flex",
+      alignItems: "center",
+      gap: "xs",
+      marginInlineStart: "auto",
+      flexShrink: 0,
+      _empty: { display: "none" },
+    },
   },
   variants: {
     controls: {
@@ -32,7 +40,17 @@ export const windowTitleBarRecipe = defineSlotRecipe({
           "[data-window-full-screen] &": { paddingInlineStart: "compact" },
         },
       },
-      overlay: { content: { marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)" } },
+      overlay: {
+        content: { marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)" },
+        actions: {
+          _after: {
+            content: '""',
+            height: "icon-md",
+            borderInlineStartWidth: "1px",
+            borderColor: "border.subtle",
+          },
+        },
+      },
     },
   },
   defaultVariants: { controls: "overlay" },
