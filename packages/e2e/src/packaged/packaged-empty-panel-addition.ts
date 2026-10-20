@@ -28,11 +28,6 @@ export const verifyEmptyPanelAddition = async (page: Page) => {
   if (await showSide.isVisible()) await showSide.click();
   if (await showBottom.isVisible()) await showBottom.click();
   await expect(side).toBeVisible();
-  const closeSelected = async (region: typeof side) => {
-    await region.getByRole("tab", { selected: true }).focus();
-    await page.keyboard.press("Shift+F10");
-    await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
-  };
   await expect(side.getByRole("tab")).toHaveCount(0);
   await expect(bottom.getByRole("tab")).toHaveCount(0);
   const bottomTabs = await watchNewTabs(bottom);
@@ -43,7 +38,10 @@ export const verifyEmptyPanelAddition = async (page: Page) => {
   await expect(bottom.getByRole("tab")).toHaveCount(0);
   expect(await bottomTabs.evaluate((watcher) => watcher.stop())).toBe(false);
   await bottomTabs.dispose();
-  await closeSelected(side);
+  await side
+    .getByRole("tab", { selected: true })
+    .getByRole("button", { name: /^Close / })
+    .click();
   await expect(side.getByRole("tab")).toHaveCount(0);
   await showSide.click();
   const sideTabs = await watchNewTabs(side);
