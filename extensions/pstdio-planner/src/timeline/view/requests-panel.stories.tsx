@@ -134,6 +134,18 @@ const cancelled: ReviewRequestView = {
   outcomeText: "Cancelled: The release scope changed.",
 };
 
+const answeredDecision: ReviewRequestView = {
+  ...decision,
+  state: "answered",
+  outcome: {
+    kind: "answered",
+    at: "2026-10-10T10:00:00.000Z",
+    by: person,
+    response: { answers: { scope: "preview", platforms: ["mac"], limits: "Internal project first." } },
+  },
+  outcomeText: "Release scope: Preview\nPlatforms: macOS\nLimits: Internal project first.",
+};
+
 const row: PlanRow = {
   id: "ticket",
   shorthand: "PS-32",
@@ -174,6 +186,15 @@ type Story = StoryObj<typeof RequestsPanel>;
 export const NoRequests: Story = { args: { row } };
 export const Task: Story = { args: { row: { ...row, requests: [task] } } };
 export const Decision: Story = { args: { row: { ...row, requests: [decision] } } };
+export const EditableAnswer: Story = { args: { row: { ...row, requests: [answeredDecision] } } };
+export const UpdateError: Story = {
+  args: {
+    row: { ...row, requests: [answeredDecision] },
+    onAnswer: async () => {
+      throw new Error("Unable to save. Try again.");
+    },
+  },
+};
 export const ProposalReview: Story = { args: { row: { ...row, requests: [proposalReview] } } };
 export const AttemptHandoff: Story = { args: { row: { ...row, requests: [handoff] } } };
 export const OpenSiblingAfterAnswer: Story = { args: { row: { ...row, requests: [answered, handoff] } } };

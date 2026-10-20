@@ -180,6 +180,11 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
 
   await execute("review", { requestId: task.id, response: { confirmed: true } });
   await execute("review", { requestId: decision.id, response: { answers: { platforms: ["mac", "win"] } } });
+  await execute("review", { requestId: decision.id, response: { answers: { platforms: ["win"] } } });
+  expect(await execute("review-requests.read", { requestId: decision.id })).toMatchObject({
+    state: "answered",
+    outcome: { response: { answers: { platforms: ["win"] } } },
+  });
   const mixed = await execute("timeline.plan.read", {});
   const row = mixed.sections
     .flatMap((section: { rows: Array<{ id: string }> }) => section.rows)
@@ -203,7 +208,7 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
 
   await execute("review-requests.cancel", { requestId: handoff.id, reason: "Superseded by a new revision." });
   const settled = await execute("review-requests.read", { requestId: decision.id });
-  expect(settled).toMatchObject({ state: "answered", outcomeText: "Platforms: macOS, Windows" });
+  expect(settled).toMatchObject({ state: "answered", outcomeText: "Platforms: Windows" });
   const [stored] = (await execute("read-tickets", {})).filter((entry: { id: string }) => entry.id === ticket.id);
   expect(stored.tagIds ?? []).not.toContain(reviewNeeded);
   const resolved = await execute("timeline.plan.read", {});

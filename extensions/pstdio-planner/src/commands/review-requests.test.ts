@@ -176,6 +176,48 @@ describe("review requests", () => {
     expect((await listReviewRequestsCommand.run(context(), { ticket: "PS-1" })).requests).toHaveLength(2);
   });
 
+  test("a saved decision can be revised without hiding other pending input", async () => {
+    const { context, flagged } = await setup();
+    const request = await requestHumanCommand.run(context(), decision as never);
+    const answer = (answers: Record<string, string | string[]>) =>
+      reviewCommand.run(context("dashboard"), { requestId: request.id, response: { answers } });
+    await answer({ scope: "preview", platforms: ["mac"], limits: "Internal only" });
+    expect(await flagged()).toBe(false);
+    const pending = await requestHumanCommand.run(context(), task as never);
+
+    await expect(answer({ scope: "beta", limits: "None" })).rejects.toThrow("Invalid choice");
+    expect((await readReviewRequestCommand.run(context(), { requestId: request.id })).outcome).toMatchObject({
+      response: { answers: { scope: "preview", platforms: ["mac"], limits: "Internal only" } },
+    });
+    await answer({ scope: "full", platforms: ["win"], limits: "Public release" });
+
+    const reloaded = await readReviewRequestCommand.run(context(), { requestId: request.id });
+    expect(reloaded).toMatchObject({
+      state: "answered",
+      outcome: {
+        by: { type: "human" },
+        response: { answers: { scope: "full", platforms: ["win"], limits: "Public release" } },
+      },
+      outcomeText: "Release scope: Full release\nPlatforms: Windows\nLimits: Public release",
+    });
+    expect(await flagged()).toBe(true);
+    expect(
+      (await listReviewRequestsCommand.run(context(), { ticket: "PS-1", openOnly: true })).requests.map(({ id }) => id),
+    ).toEqual([pending.id]);
+  });
+
+  test("cancelled decisions cannot be answered", async () => {
+    const { context } = await setup();
+    const request = await requestHumanCommand.run(context(), decision as never);
+    await cancelReviewRequestCommand.run(context(), { requestId: request.id, reason: "Withdrawn" });
+    await expect(
+      reviewCommand.run(context(), {
+        requestId: request.id,
+        response: { answers: { scope: "full", limits: "None" } },
+      }),
+    ).rejects.toThrow("already cancelled");
+  });
+
   test("schedules, automations, and events cannot answer or cancel a request", async () => {
     const { context } = await setup();
     const request = await requestHumanCommand.run(context("schedule"), task as never);

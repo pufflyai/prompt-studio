@@ -32206,7 +32206,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 658
+                  "y": 665
                 },
                 {
                   "type": "frame",
@@ -74952,7 +74952,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 72,
+                                      "x": 70,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -95585,7 +95585,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 696,
+              "y": 701,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -124571,7 +124571,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 40,
+                                          "y": 41,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -151065,7 +151065,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151087,7 +151087,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151811,7 +151811,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151833,7 +151833,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152447,7 +152447,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152469,7 +152469,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153814,7 +153814,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153836,7 +153836,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -190890,7 +190890,7 @@
       "x": 55230,
       "y": 0,
       "name": "Needs attention indicators · PS-670",
-      "width": 500,
+      "width": 560,
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 16,
@@ -191083,6 +191083,190 @@
           "fontFamily": "$font-label",
           "fontSize": 12,
           "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "FNVYe",
+          "name": "Answered decision · editable",
+          "context": "Saved decision forms keep their selected choices and text. Change the controls and choose Update answer to replace the saved answer. Saving does not undo actions already taken. Cancelled requests stay closed.",
+          "width": "fill_container",
+          "fill": "$ds-bg-subtle",
+          "cornerRadius": 4,
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "a29qg",
+              "name": "Decision title",
+              "fill": "$ds-fg",
+              "content": "Choose the release scope",
+              "fontFamily": "$font-label",
+              "fontSize": 14,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "bvZjD",
+              "name": "Saved status",
+              "theme": {
+                "palette": "green",
+                "badge": "subtle"
+              },
+              "fill": "$badge-fg",
+              "content": "Answered",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "R40SeG",
+              "name": "Saved choices remain editable",
+              "context": "Measured from implementation: Onest 12px legend/choice labels, 18px line height, 20px radios with 10px label gap, choices spaced 8px, 12px field padding, 8px fieldset corners, 12px control bottom padding. Preserve native question steps and Other behavior.",
+              "width": "fill_container",
+              "layout": "vertical",
+              "padding": [
+                17,
+                0,
+                12,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "J70uh",
+                  "name": "Existing question fieldset",
+                  "width": "fill_container",
+                  "fill": "#00000000",
+                  "cornerRadius": 8,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": [
+                    21,
+                    12,
+                    12,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "id": "IwAtJ",
+                      "type": "ref",
+                      "ref": "KPHF7",
+                      "name": "Browser checks option",
+                      "theme": {
+                        "radio": "on"
+                      },
+                      "descendants": {
+                        "aAkIM": {
+                          "content": "1. Preview",
+                          "fontSize": 12,
+                          "fontFamily": "$font-label",
+                          "fontWeight": "normal",
+                          "lineHeight": 1.5
+                        }
+                      }
+                    },
+                    {
+                      "id": "TuMJ4",
+                      "type": "ref",
+                      "ref": "KPHF7",
+                      "name": "Native tests option",
+                      "theme": {
+                        "radio": "off"
+                      },
+                      "descendants": {
+                        "aAkIM": {
+                          "content": "2. Full release",
+                          "fontSize": 12,
+                          "fontFamily": "$font-label",
+                          "fontWeight": "normal",
+                          "lineHeight": 1.5
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "mjWun",
+                  "layoutPosition": "absolute",
+                  "x": 12,
+                  "y": 0,
+                  "name": "Existing fieldset legend",
+                  "fill": "$ds-bg",
+                  "padding": [
+                    0,
+                    4
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WU5k8",
+                      "name": "Question",
+                      "fill": "$ds-fg",
+                      "content": "Release scope",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "y9Gmu",
+              "name": "Answer actions",
+              "width": "fill_container",
+              "gap": 4,
+              "children": [
+                {
+                  "id": "IUayU",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Update answer",
+                  "height": 32,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Update answer"
+                    }
+                  }
+                },
+                {
+                  "id": "UQ67K",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Open linked chat",
+                  "height": 32,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "icon": "message-square"
+                    },
+                    "Hf4GT": {
+                      "content": "Open chat"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     }

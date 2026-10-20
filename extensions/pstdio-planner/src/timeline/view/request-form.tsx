@@ -2,10 +2,10 @@
 import { Button, Flex, Icon, Stack, Text } from "@chakra-ui/react";
 import { QuestionPromptControls, useQuestionPromptState } from "@pstdio/ui/chat-ui";
 import { MessageSquare } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReviewRequestView, ReviewResponse } from "../../data/review-request-types";
 import { Instructions } from "./instructions";
-import { toQuestionPrompt, toResponseAnswers } from "./review-question-prompt";
+import { toQuestionPrompt, toResponseAnswers, toSavedPromptState } from "./review-question-prompt";
 
 export interface RequestHandlers {
   onAnswer: (requestId: string, response: ReviewResponse) => Promise<unknown>;
@@ -21,6 +21,15 @@ export function RequestForm(props: RequestFormProps) {
   const questions = request.request.kind === "decision" ? request.request.questions : [];
   const [prompt] = useState(() => toQuestionPrompt(request.id, questions));
   const form = useQuestionPromptState(prompt);
+  const [saved] = useState(() =>
+    toSavedPromptState(
+      request.id,
+      questions,
+      request.outcome?.kind === "answered" ? request.outcome.response : undefined,
+    ),
+  );
+  const restore = useRef(form.restore).current;
+  useEffect(() => restore(saved.selected, saved.custom), [restore, saved]);
   const [pending, setPending] = useState<"answer" | "chat">();
   const [error, setError] = useState<string>();
   const run = async (kind: "answer" | "chat", write: () => Promise<unknown>) => {
@@ -38,6 +47,7 @@ export function RequestForm(props: RequestFormProps) {
     request.request.kind === "task"
       ? { confirmed: true as const }
       : { answers: toResponseAnswers(questions, form.buildAnswers()) };
+  const decisionAction = request.state === "answered" ? "Update answer" : "Submit answer";
 
   return (
     <Stack gap="sm" p="sm" bg="bg.subtle" borderRadius="md">
@@ -49,12 +59,10 @@ export function RequestForm(props: RequestFormProps) {
           <Text color="green.fg" textStyle="label/S/medium">
             Answered
           </Text>
-          <Text textStyle="label/S/regular" whiteSpace="pre-wrap">
-            {request.outcomeText}
-          </Text>
+          {request.request.kind === "task" ? <Text textStyle="label/S/regular">{request.outcomeText}</Text> : null}
         </Stack>
       ) : null}
-      {request.state === "open" ? (
+      {request.state === "open" || (request.state === "answered" && request.request.kind === "decision") ? (
         <Stack gap="sm">
           {questions.length ? (
             <QuestionPromptControls
@@ -74,7 +82,7 @@ export function RequestForm(props: RequestFormProps) {
               disabled={pending !== undefined || form.hasMissingRequiredAnswer}
               onClick={() => void run("answer", () => onAnswer(request.id, response()))}
             >
-              {request.request.kind === "task" ? "Confirm completed" : "Submit answer"}
+              {request.request.kind === "task" ? "Confirm completed" : decisionAction}
             </Button>
             <Button
               size="sm"

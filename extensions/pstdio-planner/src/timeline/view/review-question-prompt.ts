@@ -1,5 +1,7 @@
 import type { ChatInputQuestionPrompt } from "@pstdio/ui/chat-ui";
-import type { ReviewQuestion } from "../../data/review-request-types";
+import type { ReviewQuestion, ReviewResponse } from "../../data/review-request-types";
+
+const questionKey = (requestId: string, question: ReviewQuestion) => `${requestId}:${question.id}`;
 
 // Number choices so repeated labels remain distinct both to the person and to the shared form.
 const choices = (question: ReviewQuestion) =>
@@ -10,7 +12,7 @@ const choices = (question: ReviewQuestion) =>
 export const toQuestionPrompt = (requestId: string, questions: ReviewQuestion[]) =>
   ({
     questions: questions.map((question) => ({
-      id: `${requestId}:${question.id}`,
+      id: questionKey(requestId, question),
       question: question.label,
       required: question.required,
       multiple: question.input.kind === "multiple-choice",
@@ -18,6 +20,25 @@ export const toQuestionPrompt = (requestId: string, questions: ReviewQuestion[])
       options: choices(question).map(({ label }) => ({ label })),
     })),
   }) satisfies ChatInputQuestionPrompt;
+
+export const toSavedPromptState = (requestId: string, questions: ReviewQuestion[], response?: ReviewResponse) => {
+  const selected: Record<string, string[]> = {};
+  const custom: Record<string, string> = {};
+  if (!response || !("answers" in response)) return { selected, custom };
+  for (const question of questions) {
+    const answer = response.answers[question.id];
+    if (answer === undefined) continue;
+    const key = questionKey(requestId, question);
+    if (question.input.kind === "text") custom[key] = String(answer);
+    else {
+      const ids = Array.isArray(answer) ? answer : [answer];
+      selected[key] = choices(question)
+        .filter(({ id }) => ids.includes(id))
+        .map(({ label }) => label);
+    }
+  }
+  return { selected, custom };
+};
 
 export const toResponseAnswers = (questions: ReviewQuestion[], answers: string[][]) =>
   Object.fromEntries(

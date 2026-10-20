@@ -23,8 +23,14 @@ export function RequestsPanel(props: RequestsPanelProps) {
           }
         </Text>
       ))}
+      {/* A saved outcome starts a fresh draft; other ticket refreshes preserve edits. */}
       {requests.map((request) => (
-        <RequestForm key={request.id} request={request} onAnswer={onAnswer} onOpenChat={onOpenChat} />
+        <RequestForm
+          key={`${request.id}:${JSON.stringify(request.outcome)}`}
+          request={request}
+          onAnswer={onAnswer}
+          onOpenChat={onOpenChat}
+        />
       ))}
       {!row.requests.length && !row.requestErrors.length ? (
         <Text textStyle="label/S/regular" color="fg.muted">

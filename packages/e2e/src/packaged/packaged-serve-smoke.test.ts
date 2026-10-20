@@ -66,7 +66,7 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
 // Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
-// Planner covers timeline state, linked review counts and resolved colors, dependency recovery and Git conflicts in separate packaged cases.
+// Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.

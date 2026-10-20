@@ -19,12 +19,16 @@ Attempt handoffs ask one required text question with the ID `result`. Its answer
 
 1. `request-human` saves the request, links a chat session, and sets Needs attention. A request from an attempt reuses the attempt's session when that session owns the work. Otherwise Planner starts a new chat for the ticket.
 2. A person or an agent answers with `review` or cancels with `review-requests cancel`. Schedules, automations, and event handlers cannot do either.
-3. Each request gets exactly one outcome: an answer or a cancellation. If two answers race, the first one wins and the other caller sees the saved outcome.
+3. Each request has one current outcome: an answer or a cancellation. If the first answer races another answer or cancellation, the first write wins and the other caller sees the saved outcome.
 4. When no open request is left on the ticket, Planner clears Needs attention. Managed attempt tickets refresh their status: stopped implementations become Todo, and running implementations become In Progress. Open or unreadable requests keep managed tickets Blocked.
 
 Requests do not change after they are saved. To correct one, cancel it and create a new request. Answers to one request never close another open request.
 
+Decision forms stay editable after submission, with saved choices and text filled in. Change the answers and choose **Update answer** to save a revision. The same `review` command updates a saved decision from the CLI. Each revision is validated and replaces the current answer; when revisions race, the last saved revision is current. The request stays answered, so revising it does not pause work again. Cancelled requests stay closed. Task confirmations stay completed.
+
 Saving a response records what the person decided. It does not merge, select an attempt, recover a session, or finish the ticket. Use the matching Planner command for that. Opening a request's chat does not record a response either.
+
+Revising an answer does not undo actions already taken using the earlier answer. Open the linked chat if the agent needs to change ongoing work.
 
 New requests need a ticket that is not done. Answers and cancellations still work after the ticket is done, because a merge can finish the ticket before its approval request is answered. Deleting a ticket deletes its requests.
 
