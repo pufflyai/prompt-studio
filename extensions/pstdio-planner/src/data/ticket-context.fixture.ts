@@ -1,6 +1,6 @@
 import type { ExtensionStorageApi, ResourceIdentity } from "@pstdio/sdk/extensions";
 import { makeCommandContext } from "@pstdio/sdk/testing";
-import { ticketsCollection as collection, putTicket as put, updateTicket as update } from "./collections";
+import { ticketsCollection as collection, putTicket as put } from "./collections";
 import type { Ticket } from "./types";
 
 const seeded = new WeakMap<ExtensionStorageApi, Map<string, ResourceIdentity>>();
@@ -55,10 +55,6 @@ export const ticketContext = (storage: ExtensionStorageApi) => {
 export const putTicket = async (storage: ExtensionStorageApi, ticket: Ticket) => {
   seedTicketIdentity(storage, ticket);
   return put(ticketContext(storage), ticket);
-};
-export const updateTicket = async (storage: ExtensionStorageApi, ticket: Ticket) => {
-  seedTicketIdentity(storage, ticket);
-  return update(ticketContext(storage), ticket);
 };
 export const ticketsCollection = (storage: ExtensionStorageApi) => {
   const ctx = ticketContext(storage);
