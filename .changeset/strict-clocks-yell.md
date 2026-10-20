@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Preserve retained view state and prevent idle tree-move cleanup from blocking asynchronous navigation rendering.
+Preserve retained view state, finish asynchronous navigation rendering, and keep focus on outside menu interactions.
