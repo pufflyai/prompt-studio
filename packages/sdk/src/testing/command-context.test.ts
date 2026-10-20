@@ -74,3 +74,30 @@ test("workspace and session anchor writes use the shared resource links", async 
   const links = await ctx.resources.listAnchors({ resource: ticket, direction: "incoming" });
   expect(links.items.map(({ source }) => source.id).sort()).toEqual(["session-1", "workspace-1"]);
 });
+
+test("contexts read core identities allocated by an earlier context", async () => {
+  const storage = createMemoryStorage();
+  const first = makeCommandContext({ storage, params: {}, resourcePrefixes: { ticket: "PS" } });
+  const allocated = await first.resources.allocate({ kind: "ticket" });
+  const second = makeCommandContext({ storage, params: {}, resourcePrefixes: { ticket: "PS" } });
+  const identity = { ...allocated, kind: "ticket", aliases: [] };
+  expect(await second.resources.identity({ kind: "ticket", id: allocated.id })).toEqual(identity);
+  expect(await second.resources.findByShorthand({ kind: "ticket", shorthand: allocated.shorthand })).toEqual([
+    identity,
+  ]);
+  expect(await second.resources.identity({ kind: "report", id: allocated.id })).toBeNull();
+  expect(await second.resources.findByShorthand({ kind: "ticket", shorthand: "PS-999" })).toEqual([]);
+});
+
+test("resource identity lookup stays within its project and extension", async () => {
+  const storage = createMemoryStorage();
+  const first = makeCommandContext({ storage, params: {}, resourcePrefixes: { ticket: "PS" } });
+  const allocated = await first.resources.allocate({ kind: "ticket" });
+  for (const other of [
+    makeCommandContext({ storage, params: {}, projectId: "other" }),
+    makeCommandContext({ storage, params: {}, overrides: { extensionId: "other.extension" } }),
+  ]) {
+    expect(await other.resources.identity({ kind: "ticket", id: allocated.id })).toBeNull();
+    expect(await other.resources.findByShorthand({ kind: "ticket", shorthand: allocated.shorthand })).toEqual([]);
+  }
+});

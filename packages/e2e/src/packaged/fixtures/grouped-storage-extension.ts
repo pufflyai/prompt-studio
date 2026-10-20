@@ -1,4 +1,11 @@
-import { defineCommand, defineExtension, params, type StorageGroup } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  defineExtension,
+  defineResourceKind,
+  params,
+  resourceEvents,
+  type StorageGroup,
+} from "@pstdio/sdk/extensions";
 
 const read = defineCommand({
   id: "read",
@@ -61,6 +68,27 @@ const checkReadCache = defineCommand({
   },
 });
 
+const allocate = defineCommand({
+  id: "allocate",
+  title: "Allocate identity",
+  mutating: true,
+  run: (ctx) => ctx.resources.allocate({ kind: "note" }),
+});
+const identity = defineCommand({
+  id: "identity",
+  title: "Read identity",
+  params: { id: params.text({ required: true }) },
+  run: (ctx, { id }) => ctx.resources.identity({ kind: "note", id }),
+});
+const find = defineCommand({
+  id: "find-number",
+  title: "Find identity",
+  params: { shorthand: params.text({ required: true }) },
+  run: (ctx, { shorthand }) => ctx.resources.findByShorthand({ kind: "note", shorthand }),
+});
+// The compiled host must expose this public event reference as well as the methods.
+const numberEvent = defineCommand({ id: "number-event", title: "Number event", run: () => resourceEvents.renumbered });
 export default defineExtension({
-  commands: [read, stage, commit, outcome, checkReadCache],
+  resourceKinds: [defineResourceKind({ id: "note", prefix: "NR" })],
+  commands: [read, stage, commit, outcome, checkReadCache, allocate, identity, find, numberEvent],
 });
