@@ -79,25 +79,38 @@ const runDefaultExtensionInstall = async (
       signal: deps.signal,
     },
     async (entries, prepareNamedSource) => {
-      for (const resolved of entries) {
-        deps.signal?.throwIfAborted();
-        if (resolved.scope !== "user") continue;
-        try {
-          installed.push(
-            await traceSetupPhase("default_extensions.install", { extension: resolved.installName }, () =>
-              install({
-                ...toInstallInput(resolved.entry, deps.releaseRef),
-                env: context.env,
-                existsOk: true,
-                prepareNamedSource,
-                signal: deps.signal,
-              }),
-            ),
-          );
-        } catch (error) {
-          if (!deps.onInstallFailure) throw error;
-          reportFailure({ error, installName: resolved.installName, source: resolved.source });
-        }
+      const pendingByName = new Map<string, Promise<InstalledExtensionSource | undefined>>();
+      const pending = entries
+        .filter((entry) => entry.scope === "user")
+        .map((resolved) => {
+          const previous = pendingByName.get(resolved.installName);
+          const request = (async () => {
+            // Two entries for one target must not promote source trees over each other.
+            if (previous) await previous;
+            deps.signal?.throwIfAborted();
+            try {
+              return await traceSetupPhase("default_extensions.install", { extension: resolved.installName }, () =>
+                install({
+                  ...toInstallInput(resolved.entry, deps.releaseRef),
+                  env: context.env,
+                  existsOk: true,
+                  prepareNamedSource,
+                  signal: deps.signal,
+                }),
+              );
+            } catch (error) {
+              if (!deps.onInstallFailure) throw error;
+              reportFailure({ error, installName: resolved.installName, source: resolved.source });
+              return undefined;
+            }
+          })();
+          pendingByName.set(resolved.installName, request);
+          return request;
+        });
+      // Every install must settle before the shared checkout can be removed.
+      for (const result of await Promise.allSettled(pending)) {
+        if (result.status === "rejected") throw result.reason;
+        if (result.value) installed.push(result.value);
       }
     },
   );

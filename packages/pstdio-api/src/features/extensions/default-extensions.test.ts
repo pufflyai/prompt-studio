@@ -72,6 +72,114 @@ describe("resolveDefaultExtensionsConfig", () => {
 });
 
 describe("installDefaultExtensions", () => {
+  test("prepares independent defaults while another dependency install is pending", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-overlap-"));
+    const first = join(root, "first");
+    const second = join(root, "second");
+    writeExtension(first, "first");
+    writeExtension(second, "second");
+    const releaseFirst = Promise.withResolvers<void>();
+    const firstStarted = Promise.withResolvers<void>();
+    const started: string[] = [];
+    const pending = installDefaultExtensions({
+      config: { defaultExtensions: [{ source: first }, { source: second }] },
+      env: { PSTDIO_HOME: join(root, "home") },
+      installExtensionSource: async (input) => {
+        const name = input.source === first ? "first" : "second";
+        started.push(name);
+        if (name === "first") {
+          firstStarted.resolve();
+          await releaseFirst.promise;
+        }
+        return { ...installed, installName: name };
+      },
+    });
+    try {
+      await firstStarted.promise;
+      expect(started).toEqual(["first", "second"]);
+      releaseFirst.resolve();
+      expect((await pending).map((entry) => entry.installName)).toEqual(["first", "second"]);
+    } finally {
+      releaseFirst.resolve();
+      await pending;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("keeps defaults for the same install target in configuration order", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-target-order-"));
+    const first = join(root, "first");
+    const second = join(root, "second");
+    writeExtension(first, "first");
+    writeExtension(second, "second");
+    const releaseFirst = Promise.withResolvers<void>();
+    const firstStarted = Promise.withResolvers<void>();
+    const started: string[] = [];
+    const pending = installDefaultExtensions({
+      config: {
+        defaultExtensions: [
+          { source: first, installName: "shared" },
+          { source: second, installName: "shared" },
+        ],
+      },
+      env: { PSTDIO_HOME: join(root, "home") },
+      installExtensionSource: async (input) => {
+        const name = input.source === first ? "first" : "second";
+        started.push(name);
+        if (name === "first") {
+          firstStarted.resolve();
+          await releaseFirst.promise;
+        }
+        return { ...installed, sourceHash: name };
+      },
+    });
+    try {
+      await firstStarted.promise;
+      expect(started).toEqual(["first"]);
+      releaseFirst.resolve();
+      expect((await pending).map((entry) => entry.sourceHash)).toEqual(["first", "second"]);
+    } finally {
+      releaseFirst.resolve();
+      await pending;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("keeps the shared checkout until pending installs finish after a failure", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-pending-cleanup-"));
+    for (const name of ["broken", "pending"]) writeExtension(join(root, name), name);
+    const releasePending = Promise.withResolvers<void>();
+    const pendingStarted = Promise.withResolvers<void>();
+    const cleanup = mock();
+    const failure = new Error("Dependency installation failed");
+    const result = installDefaultExtensions({
+      config: { defaultExtensions: ["broken", "pending"] },
+      env: { PSTDIO_HOME: join(root, "home") },
+      prepareSharedCheckout: async () => ({
+        prepareNamedSource: async (name) => ({ path: join(root, name), ref: "test-ref" }),
+        cleanup,
+      }),
+      installExtensionSource: async (input) => {
+        if (input.source === "broken") throw failure;
+        pendingStarted.resolve();
+        await releasePending.promise;
+        return installed;
+      },
+    }).catch((error: unknown) => error);
+    try {
+      await pendingStarted.promise;
+      await Bun.sleep(0);
+      expect(cleanup).not.toHaveBeenCalled();
+      releasePending.resolve();
+      expect(await result).toBe(failure);
+      expect(cleanup).toHaveBeenCalledTimes(1);
+    } finally {
+      releasePending.resolve();
+      await result;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("serializes concurrent default extension setup", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-serialized-"));
     const source = join(root, "pstdio-planner");
