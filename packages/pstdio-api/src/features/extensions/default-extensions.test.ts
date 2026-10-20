@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { installDefaultExtensions, resolveDefaultExtensionsConfig } from "./default-extensions";
 import { installed, writeExtension } from "./default-extensions-test-fixtures";
 
@@ -76,19 +76,21 @@ describe("installDefaultExtensions", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-overlap-"));
     const first = join(root, "first");
     const second = join(root, "second");
+    const third = join(root, "third");
     writeExtension(first, "first");
     writeExtension(second, "second");
+    writeExtension(third, "third");
     const releaseFirst = Promise.withResolvers<void>();
     const firstStarted = Promise.withResolvers<void>();
     const started: string[] = [];
     const pending = installDefaultExtensions({
-      config: { defaultExtensions: [{ source: first }, { source: second }] },
+      config: { defaultExtensions: [{ source: first }, { source: second }, { source: third }] },
       env: { PSTDIO_HOME: join(root, "home") },
       installExtensionSource: async (input) => {
-        const name = input.source === first ? "first" : "second";
+        const name = basename(input.source);
         started.push(name);
-        if (name === "first") {
-          firstStarted.resolve();
+        if (name !== "third") {
+          if (name === "first") firstStarted.resolve();
           await releaseFirst.promise;
         }
         return { ...installed, installName: name };
@@ -98,7 +100,7 @@ describe("installDefaultExtensions", () => {
       await firstStarted.promise;
       expect(started).toEqual(["first", "second"]);
       releaseFirst.resolve();
-      expect((await pending).map((entry) => entry.installName)).toEqual(["first", "second"]);
+      expect((await pending).map((entry) => entry.installName)).toEqual(["first", "second", "third"]);
     } finally {
       releaseFirst.resolve();
       await pending;
