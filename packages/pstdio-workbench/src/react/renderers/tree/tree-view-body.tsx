@@ -63,7 +63,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
   } = props;
 
   if (error && sections.length === 0) return null;
-  if (loading) return null;
+  if (loading && sections.length === 0) return null;
   if (moduleLoading) return <TreeViewSkeleton />;
 
   // Keep an empty-but-customizable tree right-clickable so a fully-hidden tree

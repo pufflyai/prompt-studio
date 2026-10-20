@@ -1,5 +1,5 @@
 import { PstdioConnectionError } from "@pstdio/sdk/client";
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import type { Disposable, RendererReadBinding, WorkbenchCore } from "../../core";
 import { createRendererMutationBinding } from "./renderer-mutations";
 import { useWorkbenchConnection } from "./workbench-connection-provider";
@@ -48,13 +48,16 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     const handlers = {
       onProgress: (value: T) => {
         // Background refreshes keep the complete snapshot until its replacement is ready.
-        setState((previous) => {
-          if (previous.queryKey === queryKey && previous.value !== undefined && !previous.loading) return previous;
-          return { queryKey, value, loading: true };
-        });
+        startTransition(() =>
+          setState((previous) => {
+            if (previous.queryKey === queryKey && previous.value !== undefined && !previous.loading) return previous;
+            return { queryKey, value, loading: true };
+          }),
+        );
       },
       onValue: (value: T) => {
-        setState({ queryKey, value: owner.value() ?? value, loading: false });
+        // Loaded contents may render many rows. Navigation structure and input keep priority.
+        startTransition(() => setState({ queryKey, value: owner.value() ?? value, loading: false }));
       },
       onError: (error: unknown) => {
         const connectionLost = error instanceof PstdioConnectionError;

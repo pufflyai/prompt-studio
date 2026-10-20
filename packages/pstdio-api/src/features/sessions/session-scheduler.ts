@@ -126,23 +126,26 @@ const startScheduledSession = async (
       submittedQueuePosition,
       entry: owner,
     });
-  if (!input.signal) {
-    void spawning.catch(fail);
-    return;
-  }
-
-  try {
-    await spawning;
-  } catch (error) {
-    if (error instanceof SessionCancellationCleanupError) throw error;
-    if (input.signal.aborted) {
-      if (submittedQueuePosition !== undefined) await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
-      await deps.sessionService.cancel(session.id);
-      input.signal.throwIfAborted();
-    }
-    await fail(error);
-    throw error;
-  }
+  // The session and its initial request are durable. Startup now belongs to the host,
+  // just as it does for REST-created sessions, rather than the command that requested it.
+  void spawning
+    .then(
+      async () => {
+        if (submittedQueuePosition !== undefined && !input.attachmentRefs?.length) {
+          await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
+        }
+      },
+      async (error) => {
+        if (input.signal?.aborted && !(error instanceof SessionCancellationCleanupError)) {
+          if (submittedQueuePosition !== undefined)
+            await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
+          await deps.sessionService.cancel(session.id);
+          return;
+        }
+        await fail(error);
+      },
+    )
+    .catch(fail);
 };
 
 const assertObservedRun = (input: StartExistingInput, fresh: ExistingSession) => {
@@ -220,6 +223,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
           sessionId: started.id,
           prompt: input.prompt,
           requestKind: "start",
+          model: input.model,
           attachmentRefs: input.attachmentRefs,
           params: input.params,
         });

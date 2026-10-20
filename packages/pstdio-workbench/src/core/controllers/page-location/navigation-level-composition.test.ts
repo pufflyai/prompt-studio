@@ -43,6 +43,32 @@ const setup = () => {
 };
 
 describe("level navigation", () => {
+  test("publishes destination navigation before enclosing navigation finishes", async () => {
+    const { workbench, navigation } = setup();
+    const page = registerPage(workbench, "sessions");
+    const pending = Promise.withResolvers<[]>();
+    workbench.navigationTrees.registerContribution({
+      id: "project.files",
+      owner: project,
+      sourceExtensionId: "pstdio",
+      declarationIndex: 0,
+      getSections: () => pending.promise,
+    });
+    contribute(workbench, { kind: "page", id: "test.page.sessions", extensionId: "test" }, "content", () => [
+      { id: "sessions", nodes: [{ id: "session", label: "Session" }] },
+    ]);
+    workbench.pageLocations.navigate({ kind: "page", page });
+    const published: string[][] = [];
+    const reading = navigation.getSections("content", undefined, (sections) => published.push(rows(sections)));
+    await Bun.sleep(0);
+    try {
+      expect(published).toContainEqual(["session"]);
+    } finally {
+      pending.resolve([]);
+      await reading;
+    }
+  });
+
   test("replaces the body with the level, keeps mode rows for pinned slots, and follows inherited levels", async () => {
     const { workbench, navigation } = setup();
     const home = registerPage(workbench, "home");

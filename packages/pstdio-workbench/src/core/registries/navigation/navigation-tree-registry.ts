@@ -2,6 +2,7 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-registry";
 import type { ResourceRef } from "../resources/resource-registry";
+import { settleReadBatch } from "../views/settle-read-batch";
 import type { NavigationTarget } from "./navigation-registry";
 import { getNavigationTreeNodeSource, setNavigationTreeNodeSource } from "./navigation-tree-node-source";
 
@@ -22,6 +23,7 @@ export interface NavigationTreeOwner {
 export interface NavigationTreeContext {
   resource?: ResourceRef;
   signal?: AbortSignal;
+  onProgress?(sections: TreeViewSection[]): void;
 }
 
 export interface NavigationTreeMoveContext extends NavigationTreeContext {
@@ -40,6 +42,7 @@ export interface NavigationTreeContribution {
   defaultExpandedSectionIds?: string[];
   /** Resolve the data resource independently of the selected navigation item. */
   resolveResource?(resource: ResourceRef | undefined): ResourceRef | undefined;
+  getStructure?(context: NavigationTreeContext): TreeViewSection[];
   getSections?(context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getChildren?(node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
   /** Authored actions for discovery, independent of tree data and visibility context. */
@@ -50,6 +53,7 @@ export interface CreateNavigationTreeRegistryInput {
   subscribeViewRefresh?(viewId: string, listener: () => void): Disposable;
   getViewDefaultExpandedSectionIds?(viewId: string): readonly string[] | undefined;
   getViewSections?(viewId: string, context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
+  getViewStructure?(viewId: string, context: NavigationTreeContext): TreeViewSection[];
   getViewChildren?(viewId: string, node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
   moveViewNode?(
     viewId: string,
@@ -68,6 +72,11 @@ export interface NavigationTreeRegistry {
     slot?: NavigationTreeSlot,
   ): NavigationTreeOwner | undefined;
   getReadKey(owner: NavigationTreeOwner, context?: NavigationTreeContext): string;
+  getStructure(
+    owner: NavigationTreeOwner,
+    slot?: NavigationTreeSlot,
+    context?: NavigationTreeContext,
+  ): TreeViewSection[];
   getSections(
     owner: NavigationTreeOwner,
     slot?: NavigationTreeSlot,
@@ -209,20 +218,50 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       );
     },
 
-    async getSections(owner, slot = "content", context = {}) {
+    getStructure(owner, slot = "content", context = {}) {
       const sections: TreeViewSection[] = [];
       for (const contribution of matching(owner, slot)) {
-        context.signal?.throwIfAborted();
         const query = readContext(contribution, context);
-        const sourceSections = contribution.viewId
-          ? await input.getViewSections?.(contribution.viewId, query)
-          : await contribution.getSections?.(query);
-        context.signal?.throwIfAborted();
-        for (const section of sourceSections ?? []) {
+        const structure = contribution.viewId
+          ? input.getViewStructure?.(contribution.viewId, query)
+          : contribution.getStructure?.(query);
+        for (const section of structure ?? [])
           mergeSection(sections, projectSection(section, contribution, owner, query.resource));
-        }
       }
       return sections;
+    },
+
+    async getSections(owner, slot = "content", context = {}) {
+      const selected = matching(owner, slot);
+      const available: TreeViewSection[][] = selected.map((contribution) => {
+        const query = readContext(contribution, context);
+        const structure = contribution.viewId
+          ? input.getViewStructure?.(contribution.viewId, query)
+          : contribution.getStructure?.(query);
+        return (structure ?? []).map((section) => projectSection(section, contribution, owner, query.resource));
+      });
+      const snapshot = () => {
+        const sections: TreeViewSection[] = [];
+        for (const section of available.flat()) mergeSection(sections, section);
+        return sections;
+      };
+      await settleReadBatch(
+        selected.map((contribution, index) => async (signal) => {
+          const query = readContext(contribution, { ...context, signal });
+          const publish = (sections: TreeViewSection[]) => {
+            signal.throwIfAborted();
+            available[index] = sections.map((section) => projectSection(section, contribution, owner, query.resource));
+            context.onProgress?.(snapshot());
+          };
+          const source = { ...query, onProgress: publish };
+          const sections = contribution.viewId
+            ? await input.getViewSections?.(contribution.viewId, source)
+            : await contribution.getSections?.(source);
+          publish(sections ?? []);
+        }),
+        context.signal,
+      );
+      return snapshot();
     },
 
     async getChildren(node, context = {}) {

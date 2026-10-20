@@ -13,6 +13,18 @@ export const extensionRendererRecordBaseSchema = z.object({
 });
 
 export const extensionTreeRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
+  structure: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: localizableStringSchema.optional(),
+        collapsible: z.boolean().optional(),
+        hiddenByDefault: z.boolean().optional(),
+        canHide: z.boolean().optional(),
+        resourceNode: z.object({ id: z.string(), icon: z.string().optional() }).optional(),
+      }),
+    )
+    .optional(),
   searchable: z.boolean().optional(),
   searchPlaceholder: localizableStringSchema.optional(),
   headerHandlerId: z.string().optional(),

@@ -55,6 +55,7 @@ const toNativeViewBody = (
     return {
       kind: "tree",
       ...common,
+      structure: body.structure,
       searchable: body.searchable,
       searchPlaceholder: body.searchPlaceholder,
       headerHandlerId: handlers.headerHandlerId as string | undefined,

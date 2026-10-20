@@ -4,7 +4,7 @@ import { packWorkspacePackageTarball } from "../local-workspace-registry";
 
 const repoRoot = join(import.meta.dirname, "../../../..");
 
-export async function preparePlannerSource(root: string) {
+export async function preparePlannerSource(root: string, options: { offline?: boolean } = {}) {
   mkdirSync(root, { recursive: true });
   const source = join(root, "planner-source");
   // Unpublished UI APIs need the built packages, including a generated fixture
@@ -24,11 +24,14 @@ export async function preparePlannerSource(root: string) {
     manifest.overrides[`@pstdio/${name}`] = tarball;
   }
   writeFileSync(path, JSON.stringify(manifest));
-  const lock = Bun.spawn(["bun", "install", "--lockfile-only", "--ignore-scripts"], {
-    cwd: source,
-    stdout: "ignore",
-    stderr: "pipe",
-  });
+  const lock = Bun.spawn(
+    ["bun", "install", "--lockfile-only", "--ignore-scripts", ...(options.offline ? ["--offline"] : [])],
+    {
+      cwd: source,
+      stdout: "ignore",
+      stderr: "pipe",
+    },
+  );
   const [exit, error] = await Promise.all([lock.exited, new Response(lock.stderr).text()]);
   if (exit !== 0) throw new Error(`Could not prepare planner fixture: ${error}`);
   return source;

@@ -1,7 +1,7 @@
-import { Badge, Box } from "@chakra-ui/react";
+import { Badge, Box, Spinner } from "@chakra-ui/react";
 import type { PageLocation, PageRef } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
+import { Tooltip, type TreeListActionMenuItem, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { ReactNode } from "react";
 import {
@@ -203,6 +203,14 @@ const resolveTreeNodeEndContent = (node: TreeNode, resource: ResourceRef | undef
   return <DiffBubble additions={additions} deletions={deletions} variant="ghost" size="small" />;
 };
 const toTreeListSectionEmptyNode = (section: TreeViewSection): TreeListNode | undefined => {
+  if (section.loading && section.nodes.length === 0)
+    return {
+      id: `${section.id}:loading`,
+      label: "Loading…",
+      icon: <Spinner size="xs" />,
+      disabled: true,
+      rowVariant: "empty-state",
+    };
   if (!section.emptyState || section.nodes.length > 0) return undefined;
   return {
     id: `${section.id}:empty`,
@@ -223,36 +231,40 @@ const toTreeListNode = (
   const commandContext = resource ? { resource } : undefined;
   const customPath = node.contextMenuPath ?? node.menuPath;
   const resourcePath = resource ? resourceContextMenuPath(resource.type) : undefined;
-  const sharedActions = resource
-    ? createWorkbenchResourceActions(context.workbench, resource, {
-        onRequestParams: context.onRequestParams,
+  let menuItems: TreeListActionMenuItem[] | undefined;
+  const resolveMenuItems = () => {
+    if (menuItems) return menuItems;
+    const sharedActions = resource
+      ? createWorkbenchResourceActions(context.workbench, resource, {
+          onRequestParams: context.onRequestParams,
+          onCommandError: context.onCommandError,
+        }).map((action) => ({
+          id: action.key,
+          label: action.label,
+          commandId: action.commandId,
+          icon: action.icon,
+          group: action.group,
+          disabled: action.isDisabled,
+          endContent: action.endContent,
+          separatorBefore: action.separatorBefore,
+          onAction: () => {
+            void action.onClick?.();
+          },
+        }))
+      : [];
+    menuItems = [
+      ...sharedActions,
+      ...createTreeContextMenuItems({
+        actions: node.contextMenuActions,
+        menuPath: customPath?.join("/") !== resourcePath?.join("/") ? customPath : undefined,
+        workbench: context.workbench,
+        context: commandContext,
         onCommandError: context.onCommandError,
-      }).map((action) => ({
-        id: action.key,
-        label: action.label,
-        commandId: action.commandId,
-        icon: action.icon,
-        group: action.group,
-        disabled: action.isDisabled,
-        endContent: action.endContent,
-        separatorBefore: action.separatorBefore,
-        onAction: () => {
-          void action.onClick?.();
-        },
-      }))
-    : [];
-  const contextMenuItems = [
-    ...sharedActions,
-    ...createTreeContextMenuItems({
-      actions: node.contextMenuActions,
-      menuPath: customPath?.join("/") !== resourcePath?.join("/") ? customPath : undefined,
-      workbench: context.workbench,
-      context: commandContext,
-      onCommandError: context.onCommandError,
-      onRequestParams: context.onRequestParams,
-    }),
-  ];
-  const menuItems = node.menuPath && contextMenuItems.length > 0 ? contextMenuItems : undefined;
+        onRequestParams: context.onRequestParams,
+      }),
+    ];
+    return menuItems;
+  };
   const treeNode: TreeListNode = {
     id: node.id,
     moveScope: node.moveScope,
@@ -278,8 +290,15 @@ const toTreeListNode = (
       onRequestParams: context.onRequestParams,
     }),
     endContent: resolveTreeNodeEndContent(node, resource),
-    menuItems,
-    contextMenuItems: contextMenuItems.length > 0 ? contextMenuItems : undefined,
+    get menuItems() {
+      if (!node.menuPath) return undefined;
+      const items = resolveMenuItems();
+      return items.length > 0 ? items : undefined;
+    },
+    get contextMenuItems() {
+      const items = resolveMenuItems();
+      return items.length > 0 ? items : undefined;
+    },
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),
     isContainer: node.collapsible,
     isNavigable: Boolean(navigationIntent),

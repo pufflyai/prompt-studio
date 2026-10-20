@@ -100,6 +100,10 @@ const createDeps = () => {
         transitionStatus,
         store: createTrackedSessionStore(),
       },
+      sessionQueueEntriesService: {
+        createDispatchStarted: async () => ({ queue_position: 1 }),
+        remove: async () => {},
+      },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },
