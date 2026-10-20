@@ -1,6 +1,7 @@
 import { Box, Text } from "@chakra-ui/react";
 import { WindowTitleBar } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { createPolicyWorkbench } from "../region/panel-policy.fixture";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -50,11 +51,20 @@ export const HostPanelControls: Story = {
       workbench,
       panelControlsPlacement: "host" as const,
       titleBar: (
-        <WindowTitleBar platform="darwin">
+        <WindowTitleBar platform="darwin" actions={<WorkbenchPanelToggles workbench={workbench} />}>
           <Text textStyle="label/S/medium">Project tabs</Text>
-          <WorkbenchPanelToggles workbench={workbench} />
         </WindowTitleBar>
       ),
     };
   })(),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const controls = canvas.getByRole("group", { name: "Panel controls" });
+    const titleBar = canvasElement.querySelector("[data-window-title-bar]")!;
+    await expect(titleBar.getBoundingClientRect().right - controls.getBoundingClientRect().right).toBeLessThanOrEqual(
+      10,
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "Hide Side Panel" }));
+    await expect(canvas.getByRole("button", { name: "Show Side Panel" })).toBeVisible();
+  },
 };
