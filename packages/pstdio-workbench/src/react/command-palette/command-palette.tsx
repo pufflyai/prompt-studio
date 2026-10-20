@@ -280,7 +280,7 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
           initialActiveIndex={initialActiveIndex}
           mode={activeViewMode}
           modes={activeViewModes}
-          resetKey={requestId}
+          resetKey={`${requestId}:${view}:${initialQuery}`}
           inputIcon={({ mode }) => getPaletteInputIcon({ view, mode })}
           placeholder={({ mode }) => getPalettePlaceholder({ view, mode })}
           emptyLabel="No results found."
