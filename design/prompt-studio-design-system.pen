@@ -32206,7 +32206,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -66815,6 +66815,1971 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "N98PU",
+          "name": "Loading · Board and list",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "JLl7P",
+              "name": "Board loading skeleton",
+              "width": "fill_container",
+              "height": 460,
+              "fill": "$ds-bg",
+              "stroke": "$ds-border-subtle",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "bI7kN",
+                  "name": "Saved view placeholders",
+                  "width": "fill_container",
+                  "height": 40,
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    8
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "ugUfV",
+                      "name": "View 0",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 72,
+                      "height": 12
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "fJquZ",
+                      "name": "View 1",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 56,
+                      "height": 12
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "neTXa",
+                      "name": "View 2",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 64,
+                      "height": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iy1r0",
+                  "name": "Columns",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "gap": 8,
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "E8NrT",
+                      "name": "Column 0",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [
+                        10,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "s2ZopN",
+                          "name": "Column label",
+                          "width": "fill_container",
+                          "height": 24,
+                          "gap": 4,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 7,
+                              "id": "sKalk",
+                              "name": "Status",
+                              "fill": "$ds-bg-emphasized",
+                              "width": 14,
+                              "height": 14
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 4,
+                              "id": "CXyH2",
+                              "name": "Label",
+                              "fill": "$ds-bg-emphasized",
+                              "width": 64,
+                              "height": 12
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "qcOIU",
+                          "name": "Card inset",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            10,
+                            8,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "SYNK1",
+                              "name": "Card 0",
+                              "width": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "Fuwll",
+                                  "name": "Number",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 32,
+                                  "height": 10
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "S9DCwQ",
+                                  "name": "Title",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": "fill_container",
+                                  "height": 12
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "rzowQ",
+                                  "name": "Second line",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 120,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "T2PrM",
+                                  "name": "Tags",
+                                  "width": "fill_container",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "JM3VF",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 44,
+                                      "height": 16
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "pljeY",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 28,
+                                      "height": 16
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Kdne3",
+                          "name": "Card inset",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            10,
+                            8,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "VLXKM",
+                              "name": "Card 1",
+                              "width": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "CsUQb",
+                                  "name": "Number",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 32,
+                                  "height": 10
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "wAxMv",
+                                  "name": "Title",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": "fill_container",
+                                  "height": 12
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "UUbt5",
+                                  "name": "Tags",
+                                  "width": "fill_container",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "jEIo8",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 44,
+                                      "height": 16
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "K0ZGKn",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 28,
+                                      "height": 16
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "QCnwv",
+                          "name": "Card inset",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            10,
+                            8,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "jTyl0",
+                              "name": "Card 2",
+                              "width": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "BcgcQ",
+                                  "name": "Number",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 32,
+                                  "height": 10
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "LvYxR",
+                                  "name": "Title",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": "fill_container",
+                                  "height": 12
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "Iadt5",
+                                  "name": "Second line",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 96,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "dTV8a",
+                                  "name": "Tags",
+                                  "width": "fill_container",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "nNsFg",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 44,
+                                      "height": 16
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "IE0fy",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 28,
+                                      "height": 16
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "UhLU2",
+                      "name": "Column 1",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [
+                        10,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "v7Doh",
+                          "name": "Column label",
+                          "width": "fill_container",
+                          "height": 24,
+                          "gap": 4,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 7,
+                              "id": "Gig7h",
+                              "name": "Status",
+                              "fill": "$ds-bg-emphasized",
+                              "width": 14,
+                              "height": 14
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 4,
+                              "id": "GVg5p",
+                              "name": "Label",
+                              "fill": "$ds-bg-emphasized",
+                              "width": 48,
+                              "height": 12
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "KO2zi",
+                          "name": "Card inset",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            10,
+                            8,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "JBQoR",
+                              "name": "Card 0",
+                              "width": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "t8GBF",
+                                  "name": "Number",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 32,
+                                  "height": 10
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "JDX0U",
+                                  "name": "Title",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": "fill_container",
+                                  "height": 12
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "rSXNP",
+                                  "name": "Tags",
+                                  "width": "fill_container",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "Z9W3S",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 44,
+                                      "height": 16
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "Yj7XO",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 28,
+                                      "height": 16
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "yUM2I",
+                          "name": "Card inset",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            10,
+                            8,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "K8Kan",
+                              "name": "Card 1",
+                              "width": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "Bya8s",
+                                  "name": "Number",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 32,
+                                  "height": 10
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "jrYZX",
+                                  "name": "Title",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": "fill_container",
+                                  "height": 12
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "LHaeH",
+                                  "name": "Second line",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 96,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "E9WPBQ",
+                                  "name": "Tags",
+                                  "width": "fill_container",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "KIAiv",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 44,
+                                      "height": 16
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "BrsTl",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 28,
+                                      "height": 16
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i5jjxQ",
+                      "name": "Column 2",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [
+                        10,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "x4H9mG",
+                          "name": "Column label",
+                          "width": "fill_container",
+                          "height": 24,
+                          "gap": 4,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 7,
+                              "id": "azmoc",
+                              "name": "Status",
+                              "fill": "$ds-bg-emphasized",
+                              "width": 14,
+                              "height": 14
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 4,
+                              "id": "e71J8",
+                              "name": "Label",
+                              "fill": "$ds-bg-emphasized",
+                              "width": 80,
+                              "height": 12
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "yP7Of",
+                          "name": "Card inset",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            10,
+                            8,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "ACojy",
+                              "name": "Card 0",
+                              "width": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "L4L8K",
+                                  "name": "Number",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 32,
+                                  "height": 10
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "o83dQ8",
+                                  "name": "Title",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": "fill_container",
+                                  "height": 12
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "RuymM",
+                                  "name": "Second line",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 96,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "QNXjZ",
+                                  "name": "Tags",
+                                  "width": "fill_container",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "KiF7R",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 44,
+                                      "height": 16
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "GQhvM",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 28,
+                                      "height": 16
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "GzFAW",
+                          "name": "Card inset",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            10,
+                            8,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "xMUct",
+                              "name": "Card 1",
+                              "width": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "Hsh1S",
+                                  "name": "Number",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 32,
+                                  "height": 10
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "IM5Ed",
+                                  "name": "Title",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": "fill_container",
+                                  "height": 12
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "F5hM2Q",
+                                  "name": "Second line",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 140,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "DLOml",
+                                  "name": "Tags",
+                                  "width": "fill_container",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "a4ergm",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 44,
+                                      "height": 16
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "xAJCZ",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 28,
+                                      "height": 16
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ED7ez",
+                          "name": "Card inset",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            10,
+                            8,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "lA9Ns",
+                              "name": "Card 2",
+                              "width": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "OQbVS",
+                                  "name": "Number",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 32,
+                                  "height": 10
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "IeMvO",
+                                  "name": "Title",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": "fill_container",
+                                  "height": 12
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "cnU8g",
+                                  "name": "Second line",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 120,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Qw92E",
+                                  "name": "Tags",
+                                  "width": "fill_container",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "VNxxS",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 44,
+                                      "height": 16
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "eTVPG",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 28,
+                                      "height": 16
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Hund5",
+                      "name": "Column 3",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [
+                        10,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ks3km",
+                          "name": "Column label",
+                          "width": "fill_container",
+                          "height": 24,
+                          "gap": 4,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 7,
+                              "id": "c6vbKS",
+                              "name": "Status",
+                              "fill": "$ds-bg-emphasized",
+                              "width": 14,
+                              "height": 14
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 4,
+                              "id": "hr5pz",
+                              "name": "Label",
+                              "fill": "$ds-bg-emphasized",
+                              "width": 56,
+                              "height": 12
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "yXmpg",
+                          "name": "Card inset",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            10,
+                            8,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "f9Ao6",
+                              "name": "Card 0",
+                              "width": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "e6eoTE",
+                                  "name": "Number",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 32,
+                                  "height": 10
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "aDdad",
+                                  "name": "Title",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": "fill_container",
+                                  "height": 12
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "u4HXUK",
+                                  "name": "Second line",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 140,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "zDcSZ",
+                                  "name": "Tags",
+                                  "width": "fill_container",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "m3ANcj",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 44,
+                                      "height": 16
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "j18Atd",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 28,
+                                      "height": 16
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "PgiUC",
+                          "name": "Card inset",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            10,
+                            8,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "EIxkU",
+                              "name": "Card 1",
+                              "width": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "uD3GU",
+                                  "name": "Number",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 32,
+                                  "height": 10
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "M3Fw6",
+                                  "name": "Title",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": "fill_container",
+                                  "height": 12
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "oX6ke",
+                                  "name": "Second line",
+                                  "fill": "$ds-bg-emphasized",
+                                  "width": 120,
+                                  "height": 12
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "q4GYi8",
+                                  "name": "Tags",
+                                  "width": "fill_container",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "PyvEt",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 44,
+                                      "height": 16
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 4,
+                                      "id": "PTCNu",
+                                      "name": "Tag",
+                                      "fill": "$ds-bg-emphasized",
+                                      "width": 28,
+                                      "height": 16
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "FstpX",
+              "name": "List loading skeleton",
+              "width": "fill_container",
+              "height": 460,
+              "fill": "$ds-bg",
+              "stroke": "$ds-border-subtle",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "vZb3o",
+                  "name": "Saved view placeholders",
+                  "width": "fill_container",
+                  "height": 40,
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    8
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "SnNAn",
+                      "name": "View 0",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 72,
+                      "height": 12
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "Rfzfo",
+                      "name": "View 1",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 56,
+                      "height": 12
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "iKIsH",
+                      "name": "View 2",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 64,
+                      "height": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "RyPwu",
+                  "name": "Row 0",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "vNfAu",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "MDCrj",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "beQe7",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 320,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "BR6vQ",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "J6eyvE",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "e0YTJe",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ua5Ot",
+                  "name": "Row 1",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "v2aew",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "nr2TG",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "GXrP8",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 240,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "CzHA2",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "fS9Vn",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "TsYEV",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "U060uL",
+                  "name": "Row 2",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "TCw3l",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "sWIPf",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "JggUL",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 280,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "M6pOj2",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "Q0g98",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "qvJ8y",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "d9Qen",
+                  "name": "Row 3",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "Zbkoe",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "SsmRh",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "vjYk9",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 200,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZsbvR",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "SZhXL",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "E2BtT",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wMff1",
+                  "name": "Row 4",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "SSLiC",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "gen1S",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "LPAK9",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 360,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bUVRk",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "I58WpI",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "J3Bk5",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "OMR28",
+                  "name": "Row 5",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "kJYaS",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "xiaVO",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "a9hv5p",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 260,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "p5LCvC",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "w1y43p",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "vRo8o",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "TdhHm",
+                  "name": "Row 6",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "uDBoX",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "LxvzN",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "EvmcR",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 320,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YfAXe",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "FSbRT",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "TZ4mo",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "UstML",
+                  "name": "Row 7",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "B9O3c",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "up8nQ",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "W13k3",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 240,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Z0SraY",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "c8mTOe",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "jHvPU",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "MvhMc",
+                  "name": "Row 8",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "Xo6gU",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "IJjxw",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "TZ7e5",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 280,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "x7a004",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "kMC88",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "O8i5w",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "x8b41q",
+                  "name": "Row 9",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "w2ati",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "g4UU0y",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "Bql2M",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 200,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "V2zXx",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "qPWlz",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "lqsj7",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "v01orf",
+                  "name": "Row 10",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "aHKg0",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "ag3xY",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "O2ax8",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 360,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DpNVZ",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "WjrTR",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "x9dxSI",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dl6lf",
+                  "name": "Row 11",
+                  "width": "fill_container",
+                  "height": 35,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8,
+                      "id": "YwSwt",
+                      "name": "Status",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "a52fuK",
+                      "name": "Number",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 32,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "pSm7B",
+                      "name": "Title",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 260,
+                      "height": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "z6WF1",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "tsO95",
+                      "name": "Tag",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 44,
+                      "height": 16
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 4,
+                      "id": "oux2V",
+                      "name": "Property",
+                      "fill": "$ds-bg-emphasized",
+                      "width": 36,
+                      "height": 10
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -74952,7 +76917,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -95585,7 +97550,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -124571,7 +126536,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -151065,7 +153030,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151087,7 +153052,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151811,7 +153776,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151833,7 +153798,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152447,7 +154412,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152469,7 +154434,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153814,7 +155779,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153836,7 +155801,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {

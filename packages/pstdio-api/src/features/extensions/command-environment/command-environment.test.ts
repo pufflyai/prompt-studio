@@ -746,7 +746,6 @@ describe("createCommandEnvironment storage files", () => {
     expect(attachments.urlFor(ticketFile.id)).toBe(ticketFile.url);
     await attachments.delete(ticketFile.id);
     expect(await attachments.list()).toEqual([]);
-    expect((await f.storage.readState()).pending).toHaveLength(3);
   });
 });
 

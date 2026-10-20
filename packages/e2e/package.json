@@ -16,7 +16,8 @@
     "perf:frontend:trace": "PLAYWRIGHT_TRACE=on bun run perf:frontend",
     "test:planner-stress": "bun src/perf/planner-stress.ts",
     "perf:subnav": "bun src/perf/subnav-benchmark.ts",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "perf:planner-board-cold-open": "bun src/perf/planner-board-cold-open.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
@@ -45,8 +46,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remote-workspaces": "workspace:*",
-    "workbench-fixture": "workspace:*",
-    "pstdio-sync": "workspace:*",
-    "pstdio-sync-contracts": "workspace:*"
+    "workbench-fixture": "workspace:*"
   }
 }

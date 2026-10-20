@@ -1,24 +1,4 @@
-import {
-  defineArtifactMount,
-  defineCommand,
-  defineExtension,
-  params,
-  type StorageGroup,
-  type StorageResolution,
-} from "@pstdio/sdk/extensions";
-
-const documents = defineArtifactMount({ id: "documents", path: "documents", label: "Documents" });
-const readFiles = defineCommand({
-  id: "read-files",
-  title: "Read ordinary extension files",
-  async run(ctx) {
-    return {
-      document: await ctx.artifacts.mount(documents.id).readText("remote.txt"),
-      attachment: new TextDecoder().decode(await ctx.storage.files.getBytes("remote-attachment")),
-      reference: await ctx.storage.files.get("remote-attachment"),
-    };
-  },
-});
+import { defineCommand, defineExtension, params, type StorageGroup } from "@pstdio/sdk/extensions";
 
 const read = defineCommand({
   id: "read",
@@ -52,21 +32,6 @@ const commit = defineCommand({
   run: (ctx, { group }) => ctx.storage.records.commit(group),
 });
 
-const inspect = defineCommand({
-  id: "inspect",
-  title: "Inspect a retained note",
-  params: { conflictId: params.text({ required: true }) },
-  run: (ctx, { conflictId }) => ctx.storage.records.inspect(conflictId),
-});
-
-const resolve = defineCommand({
-  id: "resolve",
-  title: "Resolve a retained note",
-  mutating: true,
-  params: { proposal: params.json<StorageResolution, { required: true }>({ required: true }) },
-  run: (ctx, { proposal }) => ctx.storage.records.resolve(proposal),
-});
-
 const outcome = defineCommand({
   id: "outcome",
   title: "Read a durable save outcome",
@@ -97,6 +62,5 @@ const checkReadCache = defineCommand({
 });
 
 export default defineExtension({
-  artifactMounts: [documents],
-  commands: [read, readFiles, stage, commit, inspect, resolve, outcome, checkReadCache],
+  commands: [read, stage, commit, outcome, checkReadCache],
 });

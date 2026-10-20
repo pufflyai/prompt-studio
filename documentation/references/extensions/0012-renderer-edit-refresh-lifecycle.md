@@ -117,6 +117,8 @@ Kanban, table, controls, tree, and file reads pass the signal through extension 
 
 Command scopes bind their host readers to the invocation signal. Reads check cancellation before dispatch and after each awaited operation; file reads also pass the signal into filesystem I/O. Cancellation cannot start the next child read, but already running work stays counted until it settles. Save operations and their path and permission checks do not inherit renderer read cancellation. Session and workspace creation keep their explicit lifecycle cancellation.
 
+A kanban view shows a board or list skeleton, matching its view mode, until both its saved views and its first query result arrive. Tabs, filter pills, and columns take their labels from both, so they never render with placeholder fields or raw option IDs.
+
 Refresh failures retain the last successful value for the same query. A first failure shows an error and Retry. A different query has its own initial loading state. File reads never clear a dirty draft, and saves retain their original binding when the user switches resources.
 
 Tree queries include their bound resource, the current project and mode, and the page's navigation contribution owner when present. Trees also follow the current page resource unless their renderer supplies a data read key. Navigation contributions receive the selected resource by default. When their resource changes, they cancel old reads and clear old actions.
