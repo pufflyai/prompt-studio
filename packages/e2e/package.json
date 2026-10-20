@@ -28,6 +28,7 @@
     "harness-claude-code": "workspace:*",
     "harness-codex": "workspace:*",
     "harness-open-code": "workspace:*",
+    "harness-pi": "workspace:*",
     "local-example": "workspace:*",
     "pstdio": "workspace:*",
     "pstdio-api-contracts": "workspace:*",

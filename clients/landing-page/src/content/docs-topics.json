@@ -105,6 +105,13 @@
   },
   {
     "section": "Extensions",
+    "label": "Pi",
+    "path": "/docs/extensions/pi/",
+    "pages": "extensions/harness-pi/docs",
+    "overview": "extensions/harness-pi/README.md"
+  },
+  {
+    "section": "Extensions",
     "label": "Extension Lab",
     "path": "/docs/extensions/extension-lab/",
     "pages": "extensions/extension-lab/docs",

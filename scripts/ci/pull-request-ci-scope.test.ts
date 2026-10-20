@@ -14,6 +14,7 @@ const packageDirs = [
   "extensions/harness-codex",
   "extensions/harness-open-code",
   "extensions/harness-claude-code",
+  "extensions/harness-pi",
   "design/motion",
   "scripts",
 ];
@@ -171,6 +172,7 @@ test("installed CLI checks run for harness changes", () => {
   expect(pullRequest(["extensions/harness-codex/src/detection.ts"]).harnessCli).toBe(true);
   expect(pullRequest(["extensions/harness-claude-code/src/spawn.ts"]).harnessCli).toBe(true);
   expect(pullRequest(["extensions/harness-open-code/src/detection.ts"]).harnessCli).toBe(true);
+  expect(pullRequest(["extensions/harness-pi/src/detection.ts"]).harnessCli).toBe(true);
   expect(pullRequest(["extensions/pstdio-planner/extension.ts"]).harnessCli).toBe(false);
 });
 

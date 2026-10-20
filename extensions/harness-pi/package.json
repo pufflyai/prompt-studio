@@ -1,0 +1,33 @@
+{
+  "name": "harness-pi",
+  "version": "0.44.0",
+  "displayName": "Pi",
+  "description": "Contributes the optional Pi coding agent harness.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^0.1.1 || ^0.2.0"
+  },
+  "pstdio": {
+    "scope": "user"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test --silent",
+    "test:coverage": "bun test --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "bun run typecheck && biome check .",
+    "format": "biome check --write ."
+  },
+  "dependencies": {
+    "@pstdio/sdk": "^0.41.0",
+    "cross-spawn": "7.0.6"
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "0.73.1",
+    "@types/cross-spawn": "6.0.6",
+    "@types/bun": "1.4.2",
+    "typescript": "6.0.2"
+  }
+}
