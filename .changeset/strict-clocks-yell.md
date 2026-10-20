@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Preserve independent scroll positions and editor identity when switching retained workbench views.
+Preserve retained view state and prevent idle tree-move cleanup from blocking asynchronous navigation rendering.
