@@ -35,7 +35,7 @@ export const writeText = (text: Y.Text, next: string) => {
   }
 };
 
-const listKeys = (values: Json[]) => {
+export const listKeys = (values: Json[]) => {
   const seen = new Map<string, number>();
   return values.map((value) => {
     const identity =
