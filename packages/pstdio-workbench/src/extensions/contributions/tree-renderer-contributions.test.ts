@@ -144,7 +144,7 @@ describe("extension tree selection and actions", () => {
   ])("preserves the declared document selection in a composed navigation tree: %s", async (documentId) => {
     const workbench = createWorkbench();
     const page = { kind: "page", extensionId: "pstdio.lab", id: "ticket" } as const;
-    workbench.views.registerView({ id: "ticket", body: { kind: "react", render: () => null } });
+    workbench.views.registerView({ id: "ticket", title: "Ticket", body: { kind: "react", render: () => null } });
     workbench.pages.registerPage({
       id: "ticket",
       ref: page,
