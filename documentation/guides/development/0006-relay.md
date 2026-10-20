@@ -185,7 +185,7 @@ Do not prune other projects' Docker resources to repair a failed run. Check Dock
 Build from the repository root:
 
 ```sh
-docker build -f services/relay/Dockerfile -t pstdio-relay:local .
+docker build -f infra/relay/Dockerfile -t pstdio-relay:local .
 ```
 
 The final runtime target contains Bun, the built service/storage library and generated relay migrations. It runs as the unprivileged bun user, without a source checkout or runtime install. Operator tooling must apply migrations before use. A logged-in native host initializes enabled extension scopes through the authenticated transport. The default build remains this production target; test-only authority code, private keys and fixture initialization exist only in separate smoke stages.
@@ -200,6 +200,9 @@ The smoke generates HTTPS trust inside each run's owned volumes, so cached image
 
 ## Infrastructure boundary
 
-Future Terraform configuration belongs under `infra/relay/terraform/`, next to the relay's Compose files and separate from the service code in `services/relay/`. This scaffold defines no resources, backend, remote state, provider credentials, or deployment workflow. Terraform state, local variable files, and working data are ignored by Git; the Terraform directory and relay environment files are excluded from Docker build contexts. Never commit application secrets or generated runtime data.
+Portable Compose and the DigitalOcean Terraform plan are described in the
+[deployment guide](0012-portable-cloud-deployment.md). Terraform lives under
+`infra/terraform/`, separate from the service source. State and private operator
+inputs are ignored and excluded from Docker build contexts. No apply is authorized.
 
 CI runs the relay's ordinary package checks through Lerna and an isolated Docker smoke job when the relay or shared tooling changes. See [package boundaries](../../references/architecture/0013-package-boundaries.md) for dependency rules. The relay stays private and is excluded from Changesets publication. Shared model changes also require the packaged CLI checks because local storage and the SDK test adapter bundle that model.
