@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { Client } from "pg";
+import { openUpdate, sealUpdate, UnreadableSyncData } from "pstdio-sync";
+import { fetchSyncSpaces } from "pstdio-sync/relay";
 import {
   type LiveServerMessage,
   liveServerMessageSchema,
@@ -287,6 +289,69 @@ test("a device over its request rate is told to slow down", async () => {
     expect(limited.status).toBe(429);
     expect(await limited.json()).toEqual({ error: "rate-limited" });
   } finally {
+    await relay.close();
+  }
+});
+
+test("two devices exchange encrypted updates with keys from the account manager", async () => {
+  const relay = await open();
+  const manager = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: relay.context.managerHandler });
+  try {
+    const { accountId, workbenchId } = relay.context.scope;
+    const spaces = (credential: string) =>
+      fetchSyncSpaces({ managerOrigin: manager.url.origin, credential, accountId, workbenchId });
+    const desktopLogin = await relay.context.manager.registerDevice({
+      accountId,
+      deviceId: crypto.randomUUID(),
+      name: "Desktop",
+      platform: "linux",
+    });
+    const laptop = { token: relay.context.token, spaces: await spaces(relay.context.device.token) };
+    const desktop = {
+      token: (await relay.context.issue(desktopLogin.token)).token,
+      spaces: await spaces(desktopLogin.token),
+    };
+    const send = async (spaceOwner: string | null, text: string) => {
+      const space = spaceOwner ? laptop.spaces.personal : laptop.spaces.project;
+      const documentId = await space.documentId('["notes","records"]');
+      const update = await sealUpdate(space, documentId, new TextEncoder().encode(text), []);
+      const route = { kind: "document", projectId: workbenchId, spaceOwner, documentId, operation: "updates" } as const;
+      expect((await relay.post(route, update)).status).toBe(200);
+      return documentId;
+    };
+    const receive = async (spaceOwner: string | null, documentId: string, token: string) => {
+      const route = { kind: "document", projectId: workbenchId, spaceOwner, documentId, operation: "read" } as const;
+      const read = readResultSchema.parse(await (await relay.post(route, { after: 0 }, token)).json());
+      if (read.status !== "updates") throw new Error("Expected updates");
+      return read.updates;
+    };
+    const decrypt = async (
+      space: typeof laptop.spaces.project,
+      documentId: string,
+      update: { updateId: string; payload: string },
+    ) => new TextDecoder().decode(await openUpdate(space, documentId, update));
+
+    const projectDocument = await send(null, "Aurora launch checklist");
+    const [shared] = await receive(null, projectDocument, desktop.token);
+    expect(await decrypt(desktop.spaces.project, projectDocument, shared)).toBe("Aurora launch checklist");
+    const personalDocument = await send(accountId, "Draft reply to the keynote team");
+    const [personal] = await receive(accountId, personalDocument, desktop.token);
+    expect(await decrypt(desktop.spaces.personal, personalDocument, personal)).toBe("Draft reply to the keynote team");
+
+    // After the desktop is removed, the laptop seals new updates with a key the desktop never received.
+    await relay.context.manager.removeDevice({ accountId, deviceId: desktopLogin.deviceId });
+    await expect(spaces(desktopLogin.token)).rejects.toThrow("Sync keys unavailable (401)");
+    laptop.spaces = await spaces(relay.context.device.token);
+    await send(null, "Move the pelican mascot to the Friday keynote");
+    // Even holding every stored byte, the removed device reads only what was written before its removal.
+    const [older, newer] = await receive(null, projectDocument, laptop.token);
+    expect(await decrypt(desktop.spaces.project, projectDocument, older)).toBe("Aurora launch checklist");
+    await expect(openUpdate(desktop.spaces.project, projectDocument, newer)).rejects.toBeInstanceOf(UnreadableSyncData);
+    expect(await decrypt(laptop.spaces.project, projectDocument, newer)).toBe(
+      "Move the pelican mascot to the Friday keynote",
+    );
+  } finally {
+    await manager.stop(true);
     await relay.close();
   }
 });

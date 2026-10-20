@@ -24,7 +24,7 @@ test("retrying a completed manager restore does not revoke newly established aut
     await owner.restore("restore-retry", snapshot);
     expect(await owner.authorize(fresh.token, fresh.workbenchId)).not.toBeNull();
     await expect(
-      owner.restore("restore-retry", { version: 2, accounts: [], workbenches: [], requests: [] }),
+      owner.restore("restore-retry", { version: 3, accounts: [], workbenches: [], keys: [], requests: [] }),
     ).rejects.toThrow("changed intent");
     expect(await owner.authorize(fresh.token, fresh.workbenchId)).not.toBeNull();
   } finally {
