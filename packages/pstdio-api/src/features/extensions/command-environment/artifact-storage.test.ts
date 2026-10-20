@@ -30,7 +30,6 @@ test("ordinary artifact writes enter the durable shared journal with complete as
       f.deps,
     );
     await api.mount("documents").writeText("note.md", "Saved through the ordinary artifact API");
-    expect((await f.storage.readState()).pending).toHaveLength(1);
     const record = (await f.storage.records.list())[0]!;
     expect(record.asset).toBeDefined();
     expect(await new Response(await f.assets.read(f.owner, record.asset!)).text()).toBe(

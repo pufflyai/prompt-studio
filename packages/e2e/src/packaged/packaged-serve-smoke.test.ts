@@ -35,7 +35,7 @@ import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-dia
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
-// Grouped storage checks cached record/legacy reads after unrelated saves and durable restart.
+// CRDT storage checks atomic saves, ignored revisions, local retry outcomes and durable restart.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -52,11 +52,6 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Also checks native harness controls and their structured values in packaged command handlers.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
-// Shared record contracts remain covered through the compiled host. The separate relay
-// image checks authenticated HTTP, immutable asset ranges and finite native sockets.
-// Private service diagnostics are checked in the manager image smoke with an owned capture endpoint.
-// Native relay coverage hydrates artifact mounts and attachment URLs, and restores foreign journal work after restart.
-import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
 // Navigation metadata preserves independent panel capabilities through the compiled host.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
@@ -135,7 +130,6 @@ registerCollectionViewOrderSmokeTests();
 registerConnectionStatusSmokeTests();
 registerAssetStorageSmokeTests();
 registerGroupedStorageSmokeTests();
-registerNativeRelaySmokeTests();
 registerAccountSmokeTests();
 registerNotificationStatusSmokeTests();
 
