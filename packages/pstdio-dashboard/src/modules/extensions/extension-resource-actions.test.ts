@@ -17,6 +17,20 @@ test("preserves resource ownership when resolving row actions", () => {
   expect(toDashboardExtensionResource(resource, projectId)).toMatchObject(resource);
 });
 
+test("resolving an extension resource preserves its document metadata", () => {
+  const resource = {
+    type: "ticket",
+    id: "ticket-1",
+    extensionId: "pstdio.pstdio-planner",
+    projectId,
+    metadata: { documentId: "notes" },
+  };
+  const resolved = toDashboardExtensionResource(resource, projectId);
+  expect(resolved?.projectId).toBe(projectId);
+  expect(resolved?.metadata).toEqual(resource.metadata);
+  expect(toDashboardExtensionResource({ ...resource, metadata: undefined }, projectId)?.metadata).toBeUndefined();
+});
+
 test("extension workspace resources use current host capabilities and keep their ticket parent", () => {
   getCollection("workspaces");
   const row = {

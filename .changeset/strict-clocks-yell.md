@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Preserve independent scroll positions when switching retained workbench views.
+Preserve independent scroll positions and editor identity when switching retained workbench views.
