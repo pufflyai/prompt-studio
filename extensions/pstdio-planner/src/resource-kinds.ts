@@ -1,9 +1,8 @@
 import { defineResourceKind, l10n, projectPrefix, resourceMenuSlotRef } from "@pstdio/sdk/extensions";
 import { resolveTicketPathCommand } from "./commands/resolve-ticket-path";
+import { resolveTicketResourcesCommand } from "./commands/resolve-ticket-resources";
 import { ticketRelatedOpeningsCommand } from "./commands/ticket-related-openings";
 import { TICKETS_DIR } from "./data/draft-storage";
-
-import { resolveTicketResourcesCommand } from "./commands/resolve-ticket-resources";
 
 export const ticketResourceKind = defineResourceKind({
   id: "ticket",
