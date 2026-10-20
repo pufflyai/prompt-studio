@@ -56,7 +56,12 @@ export const createSettingsModule = () =>
         title: "Project sync",
         body: { kind: "react", render: () => <CloudStatusItem ctx={ctx} /> },
       });
-      ctx.statusBar.registerItem({ id: "dashboard.cloud-sync", viewId: "dashboard.cloud-sync", slot: "trailing" });
+      ctx.statusBar.registerItem({
+        id: "dashboard.cloud-sync",
+        viewId: "dashboard.cloud-sync",
+        slot: "trailing",
+        isVisible: () => !!getDashboardSelectedProjectId(ctx),
+      });
 
       const surface = createWorkbenchSettingsModule({
         resolveScopeId: (scope) => (scope === "project" ? getDashboardSelectedProjectId(ctx) : undefined),
