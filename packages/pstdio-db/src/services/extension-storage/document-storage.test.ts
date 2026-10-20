@@ -200,3 +200,19 @@ test("declared text files have separate durable documents and merge offline char
     await createDocumentStorageDBService(first.db).openTextDocument({ owner: first.owner, fileId: "note.md" }).read(),
   ).toBe("FIRST\nmiddle\nLAST");
 });
+
+test("sync discovers text documents through the encrypted records document", async () => {
+  const first = await fixture();
+  const second = await fixture();
+  await first.service.openTextDocument({ owner: first.owner, fileId: "note.md" }).save("offline text");
+  expect(await first.service.documents.list(first.owner)).toEqual(["records", '["text-file","note.md"]']);
+  await second.storage.applyUpdate(await first.storage.exportUpdate());
+  expect(await second.service.documents.list(second.owner)).toEqual(["records", '["text-file","note.md"]']);
+  const update = await first.service.documents
+    .open('["text-file","note.md"]')
+    .transaction(first.owner, async ({ document }) => (await import("yjs")).encodeStateAsUpdate(document));
+  await second.service.documents.open('["text-file","note.md"]').transaction(second.owner, async ({ document }) => {
+    (await import("yjs")).applyUpdate(document, update);
+  });
+  expect(await second.service.openTextDocument({ owner: second.owner, fileId: "note.md" }).read()).toBe("offline text");
+});

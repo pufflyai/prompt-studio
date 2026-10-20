@@ -39,6 +39,7 @@ export const createExtensionStorageDBService = (db: DbClient, observer?: Storage
   };
   return {
     watch: documents.watch,
+    documents: documents.documents,
     openTextDocument: documents.openTextDocument,
     migrate: createStorageMigrations(db, documents),
     readLegacy: (source: string, scope: { projectId: string; extensionInstanceId: string }) =>
