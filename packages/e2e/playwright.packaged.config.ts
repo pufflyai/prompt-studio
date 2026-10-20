@@ -12,6 +12,7 @@ export default defineConfig({
     "packaged-native-settings.spec.ts",
     "packaged-settings-reset.spec.ts",
     "packaged-command-query.spec.ts",
+    "packaged-command-palette.spec.ts",
   ],
   timeout: 120_000,
   workers: 1,

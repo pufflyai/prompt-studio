@@ -41,6 +41,7 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
       publishedExtensions: false,
       harnessCli: false,
       databaseTests: false,
+      browserSmoke: false,
     };
   }
   const everyCheck = {
@@ -51,6 +52,7 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
     publishedExtensions: true,
     harnessCli: true,
     databaseTests: true,
+    browserSmoke: true,
   };
   if (event !== "pull_request" || labels.includes(FULL_RUN_LABEL)) return { stage: "full", ...everyCheck };
 
@@ -65,6 +67,9 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
 
   return {
     stage: "pull_request",
+    browserSmoke:
+      changedCode.some((file) => ["packages/pstdio-dashboard", "packages/e2e"].some((dir) => isInside(file, dir))) ||
+      (changedCode.length > 0 && affectedPackages.includes("pstdio-dashboard")),
     dockerBuild: changedFiles.some((file) => ["package.json", "bun.lock", "Dockerfile"].includes(basename(file))),
     lernaFilter: `--since ${PULL_REQUEST_BASE}`,
     relaySmoke: affectedPackages.some((name) => ["pstdio-relay", "pstdio-db", "pstdio-account-manager"].includes(name)),
