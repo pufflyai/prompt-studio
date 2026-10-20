@@ -1,12 +1,14 @@
 import type { ExtensionContextBase, ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { migratePlannerStorage } from "../data/migrate-storage";
 import { runTicketsQuery } from "../data/query";
 import { loadLatestWorkspaceSessions } from "../data/workspace-sessions";
 
 export const queryTickets = async (
-  ctx: Pick<ExtensionContextBase, "projectId" | "sessions" | "storage" | "workspaces">,
+  ctx: Pick<ExtensionContextBase, "files" | "projectId" | "sessions" | "storage" | "workspaces">,
   input: { filter?: ViewFilterGroup },
 ) => {
+  await migratePlannerStorage(ctx);
   const workspaces = await ctx.workspaces.list();
 
   return runTicketsQuery({
