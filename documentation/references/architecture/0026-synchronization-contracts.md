@@ -74,6 +74,10 @@ writes a new saved state and removes the folded updates. Normal saves and reads 
 load the old grouped journal. Retry metadata stays outside the CRDT state, so folding
 does not copy every past save ID.
 
+The PGlite adapter uses native hex conversion for binary values. This avoids a
+JavaScript callback for every byte in a large saved document; values still use the
+same Uint8Array database contract.
+
 The cache is published and listeners run after database commit. A failed transaction
 discards the cached document. Another service checks the database revision before using
 its own cache. A save returns `state: "saved-locally"` only after the local transaction

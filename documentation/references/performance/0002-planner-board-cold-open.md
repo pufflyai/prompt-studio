@@ -22,8 +22,8 @@ On macOS arm64, this implementation measured:
 
 | Earlier edits | Mean save | Largest remaining incremental update |
 | ---: | ---: | ---: |
-| 100 | 2.12 ms | 39 bytes |
-| 20,000 | 0.86 ms | 44 bytes |
+| 100 | 1.06 ms | 39 bytes |
+| 20,000 | 0.60 ms | 44 bytes |
 
 These are local observations, not new performance budgets. Save retry IDs are stored
 in an indexed local table instead of the Yjs document. This keeps a fold from copying
@@ -38,7 +38,9 @@ bun run --cwd packages/e2e perf:planner-board-cold-open
 The browser measurement seeds 1,000 tickets with three edits each and a saved view
 filtered by status and priority. It restarts the compiled runtime before each sample,
 opens a new browser, and records the first visible card or row and any raw option IDs
-shown while loading. The target stays 2,000 ms for every sample.
+shown while loading. Its first page navigation opens Tickets and redeems a normal
+single-use login link inside the timer. No dashboard page opens beforehand. The target
+stays 2,000 ms for every sample.
 
 The harness and loading fixes come from `bugfix/planner-cold-load`. The workbench
 waits for saved views and field labels behind a board or list skeleton. Lists mount
@@ -50,17 +52,23 @@ option installs the selected source even when reusing a seeded `--home`. Interru
 setup resumes from existing tickets and their generated edit contents. Measurement
 always restarts the runtime and opens a fresh browser for every sample.
 
-Local macOS arm64 measurements used the same 1,000-ticket fixture with all 3,000 edits:
+The earlier harness opened the dashboard to sign in, then timed a second navigation.
+Those runs included a 2,722 ms failure and also misleading subsecond results. They do
+not establish cold-open acceptance: the untimed page could start loading application
+data. A first-navigation guard now prevents that setup.
 
-| Runtime revision | First visible ticket, every sample | Raw loading IDs |
-| --- | --- | --- |
-| Before the latest main merge | 604, 636, 592 ms | None |
-| After the latest main merge (`578cb8737`) | 715, **2,722**, 741 ms | None |
-| Purge fix and timing diagnostics (`13b93e537`) | 549, 536, 547 ms | None |
+With the corrected boundary, all ten samples initially failed: **2,180, 2,077, 2,162,
+2,059, 2,069, 2,459, 2,435, 2,131, 2,096 and 2,155 ms**. Profiling found expensive
+per-byte JavaScript conversion in PGlite's default binary type handlers. Reading the
+23,103,286-byte saved document took 602 ms before Yjs decoding.
 
-The 2,722 ms sample exceeds the unchanged budget by 722 ms. Its cause is unresolved;
-the later diagnostic run does not erase that failure or establish acceptance. During
-the diagnostic run, Planner queries took 89–109 ms. The harness now reports slow
-resource requests and browser long tasks for each sample, and exits with failure if
-any sample exceeds the budget or shows raw loading IDs. No workload or time limit
-was reduced or increased.
+The database now uses native hex conversion through PGlite's type-handler options.
+Binary values remain Uint8Arrays, and caller-supplied handlers still take precedence.
+Diagnostic state reads dropped to 67–129 ms. After removing the temporary probes,
+the final runtime measured **795, 1,639, 1,582, 1,421, 1,388, 1,623, 1,717,
+1,549, 1,677 and 1,789 ms**.
+Every sample was below the unchanged 2,000 ms budget, with no raw loading IDs.
+
+The harness reports slow resource requests and browser long tasks for every sample,
+and exits with failure if any sample exceeds the budget or shows raw loading IDs.
+No workload or time limit was reduced or increased.

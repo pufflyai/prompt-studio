@@ -6,12 +6,7 @@ import { chromium } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { buildBinary, PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import { preparePlannerSource } from "../packaged/packaged-planner-source";
-import {
-  runtimeAuthorization,
-  signInBrowser,
-  startPackagedServe,
-  stopProcess,
-} from "../packaged/packaged-serve-helpers";
+import { runtimeAuthorization, startPackagedServe, stopProcess } from "../packaged/packaged-serve-helpers";
 import { summarizeSamples } from "./perf-helpers";
 
 const repoRoot = join(import.meta.dirname, "../../../..");
@@ -159,9 +154,20 @@ const measureColdOpen = async (home: string, fixture: Fixture) => {
         for (const entry of list.getEntries()) tasks.push(Math.round(entry.duration));
       }).observe({ type: "longtask", buffered: true });
     });
-    await signInBrowser(page, { origin: runtime.baseUrl, token: runtime.descriptor.token });
+    const response = await fetch(`${runtime.baseUrl}/runtime/browser-login`, {
+      method: "POST",
+      headers: runtimeAuthorization(runtime.descriptor),
+    });
+    if (!response.ok) throw new Error(`Browser login failed with HTTP ${response.status}`);
+    const login = new URL(((await response.json()) as { url: string }).url);
+    login.pathname = `/projects/${fixture.projectId}/extensions/pstdio.pstdio-planner/tickets`;
+    if (page.url() !== "about:blank") throw new Error("Cold open must use the browser's first page navigation.");
     const started = performance.now();
-    void page.goto(`${runtime.baseUrl}/projects/${fixture.projectId}/extensions/pstdio.pstdio-planner/tickets`);
+    try {
+      await page.goto(login.href, { waitUntil: "commit" });
+    } catch {
+      throw new Error("Opening Tickets failed before the page committed.");
+    }
     let rawLabelsShown = false;
     // A board shows cards and a list shows rows; the saved view decides which.
     const ticket = page.locator('[data-testid="renderer-card"], [data-testid="row-status-icon"]').first();
