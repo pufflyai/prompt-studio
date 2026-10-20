@@ -37,7 +37,7 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
     else void controller.select(workbench, id);
   };
   return (
-    <WindowTitleBar platform={platform}>
+    <WindowTitleBar platform={platform} actions={<WorkbenchPanelToggles workbench={workbench} />}>
       <WindowTabs
         tabs={tabs}
         selectedId={typeof selected === "string" ? selected : undefined}
@@ -56,7 +56,6 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
           <Plus />
         </IconButton>
       </Tooltip>
-      <WorkbenchPanelToggles workbench={workbench} />
     </WindowTitleBar>
   );
 };
