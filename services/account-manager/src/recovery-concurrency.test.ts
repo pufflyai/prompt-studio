@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { SQL } from "bun";
 import { Client } from "pg";
-import { createAuthorityFixture, provisionAccount, registration } from "./authority.fixture";
+import { connectDevice, createAuthorityFixture, deviceProfile, provisionAccount } from "./authority.fixture";
 import * as implementation from "./index";
 
 const fixture = createAuthorityFixture(implementation);
@@ -18,27 +18,28 @@ const waitForAuthorityLock = async (sql: SQL, mode: string, granted: boolean) =>
   }
 };
 
-test("restore waits for an in-flight issuance and invalidates its credential atomically", async () => {
+test("restore waits for an in-flight login and removes its device atomically", async () => {
   const owner = fixture.owner();
   const holder = new Client({ connectionString: fixture.databaseUrl });
   const sql = new SQL(fixture.databaseUrl);
-  let issuing: ReturnType<typeof owner.register> | undefined;
+  let issuing: ReturnType<typeof owner.registerDevice> | undefined;
   let restoring: ReturnType<typeof owner.restore> | undefined;
   try {
     const accountId = await provisionAccount(owner);
+    await owner.addWorkbench({ accountId, workbenchId: "workbench" });
     const snapshot = await owner.snapshot();
     await holder.connect();
     await holder.query("BEGIN");
     await holder.query("SELECT pg_advisory_xact_lock(1, hashtext($1))", [accountId]);
-    issuing = owner.register(registration(accountId));
+    issuing = owner.registerDevice({ accountId, ...deviceProfile() });
     await waitForAuthorityLock(sql, "ShareLock", true);
     restoring = owner.restore("restore-after-issuance", snapshot);
     await waitForAuthorityLock(sql, "ExclusiveLock", false);
     await holder.query("COMMIT");
     const grant = await issuing;
     await restoring;
-    expect(await owner.authorize(grant.token!, grant.workbenchId)).toBeNull();
-    expect(await owner.environments(accountId)).toEqual([]);
+    expect(await owner.authorize(grant.token, "workbench")).toBeNull();
+    expect(await owner.devices(accountId)).toEqual([]);
     expect((await owner.snapshot()).accounts.find((row) => row.id === accountId)?.state).toBe("disabled");
   } finally {
     await holder.query("ROLLBACK").catch(() => {});
@@ -47,7 +48,7 @@ test("restore waits for an in-flight issuance and invalidates its credential ato
   }
 });
 
-test("issuance waits for restore and observes the restored disabled account", async () => {
+test("a login waits for restore and observes the restored disabled account", async () => {
   const owner = fixture.owner();
   const holder = new Client({ connectionString: fixture.databaseUrl });
   const sql = new SQL(fixture.databaseUrl);
@@ -55,23 +56,23 @@ test("issuance waits for restore and observes the restored disabled account", as
   let issuing: Promise<unknown> | undefined;
   try {
     const accountId = await provisionAccount(owner);
-    const grant = await owner.register(registration(accountId));
+    const grant = await connectDevice(owner, accountId);
     const snapshot = await owner.snapshot();
     await holder.connect();
     await holder.query("BEGIN");
-    await holder.query("LOCK TABLE manager_credentials IN ACCESS EXCLUSIVE MODE");
+    await holder.query("LOCK TABLE manager_devices IN ACCESS EXCLUSIVE MODE");
     restoring = owner.restore("restore-before-issuance", snapshot);
     await waitForAuthorityLock(sql, "ExclusiveLock", true);
-    issuing = owner.register(registration(accountId)).then(
+    issuing = owner.registerDevice({ accountId, ...deviceProfile() }).then(
       () => null,
       (error: Error) => error.message,
     );
     await waitForAuthorityLock(sql, "ShareLock", false);
     await holder.query("COMMIT");
     await restoring;
-    expect(await issuing).toContain("not active");
-    expect(await owner.authorize(grant.token!, grant.workbenchId)).toBeNull();
-    expect(await owner.environments(accountId)).toEqual([]);
+    expect(await issuing).toContain("Device access");
+    expect(await owner.authorize(grant.token, grant.workbenchId)).toBeNull();
+    expect(await owner.devices(accountId)).toEqual([]);
   } finally {
     await holder.query("ROLLBACK").catch(() => {});
     await Promise.allSettled([restoring, issuing]);

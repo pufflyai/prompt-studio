@@ -1,7 +1,9 @@
 import type { ReportFailure } from "pstdio-service-telemetry";
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
+import { deviceHttp } from "./device-http";
 import type { createManagerAuthentication } from "./manager-authentication";
+import { nativeLogin } from "./native-login";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
@@ -39,29 +41,12 @@ const renewAccess = async (auth: Authentication, request: Request, log: RenewalL
   }
 };
 
-const manageEnvironments = async (
-  auth: Authentication,
-  origin: string,
-  request: Request,
-  management: RegExpExecArray,
-) => {
-  if (!["GET", "POST"].includes(request.method) || (management[2] && request.method !== "POST"))
-    return json({ error: "Method not allowed" }, 405, { allow: management[2] ? "POST" : "GET, POST" });
-  if (request.method === "POST" && request.headers.get("origin") !== origin)
-    return json({ error: "Origin denied" }, 403);
-  try {
-    const owner = auth.forSession(request.headers, decodeURIComponent(management[1]));
-    if (request.method === "GET") return json(await owner.environments());
-    const input = await request.json();
-    if (management[2] === "replace") return json(await owner.replace(input), 201);
-    if (management[2] === "revoke") {
-      await owner.revoke(input);
-      return json({ ok: true });
-    }
-    return json(await owner.register(input), 201);
-  } catch {
-    return unauthorized();
-  }
+const betterAuth = async (auth: Authentication, request: Request, report: ReportFailure) => {
+  const response = await auth.handler(request);
+  if (response.status < 500) return response;
+  await response.body?.cancel().catch(() => {});
+  if (!request.signal.aborted) report("request_exception");
+  return json({ error: "Account manager unavailable" }, 503);
 };
 
 export const createManagerHandler = (
@@ -74,17 +59,13 @@ export const createManagerHandler = (
   return async (request: Request) => {
     try {
       const path = new URL(request.url).pathname;
-      if (path.startsWith("/api/auth/")) {
-        const response = await auth.handler(request);
-        if (response.status < 500) return response;
-        await response.body?.cancel().catch(() => {});
-        if (!request.signal.aborted) report("request_exception");
-        return json({ error: "Account manager unavailable" }, 503);
-      }
+      if (path.startsWith("/api/auth/")) return await betterAuth(auth, request, report);
+      if (["/v1/native-login", "/v1/native-callback"].includes(path))
+        return await nativeLogin(auth, canonicalOrigin, request);
+      const deviceResponse = await deviceHttp(auth, canonicalOrigin, request);
+      if (deviceResponse) return deviceResponse;
       if (path === "/health") return json({ ok: true });
       if (path === "/v1/environment-access") return await renewAccess(auth, request, log, report);
-      const management = /^\/v1\/accounts\/([^/]+)\/environments(?:\/(replace|revoke))?$/.exec(path);
-      if (management) return await manageEnvironments(auth, canonicalOrigin, request, management);
       return json({ error: "Not found" }, 404);
     } catch {
       if (!request.signal.aborted) report("request_exception");

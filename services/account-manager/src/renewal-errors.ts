@@ -9,3 +9,9 @@ export class EnvironmentAccessFailure extends Error {
     super("Environment access service unavailable");
   }
 }
+
+export class DeviceAccessDenied extends Error {
+  constructor() {
+    super("Device access unavailable");
+  }
+}

@@ -3,21 +3,31 @@ import { canonicalJson, identitySchema } from "pstdio-sync-contracts";
 import {
   type AccountRequest,
   accountRequestSchema,
+  type DeviceInput,
+  type DeviceRegistrationInput,
+  deviceRegistrationSchema,
+  deviceSchema,
   type ProvisionInput,
   provisionSchema,
   type ReconciliationInput,
-  type RegistrationInput,
-  type ReplacementInput,
-  type RevokeInput,
   reconciliationSchema,
+  type WorkbenchInput,
+  workbenchSchema,
 } from "./contracts";
-import { digestCredential } from "./credential";
 import { connectManager } from "./database";
-import { listEnvironments } from "./environments";
-import { registerCredential, replaceCredential, revokeCredentials } from "./grants";
+import {
+  addWorkbenchInTransaction,
+  findDeviceAccess,
+  listDevices,
+  listWorkbenches,
+  registerDeviceInTransaction,
+  removeDeviceInTransaction,
+  removeWorkbenchInTransaction,
+} from "./devices";
 import { captureManager, restoreManager } from "./recovery";
 import { executeRequest } from "./requests";
-import { accounts, credentials } from "./schema";
+import { accounts, devices } from "./schema";
+import { withAccountTransaction } from "./transactions";
 
 export const createAccountManager = (databaseUrl: string) => {
   const connection = connectManager(databaseUrl);
@@ -41,14 +51,29 @@ export const createAccountManager = (databaseUrl: string) => {
       });
       return { accountId: identitySchema.parse(saved.result.accountId) };
     },
-    async register(input: RegistrationInput) {
-      return registerCredential(connection.db, input);
+    registerDevice(input: DeviceRegistrationInput) {
+      const intent = deviceRegistrationSchema.parse(input);
+      return withAccountTransaction(connection.db, intent.accountId, (transaction) =>
+        registerDeviceInTransaction(transaction, intent),
+      );
     },
-    async replace(input: ReplacementInput) {
-      return replaceCredential(connection.db, input);
+    async removeDevice(input: DeviceInput) {
+      const intent = deviceSchema.parse(input);
+      await withAccountTransaction(connection.db, intent.accountId, (transaction) =>
+        removeDeviceInTransaction(transaction, intent),
+      );
     },
-    async revoke(input: RevokeInput) {
-      await revokeCredentials(connection.db, input);
+    async addWorkbench(input: WorkbenchInput) {
+      const intent = workbenchSchema.parse(input);
+      await withAccountTransaction(connection.db, intent.accountId, (transaction) =>
+        addWorkbenchInTransaction(transaction, intent),
+      );
+    },
+    async removeWorkbench(input: WorkbenchInput) {
+      const intent = workbenchSchema.parse(input);
+      await withAccountTransaction(connection.db, intent.accountId, (transaction) =>
+        removeWorkbenchInTransaction(transaction, intent),
+      );
     },
     async disable(input: AccountRequest) {
       const intent = accountRequestSchema.parse(input);
@@ -66,9 +91,9 @@ export const createAccountManager = (databaseUrl: string) => {
       const intent = reconciliationSchema.parse(input);
       await executeRequest(connection.db, intent, "reconcile", intent, async (transaction) => {
         await transaction
-          .update(credentials)
-          .set({ revokedAt: sql`clock_timestamp()` })
-          .where(and(eq(credentials.accountId, intent.accountId), isNull(credentials.revokedAt)));
+          .update(devices)
+          .set({ removedAt: sql`clock_timestamp()` })
+          .where(and(eq(devices.accountId, intent.accountId), isNull(devices.removedAt)));
         const rows = await transaction
           .update(accounts)
           .set({ ownerIssuer: intent.owner.issuer, ownerSubject: intent.owner.subject, state: intent.state })
@@ -80,31 +105,10 @@ export const createAccountManager = (databaseUrl: string) => {
     },
     snapshot: () => captureManager(connection.db),
     restore: (requestId: string, input: unknown) => restoreManager(connection.db, requestId, input),
-    async environments(accountId: string) {
-      identitySchema.parse(accountId);
-      return listEnvironments(connection.db, accountId);
-    },
-    async authorize(token: string, workbenchId: string) {
-      identitySchema.parse(workbenchId);
-      const rows = await connection.db
-        .select({
-          accountId: credentials.accountId,
-          workbenchId: credentials.workbenchId,
-          environmentId: credentials.environmentId,
-        })
-        .from(credentials)
-        .innerJoin(accounts, eq(accounts.id, credentials.accountId))
-        .where(
-          and(
-            eq(credentials.digest, digestCredential(token)),
-            eq(credentials.workbenchId, workbenchId),
-            eq(accounts.state, "active"),
-            isNull(credentials.revokedAt),
-            sql`${credentials.expiresAt} > clock_timestamp()`,
-          ),
-        );
-      return rows[0] ?? null;
-    },
+    devices: (accountId: string) => listDevices(connection.db, identitySchema.parse(accountId)),
+    workbenches: (accountId: string) => listWorkbenches(connection.db, identitySchema.parse(accountId)),
+    authorize: (token: string, workbenchId: string) =>
+      findDeviceAccess(connection.db, token, identitySchema.parse(workbenchId)),
     close: connection.close,
   };
 };

@@ -11,6 +11,7 @@ import type {
   createSessionQueueEntriesDBService,
   createWebviewPreferencesDBService,
 } from "pstdio-db";
+import type { createNativeAccount } from "../services/account/native-account";
 import type { createAssetTransferService } from "../services/asset-transfer-service";
 import type { createExtensionAutomationPreferencesService } from "../services/extension-automation-preferences-service";
 import type { createExtensionFileService } from "../services/extension-file-service";
@@ -46,6 +47,7 @@ export interface ReadinessChecks {
 // and handlers should accept the narrow per-feature deps so adding a service
 // here does not silently widen every feature's surface.
 export interface RouteDeps {
+  accountService: ReturnType<typeof createNativeAccount>;
   assetTransferService: ReturnType<typeof createAssetTransferService>;
   environmentService: ReturnType<typeof createEnvironmentDBService>;
   boardViewsService: ReturnType<typeof createBoardViewsDBService>;

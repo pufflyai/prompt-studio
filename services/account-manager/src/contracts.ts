@@ -10,24 +10,23 @@ export const provisionSchema = z.strictObject({
   accountId: identitySchema,
   owner: ownerSchema,
 });
-export const registrationSchema = z.strictObject({
-  requestId: identitySchema,
-  accountId: identitySchema,
-  workbenchId: identitySchema,
-  environmentId: identitySchema,
-  expiresAt: z.iso.datetime(),
+export const deviceNameSchema = z.string().trim().min(1).max(100);
+export const deviceProfileSchema = z.strictObject({
+  deviceId: identitySchema,
+  name: deviceNameSchema,
+  platform: z.string().trim().min(1).max(40),
 });
-export const grantSchema = registrationSchema.omit({ requestId: true }).extend({ id: identitySchema });
-export const replacementSchema = registrationSchema.extend({ replacesId: identitySchema });
+export const deviceRegistrationSchema = deviceProfileSchema.extend({ accountId: identitySchema });
+export const deviceSchema = z.strictObject({ accountId: identitySchema, deviceId: identitySchema });
+export const workbenchSchema = z.strictObject({ accountId: identitySchema, workbenchId: identitySchema });
 export const accountRequestSchema = z.strictObject({ requestId: identitySchema, accountId: identitySchema });
-export const revokeSchema = accountRequestSchema.extend({ environmentId: identitySchema });
 export const reconciliationSchema = accountRequestSchema.extend({
   owner: ownerSchema,
   state: z.enum(["active", "disabled"]),
 });
 export type ProvisionInput = z.input<typeof provisionSchema>;
-export type RegistrationInput = z.input<typeof registrationSchema>;
-export type ReplacementInput = z.input<typeof replacementSchema>;
+export type DeviceRegistrationInput = z.input<typeof deviceRegistrationSchema>;
+export type DeviceInput = z.input<typeof deviceSchema>;
+export type WorkbenchInput = z.input<typeof workbenchSchema>;
 export type AccountRequest = z.input<typeof accountRequestSchema>;
-export type RevokeInput = z.input<typeof revokeSchema>;
 export type ReconciliationInput = z.input<typeof reconciliationSchema>;

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { generateKeyPair, SignJWT } from "jose";
-import { createAuthorityFixture, provisionAccount, registration } from "./authority.fixture";
+import { connectDevice, createAuthorityFixture, provisionAccount } from "./authority.fixture";
 import * as implementation from "./index";
 import { createAuthenticationFixture } from "./manager-authentication.fixture";
 
@@ -13,8 +13,8 @@ test("the independent verifier requires signed, finite, scoped environment acces
   const authentication = createAuthenticationFixture(fixture.databaseUrl);
   try {
     const accountId = await provisionAccount(manager);
-    const grant = await manager.register(registration(accountId));
-    const issued = await authentication.auth.renew(grant.token!, grant.workbenchId);
+    const grant = await connectDevice(manager, accountId);
+    const issued = await authentication.auth.renew(grant.token, grant.workbenchId);
     const trust = {
       issuer: authentication.config.origin,
       audience: authentication.config.audience,
@@ -24,7 +24,7 @@ test("the independent verifier requires signed, finite, scoped environment acces
     expect(await verify(issued.token)).toMatchObject({
       accountId,
       workbenchId: grant.workbenchId,
-      environmentId: grant.environmentId,
+      environmentId: grant.deviceId,
     });
     await expect(
       implementation.createEnvironmentAccessVerifier({ ...trust, audience: "https://different.test" })(issued.token),
@@ -35,19 +35,19 @@ test("the independent verifier requires signed, finite, scoped environment acces
       tokenType: "pstdio-environment-access",
       accountId,
       workbenchId: grant.workbenchId,
-      environmentId: grant.environmentId,
+      environmentId: grant.deviceId,
     })
       .setProtectedHeader({ alg: "EdDSA", kid: trust.jwks.keys[0].kid })
       .setIssuedAt()
       .setExpirationTime("1m")
       .setIssuer(trust.issuer)
       .setAudience(trust.audience)
-      .setSubject(grant.environmentId)
+      .setSubject(grant.deviceId)
       .sign(privateKey);
     await expect(verify(forged)).rejects.toThrow();
-    await manager.revoke({ requestId: "stop-renewal", accountId, environmentId: grant.environmentId });
+    await manager.removeDevice({ accountId, deviceId: grant.deviceId });
     expect(await verify(issued.token)).toMatchObject({ accountId });
-    await expect(authentication.auth.renew(grant.token!, grant.workbenchId)).rejects.toThrow();
+    await expect(authentication.auth.renew(grant.token, grant.workbenchId)).rejects.toThrow();
   } finally {
     await Promise.all([manager.close(), authentication.close()]);
   }

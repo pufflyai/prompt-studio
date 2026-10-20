@@ -5,13 +5,16 @@ export const discoveryPeer = (accountId: string) => {
   const snapshots = new Map<string, Snapshot>();
   const sockets = new Set<ServerWebSocket<{ extensionId: string }>>();
   const opened: string[] = [];
+  const renewals: string[] = [];
   const peer = Bun.serve<{ extensionId: string }>({
     hostname: "127.0.0.1",
     port: 0,
     async fetch(request, server) {
       const path = new URL(request.url).pathname;
-      if (path === "/v1/environment-access")
+      if (path === "/v1/environment-access") {
+        renewals.push(request.headers.get("authorization") ?? "");
         return Response.json({ token: "owned-access", expiresAt: new Date(Date.now() + 30_000).toISOString() });
+      }
       const route = relayRoute(path);
       if (!route) return new Response(null, { status: 404 });
       const key = JSON.stringify([route.workbenchId, route.extensionId]);
@@ -51,6 +54,7 @@ export const discoveryPeer = (accountId: string) => {
   return {
     peer,
     opened,
+    renewals,
     connected: () => [...sockets].map((socket) => socket.data.extensionId).sort(),
     snapshots,
     wake: () => {

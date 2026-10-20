@@ -22,8 +22,9 @@ The host decides what loads. It compares its own extension API version with `eng
 
 | Release | Extension API | Notes |
 | --- | --- | --- |
-| 0.43.1, the current stable release | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
-| `main` and `0.44.0-nightly` builds | 0.2.0 | A breaking step. It ships in the release after 0.43.x. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
+| 0.43.1 | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
+| 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
+| `main` | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 

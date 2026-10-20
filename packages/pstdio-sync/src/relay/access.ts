@@ -5,6 +5,8 @@ export const createRelayAccess = (input: {
   renewalGrant: string;
   workbenchId: string;
   signal: AbortSignal;
+  /** Called when the manager rejects the renewal credential. */
+  denied?: () => void;
 }) => {
   const origin = relayOrigin(input.managerOrigin);
   let access: { token: string; expiresAt: string } | undefined;
@@ -18,6 +20,7 @@ export const createRelayAccess = (input: {
     });
     if (!response.ok) {
       await response.body?.cancel();
+      if (response.status === 401) input.denied?.();
       throw new Error("Environment renewal unavailable");
     }
     const body = (await response.json()) as { token?: unknown; expiresAt?: unknown };

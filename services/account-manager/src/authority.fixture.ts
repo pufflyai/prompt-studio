@@ -46,10 +46,18 @@ export const provisionAccount = async (owner: ReturnType<typeof Authority.create
   });
   return accountId;
 };
-export const registration = (accountId: string, requestId: string = crypto.randomUUID()) => ({
-  requestId,
-  accountId,
-  workbenchId: "workbench",
-  environmentId: "environment",
-  expiresAt: new Date(Date.now() + 60_000).toISOString(),
+export const deviceProfile = (deviceId: string = crypto.randomUUID()) => ({
+  deviceId,
+  name: "Fixture device",
+  platform: "linux",
 });
+
+// Logs a device in to a provisioned account and makes the workbench one of its cloud projects.
+export const connectDevice = async (
+  owner: ReturnType<typeof Authority.createAccountManager>,
+  accountId: string,
+  workbenchId = "workbench",
+) => {
+  await owner.addWorkbench({ accountId, workbenchId });
+  return { ...(await owner.registerDevice({ accountId, ...deviceProfile() })), workbenchId };
+};

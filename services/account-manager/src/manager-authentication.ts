@@ -1,15 +1,17 @@
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
+import { bearer } from "better-auth/plugins/bearer";
 import { jwt } from "better-auth/plugins/jwt";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { oneTimeToken } from "better-auth/plugins/one-time-token";
+import { and, eq, sql } from "drizzle-orm";
 import { identitySchema } from "pstdio-sync-contracts";
 import { type ManagerAuthConfig, parseManagerAuthConfig } from "./auth-config";
 import * as authSchema from "./auth-schema";
-import { digestCredential } from "./credential";
 import { connectManager } from "./database";
-import { createOwnerAccess } from "./owner-access";
+import { createDeviceAccess, createDeviceLogin } from "./device-access";
+import { accountOfCredential, findDeviceAccess } from "./devices";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
-import { accounts, credentials } from "./schema";
+import { devices } from "./schema";
 import { withAccountTransaction } from "./transactions";
 
 export const createManagerAuthentication = (input: ManagerAuthConfig) => {
@@ -25,6 +27,8 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
     logger: { disabled: true },
     disabledPaths: ["/token"],
     plugins: [
+      bearer(),
+      oneTimeToken({ storeToken: "hashed", disableClientRequest: true }),
       jwt({
         disableSettingJwtHeader: true,
         jwks: { keyPairConfig: { alg: "EdDSA" } },
@@ -32,57 +36,44 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
       }),
     ],
   });
+  const readSession = (headers: Headers) => auth.api.getSession({ headers, query: { disableCookieCache: true } });
+  const deviceLogin = createDeviceLogin(connection.db, readSession);
   return {
     handler: auth.handler,
-    forSession: (headers: Headers, accountId: string) =>
-      createOwnerAccess(
-        connection.db,
-        (headers) => auth.api.getSession({ headers, query: { disableCookieCache: true } }),
-        headers,
-        accountId,
-      ),
+    // The relay origin comes from the manager's own configuration, never from the client.
+    loginDevice: async (headers: Headers, input: unknown) => ({
+      ...(await deviceLogin(headers, input)),
+      relayOrigin: config.audience,
+    }),
+    devices: createDeviceAccess(connection.db),
+    nativeLogin: (callbackURL: string) =>
+      auth.api.signInSocial({ body: { provider: "google", callbackURL }, asResponse: true }),
+    nativeCode: (headers: Headers) => auth.api.generateOneTimeToken({ headers }),
     jwks: () => auth.api.getJwks(),
     async renew(token: string, workbenchId: string) {
       identitySchema.parse(workbenchId);
       let category: "database" | "signing" = "database";
       try {
-        const [candidate] = await connection.db
-          .select({ accountId: credentials.accountId })
-          .from(credentials)
-          .where(eq(credentials.digest, digestCredential(token)));
-        if (!candidate) throw new EnvironmentAccessDenied();
-        return await withAccountTransaction(connection.db, candidate.accountId, async (transaction) => {
-          const [grant] = await transaction
-            .select({
-              accountId: credentials.accountId,
-              workbenchId: credentials.workbenchId,
-              environmentId: credentials.environmentId,
-              expiresAt: credentials.expiresAt,
-            })
-            .from(credentials)
-            .innerJoin(accounts, eq(accounts.id, credentials.accountId))
-            .where(
-              and(
-                eq(credentials.digest, digestCredential(token)),
-                eq(credentials.workbenchId, workbenchId),
-                eq(accounts.state, "active"),
-                isNull(credentials.revokedAt),
-                sql`${credentials.expiresAt} > clock_timestamp()`,
-              ),
-            );
-          if (!grant) throw new EnvironmentAccessDenied();
+        const accountId = await accountOfCredential(connection.db, token);
+        if (!accountId) throw new EnvironmentAccessDenied();
+        return await withAccountTransaction(connection.db, accountId, async (transaction) => {
+          const access = await findDeviceAccess(transaction, token, workbenchId);
+          if (!access) throw new EnvironmentAccessDenied();
+          await transaction
+            .update(devices)
+            .set({ lastSeenAt: sql`clock_timestamp()` })
+            .where(and(eq(devices.accountId, access.accountId), eq(devices.id, access.deviceId)));
           const iat = Math.floor(Date.now() / 1000);
-          const exp = Math.min(iat + config.accessLifetimeSeconds, Math.floor(grant.expiresAt.getTime() / 1000));
-          if (exp <= iat) throw new EnvironmentAccessDenied();
+          const exp = iat + config.accessLifetimeSeconds;
           category = "signing";
           const signed = await auth.api.signJWT({
             body: {
               payload: {
                 tokenType: "pstdio-environment-access",
-                accountId: grant.accountId,
-                workbenchId: grant.workbenchId,
-                environmentId: grant.environmentId,
-                sub: grant.environmentId,
+                accountId: access.accountId,
+                workbenchId: access.workbenchId,
+                environmentId: access.deviceId,
+                sub: access.deviceId,
                 iat,
                 exp,
               },

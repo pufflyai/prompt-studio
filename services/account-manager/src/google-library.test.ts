@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { createAuthorityFixture, provisionAccount, registration } from "./authority.fixture";
+import { createAuthorityFixture, deviceProfile, provisionAccount } from "./authority.fixture";
 import { createGoogleProviderFixture } from "./google-provider.fixture";
 import * as implementation from "./index";
 import { authenticationConfig } from "./manager-authentication.fixture";
@@ -34,9 +34,8 @@ test("Better Auth verifies Google tokens, keeps provider identity across email c
       .filter((value) => value.includes("session_token="))
       .map((value) => value.split(";")[0])
       .join("; ");
-    const access = auth.forSession(new Headers({ cookie }), accountId);
-    const { accountId: _, ...intent } = registration(accountId);
-    expect((await access.register(intent)).accountId).toBe(accountId);
+    const headers = new Headers({ cookie, origin: config.origin });
+    expect((await auth.loginDevice(headers, deviceProfile())).token).toBeString();
     for (const overrides of [{ aud: "other-client" }, { iss: "https://another-issuer.test" }, { exp: 1 }])
       expect((await login(await google.token(accountId, overrides))).status).toBe(401);
     expect((await login(await google.token(accountId), "another-attempt")).status).toBe(401);
@@ -50,7 +49,7 @@ test("Better Auth verifies Google tokens, keeps provider identity across email c
       }),
     );
     expect(signOut.status).toBe(200);
-    await expect(access.environments()).rejects.toThrow();
+    await expect(auth.loginDevice(headers, deviceProfile())).rejects.toThrow();
   } finally {
     google.close();
     await Promise.all([auth.close(), manager.close()]);

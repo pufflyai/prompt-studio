@@ -13,14 +13,13 @@ test("current authority recovers exact foreign operations after restore but cann
   try {
     const owner = context.storage.owner(context.scope);
     const backup = await owner.snapshot();
-    const grant = await context.manager.register({
-      requestId: "recovering-environment",
+    const peer = await context.manager.registerDevice({
       accountId: context.scope.accountId,
-      workbenchId: context.scope.workbenchId,
-      environmentId: "recovery-peer",
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      deviceId: "recovery-peer",
+      name: "Recovery peer",
+      platform: "linux",
     });
-    const access = await context.issue(grant.token!);
+    const access = await context.issue(peer.token);
     const request = (operation: string, token: string, body?: unknown) =>
       fetch(new URL(`${relayPath(context.scope, "submit").replace(/submit$/, "")}${operation}`, server.url), {
         method: operation === "snapshot" ? "GET" : "POST",

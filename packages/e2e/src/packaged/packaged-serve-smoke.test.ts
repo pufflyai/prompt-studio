@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
+import { registerAccountSmokeTests } from "./packaged-account-smoke";
 import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
 // Includes retained creation drafts, backdrop protection, and creation without row activation.
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
@@ -134,6 +135,7 @@ registerConnectionStatusSmokeTests();
 registerAssetStorageSmokeTests();
 registerGroupedStorageSmokeTests();
 registerNativeRelaySmokeTests();
+registerAccountSmokeTests();
 registerNotificationStatusSmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.

@@ -26,8 +26,8 @@ import { createSessionQueueLifecycle } from "./features/sessions/session-queue-l
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
+import { createAppAccount } from "./services/account/app-account";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
-import { connectAppRelay } from "./services/relay/runtime";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
@@ -66,6 +66,20 @@ const sessionQueueChanged =
     const session = await sessions.update(id, {});
     if (session) eventBus.emit("sessions", "set", session);
   };
+
+const registerAppRuntime = (
+  app: OpenAPIHono<AppBindings>,
+  deps: RouteDeps,
+  input: CreateAppInput,
+  runtime: Parameters<typeof createRuntimeRouteDeps>[0],
+) => {
+  const runtimeDeps = createRuntimeRouteDeps(runtime);
+  if (runtimeDeps) deps.runtime = runtimeDeps;
+  registerApi(app, deps, {
+    security: apiSecurity(input.host, runtimeDeps),
+    terminalOrigins: input.config.transport.terminalOrigins,
+  });
+};
 
 const buildApp = async (
   input: CreateAppInput,
@@ -209,8 +223,10 @@ const buildApp = async (
   });
 
   const terminalSupervisor = createAppTerminalSupervisor();
+  const account = createAppAccount(input.config, dbs.environmentDBService, projectService);
 
   deps = {
+    accountService: account.accountService,
     assetTransferService,
     environmentService: dbs.environmentDBService,
     artifactMountWrites,
@@ -255,20 +271,14 @@ const buildApp = async (
   const artifactMountWatch = startAppArtifactMountWatch(deps, projectService);
   const notificationWakeTimer = startNotificationWakeTimer(notificationService);
 
-  const runtimeDeps = createRuntimeRouteDeps({
+  registerAppRuntime(app, deps, input, {
     extensionScheduler,
     host: runtimeHost,
     sessionService,
     terminalSupervisor,
   });
-  if (runtimeDeps) deps.runtime = runtimeDeps;
 
   drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
-
-  registerApi(app, deps, {
-    security: apiSecurity(input.host, runtimeDeps),
-    terminalOrigins: input.config.transport.terminalOrigins,
-  });
 
   const close = await startAppLifecycle({
     deps,
@@ -282,7 +292,7 @@ const buildApp = async (
     terminalSupervisor,
     closeDb,
   });
-  return connectAppRelay({ app, close, deps, eventBus }, input.config.relay?.connectionsFile);
+  return account.connectAccountRelay({ app, close, deps, eventBus });
 };
 
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
