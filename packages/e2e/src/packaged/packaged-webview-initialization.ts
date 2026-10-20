@@ -2,6 +2,7 @@ import { expect, type Page } from "@playwright/test";
 
 /** Exercise repeated host initialization against the actual packaged guest runtime. */
 export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: string) => {
+  const viewport = page.viewportSize()!;
   const probe = await page.context().newPage();
   try {
     await probe.goto(page.url());
@@ -96,5 +97,9 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
     await expect(iframe).toHaveAttribute("data-pointer-events", "pointerdown,click");
   } finally {
     await probe.close();
+    // Restore Chromium's active compositor after closing the probe (ADR 0084).
+    await page.bringToFront();
+    await page.setViewportSize({ ...viewport, height: viewport.height + 1 });
+    await page.setViewportSize(viewport);
   }
 };

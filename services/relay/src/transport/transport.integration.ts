@@ -9,15 +9,7 @@ afterAll(() => fixture.close());
 
 test("a current environment reads its initialized relay scope through real HTTP authority", async () => {
   const context = await fixture.context();
-  const server = startRelay(
-    { hostname: "127.0.0.1", port: 0 },
-    {
-      storage: context.storage,
-      assets: context.assets,
-      verifyAccess: context.verifyAccess,
-      recovery: context.recovery,
-    },
-  );
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   try {
     const { workbenchId, extensionId } = context.scope;
     const path = relayPath({ workbenchId, extensionId }, "snapshot");

@@ -26,8 +26,9 @@ import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-s
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
 // Core extension checks cover extension-owned draft storage, versioned template edits, and allocated file roots.
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
+// packaged-command-palette.spec.ts checks theme selection from the palette and persistence after reload.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
-// grouped ticket settings and icons, cleanup/merge settings, saved document links, and ticket/workspace navigation.
+// grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 // Includes linked dependency loading and missing dependency diagnostics.
@@ -67,6 +68,7 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
 // Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
+// Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
@@ -80,8 +82,12 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 // Includes resource path prefixes, owner resolver commands, and resolution through HTTP.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { registerResourcePageSmokeTests } from "./packaged-resource-pages-smoke";
+// A delayed owner resolution cannot resurrect a deleted target or save cleanup as a manual closure.
+import { registerResourceRemovalSmokeTests } from "./packaged-resource-removal-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { registerSessionLaunchSmokeTests } from "./packaged-session-launch-smoke";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
+// The fixed 1,000-session / 1,000-ticket compiled navigation gate lives in ../perf/subnav-benchmark.ts.
 // Packaged browser coverage also checks shared Session action groups and lazy title search in the tab menu.
 // Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
 import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
@@ -159,6 +165,7 @@ test("includes extension development, smoke test, browser setup and update comma
 
 // Includes host drive discovery and browsing through the packaged filesystem API.
 registerPackagedProjectSetupSmokeTests();
+registerSessionLaunchSmokeTests();
 
 test(
   "loads default extension dependencies, native actions and command-backed workspace choices",
@@ -278,6 +285,7 @@ registerResourceLinksSmokeTests();
 
 registerCommandStreamSmokeTests();
 registerResourceChoicesSmokeTests();
+registerResourceRemovalSmokeTests();
 // Includes edit recovery after dispatch with draft, model, parameter, and file ownership checks.
 registerQueuedRequestSmokeTests();
 

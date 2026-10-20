@@ -164,6 +164,7 @@ const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
     owner: { kind: "page", id: dashboardViews.sessions.id, extensionId: "pstdio" },
     sourceExtensionId: "pstdio",
     declarationIndex: 0,
+    getStructure: () => buildSessionsLevelSections(),
     getSections: () => buildSessionsLevelSections(createDashboardSessions(getDashboardSelectedProjectId(ctx))),
   });
   registerDashboardNavigationContribution(ctx, {

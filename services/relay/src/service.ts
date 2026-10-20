@@ -1,7 +1,7 @@
 import type { ReportFailure } from "pstdio-service-telemetry";
 import { createRelayHandler } from "./transport/http";
 import type { RelayOwners } from "./transport/owners";
-import type { RelaySubscription } from "./transport/subscriptions";
+import type { RelaySocket } from "./transport/sockets";
 
 export interface RelayConfig {
   hostname: string;
@@ -26,7 +26,7 @@ export function readConfig(env: Record<string, string | undefined>) {
 
 export function startRelay(config: RelayConfig, owners: RelayOwners, report: ReportFailure = () => {}) {
   const handler = createRelayHandler(owners, (request, data) => server.upgrade(request, { data }), report);
-  const server = Bun.serve<RelaySubscription>({
+  const server = Bun.serve<RelaySocket>({
     ...config,
     // Match the existing S3 maximum part size while forwarding the body as a bounded stream.
     maxRequestBodySize: 5 * 1024 ** 3,
@@ -35,8 +35,8 @@ export function startRelay(config: RelayConfig, owners: RelayOwners, report: Rep
       open(socket) {
         socket.data.open(socket);
       },
-      message(socket) {
-        socket.data.close(1008);
+      message(socket, data) {
+        socket.data.message(data);
       },
       close(socket) {
         socket.data.close();

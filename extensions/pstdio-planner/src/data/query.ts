@@ -23,6 +23,7 @@ import {
   TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
 } from "./mappers";
 import { readTicketReviewRequests, withReviewNeededFlag } from "./review-request-storage";
+import { REVIEW_REQUEST_ITEMS_ATTRIBUTE, reviewRequestBadgeItems } from "./review-request-summary";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
@@ -101,6 +102,10 @@ export const runTicketsQuery = async ({
           milestoneState: "unscheduled",
           needsAttention: "no",
         }),
+        [REVIEW_REQUEST_ITEMS_ATTRIBUTE]: reviewRequestBadgeItems(
+          requests.get(ticket.id) ?? { requests: [], errors: [] },
+          row.resource,
+        ),
       },
     };
   });

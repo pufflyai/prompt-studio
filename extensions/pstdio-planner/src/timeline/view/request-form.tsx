@@ -1,10 +1,11 @@
 // Answer one review request and keep draft answers visible if the server refuses the write.
 import { Button, Flex, Icon, Stack, Text } from "@chakra-ui/react";
+import { QuestionPromptControls, useQuestionPromptState } from "@pstdio/ui/chat-ui";
 import { MessageSquare } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReviewRequestView, ReviewResponse } from "../../data/review-request-types";
 import { Instructions } from "./instructions";
-import { QuestionField } from "./question-field";
+import { toQuestionPrompt, toResponseAnswers, toSavedPromptState } from "./review-question-prompt";
 
 export interface RequestHandlers {
   onAnswer: (requestId: string, response: ReviewResponse) => Promise<unknown>;
@@ -17,7 +18,18 @@ interface RequestFormProps extends RequestHandlers {
 
 export function RequestForm(props: RequestFormProps) {
   const { request, onAnswer, onOpenChat } = props;
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
+  const questions = request.request.kind === "decision" ? request.request.questions : [];
+  const [prompt] = useState(() => toQuestionPrompt(request.id, questions));
+  const form = useQuestionPromptState(prompt);
+  const [saved] = useState(() =>
+    toSavedPromptState(
+      request.id,
+      questions,
+      request.outcome?.kind === "answered" ? request.outcome.response : undefined,
+    ),
+  );
+  const restore = useRef(form.restore).current;
+  useEffect(() => restore(saved.selected, saved.custom), [restore, saved]);
   const [pending, setPending] = useState<"answer" | "chat">();
   const [error, setError] = useState<string>();
   const run = async (kind: "answer" | "chat", write: () => Promise<unknown>) => {
@@ -31,7 +43,11 @@ export function RequestForm(props: RequestFormProps) {
       setPending(undefined);
     }
   };
-  const response: ReviewResponse = request.request.kind === "task" ? { confirmed: true } : { answers };
+  const response = () =>
+    request.request.kind === "task"
+      ? { confirmed: true as const }
+      : { answers: toResponseAnswers(questions, form.buildAnswers()) };
+  const decisionAction = request.state === "answered" ? "Update answer" : "Submit answer";
 
   return (
     <Stack gap="sm" p="sm" bg="bg.subtle" borderRadius="md">
@@ -43,33 +59,30 @@ export function RequestForm(props: RequestFormProps) {
           <Text color="green.fg" textStyle="label/S/medium">
             Answered
           </Text>
-          <Text textStyle="label/S/regular" whiteSpace="pre-wrap">
-            {request.outcomeText}
-          </Text>
+          {request.request.kind === "task" ? <Text textStyle="label/S/regular">{request.outcomeText}</Text> : null}
         </Stack>
       ) : null}
-      {request.state === "open" ? (
+      {request.state === "open" || (request.state === "answered" && request.request.kind === "decision") ? (
         <Stack gap="sm">
-          {request.request.kind === "decision"
-            ? request.request.questions.map((question) => (
-                <QuestionField
-                  key={question.id}
-                  question={question}
-                  prefix={request.id}
-                  value={answers[question.id]}
-                  disabled={pending !== undefined}
-                  onChange={(value) => setAnswers((current) => ({ ...current, [question.id]: value }))}
-                />
-              ))
-            : null}
+          {questions.length ? (
+            <QuestionPromptControls
+              isEditable={pending === undefined}
+              questionPrompt={prompt}
+              selectedOptionsByQuestion={form.selectedOptionsByQuestion}
+              customAnswersByQuestion={form.customAnswersByQuestion}
+              onToggleOption={form.toggleOption}
+              onToggleOther={form.toggleOther}
+              onCustomAnswerChange={form.setCustomAnswer}
+            />
+          ) : null}
           <Flex gap="xs" wrap="wrap">
             <Button
               size="sm"
               loading={pending === "answer"}
-              disabled={pending !== undefined}
-              onClick={() => void run("answer", () => onAnswer(request.id, response))}
+              disabled={pending !== undefined || form.hasMissingRequiredAnswer}
+              onClick={() => void run("answer", () => onAnswer(request.id, response()))}
             >
-              {request.request.kind === "task" ? "Confirm completed" : "Submit answer"}
+              {request.request.kind === "task" ? "Confirm completed" : decisionAction}
             </Button>
             <Button
               size="sm"

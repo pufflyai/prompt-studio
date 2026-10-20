@@ -46,7 +46,7 @@ Dependency integration is part of implementing this ticket. This assignment auth
 
 ## When stuck
 
-When you cannot proceed without a person's decision or action, create a Planner review request. This records the blocker and sets Review Needed in the timeline. Do this before ending the turn. Do not only ask in chat or set a ticket status.
+When you cannot proceed without a person's decision or action, create a Planner review request. This records the blocker and sets Needs attention in the timeline. Do this before ending the turn. Do not only ask in chat or set a ticket status.
 
 Use `pst pstdio-planner request-human` with the ticket, a short title, concrete instructions, and a task or decision request. See [Review requests](https://prompt.studio/docs/extensions/planner/review-requests/). Include what you tried, the evidence, and exactly what the person must decide or do.
 

@@ -24,6 +24,7 @@ export const useTreeMovement = (input: {
   const queue = useRef(Promise.resolve());
   useEffect(() => {
     setPending((current) => {
+      if (current.moves.length === 0) return current;
       if (current.scope !== scope) return { scope, moves: [] };
       const moves = current.moves.filter((move) => !move.savedAfter || move.savedAfter === body);
       return moves.length === current.moves.length ? current : { scope, moves };

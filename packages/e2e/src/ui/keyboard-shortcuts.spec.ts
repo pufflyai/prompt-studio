@@ -4,6 +4,7 @@ import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 import { installShortcutReferenceExtension } from "./helpers/shortcut-reference-extension";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
+import { changeThemeThroughCommandPalette } from "./helpers/theme-picker";
 
 test.use({ notificationsEnabled: true });
 
@@ -76,7 +77,10 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   await expect(page.getByRole("dialog").last().getByText("Shortcut greeting", { exact: true })).toHaveCount(0);
 });
 
-test("the theme picker opens on the current theme and Escape keeps it", async ({ page, request }) => {
+test("the theme picker opens on the current theme and Escape keeps it", { tag: "@smoke" }, async ({
+  page,
+  request,
+}) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Theme Picker Project" }),
   });
@@ -119,7 +123,23 @@ test("the theme picker opens on the current theme and Escape keeps it", async ({
   expect(consoleErrors.filter((error) => error.includes("Maximum update depth"))).toEqual([]);
 });
 
-test("main shortcuts navigate and open creation forms", async ({ page, request }) => {
+test("changes and saves the theme through the command palette", { tag: "@smoke" }, async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Command palette theme" }),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await page.addInitScript((projectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+    if (!localStorage.getItem("theme-preference")) localStorage.setItem("theme-preference", "pstdio-dark");
+  }, project.id);
+  await page.goto(`/projects/${project.id}/tickets`);
+  await expect(page.getByRole("option", { name: "Tickets", exact: true }).first()).toBeVisible();
+  await changeThemeThroughCommandPalette(page);
+});
+
+test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Shortcut defaults" }),
   });

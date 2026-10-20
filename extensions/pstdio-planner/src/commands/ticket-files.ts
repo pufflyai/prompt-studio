@@ -1,6 +1,7 @@
 import {
   defineCommand,
   type ExtensionContextBase,
+  l10n,
   params,
   type RendererContext,
   type TreeAction,
@@ -8,11 +9,18 @@ import {
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
 import { statusesCollection, ticketsCollection } from "../data/collections";
-import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
+import { selectedDocumentFromResource } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
+import { listTicketReviewRequests } from "../data/review-request-storage";
+import { REVIEW_REQUEST_ICON, reviewRequestSummary } from "../data/review-request-summary";
 import { readSessionHistory } from "../data/session-history";
-import { ticketPageTarget } from "../data/ticket-page-target";
+import {
+  REVIEW_REQUESTS_DOCUMENT,
+  ticketFileTarget,
+  ticketPageTarget,
+  ticketRequestsTarget,
+} from "../data/ticket-page-target";
 import { linkedResourceParentMetadata, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { plannerTicketsChanged } from "../events";
@@ -190,17 +198,19 @@ export const listTicketFilesTree = async (
   const parentLookup = createTicketParentLookup(tickets);
   const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup);
 
-  // The selected document travels with the ticket resource. This keeps the UI state
-  // in the workbench and lets every renderer callback receive the same selection.
   const ticketResource = ticketResourceReference(ticket, parentLookup);
-  const selectTarget = (documentId: string) =>
-    ticketPageTarget({
-      ...ticketResource,
-      metadata: {
-        ...ticketResource.metadata,
-        ...(documentId !== TICKET_BODY_DOCUMENT ? { documentId } : {}),
-      },
-    });
+
+  const reviewRequests = await listTicketReviewRequests(ctx.storage, ticket.id);
+  const summary = reviewRequestSummary(reviewRequests);
+  const reviewRequestsNode: TreeNode = {
+    id: REVIEW_REQUESTS_DOCUMENT,
+    label: l10n("requests.navigation.label", "Needs attention"),
+    icon: REVIEW_REQUEST_ICON,
+    badge: summary ? { label: String(summary.count), color: summary.color } : undefined,
+    tooltip: summary?.tooltip,
+    target: ticketRequestsTarget(ticketResource),
+    selected: selectedDocument === REVIEW_REQUESTS_DOCUMENT,
+  };
 
   const ticketSection: TreeViewSection = {
     id: "ticket",
@@ -211,9 +221,10 @@ export const listTicketFilesTree = async (
         label: ticketDisplayTitle(ticket),
         icon: TICKET_RESOURCE_ICON,
         resource: ticketResource,
-        target: selectTarget(TICKET_BODY_ID),
+        target: ticketPageTarget(ticketResource),
         selected: selectedDocument === TICKET_BODY_ID,
       },
+      ...(summary ? [reviewRequestsNode] : []),
     ],
   };
 
@@ -222,7 +233,7 @@ export const listTicketFilesTree = async (
       id: file.id,
       label: file.name,
       icon: "FileText",
-      target: selectTarget(file.id),
+      target: ticketFileTarget(ticketResource, file),
       selected: selectedDocument === file.id,
       contextMenuActions: fileContextMenuActions({ ticketId, fileId: file.id, fileName: file.name }),
     })),
@@ -231,7 +242,7 @@ export const listTicketFilesTree = async (
       id: attachment.id,
       label: attachment.name,
       icon: "Image",
-      target: selectTarget(attachment.id),
+      target: ticketFileTarget(ticketResource, attachment, "Image"),
       selected: selectedDocument === attachment.id,
     })),
   ];

@@ -14,6 +14,7 @@ import { toPanelContribution, toPanelInstance } from "../../core/registries/layo
 import { WorkbenchActionErrors } from "../notifications/action-errors";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { WorkbenchWidgetContents } from "./widget-contents";
 
 interface WorkbenchWidgetHostProps {
   workbench: WorkbenchCore;
@@ -112,7 +113,11 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       <WorkbenchActionErrors workbench={workbench} target={placement.widgetId} />
       {renderer ? (
         <WorkbenchRenderedWidgetFrame status={props.region === "status"}>
-          {renderer.render({ workbench, panel, instance, refresh }) as ReactNode}
+          <WorkbenchWidgetContents
+            renderer={renderer}
+            input={{ workbench, panel, instance, refresh }}
+            defer={["main", "side", "bottom"].includes(panel.region)}
+          />
         </WorkbenchRenderedWidgetFrame>
       ) : (
         <WorkbenchWidgetFallback label={`No renderer registered for ${rendererId}.`} />

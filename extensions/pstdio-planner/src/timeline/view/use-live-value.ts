@@ -2,13 +2,14 @@
 import type { EventRef } from "@pstdio/sdk/extensions";
 import { useEffect, useState } from "react";
 import { createLiveRead } from "./live-read";
+import { reportPlannerError } from "./timeline-notice";
 import type { PlanClient } from "./use-plan";
 
 // A failed read, for example while Planner restarts, is retried after this delay until it succeeds.
 const retryDelayMs = 5000;
 
 // Callers pass a module-level read and event list, so the subscription restarts only for a new client.
-export function useLiveValue<T, Client extends Pick<PlanClient, "events">>(
+export function useLiveValue<T, Client extends Pick<PlanClient, "events" | "notify">>(
   client: Client,
   read: (client: Client, resourceId?: string) => Promise<T>,
   events: readonly EventRef[],
@@ -21,7 +22,9 @@ export function useLiveValue<T, Client extends Pick<PlanClient, "events">>(
       onValue: (next) => {
         setValue(next);
       },
-      onError: () => {
+      onError: (error) => {
+        // The view owns read failures; the host only forwards explicit command notices.
+        void reportPlannerError(client, error);
         retry = setTimeout(() => void refresh(), retryDelayMs);
       },
     });
