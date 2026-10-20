@@ -120,3 +120,13 @@ export const RetainedDraft: Story = {
     await expect(draft).toHaveValue("Keep this unsaved draft");
   },
 };
+
+export const CrossModeNavigation: Story = {
+  args: { workbench: createEditorWorkbench() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Review mode" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Open note" }));
+    await expect(await canvas.findByRole("textbox", { name: "Unsaved note" })).toBeVisible();
+  },
+};

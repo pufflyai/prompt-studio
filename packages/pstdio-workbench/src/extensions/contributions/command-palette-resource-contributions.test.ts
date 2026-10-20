@@ -131,7 +131,7 @@ test("passes search cancellation to the owner command", async () => {
   expect(received).toBe(signal);
 });
 
-test("resource search includes only pages available in the active mode", async () => {
+test("resource search offers ordinary cross-mode links and omits explicitly invalid modes", async () => {
   const workbench = createWorkbench();
   workbench.views.registerView({ id: "empty", title: "Empty", body: { kind: "react", render: () => null } });
   for (const id of ["project", "review"]) workbench.modes.registerMode({ id, activate() {} });
@@ -149,13 +149,28 @@ test("resource search includes only pages available in the active mode", async (
       workbench,
       projectId: "p1",
       executeCommand: () => ({
-        items: [{ id: "intro", label: "Intro", target: { kind: "page", page: { kind: "page", id: "slides" } } }],
+        items: [
+          { id: "intro", label: "Intro", target: { kind: "page", page: { kind: "page", id: "slides" } } },
+          {
+            id: "invalid",
+            label: "Invalid",
+            target: {
+              kind: "page",
+              page: { kind: "page", id: "slides" },
+              mode: { kind: "mode", extensionId: "pstdio", id: "project" },
+            },
+          },
+        ],
       }),
     },
     [record],
   );
   workbench.modes.setActiveMode("project");
-  expect((await workbench.commandPaletteResources.queryProviders({ query: "", limit: 10 }))[0]?.results).toEqual([]);
+  expect(
+    (await workbench.commandPaletteResources.queryProviders({ query: "", limit: 10 }))[0]?.results.map(
+      (item) => item.label,
+    ),
+  ).toEqual(["Intro"]);
   workbench.modes.setActiveMode("review");
   expect((await workbench.commandPaletteResources.queryProviders({ query: "", limit: 10 }))[0]?.results).toHaveLength(
     1,

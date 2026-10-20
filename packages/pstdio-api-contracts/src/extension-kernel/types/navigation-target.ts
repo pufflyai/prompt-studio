@@ -8,6 +8,7 @@ import type { ResourceRef } from "./resources";
 export interface NavigationTargetPage {
   kind: "page";
   page: PageRef;
+  /** Explicit destination mode. Unsupported page/mode pairs reject navigation. */
   mode?: ModeRef;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;

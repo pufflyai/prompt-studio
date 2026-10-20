@@ -6,9 +6,9 @@ export const pageAllowsMode = (page: WorkbenchPageContribution, modeId: string |
   Boolean(modeId && (page.modeIds ?? [page.modeId]).includes(modeId));
 
 export const resolvePageMode = (page: WorkbenchPageContribution, requested?: ModeRef, activeModeId?: string) => {
-  // Legacy navigation selects the singleton mode. New declarations keep the current mode.
+  // Ordinary links keep a supported current mode, then fall back to the declared default.
   let modeId = page.modeId;
-  if (page.modeIds) modeId = activeModeId ?? page.modeId;
+  if (page.modeIds && activeModeId && pageAllowsMode(page, activeModeId)) modeId = activeModeId;
   if (requested) modeId = contributionRefId(requested);
   if (!pageAllowsMode(page, modeId))
     throw new Error(`Page "${page.id}" is unavailable in mode "${modeId ?? "none"}". Choose an allowed mode.`);

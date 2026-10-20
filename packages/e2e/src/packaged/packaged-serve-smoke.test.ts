@@ -54,7 +54,9 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Navigation metadata preserves panel permissions, supported page modes, mode fallbacks and unique editor policy.
-import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+// Packaged browser checks also exercise ordinary cross-mode opens and explicit invalid mode rejection.
+import { writeNavigationExtension } from "./packaged-navigation-fixture";
+import { expectPackagedNavigation } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
 // The browser suite checks typed host props, page updates, structured capability errors and saved settings.
 // Real React Query subscriptions cover matching events, reconnect deduplication and unmount cleanup.

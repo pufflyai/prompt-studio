@@ -100,9 +100,9 @@ Host modes and extension modes use the same settings.
 
 ## Page availability and mode history
 
-On `main` (extension API 0.2.1), a page can declare `modes: [mode.ref, otherMode.ref]`. The list must be non-empty, unique, and include its existing `mode` default. Without `modes`, opening the page keeps the established behavior of selecting its declared mode. With `modes`, navigation stays in the current allowed mode unless the target supplies an explicit `mode` reference. Unsupported page/mode pairs fail before navigation changes state.
+On `main` (extension API 0.2.1), a page can declare `modes: [mode.ref, otherMode.ref]`. The list must be non-empty, unique, and include its existing `mode` default. Without `modes`, opening the page keeps the established behavior of selecting its declared mode. With `modes`, an ordinary link keeps the current mode when supported, otherwise switches to the page's default `mode`. An explicit navigation `mode` must be supported; invalid page/mode pairs fail before navigation changes state. Extension authors do not need to duplicate these checks in ordinary buttons.
 
-A mode can declare `basePage: page.ref`. Switching modes restores that mode's last allowed page, or its base page when the saved page is unavailable. The base page must support the mode. Navigation trees, resource search, direct opens, copied URLs, reload and Back/Forward apply the same availability rule. Page locations and copied URLs retain the selected mode; `_mode` is the URL transport key, separate from page parameters such as `mode`.
+A mode can declare `basePage: page.ref`. Switching modes restores that mode's last allowed page, or its base page when the saved page is unavailable. The base page must support the mode. Navigation trees, resource search, direct opens and URLs without a mode use the same mode selection rule. An ordinary cross-mode link remains usable. Reload and Back/Forward validate their captured mode; they never silently replace an explicitly requested mode. Page locations and copied URLs retain the selected mode; `_mode` is the URL transport key, separate from page parameters such as `mode`.
 
 ## Unique resource editors
 

@@ -25,6 +25,7 @@ import { verifyPackagedCollectionBreadcrumb } from "./packaged-collection-breadc
 import { verifyPackagedDocumentState } from "./packaged-document-state";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPackagedNoteHeadings } from "./packaged-note-headings";
+import { verifyPackagedPageModes, withPageModeProbe } from "./packaged-page-modes";
 import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
 import { verifyPackagedPreviewSelection } from "./packaged-preview-selection";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -84,7 +85,7 @@ test.describe("packaged extension webviews", () => {
         try {
           expect(browserAvailable).toBe(true);
           const started = await startPackagedServe(tempRoot, {
-            PSTDIO_DEFAULT_EXTENSIONS: defaultExtensions,
+            PSTDIO_DEFAULT_EXTENSIONS: withPageModeProbe(defaultExtensions, tempRoot, browserCase.name === "Chromium"),
             PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
           });
           child = started.child;
@@ -237,7 +238,9 @@ test.describe("packaged extension webviews", () => {
             );
             phase("collection checked; document state start");
             await verifyPackagedDocumentState(page, started.baseUrl, project.id);
-            phase("documents checked; tree start");
+            phase("documents checked; page modes start");
+            await verifyPackagedPageModes(page, started.baseUrl, project.id);
+            phase("page modes checked; tree start");
             await page.goto(`${started.baseUrl}/projects/${project.id}/workspaces`);
             const sidenav = page.locator('[data-workbench-region="sidenav"]');
             await verifyTreeGroups(page, sidenav, sidenav.getByRole("option", { name: "Search", exact: true }));

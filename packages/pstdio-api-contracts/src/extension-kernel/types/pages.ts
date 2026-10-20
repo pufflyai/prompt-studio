@@ -66,9 +66,9 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
   readonly path: string;
-  /** Default mode for navigation without an explicit modes list. */
+  /** Default mode when navigation cannot keep the current mode. */
   readonly mode: ModeRef;
-  /** Allowed modes. Omission preserves navigation to the declared default mode. */
+  /** Supported rendering modes. Ordinary opens keep a supported current mode, otherwise use mode. Omission always selects mode. */
   readonly modes?: readonly ModeRef[];
   readonly parent?: PageRef;
   readonly resource?: ResourceConstraint;

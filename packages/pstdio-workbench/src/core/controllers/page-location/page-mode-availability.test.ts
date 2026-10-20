@@ -42,11 +42,11 @@ const harness = (
   return { workbench, browser };
 };
 
-test("rejects unavailable direct and compound opens without changing stores or history", async () => {
+test("rejects explicitly unsupported modes without changing stores or history", async () => {
   const { workbench, browser } = harness();
   const before = workbench.pages.store.getState();
   const entry = browser.current();
-  expect(workbench.pageLocations.navigate({ kind: "page", page: ref("music") }).ok).toBe(false);
+  expect(workbench.pageLocations.navigate({ kind: "page", page: ref("music"), mode: mode("project") }).ok).toBe(false);
   expect(workbench.pages.store.getState()).toBe(before);
   expect(browser.current()).toBe(entry);
   let failure: unknown;
@@ -55,7 +55,7 @@ test("rejects unavailable direct and compound opens without changing stores or h
       kind: "compound",
       targets: [
         { kind: "page", page: ref("home"), mode: mode("kiln") },
-        { kind: "page", page: ref("music") },
+        { kind: "page", page: ref("music"), mode: mode("kiln") },
       ],
     });
   } catch (error) {
@@ -65,6 +65,37 @@ test("rejects unavailable direct and compound opens without changing stores or h
   expect(workbench.pages.store.getState()).toBe(before);
   expect(workbench.modes.getActiveModeId()).toBe("project");
   expect(browser.current()).toBe(entry);
+});
+
+test("ordinary opens keep a supported current mode or switch to the page default", () => {
+  const { workbench } = harness();
+  workbench.modes.setActiveMode("kiln");
+  expect(workbench.pageLocations.navigate({ kind: "page", page: ref("home") }).ok).toBe(true);
+  expect(workbench.modes.getActiveModeId()).toBe("kiln");
+  expect(workbench.pageLocations.navigate({ kind: "page", page: ref("music") }).ok).toBe(true);
+  expect(workbench.modes.getActiveModeId()).toBe("boombox");
+  expect(workbench.pages.store.getState().location?.mode?.id).toBe("boombox");
+});
+
+test("ordinary compound navigation chooses a supported mode for each page", async () => {
+  const { workbench } = harness();
+  await workbench.navigation.openTarget({
+    kind: "compound",
+    targets: [
+      { kind: "page", page: ref("home"), mode: mode("kiln") },
+      { kind: "page", page: ref("music") },
+    ],
+  });
+  expect(workbench.pages.store.getState().activePageId).toBe("music");
+  expect(workbench.modes.getActiveModeId()).toBe("boombox");
+});
+
+test("a copied URL without a mode opens in the page default when the current mode is unsupported", () => {
+  const { workbench, browser } = harness();
+  browser.replace({ url: "/projects/p1/extensions/test/music" });
+  expect(workbench.pageLocations.boot("p1").ok).toBe(true);
+  expect(workbench.pages.store.getState().activePageId).toBe("music");
+  expect(workbench.modes.getActiveModeId()).toBe("boombox");
 });
 
 test("reselecting a mode reconciles the current page without adding history", () => {
@@ -185,7 +216,7 @@ test("mode base pages pass the same availability check before mode changes", () 
   expect(workbench.modes.getActiveModeId()).toBe("project");
 });
 
-test("navigation trees and page discovery show only pages allowed in the active mode", async () => {
+test("navigation links can switch modes while page discovery lists the current mode", async () => {
   const { workbench } = harness();
   const owner = { kind: "mode" as const, extensionId: "test", id: "project" };
   workbench.navigationTrees.registerContribution({
@@ -196,11 +227,21 @@ test("navigation trees and page discovery show only pages allowed in the active 
     getSections: () => [
       {
         id: "pages",
-        nodes: ["home", "music"].map((id) => ({ id, label: id, target: { kind: "page" as const, page: ref(id) } })),
+        nodes: [
+          ...["home", "music"].map((id) => ({ id, label: id, target: { kind: "page" as const, page: ref(id) } })),
+          {
+            id: "invalid",
+            label: "Invalid",
+            target: { kind: "page" as const, page: ref("music"), mode: mode("project") },
+          },
+        ],
       },
     ],
   });
-  expect((await workbench.navigationTrees.getSections(owner))[0]?.nodes.map((node) => node.id)).toEqual(["home"]);
+  expect((await workbench.navigationTrees.getSections(owner))[0]?.nodes.map((node) => node.id)).toEqual([
+    "home",
+    "music",
+  ]);
   expect(workbench.pages.listAvailablePages("project").map((page) => page.id)).toEqual(["home"]);
   workbench.modes.setActiveMode("boombox");
   expect((await workbench.navigationTrees.getSections(owner))[0]?.nodes.map((node) => node.id)).toEqual([
