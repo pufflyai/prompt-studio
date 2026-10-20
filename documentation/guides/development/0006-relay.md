@@ -16,6 +16,8 @@ bun run --cwd services/relay test:sync
 
 They cover duplicate updates, rejected stale latest states, blobs kept for the grace period, a storage dump with no plaintext from a seeded project, the storage bound across ten compaction cycles, protocol version errors, personal-space access, live forwarding and rate limits.
 
+The full 10,000-update storage check is a manual benchmark: `bun run --cwd services/relay bench:storage-bound`. See [relay storage bound](../../references/performance/0003-relay-storage-bound.md).
+
 ## Build and check
 
 Use Bun 1.4.2 and Docker with the Compose plugin. From the repository root:
