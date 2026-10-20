@@ -145,3 +145,24 @@ export const AddExistingEditor: Story = {
     await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
   },
 };
+
+export const ReopenMovedEditor: Story = {
+  args: { workbench: createEditorWorkbench() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const open = await canvas.findByRole("button", { name: "Open note" });
+    await userEvent.click(open);
+    const draft = await canvas.findByRole("textbox", { name: "Unsaved note" });
+    await userEvent.clear(draft);
+    await userEvent.type(draft, "Keep this unsaved draft");
+    await userEvent.click(canvas.getByRole("button", { name: "Move to Side" }));
+    await expect(open).toBeVisible();
+    await userEvent.click(open);
+    await expect(open).toBeVisible();
+    await expect(canvas.getByRole("textbox", { name: "Unsaved note" })).toBe(draft);
+    await expect(draft).toHaveValue("Keep this unsaved draft");
+    await userEvent.click(canvas.getByRole("button", { name: "Open through another tool" }));
+    await expect(open).toBeVisible();
+    await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
+  },
+};

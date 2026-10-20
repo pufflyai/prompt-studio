@@ -20,10 +20,13 @@ export const findCachedMainEditor = (
   core: WorkbenchCore,
   modeId: string,
   matches: (placement: WorkbenchWidgetPlacement) => boolean,
+  projectId = core.pages.store.getState().projectId,
 ) => {
-  const projectId = core.pages.store.getState().projectId;
   return projectId ? caches.get(core)?.findMainEditor(projectId, modeId, matches) : undefined;
 };
+
+export const getWorkbenchModeLayout = (core: WorkbenchCore, projectId: string | undefined, modeId: string) =>
+  caches.get(core)?.readMode(projectId, modeId);
 
 /** Query the same owners that restoration uses, without publishing navigation. */
 export const getWorkbenchPanelLayout = (
@@ -34,11 +37,12 @@ export const getWorkbenchPanelLayout = (
   const cache = caches.get(core);
   const current = core.pages.store.getState();
   const defaults = core.layout.store.getInitialState().layout;
+  const projectId = proposed?.projectId ?? current.projectId;
   const layout =
-    modeId && modeId !== core.modes.getActiveModeId()
-      ? (cache?.readMode(current.projectId, modeId) ?? defaults)
+    modeId && (modeId !== core.modes.getActiveModeId() || projectId !== current.projectId)
+      ? (cache?.readMode(projectId, modeId) ?? defaults)
       : core.layout.getLayout();
-  if (!proposed || !pageContextChanged(proposed, current)) return layout;
+  if (!proposed || proposed.activeModeId !== modeId || !pageContextChanged(proposed, current)) return layout;
   const pageLayout = cache?.loadPageLayout(pageLayoutContext(proposed), proposed.pages[proposed.activePageId ?? ""]);
   return { ...layout, regions: { ...layout.regions, main: pageLayout?.regions.main ?? defaults.regions.main } };
 };

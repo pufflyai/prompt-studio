@@ -8,10 +8,14 @@ import {
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
 import { resolvePageMode } from "../../registries/pages/page-availability";
-import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
+import type {
+  WorkbenchPageContribution,
+  WorkbenchPageRegistryStoreState,
+} from "../../registries/pages/page-registry-types";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { WorkbenchCore } from "../../workbench-core-types";
-import { findCachedMainEditor } from "../page-runtime/workbench-layout-context";
+import { getPageLocationPreparation } from "../page-location/page-location-preparation";
+import { findCachedMainEditor, getWorkbenchPanelLayout } from "../page-runtime/workbench-layout-context";
 
 export const pageLocationTarget = (location: PageLocation): NavigationTargetPage => ({
   ...location,
@@ -36,7 +40,14 @@ export const resourceEditorKey = (
   return JSON.stringify([viewId, resourceKey(resource), keys.map((key) => [key, resource.metadata?.[key] ?? null])]);
 };
 
-const findHiddenEditor = (core: WorkbenchCore, viewId: string, resource: ResourceRef | undefined, modeId?: string) => {
+type EditorContext = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
+const findResourceEditor = (
+  core: WorkbenchCore,
+  viewId: string,
+  resource: ResourceRef | undefined,
+  modeId: string | undefined,
+  current: EditorContext,
+) => {
   if (!resource || !modeId || core.views.getView(viewId)?.instancePolicy !== "per-resource") return undefined;
   const pages = core.pages.listPages();
   const key = resourceEditorKey(viewId, resource, pages);
@@ -44,14 +55,28 @@ const findHiddenEditor = (core: WorkbenchCore, viewId: string, resource: Resourc
     Boolean(
       placement.resource && placement.viewId === viewId && resourceEditorKey(viewId, placement.resource, pages) === key,
     );
-  if (core.modes.getActiveModeId() === modeId) {
-    const layout = core.layout.getLayout();
-    const placement = layout.regions.main.widgets.find(matches);
-    const location = core.pages.store.getState().location;
-    if (placement && location) return { placement, location };
-    if (Object.values(layout.regions).some((region) => region.widgets.some(matches))) return undefined;
+  const layout = getWorkbenchPanelLayout(core, modeId, current);
+  const available = Object.values(layout.regions).flatMap((region) =>
+    region.widgets.map((placement) => ({ region: region.id, placement })),
+  );
+  if (current.activeModeId === modeId && current !== core.pages.store.getState()) {
+    for (const entry of current.placements) {
+      if (!available.some(({ placement }) => placement.widgetId === entry.value.widgetId))
+        available.push({ region: entry.region, placement: entry.value });
+    }
   }
-  const saved = findCachedMainEditor(core, modeId, matches);
+  // Global trays stay authoritative when another page has a cached copy in Main.
+  const found =
+    available.find((entry) => entry.region !== "main" && matches(entry.placement)) ??
+    available.find((entry) => matches(entry.placement));
+  if (found) {
+    const location =
+      current.activeModeId === modeId
+        ? current.location
+        : getPageLocationPreparation(core.pageLocations).modeLocation(modeId);
+    if (location) return { ...found, location };
+  }
+  const saved = findCachedMainEditor(core, modeId, matches, current.projectId);
   if (
     !saved ||
     !pages.some(
@@ -59,13 +84,13 @@ const findHiddenEditor = (core: WorkbenchCore, viewId: string, resource: Resourc
     )
   )
     return undefined;
-  return saved;
+  return { ...saved, region: "main" as const };
 };
 
 export const resolveUniqueEditorPage = (
   core: WorkbenchCore | undefined,
   target: NavigationTargetPage,
-  activeModeId?: string,
+  current: EditorContext,
 ) => {
   if (!core) return { target };
   const page = core.pages
@@ -79,8 +104,9 @@ export const resolveUniqueEditorPage = (
     !resourceMatchesConstraint(page.resource, target.resource)
   )
     return { target };
-  const modeId = resolvePageMode(page, target.mode, activeModeId);
-  const saved = findHiddenEditor(core, contributionRefId(page.main.view), target.resource, modeId);
+  const modeId = resolvePageMode(page, target.mode, current.activeModeId);
+  const viewId = contributionRefId(page.main.view);
+  const saved = findResourceEditor(core, viewId, target.resource, modeId, current);
   if (!saved) return { target };
   return {
     editorOpens: saved.placement.placementIdentity
@@ -89,19 +115,23 @@ export const resolveUniqueEditorPage = (
     activate: saved.placement.placementIdentity ? [saved.placement.placementIdentity] : [],
     target: {
       ...pageLocationTarget(saved.location),
-      ...(resourceKey(saved.location.resource) === resourceKey(target.resource)
+      ...(saved.region === "main" &&
+      saved.location.resource &&
+      resourceEditorKey(viewId, saved.location.resource, core.pages.listPages()) ===
+        resourceEditorKey(viewId, target.resource, core.pages.listPages())
         ? { resource: target.resource, section: target.section, position: target.position, open: target.open }
         : {}),
     },
   };
 };
 
-export const hiddenEditorPageForPanel = (
+export const resourceEditorPageForPanel = (
   core: WorkbenchCore,
   target: NavigationTargetPanel,
-  modeId?: string,
-  pageId?: string,
+  current: EditorContext,
 ) => {
+  const modeId = current.activeModeId;
+  const pageId = current.activePageId;
   const panel = target.panel;
   let item: import("../../registries/pages/page-registry-types").WorkbenchPageSlot["item"] | undefined;
   if (panel.kind === "shell-placement") item = core.shellPlacements.getPlacement(panel.id)?.item;
@@ -118,7 +148,7 @@ export const hiddenEditorPageForPanel = (
   }
   if (!item || item.kind !== "binding" || !target.resource || !resourceMatchesConstraint(item.binding, target.resource))
     return undefined;
-  const saved = findHiddenEditor(core, contributionRefId(item.binding.view), target.resource, modeId);
+  const saved = findResourceEditor(core, contributionRefId(item.binding.view), target.resource, modeId, current);
   return saved
     ? {
         target: pageLocationTarget(saved.location),

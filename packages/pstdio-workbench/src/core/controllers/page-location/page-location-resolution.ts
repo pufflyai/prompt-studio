@@ -17,10 +17,10 @@ export const createPageLocationResolution = <Value>(
       pages(),
       activeModeId(),
     );
-  const normalizeStored = (location: PageLocation): ResolvedPageLocation => {
+  const normalizeStored = (location: PageLocation, current = input.registry.store.getState()): ResolvedPageLocation => {
     const resolved = normalizeRawStored(location);
     const target = pageLocationTarget(resolved.location);
-    const editorTarget = input.resolvePageTarget?.(target, activeModeId()) ?? { target };
+    const editorTarget = input.resolvePageTarget?.(target, current) ?? { target };
     return {
       ...(editorTarget.target === target
         ? resolved
@@ -30,15 +30,19 @@ export const createPageLocationResolution = <Value>(
     };
   };
   const start = () => resolveStartPageLocation(input.startPage, pages(), resources);
-  const normalizeTarget = (target: Parameters<typeof resolvePageTargetMode>[0], modeId = activeModeId()) => {
+  const normalizeTarget = (
+    target: Parameters<typeof resolvePageTargetMode>[0],
+    current = input.registry.store.getState(),
+  ) => {
+    const modeId = current.activeModeId;
     const modeTarget = resolvePageTargetMode(target, pages(), modeId);
-    const editorTarget = input.resolvePageTarget?.(modeTarget, modeId) ?? { target: modeTarget };
+    const editorTarget = input.resolvePageTarget?.(modeTarget, current) ?? { target: modeTarget };
     return {
       ...normalizeWorkbenchPageTarget({
         target: resolvePageTargetMode(editorTarget.target, pages(), modeId),
         pages: pages(),
         resources: resources,
-        active: input.registry.store.getState().location,
+        active: current.location,
       }),
       activate: editorTarget.activate,
       editorOpens: editorTarget.editorOpens,

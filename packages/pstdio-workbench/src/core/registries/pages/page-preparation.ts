@@ -145,10 +145,9 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
         location: target.location,
         activePageId: page.id,
         activeModeId: modeId,
-        activate: [
+        activate: target.activate ?? [
           ...(primary && instanceKey ? [pagePlacementIdentity(page.id, primary.id, instanceKey)] : []),
           ...followers,
-          ...(target.activate ?? []),
         ],
         editorOpens: target.editorOpens,
         action: target.action,
@@ -208,7 +207,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
       location: target.location,
       activePageId: page.id,
       activeModeId: resolvePageMode(page, target.location.mode, current.activeModeId),
-      activate: [],
+      activate: target.activate ?? [],
       editorOpens: target.editorOpens,
       action: target.action,
     });

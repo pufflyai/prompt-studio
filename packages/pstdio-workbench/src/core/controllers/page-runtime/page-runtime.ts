@@ -97,9 +97,7 @@ const reconcilePageLayout = (
 const pageActivations = (
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   latest: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
-  restoresMode: boolean,
 ) => {
-  if (restoresMode) return [];
   return latest.reconciliation.activate.length > 0 ? latest.reconciliation.activate : state.reconciliation.activate;
 };
 const revealPagePlacements = (
@@ -149,7 +147,7 @@ const applyPageState = (
     const latest = stored === storeBeforeTransition ? state : stored;
     const restoredScope = source === "scope-restore" || input.layout.getPersistenceScope() !== previousScope;
     const restoresLayout = modeChanged || restoredScope || pageContextChanged(state, previous);
-    const activation = pageActivations(state, latest, restoresMode);
+    const activation = pageActivations(state, latest);
     const layoutInput = {
       layout: restoresLayout
         ? restoreModePanelLayout(input.layout.getLayout(), modeLayout, defaultLayout, pageLayout)

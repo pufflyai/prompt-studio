@@ -1,4 +1,4 @@
-import type { NavigationTargetPage } from "@pstdio/sdk/extensions";
+import type { NavigationTargetPage, PageLocation } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import type {
   ResolvedPageLocation,
@@ -7,7 +7,8 @@ import type {
 } from "./page-location-types";
 
 interface PageLocationPreparation<Value> {
-  resolve(target: NavigationTargetPage, modeId?: string): ResolvedPageLocation;
+  resolve(target: NavigationTargetPage, current?: WorkbenchPageRegistryStoreState<Value>): ResolvedPageLocation;
+  modeLocation(modeId: string): PageLocation;
   commit(
     state: WorkbenchPageRegistryStoreState<Value>,
     beforePublish?: () => void,

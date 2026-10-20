@@ -308,3 +308,163 @@ test("moving a final preview editor pins it before returning to its collection",
     tabRetention: "persistent",
   });
 });
+
+for (const region of ["side", "secondary"] as const) {
+  test.each([
+    "page controller",
+    "navigation",
+    "compound",
+  ] as const)(`%s opens select an editor in ${region} without replacing Main or browser history`, async (entry) => {
+    const { createMemoryWorkbenchPageLocationBrowser } = await import("../page-location/page-location-memory");
+    const browser = createMemoryWorkbenchPageLocationBrowser();
+    const s = fixture({ pageLocationBrowser: browser });
+    s.w.pageLocations.navigate(s.target);
+    const editor = s.w.layout.getActivePanel("main")!;
+    s.w.movePanel(editor.instanceId, region);
+    const location = s.w.pages.store.getState().location;
+    const main = s.w.layout.getLayout().regions.main;
+    const history = browser.current();
+    const historyState = s.w.pageLocations.historyStore.getState();
+    s.w.shell.setRegionOpen(region, false);
+    const section = { anchors: [{ id: "focus", heading: "Focus" }] };
+    const target = { ...s.target, resource: { ...s.resource, label: "Renamed" }, section };
+    if (entry === "page controller") expect(s.w.pageLocations.navigate(target).ok).toBe(true);
+    if (entry === "navigation") await s.w.navigation.openTarget(target);
+    if (entry === "compound") await s.w.navigation.openTarget({ kind: "compound", targets: [target] });
+    expect(s.w.pages.store.getState().location).toEqual(location);
+    expect(s.w.pages.store.getState().activePageId).toBe("alpha-list");
+    expect(s.w.layout.getLayout().regions.main.widgets).toEqual(main.widgets);
+    expect(browser.current()).toBe(history);
+    expect(s.w.pageLocations.historyStore.getState()).toEqual(historyState);
+    expect(s.w.shell.getRegionState(region).open).toBe(true);
+    expect(s.w.layout.getActivePanel()).toMatchObject({ instanceId: editor.instanceId, title: "Renamed", section });
+    expect(s.w.layout.listPanelInstances().filter((panel) => panel.viewId === "editor")).toHaveLength(1);
+  });
+}
+
+test("opening a moved editor in a compound action preserves the preceding Main navigation", async () => {
+  const s = fixture();
+  s.w.pageLocations.navigate(s.target);
+  const editor = s.w.layout.getActivePanel("main")!;
+  s.w.movePanel(editor.instanceId, "side");
+  await s.w.navigation.openTarget({
+    kind: "compound",
+    targets: [{ kind: "page", page: pageRef("alpha") }, s.target],
+  });
+  expect(s.w.pages.store.getState().activePageId).toBe("alpha");
+  expect(s.w.layout.getActivePanel()?.instanceId).toBe(editor.instanceId);
+  expect(s.w.layout.listPanelInstances("main").some((p) => p.viewId === "editor")).toBe(false);
+});
+
+test("opening a moved editor restores its mode's Main page", () => {
+  const s = fixture();
+  s.w.pageLocations.navigate(s.target);
+  const editor = s.w.layout.getActivePanel("main")!;
+  s.w.movePanel(editor.instanceId, "side");
+  s.w.layout.activatePanel(s.w.layout.getActivePanel("main")!.instanceId);
+  s.w.pageLocations.navigate({ kind: "page", page: pageRef("beta") });
+  expect(s.w.pageLocations.navigate(s.target).ok).toBe(true);
+  expect(s.w.pages.store.getState().activePageId).toBe("alpha-list");
+  expect(s.w.layout.getActivePanel()?.instanceId).toBe(editor.instanceId);
+  expect(s.w.layout.getActivePanel("main")?.viewId).toBe("document");
+});
+
+test("a compound action can reopen an editor it just opened in Side without replacing Main", async () => {
+  const s = fixture();
+  await s.w.navigation.openTarget({
+    kind: "compound",
+    targets: [
+      {
+        kind: "panel",
+        panel: { kind: "shell-placement", id: "editor" },
+        resource: s.resource,
+        region: "side",
+        open: "pin",
+      },
+      s.target,
+    ],
+  });
+  expect(s.w.pages.store.getState().activePageId).toBe("alpha");
+  expect(s.w.layout.listPanelInstances("main").filter((p) => p.viewId === "editor")).toEqual([]);
+  expect(s.w.layout.getActivePanel()?.viewId).toBe("editor");
+});
+
+test("reopening a moved document leaves a different document in Main even when their resource IDs match", () => {
+  const s = fixture();
+  s.w.pages.registerPage({
+    ...s.w.pages.getPage("edit")!,
+    id: "files",
+    ref: pageRef("files"),
+    path: "files",
+    document: { metadataKey: "path" },
+  });
+  const a = { ...s.target, page: pageRef("files"), resource: { ...s.resource, metadata: { path: "a" } } };
+  s.w.pageLocations.navigate(a);
+  const editor = s.w.layout.getActivePanel("main")!;
+  s.w.movePanel(editor.instanceId, "side");
+  s.w.pageLocations.navigate({ ...a, resource: { ...s.resource, metadata: { path: "b" } } });
+  const location = s.w.pages.store.getState().location;
+  const main = s.w.layout.getActivePanel("main")!;
+  s.w.pageLocations.navigate(a);
+  expect(s.w.pages.store.getState().location).toEqual(location);
+  expect(s.w.layout.getActivePanel("main")?.instanceId).toBe(main.instanceId);
+  expect(s.w.layout.getActivePanel()?.instanceId).toBe(editor.instanceId);
+});
+
+test("Back and Forward keep the URL aligned with Main when an editor has moved", async () => {
+  const { createMemoryWorkbenchPageLocationBrowser } = await import("../page-location/page-location-memory");
+  const { serializeWorkbenchPageUrl } = await import("pstdio-api-contracts");
+  const { getWorkbenchPageRegistryInternals } = await import("../../registries/pages/page-registry-internals");
+  const browser = createMemoryWorkbenchPageLocationBrowser();
+  const s = fixture({ pageLocationBrowser: browser });
+  s.w.pageLocations.navigate(s.target);
+  s.w.pageLocations.navigate({ kind: "page", page: pageRef("alpha") });
+  s.w.pageLocations.navigate(s.target);
+  s.w.movePanel(s.w.layout.getActivePanel("main")!.instanceId, "side");
+  for (const action of [browser.back, browser.back, browser.forward, browser.forward]) {
+    action();
+    expect(browser.current().url).toBe(
+      serializeWorkbenchPageUrl({
+        projectId: "project",
+        location: s.w.pages.store.getState().location!,
+        pages: s.w.pages.listPages(),
+        resources: getWorkbenchPageRegistryInternals(s.w.pages).resources,
+      }),
+    );
+  }
+});
+
+test("boot resolves the requested project's moved editor before that project is active", async () => {
+  const { createMemoryWorkbenchPageLocationBrowser, createMemoryWorkbenchPageLocationPersistence } = await import(
+    "../page-location/page-location-memory"
+  );
+  const browser = createMemoryWorkbenchPageLocationBrowser();
+  const persistence = createMemoryWorkbenchPageLocationPersistence();
+  const s = fixture({ pageLocationBrowser: browser, pageLocationPersistence: persistence });
+  s.w.pageLocations.navigate(s.target);
+  const copied = browser.current();
+  const editor = s.w.layout.getActivePanel("main")!;
+  s.w.movePanel(editor.instanceId, "side");
+  s.w.pageLocations.navigate({ kind: "page", page: pageRef("beta") });
+  s.w.pageLocations.clearProject();
+  browser.replace(copied);
+  expect(s.w.pageLocations.boot("project").ok).toBe(true);
+  expect(s.w.pages.store.getState().activePageId).toBe("alpha-list");
+  expect(s.w.layout.getActivePanel("side")?.instanceId).toBe(editor.instanceId);
+  expect(s.w.layout.getActivePanel("main")?.viewId).toBe("document");
+});
+
+test("restoring a saved Main snapshot still selects the moved editor requested by its copied URL", async () => {
+  const { createMemoryWorkbenchPageLocationBrowser } = await import("../page-location/page-location-memory");
+  const browser = createMemoryWorkbenchPageLocationBrowser();
+  const s = fixture({ pageLocationBrowser: browser });
+  s.w.pageLocations.navigate(s.target);
+  const copied = browser.current();
+  const editor = s.w.layout.getActivePanel("main")!;
+  s.w.movePanel(editor.instanceId, "side");
+  s.w.layout.activatePanel(s.w.layout.getActivePanel("main")!.instanceId);
+  browser.replace(copied);
+  expect(s.w.pageLocations.boot("project").ok).toBe(true);
+  expect(s.w.pages.store.getState().activePageId).toBe("alpha-list");
+  expect(s.w.layout.getActivePanel()?.instanceId).toBe(editor.instanceId);
+});

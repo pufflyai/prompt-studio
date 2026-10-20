@@ -14,7 +14,7 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { requirePanelOpen } from "../shell/panel-open-policy";
 
-import { hiddenEditorPageForPanel } from "./resource-editor-lookup";
+import { resourceEditorPageForPanel } from "./resource-editor-lookup";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
 
@@ -93,7 +93,7 @@ const preparePageNavigation = (
   current: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   modeState: OwnedPlacementState,
   shellState: OwnedPlacementState,
-  activate: readonly PlacementIdentity[] = [],
+  activate?: readonly PlacementIdentity[],
   editorOpens: readonly WorkbenchEditorOpen[] = [],
 ) => {
   const pages = getWorkbenchPageRegistryInternals(core.pages);
@@ -101,7 +101,7 @@ const preparePageNavigation = (
   const mode = getOwnedPlacementPreparation(core.modePlacements);
   const shell = getOwnedPlacementPreparation(core.shellPlacements);
   if (!current.projectId) throw new Error("Cannot navigate before a project is active");
-  const resolved = locations.resolve(target, current.activeModeId);
+  const resolved = locations.resolve(target, current);
   const page = current.pages[resolved.pageId]!;
   const modeId = resolved.location.mode ? contributionRefId(resolved.location.mode) : page.modeId;
   shellState =
@@ -113,6 +113,10 @@ const preparePageNavigation = (
   modeState =
     mode.restore?.({ modeId, pageId: page.id, location: resolved.location, projectId: current.projectId }, modeState) ??
     modeState;
+  const editorActivation =
+    resolved.activate === undefined && activate === undefined
+      ? undefined
+      : [...(resolved.activate ?? []), ...(activate ?? [])];
   const proposed = pages.prepare.location(
     {
       pageId: page.id,
@@ -121,7 +125,7 @@ const preparePageNavigation = (
       resource: resolved.location.resource,
       section: resolved.location.section,
       open: resolved.open,
-      activate: [...(resolved.activate ?? []), ...activate],
+      activate: editorActivation,
       editorOpens: [...(resolved.editorOpens ?? []), ...editorOpens],
       action: "preparePageNavigation",
     },
@@ -146,7 +150,7 @@ const resolveEditorNavigationTarget = (
       proposed,
     });
   return (
-    hiddenEditorPageForPanel(core, requested, proposed.activeModeId, proposed.activePageId) ?? {
+    resourceEditorPageForPanel(core, requested, proposed) ?? {
       target: requested,
       activate: undefined,
       editorOpens: undefined,

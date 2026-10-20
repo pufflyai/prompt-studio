@@ -108,7 +108,7 @@ A mode can declare `basePage: page.ref`. Switching modes restores that mode's la
 
 On `main` (extension API 0.2.1), a view can declare `instancePolicy: "per-resource"`. One editor then owns each full resource identity for that view within a project and mode. Different extensions, projects, resource kinds and declared documents remain distinct. This policy is independent of binding `cardinality`, which controls how many resources one binding holds. Omitting the policy, or choosing `"multiple"`, preserves placement-based behavior.
 
-Explicit opening, including Add panel, selects the existing editor in Main, Side or Bottom. New resources open in the chosen tray. Its mounted view, unsaved content, tray and retention remain intact. A hidden Main editor returns with its owning page. Its page Main snapshot captures that route and its ancestry together with the tray. Navigation, restore and layout reset use the same identity rules.
+Explicit opening, including Add panel, selects the existing editor in Main, Side or Bottom. New resources open in the chosen tray. Its mounted view, unsaved content, tray and retention remain intact. Reopening an editor in Side or Bottom leaves the current Main page and browser history unchanged. A hidden Main editor returns with its owning page. Its page Main snapshot captures that route and its ancestry together with the tray. Navigation, restore and layout reset use the same identity rules.
 
 Moving the final routed Main document to another tray returns Main to its contextual parent or collection. The moved editor keeps its resource binding. Automatic related previews do not trigger this fallback. A moved editor follows its tray's project/mode lifetime rather than inheriting its source page's availability restriction.
 

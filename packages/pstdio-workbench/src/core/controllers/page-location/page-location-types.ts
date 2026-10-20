@@ -8,7 +8,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageRegistry, WorkbenchPageRuntimeState } from "../../registries/pages/page-registry";
-import type { WorkbenchEditorOpen } from "../../registries/pages/page-registry-types";
+import type { WorkbenchEditorOpen, WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry-types";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type { NavigationLevelModes } from "./navigation-level";
 
@@ -66,7 +66,7 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   reportDiagnostic?(diagnostic: WorkbenchPageLocationDiagnostic): void;
   resolvePageTarget?(
     target: NavigationTargetPage,
-    modeId?: string,
+    current: WorkbenchPageRegistryStoreState<Value>,
   ): {
     target: NavigationTargetPage;
     activate?: readonly PlacementIdentity[];

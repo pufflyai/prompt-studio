@@ -128,12 +128,15 @@ export const createWorkbenchPageLocationController = <Value>(
       pages(),
       activeModeId(),
     );
-    if (!isHistoryState(entry.state) || entry.state.projectId !== projectId) return normalizeStored(direct.location);
+    const current = { ...input.registry.store.getState(), projectId };
+    if (!isHistoryState(entry.state) || entry.state.projectId !== projectId)
+      return normalizeStored(direct.location, current);
     const contextual = normalizeRawStored(entry.state.location);
     const directKey = workbenchPageLocationRouteKey(direct.location, internals.resources, pages());
     const contextualKey = workbenchPageLocationRouteKey(contextual.location, internals.resources, pages());
-    if (entry.state.routeKey !== directKey || contextualKey !== directKey) return normalizeStored(direct.location);
-    return normalizeStored(locationWithUrlParams(direct.location, contextual.location));
+    if (entry.state.routeKey !== directKey || contextualKey !== directKey)
+      return normalizeStored(direct.location, current);
+    return normalizeStored(locationWithUrlParams(direct.location, contextual.location), current);
   };
 
   const restore = (
@@ -148,15 +151,16 @@ export const createWorkbenchPageLocationController = <Value>(
       } else {
         history.reset();
       }
+      const persisted = input.persistence.load(projectId);
+      rootLevel.restore(persisted?.rootLevel);
+      modeMemory.restore(persisted?.modeLocations);
       const hasProjectUrl = useCurrentUrl && isWorkbenchProjectUrl(browserEntry.url, projectId);
       const fromUrl = hasProjectUrl ? resolveUrl(projectId, browserEntry) : undefined;
       if (hasProjectUrl && !fromUrl) throw new Error(`Cannot resolve page URL: ${browserEntry.url}`);
       // A URL wins over the saved location, but the saved root level still names the way out of a level.
-      const persisted = input.persistence.load(projectId);
-      rootLevel.restore(persisted?.rootLevel);
-      modeMemory.restore(persisted?.modeLocations);
       const saved = hasProjectUrl ? undefined : persisted?.location;
-      const resolved = fromUrl ?? (saved ? normalizeStored(saved) : start());
+      const resolved =
+        fromUrl ?? (saved ? normalizeStored(saved, { ...input.registry.store.getState(), projectId }) : start());
       const action = source === "boot" ? "bootPageLocation" : "switchPageProject";
       const matchesSavedLocation = workbenchPageLocationsEqual(
         persisted?.location,
@@ -188,7 +192,8 @@ export const createWorkbenchPageLocationController = <Value>(
       }
       const resolved = resolveUrl(projectId, entry);
       if (!resolved) throw new Error(`Cannot resolve page URL: ${entry.url}`);
-      const result = commit(projectId, resolved, "none", "replayPageHistory");
+      const canonical = historyEntry(projectId, resolved.location, history.getIndex());
+      const result = commit(projectId, resolved, canonical.url === entry.url ? "none" : "replace", "replayPageHistory");
       if (result.ok) navigation.notify(result.location);
     } catch (error) {
       fail("history", error);
@@ -260,6 +265,7 @@ export const createWorkbenchPageLocationController = <Value>(
   });
   setPageLocationPreparation<Value>(controller, {
     resolve: normalizeTarget,
+    modeLocation: modeMemory.target,
 
     commit: (state, beforePublish, requestedHistory) => {
       if (!state.projectId || !state.location) throw new Error("Cannot navigate before a project is active");
