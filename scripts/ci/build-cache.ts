@@ -39,11 +39,12 @@ if (import.meta.main) {
   const ready = join(process.env.RUNNER_TEMP!, "ci-build-cache-ready");
   if (process.argv.includes("--serve")) {
     const server = createBuildCache(directory);
-    writeFileSync(ready, `NX_SELF_HOSTED_REMOTE_CACHE_SERVER=${server.url.origin}\n`);
+    writeFileSync(ready, JSON.stringify({ url: server.url.origin, pid: process.pid }));
   } else {
-    // A detached child keeps one loopback cache alive through subsequent job steps.
+    // unref() releases the parent event loop; detaching also survives Windows shell cleanup.
     // GitHub's runner cleans it up when the job finishes.
     const child = Bun.spawn([process.execPath, import.meta.path, "--serve"], {
+      detached: true,
       stdin: "ignore",
       stdout: "ignore",
       stderr: Bun.file(join(process.env.RUNNER_TEMP!, "ci-build-cache.log")),
@@ -52,7 +53,8 @@ if (import.meta.main) {
     let started = false;
     for (let attempt = 0; attempt < 100; attempt++) {
       if (await Bun.file(ready).exists()) {
-        appendFileSync(process.env.GITHUB_ENV!, readFileSync(ready, "utf8"));
+        const { url } = JSON.parse(readFileSync(ready, "utf8"));
+        appendFileSync(process.env.GITHUB_ENV!, `NX_SELF_HOSTED_REMOTE_CACHE_SERVER=${url}\n`);
         started = true;
         break;
       }

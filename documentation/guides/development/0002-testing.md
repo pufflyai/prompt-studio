@@ -143,7 +143,7 @@ Run `bun run --cwd scripts verify:published-extensions` to typecheck and test ev
 
 Published-extension checks and public-package consumer checks use a one-day minimum release age for fresh installs. This keeps a third-party publish in progress from selecting packages whose matching dependencies are not available yet. Prompt Studio packages in the Changesets release group are exempt, so these checks can use the SDK and UI immediately after a release. The repository's frozen-lockfile install is unchanged. See [Bun's minimum release age](https://bun.sh/docs/pm/cli/install#minimum-release-age).
 
-On a pull request, the CI job runs for extension, SDK, UI, and API contract changes other than documentation files, and for changes outside the workspace packages. It always runs in the full stage. The merge queue skips it because it reads the npm registry. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
+On pull requests and merge groups, the CI job runs for extension, SDK, UI, and API contract changes other than documentation files, and for changes outside the workspace packages. It always runs in the full stage. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
 
 ## Extension smoke checks
 
