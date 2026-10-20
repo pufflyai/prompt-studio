@@ -4,7 +4,7 @@ import type { WorkbenchCore } from "../../core";
 import { workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
 import { useModeChrome } from "../region/mode-chrome";
-import { panelPositionActions, usePanelDragSurface } from "../region/panel-position-controls";
+import { usePanelDragSurface, usePanelPositionActions } from "../region/panel-position-controls";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -54,10 +54,11 @@ const WorkbenchNavigationControls = (props: { workbench: WorkbenchCore }) => {
 export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   const { workbench, hasNav, panelControls = true } = props;
   const drag = usePanelDragSurface(workbench, "main");
+  const positionActions = usePanelPositionActions(workbench, "main");
   const chrome = useModeChrome(workbench, "nav");
 
   return (
-    <ResourceContextMenu actions={panelPositionActions(workbench, "main")}>
+    <ResourceContextMenu actions={positionActions}>
       <Header
         {...drag}
         data-workbench-region="nav"

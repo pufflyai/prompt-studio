@@ -4,7 +4,7 @@ import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchSystemErrors } from "../notifications/system-errors";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
-import { panelPositionActions, usePanelDragSurface } from "../region/panel-position-controls";
+import { usePanelDragSurface, usePanelPositionActions } from "../region/panel-position-controls";
 import { WorkbenchRegion } from "../region/region";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -18,13 +18,10 @@ interface WorkbenchSidenavProps {
 export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
   const { workbench, contextActions } = props;
   const drag = usePanelDragSurface(workbench, "sidenav");
+  const positionActions = usePanelPositionActions(workbench, "sidenav");
 
   return (
-    <ResourceContextMenu
-      actions={[...contextActions, ...panelPositionActions(workbench, "sidenav")]}
-      closeOnSelect={false}
-      keepMountedWhenEmpty
-    >
+    <ResourceContextMenu actions={[...contextActions, ...positionActions]} closeOnSelect={false} keepMountedWhenEmpty>
       <Box {...drag} h="full" minH="0" minW="0" w="full">
         <WorkbenchFocusRegion
           workbench={workbench}
@@ -60,11 +57,12 @@ export const WORKBENCH_STATUS_BAR_HEIGHT = "2rem";
 export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
   const drag = usePanelDragSurface(workbench, "activity");
+  const positionActions = usePanelPositionActions(workbench, "activity");
   const edge = useWorkbenchStore(workbench.layout.store, () => workbench.shell.getArrangement().activity);
   const horizontal = edge === "top" || edge === "bottom";
 
   return (
-    <ResourceContextMenu actions={panelPositionActions(workbench, "activity")}>
+    <ResourceContextMenu actions={positionActions}>
       <Box
         {...drag}
         display={props.visible === false ? "none" : "block"}

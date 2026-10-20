@@ -3,7 +3,11 @@ import { useDroppable } from "@dnd-kit/core";
 import { DropIndicator } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchCore } from "../../core";
-import type { WorkbenchPanelPosition, WorkbenchPositionedRegion } from "../../core/registries/layout/panel-positions";
+import {
+  resolvePanelPosition,
+  type WorkbenchPanelPosition,
+  type WorkbenchPositionedRegion,
+} from "../../core/registries/layout/panel-positions";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useTabDrag } from "./tab-drag-context";
 
@@ -58,8 +62,7 @@ export const WorkbenchPanelDropFrame = (props: WorkbenchPanelDropFrameProps) => 
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const arrangement = workbench.shell.getArrangement();
   const moving = region === "secondary" && activePanel === "main" ? "main" : region;
-  let current: WorkbenchPanelPosition = arrangement[region];
-  if (moving === "main") current = arrangement.secondary === "top" ? "bottom" : "top";
+  const current = resolvePanelPosition(arrangement, moving);
   let edges: readonly WorkbenchPanelPosition[] = [];
   if (activePanel === moving) edges = workbench.shell.getPanelPositions(moving).filter((edge) => edge !== current);
   else if (

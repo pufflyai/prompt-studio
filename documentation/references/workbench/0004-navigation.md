@@ -105,7 +105,7 @@ The matching shell methods enforce the same permissions. Header show/hide also h
 
 The shared shell owns whole-panel positions in the existing project and mode layout. Side can sit left or right of Main. Navigation sits at the far left or far right. Main and Bottom can flip their vertical order. The action bar can sit on any outer edge. Moving a panel keeps its tabs, resources, selection and live content. Reset layout restores the default positions.
 
-Drag empty Side or Bottom header space to an allowed edge. Drag empty breadcrumb-row space to move Main. Navigation and the action bar also accept drags from empty space. Buttons, tabs and resource controls keep their own gestures. The header context menu offers the same placement actions through right-click, Shift+F10, the Context Menu key and touch hold. Unavailable moves are omitted.
+Drag empty Side or Bottom header space to an allowed edge. Drag empty breadcrumb-row space to move Main. Navigation and the action bar also accept drags from empty space. Buttons, tabs and resource controls keep their own gestures. The header context menu offers the same placement actions through right-click, Shift+F10, the Context Menu key and touch hold. Unavailable moves and the current position are omitted. Actions refresh after each placement change.
 
 Insertion targets reserve space at the boundary that owns the panel: Side sits between Navigation and Main, and Bottom stays within Main's column. The current placement has no target. During a whole-panel drag, the nearest allowed target in the workbench is selected even when the pointer has not reached its outline. It fills with the accent color and shows an insertion line along the correct axis. Leaving the workbench or cancelling preserves the placement.
 

@@ -7,6 +7,11 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
     ["secondary", "top"],
   ] as const) {
     const header = page.getByLabel(region === "side" ? "Side panel header" : "Bottom panel header", { exact: true });
+    await header.focus();
+    await header.press("Shift+F10");
+    await expect(page.getByRole("menuitem", { name: /^Move panel to / })).toHaveCount(1);
+    await expect(page.getByRole("menuitem", { name: `Move panel to ${edge}`, exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
     const source = (await header.boundingBox())!;
     await page.mouse.move(source.x + 3, source.y + source.height / 2);
     await page.mouse.down();
@@ -29,6 +34,14 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
   for (const region of ["side", "secondary"] as const) {
     const panel = page.locator(`[data-workbench-panel="${region}"]:visible`);
     await expect(panel).toBeVisible();
+    const header = page.getByLabel(region === "side" ? "Side panel header" : "Bottom panel header", { exact: true });
+    await header.focus();
+    await header.press("Shift+F10");
+    await expect(page.getByRole("menuitem", { name: /^Move panel to / })).toHaveCount(1);
+    await expect(
+      page.getByRole("menuitem", { name: `Move panel to ${region === "side" ? "right" : "bottom"}`, exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect
       .poll(async () => {
         const moved = (await panel.boundingBox())!;

@@ -2,13 +2,23 @@ import { mergeRefs } from "@chakra-ui/react";
 import { useDraggable } from "@dnd-kit/core";
 import { Header } from "@pstdio/ui";
 import type { ComponentProps, MouseEvent, TouchEvent } from "react";
+import { useShallow } from "zustand/react/shallow";
 import type { WorkbenchCore } from "../../core";
-import type { WorkbenchPositionedRegion } from "../../core/registries/layout/panel-positions";
+import { resolvePanelPosition, type WorkbenchPositionedRegion } from "../../core/registries/layout/panel-positions";
 import { WorkbenchIcon } from "../shared/icon";
 import { usePanelPolicy } from "../shared/use-panel-policy";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 
-export const panelPositionActions = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) =>
-  workbench.shell.getPanelPositions(region).map((position) => ({
+export const usePanelPositionActions = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
+  useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
+  const positions = useWorkbenchStore(
+    workbench.layout.store,
+    useShallow(() => {
+      const current = resolvePanelPosition(workbench.shell.getArrangement(), region);
+      return workbench.shell.getPanelPositions(region).filter((position) => position !== current);
+    }),
+  );
+  return positions.map((position) => ({
     key: `position-${position}`,
     label: `Move ${region === "activity" ? "action bar" : "panel"} to ${position}`,
     icon: (
@@ -19,6 +29,7 @@ export const panelPositionActions = (workbench: WorkbenchCore, region: Workbench
     ),
     onClick: () => workbench.shell.repositionPanel(region, position),
   }));
+};
 
 const interactive =
   'button,a,input,textarea,select,iframe,[role="tab"],[role="treeitem"],[role="button"],[role="menuitem"],[contenteditable="true"],[data-workbench-tab]';

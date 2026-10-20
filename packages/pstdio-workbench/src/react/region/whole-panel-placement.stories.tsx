@@ -1,6 +1,7 @@
 import { IconButton, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { getWorkbenchRenderers } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { createArrangementWorkbench } from "./panel-arrangement.stories";
@@ -65,3 +66,54 @@ export const Dark: Story = { args: { dark: true } };
 export const Reversed: Story = { args: { reversed: true } };
 export const EmbeddedNavigation: Story = { args: { embeddedNavigation: true } };
 export const Restricted: Story = { args: { restricted: true } };
+
+const checkPanelPosition = (canvasElement: HTMLElement, region: string, position: string) => {
+  const vertical = position === "left" || position === "right";
+  const axis = vertical ? "x" : "y";
+  const direction = position === "left" || position === "top" ? -1 : 1;
+  const moved = canvasElement.querySelector<HTMLElement>(
+    region === "main" ? '[data-workbench-panel="main"]' : `[data-workbench-panel-drag="${region}"]`,
+  )!;
+  const reference = canvasElement.querySelector<HTMLElement>(
+    `[data-workbench-panel="${region === "main" ? "secondary" : "main"}"]`,
+  )!;
+  const bounds = moved.getBoundingClientRect();
+  if (region === "activity") expect(bounds.height > bounds.width).toBe(vertical);
+  expect(direction * (bounds[axis] - reference.getBoundingClientRect()[axis])).toBeGreaterThan(0);
+};
+
+const checkMoveActions = async (canvasElement: HTMLElement, reversed = false) => {
+  const body = within(canvasElement.ownerDocument.body);
+  for (const [region, initial, destination] of [
+    ["side", "right", "left"],
+    ["secondary", "bottom", "top"],
+    ["main", "top", "bottom"],
+    ["sidenav", "left", "right"],
+    ["activity", "left", "bottom"],
+  ] as const) {
+    const current = reversed ? destination : initial;
+    const next = reversed ? initial : destination;
+    const label = region === "activity" ? "action bar" : "panel";
+    for (const [from, to] of [
+      [current, next],
+      [next, current],
+    ]) {
+      const header = canvasElement.querySelector<HTMLElement>(`[data-workbench-panel-drag="${region}"]`)!;
+      header.focus();
+      await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+      await expect(body.queryByRole("menuitem", { name: `Move ${label} to ${from}` })).toBeNull();
+      await expect(body.getAllByRole("menuitem", { name: /^Move (panel|action bar) to / })).toHaveLength(
+        region === "activity" ? 3 : 1,
+      );
+      await userEvent.click(body.getByRole("menuitem", { name: `Move ${label} to ${to}` }));
+      await waitFor(() => checkPanelPosition(canvasElement, region, to));
+      await userEvent.keyboard("{Escape}");
+    }
+  }
+};
+
+export const MoveActions: Story = { play: async ({ canvasElement }) => checkMoveActions(canvasElement) };
+export const ReversedMoveActions: Story = {
+  args: { reversed: true },
+  play: async ({ canvasElement }) => checkMoveActions(canvasElement, true),
+};

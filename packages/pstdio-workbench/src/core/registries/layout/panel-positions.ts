@@ -21,6 +21,11 @@ export const defaultArrangement: WorkbenchArrangement = {
   activity: "left",
 };
 
+export const resolvePanelPosition = (arrangement: WorkbenchArrangement, region: WorkbenchPositionedRegion) => {
+  if (region === "main") return arrangement.secondary === "top" ? "bottom" : "top";
+  return arrangement[region];
+};
+
 const supportedPosition = <T extends WorkbenchPanelPosition>(
   value: T | undefined,
   allowed: readonly T[],

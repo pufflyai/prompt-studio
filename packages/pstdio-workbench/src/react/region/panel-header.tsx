@@ -4,7 +4,7 @@ import type { ComponentProps } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { usePanelPolicy } from "../shared/use-panel-policy";
-import { PanelDragHeader, panelPositionActions } from "./panel-position-controls";
+import { PanelDragHeader, usePanelPositionActions } from "./panel-position-controls";
 
 interface PanelHeaderProps extends ComponentProps<typeof Header> {
   workbench: WorkbenchCore;
@@ -18,6 +18,7 @@ export const PanelHeader = (props: PanelHeaderProps) => {
   const { workbench, region, hasContent = true, hasTabs = false, children, ...rest } = props;
   const edgeStyles = useRecipe({ key: "panelHeaderEdge" })();
   const policy = usePanelPolicy(workbench, region);
+  const positionActions = usePanelPositionActions(workbench, region);
   const show = policy.legacyHeaders
     ? (policy.showHeader || hasTabs) && hasContent
     : policy.showHeader && (region !== "main" || hasContent || policy.headerExplicit);
@@ -39,7 +40,7 @@ export const PanelHeader = (props: PanelHeaderProps) => {
   return (
     <ResourceContextMenu
       actions={[
-        ...panelPositionActions(workbench, region),
+        ...positionActions,
         {
           key: "header",
           label: show ? "Hide header" : "Show header",

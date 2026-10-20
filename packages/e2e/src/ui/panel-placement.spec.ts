@@ -18,6 +18,57 @@ const beginDrag = async (page: Page, source: Locator) => {
   await page.mouse.move(box.x + box.width / 2 + 12, box.y + box.height / 2, { steps: 3 });
 };
 
+const expectPanelPosition = async (page: Page, region: string, position: string) => {
+  const vertical = position === "left" || position === "right";
+  const axis = vertical ? "x" : "y";
+  const direction = position === "left" || position === "top" ? -1 : 1;
+  const moved = page.locator(
+    region === "main" ? '[data-workbench-panel="main"]' : `[data-workbench-panel-drag="${region}"]`,
+  );
+  const reference = page.locator(`[data-workbench-panel="${region === "main" ? "secondary" : "main"}"]`);
+  await expect
+    .poll(async () => {
+      const bounds = (await moved.boundingBox())!;
+      if (region === "activity" && vertical !== bounds.height > bounds.width) return 0;
+      return direction * (bounds[axis] - (await reference.boundingBox())![axis]);
+    })
+    .toBeGreaterThan(0);
+};
+
+for (const story of ["interactive", "reversed"]) {
+  test(`${story}: panel menus follow available destinations after each move`, async ({ page }) => {
+    await page.goto(storyUrl(baseUrl, `pstdio-workbench-reference-core-api-whole-panel-placement--${story}`));
+    await waitForStoryPlayback(page);
+    for (const [region, initial, destination] of [
+      ["side", "right", "left"],
+      ["secondary", "bottom", "top"],
+      ["main", "top", "bottom"],
+      ["sidenav", "left", "right"],
+      ["activity", "left", "bottom"],
+    ] as const) {
+      const current = story === "reversed" ? destination : initial;
+      const next = story === "reversed" ? initial : destination;
+      const label = region === "activity" ? "action bar" : "panel";
+      for (const [from, to] of [
+        [current, next],
+        [next, current],
+      ]) {
+        const header = page.locator(`[data-workbench-panel-drag="${region}"]`);
+        await header.focus();
+        await header.press("Shift+F10");
+        await expect(page.getByRole("menuitem", { name: `Move ${label} to ${to}`, exact: true })).toBeVisible();
+        await expect(page.getByRole("menuitem", { name: /^Move (panel|action bar) to / })).toHaveCount(
+          region === "activity" ? 3 : 1,
+        );
+        await expect(page.getByRole("menuitem", { name: `Move ${label} to ${from}`, exact: true })).toHaveCount(0);
+        await page.getByRole("menuitem", { name: `Move ${label} to ${to}`, exact: true }).click();
+        await expectPanelPosition(page, region, to);
+        await page.keyboard.press("Escape");
+      }
+    }
+  });
+}
+
 for (const story of ["sidenav-open", "sidenav-closed"]) {
   test(`browser panel controls stay aligned with ${story}`, async ({ page }) => {
     await page.goto(storyUrl(baseUrl, `pstdio-workbench-reference-core-api-browser-panel-controls--${story}`));
