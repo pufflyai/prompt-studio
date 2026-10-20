@@ -14,6 +14,51 @@ const login = (deviceId: string) => ({
   token: "device-credential",
 });
 
+test("membership discovery finishing after shutdown cannot restart device presence", async () => {
+  const root = await mkdtemp(join(tmpdir(), "native-account-close-"));
+  const requested = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let heartbeats = 0;
+  const manager = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      if (new URL(request.url).pathname === "/v1/devices/presence") {
+        heartbeats++;
+        return Response.json({ ok: true });
+      }
+      requested.resolve();
+      await release.promise;
+      return Response.json([]);
+    },
+  });
+  const file = join(root, "native-account.json");
+  await Bun.write(file, JSON.stringify({ login: { ...login("device"), managerOrigin: manager.url.origin } }));
+  const account = createNativeAccount({
+    file,
+    environment: { get: async () => ({ environmentId: "device" }) },
+    projects: {
+      get: async () => {
+        throw new Error("No Cloud projects should be loaded");
+      },
+    },
+  });
+  try {
+    const refreshing = account.refresh();
+    await requested.promise;
+    account.close();
+    release.resolve();
+    await refreshing;
+    await Bun.sleep(20);
+    expect(heartbeats).toBe(0);
+  } finally {
+    release.resolve();
+    account.close();
+    await manager.stop(true);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("logout clears the login even when the account service is unreachable", async () => {
   const root = await mkdtemp(join(tmpdir(), "native-account-offline-"));
   const host = await createAccountHostFixture(root);

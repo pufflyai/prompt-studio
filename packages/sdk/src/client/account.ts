@@ -25,6 +25,8 @@ export interface AccountDevice {
   platform: string;
   createdAt: string;
   lastSeenAt: string;
+  /** The manager heard from this device within its presence lease window. */
+  online: boolean;
   /** True for the device that answered the request. */
   current: boolean;
 }

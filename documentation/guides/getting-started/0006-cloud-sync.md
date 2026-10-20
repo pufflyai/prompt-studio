@@ -6,7 +6,7 @@ Sign in once on each computer to sync Cloud projects. Your saved work stays avai
 
 Open **Settings → Account and devices**, then choose **Continue with Google**. Finish sign-in in the browser on the computer running Prompt Studio. If the browser does not open, use **Open Google sign-in**. Cancel and retry without closing your project or losing your open draft.
 
-The account page shows your signed-in email and devices. Each device has its name, platform and last-seen time. The current device shows Online when its account request succeeds. Other devices show that their online status is unavailable; a last-seen time does not prove a live connection.
+The account page shows your signed-in email and devices. Each device has its name, platform and last-seen time. Each signed-in runtime sends an authenticated heartbeat every 15 seconds, including when it has no Cloud projects. Online means the account service heard from that device in the last 45 seconds. A disconnected or stopped device becomes Offline after that window. If the account service cannot be reached, online status is unavailable.
 
 Choose **Rename** to change a device name. **Remove** stops that device from renewing Cloud access. It keeps downloaded data. **Sign out** stops sync on this device and keeps local data and open work. If the service is unreachable, sign-out still works locally; remove the device from another computer later.
 

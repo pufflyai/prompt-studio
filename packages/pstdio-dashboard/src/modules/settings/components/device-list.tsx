@@ -6,15 +6,17 @@ import { useState } from "react";
 interface DeviceListProps {
   devices: AccountDevice[];
   busy?: boolean;
-  online?: boolean;
+  presenceAvailable?: boolean;
   onRename: (id: string, name: string) => void;
   onRemove: (id: string) => void;
 }
 const DeviceRow = (props: Omit<DeviceListProps, "devices"> & { device: AccountDevice }) => {
-  const { device, busy, online, onRename, onRemove } = props;
+  const { device, busy, presenceAvailable = true, onRename, onRemove } = props;
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(device.name);
   const [removing, setRemoving] = useState(false);
+  let onlineState = "Online status unavailable";
+  if (presenceAvailable) onlineState = device.online ? "Online" : "Offline";
   return (
     <Stack gap="xs" py="md" borderBottomWidth="1px" borderColor="border">
       <Text textStyle="label/M/medium">
@@ -22,7 +24,7 @@ const DeviceRow = (props: Omit<DeviceListProps, "devices"> & { device: AccountDe
         {device.current ? " · This device" : ""}
       </Text>
       <Text textStyle="paragraph/S/regular" color="fg.muted">
-        {device.platform} · {device.current && online ? "Online" : "Online status unavailable"}
+        {device.platform} · {onlineState}
       </Text>
       <Text textStyle="paragraph/S/regular" color="fg.muted">
         Last seen {new Date(device.lastSeenAt).toLocaleString()}

@@ -11,6 +11,7 @@ export const CloudAccountPanel = () => {
   const client = useQueryClient();
   const [login, setLogin] = useState<{ id: string; url: string }>();
   const [notice, setNotice] = useState<string>();
+  const [now, setNow] = useState(Date.now);
   const refresh = async () => {
     await Promise.all(
       [cloudAccountKey, cloudDevicesKey, cloudProjectKey].map((queryKey) => client.invalidateQueries({ queryKey })),
@@ -22,6 +23,13 @@ export const CloudAccountPanel = () => {
     enabled: !!account.data?.login,
     refetchInterval: 10_000,
   });
+  // A stalled refetch must not keep an old presence snapshot authoritative.
+  const presenceExpiresAt = devices.dataUpdatedAt + 10_000;
+  useEffect(() => {
+    setNow(Date.now());
+    const timer = setTimeout(() => setNow(Date.now()), Math.max(0, presenceExpiresAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [presenceExpiresAt]);
   const action = useMutation({
     mutationFn: (run: () => Promise<unknown>) => run(),
     onSuccess: refresh,
@@ -136,7 +144,7 @@ export const CloudAccountPanel = () => {
             <DeviceList
               devices={devices.data ?? []}
               busy={action.isPending}
-              online={!devices.isError}
+              presenceAvailable={!devices.isError && now < presenceExpiresAt}
               onRename={(id, name) => action.mutate(() => getApiClient().account.renameDevice(id, name))}
               onRemove={(id) => action.mutate(() => getApiClient().account.removeDevice(id))}
             />

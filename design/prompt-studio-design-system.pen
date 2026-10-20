@@ -193843,7 +193843,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "Last seen 19 October · Online status unavailable",
+              "content": "Offline · Last seen 19 October",
               "fontFamily": "$font-body",
               "fontSize": 14,
               "fontWeight": "normal"

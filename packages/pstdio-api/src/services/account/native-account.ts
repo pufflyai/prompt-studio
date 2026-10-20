@@ -8,6 +8,7 @@ import { apiLogger } from "../../lib/logger";
 import type { RelayWorkbench } from "../relay/runtime";
 import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
 import { startNativeLogin } from "./native-login";
+import { createNativePresence } from "./native-presence";
 import { createNativeStore, type DeviceLogin } from "./native-store";
 
 const RETRY_MS = 60_000;
@@ -26,6 +27,7 @@ const devicesSchema = z.object({
       platform: z.string(),
       createdAt: z.string(),
       lastSeenAt: z.string(),
+      online: z.boolean(),
     }),
   ),
 });
@@ -41,6 +43,12 @@ export const createNativeAccount = (input: {
   projects: Pick<RouteDeps["projectService"], "get">;
 }) => {
   const store = createNativeStore(input.file);
+  const presence = createNativePresence({
+    denied: async (credential) => {
+      await store.forget(credential);
+      await refresh();
+    },
+  });
   const logins = new Map<string, ReturnType<typeof startNativeLogin>>();
   let cloudProjects: { credential: string; ids: string[] } | undefined;
   const projectsFor = (login: DeviceLogin | null) =>
@@ -84,6 +92,7 @@ export const createNativeAccount = (input: {
 
   // Syncs every cloud project that also exists on this device. Others start once they are created or bound here.
   const publish = async (login: DeviceLogin | null) => {
+    void presence.update(login);
     const local = await Promise.all(
       (projectsFor(login) ?? []).map(async (id) => ((await input.projects.get(id)) ? id : null)),
     );
@@ -249,6 +258,7 @@ export const createNativeAccount = (input: {
     },
     close() {
       closed = true;
+      presence.close();
       clearTimeout(retry);
       update = async () => {};
       for (const login of logins.values()) login.close();

@@ -8,7 +8,7 @@ const meta = {
   args: {
     onRename: () => {},
     onRemove: () => {},
-    online: true,
+    presenceAvailable: true,
   },
 } satisfies Meta<typeof DeviceList>;
 export default meta;
@@ -22,6 +22,7 @@ export const SeveralDevices: Story = {
         name: "Work Mac",
         platform: "darwin",
         current: true,
+        online: true,
         createdAt: "2026-10-01T10:00:00Z",
         lastSeenAt: "2026-10-20T10:00:00Z",
       },
@@ -30,6 +31,7 @@ export const SeveralDevices: Story = {
         name: "Home laptop",
         platform: "linux",
         current: false,
+        online: false,
         createdAt: "2026-10-01T10:00:00Z",
         lastSeenAt: "2026-10-19T10:00:00Z",
       },
@@ -38,10 +40,11 @@ export const SeveralDevices: Story = {
         name: "Desktop",
         platform: "win32",
         current: false,
+        online: true,
         createdAt: "2026-10-01T10:00:00Z",
         lastSeenAt: "2026-10-18T10:00:00Z",
       },
     ],
   },
 };
-export const ConnectionUnavailable: Story = { args: { ...SeveralDevices.args, online: false } };
+export const ConnectionUnavailable: Story = { args: { ...SeveralDevices.args, presenceAvailable: false } };
