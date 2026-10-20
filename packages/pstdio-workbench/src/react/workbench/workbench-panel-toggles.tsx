@@ -1,12 +1,16 @@
 import { HStack, IconButton } from "@chakra-ui/react";
 import { PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchShellOpenRegion } from "../../core";
+import { resolveArrangement } from "../../core/registries/layout/panel-positions";
 import { WorkbenchIcon } from "../shared/icon";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useWorkbenchRegionContent } from "./use-workbench-region-content";
 
 export const useWorkbenchPanelToggles = (workbench: WorkbenchCore) => {
+  const saved = useWorkbenchStore(workbench.layout.store, (state) => state.layout.arrangement);
+  const arrangement = resolveArrangement(saved);
   const sidenav = usePanelPolicy(workbench, "sidenav");
   const secondary = usePanelPolicy(workbench, "secondary");
   const side = usePanelPolicy(workbench, "side");
@@ -16,8 +20,20 @@ export const useWorkbenchPanelToggles = (workbench: WorkbenchCore) => {
   const hasBottom = useWorkbenchRegionContent(workbench, "secondary") || composition.secondary.addable.length > 0;
   const panels = [
     { region: "sidenav", label: "Sidenav", icon: "ListTree", policy: sidenav, provided: hasNavigation },
-    { region: "secondary", label: "Bottom Panel", icon: "PanelBottom", policy: secondary, provided: hasBottom },
-    { region: "side", label: "Side Panel", icon: "PanelRight", policy: side, provided: hasSide },
+    {
+      region: "secondary",
+      label: "Bottom Panel",
+      icon: arrangement.secondary === "top" ? "PanelTop" : "PanelBottom",
+      policy: secondary,
+      provided: hasBottom,
+    },
+    {
+      region: "side",
+      label: "Side Panel",
+      icon: arrangement.side === "left" ? "PanelLeft" : "PanelRight",
+      policy: side,
+      provided: hasSide,
+    },
   ] as const;
   return panels.filter(
     ({ policy, provided }) => provided && policy.provided && (policy.open ? policy.canClose : policy.canOpen),

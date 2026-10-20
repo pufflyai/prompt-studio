@@ -82,6 +82,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
+  const position = useWorkbenchStore(workbench.layout.store, () => workbench.shell.getArrangement().secondary);
   const policy = usePanelPolicy(workbench, "secondary");
   const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
@@ -145,7 +146,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       as="main"
       minH="0"
       minW="0"
-      resizableSide="bottom"
+      resizableSide={position}
       contentPanel={mainContent}
       resizablePanel={<WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />}
       collapsed={!secondaryPanel.has || secondaryPanel.collapsed}

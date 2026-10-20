@@ -157688,7 +157688,7 @@
                   "x": 0,
                   "y": 0,
                   "name": "Full panel hover overlay",
-                  "context": "Shared panel tab drop overlay: 4% accent fill, 1 px accent outline, full panel bounds, pointer-transparent, shown only for the hovered valid destination.",
+                  "context": "Full rounded target outline and subtle accent fill. Pin-on-drop preserves the destination preview; insertion marker only, no dropzone text.",
                   "reusable": true,
                   "width": 568,
                   "height": 180,
@@ -157716,19 +157716,7 @@
                   "stroke": "$ds-accent",
                   "strokeWidth": 1,
                   "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "LS4yC",
-                      "name": "Drop guidance",
-                      "fill": "$ds-fg-muted",
-                      "content": "Drop here to add a tab",
-                      "fontFamily": "$font-body",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
-                    }
-                  ]
+                  "alignItems": "center"
                 },
                 {
                   "type": "text",
@@ -193246,6 +193234,131 @@
                       "content": "Open chat"
                     }
                   }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "W0fN8d",
+      "x": 55830,
+      "y": 0,
+      "name": "PS-796 · Shared panel placement and closed edges",
+      "width": 940,
+      "height": 360,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "UAdoc",
+          "name": "Placement rules",
+          "fill": "$ds-fg",
+          "content": "Side left/right · Navigation far left/right · Main/Bottom order · Action bar on outer edges",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "Z3GAG7",
+          "name": "Closed eligible panel edge targets",
+          "width": "fill_container",
+          "height": 260,
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "rvkzF",
+              "name": "light · Closed Side and Bottom edges",
+              "theme": {
+                "mode": "light"
+              },
+              "width": 430,
+              "height": 260,
+              "fill": "$ds-bg",
+              "cornerRadius": 4,
+              "layout": "none",
+              "children": [
+                {
+                  "id": "ntoaN",
+                  "type": "ref",
+                  "ref": "XMJjf",
+                  "name": "Closed Side target · full rounded outline",
+                  "x": 382,
+                  "y": 0,
+                  "width": 48,
+                  "height": 260
+                },
+                {
+                  "id": "hjNBy",
+                  "type": "ref",
+                  "ref": "XMJjf",
+                  "name": "Closed Bottom target · full rounded outline",
+                  "x": 0,
+                  "y": 212,
+                  "width": 378,
+                  "height": 48
+                },
+                {
+                  "type": "frame",
+                  "id": "pAHVI",
+                  "x": 386,
+                  "y": 4,
+                  "name": "Tab insertion marker",
+                  "width": 2,
+                  "height": 24,
+                  "fill": "$ds-accent"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "EnM65",
+              "name": "dark · Closed Side and Bottom edges",
+              "theme": {
+                "mode": "dark"
+              },
+              "width": 430,
+              "height": 260,
+              "fill": "$ds-bg",
+              "cornerRadius": 4,
+              "layout": "none",
+              "children": [
+                {
+                  "id": "w2zvc",
+                  "type": "ref",
+                  "ref": "XMJjf",
+                  "name": "Closed Side target · full rounded outline",
+                  "x": 382,
+                  "y": 0,
+                  "width": 48,
+                  "height": 260
+                },
+                {
+                  "id": "dp4qA",
+                  "type": "ref",
+                  "ref": "XMJjf",
+                  "name": "Closed Bottom target · full rounded outline",
+                  "x": 0,
+                  "y": 212,
+                  "width": 378,
+                  "height": 48
+                },
+                {
+                  "type": "frame",
+                  "id": "dlPFY",
+                  "x": 386,
+                  "y": 4,
+                  "name": "Tab insertion marker",
+                  "width": 2,
+                  "height": 24,
+                  "fill": "$ds-accent"
                 }
               ]
             }

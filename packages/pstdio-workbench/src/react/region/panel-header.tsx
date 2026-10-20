@@ -4,6 +4,7 @@ import type { ComponentProps } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { usePanelPolicy } from "../shared/use-panel-policy";
+import { PanelDragHeader, panelPositionActions } from "./panel-position-controls";
 
 interface PanelHeaderProps extends ComponentProps<typeof Header> {
   workbench: WorkbenchCore;
@@ -21,9 +22,24 @@ export const PanelHeader = (props: PanelHeaderProps) => {
     ? (policy.showHeader || hasTabs) && hasContent
     : policy.showHeader && (region !== "main" || hasContent || policy.headerExplicit);
   const label = { secondary: "Bottom", side: "Side", main: "Main" }[region];
+  const headerProps = {
+    ...rest,
+    "data-workbench-panel-header": region,
+    "aria-label": `${label} panel header`,
+    tabIndex: 0,
+  };
+  const header =
+    region === "main" ? (
+      <Header {...headerProps}>{children}</Header>
+    ) : (
+      <PanelDragHeader workbench={workbench} region={region} {...headerProps}>
+        {children}
+      </PanelDragHeader>
+    );
   return (
     <ResourceContextMenu
       actions={[
+        ...panelPositionActions(workbench, region),
         {
           key: "header",
           label: show ? "Hide header" : "Show header",
@@ -32,13 +48,7 @@ export const PanelHeader = (props: PanelHeaderProps) => {
         },
       ]}
     >
-      {show ? (
-        <Header {...rest} data-workbench-panel-header={region} aria-label={`${label} panel header`} tabIndex={0}>
-          {children}
-        </Header>
-      ) : (
-        <Box css={edgeStyles} aria-label={`${label} header edge`} aria-haspopup="menu" tabIndex={0} />
-      )}
+      {show ? header : <Box css={edgeStyles} aria-label={`${label} header edge`} aria-haspopup="menu" tabIndex={0} />}
     </ResourceContextMenu>
   );
 };

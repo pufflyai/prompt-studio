@@ -29,14 +29,10 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
 import { useWorkbenchRegionContent } from "./use-workbench-region-content";
+import { useWorkbenchArrangement, WorkbenchArrangementFrame } from "./workbench-arrangement";
 import { WorkbenchBody } from "./workbench-body";
 import { resolvePanelCollapsible } from "./workbench-panel-state";
-import {
-  WORKBENCH_STATUS_BAR_HEIGHT,
-  WorkbenchActivityBar,
-  WorkbenchSidenav,
-  WorkbenchStatusBar,
-} from "./workbench-panels";
+import { WORKBENCH_STATUS_BAR_HEIGHT, WorkbenchSidenav, WorkbenchStatusBar } from "./workbench-panels";
 import { WorkbenchSidePanelBoundary } from "./workbench-side-panel-boundary";
 import { WorkbenchSidePanelRegionHeader, WorkbenchSidePanelRegionPortal } from "./workbench-side-panel-layout";
 
@@ -105,6 +101,7 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
 
 const WorkbenchContent = (props: WorkbenchProps) => {
   const { workbench, renderParamField, sidePanelBubbleIcon, onOpenSidePanel, titleBar, panelControlsPlacement } = props;
+  const arrangement = useWorkbenchArrangement(workbench);
   const [sidenavContextActions, setSidenavContextActions] = useState<ResourceContextAction[]>([]);
   installWorkbenchTreeRenderer(workbench, {
     renderParamField,
@@ -185,7 +182,17 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       minH="0"
       minW="0"
       resizablePanel={<WorkbenchSidenav workbench={workbench} contextActions={sidenavContextActions} />}
-      contentPanel={contentWithHeader}
+      resizableSide={arrangement.sidenav}
+      contentPanel={
+        <WorkbenchSidePanelBoundary
+          workbench={workbench}
+          showAttachedSidePanel={showAttachedSidePanel}
+          contentFrame={contentWithHeader}
+          sideHeader={sideHeader}
+          contentMinSizePx={CONTENT_MIN_SIZE_PX}
+          onAttachedSlotChange={setAttachedSidePanelSlot}
+        />
+      }
       collapsed={!showSidenav || !sidenavOpen}
       resizable={sidenavPolicy.resizable}
       collapsible={sidenavPolicy.canClose && sidenavCollapsible}
@@ -203,10 +210,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 
   const contentFrame = (
     <Flex position="relative" h="full" minH="0" minW="0" w="full" bg={workbenchBackgrounds.main} color="fg">
-      <WorkbenchActivityBar workbench={workbench} visible={hasActivityBarWidgets} />
-      <Flex flex="1" minH="0" minW="0" overflow="hidden" position="relative">
+      <WorkbenchArrangementFrame workbench={workbench} activityVisible={hasActivityBarWidgets}>
         {contentWithSidenav}
-      </Flex>
+      </WorkbenchArrangementFrame>
       <WorkbenchOverlayLayer workbench={workbench} />
     </Flex>
   );
@@ -226,14 +232,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           pr="panel-gap"
           pl={hasActivityBarWidgets ? "0" : "panel-gap"}
         >
-          <WorkbenchSidePanelBoundary
-            workbench={workbench}
-            showAttachedSidePanel={showAttachedSidePanel}
-            contentFrame={contentFrame}
-            sideHeader={sideHeader}
-            contentMinSizePx={CONTENT_MIN_SIZE_PX}
-            onAttachedSlotChange={setAttachedSidePanelSlot}
-          />
+          {contentFrame}
         </Flex>
         <WorkbenchStatusBar workbench={workbench} visible={hasStatusWidgets} />
         <WorkbenchFloatingSidePanel

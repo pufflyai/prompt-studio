@@ -2,8 +2,11 @@ import type { WorkbenchPanelRegion, WorkbenchTabPosition } from "../../registrie
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { registerPanelCommands } from "../shell/panel-commands";
 
+import { registerPositionCommands } from "../shell/position-commands";
+
 export const registerArrangementCommands = (core: WorkbenchCore) => {
   registerPanelCommands(core);
+  registerPositionCommands(core);
   core.commands.registerCommand(
     {
       id: "workbench.resetLayout",

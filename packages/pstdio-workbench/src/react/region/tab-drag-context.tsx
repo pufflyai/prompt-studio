@@ -13,7 +13,7 @@ import {
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchTabPosition } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
-
+import type { WorkbenchPanelPosition, WorkbenchPositionedRegion } from "../../core/registries/layout/panel-positions";
 import { planTrayDrop } from "../../core/registries/layout/tray-tabs";
 
 interface TabDrop {
@@ -22,12 +22,20 @@ interface TabDrop {
   widgetId?: string;
   edge?: "before" | "after";
 }
-const TabDragContext = createContext<{ activeId?: string; drop?: TabDrop; destinations?: WorkbenchPanelRegion[] }>({});
+const TabDragContext = createContext<{
+  activeId?: string;
+  drop?: TabDrop;
+  destinations?: WorkbenchPanelRegion[];
+  activePanel?: WorkbenchPositionedRegion;
+  panelDrop?: WorkbenchPanelPosition;
+}>({});
 export const useTabDrag = () => useContext(TabDragContext);
 
 export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; children: ReactNode }) => {
   const { workbench, children } = props;
   const [activeId, setActiveId] = useState<string>();
+  const [activePanel, setActivePanel] = useState<WorkbenchPositionedRegion>();
+  const [panelDrop, setPanelDrop] = useState<WorkbenchPanelPosition>();
   const [drop, setDrop] = useState<TabDrop>();
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -35,6 +43,8 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
   );
   const finish = () => {
     setActiveId(undefined);
+    setActivePanel(undefined);
+    setPanelDrop(undefined);
     setDrop(undefined);
   };
   const resolveDrop = (event: DragOverEvent) => {
@@ -68,10 +78,25 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
   };
   const placement = activeId ? findPlacementByWidgetId(workbench.layout.getLayout(), activeId)?.placement : undefined;
   return (
-    <TabDragContext value={{ activeId, drop, destinations: activeId ? workbench.getPanelDestinations(activeId) : [] }}>
+    <TabDragContext
+      value={{
+        activeId,
+        drop,
+        activePanel,
+        panelDrop,
+        destinations: activeId ? workbench.getPanelDestinations(activeId) : [],
+      }}
+    >
       <DndContext
         sensors={sensors}
         collisionDetection={(args) => {
+          if (args.active.data.current?.panelRegion)
+            return pointerWithin(args).filter(
+              (c) => c.data?.droppableContainer.data.current?.panelRegion === args.active.data.current?.panelRegion,
+            );
+          const collisions = pointerWithin(args);
+          const closed = collisions.filter((c) => c.data?.droppableContainer.data.current?.closed);
+          if (closed.length) return closed;
           const pointer = args.pointerCoordinates;
           const panel = pointer
             ? document
@@ -89,11 +114,27 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
               return area(a.id) - area(b.id);
             });
         }}
-        onDragStart={(event) => setActiveId(String(event.active.id))}
-        onDragOver={(event) => setDrop(resolveDrop(event))}
-        onDragMove={(event) => setDrop(resolveDrop(event))}
+        onDragStart={(event) => {
+          if (event.active.data.current?.panelRegion) setActivePanel(event.active.data.current.panelRegion);
+          else setActiveId(String(event.active.id));
+        }}
+        onDragOver={(event) => {
+          setDrop(resolveDrop(event));
+          setPanelDrop(event.over?.data.current?.position);
+        }}
+        onDragMove={(event) => {
+          setDrop(resolveDrop(event));
+          setPanelDrop(event.over?.data.current?.position);
+        }}
         onDragCancel={finish}
         onDragEnd={(event) => {
+          if (event.active.data.current?.panelRegion) {
+            const data = event.over?.data.current;
+            finish();
+            if (data?.position && data.panelRegion === event.active.data.current.panelRegion)
+              workbench.shell.repositionPanel(data.panelRegion, data.position);
+            return;
+          }
           const target = resolveDrop(event);
           finish();
           if (target) workbench.movePanel(String(event.active.id), target.region, target.position);

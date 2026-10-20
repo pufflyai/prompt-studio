@@ -10,12 +10,14 @@ export const createArrangementWorkbench = (
   crowded = false,
   pageContent: ReactNode = <Text p="md">Page without a header</Text>,
   movableTo?: WorkbenchPanelRegion[],
+  bottomInitiallyOpen = true,
+  sourceRegion: WorkbenchPanelRegion = "side",
 ) => {
   const page = { kind: "page", extensionId: "storybook", id: "arrangement" } as const;
   const w = createWorkbench({
     startPage: page,
-    initialSidePanelMode: "attached",
-    defaultPanelOpenByRegionId: { secondary: true },
+    initialSidePanelMode: sourceRegion === "side" ? "attached" : "closed",
+    defaultPanelOpenByRegionId: { secondary: bottomInitiallyOpen },
   });
   w.modes.registerMode({
     id: "arrangement",
@@ -118,6 +120,7 @@ export const createArrangementWorkbench = (
         id: String(i),
         label: i === 0 ? "Review session" : `Session with a longer name ${i}`,
       },
+      region: sourceRegion,
       open: i === (crowded ? 7 : 1) ? "preview" : "pin",
     });
   return w;
@@ -197,3 +200,20 @@ void previewInsertionWorkbench.navigation.openTarget({
   open: "preview",
 });
 export const PreviewInsertion: Story = { args: { workbench: previewInsertionWorkbench } };
+
+const neverOpenedBottom = createArrangementWorkbench(false, undefined, undefined, false);
+export const ClosedBottom: Story = { args: { workbench: neverOpenedBottom } };
+const closedSide = createArrangementWorkbench(false, undefined, undefined, false, "main");
+closedSide.shell.setHeaderVisible("main", true);
+export const ClosedSide: Story = { args: { workbench: closedSide } };
+const positioned = createArrangementWorkbench();
+positioned.shell.repositionPanel("side", "left");
+positioned.shell.repositionPanel("secondary", "top");
+export const Repositioned: Story = { args: { workbench: positioned } };
+const closedLeftSide = createArrangementWorkbench(false, undefined, undefined, false, "main");
+closedLeftSide.shell.setHeaderVisible("main", true);
+closedLeftSide.shell.repositionPanel("side", "left");
+export const ClosedLeftSide: Story = { args: { workbench: closedLeftSide } };
+const closedTopBottom = createArrangementWorkbench(false, undefined, undefined, false);
+closedTopBottom.shell.repositionPanel("secondary", "top");
+export const ClosedTopBottom: Story = { args: { workbench: closedTopBottom } };

@@ -61,6 +61,7 @@ interface WorkbenchAttachedSidePanelLayoutProps {
 
 export const WorkbenchAttachedSidePanelLayout = (props: WorkbenchAttachedSidePanelLayoutProps) => {
   const { workbench, attached, contentPanel, contentMinSizePx, header, onAttachedSlotChange, onCollapse } = props;
+  const position = useWorkbenchStore(workbench.layout.store, () => workbench.shell.getArrangement().side);
   const policy = usePanelPolicy(workbench, "side");
   const persistedSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.side.size);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "side");
@@ -73,7 +74,7 @@ export const WorkbenchAttachedSidePanelLayout = (props: WorkbenchAttachedSidePan
       minH="0"
       minW="0"
       w="full"
-      resizableSide="right"
+      resizableSide={position}
       contentPanel={contentPanel}
       resizablePanel={
         <WorkbenchAttachedSidePanel workbench={workbench} contentSlotRef={onAttachedSlotChange} header={header} />
