@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createClient } from "@pstdio/sdk/client";
+import { createClient, type SyncRow } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
@@ -129,6 +129,27 @@ export const registerPersonalHistorySmokeTests = () =>
           parts: [{ type: "text", text: "packaged-secret transcript 599" }],
         });
         expect(conversation.session.device?.ownerId).toBe("owner");
+        let initialSession: SyncRow | undefined;
+        const snapshotReady = Promise.withResolvers<void>();
+        const sync = clientB.sync.start({
+          getWriter: (table) =>
+            table === "sessions"
+              ? {
+                  truncateAndWrite(rows) {
+                    initialSession = rows.find((row) => row.id === session.id);
+                  },
+                  upsert() {},
+                  remove() {},
+                }
+              : undefined,
+          onConnected: () => snapshotReady.resolve(),
+        });
+        try {
+          await snapshotReady.promise;
+          expect(initialSession).toMatchObject({ id: session.id, device: { ownerId: "owner" } });
+        } finally {
+          sync.close();
+        }
         expect(JSON.stringify([...peer.documents.values()])).not.toContain("packaged-secret");
       } finally {
         await stopProcess(a.child);
