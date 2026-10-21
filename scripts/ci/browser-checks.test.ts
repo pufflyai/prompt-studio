@@ -5,6 +5,7 @@ test("session changes select navigation and retained session state", () => {
   const checks = selectBrowserChecks(["packages/pstdio-api/src/features/sessions/session-service.ts"]);
   expect(checks).toContain("session-menu-parity.spec.ts");
   expect(checks).toContain("session-chat-state.spec.ts");
+  expect(checks).toContain("session-stream-connection.spec.ts");
   expect(checks).not.toContain("marketplace-extension-lifecycle.spec.ts");
 });
 
