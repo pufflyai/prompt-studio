@@ -191,6 +191,12 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
   variants: {
     compact: {
       true: {
+        iconEditor: {
+          height: "full",
+          minHeight: 0,
+          alignItems: "stretch",
+          "& > [data-demo-part]": { minHeight: 0, maxHeight: "none" },
+        },
         iconGrid: {
           gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
           gap: "2xs",

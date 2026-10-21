@@ -31,7 +31,16 @@ export const InspectorAdded: Story = {
     docs: { description: { story: "The inspector centers its glyph in a taller preview, including compact boards." } },
   },
 };
-export const IconsComplete: Story = { args: { view: { example: "icons", parts: ["page", "editor", "command"] } } };
+export const IconsComplete: Story = {
+  args: { view: { example: "icons", parts: ["page", "editor", "command"] } },
+  parameters: {
+    docs: {
+      description: {
+        story: "The icon editor fills the workbench content area as the board grows and shrinks.",
+      },
+    },
+  },
+};
 export const NarrowIconsComplete: Story = {
   args: { scale: 0.5, view: { example: "icons", parts: ["page", "editor", "command"] } },
 };

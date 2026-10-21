@@ -83,6 +83,8 @@ the fitted size. Its controls stay at their reference scale as the board grows,
 so larger screens show more content instead of oversized UI. The landing preview
 hides its scrollbars while allowing the animated agents to reveal their controls.
 The shader code pane fills its panel's remaining height.
+The icon set editor fills the workbench preview, with its panels stretched to fit.
+The standalone icon editor keeps its content-sized panels.
 The measured download column and the theme's font scaling keep that layout
 aligned on large displays too.
 Shapes keep their original size when inserted,
