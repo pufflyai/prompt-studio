@@ -63,3 +63,5 @@ pst extensions dev ./extensions/extension-lab
 The dev command copies the extension and installs its own dependencies. To check the dashboard, run the repository's isolated Docker stack with `bun run dev:isolated` from a repository checkout.
 
 The examples' layouts, data, and themes come from the workbench Showcase stories. Host contract fixtures, including the fake agent and the webview that fails on purpose, live in `packages/workbench-fixture`.
+
+Example saves commit the complete field batch to one shared record. A failed batch leaves earlier saved values intact, and replacing a parent clears its older child patches. Existing example fields migrate once; Scribble keeps its native page records.
