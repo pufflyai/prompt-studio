@@ -3,14 +3,12 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium, expect, test } from "@playwright/test";
-import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyEmptyPanelAddition } from "./packaged-empty-panel-addition";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPanelInsertionTargets } from "./packaged-panel-insertion";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
-import { verifySessionPageMovement } from "./packaged-session-page-movement";
 
 test.afterEach(stopPendingTestProcesses);
 test.afterAll(stopPendingTestProcesses);
@@ -24,16 +22,14 @@ test("adding a tool keeps the other empty panel open", async () => {
   let browser: Browser | null = null;
   try {
     const started = await test.step("Start the packaged runtime", () =>
-      startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") }));
+      startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: "[]" }));
     child = started.child;
     const folder = join(root, "project");
     mkdirSync(folder);
     const response = await fetch(`${started.baseUrl}/v1/projects`, {
       method: "POST",
       headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-      body: JSON.stringify(
-        folderProjectInput({ name: "empty-panels", agents: ["pstdio.workbench-fixture.harness.fake"] }, folder),
-      ),
+      body: JSON.stringify(folderProjectInput({ name: "empty-panels" }, folder)),
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
@@ -45,8 +41,6 @@ test("adding a tool keeps the other empty panel open", async () => {
     await expect(page.getByText("Project home", { exact: true })).toBeVisible();
     await test.step("Add tools while preserving the other empty panel", () => verifyEmptyPanelAddition(page));
     await test.step("Place panels and cancel from the grab point", () => verifyPanelInsertionTargets(page));
-    await test.step("Move the live Sessions page through shared keyboard menus", () =>
-      verifySessionPageMovement(page, started.baseUrl, project.id));
   } finally {
     await browser?.close();
     if (child) await stopProcess(child);

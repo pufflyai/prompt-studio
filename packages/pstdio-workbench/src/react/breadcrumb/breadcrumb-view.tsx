@@ -10,7 +10,6 @@ import { WorkbenchIcon } from "../shared/icon";
 import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { breadcrumbSnapshot } from "./breadcrumb-snapshot";
-import { PagePanelControl } from "./page-panel-control";
 
 interface WorkbenchBreadcrumbViewProps {
   workbench: WorkbenchCore;
@@ -94,25 +93,20 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
     });
   }
   return (
-    <HStack gap="xs" minW="0" h="full">
-      <Breadcrumb
-        items={buildWorkbenchBreadcrumbItems(crumbs, (item) =>
-          item.resource
-            ? createWorkbenchResourceMenu(
-                workbench,
-                item.resource,
-                breadcrumbSnapshot(item, crumbs.at(-1), resource, snapshot, workbench.pages.resourceReferenceKey),
-              )
-            : undefined,
-        )}
-        separator="/"
-        separatorGap="xs"
-        display="flex"
-        h="full"
-      />
-      {page?.main.kind === "view" && page.main.cardinality === "one" && placement ? (
-        <PagePanelControl workbench={workbench} placement={placement} />
-      ) : null}
-    </HStack>
+    <Breadcrumb
+      items={buildWorkbenchBreadcrumbItems(crumbs, (item) =>
+        item.resource
+          ? createWorkbenchResourceMenu(
+              workbench,
+              item.resource,
+              breadcrumbSnapshot(item, crumbs.at(-1), resource, snapshot, workbench.pages.resourceReferenceKey),
+            )
+          : undefined,
+      )}
+      separator="/"
+      separatorGap="xs"
+      display="flex"
+      h="full"
+    />
   );
 };

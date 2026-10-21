@@ -69,7 +69,6 @@ export const useRegionTab = (props: WorkbenchRegionTabProps, triggerId: string) 
   return {
     snapshot,
     menu,
-    show,
     drag,
     target,
     drop: context.drop?.widgetId === placement.widgetId ? context.drop : undefined,

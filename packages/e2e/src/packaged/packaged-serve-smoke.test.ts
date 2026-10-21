@@ -91,7 +91,6 @@ import { registerSessionLaunchSmokeTests } from "./packaged-session-launch-smoke
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // The fixed 1,000-session / 1,000-ticket compiled navigation gate lives in ../perf/subnav-benchmark.ts.
 // Packaged browser coverage also checks shared Session action groups and lazy title search in the tab menu.
-// packaged-empty-panels.spec.ts also moves the live Sessions page with its draft through shared keyboard menus.
 // Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
 import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
 import { registerPackagedShowcaseSmokeTests } from "./packaged-showcase-smoke";

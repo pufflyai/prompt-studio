@@ -32,8 +32,7 @@ The Sessions page and mode-owned Session panels use one content renderer and act
 Their conversation, composer, workspace selector, notices, approvals, queue, and spacing match at the same available width.
 Choosing a workspace updates the draft; the separate Open workspace action opens it.
 
-The shared workbench grip beside a single-resource page's breadcrumb moves its live panel to Main, Side, or Bottom.
-Click the grip or press Shift+F10 to use the shared move menu. A move preserves the mounted conversation,
+A move through the shared workbench placement controls preserves the mounted conversation,
 draft, attachments, model selection, transcript scroll, and stream subscription. It leaves the page URL,
 primary resource anchor, and browser history unchanged. Cancelling a drag leaves the source intact.
 Headerless destinations expose the temporary top drop band; multiple resources reveal their shared tab tray.
