@@ -80,7 +80,7 @@ export const registerDocumentSyncSmokeTests = () =>
           expect(body.outcome.ok).toBe(true);
           return body.outcome.value;
         };
-        const login = await client.account.login(peer.server.url.origin);
+        const login = await client.account.login(peer.origin);
         const url = new URL(login.url);
         const callback = new URL(url.searchParams.get("callback")!);
         callback.searchParams.set("state", url.searchParams.get("state")!);
@@ -117,7 +117,7 @@ export const registerDocumentSyncSmokeTests = () =>
         expect(saved).not.toContain("packaged-secret");
       } finally {
         await stopProcess(host.child);
-        await peer.server.stop(true);
+        await peer.stop();
         await rm(root, { recursive: true, force: true });
       }
     },
