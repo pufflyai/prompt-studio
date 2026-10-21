@@ -346,3 +346,37 @@ it("session list sends time and anchor filters through the public client", async
   expect(query.get("anchor_type")).toBe("ticket");
   expect(query.get("anchor_id")).toBe("T");
 });
+
+it("removes an accepted tab-interest claim when its POST response is lost", async () => {
+  const server = createFakeStreamServer();
+  let lost = false;
+  const client = createClient({
+    baseUrl: "http://session-api.test",
+    fetch: (async (url, options) => {
+      const response = await server.fetchFn(url, options);
+      if (options?.method === "POST" && String(options.body).includes("retain_session_id") && !lost) {
+        lost = true;
+        throw new Error("Accepted response lost");
+      }
+      return response;
+    }) as typeof fetch,
+  });
+  const live = client.sessions.connectStream("working", {});
+  const retained = client.sessions.retainResources("idle");
+  try {
+    await tick();
+    server.send("connected", { connection_id: "connection" });
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    const claims = server.calls("POST").filter((call) => call.body?.retain_session_id === "idle");
+    expect(claims).toHaveLength(2);
+    retained.close();
+    await tick();
+    expect(server.calls("DELETE").map((call) => call.url.split("/").at(-1))).toEqual(
+      claims.map((call) => call.body!.subscription_id),
+    );
+    expect(server.calls("GET")[0]?.signal?.aborted).toBe(false);
+  } finally {
+    retained.close();
+    live.close();
+  }
+});

@@ -2,6 +2,7 @@ import type { PageRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchLayout } from "../../registries/layout/layout-types";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
 import { createWorkbench } from "../../workbench-core";
+import type { WorkbenchPageLocationPersistence } from "../page-location/page-location-controller";
 
 export const pageRef = (id: string) => ({ kind: "page", extensionId: "test", id }) satisfies PageRef;
 export const modePanelFixture = (
@@ -9,13 +10,18 @@ export const modePanelFixture = (
   scoped = true,
   extraPages: WorkbenchPageContribution[] = [],
   initialPage = "alpha",
+  pageLocationPersistence?: WorkbenchPageLocationPersistence,
 ) => {
   const w = createWorkbench({
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
+    pageLocationPersistence,
     layoutPersistence: {
       getLayout: (scope) => saved.get(scope),
       setLayout: (layout, scope) => saved.set(scope, structuredClone(layout)),
+      removeLayout: (scope) => {
+        saved.delete(scope);
+      },
       listLayouts: () => [...saved].map(([scope, layout]) => ({ scope, layout })),
     },
     resolvePagePersistenceScope: scoped
@@ -76,6 +82,6 @@ export const modePanelFixture = (
     w.layout.listPanelInstances(region).flatMap((tab) => tab.resource?.id ?? []);
   for (const page of extraPages) w.pages.registerPage(page);
   w.pageLocations.setProject("project");
-  navigate(initialPage);
+  if (initialPage) navigate(initialPage);
   return { w, saved, navigate, open, ids };
 };

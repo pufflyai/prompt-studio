@@ -40,6 +40,7 @@
     }
   },
   "scripts": {
+    "bench:open-resources": "bun src/core/controllers/page-runtime/open-resource-inventory.bench.ts",
     "build": "cross-env NODE_ENV=production vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",

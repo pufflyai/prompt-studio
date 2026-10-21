@@ -8,6 +8,28 @@ import {
   testHarnessId,
 } from "../../harnesses/test-harness-registry";
 
+test("retention distinguishes a deleted session from a disconnected stream", async () => {
+  const handle = await createTestApp();
+  const project = await handle.deps.projectService.create({ name: "Retention errors" });
+  const session = await handle.deps.sessionService.create({ project_id: project.id, title: "Saved", agent: "test" });
+  try {
+    const retain = (sessionId: string) =>
+      handle.app.request("/v1/session-stream/missing/subscriptions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ subscription_id: "tab", retain_session_id: sessionId }),
+      });
+    const deleted = await retain("deleted");
+    expect(deleted.status).toBe(404);
+    expect(await deleted.json()).toMatchObject({ code: "SESSION_NOT_FOUND" });
+    const disconnected = await retain(session.id);
+    expect(disconnected.status).toBe(404);
+    expect(await disconnected.json()).toMatchObject({ code: "SESSION_STREAM_NOT_FOUND" });
+  } finally {
+    await handle.close();
+  }
+});
+
 test("open client tabs retain completed session resources until the last client closes and the grace period ends", async () => {
   let now = 0;
   let expire: (() => void) | undefined;

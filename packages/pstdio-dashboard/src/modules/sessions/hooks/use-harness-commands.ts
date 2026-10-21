@@ -14,7 +14,7 @@ export const useHarnessCommands = (
   input: WorkbenchPanelRenderInput,
 ) => {
   const open = useWorkbenchStore(input.workbench.layout.store, () =>
-    input.workbench.host.getOpenPlacements().some((placement) => placement.widgetId === input.instance.instanceId),
+    input.workbench.host.getOpenPlacementIds().has(input.instance.instanceId),
   );
   const client = useQueryClient();
   const queryKey = ["harness-commands", sessionId, harnessId, sessionId ? undefined : draft];

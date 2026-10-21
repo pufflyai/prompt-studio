@@ -42,6 +42,7 @@ test("open resources include inactive tabs and tabs in another page or mode", ()
   s.open("first", "side", "pin");
   s.open("second", "side", "pin");
   s.navigate("document", "main");
+  s.w.pages.pinPlacement(s.w.layout.getLayout().regions.main.widgets[0].placementIdentity!);
   s.navigate("beta");
   const ids = s.w.getOpenResources?.().map((resource) => resource.id) ?? [];
   expect(ids).toContain("first");
