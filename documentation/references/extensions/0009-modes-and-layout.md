@@ -69,10 +69,11 @@ Each permission is independent. The active mode owns the policy; the saved mode 
 | `canOpen` | Allows revealing a closed panel. Existing open panels remain usable when false. |
 | `canClose` | Allows hiding a panel. Closing individual tabs stays independent. A nonclosing surface remains visible after its last tab closes. |
 | `acceptsTabs` | Allows new tabs and drops, including moves. Existing tabs remain usable. |
+| `movable` | Allows moving the whole panel or action bar. Tab acceptance remains independent. Main and Bottom must both allow movement to flip their order. |
 | `resizable` | Allows pointer, keyboard and command resizing. Equal minimum and maximum sizes also prevent resizing. |
 | `floatable` | Side only. Allows floating, independently of visibility. Overrides `floatingPanels`. |
 
-These optional booleans default to true. Unavailable panels reject opening and drops, and stale layouts cannot restore them. Commands validate before publishing navigation. Disallowed controls are omitted. A directional Show or Hide action requires its corresponding permission; a toggle requires both. Tab movement still respects published `movableTo` restrictions. Whole-panel docking is separate work.
+These optional booleans default to true. Unavailable panels reject opening and drops, and stale layouts cannot restore them. Commands validate before publishing navigation. Disallowed controls are omitted. A directional Show or Hide action requires its corresponding permission; a toggle requires both. Tab movement still respects published `movableTo` restrictions. Side moves left or right of Main. Navigation moves to the far left or right. Main and Bottom can flip their vertical order. The action bar supports all four outer edges. Placement choices persist per project and mode; Reset layout clears them. A mode that disables movement restores that region to its default position.
 
 `floatingPanels` is deprecated in favor of `regionSettings.side.floatable`. Panel `collapsible` is deprecated in favor of `canOpen`/`canClose`; it keeps its legacy drag-collapse behavior, including explicit Show/Hide, when new permissions are omitted. Panel menus still support `collapsible`. Publish this additive SDK and host release before adopting the new fields in separately released extensions.
 

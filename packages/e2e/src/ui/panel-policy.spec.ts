@@ -94,6 +94,7 @@ test("desktop hosts place the same controls beside project tabs", async ({ page 
   await waitForStoryPlayback(page);
   await expect(page.getByRole("group", { name: "Panel controls" })).toHaveCount(1);
   await expect(page.getByText("Project tabs", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Show Side Panel" }).click();
   await expect(page.getByRole("button", { name: "Hide Side Panel" })).toBeVisible();
   await expect(
     page.locator('[data-workbench-region="status"]').getByRole("group", { name: "Panel controls" }),

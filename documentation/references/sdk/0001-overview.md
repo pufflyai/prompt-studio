@@ -44,4 +44,4 @@ Scripts and services that call a running Prompt Studio use `@pstdio/sdk/client`.
 
 People who build their own host app on the workbench should read the [Workbench](../workbench/0001-overview.md) reference. Host registries and layout controllers are not extension authoring APIs.
 
-Mode authors can declare independent panel capabilities through `ModeRegionSettings`: `canOpen`, `canClose`, `acceptsTabs`, `resizable` and Side `floatable`. The SDK and host release must ship before extension adoption. Published `collapsible`, `floatingPanels` and header behavior remain compatible during deprecation. See [modes and layout](../extensions/0009-modes-and-layout.md#panel-policy).
+Mode authors can declare independent panel capabilities through `ModeRegionSettings`: `canOpen`, `canClose`, `acceptsTabs`, `movable`, `resizable` and Side `floatable`. The SDK and host release must ship before extension adoption. Published `collapsible`, `floatingPanels` and header behavior remain compatible during deprecation. See [modes and layout](../extensions/0009-modes-and-layout.md#panel-policy).
