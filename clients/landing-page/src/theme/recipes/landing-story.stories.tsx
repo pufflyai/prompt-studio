@@ -42,7 +42,7 @@ export const HowDoesItWork: Story = {
     docs: {
       description: {
         story:
-          "At 2560 by 1440 each chapter and its demos fill the available height. Phones and short windows scroll to every control and documentation link. Chapters advance every eight seconds without transition animations. A compact tab row sits above the bounded chapter scroll area. Hover or focus holds the current chapter. Tabs have no numbered stepper or playback controls.",
+          "At 2560 by 1440 each chapter fills the available height. Building-block cards stop at the small width token and follow their content instead of stretching with the chapter. Phones and short windows scroll to every control and documentation link. Chapters advance every eight seconds without transition animations. A compact tab row sits above the bounded chapter scroll area. Hover or focus holds the current chapter. Tabs have no numbered stepper or playback controls.",
       },
     },
   },

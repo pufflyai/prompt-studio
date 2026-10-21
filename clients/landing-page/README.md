@@ -168,6 +168,8 @@ or swiping horizontally also changes the chapter. Chapters change immediately,
 without transition animations. Arrow keys navigate focused tabs. Reduced motion disables autoplay.
 How does it work uses a fitted demo layout: its chapter, panels, and previews
 share the available height at 1440p. Standalone examples keep content sizing.
+Building-block cards have bounded widths and content-sized rows so they stay
+compact when the chapter grows.
 Each chapter scrolls within the available panel height on desktop and mobile;
 scrolling never advances to another chapter. There is no numbered stepper or pause
 button. The Tweak demo focuses on the shader and its controls.
