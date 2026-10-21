@@ -18,7 +18,7 @@ A device is one client runtime. Its environment ID is its device ID. Logging in 
 - Logging in again on the same device replaces its credential and undoes an earlier removal. The device keeps its name.
 - `manager_workbenches` lists the account's cloud projects. A device renews access only for those.
 - Removing a device stops its renewal. Removing a cloud project stops renewal for it on every device. Access already issued stays valid until it expires.
-- `manager_space_keys` holds the encryption keys of each cloud project: a project key and the owner's personal-space key, one row per generation. The first key request for a cloud project creates generation 1. Removing a device adds the next generation of every key of the account, so the removed device cannot read data written afterward. Older generations stay. See [ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md).
+- `manager_space_keys` holds the encryption keys of each cloud project: a project key and the key for the owner's private project data, one row per generation. The first key request for a cloud project creates generation 1. Removing a device adds the next generation of every key of the account, so the removed device cannot read data written afterward. Older generations stay. See [ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md).
 - Every renewal updates the device's last-seen time.
 
 ## Internal operations

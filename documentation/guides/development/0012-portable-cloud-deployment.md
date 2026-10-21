@@ -73,7 +73,7 @@ and device list survive. Never use `down --volumes` on a deployment you want to 
 
 ## Keys and recovery
 
-The account manager's own PostgreSQL database contains project and personal-space
+The account manager's own PostgreSQL database contains project keys, private-data
 keys, older key generations, device grants and signing keys. Relay object storage
 contains ciphertext. Its latest state and later updates are the content backup;
 there is no relay backup bucket or backup worker.
