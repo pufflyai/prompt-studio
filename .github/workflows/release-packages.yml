@@ -309,6 +309,21 @@ jobs:
             docker push "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION"
           done
 
+      # Self-hosters pull these images without logging in. GitHub creates a new package as
+      # private and has no API to change that, so an organization owner makes it public once.
+      - name: Check that anyone can pull the service images
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker logout ghcr.io
+          for service in relay account-manager; do
+            if ! docker manifest inspect "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION" > /dev/null; then
+              echo "::error::ghcr.io/$GITHUB_REPOSITORY/$service is private. In its package settings, choose Danger Zone > Change visibility > Public, then re-run this job."
+              exit 1
+            fi
+          done
+
       - name: Create the draft GitHub release with CLI assets
         uses: ./.github/actions/create-pstdio-release
         with:
