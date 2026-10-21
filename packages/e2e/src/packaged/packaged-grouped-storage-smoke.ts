@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AssetReference, StorageRecord, StorageSaveOutcome } from "@pstdio/sdk/extensions";
+import type { AssetReference, ResourceIdentity, StorageRecord, StorageSaveOutcome } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -56,6 +56,15 @@ export const registerGroupedStorageSmokeTests = () => {
         expect(created.status).toBe(201);
         const project = (await created.json()) as { id: string };
         const initial = await read(project.id);
+        const allocated = await command<{ id: string; shorthand: string }>(project.id, "allocate");
+        const identity: ResourceIdentity = { ...allocated, kind: "note", aliases: [] };
+        expect(await command(project.id, "identity", { id: allocated.id })).toEqual(identity);
+        expect(await command(project.id, "find-number", { shorthand: allocated.shorthand })).toEqual([identity]);
+        expect(await command(project.id, "number-event")).toMatchObject({
+          kind: "event",
+          extensionId: "pstdio",
+          id: "resource.renumbered",
+        });
         const cached = await command<{
           before: StorageRecord;
           reads: { record: StorageRecord; legacy: unknown }[];
@@ -118,6 +127,8 @@ export const registerGroupedStorageSmokeTests = () => {
         expect((await command<StorageSaveOutcome>(project.id, "outcome", { operationId: "second-caller" })).state).toBe(
           "saved-locally",
         );
+        expect(await command(project.id, "identity", { id: allocated.id })).toEqual(identity);
+        expect(await command(project.id, "find-number", { shorthand: allocated.shorthand })).toEqual([identity]);
         const final = await read(project.id);
         expect(final.caption.value).toBe("Second caption");
         expect(final.note.asset).toEqual(replacement);

@@ -85,6 +85,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
   const position = useWorkbenchStore(workbench.layout.store, () => workbench.shell.getArrangement().secondary);
   const policy = usePanelPolicy(workbench, "secondary");
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
   const panels = useWorkbenchMainPanels(workbench);
@@ -134,7 +135,9 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       layerStyle="panel"
       position="relative"
     >
-      <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
+      <Box display={fullscreen ? "none" : "contents"}>
+        <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
+      </Box>
       <WorkbenchTabDropTarget region="main" />
       <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
         {mainPanelWithMenus}
@@ -151,7 +154,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
         resizableSide={position}
         contentPanel={mainContent}
         resizablePanel={<WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />}
-        collapsed={!secondaryPanel.has || secondaryPanel.collapsed}
+        collapsed={fullscreen || !secondaryPanel.has || secondaryPanel.collapsed}
         resizable={policy.resizable}
         collapsible={policy.canClose && secondaryPanel.collapsible}
         defaultSizePx={secondaryPanelSize.defaultPx}

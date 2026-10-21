@@ -38,7 +38,13 @@ const interactive =
 
 /** Only unused header space starts a whole-panel drag. Tab and control gestures keep their owners. */
 export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
-  const disabled = !usePanelMovePositions(workbench, region).length;
+  const canMove = usePanelMovePositions(workbench, region).length > 0;
+  const floatingSide = useWorkbenchStore(
+    workbench.layout.store,
+    () => region === "side" && workbench.sidePanel.getMode() === "floating",
+  );
+  const fullscreenSide = useWorkbenchStore(workbench.fullscreen.store, (state) => region === "side" && state.active);
+  const disabled = !canMove || floatingSide || fullscreenSide;
   const drag = useDraggable({
     id: `panel:${region}`,
     data: { panelRegion: region },

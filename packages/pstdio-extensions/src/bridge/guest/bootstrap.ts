@@ -4,6 +4,7 @@ import type { HostApi, HostEventMessage, InitMessage, PropsUpdateMessage, ThemeU
 import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
+import { installEscapeForwarder } from "./escape-forwarder";
 import { observeContentWidth } from "./observe-content-width";
 import { createViewLifecycle } from "./view-lifecycle";
 
@@ -143,9 +144,11 @@ const start = async () => {
 
         if (!inputForwardersInstalled) {
           inputForwardersInstalled = true;
+          installEscapeForwarder(document, (event) => connection.remote.dispatchKeyboardEvent(event));
           document.addEventListener(
             "keydown",
             (event) => {
+              if (event.key === "Escape") return;
               if (!event.ctrlKey && !event.metaKey && !event.altKey) return;
               if (isEditableTarget(event.target) && !event.shiftKey) return;
 

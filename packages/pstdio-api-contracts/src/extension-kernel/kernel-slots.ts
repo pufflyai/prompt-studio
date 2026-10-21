@@ -2,7 +2,7 @@ import { workbenchResourceKinds } from "./builtin-refs";
 import { eventRef } from "./refs";
 import { defineSlot } from "./slots";
 import type { Struct } from "./types/json";
-import type { ResourceAnchor } from "./types/resources";
+import type { ResourceAnchor, ResourceRenumberedEvent } from "./types/resources";
 import type { ExtensionWorkspace } from "./types/workspaces";
 
 const hostEventRef = <TPayload extends Struct>(id: string) => eventRef<TPayload>({ extensionId: "pstdio", id });
@@ -121,6 +121,10 @@ export const sessionEvents = {
    * Read `sessionStatus` to tell them apart.
    */
   completed: hostEventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.completed"),
+};
+
+export const resourceEvents = {
+  renumbered: hostEventRef<ResourceRenumberedEvent>("resource.renumbered"),
 };
 
 export const workspaceEvents = {

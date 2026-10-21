@@ -7,7 +7,7 @@ import { RequestsPanel } from "./requests-panel";
 
 const person = { type: "human" as const, id: "person", displayName: "Human" };
 const agent = { type: "agent" as const, id: "agent", displayName: "Agent" };
-const context = { reason: null, workspaceId: null, attemptRevision: null, sessionId: "chat", relatedSessionId: null };
+const context = { reason: null, workspaceId: null, attemptRevision: null, sessionId: null, relatedSessionId: null };
 
 const task: ReviewRequestView = {
   id: "task",

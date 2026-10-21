@@ -214856,8 +214856,472 @@
     },
     {
       "type": "frame",
-      "id": "HyAam",
+      "id": "B6Pv0o",
       "x": 58910,
+      "y": 0,
+      "name": "PS-798 · Main fullscreen and temporary Side",
+      "context": "Fullscreen uses only the bubble to reopen the temporary Side overlay. The header retains the fullscreen exit control. Closing or minimizing Side returns focus to the bubble. Saved panel layout is retained; Side availability, floating and opening permissions still apply.",
+      "width": 940,
+      "height": 1200,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "SLMlJ",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Main fullscreen · presentation only",
+          "fontFamily": "$font-label",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "rNJE8",
+          "name": "light",
+          "theme": {
+            "mode": "light"
+          },
+          "clip": true,
+          "width": "fill_container",
+          "height": 300,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "m90jH",
+              "name": "Fullscreen header",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "PgGEo",
+                  "name": "Main context spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "id": "jip7n",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Exit Main fullscreen",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "minimize",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ro4Tu",
+              "name": "Retained Main with Side overlay",
+              "width": "fill_container",
+              "height": "fill_container",
+              "gap": 12,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "EQw8i",
+                  "name": "Main editor",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Main editor stays mounted. Saved tabs, sizes and docking are unchanged.",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "Z1z2js",
+                  "type": "ref",
+                  "ref": "MXmR5",
+                  "name": "Temporary Side overlay",
+                  "width": 320,
+                  "height": 224,
+                  "descendants": {
+                    "IBXDe": {
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "v6PKW8",
+                          "name": "Side title",
+                          "fill": "$ds-fg",
+                          "content": "Side Panel",
+                          "fontFamily": "$font-label",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "e46ma3",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "id": "MIhbx",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Dismiss temporary Side",
+                          "width": 24,
+                          "height": 24,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "minus",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "qP4zg",
+          "name": "dark",
+          "theme": {
+            "mode": "dark"
+          },
+          "clip": true,
+          "width": "fill_container",
+          "height": 300,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "tf0RG",
+              "name": "Fullscreen header",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "xQGat",
+                  "name": "Main context spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "id": "IaA6D",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Exit Main fullscreen",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "minimize",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "KG37T",
+              "name": "Retained Main with Side overlay",
+              "width": "fill_container",
+              "height": "fill_container",
+              "gap": 12,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "JAYKs",
+                  "name": "Main editor",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Main editor stays mounted. Saved tabs, sizes and docking are unchanged.",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "L4Qev",
+                  "type": "ref",
+                  "ref": "MXmR5",
+                  "name": "Temporary Side overlay",
+                  "width": 320,
+                  "height": 224,
+                  "descendants": {
+                    "IBXDe": {
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "RdPus",
+                          "name": "Side title",
+                          "fill": "$ds-fg",
+                          "content": "Side Panel",
+                          "fontFamily": "$font-label",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Y0rU9",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "id": "OkIvN",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Dismiss temporary Side",
+                          "width": 24,
+                          "height": 24,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "minus",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "bTtJ2",
+          "name": "light · Side minimized",
+          "theme": {
+            "mode": "light"
+          },
+          "clip": true,
+          "width": "fill_container",
+          "height": 216,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "stAcm",
+              "name": "Fullscreen controls",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "bFqVx",
+                  "name": "Main context spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "id": "IwXEw",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Exit Main fullscreen",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "minimize",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qGPV9",
+              "name": "Retained Main with minimized Side",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "a6UcMK",
+                  "x": 12,
+                  "y": 12,
+                  "name": "Minimized Side behavior",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": 680,
+                  "content": "Side minimized. The bubble reopens its temporary overlay; saved layout stays unchanged.",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "U8PaXb",
+                  "type": "ref",
+                  "ref": "C572TP",
+                  "name": "Reopen temporary Side bubble",
+                  "x": 820,
+                  "y": 104,
+                  "width": 48,
+                  "height": 48
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Hk3aN",
+          "name": "dark · Side minimized",
+          "theme": {
+            "mode": "dark"
+          },
+          "clip": true,
+          "width": "fill_container",
+          "height": 216,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "viNHA",
+              "name": "Fullscreen controls",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "p9okwr",
+                  "name": "Main context spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "id": "MEQ1k",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Exit Main fullscreen",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "minimize",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "It8Q8",
+              "name": "Retained Main with minimized Side",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "icXPd",
+                  "x": 12,
+                  "y": 12,
+                  "name": "Minimized Side behavior",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": 680,
+                  "content": "Side minimized. The bubble reopens its temporary overlay; saved layout stays unchanged.",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "nz9tN",
+                  "type": "ref",
+                  "ref": "C572TP",
+                  "name": "Reopen temporary Side bubble",
+                  "x": 820,
+                  "y": 104,
+                  "width": 48,
+                  "height": 48
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "dPUGO",
+      "x": 59930,
       "y": 0,
       "name": "PS-684 · Single resource panel movement",
       "context": "The shared workbench breadcrumb offers a small ghost grip button when a single-resource page has no visible tab tray. Drag moves its existing live placement through workbench.movePanel; click or Shift+F10 opens the shared resource and move menu. A visible tab takes over as the single drag source after moving. Keep page ownership in Main, Side or Secondary, with no permanent close action. During tab drags the shared temporary top drop band is 32px high and uses the tab drop zone tokens. Real tabs keep insertion priority, followed by that band and then panel edge targets. A second resource reveals the shared tray.",
@@ -214870,7 +215334,7 @@
       "children": [
         {
           "type": "text",
-          "id": "wBFnf",
+          "id": "C6k43o",
           "name": "Title",
           "fill": "$ds-fg",
           "content": "Move the live page panel",
@@ -214880,7 +215344,7 @@
         },
         {
           "type": "frame",
-          "id": "riff8",
+          "id": "i5D3g",
           "name": "light breadcrumb",
           "theme": {
             "mode": "light"
@@ -214896,7 +215360,7 @@
           "alignItems": "center",
           "children": [
             {
-              "id": "aMZOt",
+              "id": "HC78b",
               "type": "ref",
               "ref": "N3VfvY",
               "name": "Sessions breadcrumb",
@@ -214907,7 +215371,7 @@
               }
             },
             {
-              "id": "G6elU",
+              "id": "KKOoT",
               "type": "ref",
               "ref": "N3VfvY",
               "name": "Current session breadcrumb",
@@ -214921,7 +215385,7 @@
               }
             },
             {
-              "id": "I0CeXT",
+              "id": "NxvdH",
               "type": "ref",
               "ref": "nvvgg",
               "name": "Move page panel · drag or open menu",
@@ -214943,7 +215407,7 @@
         },
         {
           "type": "frame",
-          "id": "OSW2I",
+          "id": "H49F8",
           "name": "dark breadcrumb",
           "theme": {
             "mode": "dark"
@@ -214959,7 +215423,7 @@
           "alignItems": "center",
           "children": [
             {
-              "id": "K9DIB",
+              "id": "PSxuO",
               "type": "ref",
               "ref": "N3VfvY",
               "name": "Sessions breadcrumb",
@@ -214970,7 +215434,7 @@
               }
             },
             {
-              "id": "M7tqCD",
+              "id": "rbK6d",
               "type": "ref",
               "ref": "N3VfvY",
               "name": "Current session breadcrumb",
@@ -214984,7 +215448,7 @@
               }
             },
             {
-              "id": "Gv96Z",
+              "id": "QQz2h",
               "type": "ref",
               "ref": "nvvgg",
               "name": "Move page panel · drag or open menu",
@@ -215006,7 +215470,7 @@
         },
         {
           "type": "text",
-          "id": "aJY1u",
+          "id": "mpFcZ",
           "name": "Usage",
           "fill": "$ds-fg-muted",
           "content": "Drag the grip to another panel. Enter opens Move to Main / Side / Bottom. Escape cancels a drag.",
