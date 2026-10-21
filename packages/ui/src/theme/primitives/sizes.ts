@@ -73,7 +73,6 @@ export const sizes = {
   "tab-min": { value: sp[600] },
   "tab-label-max": { value: "8.875rem" },
   "window-tab-min": { value: sp[800] },
-  "window-tab-label-max": { value: "11.0625rem" },
   "mobile-titlebar": { value: "3.25rem" },
   "collection-row": { value: "2.125rem" },
   "drop-indicator": { value: sp[25] },
