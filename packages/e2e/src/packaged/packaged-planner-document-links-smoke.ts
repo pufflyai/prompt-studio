@@ -12,20 +12,34 @@ export const expectPlannerDocumentLinks = async (
   expect(
     metadata.resourceKinds.find((kind) => kind.id === "ticket" && kind.extensionId === "pstdio.pstdio-planner"),
   ).toMatchObject({ resolveManyCommand: "pstdio.pstdio-planner.command.resolve-ticket-resources" });
-  const execute = async (name: string, params: Record<string, unknown>, resource?: Record<string, unknown>) => {
+  const execute = async (
+    name: string,
+    params: Record<string, unknown>,
+    resource?: Record<string, unknown>,
+    commandMetadata?: Record<string, unknown>,
+  ) => {
     const response = await fetch(
       `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${name}/execute`,
       {
         method: "POST",
         headers: { ...headers, "content-type": "application/json" },
-        body: JSON.stringify({ source: "api", params, resource }),
+        body: JSON.stringify({ source: "api", params, resource, metadata: commandMetadata }),
       },
     );
     expect(response.status).toBe(200);
-    return (await response.json()) as { outcome: { ok: boolean; value: Record<string, string> } };
+    return (await response.json()) as {
+      outcome: { ok: boolean; value: Record<string, string>; data?: { fileStorageVersions?: Record<string, string> } };
+    };
   };
   const ticket = await execute("create-ticket", { title: "Packaged document links" });
   expect(ticket.outcome.ok).toBe(true);
+  const loaded = await execute("get-ticket-content", { id: ticket.outcome.value.id }, undefined, {
+    fileStorageVersions: {},
+  });
+  expect(loaded.outcome.ok).toBe(true);
+  const observedRecords = Object.keys(loaded.outcome.data?.fileStorageVersions ?? {});
+  expect(observedRecords).toHaveLength(1);
+  expect(observedRecords[0]).toContain(ticket.outcome.value.id);
   const file = await execute("create-ticket-file", { ticketId: ticket.outcome.value.id, name: "notes.md" });
   expect(file.outcome.ok).toBe(true);
   const link = await execute("document-link", { id: ticket.outcome.value.shorthand, file: "notes.md" });
