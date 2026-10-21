@@ -204309,6 +204309,276 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "gzCXl",
+              "name": "States · plan",
+              "width": "fill_container",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "IE9H0",
+                  "name": "no plan",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Hc9Xj",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "no plan",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Fz21Y",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width-height",
+                      "width": "fill_container",
+                      "height": 48,
+                      "content": "Signed in without a Cloud plan. Projects stay local. The popover explains Cloud and links to plans.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "CSrsb",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 40,
+                      "layout": "vertical",
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "uq7zl",
+                          "name": "Status Bar",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 32,
+                          "fill": "$ds-bg",
+                          "cornerRadius": 6,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 14,
+                          "padding": [
+                            0,
+                            8,
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "JtxAp",
+                              "name": "main",
+                              "gap": 5,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "HxzaK",
+                                  "name": "main Icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "git-branch",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "SeWFV",
+                                  "name": "main Label",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "main",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Pr4HF",
+                              "name": "Spacer",
+                              "width": "fill_container",
+                              "height": 2
+                            },
+                            {
+                              "id": "G8ha5A",
+                              "type": "ref",
+                              "ref": "bWgi1",
+                              "name": "Cloud",
+                              "descendants": {
+                                "V7sfJl": {
+                                  "icon": "cloud",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                "Vxs37": {
+                                  "content": "Local",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "l772N",
+                  "name": "plan ended",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "I0DBa",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "plan ended",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "dKc9M",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width-height",
+                      "width": "fill_container",
+                      "height": 48,
+                      "content": "The Cloud plan ended. Sync is paused on every device until the plan is renewed. Work continues locally.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "kepgd",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 40,
+                      "layout": "vertical",
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "PEPs6",
+                          "name": "Status Bar",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 32,
+                          "fill": "$ds-bg",
+                          "cornerRadius": 6,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 14,
+                          "padding": [
+                            0,
+                            8,
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "g7VOgX",
+                              "name": "main",
+                              "gap": 5,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "kXTeb",
+                                  "name": "main Icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "git-branch",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "HLxdn",
+                                  "name": "main Label",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "main",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Q43yK6",
+                              "name": "Spacer",
+                              "width": "fill_container",
+                              "height": 2
+                            },
+                            {
+                              "id": "nIoi9",
+                              "type": "ref",
+                              "ref": "bWgi1",
+                              "name": "Cloud",
+                              "descendants": {
+                                "V7sfJl": {
+                                  "icon": "cloud-alert",
+                                  "fill": "$ds-warning"
+                                },
+                                "Vxs37": {
+                                  "content": "Sync paused",
+                                  "fill": "$ds-warning"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Sk5HR",
+                  "name": "Empty slot",
+                  "width": "fill_container",
+                  "height": 2
+                },
+                {
+                  "type": "frame",
+                  "id": "qJzHx",
+                  "name": "Empty slot",
+                  "width": "fill_container",
+                  "height": 2
+                },
+                {
+                  "type": "frame",
+                  "id": "KMYpr",
+                  "name": "Empty slot",
+                  "width": "fill_container",
+                  "height": 2
+                }
+              ]
             }
           ]
         },
@@ -207378,6 +207648,616 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "KRNd4",
+              "name": "States 3 · plan",
+              "width": "fill_container",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "gzU6w",
+                  "name": "no plan",
+                  "width": 340,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "B3kMz",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "no plan",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DM4oo",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width-height",
+                      "width": "fill_container",
+                      "height": 48,
+                      "content": "Signed in, no Cloud plan. Explain what Cloud does and link to plans. No devices: nothing syncs.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WKMxs",
+                      "name": "Cloud popover",
+                      "width": 340,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000040",
+                        "offset": {
+                          "x": 0,
+                          "y": 8
+                        },
+                        "blur": 24
+                      },
+                      "layout": "vertical",
+                      "gap": 10,
+                      "padding": [
+                        8,
+                        16,
+                        12,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "cBQbt",
+                          "name": "Header",
+                          "width": "fill_container",
+                          "height": 24,
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "SafZr",
+                              "name": "Icon",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "cloud",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ndLrn",
+                              "name": "Title",
+                              "fill": "$ds-fg",
+                              "content": "Cloud",
+                              "fontFamily": "$font-label",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "b9KID",
+                          "name": "Cloud state",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Z4KmY",
+                              "name": "Icon box",
+                              "width": 16,
+                              "height": 18,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "Ioqmh",
+                                  "name": "Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "cloud",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "uTn3F",
+                              "name": "Text",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 1,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "buBJB",
+                                  "name": "Text",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Cloud is not on your plan",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "IFCBa",
+                                  "name": "Text",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Your projects stay on this device.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Q9y1o",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Prompt Studio Cloud syncs your projects across your devices, end-to-end encrypted.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "U5vXwd",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "See plans",
+                          "height": 28,
+                          "theme": {
+                            "btn": "primary",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": true,
+                              "icon": "sparkles",
+                              "width": 12,
+                              "height": 12
+                            },
+                            "Hf4GT": {
+                              "content": "See plans"
+                            }
+                          }
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "qVjOP",
+                          "name": "Divider",
+                          "fill": "$ds-border-subtle",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "frame",
+                          "id": "e8QcJk",
+                          "name": "Account",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "g1ykfP",
+                              "type": "ref",
+                              "ref": "Rt8F5",
+                              "name": "Avatar",
+                              "descendants": {
+                                "joBhu": {
+                                  "content": "AM"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "oDB9g",
+                              "name": "Who",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "N3n2x",
+                                  "name": "Text",
+                                  "fill": "$ds-fg",
+                                  "content": "Alex Morgan",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Wl9qh",
+                                  "name": "Text",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "alex@example.com",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "fX99K",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Sign out",
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Sign out"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "d5nbLr",
+                          "name": "Divider",
+                          "fill": "$ds-border-subtle",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "id": "WouFs",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Cloud settings",
+                          "height": 24,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": true,
+                              "icon": "settings-2",
+                              "width": 12,
+                              "height": 12
+                            },
+                            "Hf4GT": {
+                              "content": "Cloud settings"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "CiZrU",
+                  "name": "plan ended",
+                  "width": 340,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "KXKHK",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "plan ended",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "PeYdx",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width-height",
+                      "width": "fill_container",
+                      "height": 48,
+                      "content": "The plan lapsed. Sync pauses everywhere; nothing is deleted on devices. Renewing resumes and merges.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "O56gl",
+                      "name": "Cloud popover",
+                      "width": 340,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000040",
+                        "offset": {
+                          "x": 0,
+                          "y": 8
+                        },
+                        "blur": 24
+                      },
+                      "layout": "vertical",
+                      "gap": 10,
+                      "padding": [
+                        8,
+                        16,
+                        12,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "VKoDK",
+                          "name": "Header",
+                          "width": "fill_container",
+                          "height": 24,
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "XUaB3",
+                              "name": "Icon",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "cloud",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "PjKf7",
+                              "name": "Title",
+                              "fill": "$ds-fg",
+                              "content": "Cloud",
+                              "fontFamily": "$font-label",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "JVoxT",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Alert",
+                          "theme": {
+                            "status": "warning"
+                          },
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "cloud-alert"
+                            },
+                            "GL4gS": {
+                              "content": "Your Cloud plan ended"
+                            },
+                            "B8etL": {
+                              "content": "Sync is paused on all your devices. Your work stays on them, and Cloud keeps your synced data until Nov 20."
+                            },
+                            "x7Usi7": {
+                              "enabled": true
+                            },
+                            "x7Usi7/Hf4GT": {
+                              "content": "Renew"
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "kJOpZ",
+                          "name": "Cloud state",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "smBcU",
+                              "name": "Icon box",
+                              "width": 16,
+                              "height": 18,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "u36ae",
+                                  "name": "Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "cloud-alert",
+                                  "library": "lucide",
+                                  "fill": "$ds-warning"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "FY7IA",
+                              "name": "Text",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 1,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "O8lBA",
+                                  "name": "Text",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Sync paused",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "fNtW7",
+                                  "name": "Text",
+                                  "fill": "$ds-warning",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Changes stay on this device until you renew.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "fmuUm",
+                          "name": "Divider",
+                          "fill": "$ds-border-subtle",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "frame",
+                          "id": "OEbig",
+                          "name": "Account",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "vL1Kk",
+                              "type": "ref",
+                              "ref": "Rt8F5",
+                              "name": "Avatar",
+                              "descendants": {
+                                "joBhu": {
+                                  "content": "AM"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "FUwb2",
+                              "name": "Who",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Qx4sz",
+                                  "name": "Text",
+                                  "fill": "$ds-fg",
+                                  "content": "Alex Morgan",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "uQohz",
+                                  "name": "Text",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "alex@example.com",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "hJDlY",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Sign out",
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Sign out"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "VAtfs",
+                          "name": "Divider",
+                          "fill": "$ds-border-subtle",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "id": "B4mRBU",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Cloud settings",
+                          "height": 24,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": true,
+                              "icon": "settings-2",
+                              "width": 12,
+                              "height": 12
+                            },
+                            "Hf4GT": {
+                              "content": "Cloud settings"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -207495,7 +208375,7 @@
                       "name": "Settings · Cloud active",
                       "clip": true,
                       "width": 1100,
-                      "height": 610,
+                      "height": 690,
                       "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
                       "stroke": "$ds-border",
@@ -207865,6 +208745,113 @@
                                             },
                                             "Hf4GT": {
                                               "content": "Sign out"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "fWK5T",
+                                  "name": "Section",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "PLAN",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "LxRSL",
+                                  "name": "Plan card",
+                                  "width": "fill_container",
+                                  "cornerRadius": 6,
+                                  "stroke": "$ds-border-subtle",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "gap": 10,
+                                  "padding": [
+                                    12,
+                                    16
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "f9eQHz",
+                                      "name": "Row",
+                                      "width": "fill_container",
+                                      "gap": 12,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "qYdSs",
+                                          "name": "Icon",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "badge-check",
+                                          "library": "lucide",
+                                          "fill": "$ds-fg-muted"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "w3j89S",
+                                          "name": "Label",
+                                          "width": "fill_container",
+                                          "layout": "vertical",
+                                          "gap": 2,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "zl4MI",
+                                              "name": "Text",
+                                              "fill": "$ds-fg",
+                                              "textGrowth": "fixed-width",
+                                              "width": "fill_container",
+                                              "content": "Prompt Studio Cloud · Personal",
+                                              "lineHeight": 1.45,
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 13,
+                                              "fontWeight": "500"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "sACWr",
+                                              "name": "Text",
+                                              "fill": "$ds-fg-muted",
+                                              "textGrowth": "fixed-width",
+                                              "width": "fill_container",
+                                              "content": "Renews Nov 21, 2026. Covers all your devices.",
+                                              "lineHeight": 1.45,
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 11,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "id": "eDYfc",
+                                          "type": "ref",
+                                          "ref": "c24zV7",
+                                          "name": "Manage billing",
+                                          "height": 28,
+                                          "theme": {
+                                            "btn": "outline",
+                                            "size": "xs"
+                                          },
+                                          "descendants": {
+                                            "DsEVd": {
+                                              "enabled": true,
+                                              "icon": "external-link",
+                                              "width": 12,
+                                              "height": 12
+                                            },
+                                            "Hf4GT": {
+                                              "content": "Manage billing"
                                             }
                                           }
                                         }
@@ -208577,7 +209564,7 @@
                   "name": "Settings · Project local",
                   "clip": true,
                   "width": 1100,
-                  "height": 640,
+                  "height": 720,
                   "fill": "$ds-bg",
                   "cornerRadius": "$overlay-radius",
                   "stroke": "$ds-border",
@@ -208947,6 +209934,113 @@
                                         },
                                         "Hf4GT": {
                                           "content": "Sign out"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Z0H2g",
+                              "name": "Section",
+                              "fill": "$ds-fg-subtle",
+                              "content": "PLAN",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "type": "frame",
+                              "id": "GRnTu",
+                              "name": "Plan card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "padding": [
+                                12,
+                                16
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "A47dQ",
+                                  "name": "Row",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "IzjEz",
+                                      "name": "Icon",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "badge-check",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "jm5AV",
+                                      "name": "Label",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 2,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "lOnv2",
+                                          "name": "Text",
+                                          "fill": "$ds-fg",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Prompt Studio Cloud · Personal",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "WT2pH",
+                                          "name": "Text",
+                                          "fill": "$ds-fg-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Renews Nov 21, 2026. Covers all your devices.",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "Vztv9",
+                                      "type": "ref",
+                                      "ref": "c24zV7",
+                                      "name": "Manage billing",
+                                      "height": 28,
+                                      "theme": {
+                                        "btn": "outline",
+                                        "size": "xs"
+                                      },
+                                      "descendants": {
+                                        "DsEVd": {
+                                          "enabled": true,
+                                          "icon": "external-link",
+                                          "width": 12,
+                                          "height": 12
+                                        },
+                                        "Hf4GT": {
+                                          "content": "Manage billing"
                                         }
                                       }
                                     }
@@ -209358,6 +210452,2432 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "nKJoG",
+              "name": "No plan page",
+              "width": "fill_container",
+              "gap": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "EevV3",
+                  "name": "Settings · No plan",
+                  "clip": true,
+                  "width": 1100,
+                  "height": 400,
+                  "fill": "$ds-bg",
+                  "cornerRadius": "$overlay-radius",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "zO2EW",
+                      "name": "Head",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$ds-bg-subtle",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "j58fqi",
+                          "name": "I",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "settings",
+                          "library": "lucide",
+                          "fill": "$ds-accent"
+                        },
+                        {
+                          "type": "text",
+                          "id": "X8Yor",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "Settings",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "RxkqT",
+                          "name": "Sp",
+                          "width": "fill_container",
+                          "height": 2
+                        },
+                        {
+                          "id": "MJZka",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Close",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "x"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DThoc",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "r9IeE",
+                          "name": "Sections",
+                          "width": 220,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "right": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "aHfGF",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "PROJECT",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "kZhBt",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Runtime",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "folder"
+                                },
+                                "ROY2j": {
+                                  "content": "General",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "C79Sm",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "HlrMj",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "EXTENSIONS",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "cYc56",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Performance",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "active"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "cloud"
+                                },
+                                "ROY2j": {
+                                  "content": "Cloud",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "MkXc0",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Connection",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "layers"
+                                },
+                                "ROY2j": {
+                                  "content": "Workspaces",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "VTAXy",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "bHaAy",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "EXPERIMENTAL",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "x3dP6",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Beta features",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "flask-conical"
+                                },
+                                "ROY2j": {
+                                  "content": "Beta features",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "dbyPd",
+                          "name": "Content",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 24,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "IBBQQ",
+                              "name": "Intro",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "mtfOl",
+                                  "name": "Title",
+                                  "fill": "$ds-fg",
+                                  "content": "Cloud",
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 16,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "IbKCd",
+                                  "name": "Text",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Prompt Studio Cloud keeps this project in sync on your devices. Everything is end-to-end encrypted.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "po0Mp",
+                              "name": "Section",
+                              "fill": "$ds-fg-subtle",
+                              "content": "ACCOUNT",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "type": "frame",
+                              "id": "e4rwnk",
+                              "name": "Account card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "padding": [
+                                12,
+                                16
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "DbiMe",
+                                  "name": "Row",
+                                  "width": "fill_container",
+                                  "gap": 10,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "id": "lCAtC",
+                                      "type": "ref",
+                                      "ref": "Rt8F5",
+                                      "name": "Avatar",
+                                      "descendants": {
+                                        "joBhu": {
+                                          "content": "AM"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "SxIt8",
+                                      "name": "Who",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "j1bIB",
+                                          "name": "Text",
+                                          "fill": "$ds-fg",
+                                          "content": "Alex Morgan",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "W8IIeb",
+                                          "name": "Text",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "alex@example.com · Google account",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "WoE4P",
+                                      "type": "ref",
+                                      "ref": "c24zV7",
+                                      "name": "Sign out",
+                                      "height": 28,
+                                      "theme": {
+                                        "btn": "outline",
+                                        "size": "xs"
+                                      },
+                                      "descendants": {
+                                        "DsEVd": {
+                                          "enabled": true,
+                                          "icon": "log-out",
+                                          "width": 12,
+                                          "height": 12
+                                        },
+                                        "Hf4GT": {
+                                          "content": "Sign out"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "exXuh",
+                              "name": "Section",
+                              "fill": "$ds-fg-subtle",
+                              "content": "PLAN",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "type": "frame",
+                              "id": "k5G2eu",
+                              "name": "Plan card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "padding": [
+                                12,
+                                16
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "ZfQKe",
+                                  "name": "Row",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "tM5sZ",
+                                      "name": "Icon",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "cloud",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "twCKL",
+                                      "name": "Label",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 2,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "S1yGjx",
+                                          "name": "Text",
+                                          "fill": "$ds-fg",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "No Cloud plan",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Lz4uF",
+                                          "name": "Text",
+                                          "fill": "$ds-fg-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Sync your projects across your devices, end-to-end encrypted.",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "nRshV",
+                                      "type": "ref",
+                                      "ref": "c24zV7",
+                                      "name": "See plans",
+                                      "height": 28,
+                                      "theme": {
+                                        "btn": "primary",
+                                        "size": "xs"
+                                      },
+                                      "descendants": {
+                                        "DsEVd": {
+                                          "enabled": true,
+                                          "icon": "sparkles",
+                                          "width": 12,
+                                          "height": 12
+                                        },
+                                        "Hf4GT": {
+                                          "content": "See plans"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "BXifV",
+                              "name": "Section",
+                              "fill": "$ds-fg-subtle",
+                              "content": "THIS PROJECT",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "type": "frame",
+                              "id": "eJDFq",
+                              "name": "State card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "padding": [
+                                12,
+                                16
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "X91K2",
+                                  "name": "Row",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "HyTKE",
+                                      "name": "Icon",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "cloud-off",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "qAWUn",
+                                      "name": "Label",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 2,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "y2LT4L",
+                                          "name": "Text",
+                                          "fill": "$ds-fg",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "This project is local",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "B9Jmj",
+                                          "name": "Text",
+                                          "fill": "$ds-fg-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Syncing needs a Cloud plan.",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "j8Vml5",
+                                      "type": "ref",
+                                      "ref": "c24zV7",
+                                      "name": "Sync with Cloud",
+                                      "height": 28,
+                                      "theme": {
+                                        "btn": "primary",
+                                        "size": "xs",
+                                        "btn-interaction": "disabled"
+                                      },
+                                      "descendants": {
+                                        "DsEVd": {
+                                          "enabled": true,
+                                          "icon": "cloud-upload",
+                                          "width": 12,
+                                          "height": 12
+                                        },
+                                        "Hf4GT": {
+                                          "content": "Sync with Cloud"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "IJlTL",
+                  "name": "No plan notes",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SElC0",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "no plan",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "r4gxlN",
+                      "name": "Text",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Signed in without a plan, the page shows the account and the plan offer. Devices are hidden because nothing syncs. Sync with Cloud stays visible but disabled, so people see what the plan unlocks.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "nqVm5",
+      "x": 28440,
+      "y": 23003,
+      "name": "Cloud · New device · Exploration",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1960,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 30,
+      "padding": [
+        48,
+        40
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "bdJM8",
+          "name": "Frame Header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "iQ0fT",
+              "name": "Kicker",
+              "fill": "$ds-fg-subtle",
+              "content": "EXPLORATION · PROMPT STUDIO CLOUD EXTENSION · PS-825",
+              "fontFamily": "$font-heading",
+              "fontSize": 12,
+              "fontWeight": "600",
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "text",
+              "id": "wXXdH",
+              "name": "Title",
+              "fill": "$ds-fg",
+              "content": "A new device",
+              "lineHeight": 1.05,
+              "fontFamily": "$font-display",
+              "fontSize": 44,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "yaQM7",
+              "name": "Sub",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 1180,
+              "content": "Signing in on a new device connects it to every cloud project on the account and starts downloading them. No step per project. Project data such as tickets, notes, artifacts and session history needs no folder, so a project opens as soon as its data is down. The project's files come later: the first time something needs them, Prompt Studio asks for a folder and offers to clone the project's git remote.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Aqcty",
+          "name": "Project picker",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "FN6ws",
+              "name": "Caption",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 5,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uHHbA",
+                  "name": "TR",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "z9T1U",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "project picker",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "RoPjx",
+                      "name": "B",
+                      "fill": "$ds-surface",
+                      "cornerRadius": 999,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        4,
+                        9
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YTMwk",
+                          "name": "T",
+                          "fill": "$ds-fg-muted",
+                          "content": "fresh install · sign in · download · open",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vyK4F",
+                      "name": "Sp",
+                      "width": "fill_container",
+                      "height": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "tP9h8",
+                  "name": "D",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Cloud projects appear in the normal project picker with a cloud icon. The second line says where the project is on this device: downloading, ready without a folder, or its folder path once one is chosen. Opening a project that is still downloading works; the Cloud status item shows Downloading until it is ready offline.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "PCnGL",
+              "name": "Steps",
+              "width": "fill_container",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "n9488",
+                  "name": "1 · fresh install",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "gHopJ",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "1 · fresh install",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "VwCw5",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width-height",
+                      "width": "fill_container",
+                      "height": 48,
+                      "content": "Nothing on this device yet. The empty picker offers to sign in, next to creating a local project.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hynk5",
+                      "name": "Projects modal",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000040",
+                        "offset": {
+                          "x": 0,
+                          "y": 8
+                        },
+                        "blur": 24
+                      },
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "pkaGG",
+                          "name": "Header",
+                          "width": "fill_container",
+                          "padding": [
+                            16,
+                            16,
+                            8,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "p85bE",
+                              "name": "Text",
+                              "fill": "$ds-fg",
+                              "content": "Projects",
+                              "lineHeight": 1.45,
+                              "fontFamily": "$font-body",
+                              "fontSize": 16,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "MI0zz",
+                          "name": "List",
+                          "width": "fill_container",
+                          "height": 236,
+                          "layout": "vertical",
+                          "padding": [
+                            4,
+                            8
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "DqEpF",
+                              "name": "Empty",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "BnRZK",
+                                  "name": "Icon",
+                                  "width": 28,
+                                  "height": 28,
+                                  "icon": "folder-open",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-subtle"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "kboFD",
+                                  "name": "Text",
+                                  "fill": "$ds-fg",
+                                  "content": "No projects yet",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "WSIHm",
+                                  "name": "Text",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Create a project, or sign in to get your cloud projects.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "id": "dxJ39",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Sign in with Google",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "outline",
+                                    "size": "xs"
+                                  },
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": true,
+                                      "icon": "log-in",
+                                      "width": 12,
+                                      "height": 12
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Sign in with Google"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "meHe0",
+                          "name": "Footer",
+                          "width": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "top": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            16,
+                            12,
+                            16
+                          ],
+                          "justifyContent": "end",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "yxWSx",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Create project",
+                              "height": 28,
+                              "theme": {
+                                "btn": "outline",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": true,
+                                  "icon": "plus",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                "Hf4GT": {
+                                  "content": "Create project"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "t2Hyk",
+                  "name": "2 · signed in",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "IG8dL",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "2 · signed in",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "aDoR5",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width-height",
+                      "width": "fill_container",
+                      "height": 48,
+                      "content": "Every cloud project of the account appears at once and starts downloading. The status item shows Downloading.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Kk9u2",
+                      "name": "Projects modal",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000040",
+                        "offset": {
+                          "x": 0,
+                          "y": 8
+                        },
+                        "blur": 24
+                      },
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Uzb8V",
+                          "name": "Header",
+                          "width": "fill_container",
+                          "padding": [
+                            16,
+                            16,
+                            8,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "PCXHY",
+                              "name": "Text",
+                              "fill": "$ds-fg",
+                              "content": "Projects",
+                              "lineHeight": 1.45,
+                              "fontFamily": "$font-body",
+                              "fontSize": 16,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "r6CCZI",
+                          "name": "List",
+                          "width": "fill_container",
+                          "height": 236,
+                          "layout": "vertical",
+                          "padding": [
+                            4,
+                            8
+                          ],
+                          "children": [
+                            {
+                              "id": "Q4mmE8",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Prompt Studio",
+                              "width": "fill_container",
+                              "height": "fit_content",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "cloud"
+                                },
+                                "h0cJn": {
+                                  "content": "Prompt Studio"
+                                },
+                                "lTPwv": {
+                                  "content": "Cloud · not on this device yet",
+                                  "enabled": true
+                                },
+                                "E8VVm": {
+                                  "enabled": true,
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "gray"
+                                  }
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": "62%"
+                                }
+                              }
+                            },
+                            {
+                              "id": "uIPDT",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Granite",
+                              "width": "fill_container",
+                              "height": "fit_content",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "cloud"
+                                },
+                                "h0cJn": {
+                                  "content": "Granite"
+                                },
+                                "lTPwv": {
+                                  "content": "Cloud · waiting to download",
+                                  "enabled": true
+                                },
+                                "E8VVm": {
+                                  "enabled": true,
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "gray"
+                                  }
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": "Queued"
+                                }
+                              }
+                            },
+                            {
+                              "id": "B6jM7",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Docufin",
+                              "width": "fill_container",
+                              "height": "fit_content",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "cloud"
+                                },
+                                "h0cJn": {
+                                  "content": "Docufin"
+                                },
+                                "lTPwv": {
+                                  "content": "Cloud · ready offline · no folder yet",
+                                  "enabled": true
+                                },
+                                "E8VVm": {
+                                  "enabled": false,
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "gray"
+                                  }
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": ""
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "O299e7",
+                          "name": "Footer",
+                          "width": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "top": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            16,
+                            12,
+                            16
+                          ],
+                          "justifyContent": "end",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "OI5d0",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Create project",
+                              "height": 28,
+                              "theme": {
+                                "btn": "outline",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": true,
+                                  "icon": "plus",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                "Hf4GT": {
+                                  "content": "Create project"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "znYC2",
+                  "name": "3 · after a while",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SmO5K",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "3 · after a while",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Z4cdW8",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width-height",
+                      "width": "fill_container",
+                      "height": 48,
+                      "content": "Data is down. Projects without a folder open fine; only work on files asks for one. Docufin already got its folder through the dialog below.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "z6ihZV",
+                      "name": "Projects modal",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000040",
+                        "offset": {
+                          "x": 0,
+                          "y": 8
+                        },
+                        "blur": 24
+                      },
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "YDj5J",
+                          "name": "Header",
+                          "width": "fill_container",
+                          "padding": [
+                            16,
+                            16,
+                            8,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "O0D5p",
+                              "name": "Text",
+                              "fill": "$ds-fg",
+                              "content": "Projects",
+                              "lineHeight": 1.45,
+                              "fontFamily": "$font-body",
+                              "fontSize": 16,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Q68I4B",
+                          "name": "List",
+                          "width": "fill_container",
+                          "height": 236,
+                          "layout": "vertical",
+                          "padding": [
+                            4,
+                            8
+                          ],
+                          "children": [
+                            {
+                              "id": "xomHQ",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Prompt Studio",
+                              "width": "fill_container",
+                              "height": "fit_content",
+                              "theme": {
+                                "row": "active"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "cloud"
+                                },
+                                "h0cJn": {
+                                  "content": "Prompt Studio"
+                                },
+                                "lTPwv": {
+                                  "content": "Cloud · ready offline · no folder yet",
+                                  "enabled": true
+                                },
+                                "E8VVm": {
+                                  "enabled": false,
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "gray"
+                                  }
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": ""
+                                }
+                              }
+                            },
+                            {
+                              "id": "m96jOj",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Granite",
+                              "width": "fill_container",
+                              "height": "fit_content",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "cloud"
+                                },
+                                "h0cJn": {
+                                  "content": "Granite"
+                                },
+                                "lTPwv": {
+                                  "content": "Cloud · ready offline · no folder yet",
+                                  "enabled": true
+                                },
+                                "E8VVm": {
+                                  "enabled": false,
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "gray"
+                                  }
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": ""
+                                }
+                              }
+                            },
+                            {
+                              "id": "k46myN",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Docufin",
+                              "width": "fill_container",
+                              "height": "fit_content",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "cloud"
+                                },
+                                "h0cJn": {
+                                  "content": "Docufin"
+                                },
+                                "lTPwv": {
+                                  "content": "~/Projects/docufin",
+                                  "enabled": true
+                                },
+                                "E8VVm": {
+                                  "enabled": false,
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "gray"
+                                  }
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": ""
+                                }
+                              }
+                            },
+                            {
+                              "id": "aASb2",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Scratchpad",
+                              "width": "fill_container",
+                              "height": "fit_content",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "folder"
+                                },
+                                "h0cJn": {
+                                  "content": "Scratchpad"
+                                },
+                                "lTPwv": {
+                                  "content": "~/Documents/scratchpad · local",
+                                  "enabled": true
+                                },
+                                "E8VVm": {
+                                  "enabled": false,
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "gray"
+                                  }
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": ""
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "diqA9",
+                          "name": "Footer",
+                          "width": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "top": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            16,
+                            12,
+                            16
+                          ],
+                          "justifyContent": "end",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "F6ceAX",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Create project",
+                              "height": 28,
+                              "theme": {
+                                "btn": "outline",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": true,
+                                  "icon": "plus",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                "Hf4GT": {
+                                  "content": "Create project"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "VDhoz",
+                  "name": "signed in · no plan",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "L6jGAz",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "signed in · no plan",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "P33GO8",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width-height",
+                      "width": "fill_container",
+                      "height": 48,
+                      "content": "The account has cloud projects from an earlier plan, but no plan now. They show, locked, so nothing seems lost.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "clGOT",
+                      "name": "Projects modal",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000040",
+                        "offset": {
+                          "x": 0,
+                          "y": 8
+                        },
+                        "blur": 24
+                      },
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "X0BOv7",
+                          "name": "Header",
+                          "width": "fill_container",
+                          "padding": [
+                            16,
+                            16,
+                            8,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "fOKow",
+                              "name": "Text",
+                              "fill": "$ds-fg",
+                              "content": "Projects",
+                              "lineHeight": 1.45,
+                              "fontFamily": "$font-body",
+                              "fontSize": 16,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "JVFig",
+                          "name": "List",
+                          "width": "fill_container",
+                          "height": 236,
+                          "layout": "vertical",
+                          "padding": [
+                            4,
+                            8
+                          ],
+                          "children": [
+                            {
+                              "id": "ooHAO",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Prompt Studio",
+                              "width": "fill_container",
+                              "height": "fit_content",
+                              "theme": {
+                                "row": "locked"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "lock"
+                                },
+                                "h0cJn": {
+                                  "content": "Prompt Studio"
+                                },
+                                "lTPwv": {
+                                  "content": "Cloud · needs a Cloud plan to download",
+                                  "enabled": true
+                                },
+                                "E8VVm": {
+                                  "enabled": false,
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "gray"
+                                  }
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": ""
+                                }
+                              }
+                            },
+                            {
+                              "id": "Hqprp",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Granite",
+                              "width": "fill_container",
+                              "height": "fit_content",
+                              "theme": {
+                                "row": "locked"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "lock"
+                                },
+                                "h0cJn": {
+                                  "content": "Granite"
+                                },
+                                "lTPwv": {
+                                  "content": "Cloud · needs a Cloud plan to download",
+                                  "enabled": true
+                                },
+                                "E8VVm": {
+                                  "enabled": false,
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "gray"
+                                  }
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": ""
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "BZ4WT",
+                          "name": "Footer",
+                          "width": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "top": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            16,
+                            12,
+                            16
+                          ],
+                          "justifyContent": "end",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "uqxu1",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "See plans",
+                              "height": 28,
+                              "theme": {
+                                "btn": "primary",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": true,
+                                  "icon": "sparkles",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                "Hf4GT": {
+                                  "content": "See plans"
+                                }
+                              }
+                            },
+                            {
+                              "id": "OKkI1",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Create project",
+                              "height": 28,
+                              "theme": {
+                                "btn": "outline",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": true,
+                                  "icon": "plus",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                "Hf4GT": {
+                                  "content": "Create project"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "i7uuUy",
+          "name": "Files on demand",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "NRUEY",
+              "name": "Caption",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 5,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "xf56r",
+                  "name": "TR",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "h2uCG",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "files on demand",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "yCooO",
+                      "name": "B",
+                      "fill": "$ds-surface",
+                      "cornerRadius": 999,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        4,
+                        9
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "HDxcu",
+                          "name": "T",
+                          "fill": "$ds-fg-muted",
+                          "content": "first time something needs files",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rUpou",
+                      "name": "Sp",
+                      "width": "fill_container",
+                      "height": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "JESz5",
+                  "name": "D",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Tickets, notes, artifacts and session history work without a folder. Opening Files, creating a workspace or starting a session that needs files asks once for a folder. When the project records a git remote, cloning is the default; otherwise the user picks an existing folder. A remote command that needs files on a device without a folder fails with a clear error.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "UrGg2",
+              "name": "Exhibits",
+              "width": "fill_container",
+              "gap": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "L0VES",
+                  "name": "Files dialog",
+                  "clip": true,
+                  "width": 520,
+                  "fill": "$ds-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000059",
+                    "offset": {
+                      "x": 0,
+                      "y": 12
+                    },
+                    "blur": 32
+                  },
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "TCOKz",
+                      "name": "Header",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": [
+                        24,
+                        24,
+                        8,
+                        24
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "j08irM",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Prompt Studio's files are not on this device",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 18,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Atw7Q",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Workspaces and file views need the project's folder. Choose how to get it.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "k1IYn",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 14,
+                      "padding": [
+                        12,
+                        24,
+                        20,
+                        24
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "TqVmj",
+                          "name": "Clone option",
+                          "width": "fill_container",
+                          "cornerRadius": 6,
+                          "stroke": "$ds-border-accent",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "id": "dfEHO",
+                              "type": "ref",
+                              "ref": "KPHF7",
+                              "name": "Clone",
+                              "theme": {
+                                "radio": "on"
+                              },
+                              "descendants": {
+                                "aAkIM": {
+                                  "content": "Clone from git@github.com:pstdio/prompt-studio.git"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "px5kr",
+                              "name": "Path",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                0,
+                                0,
+                                30
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "FAOHC",
+                                  "type": "ref",
+                                  "ref": "nbn0J",
+                                  "name": "Folder",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "theme": {
+                                    "size": "xs",
+                                    "field": "default"
+                                  },
+                                  "descendants": {
+                                    "hcIyD": {
+                                      "content": "~/Projects/prompt-studio",
+                                      "fill": "$ds-fg"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "GJ58P",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Browse",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "outline",
+                                    "size": "xs"
+                                  },
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Browse"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "NLe1C",
+                          "name": "Existing option",
+                          "width": "fill_container",
+                          "cornerRadius": 6,
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "id": "XqFt7",
+                              "type": "ref",
+                              "ref": "KPHF7",
+                              "name": "Existing",
+                              "theme": {
+                                "radio": "off"
+                              },
+                              "descendants": {
+                                "aAkIM": {
+                                  "content": "Use a folder that already has it"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "yGyLD",
+                              "name": "Text",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "For a checkout you made yourself. Prompt Studio checks that it is the same repository.",
+                              "lineHeight": 1.45,
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GTpMA",
+                      "name": "Footer",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        8,
+                        24,
+                        16,
+                        24
+                      ],
+                      "justifyContent": "end",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "uTXhA",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Not now",
+                          "height": 32,
+                          "theme": {
+                            "btn": "outline",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Not now"
+                            }
+                          }
+                        },
+                        {
+                          "id": "omUSI",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Clone and continue",
+                          "height": 32,
+                          "theme": {
+                            "btn": "primary",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Clone and continue"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "L2OlmZ",
+                  "name": "What works without a folder",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Q985Kk",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "works without a folder",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "t4417",
+                      "name": "Tickets, boards and reports",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "zGtsF",
+                          "name": "Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "ticket",
+                          "library": "lucide",
+                          "fill": "$ds-success"
+                        },
+                        {
+                          "type": "text",
+                          "id": "bnasf",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "content": "Tickets, boards and reports",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gmXPE",
+                      "name": "Notes and artifacts",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "RKP75",
+                          "name": "Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "notebook-pen",
+                          "library": "lucide",
+                          "fill": "$ds-success"
+                        },
+                        {
+                          "type": "text",
+                          "id": "VkfwU",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "content": "Notes and artifacts",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hMEsf",
+                      "name": "Session history from your other devices",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "FlYoc",
+                          "name": "Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "history",
+                          "library": "lucide",
+                          "fill": "$ds-success"
+                        },
+                        {
+                          "type": "text",
+                          "id": "O8gBC",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "content": "Session history from your other devices",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "B3vDv",
+                      "name": "The Workspaces list, grouped by device",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "RwO2O",
+                          "name": "Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "layers",
+                          "library": "lucide",
+                          "fill": "$ds-success"
+                        },
+                        {
+                          "type": "text",
+                          "id": "akA5m",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "content": "The Workspaces list, grouped by device",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "fQWOy",
+                      "name": "T2",
+                      "fill": "$ds-fg",
+                      "content": "asks for the folder",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NFze7",
+                      "name": "Opening Files or Changes",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "XNKfo",
+                          "name": "Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "folder-tree",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "nB2A6",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "content": "Opening Files or Changes",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tjjLP",
+                      "name": "Creating a workspace",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "FPQdJ",
+                          "name": "Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "git-branch",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "FFgMR",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "content": "Creating a workspace",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TxM5j",
+                      "name": "Starting a session that works on files",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "ioOJT",
+                          "name": "Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "message-square-plus",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "U68HKa",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "content": "Starting a session that works on files",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "RXF0D",
+          "name": "Open questions",
+          "width": "fill_container",
+          "fill": "$ds-surface",
+          "cornerRadius": 12,
+          "stroke": "$ds-border",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            18,
+            20
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "G1C0cm",
+              "name": "Title",
+              "fill": "$ds-fg",
+              "content": "Open questions",
+              "fontFamily": "$font-heading",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "P6ShEE",
+              "name": "Q",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "1 · Plan check: the account manager should only hand out relay access to accounts with an active plan, so the relay never needs to know about billing. Login and device registration stay free.",
+              "lineHeight": 1.45,
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "dWwhl",
+              "name": "Q",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "2 · When a plan ends, how long does Cloud keep the synced data? The design shows a date (Nov 20) as a placeholder.",
+              "lineHeight": 1.45,
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "BFLkZ",
+              "name": "Q",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "3 · Where is the git remote recorded? It needs to sync with the project record so a new device can offer the clone. Without one, only 'Use a folder that already has it' shows.",
+              "lineHeight": 1.45,
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
             }
           ]
         }
