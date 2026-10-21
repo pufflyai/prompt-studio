@@ -7,7 +7,10 @@ import type { ResumeSpawnInput, StartSpawnInput } from "./session-input";
 
 export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpawnProcess }) => {
   const servers = new Map<string, ReturnType<typeof createAppServerTransport>>();
-  const workers = new Map<string, { projectId?: string; worker: ReturnType<typeof createCodexWorker> }>();
+  const workers = new Map<
+    string,
+    { projectId?: string; sessionId?: string; worker: ReturnType<typeof createCodexWorker> }
+  >();
   const readers = new Map<AbortController, { projectId?: string; done: Promise<void> }>();
   const disposeReaders = async (projectId?: string, all = false) => {
     const selected = [...readers.entries()].filter(([, value]) => all || value.projectId === projectId);
@@ -38,12 +41,31 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
     let owned = workers.get(key)?.worker;
     if (!owned || owned.isClosed()) {
       owned = createCodexWorker(input, server(input.env), identity(input));
-      workers.set(key, { projectId: input.env?.PSTDIO_PROJECT_ID, worker: owned });
+      workers.set(key, {
+        projectId: input.env?.PSTDIO_PROJECT_ID,
+        sessionId: input.env?.PSTDIO_SESSION_ID,
+        worker: owned,
+      });
     }
     return owned;
   };
   return {
     worker,
+    releaseSession: async (projectId: string | undefined, sessionId: string) => {
+      const selected = [...workers].filter(
+        ([, value]) => value.projectId === projectId && value.sessionId === sessionId,
+      );
+      const released = await Promise.allSettled(
+        selected.map(async ([key, value]) => {
+          if (!(await value.worker.releaseIdle())) return false;
+          if (workers.get(key) === value) workers.delete(key);
+          return true;
+        }),
+      );
+      const errors = released.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (errors.length) throw new AggregateError(errors, "Codex session cleanup failed.");
+      return released.every((result) => result.status === "fulfilled" && result.value);
+    },
     prepareGoalUpdate: (input: Parameters<typeof keyOf>[0]) => workers.get(keyOf(input))?.worker.prepareGoalUpdate(),
     readMessages: async (input: { agentSessionId: string; cwd?: string; env?: Record<string, string> }) => {
       const transport = server(input.env);
