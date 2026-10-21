@@ -173,6 +173,9 @@ export const createWorkbenchLayoutCache = (
       restoreInventory(current);
       return inventory.getResources();
     },
+    hasPageMain(context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution) {
+      return Boolean(read(mainScope(context, page)));
+    },
     loadPageLayout(context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution | undefined) {
       const scope = input.resolvePagePersistenceScope?.(context)?.scope;
       const layout = read(scope);

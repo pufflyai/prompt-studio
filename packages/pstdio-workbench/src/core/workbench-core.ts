@@ -213,7 +213,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     loadModeLayout: layoutCache.readMode,
     saveModeLayout: layoutCache.saveMode,
     beforeApply: createPagePersistenceScopeHandler(input, layout, panelMenuState),
-    restorePageState: createPageStateRestorer(cachedInput, layoutCache.loadPageLayout),
+    restorePageState: createPageStateRestorer(cachedInput, layoutCache.loadPageLayout, layoutCache.hasPageMain),
 
     revealRegion: (region) => revealPanelRegion(core, region),
     layout,

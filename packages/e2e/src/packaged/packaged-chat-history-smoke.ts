@@ -77,14 +77,19 @@ export const expectPackagedChatHistory = async (page: Page, sessionId: string) =
     logTestPhase("Packaged chat history: show final response");
     await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
     expect(historyReads).toBe(0);
-    const overrides = await page.evaluate((pageId) => {
-      const prefix = ":layout:workbench-main:";
-      return Object.keys(localStorage).filter((key) => {
-        const offset = key.indexOf(prefix);
-        return offset >= 0 && JSON.parse(key.slice(offset + prefix.length))[2] === pageId;
-      }).length;
-    }, workbenchPages.session.id);
-    expect(overrides).toBe(0);
+    const overrides = () =>
+      page.evaluate((pageId) => {
+        const prefix = ":layout:workbench-main:";
+        return Object.keys(localStorage).filter((key) => {
+          const offset = key.indexOf(prefix);
+          return offset >= 0 && JSON.parse(key.slice(offset + prefix.length))[2] === pageId;
+        }).length;
+      }, workbenchPages.session.id);
+    expect(await overrides()).toBe(0);
+    await page.reload();
+    await expect.poll(isOpen).toBe(true);
+    await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
+    expect(await overrides()).toBe(0);
   } finally {
     await page.unroute(route);
   }

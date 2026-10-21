@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { defaultPageResourceCodec } from "pstdio-api-contracts";
 import { createDefaultWorkbenchLayout, type WorkbenchLayout } from "../../registries/layout/layout-types";
 import { pageResourceInstanceKey } from "../../registries/pages/page-resource-context";
+import { createMemoryWorkbenchPageLocationPersistence } from "../page-location/page-location-memory";
 import { modePanelFixture, pageRef } from "./mode-panel-state.fixture";
 import { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 
@@ -51,6 +52,23 @@ test("explicitly opened tabs retain resources across navigation and reload until
   restored.w.closePlacement(extra.placementIdentity!);
   restored.navigate("conversation", "second");
   expect(restored.w.getOpenResources().map((resource) => resource.id)).toEqual(["second"]);
+});
+
+test("booting the saved location rebuilds default Main tabs without treating geometry as an explicit closure", () => {
+  const page = conversations().w.pages.getPage("conversation")!;
+  const saved = new Map<string | undefined, WorkbenchLayout>();
+  const locations = createMemoryWorkbenchPageLocationPersistence();
+  const first = modePanelFixture(saved, true, [page], "alpha", locations);
+  first.navigate("conversation", "selected");
+  expect(mainScopes(saved)).toEqual([]);
+  const restored = modePanelFixture(saved, true, [page], "", locations);
+  expect(restored.w.pageLocations.boot("project").ok).toBe(true);
+  expect(restored.ids("main")).toEqual(["selected"]);
+  expect(mainScopes(saved)).toEqual([]);
+  restored.open("extra", "main", "pin");
+  const custom = modePanelFixture(saved, true, [page], "", locations);
+  expect(custom.w.pageLocations.boot("project").ok).toBe(true);
+  expect(custom.ids("main")).toEqual(expect.arrayContaining(["selected", "extra"]));
 });
 
 test("a custom Main tray survives navigation and its override disappears after returning to baseline", () => {
