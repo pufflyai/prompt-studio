@@ -243,6 +243,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     fullscreen: createMainFullscreen(() => core),
     host: {
       getOpenPlacements: () => layoutCache.listPlacements(layout.getLayout()),
+      getOpenPlacementIds: () => layoutCache.placementIds(layout.getLayout()),
       getSnapshot: () => ({ layout: layout.getLayout() }),
       restoreSnapshot: (snapshot) => layout.restoreLayout(snapshot.layout),
       setPersistenceScope: (scope, scopeInput = {}) =>

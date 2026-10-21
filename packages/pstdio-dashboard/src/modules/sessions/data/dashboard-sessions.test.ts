@@ -7,6 +7,24 @@ import {
   resolveDashboardSessionViewForPlacement,
 } from "./dashboard-sessions";
 
+test("unchanged session lists share a snapshot and synced edits invalidate it", () => {
+  const writer = getWriter("sessions")!;
+  writer.upsert({ id: "snapshot-session", title: "Before", project_id: "snapshot-project" });
+  try {
+    const first = createDashboardSessions("snapshot-project");
+    expect(createDashboardSessions("snapshot-project")).toBe(first);
+    expect(createDashboardSessions("other-project")).toEqual([]);
+    writer.upsert({ id: "snapshot-session", title: "After", project_id: "snapshot-project" });
+    const updated = createDashboardSessions("snapshot-project");
+    expect(updated).not.toBe(first);
+    expect(updated[0].title).toBe("After");
+    writer.remove("snapshot-session");
+    expect(createDashboardSessions("snapshot-project")).toEqual([]);
+  } finally {
+    writer.remove("snapshot-session");
+  }
+});
+
 test("selected session and recent menus never enumerate unrelated files", () => {
   getWriter("sessions")!.upsert({ id: "keyed", title: "Selected", project_id: "project" });
   getWriter("workspace_sessions")!.upsert({ id: "keyed-link", session_id: "keyed", workspace_id: "keyed-workspace" });

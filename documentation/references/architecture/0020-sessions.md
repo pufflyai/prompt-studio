@@ -18,6 +18,20 @@ The workbench keeps a recently closed view for the same grace period, preserving
 
 The SDK client exposes `sessions.retainResources(sessionId)`, which returns a connection with `close()`. It uses the existing multiplexed session stream and restores interest after connection loss. History reads stay separate: listing sessions or reading a completed transcript does not start its native tools.
 
+The workbench restores its open-placement inventory once and updates only the scopes whose tabs change. Regions and conversation views share a cached placement-ID set, so checking whether a tab is open does not enumerate storage or rebuild the inventory. Persistence adapters can publish layout changes, including transforms and evictions, through `onDidChangeLayout`. Navigation keeps inactive open tabs retained; closing a tab removes its interest when no other owner keeps it open.
+
+Page Main trays start from the page declarations and routed resource. A page-specific layout snapshot is saved only when its tabs, order, pinning, or selection differ from that baseline. Returning to baseline removes the saved override when the persistence adapter supports deletion. Default pages remain in the shared runtime inventory during navigation without a full saved layout per resource. Custom trays and explicit closed default panels still restore their saved state. Main geometry remains owned by the mode.
+
+The host indexes idle owners by cleanup deadline and session ID. Retaining or using one session updates only that session's owners and the next cleanup deadline. One timer serves all idle owners. Cleanup does not scan every session on each interaction.
+
+Resolving the selected session uses its keyed synced row and checks the selected project. It does not rebuild or sort the session list during navigation.
+
+Session lists share a sorted snapshot per runtime collection owner, synced collection version, and project. Synced edits invalidate the snapshot; selection changes reuse it. Switching API clients cannot reuse another runtime's session data.
+
+Tree previews preserve an unchanged data snapshot during selection changes, so selecting a session does not clone every saved row. A failed subscription response triggers removal of the possibly accepted claim before tab interest retries.
+
+The fixed 10,000-session bookkeeping workloads can be measured with `bun run --cwd packages/pstdio-workbench bench:open-resources` and `bun run --cwd packages/pstdio-api-runtime-host bench:session-resources`. They report restoration, warm inventory checks, bulk interest changes, and expiry separately. These workloads measure metadata and ownership; they do not start 10,000 native runtimes or mount 10,000 transcripts.
+
 Harnesses can implement the optional `releaseSession(ctx, { sessionId })` method. The host calls it only after the grace period and waits for in-flight cleanup before dispatching another operation for that owner. Returning `false` means native work or delivery is not yet safe to release; the host keeps ownership and checks again after another grace period. A cleanup error is logged and also keeps ownership. Providers without the method retain their existing lifecycle.
 
 The core host owns the shared retention policy. Each harness extension owns the native mechanism that makes release safe:

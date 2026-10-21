@@ -3,6 +3,33 @@ import { createDefaultWorkbenchLayout } from "../core";
 import { createLocalStorageLayoutPersistence } from "./local-storage-layout-persistence";
 import { createLocalStorageWorkbenchPersistence } from "./local-storage-persistence";
 
+test("removing a layout cancels its pending write without removing other scopes", () => {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+    removeItem: (key: string) => {
+      values.delete(key);
+    },
+  };
+  const persistence = createLocalStorageLayoutPersistence({ namespace: "remove", storage });
+  const layout = createDefaultWorkbenchLayout();
+  try {
+    persistence.setLayout(layout, "first");
+    persistence.setLayout(layout, "second");
+    persistence.flush?.();
+    persistence.setLayout(layout, "first");
+    persistence.removeLayout?.("first");
+    persistence.flush?.();
+    expect(persistence.getLayout("first")).toBeUndefined();
+    expect(persistence.getLayout("second")).toEqual(layout);
+  } finally {
+    persistence.dispose?.();
+  }
+});
+
 test("enumerates pending and persisted inactive layouts through snapshot persistence", () => {
   const values = new Map<string, string>();
   const storage = {

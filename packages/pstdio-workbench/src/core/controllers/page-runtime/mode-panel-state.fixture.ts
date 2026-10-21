@@ -16,6 +16,9 @@ export const modePanelFixture = (
     layoutPersistence: {
       getLayout: (scope) => saved.get(scope),
       setLayout: (layout, scope) => saved.set(scope, structuredClone(layout)),
+      removeLayout: (scope) => {
+        saved.delete(scope);
+      },
       listLayouts: () => [...saved].map(([scope, layout]) => ({ scope, layout })),
     },
     resolvePagePersistenceScope: scoped

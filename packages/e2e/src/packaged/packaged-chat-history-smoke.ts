@@ -1,7 +1,23 @@
 import { expect, type Page } from "@playwright/test";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { logTestPhase } from "../scripts/log-test-phase";
 
 export const expectPackagedChatHistory = async (page: Page, sessionId: string) => {
+  const retained = await page.evaluate((id) => {
+    const workbench = (
+      window as Window & {
+        __pstdioDashboardWorkbench: {
+          host: {
+            getOpenPlacementIds(): ReadonlySet<string>;
+            getOpenPlacements(): { widgetId: string; resource?: { id: string } }[];
+          };
+        };
+      }
+    ).__pstdioDashboardWorkbench;
+    const placement = workbench.host.getOpenPlacements().find((entry) => entry.resource?.id === id);
+    return Boolean(placement && workbench.host.getOpenPlacementIds().has(placement.widgetId));
+  }, sessionId);
+  expect(retained).toBe(true);
   logTestPhase("Packaged chat history: sticky position");
   const log = page.getByRole("log").last();
   const viewport = log.locator('[data-scope="scroll-area"][data-part="viewport"]').first();
@@ -58,6 +74,14 @@ export const expectPackagedChatHistory = async (page: Page, sessionId: string) =
     logTestPhase("Packaged chat history: show final response");
     await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
     expect(historyReads).toBe(0);
+    const overrides = await page.evaluate((pageId) => {
+      const prefix = ":layout:workbench-main:";
+      return Object.keys(localStorage).filter((key) => {
+        const offset = key.indexOf(prefix);
+        return offset >= 0 && JSON.parse(key.slice(offset + prefix.length))[2] === pageId;
+      }).length;
+    }, workbenchPages.session.id);
+    expect(overrides).toBe(0);
   } finally {
     await page.unroute(route);
   }

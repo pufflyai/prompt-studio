@@ -11,7 +11,9 @@ export const createPageLayoutCacheHandlers = (cache: ReturnType<typeof createWor
   savePageMain: (
     state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
     layout: Parameters<typeof cache.savePageMain>[1],
-  ) => cache.savePageMain(pageLayoutContext(state), layout, state.pages[state.activePageId ?? ""]),
+    beforePreviewRemoval?: Parameters<typeof cache.savePageMain>[1],
+  ) =>
+    cache.savePageMain(pageLayoutContext(state), layout, state.pages[state.activePageId ?? ""], beforePreviewRemoval),
 });
 
 const caches = new WeakMap<WorkbenchCore, ReturnType<typeof createWorkbenchLayoutCache>>();

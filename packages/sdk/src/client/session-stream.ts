@@ -45,7 +45,8 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
       () => {},
       (error: unknown) => {
         if (subscriptions.get(id) !== subscription) return;
-        release(id, false);
+        // A failed response can still have created the server subscription.
+        release(id, true);
         subscription.onError(error);
       },
     );
