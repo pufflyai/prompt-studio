@@ -22,7 +22,7 @@ export const DraggableAgents: Story = {
     docs: {
       description: {
         story:
-          "Twelve shapes, two of each kind, start awake in a low floor layout. Watch the first two seconds: the shapes settle slightly from the first frame, with no delayed burst when a cursor first grabs one. Pull an exposed shape slowly from beneath the pile, then try a fast pull and release. Neighbours move immediately. Escape or pointer cancellation returns the held shape. People can take a shape from an active cursor while other cursors keep working. Positions and the loop survive navigation. The board grows with available space while slots and shapes keep their size. Watch OpenCode after Rename icon, and resize during the board session clicks. Reduced motion hides cursors and preserves manual dragging.",
+          "All 28 shapes start awake in low floor stacks. Watch the first two seconds: the shapes settle slightly from the first frame, with no delayed burst when a cursor first grabs one. Pull an exposed shape slowly from beneath the pile, then sweep quickly across the scene and release. At 2560 by 1440, the held shape should keep up with the pointer and collide with its neighbours. Narrow scenes keep all 28 shapes and let them settle into a crowded pile. Neighbours move immediately. Escape or pointer cancellation returns the held shape. People can take a shape from an active cursor while other cursors keep working. Positions and the loop survive navigation. The board grows with available space while slots and shapes keep their size. Watch OpenCode after Rename icon, and resize during the board session clicks. Reduced motion hides cursors and preserves manual dragging.",
       },
     },
   },

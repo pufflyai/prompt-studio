@@ -71,12 +71,21 @@ const setPosition = (piece: PhysicsPiece, point: AssemblyPosition) => {
   Matter.Body.setPosition(piece.body, { x: point.x + offset.x, y: point.y + offset.y });
 };
 
-/** Both human and agent drags use springs in the same collision world. */
+const limitMomentum = (piece: PhysicsPiece, held: boolean) => {
+  const speed = Matter.Body.getSpeed(piece.body);
+  if (!held && speed > 18) Matter.Body.setVelocity(piece.body, Matter.Vector.mult(piece.body.velocity, 18 / speed));
+  // Fast contact impulses can turn linear movement into runaway spinning.
+  const radius = Math.hypot(piece.width, piece.height) / 2;
+  const edgeSpeed = Math.abs(piece.body.angularVelocity) * radius;
+  if (edgeSpeed > 18) Matter.Body.setAngularVelocity(piece.body, piece.body.angularVelocity * (18 / edgeSpeed));
+};
+
+/** Human and agent drags steer bodies through the same collision world. */
 export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: FieldSize = DEFAULT_FIELD_SIZE) => {
   let size = initialSize;
   const engine = Matter.Engine.create({ gravity: { x: 0, y: 1.2 }, enableSleeping: true });
   const pieces = definitions.map(createPiece);
-  const grips = new Map<string, { constraint: Matter.Constraint; target: { x: number; y: number } }>();
+  const grips = new Map<string, { piece: PhysicsPiece; target: { x: number; y: number } }>();
   const createWalls = () => [
     Matter.Bodies.rectangle(size.width / 2, -30, size.width + 120, 60, { isStatic: true }),
     Matter.Bodies.rectangle(size.width / 2, size.height + 30, size.width + 120, 60, { isStatic: true }),
@@ -86,8 +95,6 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
   let walls = createWalls();
   Matter.Composite.add(engine.world, [...walls, ...pieces.map((piece) => piece.body)]);
   const release = (piece: PhysicsPiece) => {
-    const grip = grips.get(piece.id);
-    if (grip) Matter.Composite.remove(engine.world, grip.constraint);
     grips.delete(piece.id);
   };
   const grab = (piece: PhysicsPiece) => {
@@ -96,16 +103,7 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
     Matter.Body.setStatic(piece.body, false);
     Matter.Sleeping.set(piece.body, false);
     const point = physicsPosition(piece);
-    const grip = Matter.Constraint.create({
-      pointA: { x: point.x, y: point.y },
-      bodyB: piece.body,
-      pointB: { x: point.x - piece.body.position.x, y: point.y - piece.body.position.y },
-      stiffness: 0.035,
-      damping: 0.12,
-      length: 0,
-    });
-    grips.set(piece.id, { constraint: grip, target: { x: point.x, y: point.y } });
-    Matter.Composite.add(engine.world, grip);
+    grips.set(piece.id, { piece, target: { x: point.x, y: point.y } });
   };
   const snap = (piece: PhysicsPiece, slot: AssemblySlot) => {
     release(piece);
@@ -114,6 +112,34 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
     Matter.Body.setStatic(piece.body, true);
   };
   let accumulator = 0;
+  const advance = (delta: number, remainingUpdates: number) => {
+    // Sleeping neighbours act like fixed obstacles until a pull is fast enough to wake them.
+    // Keep the small shared pile awake during drags so slow pulls move it from the first step.
+    if (grips.size)
+      pieces.forEach(({ body }) => {
+        Matter.Sleeping.set(body, false);
+      });
+    // Spread the pointer movement over the frame so the last update keeps its release velocity.
+    const moving = [...grips.values()].map(({ piece, target }) => {
+      const point = physicsPosition(piece);
+      const offset = Matter.Vector.mult(Matter.Vector.sub(target, point), 1 / remainingUpdates);
+      return { piece, target: Matter.Vector.add(point, offset), distance: Matter.Vector.magnitude(offset) };
+    });
+    // Small actual body movements let Matter resolve contacts before the next movement.
+    const travel = Math.max(0, ...moving.map(({ distance }) => distance));
+    const steps = Math.max(1, Math.ceil(travel / 8));
+    for (let step = 0; step < steps; step++) {
+      for (const { piece, target } of moving) {
+        const offset = Matter.Vector.sub(target, physicsPosition(piece));
+        const distance = Matter.Vector.magnitude(offset);
+        const fraction = Math.min(1 / (steps - step), 8 / (distance || 1));
+        const velocity = Matter.Vector.mult(offset, (fraction * (1000 / 60)) / (delta / steps));
+        Matter.Body.setVelocity(piece.body, velocity);
+      }
+      for (const piece of pieces) limitMomentum(piece, grips.has(piece.id));
+      Matter.Engine.update(engine, delta / steps);
+    }
+  };
   return {
     pieces,
     grab,
@@ -184,26 +210,11 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
     },
     step: (delta: number) => {
       accumulator += Math.min(delta, 48);
-      while (accumulator >= 1000 / 120) {
-        // Sleeping neighbours act like fixed obstacles until a pull is fast enough to wake them.
-        // Keep the small shared pile awake during drags so slow pulls move it from the first step.
-        if (grips.size)
-          pieces.forEach(({ body }) => {
-            Matter.Sleeping.set(body, false);
-          });
-        // Limit spring travel per step so a fast pointer cannot tunnel a body through a wall.
-        for (const { constraint, target } of grips.values()) {
-          const delta = Matter.Vector.sub(target, constraint.pointA);
-          const distance = Matter.Vector.magnitude(delta);
-          const fraction = distance > 8 ? 8 / distance : 1;
-          constraint.pointA = Matter.Vector.add(constraint.pointA, Matter.Vector.mult(delta, fraction));
-        }
-        for (const { body } of pieces) {
-          const speed = Matter.Vector.magnitude(body.velocity);
-          if (speed > 18) Matter.Body.setVelocity(body, Matter.Vector.mult(body.velocity, 18 / speed));
-        }
-        Matter.Engine.update(engine, 1000 / 120);
+      let updates = Math.floor(accumulator / (1000 / 120));
+      while (updates > 0) {
+        advance(1000 / 120, updates);
         accumulator -= 1000 / 120;
+        updates -= 1;
       }
     },
     dispose: () => {
