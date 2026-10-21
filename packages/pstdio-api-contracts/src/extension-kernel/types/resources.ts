@@ -40,6 +40,19 @@ export interface ResourceRemovedEvent {
   resource: ResourceRef;
 }
 
+export interface ResourceIdentity {
+  id: string;
+  kind: string;
+  shorthand: string;
+  aliases: string[];
+}
+
+export interface ResourceRenumberedEvent {
+  resource: ResourceRef;
+  previousShorthand: string;
+  shorthand: string;
+}
+
 export interface ResourceAnchorQuery {
   resource: ResourceRef;
   direction?: "outgoing" | "incoming" | "both";
@@ -82,6 +95,10 @@ export interface ExtensionResourcesApi {
   removed(resource: ResourceRef): Promise<void>;
   /** Allocate an ID and shorthand. idPrefix selects the same compact ID format as storage.ids.create. */
   allocate(input: { kind: string; idPrefix?: string }): Promise<{ id: string; shorthand: string }>;
+  /** Read the core-owned current number. Returns null for an unknown resource. */
+  identity(input: { kind: string; id: string }): Promise<ResourceIdentity | null>;
+  /** Current matches come first; shared aliases can return several resources. */
+  findByShorthand(input: { kind: string; shorthand: string }): Promise<ResourceIdentity[]>;
 }
 
 export interface ViewHierarchyParent {

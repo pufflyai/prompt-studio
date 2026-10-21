@@ -35,6 +35,7 @@ export const restoreModePanelLayout = (
   }
   return {
     ...layout,
+    arrangement: saved?.arrangement ?? defaults.arrangement,
     regions,
     activeWidgetId:
       saved?.activeWidgetId && savedIds.has(saved.activeWidgetId) ? saved.activeWidgetId : layout.activeWidgetId,

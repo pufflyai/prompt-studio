@@ -10,7 +10,7 @@ console.log("Built relay liveness passed");
 
 const bytes = crypto.getRandomValues(new Uint8Array(1024));
 
-const scope = { accountId: "smoke-owner", workbenchId: crypto.randomUUID(), extensionId: "notes" };
+const scope = { accountId: "smoke-owner", workbenchId: "built-storage-smoke", extensionId: "notes" };
 const asset = {
   sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),
   byteLength: bytes.length,

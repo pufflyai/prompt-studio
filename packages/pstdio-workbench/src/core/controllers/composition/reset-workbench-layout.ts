@@ -48,6 +48,7 @@ export const resetWorkbenchLayout = (core: WorkbenchCore) => {
   const defaults = core.layout.store.getInitialState().layout;
   const cleared = {
     ...layout,
+    arrangement: defaults.arrangement,
     regions: Object.fromEntries(
       Object.entries(layout.regions).map(([id, region]) => [
         id,

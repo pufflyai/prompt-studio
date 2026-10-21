@@ -125,3 +125,24 @@ Read-only rich messages detect ordinary file paths in prose and show them as res
 bubbles. Agents can share paths without knowing any special link syntax. Owner
 resolution supplies the label, icon, and navigation URL. Ordinary web links keep
 their normal appearance. Editable messages retain their original Markdown source.
+
+## Resource numbers
+
+On `main` (the release after 0.44.0), core owns numbers for resource kinds that declare a prefix.
+Call `ctx.resources.allocate({ kind })` to get an ID and an initial shorthand, including offline.
+Store the ID with the extension's data. Read the current shorthand with
+`ctx.resources.identity({ kind, id })`; it returns `{ id, kind, shorthand, aliases }`, or
+`null` for an unknown resource. Do not store a separate copy of the number.
+
+After devices merge, the resource whose ID sorts first keeps a duplicated number.
+Core assigns the others the next free number and retains earlier numbers as aliases.
+`ctx.resources.findByShorthand({ kind, shorthand })` returns all matching identities,
+with current matches before alias matches. A shared alias can return several resources;
+show those choices so the person can select the right one. Both methods are scoped to
+the calling extension and project.
+
+`resourceEvents.renumbered` from `@pstdio/sdk/extensions` is the host event
+`resource.renumbered`. It carries `{ resource, previousShorthand, shorthand }` after the
+number is saved locally. Use it to refresh displayed numbers and generated references.
+The host handles collision repair and alias storage; extensions need no sync code.
+Workspace numbers (`WS-`) are separate and do not use this API.
