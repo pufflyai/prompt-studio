@@ -28,16 +28,16 @@ for (const story of ["attached-side", "floating-side", "closed-side", "fixed-sid
     await expect(page.locator('[data-workbench-region="status"]')).toBeHidden();
     await expect(page.getByRole("textbox", { name: "Terminal draft" })).toBeHidden();
     if (story !== "fixed-side") {
-      const toggle = page.getByRole("button", { name: "Show fullscreen Side Panel" });
-      if (await toggle.isVisible()) await toggle.click();
+      const bubble = page.getByRole("button", { name: "Open Side Panel", exact: true });
+      if (await bubble.isVisible()) await bubble.click();
       const session = page.getByRole("textbox", { name: "Session draft" });
       await session.fill("Live Side draft");
       await session.press("Escape");
-      await expect(toggle).toBeFocused();
-      await toggle.click();
+      await expect(bubble).toBeFocused();
+      await bubble.click();
       await expect(session).toHaveValue("Live Side draft");
       await session.press("Escape");
-      await expect(toggle).toBeFocused();
+      await expect(bubble).toBeFocused();
     }
     await page.getByRole("textbox", { name: "Editor draft" }).press("Escape");
     await expect(page.getByRole("button", { name: "Enter Main fullscreen" })).toBeFocused();
@@ -70,9 +70,9 @@ test("unhandled iframe Escape dismisses Side then exits, preserving guest drafts
   await draft.fill("Unsaved iframe Side");
   await side.getByRole("button", { name: "Open nested dialog" }).click();
   await side.getByRole("dialog").press("Escape");
-  await expect(page.getByRole("button", { name: "Hide fullscreen Side Panel" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Side Panel", exact: true })).toBeVisible();
   await draft.press("Escape");
-  const reopen = page.getByRole("button", { name: "Show fullscreen Side Panel" });
+  const reopen = page.getByRole("button", { name: "Open Side Panel", exact: true });
   await expect(reopen).toBeFocused();
   await reopen.click();
   await expect(draft).toHaveValue("Unsaved iframe Side");

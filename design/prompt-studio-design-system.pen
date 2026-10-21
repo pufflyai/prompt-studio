@@ -193923,7 +193923,7 @@
       "x": 56850,
       "y": 0,
       "name": "PS-798 · Main fullscreen and temporary Side",
-      "context": "Fullscreen keeps the Side bubble available while the temporary overlay is minimized. Opening the bubble changes only fullscreen presentation; saved panel layout is retained. Hide the bubble beneath the open overlay and respect Side availability, floating and opening permissions.",
+      "context": "Fullscreen uses only the bubble to reopen the temporary Side overlay. The header retains the fullscreen exit control. Closing or minimizing Side returns focus to the bubble. Saved panel layout is retained; Side availability, floating and opening permissions still apply.",
       "width": 940,
       "height": 1200,
       "fill": "$ds-bg-subtle",
@@ -193973,25 +193973,6 @@
                   "name": "Main context spacer",
                   "width": "fill_container",
                   "height": 1
-                },
-                {
-                  "id": "H8SRM9",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Temporary Side toggle",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
                 },
                 {
                   "id": "jip7n",
@@ -194123,25 +194104,6 @@
                   "height": 1
                 },
                 {
-                  "id": "Gsugx",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Temporary Side toggle",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                },
-                {
                   "id": "IaA6D",
                   "type": "ref",
                   "ref": "nvvgg",
@@ -194271,25 +194233,6 @@
                   "height": 1
                 },
                 {
-                  "id": "xAKwx",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Temporary Side toggle",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                },
-                {
                   "id": "IwXEw",
                   "type": "ref",
                   "ref": "nvvgg",
@@ -194378,25 +194321,6 @@
                   "name": "Main context spacer",
                   "width": "fill_container",
                   "height": 1
-                },
-                {
-                  "id": "m84OkA",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Temporary Side toggle",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
                 },
                 {
                   "id": "MEQ1k",

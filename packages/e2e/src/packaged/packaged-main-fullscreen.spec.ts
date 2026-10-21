@@ -36,7 +36,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await expect(bubble).toBeHidden();
     await page.getByRole("button", { name: "Close Side Panel", exact: true }).click();
     await expect(bubble).toBeVisible();
-    await bubble.focus();
+    await expect(bubble).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("dialog", { name: "Side Panel", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Close Side Panel", exact: true }).click();

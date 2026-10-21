@@ -1,7 +1,7 @@
 import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
 import { AttachedPanel, BubbleButton, BubblePanel, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import { MessageCircle, Minimize2, Minus, SquareArrowOutUpRight } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
@@ -113,11 +113,21 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
   const policy = usePanelPolicy(workbench, "side");
   const visible = available && canFloat && (fullscreen.active ? fullscreen.sideOpen : mode === "floating");
+  const bubbleRef = useRef<HTMLButtonElement>(null);
+  const previousFullscreen = useRef(fullscreen);
+  useLayoutEffect(() => {
+    const previous = previousFullscreen.current;
+    previousFullscreen.current = fullscreen;
+    if (!previous.active || !fullscreen.active || !previous.sideOpen || fullscreen.sideOpen) return;
+    const frame = requestAnimationFrame(() => bubbleRef.current?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [fullscreen]);
 
   return (
     <>
       {available && canFloat && policy.canOpen && (fullscreen.active || mode !== "attached") ? (
         <BubbleButton
+          ref={bubbleRef}
           isOpen={visible}
           aria-label="Open Side Panel"
           containerProps={{ bottom: launcherBottom(bottomOffset) }}

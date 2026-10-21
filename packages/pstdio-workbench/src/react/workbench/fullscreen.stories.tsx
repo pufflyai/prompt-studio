@@ -34,7 +34,7 @@ const fullscreenStory = (side: "attached" | "floating" | "closed", floatable = t
         expect(body.getAllByLabelText("Side panel header")).toHaveLength(1);
         expect(body.queryByRole("button", { name: "Open Side Panel" })).toBeNull();
         await userEvent.click(body.getByRole("button", { name: "Close Side Panel" }));
-        await expect(canvas.getByRole("button", { name: "Show fullscreen Side Panel" })).toHaveFocus();
+        await waitFor(() => expect(body.getByRole("button", { name: "Open Side Panel" })).toHaveFocus());
         expect(body.queryAllByLabelText("Side panel header")).toHaveLength(0);
         const bubble = await body.findByRole("button", { name: "Open Side Panel" });
         await waitFor(() => expect(bubble).toBeVisible());
@@ -44,7 +44,6 @@ const fullscreenStory = (side: "attached" | "floating" | "closed", floatable = t
         await userEvent.click(body.getByRole("button", { name: "Close Side Panel" }));
         await waitFor(() => expect(body.getByRole("button", { name: "Open Side Panel" })).toBeVisible());
       } else {
-        expect(canvas.queryByRole("button", { name: "Show fullscreen Side Panel" })).toBeNull();
         expect(body.queryByRole("button", { name: "Open Side Panel" })).toBeNull();
       }
       await userEvent.click(canvas.getByRole("button", { name: "Exit Main fullscreen" }));

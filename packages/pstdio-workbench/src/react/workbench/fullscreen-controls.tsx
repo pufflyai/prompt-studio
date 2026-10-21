@@ -1,60 +1,35 @@
-import { HStack, IconButton } from "@chakra-ui/react";
+import { IconButton } from "@chakra-ui/react";
 import { PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import { useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
-import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
 export const FullscreenControls = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
-  const { active, sideOpen } = useWorkbenchStore(workbench.fullscreen.store, (state) => state);
-  const policy = usePanelPolicy(workbench, "side");
+  const active = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const exitRef = useRef<HTMLButtonElement>(null);
-  const sideRef = useRef<HTMLButtonElement>(null);
-  const previous = useRef({ active, sideOpen });
+  const previous = useRef(active);
   useLayoutEffect(() => {
-    if (previous.current.active && !active) exitRef.current?.focus({ preventScroll: true });
-    else if (active && previous.current.sideOpen && !sideOpen) sideRef.current?.focus({ preventScroll: true });
-    previous.current = { active, sideOpen };
-  }, [active, sideOpen]);
+    if (previous.current && !active) exitRef.current?.focus({ preventScroll: true });
+    previous.current = active;
+  }, [active]);
   const label = active ? "Exit Main fullscreen" : "Enter Main fullscreen";
-  const sideLabel = sideOpen ? "Hide fullscreen Side Panel" : "Show fullscreen Side Panel";
   return (
-    <HStack gap="2xs" flexShrink={0}>
-      {active && policy.provided && policy.floatable && (sideOpen ? policy.canClose : policy.canOpen) ? (
-        <Tooltip content={sideLabel}>
-          <IconButton
-            ref={sideRef}
-            size={PANEL_HEADER_CONTROL_SIZE}
-            variant="ghost"
-            aria-label={sideLabel}
-            aria-pressed={sideOpen}
-            onClick={() =>
-              workbench.commands.executeCommand(
-                sideOpen ? "workbench.hideFullscreenSide" : "workbench.showFullscreenSide",
-              )
-            }
-          >
-            <WorkbenchIcon name="PanelRight" size={14} />
-          </IconButton>
-        </Tooltip>
-      ) : null}
-      <Tooltip content={label}>
-        <IconButton
-          ref={exitRef}
-          size={PANEL_HEADER_CONTROL_SIZE}
-          variant="ghost"
-          aria-label={label}
-          aria-pressed={active}
-          onClick={() =>
-            workbench.commands.executeCommand(active ? "workbench.exitMainFullscreen" : "workbench.enterMainFullscreen")
-          }
-        >
-          <WorkbenchIcon name={active ? "Minimize" : "Maximize"} size={14} />
-        </IconButton>
-      </Tooltip>
-    </HStack>
+    <Tooltip content={label}>
+      <IconButton
+        ref={exitRef}
+        size={PANEL_HEADER_CONTROL_SIZE}
+        variant="ghost"
+        aria-label={label}
+        aria-pressed={active}
+        onClick={() =>
+          workbench.commands.executeCommand(active ? "workbench.exitMainFullscreen" : "workbench.enterMainFullscreen")
+        }
+      >
+        <WorkbenchIcon name={active ? "Minimize" : "Maximize"} size={14} />
+      </IconButton>
+    </Tooltip>
   );
 };
 
