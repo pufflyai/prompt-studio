@@ -35,9 +35,9 @@ export const useWorkbenchPanelToggles = (workbench: WorkbenchCore) => {
       provided: hasSide,
     },
   ] as const;
-  return panels.filter(
-    ({ policy, provided }) => provided && policy.provided && (policy.open ? policy.canClose : policy.canOpen),
-  );
+  return panels
+    .filter(({ policy, provided }) => provided && policy.provided && (policy.open ? policy.canClose : policy.canOpen))
+    .map((panel) => ({ ...panel, position: arrangement[panel.region] }));
 };
 
 /** Shared host controls. Desktop hosts mount these beside their project tabs. */
@@ -55,7 +55,7 @@ export const WorkbenchPanelToggles = (props: {
       gap="2xs"
       flexShrink={0}
     >
-      {panels.map(({ region, label, icon, policy }) => {
+      {panels.map(({ region, label, icon, policy, position }) => {
         const action = `${policy.open ? "Hide" : "Show"} ${label}`;
         return (
           <Tooltip key={region} content={action}>
@@ -66,7 +66,11 @@ export const WorkbenchPanelToggles = (props: {
               aria-pressed={policy.canToggle ? policy.open : undefined}
               onClick={() => workbench.shell.setRegionOpen(region as WorkbenchShellOpenRegion, !policy.open)}
             >
-              <WorkbenchIcon name={icon} size={14} />
+              <WorkbenchIcon
+                name={icon}
+                size={14}
+                layerStyle={region === "sidenav" && position === "right" ? "mirroredIcon" : undefined}
+              />
             </IconButton>
           </Tooltip>
         );

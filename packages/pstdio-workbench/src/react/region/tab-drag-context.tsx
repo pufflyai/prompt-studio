@@ -96,8 +96,24 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
           if (args.active.data.current?.panelRegion) return panelDropCollision(args, origin.current);
           const collisions = pointerWithin(args);
           const closed = collisions.filter((c) => c.data?.droppableContainer.data.current?.closed);
-          if (closed.length) return closed;
           const pointer = args.pointerCoordinates;
+          if (closed.length && pointer) {
+            const distance = (collision: (typeof closed)[number]) => {
+              const container = collision.data?.droppableContainer;
+              const rect = args.droppableRects.get(collision.id)!;
+              switch (container.data.current.edge) {
+                case "left":
+                  return pointer.x - rect.left;
+                case "right":
+                  return rect.right - pointer.x;
+                case "top":
+                  return pointer.y - rect.top;
+                default:
+                  return rect.bottom - pointer.y;
+              }
+            };
+            return closed.sort((a, b) => distance(a) - distance(b)).slice(0, 1);
+          }
           const panel = pointer
             ? document
                 .elementFromPoint(pointer.x, pointer.y)
@@ -159,11 +175,12 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
   );
 };
 
-export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion }) => {
-  const { region } = props;
+export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion; visible?: boolean }) => {
+  const { region, visible = true } = props;
   const { activeId, drop, destinations } = useTabDrag();
   const id = useId();
-  const allowed = Boolean(activeId && destinations?.includes(region));
+  const dragging = Boolean(activeId && visible);
+  const allowed = dragging && Boolean(destinations?.includes(region));
   const { setNodeRef } = useDroppable({ id, data: { region }, disabled: !allowed });
   const highlighted = allowed && drop?.region === region;
   return (
@@ -176,8 +193,8 @@ export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion }) 
       zIndex="dropdown"
       // Keep tab drag events out of iframes, including release over a disallowed
       // destination. Native file drops still reach the guest outside tab drags.
-      pointerEvents={activeId ? "auto" : "none"}
-      visibility={activeId ? "visible" : "hidden"}
+      pointerEvents={dragging ? "auto" : "none"}
+      visibility={dragging ? "visible" : "hidden"}
       layerStyle={highlighted ? "tabDropZone" : undefined}
     />
   );

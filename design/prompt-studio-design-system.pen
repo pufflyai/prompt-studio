@@ -193646,8 +193646,9 @@
       "x": 55830,
       "y": 0,
       "name": "PS-796 · Shared panel placement and closed edges",
+      "context": "Tab drag targets appear only near the pointer and overlay content without changing its size. Only the nearest eligible edge has an outline. Whole-panel drag slots still reserve space. Navigation controls mirror when placed on the right, including while closed.",
       "width": 940,
-      "height": 420,
+      "height": 480,
       "fill": "$ds-bg-subtle",
       "layout": "vertical",
       "gap": 16,
@@ -193658,7 +193659,7 @@
           "id": "UAdoc",
           "name": "Placement rules",
           "fill": "$ds-fg",
-          "content": "Panel insertion · return toward drag start to cancel · rounded target without center bar",
+          "content": "Tabs · reveal a nearby edge only · one rounded outline at a time",
           "fontFamily": "$font-body",
           "fontSize": 14,
           "fontWeight": "normal"
@@ -193675,7 +193676,7 @@
               "type": "frame",
               "id": "rvkzF",
               "name": "light · Closed Side and Bottom edges",
-              "context": "Insertion slots occupy layout space. Full rounded outline at rest; accent fill selects a target, with no center bar. The drag start competes with destinations so release near the starting point keeps placement. Main is grabbed only from its own moving panel header. Empty movable chrome uses grab / grabbing cursors.",
+              "context": "Tab edge outlines stay invisible until the pointer approaches and overlay content without taking layout space. Only the nearest eligible target appears, including at corners. Whole-panel insertion slots still reserve space. Navigation controls mirror on the right, including when closed.",
               "theme": {
                 "mode": "light"
               },
@@ -193697,10 +193698,33 @@
                 },
                 {
                   "type": "frame",
+                  "id": "UU9Rz",
+                  "name": "Main and Bottom",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "frfOR",
+                      "name": "Main content",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "q0ye6F",
+                  "layoutPosition": "absolute",
+                  "x": 80,
+                  "y": 4,
                   "name": "Side insertion target · selected",
                   "width": 48,
-                  "height": "fill_container",
+                  "height": 312,
                   "padding": 2,
                   "children": [
                     {
@@ -193736,46 +193760,6 @@
                       "alignItems": "center"
                     }
                   ]
-                },
-                {
-                  "type": "frame",
-                  "id": "UU9Rz",
-                  "name": "Main and Bottom",
-                  "width": "fill_container",
-                  "height": "fill_container",
-                  "layout": "vertical",
-                  "gap": 4,
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "h22eL",
-                      "name": "Bottom insertion target · idle",
-                      "width": "fill_container",
-                      "height": 48,
-                      "padding": 2,
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "uyQ7I",
-                          "name": "Idle target",
-                          "width": "fill_container",
-                          "height": "fill_container",
-                          "cornerRadius": 6,
-                          "stroke": "$ds-accent",
-                          "strokeWidth": 1
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "frfOR",
-                      "name": "Main content",
-                      "width": "fill_container",
-                      "height": "fill_container",
-                      "fill": "$ds-bg-subtle",
-                      "cornerRadius": 4
-                    }
-                  ]
                 }
               ]
             },
@@ -193783,7 +193767,7 @@
               "type": "frame",
               "id": "EnM65",
               "name": "dark · Closed Side and Bottom edges",
-              "context": "Insertion slots occupy layout space. Full rounded outline at rest; accent fill selects a target, with no center bar. The drag start competes with destinations so release near the starting point keeps placement. Main is grabbed only from its own moving panel header. Empty movable chrome uses grab / grabbing cursors.",
+              "context": "Tab edge outlines stay invisible until the pointer approaches and overlay content without taking layout space. Only the nearest eligible target appears, including at corners. Whole-panel insertion slots still reserve space. Navigation controls mirror on the right, including when closed.",
               "theme": {
                 "mode": "dark"
               },
@@ -193805,10 +193789,33 @@
                 },
                 {
                   "type": "frame",
+                  "id": "ftwZH",
+                  "name": "Main and Bottom",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nAqyQ",
+                      "name": "Main content",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "nCkhf",
+                  "layoutPosition": "absolute",
+                  "x": 80,
+                  "y": 4,
                   "name": "Side insertion target · selected",
                   "width": 48,
-                  "height": "fill_container",
+                  "height": 312,
                   "padding": 2,
                   "children": [
                     {
@@ -193844,48 +193851,73 @@
                       "alignItems": "center"
                     }
                   ]
-                },
-                {
-                  "type": "frame",
-                  "id": "ftwZH",
-                  "name": "Main and Bottom",
-                  "width": "fill_container",
-                  "height": "fill_container",
-                  "layout": "vertical",
-                  "gap": 4,
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "zyZvW",
-                      "name": "Bottom insertion target · idle",
-                      "width": "fill_container",
-                      "height": 48,
-                      "padding": 2,
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "R8zK9m",
-                          "name": "Idle target",
-                          "width": "fill_container",
-                          "height": "fill_container",
-                          "cornerRadius": 6,
-                          "stroke": "$ds-accent",
-                          "strokeWidth": 1
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "nAqyQ",
-                      "name": "Main content",
-                      "width": "fill_container",
-                      "height": "fill_container",
-                      "fill": "$ds-bg-subtle",
-                      "cornerRadius": 4
-                    }
-                  ]
                 }
               ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "dKI0B",
+          "name": "Navigation toggle orientations",
+          "width": "fill_container",
+          "gap": 16,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Uxvqu",
+              "name": "Left position",
+              "fill": "$ds-fg",
+              "content": "Navigation left",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "JHp6i",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Navigation toggle · left",
+              "theme": {
+                "btn": "ghost",
+                "size": "sm"
+              },
+              "width": 32,
+              "height": 32,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "list-tree"
+                }
+              }
+            },
+            {
+              "type": "text",
+              "id": "R0tEP",
+              "name": "Right position",
+              "fill": "$ds-fg",
+              "content": "Navigation right",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "wl24n",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Navigation toggle · right",
+              "theme": {
+                "btn": "ghost",
+                "size": "sm"
+              },
+              "width": 32,
+              "height": 32,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "list-tree",
+                  "flipX": true
+                }
+              }
             }
           ]
         }

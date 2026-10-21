@@ -10,6 +10,7 @@ import {
   WorkbenchRegionTabs,
 } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
+import { usePanelPolicy } from "../shared/use-panel-policy";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
@@ -20,6 +21,7 @@ interface WorkbenchSecondaryPanelProps {
 
 export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => {
   const { workbench, hasSecondaryHeader } = props;
+  const policy = usePanelPolicy(workbench, "secondary");
   const hasTabs = useWorkbenchRegionTabsVisible(workbench, "secondary");
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
 
@@ -63,7 +65,7 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
         <WorkbenchPanelMenuOpeners workbench={workbench} panel="secondary" />
         <WorkbenchHeaderBorder workbench={workbench} region="secondary-header" />
       </PanelHeader>
-      <WorkbenchTabDropTarget region="secondary" />
+      <WorkbenchTabDropTarget region="secondary" visible={policy.open} />
       <Box flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchPanelMenuLayout workbench={workbench} panel="secondary">
           <WorkbenchRegion workbench={workbench} region="secondary" title="Secondary Panel" />

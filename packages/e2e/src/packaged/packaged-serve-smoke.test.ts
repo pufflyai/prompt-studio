@@ -114,7 +114,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Dropping a session preview pins it and keeps the destination terminal preview open and leftmost.
 // Unpinning a created session replaces the tray preview and keeps it leftmost.
 // Adding Terminal in Side or Session in Bottom keeps the other empty panel open.
-// The packaged empty-panel browser flow also checks Start's header, Main's drag handle, cancellation, cursors and reload.
+// The packaged empty-panel browser flow also checks nearby tab targets, mirrored Navigation, panel handles and reload.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";

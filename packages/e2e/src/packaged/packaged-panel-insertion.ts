@@ -68,4 +68,43 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
       })
       .toBe(true);
   }
+  await verifyNearbyTabTargets(page);
+};
+
+const verifyNearbyTabTargets = async (page: Page) => {
+  const nav = page.locator('[data-workbench-panel-drag="sidenav"]');
+  await nav.focus();
+  await nav.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Move panel to right", exact: true }).click();
+  const navToggle = page.getByRole("button", { name: /^(Show|Hide) Sidenav$/ });
+  await expect(navToggle.locator(".chakra-icon")).toHaveCSS("transform", "matrix(-1, 0, 0, 1, 0, 0)");
+  await navToggle.click();
+  await expect(navToggle).toHaveAccessibleName("Show Sidenav");
+  await page.reload();
+  await expect(navToggle).toHaveAccessibleName("Show Sidenav");
+  await expect(navToggle.locator(".chakra-icon")).toHaveCSS("transform", "matrix(-1, 0, 0, 1, 0, 0)");
+  await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Hide Bottom Panel", exact: true }).click();
+  await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
+  const main = page.locator('[data-workbench-panel="main"]');
+  const bounds = (await main.boundingBox())!;
+  const tab = main.getByRole("tab", { name: "Start", exact: true });
+  const source = (await tab.boundingBox())!;
+  await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(source.x + source.width / 2 + 12, source.y + source.height / 2, { steps: 3 });
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, { steps: 6 });
+  await expect(page.locator("[data-workbench-edge-drop]")).toHaveCount(0);
+  await expect.poll(() => main.boundingBox()).toEqual(bounds);
+  for (const region of ["side", "secondary"]) {
+    await page.locator(`[data-workbench-edge-hit="${region}"]`).hover();
+    await expect(page.locator(`[data-workbench-edge-drop="${region}"]`)).toBeVisible();
+    await expect(page.locator("[data-workbench-edge-drop], [data-workbench-tab-drop][data-drop-active]")).toHaveCount(
+      1,
+    );
+  }
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(page.locator("[data-workbench-edge-drop]")).toHaveCount(0);
 };

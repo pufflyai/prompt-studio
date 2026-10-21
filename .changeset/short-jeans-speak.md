@@ -2,4 +2,4 @@
 "@pstdio/ui": patch
 ---
 
-Show grab cursors on movable panel chrome and a grabbing cursor during panel drags.
+Show correct panel cursors and mirror Navigation controls with their placement.

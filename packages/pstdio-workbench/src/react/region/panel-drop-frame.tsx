@@ -16,25 +16,36 @@ interface PanelInsertionTargetProps {
   panel: boolean;
 }
 
+const tabEdgeAnchors = {
+  left: { top: "0", bottom: "0", left: "0" },
+  right: { top: "0", bottom: "0", right: "0" },
+  top: { top: "0", left: "0", right: "0" },
+  bottom: { bottom: "0", left: "0", right: "0" },
+} as const;
+
 const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
   const { edge, region, panel } = props;
   const { drop, panelDrop } = useTabDrag();
   const { setNodeRef } = useDroppable({
     id: `edge:${panel ? "panel" : "tab"}:${region}:${edge}`,
-    data: panel ? { panelRegion: region, position: edge } : { region, closed: true },
+    data: panel ? { panelRegion: region, position: edge } : { region, closed: true, edge },
   });
   const highlighted = panel ? panelDrop === edge : drop?.region === region;
   const vertical = edge === "left" || edge === "right";
+  const targetId = panel ? `panel-${edge}` : region;
   return (
     <Box
       ref={setNodeRef}
-      data-workbench-edge-drop={panel ? `panel-${edge}` : region}
+      data-workbench-edge-drop={panel || highlighted ? targetId : undefined}
+      data-workbench-edge-hit={panel ? undefined : region}
       data-drop-active={highlighted || undefined}
-      position="relative"
+      position={panel ? "relative" : "absolute"}
+      {...(panel ? {} : tabEdgeAnchors[edge])}
       flexShrink={0}
       w={vertical ? "12" : "full"}
       h={vertical ? "full" : "12"}
-      layerStyle="panelDropZone"
+      layerStyle={panel || highlighted ? "panelDropZone" : undefined}
+      zIndex={panel ? undefined : "overlay"}
     />
   );
 };
@@ -45,7 +56,7 @@ interface WorkbenchPanelDropFrameProps {
   children: ReactNode;
 }
 
-/** Insert targets at the layout boundary that owns the placement, so they reserve real space. */
+/** Panel moves reserve space; tab targets overlay their stable layout boundary. */
 export const WorkbenchPanelDropFrame = (props: WorkbenchPanelDropFrameProps) => {
   const { workbench, region, children } = props;
   const { activeId, destinations, activePanel } = useTabDrag();

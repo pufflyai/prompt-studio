@@ -78,6 +78,7 @@ export const layerStyles = defineLayerStyles({
     },
   },
   panelDragging: { value: { cursor: "grabbing" } },
+  mirroredIcon: { value: { transform: "scaleX(-1)" } },
   filterPicker: {
     value: {
       height: "min({sizes.filter-picker-height}, calc(100dvh - {spacing.xl}))",

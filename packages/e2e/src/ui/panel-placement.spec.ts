@@ -94,8 +94,10 @@ for (const [story, sourceRegion, targetRegion] of [
     await draft.fill("Keep this draft");
     await beginDrag(page, tab);
     const target = page.locator(`[data-workbench-edge-drop="${targetRegion}"]`);
+    const hit = page.locator(`[data-workbench-edge-hit="${targetRegion}"]`);
+    await expect(target).toHaveCount(0);
+    await hit.hover();
     await expect(target).toBeVisible();
-    await target.hover();
     await expect(target).toHaveAttribute("data-drop-active", "true");
     await expect(target).toHaveText("");
     await page.keyboard.press("Escape");
@@ -103,7 +105,7 @@ for (const [story, sourceRegion, targetRegion] of [
     await expect(target).toHaveCount(0);
     await expect(source.locator(`[data-workbench-tab="${id}"]`)).toBeVisible();
     await beginDrag(page, tab);
-    await target.hover();
+    await hit.hover();
     await page.mouse.up();
     const destination = page.locator(`[data-workbench-panel="${targetRegion}"]:visible`);
     await expect(destination.locator(`[data-workbench-tab="${id}"]`)).toBeVisible();
