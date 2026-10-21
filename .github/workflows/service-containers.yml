@@ -58,15 +58,15 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.15.7"
-      - run: terraform -chdir=infra/terraform fmt -check
-      - run: terraform -chdir=infra/terraform init -backend=false -input=false
-      - run: terraform -chdir=infra/terraform validate
-      - name: Plan an empty validation workspace without cloud access
+      - run: terraform -chdir=infra/terraform fmt -check -recursive
+      - run: terraform -chdir=infra/terraform/validation init -input=false
+      - run: terraform -chdir=infra/terraform/validation validate
+      - name: Plan the module with synthetic inputs and no cloud access
         env:
           DIGITALOCEAN_TOKEN: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
           SPACES_ACCESS_KEY_ID: validation-only
           SPACES_SECRET_ACCESS_KEY: validation-only
-        run: terraform -chdir=infra/terraform plan -refresh=false -input=false -var-file=validation.tfvars
+        run: terraform -chdir=infra/terraform/validation plan -refresh=false -input=false
   portable_smoke:
     runs-on: ubuntu-latest
     steps:

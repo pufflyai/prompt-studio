@@ -110,3 +110,13 @@ test("cancelling waits for an in-flight save to finish its abort cleanup", async
     await manager.stop(true);
   }
 });
+
+test("native sign-in opens the account manager under its address path", () => {
+  const login = startNativeLogin("https://base.example.com/accounts", async () => {});
+  try {
+    const start = new URL(login.url);
+    expect(`${start.origin}${start.pathname}`).toBe("https://base.example.com/accounts/v1/native-login");
+  } finally {
+    login.close();
+  }
+});

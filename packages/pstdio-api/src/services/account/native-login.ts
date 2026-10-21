@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { serviceUrl } from "pstdio-sync/relay";
 import { z } from "zod";
 import { managerRequest } from "./manager-client";
 
@@ -75,7 +76,7 @@ export const startNativeLogin = (
   };
   const expiry = setTimeout(close, 3 * 60_000);
   expiry.unref();
-  const url = new URL("/v1/native-login", origin);
+  const url = serviceUrl(origin, "/v1/native-login");
   url.searchParams.set("callback", new URL("/callback", server.url).href);
   url.searchParams.set("state", state);
   return { origin, url: url.href, status: () => status, close };

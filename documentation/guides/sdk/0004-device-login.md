@@ -4,7 +4,7 @@ Log in once with Google on each computer. Each computer becomes a device of your
 
 ## Log in
 
-Use the HTTPS account service URL from your administrator. The examples use `https://accounts.example.test`.
+Use the HTTPS account service URL from your administrator. It may include a path, such as `https://base.example.test/accounts`. The examples use `https://accounts.example.test`.
 
 ```sh
 pst login --manager https://accounts.example.test
