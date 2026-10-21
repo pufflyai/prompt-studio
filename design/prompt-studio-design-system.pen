@@ -202327,7 +202327,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": 1180,
-              "content": "One trailing status bar item answers two questions: am I signed in, and is Cloud active for this project. It stays muted while everything is fine and turns amber only when work is not reaching Cloud. Selecting it opens the Cloud popover with this project's Cloud state, the devices that have this project, and the account. The Prompt Studio Cloud extension contributes it through the status bar slot; core only provides the data.",
+              "content": "One trailing status bar item answers two questions: am I signed in, and is Cloud active for this project. It stays muted while everything is fine and turns amber only when work is not reaching Cloud. Cloud is in early access: the account manager marks which accounts have the relay feature. Every other account sees Cloud sync as Coming soon. The Prompt Studio Cloud extension contributes the item; core only provides the data.",
               "lineHeight": 1.5,
               "fontFamily": "$font-body",
               "fontSize": 16,
@@ -204313,14 +204313,14 @@
             {
               "type": "frame",
               "id": "gzCXl",
-              "name": "States · plan",
+              "name": "States · access",
               "width": "fill_container",
               "gap": 20,
               "children": [
                 {
                   "type": "frame",
                   "id": "IE9H0",
-                  "name": "no plan",
+                  "name": "cloud not available",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -204330,7 +204330,7 @@
                       "id": "Hc9Xj",
                       "name": "T",
                       "fill": "$ds-fg",
-                      "content": "no plan",
+                      "content": "cloud not available",
                       "fontFamily": "$font-mono",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -204343,7 +204343,7 @@
                       "textGrowth": "fixed-width-height",
                       "width": "fill_container",
                       "height": 48,
-                      "content": "Signed in without a Cloud plan. Projects stay local. The popover explains Cloud and links to plans.",
+                      "content": "Signed in, but the account does not have Cloud yet. Projects stay local. The popover says Cloud is coming soon.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 11,
@@ -204439,126 +204439,6 @@
                 },
                 {
                   "type": "frame",
-                  "id": "l772N",
-                  "name": "plan ended",
-                  "width": "fill_container",
-                  "layout": "vertical",
-                  "gap": 8,
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "I0DBa",
-                      "name": "T",
-                      "fill": "$ds-fg",
-                      "content": "plan ended",
-                      "fontFamily": "$font-mono",
-                      "fontSize": 12,
-                      "fontWeight": "600"
-                    },
-                    {
-                      "type": "text",
-                      "id": "dKc9M",
-                      "name": "D",
-                      "fill": "$ds-fg-muted",
-                      "textGrowth": "fixed-width-height",
-                      "width": "fill_container",
-                      "height": 48,
-                      "content": "The Cloud plan ended. Sync is paused on every device until the plan is renewed. Work continues locally.",
-                      "lineHeight": 1.45,
-                      "fontFamily": "$font-body",
-                      "fontSize": 11,
-                      "fontWeight": "normal"
-                    },
-                    {
-                      "type": "frame",
-                      "id": "kepgd",
-                      "name": "Stage",
-                      "width": "fill_container",
-                      "height": 40,
-                      "layout": "vertical",
-                      "justifyContent": "end",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "PEPs6",
-                          "name": "Status Bar",
-                          "clip": true,
-                          "width": "fill_container",
-                          "height": 32,
-                          "fill": "$ds-bg",
-                          "cornerRadius": 6,
-                          "stroke": "$ds-border",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "gap": 14,
-                          "padding": [
-                            0,
-                            8,
-                            0,
-                            12
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "g7VOgX",
-                              "name": "main",
-                              "gap": 5,
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "kXTeb",
-                                  "name": "main Icon",
-                                  "width": 12,
-                                  "height": 12,
-                                  "icon": "git-branch",
-                                  "library": "lucide",
-                                  "fill": "$ds-fg-muted"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "HLxdn",
-                                  "name": "main Label",
-                                  "fill": "$ds-fg-muted",
-                                  "content": "main",
-                                  "fontFamily": "$font-body",
-                                  "fontSize": 10,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "Q43yK6",
-                              "name": "Spacer",
-                              "width": "fill_container",
-                              "height": 2
-                            },
-                            {
-                              "id": "nIoi9",
-                              "type": "ref",
-                              "ref": "bWgi1",
-                              "name": "Cloud",
-                              "descendants": {
-                                "V7sfJl": {
-                                  "icon": "cloud-alert",
-                                  "fill": "$ds-warning"
-                                },
-                                "Vxs37": {
-                                  "content": "Sync paused",
-                                  "fill": "$ds-warning"
-                                }
-                              }
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
                   "id": "Sk5HR",
                   "name": "Empty slot",
                   "width": "fill_container",
@@ -204574,6 +204454,13 @@
                 {
                   "type": "frame",
                   "id": "KMYpr",
+                  "name": "Empty slot",
+                  "width": "fill_container",
+                  "height": 2
+                },
+                {
+                  "type": "frame",
+                  "id": "yZEka",
                   "name": "Empty slot",
                   "width": "fill_container",
                   "height": 2
@@ -207652,14 +207539,14 @@
             {
               "type": "frame",
               "id": "KRNd4",
-              "name": "States 3 · plan",
+              "name": "States 3 · access",
               "width": "fill_container",
               "gap": 20,
               "children": [
                 {
                   "type": "frame",
                   "id": "gzU6w",
-                  "name": "no plan",
+                  "name": "cloud not available",
                   "width": 340,
                   "layout": "vertical",
                   "gap": 8,
@@ -207669,7 +207556,7 @@
                       "id": "B3kMz",
                       "name": "T",
                       "fill": "$ds-fg",
-                      "content": "no plan",
+                      "content": "cloud not available",
                       "fontFamily": "$font-mono",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -207682,7 +207569,7 @@
                       "textGrowth": "fixed-width-height",
                       "width": "fill_container",
                       "height": 48,
-                      "content": "Signed in, no Cloud plan. Explain what Cloud does and link to plans. No devices: nothing syncs.",
+                      "content": "Every signed-in account without the relay feature sees this. Cloud is announced, nothing to buy or turn on. No devices.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 11,
@@ -207790,7 +207677,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Cloud is not on your plan",
+                                  "content": "Cloud sync is coming soon",
                                   "lineHeight": 1.45,
                                   "fontFamily": "$font-body",
                                   "fontSize": 12,
@@ -207803,7 +207690,7 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Your projects stay on this device.",
+                                  "content": "Your projects stay on this device for now.",
                                   "lineHeight": 1.45,
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -207825,28 +207712,6 @@
                           "fontFamily": "$font-body",
                           "fontSize": 11,
                           "fontWeight": "normal"
-                        },
-                        {
-                          "id": "U5vXwd",
-                          "type": "ref",
-                          "ref": "c24zV7",
-                          "name": "See plans",
-                          "height": 28,
-                          "theme": {
-                            "btn": "primary",
-                            "size": "xs"
-                          },
-                          "descendants": {
-                            "DsEVd": {
-                              "enabled": true,
-                              "icon": "sparkles",
-                              "width": 12,
-                              "height": 12
-                            },
-                            "Hf4GT": {
-                              "content": "See plans"
-                            }
-                          }
                         },
                         {
                           "type": "rectangle",
@@ -207937,302 +207802,6 @@
                         },
                         {
                           "id": "WouFs",
-                          "type": "ref",
-                          "ref": "c24zV7",
-                          "name": "Cloud settings",
-                          "height": 24,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          },
-                          "descendants": {
-                            "DsEVd": {
-                              "enabled": true,
-                              "icon": "settings-2",
-                              "width": 12,
-                              "height": 12
-                            },
-                            "Hf4GT": {
-                              "content": "Cloud settings"
-                            }
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "CiZrU",
-                  "name": "plan ended",
-                  "width": 340,
-                  "layout": "vertical",
-                  "gap": 8,
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "KXKHK",
-                      "name": "T",
-                      "fill": "$ds-fg",
-                      "content": "plan ended",
-                      "fontFamily": "$font-mono",
-                      "fontSize": 12,
-                      "fontWeight": "600"
-                    },
-                    {
-                      "type": "text",
-                      "id": "PeYdx",
-                      "name": "D",
-                      "fill": "$ds-fg-muted",
-                      "textGrowth": "fixed-width-height",
-                      "width": "fill_container",
-                      "height": 48,
-                      "content": "The plan lapsed. Sync pauses everywhere; nothing is deleted on devices. Renewing resumes and merges.",
-                      "lineHeight": 1.45,
-                      "fontFamily": "$font-body",
-                      "fontSize": 11,
-                      "fontWeight": "normal"
-                    },
-                    {
-                      "type": "frame",
-                      "id": "O56gl",
-                      "name": "Cloud popover",
-                      "width": 340,
-                      "fill": "$ds-bg",
-                      "cornerRadius": 4,
-                      "stroke": "$ds-border",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "effect": {
-                        "type": "shadow",
-                        "shadowType": "outer",
-                        "color": "#00000040",
-                        "offset": {
-                          "x": 0,
-                          "y": 8
-                        },
-                        "blur": 24
-                      },
-                      "layout": "vertical",
-                      "gap": 10,
-                      "padding": [
-                        8,
-                        16,
-                        12,
-                        16
-                      ],
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "VKoDK",
-                          "name": "Header",
-                          "width": "fill_container",
-                          "height": 24,
-                          "gap": 6,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "XUaB3",
-                              "name": "Icon",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "cloud",
-                              "library": "lucide",
-                              "fill": "$ds-fg-muted"
-                            },
-                            {
-                              "type": "text",
-                              "id": "PjKf7",
-                              "name": "Title",
-                              "fill": "$ds-fg",
-                              "content": "Cloud",
-                              "fontFamily": "$font-label",
-                              "fontSize": 13,
-                              "fontWeight": "500"
-                            }
-                          ]
-                        },
-                        {
-                          "id": "JVoxT",
-                          "type": "ref",
-                          "ref": "So6vB",
-                          "name": "Alert",
-                          "theme": {
-                            "status": "warning"
-                          },
-                          "descendants": {
-                            "sAoE1": {
-                              "icon": "cloud-alert"
-                            },
-                            "GL4gS": {
-                              "content": "Your Cloud plan ended"
-                            },
-                            "B8etL": {
-                              "content": "Sync is paused on all your devices. Your work stays on them, and Cloud keeps your synced data until Nov 20."
-                            },
-                            "x7Usi7": {
-                              "enabled": true
-                            },
-                            "x7Usi7/Hf4GT": {
-                              "content": "Renew"
-                            }
-                          }
-                        },
-                        {
-                          "type": "frame",
-                          "id": "kJOpZ",
-                          "name": "Cloud state",
-                          "width": "fill_container",
-                          "gap": 8,
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "smBcU",
-                              "name": "Icon box",
-                              "width": 16,
-                              "height": 18,
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "u36ae",
-                                  "name": "Icon",
-                                  "width": 14,
-                                  "height": 14,
-                                  "icon": "cloud-alert",
-                                  "library": "lucide",
-                                  "fill": "$ds-warning"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "FY7IA",
-                              "name": "Text",
-                              "width": "fill_container",
-                              "layout": "vertical",
-                              "gap": 1,
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "O8lBA",
-                                  "name": "Text",
-                                  "fill": "$ds-fg",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container",
-                                  "content": "Sync paused",
-                                  "lineHeight": 1.45,
-                                  "fontFamily": "$font-body",
-                                  "fontSize": 12,
-                                  "fontWeight": "normal"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "fNtW7",
-                                  "name": "Text",
-                                  "fill": "$ds-warning",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container",
-                                  "content": "Changes stay on this device until you renew.",
-                                  "lineHeight": 1.45,
-                                  "fontFamily": "$font-body",
-                                  "fontSize": 11,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "rectangle",
-                          "id": "fmuUm",
-                          "name": "Divider",
-                          "fill": "$ds-border-subtle",
-                          "width": "fill_container",
-                          "height": 1
-                        },
-                        {
-                          "type": "frame",
-                          "id": "OEbig",
-                          "name": "Account",
-                          "width": "fill_container",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "id": "vL1Kk",
-                              "type": "ref",
-                              "ref": "Rt8F5",
-                              "name": "Avatar",
-                              "descendants": {
-                                "joBhu": {
-                                  "content": "AM"
-                                }
-                              }
-                            },
-                            {
-                              "type": "frame",
-                              "id": "FUwb2",
-                              "name": "Who",
-                              "width": "fill_container",
-                              "layout": "vertical",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "Qx4sz",
-                                  "name": "Text",
-                                  "fill": "$ds-fg",
-                                  "content": "Alex Morgan",
-                                  "lineHeight": 1.45,
-                                  "fontFamily": "$font-body",
-                                  "fontSize": 12,
-                                  "fontWeight": "normal"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "uQohz",
-                                  "name": "Text",
-                                  "fill": "$ds-fg-muted",
-                                  "content": "alex@example.com",
-                                  "lineHeight": 1.45,
-                                  "fontFamily": "$font-body",
-                                  "fontSize": 11,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "id": "hJDlY",
-                              "type": "ref",
-                              "ref": "c24zV7",
-                              "name": "Sign out",
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "DsEVd": {
-                                  "enabled": false
-                                },
-                                "Hf4GT": {
-                                  "content": "Sign out"
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "rectangle",
-                          "id": "VAtfs",
-                          "name": "Divider",
-                          "fill": "$ds-border-subtle",
-                          "width": "fill_container",
-                          "height": 1
-                        },
-                        {
-                          "id": "B4mRBU",
                           "type": "ref",
                           "ref": "c24zV7",
                           "name": "Cloud settings",
@@ -208757,7 +208326,7 @@
                                   "id": "fWK5T",
                                   "name": "Section",
                                   "fill": "$ds-fg-subtle",
-                                  "content": "PLAN",
+                                  "content": "CLOUD ACCESS",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 9,
                                   "fontWeight": "600",
@@ -208765,8 +208334,8 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "LxRSL",
-                                  "name": "Plan card",
+                                  "id": "WkU5v",
+                                  "name": "Cloud access card",
                                   "width": "fill_container",
                                   "cornerRadius": 6,
                                   "stroke": "$ds-border-subtle",
@@ -208781,7 +208350,7 @@
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "f9eQHz",
+                                      "id": "t22jxX",
                                       "name": "Row",
                                       "width": "fill_container",
                                       "gap": 12,
@@ -208789,17 +208358,17 @@
                                       "children": [
                                         {
                                           "type": "icon",
-                                          "id": "qYdSs",
+                                          "id": "xD8e6",
                                           "name": "Icon",
                                           "width": 16,
                                           "height": 16,
-                                          "icon": "badge-check",
+                                          "icon": "cloud",
                                           "library": "lucide",
                                           "fill": "$ds-fg-muted"
                                         },
                                         {
                                           "type": "frame",
-                                          "id": "w3j89S",
+                                          "id": "PzVTK",
                                           "name": "Label",
                                           "width": "fill_container",
                                           "layout": "vertical",
@@ -208807,12 +208376,12 @@
                                           "children": [
                                             {
                                               "type": "text",
-                                              "id": "zl4MI",
+                                              "id": "K9s59",
                                               "name": "Text",
                                               "fill": "$ds-fg",
                                               "textGrowth": "fixed-width",
                                               "width": "fill_container",
-                                              "content": "Prompt Studio Cloud · Personal",
+                                              "content": "Early access",
                                               "lineHeight": 1.45,
                                               "fontFamily": "$font-body",
                                               "fontSize": 13,
@@ -208820,12 +208389,12 @@
                                             },
                                             {
                                               "type": "text",
-                                              "id": "sACWr",
+                                              "id": "nO3BX",
                                               "name": "Text",
                                               "fill": "$ds-fg-muted",
                                               "textGrowth": "fixed-width",
                                               "width": "fill_container",
-                                              "content": "Renews Nov 21, 2026. Covers all your devices.",
+                                              "content": "Cloud sync is turned on for your account.",
                                               "lineHeight": 1.45,
                                               "fontFamily": "$font-body",
                                               "fontSize": 11,
@@ -208834,24 +208403,26 @@
                                           ]
                                         },
                                         {
-                                          "id": "eDYfc",
+                                          "id": "hFb6f",
                                           "type": "ref",
-                                          "ref": "c24zV7",
-                                          "name": "Manage billing",
-                                          "height": 28,
+                                          "ref": "dbK8Z",
+                                          "name": "Access badge",
+                                          "height": 20,
+                                          "padding": [
+                                            3,
+                                            9
+                                          ],
                                           "theme": {
-                                            "btn": "outline",
-                                            "size": "xs"
+                                            "badge": "subtle",
+                                            "palette": "green"
                                           },
                                           "descendants": {
-                                            "DsEVd": {
-                                              "enabled": true,
-                                              "icon": "external-link",
-                                              "width": 12,
-                                              "height": 12
+                                            "ohhQY": {
+                                              "enabled": false
                                             },
-                                            "Hf4GT": {
-                                              "content": "Manage billing"
+                                            "FaaBK": {
+                                              "content": "Enabled",
+                                              "fontSize": 11
                                             }
                                           }
                                         }
@@ -209946,7 +209517,7 @@
                               "id": "Z0H2g",
                               "name": "Section",
                               "fill": "$ds-fg-subtle",
-                              "content": "PLAN",
+                              "content": "CLOUD ACCESS",
                               "fontFamily": "$font-heading",
                               "fontSize": 9,
                               "fontWeight": "600",
@@ -209954,8 +209525,8 @@
                             },
                             {
                               "type": "frame",
-                              "id": "GRnTu",
-                              "name": "Plan card",
+                              "id": "gzYUc",
+                              "name": "Cloud access card",
                               "width": "fill_container",
                               "cornerRadius": 6,
                               "stroke": "$ds-border-subtle",
@@ -209970,7 +209541,7 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "A47dQ",
+                                  "id": "re3ra",
                                   "name": "Row",
                                   "width": "fill_container",
                                   "gap": 12,
@@ -209978,17 +209549,17 @@
                                   "children": [
                                     {
                                       "type": "icon",
-                                      "id": "IzjEz",
+                                      "id": "JWVoU",
                                       "name": "Icon",
                                       "width": 16,
                                       "height": 16,
-                                      "icon": "badge-check",
+                                      "icon": "cloud",
                                       "library": "lucide",
                                       "fill": "$ds-fg-muted"
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "jm5AV",
+                                      "id": "ng4Sw",
                                       "name": "Label",
                                       "width": "fill_container",
                                       "layout": "vertical",
@@ -209996,12 +209567,12 @@
                                       "children": [
                                         {
                                           "type": "text",
-                                          "id": "lOnv2",
+                                          "id": "VQ2yn",
                                           "name": "Text",
                                           "fill": "$ds-fg",
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
-                                          "content": "Prompt Studio Cloud · Personal",
+                                          "content": "Early access",
                                           "lineHeight": 1.45,
                                           "fontFamily": "$font-body",
                                           "fontSize": 13,
@@ -210009,12 +209580,12 @@
                                         },
                                         {
                                           "type": "text",
-                                          "id": "WT2pH",
+                                          "id": "R2nHz",
                                           "name": "Text",
                                           "fill": "$ds-fg-muted",
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
-                                          "content": "Renews Nov 21, 2026. Covers all your devices.",
+                                          "content": "Cloud sync is turned on for your account.",
                                           "lineHeight": 1.45,
                                           "fontFamily": "$font-body",
                                           "fontSize": 11,
@@ -210023,24 +209594,26 @@
                                       ]
                                     },
                                     {
-                                      "id": "Vztv9",
+                                      "id": "JHq8k",
                                       "type": "ref",
-                                      "ref": "c24zV7",
-                                      "name": "Manage billing",
-                                      "height": 28,
+                                      "ref": "dbK8Z",
+                                      "name": "Access badge",
+                                      "height": 20,
+                                      "padding": [
+                                        3,
+                                        9
+                                      ],
                                       "theme": {
-                                        "btn": "outline",
-                                        "size": "xs"
+                                        "badge": "subtle",
+                                        "palette": "green"
                                       },
                                       "descendants": {
-                                        "DsEVd": {
-                                          "enabled": true,
-                                          "icon": "external-link",
-                                          "width": 12,
-                                          "height": 12
+                                        "ohhQY": {
+                                          "enabled": false
                                         },
-                                        "Hf4GT": {
-                                          "content": "Manage billing"
+                                        "FaaBK": {
+                                          "content": "Enabled",
+                                          "fontSize": 11
                                         }
                                       }
                                     }
@@ -210456,17 +210029,17 @@
             {
               "type": "frame",
               "id": "nKJoG",
-              "name": "No plan page",
+              "name": "Cloud not available page",
               "width": "fill_container",
               "gap": 24,
               "children": [
                 {
                   "type": "frame",
                   "id": "EevV3",
-                  "name": "Settings · No plan",
+                  "name": "Settings · Cloud not available",
                   "clip": true,
                   "width": 1100,
-                  "height": 400,
+                  "height": 480,
                   "fill": "$ds-bg",
                   "cornerRadius": "$overlay-radius",
                   "stroke": "$ds-border",
@@ -210848,7 +210421,7 @@
                               "id": "exXuh",
                               "name": "Section",
                               "fill": "$ds-fg-subtle",
-                              "content": "PLAN",
+                              "content": "CLOUD ACCESS",
                               "fontFamily": "$font-heading",
                               "fontSize": 9,
                               "fontWeight": "600",
@@ -210856,8 +210429,8 @@
                             },
                             {
                               "type": "frame",
-                              "id": "k5G2eu",
-                              "name": "Plan card",
+                              "id": "dkdtI",
+                              "name": "Cloud access card",
                               "width": "fill_container",
                               "cornerRadius": 6,
                               "stroke": "$ds-border-subtle",
@@ -210872,7 +210445,7 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "ZfQKe",
+                                  "id": "HLHy3",
                                   "name": "Row",
                                   "width": "fill_container",
                                   "gap": 12,
@@ -210880,7 +210453,7 @@
                                   "children": [
                                     {
                                       "type": "icon",
-                                      "id": "tM5sZ",
+                                      "id": "Jp7JW",
                                       "name": "Icon",
                                       "width": 16,
                                       "height": 16,
@@ -210890,7 +210463,7 @@
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "twCKL",
+                                      "id": "d4iERO",
                                       "name": "Label",
                                       "width": "fill_container",
                                       "layout": "vertical",
@@ -210898,12 +210471,12 @@
                                       "children": [
                                         {
                                           "type": "text",
-                                          "id": "S1yGjx",
+                                          "id": "M2vTXF",
                                           "name": "Text",
                                           "fill": "$ds-fg",
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
-                                          "content": "No Cloud plan",
+                                          "content": "Cloud sync",
                                           "lineHeight": 1.45,
                                           "fontFamily": "$font-body",
                                           "fontSize": 13,
@@ -210911,12 +210484,12 @@
                                         },
                                         {
                                           "type": "text",
-                                          "id": "Lz4uF",
+                                          "id": "hk2Ql",
                                           "name": "Text",
                                           "fill": "$ds-fg-muted",
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
-                                          "content": "Sync your projects across your devices, end-to-end encrypted.",
+                                          "content": "Sync your projects across your devices, end-to-end encrypted. Available to everyone soon.",
                                           "lineHeight": 1.45,
                                           "fontFamily": "$font-body",
                                           "fontSize": 11,
@@ -210925,24 +210498,26 @@
                                       ]
                                     },
                                     {
-                                      "id": "nRshV",
+                                      "id": "t2eIL",
                                       "type": "ref",
-                                      "ref": "c24zV7",
-                                      "name": "See plans",
-                                      "height": 28,
+                                      "ref": "dbK8Z",
+                                      "name": "Access badge",
+                                      "height": 20,
+                                      "padding": [
+                                        3,
+                                        9
+                                      ],
                                       "theme": {
-                                        "btn": "primary",
-                                        "size": "xs"
+                                        "badge": "subtle",
+                                        "palette": "blue"
                                       },
                                       "descendants": {
-                                        "DsEVd": {
-                                          "enabled": true,
-                                          "icon": "sparkles",
-                                          "width": 12,
-                                          "height": 12
+                                        "ohhQY": {
+                                          "enabled": false
                                         },
-                                        "Hf4GT": {
-                                          "content": "See plans"
+                                        "FaaBK": {
+                                          "content": "Coming soon",
+                                          "fontSize": 11
                                         }
                                       }
                                     }
@@ -211023,7 +210598,7 @@
                                           "fill": "$ds-fg-muted",
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
-                                          "content": "Syncing needs a Cloud plan.",
+                                          "content": "Syncing becomes available with Cloud.",
                                           "lineHeight": 1.45,
                                           "fontFamily": "$font-body",
                                           "fontSize": 11,
@@ -211077,7 +210652,7 @@
                       "id": "SElC0",
                       "name": "T",
                       "fill": "$ds-fg",
-                      "content": "no plan",
+                      "content": "what every account sees today",
                       "fontFamily": "$font-mono",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -211089,7 +210664,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Signed in without a plan, the page shows the account and the plan offer. Devices are hidden because nothing syncs. Sync with Cloud stays visible but disabled, so people see what the plan unlocks.",
+                      "content": "Every account without the relay feature sees this page: the account, Cloud sync marked Coming soon, and this project as local. No devices, because nothing syncs. The pages above appear only for accounts the account manager marks with the relay feature.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 11,
@@ -211985,7 +211560,7 @@
                 {
                   "type": "frame",
                   "id": "VDhoz",
-                  "name": "signed in · no plan",
+                  "name": "signed in · cloud not available",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -211995,7 +211570,7 @@
                       "id": "L6jGAz",
                       "name": "T",
                       "fill": "$ds-fg",
-                      "content": "signed in · no plan",
+                      "content": "signed in · cloud not available",
                       "fontFamily": "$font-mono",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -212008,7 +211583,7 @@
                       "textGrowth": "fixed-width-height",
                       "width": "fill_container",
                       "height": 48,
-                      "content": "The account has cloud projects from an earlier plan, but no plan now. They show, locked, so nothing seems lost.",
+                      "content": "An account without the relay feature. Signing in brings no cloud projects; the picker says Cloud sync is coming soon.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 11,
@@ -212075,68 +211650,28 @@
                           ],
                           "children": [
                             {
-                              "id": "ooHAO",
+                              "id": "A4Y83",
                               "type": "ref",
                               "ref": "hIyB7",
-                              "name": "Prompt Studio",
+                              "name": "Scratchpad",
                               "width": "fill_container",
                               "height": "fit_content",
                               "theme": {
-                                "row": "locked"
+                                "row": "default"
                               },
                               "descendants": {
                                 "vsjz1": {
-                                  "icon": "lock"
+                                  "icon": "folder"
                                 },
                                 "h0cJn": {
-                                  "content": "Prompt Studio"
+                                  "content": "Scratchpad"
                                 },
                                 "lTPwv": {
-                                  "content": "Cloud · needs a Cloud plan to download",
+                                  "content": "~/Documents/scratchpad · local",
                                   "enabled": true
                                 },
                                 "E8VVm": {
-                                  "enabled": false,
-                                  "theme": {
-                                    "badge": "subtle",
-                                    "palette": "gray"
-                                  }
-                                },
-                                "E8VVm/FaaBK": {
-                                  "content": ""
-                                }
-                              }
-                            },
-                            {
-                              "id": "Hqprp",
-                              "type": "ref",
-                              "ref": "hIyB7",
-                              "name": "Granite",
-                              "width": "fill_container",
-                              "height": "fit_content",
-                              "theme": {
-                                "row": "locked"
-                              },
-                              "descendants": {
-                                "vsjz1": {
-                                  "icon": "lock"
-                                },
-                                "h0cJn": {
-                                  "content": "Granite"
-                                },
-                                "lTPwv": {
-                                  "content": "Cloud · needs a Cloud plan to download",
-                                  "enabled": true
-                                },
-                                "E8VVm": {
-                                  "enabled": false,
-                                  "theme": {
-                                    "badge": "subtle",
-                                    "palette": "gray"
-                                  }
-                                },
-                                "E8VVm/FaaBK": {
-                                  "content": ""
+                                  "enabled": false
                                 }
                               }
                             }
@@ -212163,26 +211698,35 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "id": "uqxu1",
-                              "type": "ref",
-                              "ref": "c24zV7",
-                              "name": "See plans",
-                              "height": 28,
-                              "theme": {
-                                "btn": "primary",
-                                "size": "xs"
-                              },
-                              "descendants": {
-                                "DsEVd": {
-                                  "enabled": true,
-                                  "icon": "sparkles",
+                              "type": "frame",
+                              "id": "mmkjk",
+                              "name": "Cloud note",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "f29y7",
+                                  "name": "Icon",
                                   "width": 12,
-                                  "height": 12
+                                  "height": 12,
+                                  "icon": "cloud",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-subtle"
                                 },
-                                "Hf4GT": {
-                                  "content": "See plans"
+                                {
+                                  "type": "text",
+                                  "id": "YdrpW",
+                                  "name": "Text",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "Cloud sync is coming soon",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
                                 }
-                              }
+                              ]
                             },
                             {
                               "id": "OKkI1",
@@ -212847,7 +212391,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "1 · Plan check: the account manager should only hand out relay access to accounts with an active plan, so the relay never needs to know about billing. Login and device registration stay free.",
+              "content": "1 · Early access: the account manager keeps a relay feature flag per account and gives relay access, cloud projects and keys only to flagged accounts. Signing in and registering a device stay open to everyone.",
               "lineHeight": 1.45,
               "fontFamily": "$font-body",
               "fontSize": 12,
@@ -212860,7 +212404,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "2 · When a plan ends, how long does Cloud keep the synced data? The design shows a date (Nov 20) as a placeholder.",
+              "content": "2 · Plans come later. Until then there is nothing to buy, and an unflagged account simply sees Coming soon.",
               "lineHeight": 1.45,
               "fontFamily": "$font-body",
               "fontSize": 12,
