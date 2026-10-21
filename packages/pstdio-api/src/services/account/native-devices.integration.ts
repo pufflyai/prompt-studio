@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createAccountHostFixture } from "./native-host.fixture";
 
 type Host = Awaited<ReturnType<typeof createAccountHostFixture>>;
-type Device = { id: string; name: string; current: boolean };
+type Device = { id: string; name: string; current: boolean; online: boolean };
 type Status = { login: { accountId: string; deviceId: string } | null; cloudProjects: string[] };
 
 const origin = process.env.OWNER_TEST_ORIGIN!;
@@ -46,6 +46,8 @@ const login = async (host: Host, cookie: string) => {
   assert.equal((await fetch(invalid)).status, 400);
   assert.equal((await fetch(completed.headers.get("location")!)).status, 200);
   assert.equal((await call<{ status: string }>(host, `/account/login/${started.body.id}`)).body.status, "complete");
+  // Sign-in completes at credential persistence; discovery runs without delaying its callback.
+  await host.account.refresh();
   const status = await call<Status>(host, "/account");
   assert.ok(status.body.login);
   assert.ok(!status.text.includes((await token(host))!), "The device credential never leaves the native host");
@@ -93,6 +95,10 @@ try {
     const listed = await devices(host);
     assert.deepEqual(listed.map((device) => device.id).sort(), [laptopLogin.deviceId, desktopLogin.deviceId].sort());
     assert.equal(listed.filter((device) => device.current).length, 1);
+    assert.ok(
+      listed.every((device) => device.online),
+      "Both active native devices have live presence",
+    );
   }
   const rename = { name: "Work laptop" };
   assert.equal((await call(desktop, `/account/devices/${laptopLogin.deviceId}/rename`, "POST", rename)).status, 200);

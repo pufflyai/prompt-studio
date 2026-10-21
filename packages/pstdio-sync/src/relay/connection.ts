@@ -20,6 +20,8 @@ interface RelaySocketInput {
   synchronize: (signal: AbortSignal) => Promise<unknown>;
   signal: AbortSignal;
   onError?: () => void;
+  /** Runs when the connection opens or closes, or a synchronization run ends. */
+  onStatusChange?: () => void;
 }
 
 const createRelaySocket = (input: RelaySocketInput) => {
@@ -45,7 +47,13 @@ const createRelaySocket = (input: RelaySocketInput) => {
       socket?.close();
     } finally {
       running = undefined;
+      input.onStatusChange?.();
     }
+  };
+  const setConnected = (next: boolean) => {
+    const changed = connected !== next;
+    connected = next;
+    if (changed) input.onStatusChange?.();
   };
   const wake = () => {
     dirty = true;
@@ -100,7 +108,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
             return;
           }
           if (message === "ready") {
-            connected = true;
+            setConnected(true);
             failures = 0;
           }
           if (message) wake();
@@ -115,7 +123,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
         input.onError?.();
       }
       clearTimeout(expiry);
-      connected = false;
+      setConnected(false);
       attempt.abort();
       await running;
       if (input.signal.aborted) break;
@@ -127,7 +135,11 @@ const createRelaySocket = (input: RelaySocketInput) => {
     }
     input.signal.removeEventListener("abort", abort);
   })();
-  return { wake, done };
+  return {
+    wake,
+    done,
+    status: () => ({ connected, busy: dirty || !!running }),
+  };
 };
 
 export const createRelayConnection = (

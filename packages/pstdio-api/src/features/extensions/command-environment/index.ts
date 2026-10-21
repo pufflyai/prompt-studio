@@ -18,6 +18,7 @@ import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createExtensionConnectionsApi } from "../extension-connection-service";
 import { findFreePort } from "../extension-process-api";
+import { createAccountApi } from "./account";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
 import { createAutomationApi } from "./automation";
@@ -174,6 +175,7 @@ export const createCommandEnvironment = (
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
     connections: hostApis.connections,
     terminal: hostApis.terminal,
+    account: createAccountApi(deps.accountService, input.projectId),
     withScope: (scope) => scopedHostApis(scope),
   };
 };
