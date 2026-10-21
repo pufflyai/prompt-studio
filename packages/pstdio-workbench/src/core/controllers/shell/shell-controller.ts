@@ -2,8 +2,8 @@ import type { LayoutModel } from "../../registries/layout/layout-model";
 import type { WorkbenchRegion } from "../../registries/layout/layout-types";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { WorkbenchSidePanelController, WorkbenchSidePanelMode } from "../side-panel/side-panel-controller";
-
 import type { WorkbenchPanelPolicy } from "./panel-policy";
+import { createPanelPositionController } from "./panel-position";
 
 export type WorkbenchSidePanelPresentation = WorkbenchSidePanelMode;
 
@@ -14,7 +14,7 @@ export interface WorkbenchShellRegionState {
   size?: number;
 }
 
-export interface WorkbenchShellController {
+export interface WorkbenchShellController extends ReturnType<typeof createPanelPositionController> {
   getPanelPolicy(region: WorkbenchRegion): WorkbenchPanelPolicy;
   setHeaderVisible(region: WorkbenchRegion, visible: boolean): void;
   getRegionState(region: WorkbenchRegion): WorkbenchShellRegionState;
@@ -37,6 +37,7 @@ export const createWorkbenchShellController = (input: {
     if (!allowed) throw new Error(`Panel cannot ${action}: ${region}`);
   };
   return {
+    ...createPanelPositionController(input),
     getPanelPolicy: input.getPolicy,
     setHeaderVisible(region, visible) {
       if (!input.getPolicy(region).provided) throw new Error(`Panel is not provided: ${region}`);

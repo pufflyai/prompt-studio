@@ -13,6 +13,7 @@ export default defineConfig({
     "packaged-settings-reset.spec.ts",
     "packaged-command-query.spec.ts",
     "packaged-command-palette.spec.ts",
+    "packaged-main-fullscreen.spec.ts",
   ],
   timeout: 120_000,
   workers: 1,

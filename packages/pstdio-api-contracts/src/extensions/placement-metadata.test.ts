@@ -16,6 +16,7 @@ test("transfers independent panel capabilities without coupling them", () => {
     canClose: true,
     acceptsTabs: true,
     resizable: false,
+    movable: false,
     floatable: false,
   } satisfies ModeRegionSettings;
   expect(regionSettingsSchema.parse(settings)).toEqual(settings);

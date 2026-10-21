@@ -185,6 +185,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0003 — Storybook coverage](development/0003-storybook-coverage.md)
 - [0004 — Pull request area labels](development/0004-pull-request-labels.md)
 - [0005 — Extension conformance and regression coverage](development/0005-conformance.md)
+- [0012 — Portable relay and account manager deployment](development/0012-portable-cloud-deployment.md)
 
 ### Build extensions
 

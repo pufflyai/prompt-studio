@@ -2,7 +2,7 @@ import { IconButton, Stack } from "@chakra-ui/react";
 import { contributionRefId } from "@pstdio/sdk/extensions";
 import { Tooltip } from "@pstdio/ui";
 import { runUserAction } from "@pstdio/workbench";
-import { WorkbenchIcon, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
+import { useWorkbenchStore, WorkbenchIcon, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
@@ -25,17 +25,27 @@ export const ExtensionActivityRailWidget = (props: { input: WorkbenchPanelRender
     return () => subscription.dispose();
   }, [workbench]);
 
+  const edge = useWorkbenchStore(workbench.layout.store, () => workbench.shell.getArrangement().activity);
+  const horizontal = edge === "top" || edge === "bottom";
   const projectId = getDashboardSelectedProjectId(workbench);
   const items = (getCachedDashboardExtensionMetadata(projectId)?.activityItems ?? [])
     .filter((item) => Boolean(activeModeId && item.modes.some((mode) => contributionRefId(mode) === activeModeId)))
     .sort((a, b) => placementRank[a.placement ?? "default"] - placementRank[b.placement ?? "default"]);
 
   return (
-    <Stack as="nav" align="center" gap="2xs" paddingY="sm" h="full" aria-label="Activity">
+    <Stack
+      as="nav"
+      direction={horizontal ? "row" : "column"}
+      align="center"
+      gap="2xs"
+      p="sm"
+      h="full"
+      aria-label="Activity"
+    >
       {items.map((item) => {
         const title = resolveLocalizableString(item.title, item.extensionId);
         return (
-          <Tooltip key={item.id} content={title} positioning={{ placement: "right" }}>
+          <Tooltip key={item.id} content={title} positioning={{ placement: horizontal ? "bottom" : "right" }}>
             <IconButton
               aria-label={title}
               variant="ghost"
