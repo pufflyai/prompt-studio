@@ -4,6 +4,7 @@ import {
   createMemoryDocumentStore,
   type DocumentStore,
   scopeRecordStorage,
+  snapshotDocumentRecords,
 } from "pstdio-sync";
 import type { createMemoryAssets } from "./memory-assets";
 
@@ -15,8 +16,9 @@ export interface MemoryStorageSeed {
 export const createMemoryRecordOwner = (
   assets: ReturnType<typeof createMemoryAssets>,
   seed: MemoryStorageSeed = {},
+  identity: { workbenchId?: string; extensionId?: string } = {},
 ) => {
-  const owner = { workbenchId: crypto.randomUUID(), extensionId: "test-extension" };
+  const owner = { workbenchId: crypto.randomUUID(), extensionId: "test-extension", ...identity };
   const baseStore = createMemoryDocumentStore();
   const seedStorage = createLegacyRecordStorage({ store: baseStore, owner }).scope("project", owner.workbenchId);
   const initialized = Promise.all([
@@ -45,8 +47,12 @@ export const createMemoryRecordOwner = (
   const legacy = createLegacyRecordStorage({ store, owner });
   return {
     workbenchId: owner.workbenchId,
+    extensionId: owner.extensionId,
     dataVersion: storage.dataVersion,
     setDataVersion: storage.setDataVersion,
+    exportUpdate: storage.exportUpdate,
+    applyUpdate: storage.applyUpdate,
+    snapshot: () => store.transaction(owner, async ({ document }) => snapshotDocumentRecords(document)),
     duringMigration: async <T>(key: string, run: () => Promise<T>) => {
       await initialized;
       return baseStore.duringMigration(key, run);

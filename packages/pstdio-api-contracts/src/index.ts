@@ -25,6 +25,8 @@ export * from "./session-messages";
 export * from "./sessions";
 export * from "./settings";
 export * from "./skills";
+export { createStorageId, createStorageMigration } from "./storage-identities";
+export { createStoragePositions } from "./storage-positions";
 export * from "./workspace-collection";
 export * from "./workspace-diffs";
 export * from "./workspaces";

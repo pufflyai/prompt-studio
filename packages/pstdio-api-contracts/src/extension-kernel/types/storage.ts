@@ -23,9 +23,25 @@ export type StorageScope =
   | { type: "resource"; resource: ResourceRef }
   | { type: string; id: string };
 
+export interface ExtensionStorageMigration {
+  /** Derive the same ID from a stable source key. A prefix selects lossless, case-sensitive Base62 output. */
+  id(key: string, prefix?: string): string;
+}
+
+export interface ExtensionStoragePositionsApi {
+  /** Create a unique position between neighbours. Omit either end; compare with < and >, not localeCompare. */
+  between(before?: string, after?: string): string;
+}
+
 export interface ExtensionStorageApi {
   /** Upgrade this storage scope once. Saves the version after success; failed work must be safe to retry. */
-  migrate(version: number, run: (previousVersion: number) => Promise<void>): Promise<void>;
+  migrate(
+    version: number,
+    run: (previousVersion: number, migration: ExtensionStorageMigration) => Promise<void>,
+  ): Promise<void>;
+  /** Create a UUIDv7. A prefix selects lossless, case-sensitive Base62 output. Use migration.id for imports. */
+  ids: { create(prefix?: string): string };
+  positions: ExtensionStoragePositionsApi;
   /** Read retained records from a removed schema, restricted to this project and instance. */
   readLegacy(source: string): Promise<{ version: string; records: JsonObject[] } | undefined>;
   records: ExtensionRecordsApi;

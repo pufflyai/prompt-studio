@@ -12,11 +12,18 @@ test.afterAll(async () => {
   await stopStorybook(storybook);
 });
 
-for (const story of ["attached-side", "floating-side", "closed-side", "fixed-side"]) {
+for (const story of ["attached-side", "floating-side", "closed-side", "fixed-side", "rearranged-panels"]) {
   test(`fullscreen restores ${story} and retains live editors`, async ({ page }) => {
     await page.goto(storyUrl(baseUrl, `${prefix}${story}`));
     await waitForStoryPlayback(page);
     await expect(page.getByRole("textbox", { name: "Editor draft" })).toHaveValue("Unsaved Main draft");
+    if (story === "rearranged-panels") {
+      const main = (await page.getByRole("textbox", { name: "Editor draft" }).boundingBox())!;
+      const side = (await page.getByRole("textbox", { name: "Session draft" }).boundingBox())!;
+      const bottom = (await page.getByRole("textbox", { name: "Terminal draft" }).boundingBox())!;
+      expect(side.x).toBeLessThan(main.x);
+      expect(bottom.y).toBeLessThan(main.y);
+    }
     await page.getByRole("button", { name: "Enter Main fullscreen" }).click();
     await expect(page.locator('[data-workbench-region="status"]')).toBeHidden();
     await expect(page.getByRole("textbox", { name: "Terminal draft" })).toBeHidden();
@@ -35,6 +42,13 @@ for (const story of ["attached-side", "floating-side", "closed-side", "fixed-sid
     await page.getByRole("textbox", { name: "Editor draft" }).press("Escape");
     await expect(page.getByRole("button", { name: "Enter Main fullscreen" })).toBeFocused();
     await expect(page.getByRole("textbox", { name: "Terminal draft" })).toBeVisible();
+    if (story === "rearranged-panels") {
+      const main = (await page.getByRole("textbox", { name: "Editor draft" }).boundingBox())!;
+      const side = (await page.getByRole("textbox", { name: "Session draft" }).boundingBox())!;
+      const bottom = (await page.getByRole("textbox", { name: "Terminal draft" }).boundingBox())!;
+      expect(side.x).toBeLessThan(main.x);
+      expect(bottom.y).toBeLessThan(main.y);
+    }
   });
 }
 

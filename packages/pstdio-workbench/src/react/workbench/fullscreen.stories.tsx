@@ -59,6 +59,9 @@ export const FloatingSide = fullscreenStory("floating");
 export const ClosedSide = fullscreenStory("closed");
 export const FixedSide = fullscreenStory("attached", false);
 export const HiddenNavigation = fullscreenStory("attached", true, true);
+export const RearrangedPanels = fullscreenStory("attached");
+RearrangedPanels.args!.workbench!.shell.repositionPanel("side", "left");
+RearrangedPanels.args!.workbench!.shell.repositionPanel("secondary", "top");
 
 const navigation = createFullscreenWorkbench();
 export const PageAndModeContinuity: Story = {

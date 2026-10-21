@@ -94,7 +94,7 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
             <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
           </Flex>
         </WorkbenchPanelMenuLayout>
-        <WorkbenchTabDropTarget region="side" />
+        <WorkbenchTabDropTarget region="side" visible={attached} />
       </AttachedPanel>
     </WorkbenchFocusRegion>
   );
@@ -176,7 +176,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         }
         onPopOut={() => workbench.sidePanel.setMode("attached")}
         menu={visible ? <WorkbenchSidePanelHeader header={header} /> : undefined}
-        overlay={<WorkbenchTabDropTarget region="side" />}
+        overlay={<WorkbenchTabDropTarget region="side" visible={visible} />}
       >
         <WorkbenchFocusRegion workbench={workbench} region="side" display="flex" flex="1" minH="0">
           <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />

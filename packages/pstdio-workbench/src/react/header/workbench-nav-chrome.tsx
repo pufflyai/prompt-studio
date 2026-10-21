@@ -55,9 +55,6 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   const { workbench, hasNav, panelControls = true } = props;
   const chrome = useModeChrome(workbench, "nav");
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
-  const sidenavOpen = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.visible);
-  const trailingRegions =
-    chrome && !sidenavOpen ? (["sidenav", "secondary", "side"] as const) : (["secondary", "side"] as const);
 
   return (
     <Header
@@ -74,7 +71,6 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
     >
       <Box display={chrome !== undefined || fullscreen ? "none" : "contents"}>
         <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderLeadingMenuPath} />
-        {panelControls && !sidenavOpen ? <WorkbenchPanelToggles workbench={workbench} regions={["sidenav"]} /> : null}
         <WorkbenchNavigationControls workbench={workbench} />
       </Box>
       <Box
@@ -107,9 +103,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
         <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
       </Box>
       {fullscreen || chrome === false ? <Box flex="1" minW="0" /> : null}
-      {panelControls && !fullscreen && chrome !== false ? (
-        <WorkbenchPanelToggles workbench={workbench} regions={trailingRegions} />
-      ) : null}
+      {panelControls && !fullscreen ? <WorkbenchPanelToggles workbench={workbench} /> : null}
       <FullscreenControls workbench={workbench} />
     </Header>
   );
