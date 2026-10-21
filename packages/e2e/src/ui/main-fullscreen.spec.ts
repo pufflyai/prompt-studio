@@ -31,11 +31,16 @@ for (const story of ["attached-side", "floating-side", "closed-side", "fixed-sid
       const bubble = page.getByRole("button", { name: "Open Side Panel", exact: true });
       if (await bubble.isVisible()) await bubble.click();
       const session = page.getByRole("textbox", { name: "Session draft" });
+      // Editing moves the pointer off controls whose tooltips handle Escape.
+      await session.click();
       await session.fill("Live Side draft");
+      await expect(page.getByRole("tooltip")).toHaveCount(0);
       await session.press("Escape");
       await expect(bubble).toBeFocused();
       await bubble.click();
       await expect(session).toHaveValue("Live Side draft");
+      await session.click();
+      await expect(page.getByRole("tooltip")).toHaveCount(0);
       await session.press("Escape");
       await expect(bubble).toBeFocused();
     }

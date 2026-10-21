@@ -63,6 +63,15 @@ test("package checks explicitly name all affected consumers", () => {
   expect(scope.browserSmoke).toBe(true);
 });
 
+test("browser-test-only changes select browser checks without an empty unit-test scope", () => {
+  for (const event of ["pull_request", "merge_group"]) {
+    const scope = select(["packages/e2e/src/ui/main-fullscreen.spec.ts"], ["e2e"], event);
+    expect(scope.packageChecks).toBe(false);
+    expect(scope.browserSmoke).toBe(true);
+    expect(scope.browserChecks.length).toBeGreaterThan(0);
+  }
+});
+
 test("documentation outside packages selects only static checks", () => {
   const scope = select([
     "README.md",
