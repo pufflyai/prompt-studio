@@ -6,6 +6,8 @@ export type ExtensionsRouteDeps = Pick<
   RouteDeps,
   | "accountService"
   | "artifactMountWrites"
+  | "personalHistoryService"
+  | "accountService"
   | "assetTransferService"
   | "harnessRegistry"
   | "eventBus"

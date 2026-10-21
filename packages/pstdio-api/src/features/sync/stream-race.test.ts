@@ -53,6 +53,33 @@ const createSSEReader = (response: Response) => {
 };
 
 describe("stream bootstrap race condition", () => {
+  test("does not drop updates while a slow reader drains the initial events", async () => {
+    const eventBus = new EventBus();
+    const syncService = {
+      getFullState: async () => {
+        for (const status of ["queued", "in_progress", "completed"])
+          eventBus.emit("sessions", "set", { id: "s1", status });
+        return { sessions: [] };
+      },
+    } as Parameters<typeof streamHandler>[0]["syncService"];
+    const app = new Hono();
+    app.get("/stream", streamHandler({ eventBus, syncService }));
+    const sse = createSSEReader(await app.request("/stream"));
+    try {
+      const initial = await sse.readEvents(2);
+      expect(initial.map((event) => event.event)).toEqual(["init", "sync:set"]);
+      eventBus.emit("sessions", "set", { id: "s1", status: "archived" });
+      const updates = await sse.readEvents(3);
+      expect(updates.map((event) => event.data)).toEqual([
+        { table: "sessions", data: { id: "s1", status: "in_progress" }, seq: 2 },
+        { table: "sessions", data: { id: "s1", status: "completed" }, seq: 3 },
+        { table: "sessions", data: { id: "s1", status: "archived" }, seq: 4 },
+      ]);
+    } finally {
+      await sse.close();
+    }
+  });
+
   test("does not drop events emitted during initial snapshot", async () => {
     const eventBus = new EventBus();
 

@@ -4,6 +4,7 @@ import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
 import { startCoreDocumentSync } from "./core-documents";
 import { startRelayExtension } from "./extension-owner";
+import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
 
 export type RelayWorkbench = {
@@ -28,6 +29,7 @@ export const startRelayRuntime = async (input: {
   const { deps } = input;
   const coreConnections = new Map<string, ReturnType<typeof startCoreDocumentSync>>();
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
+  const personal = new Map<string, ReturnType<typeof startRelayPersonalHistory>>();
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
     await connection.done;
@@ -47,6 +49,11 @@ export const startRelayRuntime = async (input: {
   };
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
+    if (!personal.has(workbenchId))
+      personal.set(
+        workbenchId,
+        startRelayPersonalHistory({ config, deps, signal: controller.signal, access: access.get(workbenchId)! }),
+      );
     if (!coreConnections.has(workbenchId))
       coreConnections.set(
         workbenchId,
@@ -161,6 +168,7 @@ export const startRelayRuntime = async (input: {
     },
     // Replaces the synced workbenches. Only workbenches whose login changed restart their connections.
     async update(next: RelayWorkbench[]) {
+      await deps.personalHistoryService.refreshIdentity();
       const desired = new Map(next.map((connection) => [connection.workbenchId, connection]));
       const changed = new Set(
         [...workbenches]
@@ -168,6 +176,10 @@ export const startRelayRuntime = async (input: {
           .map(([id]) => id),
       );
       for (const id of changed) {
+        const previous = personal.get(id);
+        previous?.close();
+        if (previous) await previous.done;
+        personal.delete(id);
         const coreConnection = coreConnections.get(id);
         coreConnection?.close();
         await coreConnection?.done;
@@ -194,9 +206,11 @@ export const startRelayRuntime = async (input: {
       controller.abort();
       for (const connection of coreConnections.values()) connection.close();
       for (const connection of connections.values()) connection.close();
+      for (const connection of personal.values()) connection.close();
       await running;
       await Promise.all([...coreConnections.values()].map((connection) => connection.done));
       await Promise.all([...connections.values()].map((connection) => connection.done));
+      await Promise.all([...personal.values()].map((connection) => connection.done));
     },
   };
 };

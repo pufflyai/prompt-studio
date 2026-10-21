@@ -20,6 +20,7 @@ import type { createExtensionService } from "../services/extension-service";
 import type { createExtensionUpgradeService } from "../services/extension-upgrade-service";
 import type { createFileService } from "../services/file-service";
 import type { createNotificationService } from "../services/notification-service";
+import type { createPersonalHistoryService } from "../services/personal-history/service";
 import type { createProjectService } from "../services/project-service";
 import type { createSessionService } from "../services/session-service";
 import type { createSettingsService } from "../services/settings-service";
@@ -49,6 +50,7 @@ export interface ReadinessChecks {
 // here does not silently widen every feature's surface.
 export interface RouteDeps {
   accountService: ReturnType<typeof createNativeAccount>;
+  personalHistoryService: ReturnType<typeof createPersonalHistoryService>;
   assetTransferService: ReturnType<typeof createAssetTransferService>;
   environmentService: ReturnType<typeof createEnvironmentDBService>;
   storagePositions: ExtensionStoragePositionsApi;

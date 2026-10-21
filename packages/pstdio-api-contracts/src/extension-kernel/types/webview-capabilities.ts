@@ -9,6 +9,7 @@ import type { NavigationTarget } from "./navigation-target";
 import type { PageLocation, PageParamValue } from "./pages";
 import type { ResourceRef } from "./resources";
 import type { ExtensionHarnessInput } from "./sessions";
+import type { WebviewEditingSessionParams, WebviewEditingSnapshot } from "./webview-editing";
 
 export type { ExtensionBlobRef } from "./context";
 
@@ -19,6 +20,7 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "clipboard.write",
   "commands.execute",
   "commands.stream",
+  "editing.session",
   "harnesses.read",
   "resources.actions",
   "navigation.open",
@@ -200,6 +202,7 @@ export interface WebviewHostCapabilityParams {
     | { operation: "execute"; resource: ResourceRef; key: string };
   "commands.execute": WebviewCommandsExecuteParams;
   "commands.stream": WebviewCommandsStreamParams;
+  "editing.session": WebviewEditingSessionParams;
   "page.params.update": WebviewPageParamsUpdateParams;
   "navigation.open": WebviewNavigationOpenParams;
   "placement.close": Record<string, never>;
@@ -240,6 +243,7 @@ export interface WebviewHostCapabilityResults {
   "resources.actions": WebviewResourceAction[];
   "commands.execute": { outcome: CommandOutcome };
   "commands.stream": { operation: "start" | "cancel" | "ack"; accepted: true };
+  "editing.session": WebviewEditingSnapshot | undefined;
   "page.params.update": { location: PageLocation };
   "navigation.open": void;
   "placement.close": void;
