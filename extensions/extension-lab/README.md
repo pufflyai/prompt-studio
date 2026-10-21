@@ -26,7 +26,11 @@ Open an example from the project's **Examples** group. You do not need a setup c
 
 ## State and resources
 
-The samples are ready right away. Your changes are saved in the extension's storage for the project. Each changed field is saved on its own, so edits in different views do not overwrite each other. When a command finishes, the other views refresh. Navigation uses public page targets and resource references. No view reads the host's database or internal registries.
+The samples are ready right away. Your changes are saved in the extension's storage for the project. Each example keeps its field patches in one shared record. A grouped save applies every patch together, so edits to separate fields merge and a failed batch cannot delete earlier saved values. Existing patch collections migrate once. Parent replacements apply before child patches; a parent value hides concurrent child patches whose paths no longer apply. Views of the same example share one local editing session. Edits reach every view before the backend save finishes, and rapid edits share a coalesced save queue. Saved-change events refresh backend or agent edits. Navigation uses public page targets and resource references. No view reads the host's database or internal registries.
+
+The helper in [example-store.ts](src/example-store.ts) uses the public `client.editing.open` API. `setState` publishes a durable edit. `preview`, `commitPreview`, and `cancelPreview` let a gesture update every view and save only on completion. `setTransient` keeps view-only playback progress local, including when a shared snapshot arrives. A structural change cancels drafts whose paths no longer apply. Views close their sessions when disposed.
+
+This pattern requires the SDK and host support after 0.44.0 (extension API 0.2.1). Publish that support before installing this adoption revision.
 
 Read an example's data from a terminal:
 

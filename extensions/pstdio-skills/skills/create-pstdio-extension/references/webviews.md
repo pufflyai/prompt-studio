@@ -33,6 +33,18 @@ The inspector uses Apply to commit a complete settings value. Reset uses the sam
 
 Loading, focus, and save progress belong to the local view. Persist state only when it must survive reopening or coordinate with another view. Do not synchronize views through module globals, polling, `lastCommand`, or a second copy of authoritative settings in browser storage.
 
+## Share edits before saving
+
+On `main` after release 0.44.0 (extension API 0.2.1), declare `editing.session` and open `client.editing.open({ key, initial, save: { commandId, params } })`. The key identifies one document within the current project and extension. Read the initial JSON document through your typed command. Use your own extension's save command; it receives a batch of `{ path, value }` changes and must apply the complete batch before returning success.
+
+Subscribe to the session and render `session.getSnapshot().value`. `session.commit(changes)` publishes to every participating view immediately, then waits for the shared save queue. The host coalesces changes while a save is pending. Acknowledgements cannot roll back newer edits. Keep save failures visible; `session.save()` retries or awaits pending work.
+
+Use `session.preview(changes)` during a gesture, `session.commit()` on completion, and `session.cancel()` on cancellation. Previews do not persist. Structural changes cancel drafts whose paths no longer apply. Keep selection, zoom, active tool and other view-only state outside the shared document. Preserve that local state when a shared snapshot arrives.
+
+Saved-change events remain invalidation signals. Use `session.refresh(read)` to reread backend edits; it waits for pending saves and retries when shared state changes during the read. Unsubscribe and call `session.close()` on disposal. The host owns pending saves after a view closes. Unsaved edits remain only in the live workbench if storage fails.
+
+See [Local editing sessions](https://prompt.studio/docs/references/extensions/webview-and-storage-api/#local-editing-sessions) and Extension Lab's `src/example-store.ts`. Publish the SDK and host support before adopting this pattern in a separately released extension.
+
 ## Keep browser and backend dependencies separate
 
 The extension definition and command handlers run on the backend. The webview entry runs in the browser. Keep shared IDs, types, and pure data in a small module; keep React, DOM code, styles, and browser-only libraries out of backend imports. Use type-only imports for command inference so handlers are not bundled into the browser.

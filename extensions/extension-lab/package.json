@@ -9,7 +9,7 @@
     "./contracts": "./src/contracts.ts"
   },
   "engines": {
-    "pstdio": "^0.1.0 || ^0.2.0"
+    "pstdio": "^0.2.1"
   },
   "private": true,
   "type": "module",

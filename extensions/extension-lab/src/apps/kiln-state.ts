@@ -12,6 +12,7 @@ export const kilnStore = {
     const timer = window.setInterval(() => {
       const state = stateStore.getState();
       if (!state.playing) {
+        stateStore.clearTransient("frame");
         startedAt = 0;
         return;
       }

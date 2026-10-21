@@ -1,12 +1,10 @@
-import { defineCommand, eventRef, l10n, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params, type WebviewEditingChange } from "@pstdio/sdk/extensions";
 import { readExampleState, writeExampleState } from "./example-state";
-import type { StateChange } from "./state-changes";
 import { type ExampleName, exampleNames, exampleResources } from "./state-defaults";
+import { examplesChanged } from "./state-events";
 
-export const examplesChanged = eventRef<{ name: string }>({
-  extensionId: "pstdio.extension-lab",
-  id: "examples.changed",
-});
+export { examplesChanged } from "./state-events";
+
 const nameParam = () =>
   params.select({ required: true, options: exampleNames.map((value) => ({ value, label: value })) });
 const exampleName = (name: string) => {
@@ -27,7 +25,7 @@ export const updateState = defineCommand({
   id: "state.update",
   title: l10n("commands.stateUpdate", "Update example"),
   cli: { path: ["state", "update"] },
-  params: { name: nameParam(), changes: params.json<StateChange[], { required: true }>({ required: true }) },
+  params: { name: nameParam(), changes: params.json<WebviewEditingChange[], { required: true }>({ required: true }) },
   async run(ctx, input) {
     const name = exampleName(input.name);
     const state = await writeExampleState(ctx.storage, name, input.changes);
