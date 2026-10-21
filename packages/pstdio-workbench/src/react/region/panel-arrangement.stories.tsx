@@ -169,6 +169,14 @@ const secondarySession = secondaryWorkbench.layout
   .regions.side.widgets.find((widget) => widget.tabRetention === "preview")!;
 secondaryWorkbench.movePanel(secondarySession.widgetId, "secondary");
 export const SecondarySession: Story = { args: { workbench: secondaryWorkbench } };
+const shortDestination = createArrangementWorkbench();
+const shortTab = shortDestination.layout.getLayout().regions.side.widgets[0]!;
+shortDestination.movePanel(shortTab.widgetId, "secondary");
+shortDestination.layout.updateWidgetPlacement(shortTab.widgetId, {
+  title: "T",
+  resource: { ...shortTab.resource!, label: "T" },
+});
+export const ShortDestinationTab: Story = { args: { workbench: shortDestination } };
 const movedPageWorkbench = createArrangementWorkbench();
 for (const session of movedPageWorkbench.layout.getLayout().regions.side.widgets)
   movedPageWorkbench.closePlacement(session.placementIdentity!);
@@ -222,3 +230,21 @@ export const ClosedLeftSide: Story = { args: { workbench: closedLeftSide } };
 const closedTopBottom = createArrangementWorkbench(false, undefined, undefined, false);
 closedTopBottom.shell.repositionPanel("secondary", "top");
 export const ClosedTopBottom: Story = { args: { workbench: closedTopBottom } };
+
+const createLastTabWorkbench = (region: "side" | "secondary", movable = true) => {
+  // Keep a live unpinned editor as the only tab, so its drag can move the panel.
+  const workbench = createArrangementWorkbench(false, undefined, undefined, false, region);
+  const pinned = workbench.layout
+    .getLayout()
+    .regions[region].widgets.find((widget) => widget.tabRetention === "persistent")!;
+  workbench.closePlacement(pinned.placementIdentity!);
+  workbench.modes.getMode("arrangement")!.regionSettings![region] = { movable };
+  return workbench;
+};
+export const LastSideTab: Story = { args: { workbench: createLastTabWorkbench("side") } };
+export const LastBottomTab: Story = { args: { workbench: createLastTabWorkbench("secondary") } };
+export const FixedLastSideTab: Story = { args: { workbench: createLastTabWorkbench("side", false) } };
+export const FixedLastBottomTab: Story = { args: { workbench: createLastTabWorkbench("secondary", false) } };
+export const BottomTabs: Story = {
+  args: { workbench: createArrangementWorkbench(false, undefined, undefined, false, "secondary") },
+};

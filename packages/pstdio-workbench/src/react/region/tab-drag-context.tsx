@@ -20,8 +20,8 @@ import {
 } from "../../core/registries/layout/panel-positions";
 import { planTrayDrop } from "../../core/registries/layout/tray-tabs";
 import { batchWorkbenchChanges } from "../../core/shared/store/workbench-batch";
-import { closedTabDropCollisions } from "./closed-tab-drop-collision";
 import { panelDropCollision } from "./panel-drop-collision";
+import { tabEdgeDropCollisions, tabHeaderDropCollisions } from "./tab-edge-drop-collision";
 
 interface TabDrop {
   region: WorkbenchPanelRegion;
@@ -84,7 +84,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
       position,
       widgetId: next?.widgetId ?? previous?.widgetId,
       edge: next ? "before" : "after",
-      panelPosition: data.closed ? (data.edge as WorkbenchPanelPosition) : undefined,
+      panelPosition: data.panelPosition as WorkbenchPanelPosition | undefined,
     } satisfies TabDrop;
   };
   const placement = activeId ? findPlacementByWidgetId(workbench.layout.getLayout(), activeId)?.placement : undefined;
@@ -102,8 +102,13 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
         sensors={sensors}
         collisionDetection={(args) => {
           if (args.active.data.current?.panelRegion) return panelDropCollision(args, origin.current);
-          const closed = closedTabDropCollisions(args, workbench.shell.getPanelPolicy("side").open);
-          if (closed.length) return closed;
+          const destinations = workbench.getPanelDestinations(String(args.active.id));
+          const tabs = tabHeaderDropCollisions(args).filter((collision) =>
+            destinations.includes(collision.data?.droppableContainer.data.current?.region),
+          );
+          if (tabs.length) return tabs;
+          const edges = tabEdgeDropCollisions(args);
+          if (edges.length) return edges;
           const pointer = args.pointerCoordinates;
           const panel = pointer
             ? document
@@ -156,6 +161,8 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
               )
                 workbench.shell.repositionPanel(target.region, target.panelPosition);
               workbench.movePanel(String(event.active.id), target.region, target.position);
+              if (target.panelPosition && target.region === "side")
+                workbench.shell.setSidePanelPresentation("attached");
             });
         }}
       >
@@ -181,7 +188,7 @@ export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion; vi
   const dragging = Boolean(activeId && visible);
   const allowed = dragging && Boolean(destinations?.includes(region));
   const { setNodeRef } = useDroppable({ id, data: { region }, disabled: !allowed });
-  const highlighted = allowed && drop?.region === region;
+  const highlighted = allowed && drop?.region === region && !drop.panelPosition;
   return (
     <Box
       ref={setNodeRef}

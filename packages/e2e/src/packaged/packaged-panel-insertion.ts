@@ -153,9 +153,59 @@ const verifyNearbyTabTargets = async (page: Page) => {
         return region === "side" ? panel.x > content.x : panel.y > content.y;
       })
       .toBe(true);
+    await verifyLastTabPanelMove(page, region, region === "side" ? "left" : "top");
   }
   await page.reload();
   const bottom = page.locator('[data-workbench-panel="secondary"]:visible');
   await expect(bottom.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
-  await expect.poll(async () => (await bottom.boundingBox())!.y > (await main.boundingBox())!.y).toBe(true);
+  await expect.poll(async () => (await bottom.boundingBox())!.y < (await main.boundingBox())!.y).toBe(true);
+};
+
+const verifyLastTabPanelMove = async (page: Page, region: string, position: string) => {
+  const panel = page.locator(`[data-workbench-panel="${region}"]:visible`);
+  const tab = panel.getByRole("tab", { name: "Start", exact: true });
+  // Earlier checks leave a session in Bottom. Close it through its tab menu
+  // only after the existing destination-content checks have completed.
+  const others = panel.getByRole("tab").filter({ hasNotText: "Start" });
+  for (let remaining = await others.count(); remaining > 0; remaining--) {
+    await others.first().focus();
+    await page.keyboard.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
+    await expect(others).toHaveCount(remaining - 1);
+  }
+  await expect(panel.getByRole("tab")).toHaveCount(1);
+  const main = page.locator('[data-workbench-panel="main"]');
+  await main.hover();
+  await tab.hover();
+  const before = (await panel.boundingBox())!;
+  const bounds = (await main.boundingBox())!;
+  const hit = page.locator(`[data-workbench-edge-hit="${region}"]`);
+  for (const cancel of [true, false]) {
+    await tab.hover();
+    const source = (await tab.boundingBox())!;
+    await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(source.x + source.width / 2 + 12, source.y + source.height / 2, { steps: 3 });
+    await expect(hit).toHaveCount(1);
+    await expect(hit).toHaveAttribute("data-workbench-edge-position", position);
+    await hit.hover();
+    await expect(page.locator("[data-workbench-edge-drop], [data-workbench-tab-drop][data-drop-active]")).toHaveCount(
+      1,
+    );
+    const slot = (await page.locator(`[data-workbench-edge-drop="${region}"]`).boundingBox())!;
+    await expect
+      .poll(() => main.boundingBox())
+      .toEqual({
+        x: bounds.x + (position === "left" ? slot.width : 0),
+        y: bounds.y + (position === "top" ? slot.height : 0),
+        width: bounds.width - (region === "side" ? slot.width : 0),
+        height: bounds.height - (region === "secondary" ? slot.height : 0),
+      });
+    if (cancel) await page.keyboard.press("Escape");
+    await page.mouse.up();
+    if (cancel) await expect.poll(() => panel.boundingBox()).toEqual(before);
+  }
+  await expect(tab).toBeVisible();
+  const axis = region === "side" ? "x" : "y";
+  await expect.poll(async () => (await panel.boundingBox())![axis] < (await main.boundingBox())![axis]).toBe(true);
 };

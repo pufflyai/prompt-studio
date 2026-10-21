@@ -1,8 +1,10 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { useDroppable } from "@dnd-kit/core";
 import type { ReactNode } from "react";
+import { useShallow } from "zustand/react/shallow";
 import type { WorkbenchCore } from "../../core";
 import {
+  resolveArrangement,
   resolvePanelPosition,
   type WorkbenchPanelPosition,
   type WorkbenchPositionedRegion,
@@ -28,7 +30,7 @@ const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
   const { drop, panelDrop } = useTabDrag();
   const { setNodeRef } = useDroppable({
     id: `edge:${panel ? "panel" : "tab"}:${region}:${edge}`,
-    data: panel ? { panelRegion: region, position: edge } : { region, closed: true, edge },
+    data: panel ? { panelRegion: region, position: edge } : { region, panelPosition: edge },
   });
   const highlighted = panel ? panelDrop === edge : drop?.region === region && drop.panelPosition === edge;
   const vertical = edge === "left" || edge === "right";
@@ -74,23 +76,26 @@ interface WorkbenchPanelDropFrameProps {
 export const WorkbenchPanelDropFrame = (props: WorkbenchPanelDropFrameProps) => {
   const { workbench, region, children } = props;
   const { activeId, destinations, activePanel } = useTabDrag();
-  useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
-  const arrangement = workbench.shell.getArrangement();
   const moving = region === "secondary" && activePanel === "main" ? "main" : region;
-  const current = resolvePanelPosition(arrangement, moving);
-  let edges: readonly WorkbenchPanelPosition[] = [];
-  if (activePanel === moving) edges = workbench.shell.getPanelPositions(moving).filter((edge) => edge !== current);
-  else if (
-    !activePanel &&
-    activeId &&
-    (region === "side" || region === "secondary") &&
-    destinations?.includes(region) &&
-    !workbench.shell.getPanelPolicy(region).open
-  ) {
-    edges = workbench.shell.getPanelPositions(region);
-    if (!edges.length) edges = [arrangement[region]];
-  }
+  // Derive from the subscribed layout so a completed move updates the next drag.
+  const edges = useWorkbenchStore(
+    workbench.layout.store,
+    useShallow((state) => {
+      const arrangement = resolveArrangement(state.layout.arrangement);
+      const current = resolvePanelPosition(arrangement, moving);
+      if (activePanel === moving) return workbench.shell.getPanelPositions(moving).filter((edge) => edge !== current);
+      if (!activePanel && activeId && (region === "side" || region === "secondary") && destinations?.includes(region)) {
+        const open = workbench.shell.getPanelPolicy(region).open;
+        const widgets = state.layout.regions[region].widgets;
+        const lastTab = widgets.length === 1 && widgets[0]?.widgetId === activeId;
+        const positions = workbench.shell.getPanelPositions(region);
+        if (!open) return positions.length ? positions : [arrangement[region]];
+        if (lastTab) return positions.filter((edge) => edge !== current);
+      }
+      return [];
+    }),
+  );
 
   const targets = Object.fromEntries(
     edges.map((edge) => [

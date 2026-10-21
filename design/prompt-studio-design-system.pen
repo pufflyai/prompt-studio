@@ -193646,7 +193646,7 @@
       "x": 55830,
       "y": 0,
       "name": "PS-796 · Shared panel placement and closed edges",
-      "context": "Closed panel tab targets appear only near the pointer. The selected rounded slot reserves layout space just like a whole-panel target; it never covers content. Invisible hit areas use stable owning boundaries, so preview resizing does not change the nearest edge at corners. Only one outline is visible. Leaving the edge restores content size. Hover and cancellation preserve saved placement; successful drops open the chosen edge. Main moves only beside an open Bottom.",
+      "context": "Closed panel tab targets appear only near the pointer. The selected rounded slot reserves layout space just like a whole-panel target; it never covers content. Invisible hit areas use stable owning boundaries, so preview resizing does not change the nearest edge at corners. Only one outline is visible. Leaving the edge restores content size. Hover and cancellation preserve saved placement; successful drops open the chosen edge. Main moves only beside an open Bottom. Dragging the sole tab of an open Side or Bottom also offers the opposite permitted edge. Its slot reserves space and owns the only active outline. A successful drop moves the same panel and pins the tab; cancellation keeps its placement and retention. Multiple-tab and fixed panels do not offer an alternate edge for their own tab.",
       "width": 940,
       "height": 480,
       "fill": "$ds-bg-subtle",
