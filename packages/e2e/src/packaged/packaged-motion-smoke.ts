@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page } from "@playwright/test";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { expectPackagedChatHistory } from "./packaged-chat-history-smoke";
 
 const expectResizedPanelReopen = async (page: Page, label: string, openName: string, direction: number) => {
@@ -92,6 +93,7 @@ export const expectPackagedStreamingMotion = async (
   });
   expect(response.ok).toBe(true);
   const session = (await response.json()) as { id: string };
+  logTestPhase("Packaged chat stream: open replay");
   await page.getByRole("option", { name: "Motion replay", exact: true }).click();
   const transcript = page.getByRole("log").filter({ visible: true }).first();
   await expect(transcript.locator('[data-scope="scroll-area"][data-part="viewport"]').first()).toBeVisible();
@@ -100,6 +102,7 @@ export const expectPackagedStreamingMotion = async (
     .filter({ hasText: /^Step 1\./, visible: true })
     .first();
   await expect(text).toBeVisible();
+  logTestPhase("Packaged chat stream: first chunk visible");
   const earlier = await text.elementHandle();
   // Release the remaining chunks only after the first visible response is observed.
   writeFileSync(join(projectRoot, ".fake-hold-release-1"), "release");
@@ -110,6 +113,7 @@ export const expectPackagedStreamingMotion = async (
       .first(),
   ).toBeVisible();
   expect(await earlier?.evaluate((element) => element.isConnected)).toBe(true);
+  logTestPhase("Packaged chat stream: second chunk visible");
   writeFileSync(join(projectRoot, ".fake-hold-release-2"), "release");
   await expect(page.locator(".streaming-text-chunk").first()).toBeAttached();
   await expect
@@ -127,6 +131,7 @@ export const expectPackagedStreamingMotion = async (
       .filter({ visible: true })
       .first(),
   ).toBeVisible();
+  logTestPhase("Packaged chat stream: final chunk visible");
   expect(await page.locator(".ai-message__root:visible").count()).toBeLessThan(20);
   await expect
     .poll(() =>

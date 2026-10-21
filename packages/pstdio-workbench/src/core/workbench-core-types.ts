@@ -130,6 +130,8 @@ export interface WorkbenchCoreContributionContext {
   themes: ThemeRegistry;
   fileIconThemes: FileIconThemeRegistry;
   getPrimaryResource(): ResourceRef | undefined;
+  /** Resources in open tabs, including saved inactive pages and modes when persistence supports enumeration. */
+  getOpenResources(): ResourceRef[];
   onDidChangePrimaryResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
   getActiveResource(): ResourceRef | undefined;
   onDidChangeActiveResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
@@ -143,11 +145,13 @@ export interface WorkbenchSnapshot {
 export interface WorkbenchPersistenceAdapter {
   getSnapshot(scope?: string): WorkbenchSnapshot | undefined;
   setSnapshot(snapshot: WorkbenchSnapshot, scope?: string): void;
+  listLayouts?(): { scope?: string; layout: WorkbenchLayout }[];
   flush?(): void;
   dispose?(): void;
 }
 
 export interface WorkbenchHost {
+  getOpenPlacements(): WorkbenchWidgetPlacement[];
   getSnapshot(): WorkbenchSnapshot;
   restoreSnapshot(snapshot: WorkbenchSnapshot): void;
   setPersistenceScope(scope: string | undefined, input?: { carryRegions?: readonly WorkbenchRegion[] }): void;

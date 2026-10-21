@@ -189,10 +189,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const resources = createResourceRegistry({
-    remove: (resource, retained) => {
-      removeWorkbenchResource(core, resource, retained);
-      layoutCache.removeResource(resource);
-    },
+    remove: (resource, retained) => removeWorkbenchResource(core, resource, retained, layoutCache.removeResource),
     getPrimary: () => core.getPrimaryResource(),
     resolveView: views.getView,
   });
@@ -232,6 +229,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const composition = createCoreCompositionController(() => core);
 
   core = {
+    getOpenResources: () => layoutCache.listResources(layout.getLayout()),
     closePlacement: createPlacementCloseController(() => core),
     pinPlacement: createPlacementPinController(() => core),
     ...createPanelArrangement(() => core),
@@ -244,6 +242,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     focus,
     fullscreen: createMainFullscreen(() => core),
     host: {
+      getOpenPlacements: () => layoutCache.listPlacements(layout.getLayout()),
       getSnapshot: () => ({ layout: layout.getLayout() }),
       restoreSnapshot: (snapshot) => layout.restoreLayout(snapshot.layout),
       setPersistenceScope: (scope, scopeInput = {}) =>

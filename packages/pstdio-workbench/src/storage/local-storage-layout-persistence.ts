@@ -175,6 +175,19 @@ export const createLocalStorageLayoutPersistence = (
       });
       scheduleFlush();
     },
+    listLayouts() {
+      const prefix = `${input.namespace}:layout:`;
+      const keys = new Set(pending.keys());
+      for (let index = 0; index < (storage.length ?? 0); index++) {
+        const key = storage.key?.(index);
+        if (key?.startsWith(prefix)) keys.add(key);
+      }
+      return [...keys].flatMap((key) => {
+        const scope = key.slice(prefix.length);
+        const layout = this.getLayout(scope || undefined);
+        return layout ? [{ scope, layout }] : [];
+      });
+    },
     flush,
     listScopes(projectId) {
       return [

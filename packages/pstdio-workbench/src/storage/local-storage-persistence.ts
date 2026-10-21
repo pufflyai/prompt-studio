@@ -120,6 +120,7 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
       return layout ? { layout } : undefined;
     },
     setSnapshot: (snapshot, scope) => layoutPersistence.setLayout(snapshot.layout, scope),
+    listLayouts: () => layoutPersistence.listLayouts?.() ?? [],
     flush: layoutPersistence.flush,
     dispose: layoutPersistence.dispose,
   };
