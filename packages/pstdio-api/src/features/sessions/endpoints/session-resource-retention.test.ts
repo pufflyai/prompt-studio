@@ -11,7 +11,7 @@ import {
 test("retention distinguishes a deleted session from a disconnected stream", async () => {
   const handle = await createTestApp();
   const project = await handle.deps.projectService.create({ name: "Retention errors" });
-  const session = await handle.deps.sessionService.create({ project_id: project.id, title: "Saved" });
+  const session = await handle.deps.sessionService.create({ project_id: project.id, title: "Saved", agent: null });
   try {
     const retain = (sessionId: string) =>
       handle.app.request("/v1/session-stream/missing/subscriptions", {
