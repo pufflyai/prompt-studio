@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect } from "react";
 import { useProject } from "@/shared/projects/use-project";
-import { createDashboardWorkspaceOptions, type DashboardWorkspaceOption } from "@/shared/workspaces/workspace-options";
+import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { resolveRuntimeWorkspaceSelection } from "../runtime/session-runtime-selection";
 import { SessionWorkspaceMenu } from "./session-workspace-menu";
@@ -11,7 +11,6 @@ interface SessionWorkspaceControlProps {
   projectId: string | undefined;
   selectedWorkspaceId: string;
   setSelectedWorkspaceId: Dispatch<SetStateAction<string>>;
-  onSelectWorkspace?: (workspace: DashboardWorkspaceOption) => void;
 }
 
 const getSelectedWorkspaceLabel = (input: {
@@ -27,7 +26,7 @@ const getSelectedWorkspaceLabel = (input: {
 
 /** Workspace identity/selector for the workspace hub header. */
 export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => {
-  const { view, projectId, selectedWorkspaceId, setSelectedWorkspaceId, onSelectWorkspace } = props;
+  const { view, projectId, selectedWorkspaceId, setSelectedWorkspaceId } = props;
   const { isLoading: isProjectLoading } = useProject(projectId);
   const workspaceOptions = createDashboardWorkspaceOptions(projectId);
   const workspaceSelectionKey = workspaceOptions.map((workspace) => workspace.id).join("|");
@@ -53,18 +52,12 @@ export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => 
     if (nextWorkspaceId !== selectedWorkspaceId) setSelectedWorkspaceId(nextWorkspaceId);
   }, [defaultWorkspaceId, selectedWorkspaceId, setSelectedWorkspaceId, view.workspaceId, workspaceSelectionKey]);
 
-  const handleSelectWorkspace = (workspaceId: string) => {
-    const workspace = workspaceOptions.find((option) => option.id === workspaceId);
-    setSelectedWorkspaceId(workspaceId);
-    if (workspace) onSelectWorkspace?.(workspace);
-  };
-
   return (
     <SessionWorkspaceMenu
       workspaces={workspaceOptions}
       selectedWorkspaceId={selectedWorkspaceId}
       selectedWorkspaceLabel={selectedWorkspaceLabel}
-      onSelectWorkspace={handleSelectWorkspace}
+      onSelectWorkspace={setSelectedWorkspaceId}
       isDisabled={isExistingSession || isProjectLoading}
     />
   );
