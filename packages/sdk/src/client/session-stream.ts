@@ -6,6 +6,7 @@ import {
   resolveClientUrl,
   resolveFetch,
 } from "./request";
+import { removeSessionStreamSubscription } from "./session-stream-removal";
 import { readSseStream } from "./sse";
 
 export interface SessionStreamListener {
@@ -14,6 +15,7 @@ export interface SessionStreamListener {
 }
 
 export type ClientStreamSubscription =
+  | { retain_session_id: string }
   | { session_id: string }
   | { command: { project_id: string; command_id: string; body: import("pstdio-api-contracts").CommandExecuteBody } };
 
@@ -61,9 +63,9 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
     if (!notifyServer || !started) return;
     // Subscribe and unsubscribe can travel on different HTTP connections. An
     // unsubscribe that overtook its subscribe would leave a run nobody stops.
-    // A failed unsubscribe only leaves events the client already ignores.
     const path = `/v1/session-stream/${connection.id}/subscriptions/${id}`;
-    void started.then(() => request(path, { method: "DELETE" })).catch(() => {});
+    const { signal } = connection.controller;
+    void started.then(() => removeSessionStreamSubscription(request, path, signal));
   };
 
   const dispatch = (current: Connection, event: string, payload: Envelope) => {
@@ -88,6 +90,7 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
   const fail = (current: Connection, error: unknown) => {
     if (connection !== current) return;
     connection = undefined;
+    current.controller.abort();
     const failed = [...subscriptions.values()];
     subscriptions.clear();
     const failure = new Error(error instanceof Error ? error.message : String(error), { cause: error });

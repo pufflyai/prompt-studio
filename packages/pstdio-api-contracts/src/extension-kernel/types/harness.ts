@@ -161,6 +161,15 @@ export interface HarnessProvider extends ContributionDefinition<"harness"> {
   getMessages?(ctx: HarnessContext, input: HarnessMessagesInput): MaybePromise<SessionMessage[]>;
   recoverMessages?(ctx: HarnessContext, input: HarnessRecoveryInput): MaybePromise<HarnessRecoveryResult>;
   /**
+   * Release idle local resources for one host session without deleting history or
+   * stopping remote work. The host calls this after all tabs close and the session
+   * has been unused for 30 minutes. Return true when released (including an already
+   * released session), or false while native work or delivery is still uncertain.
+   * A later start/resume or command must recreate resources as needed. Active runs,
+   * pending answers and in-flight commands keep their host ownership throughout.
+   */
+  releaseSession?(ctx: HarnessContext, input: { sessionId: string }): MaybePromise<boolean>;
+  /**
    * Release workers and connections owned by this provider in ctx.projectId's scope
    * (or the host scope when projectId is absent). The host starts cleanup on source
    * reload, removal, and project disablement, and awaits it before replacement

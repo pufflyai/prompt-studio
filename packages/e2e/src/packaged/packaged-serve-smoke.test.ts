@@ -85,6 +85,7 @@ import { registerResourceRemovalSmokeTests } from "./packaged-resource-removal-s
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionLaunchSmokeTests } from "./packaged-session-launch-smoke";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
+// The session query smoke also checks open-tab resource retention in the compiled host.
 // The fixed 1,000-session / 1,000-ticket compiled navigation gate lives in ../perf/subnav-benchmark.ts.
 // Packaged browser coverage also checks shared Session action groups and lazy title search in the tab menu.
 // Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.

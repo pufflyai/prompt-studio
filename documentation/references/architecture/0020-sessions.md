@@ -8,6 +8,16 @@ CLI and dashboard clients call the session API. Domain services coordinate datab
 
 ## Core concepts
 
+### Idle resources
+
+The host keeps a harness's idle session resources while that conversation is open in any connected tab, while a run or native command is active, and for 30 minutes after its last use. Inactive tabs and saved tabs on another page or mode count as open, including after an app reload. Closing the last tab starts a 30-minute grace period. An unexpected client disconnect releases that client's interest; another window can still retain the conversation.
+
+The SDK client exposes `sessions.retainResources(sessionId)`, which returns a connection with `close()`. It uses the existing multiplexed session stream and restores interest after connection loss. History reads stay separate: listing sessions or reading a completed transcript does not start its native tools.
+
+Harnesses can implement the optional `releaseSession(ctx, { sessionId })` method. The host calls it only after the grace period and waits for in-flight cleanup before dispatching another operation for that owner. Returning `false` means native work or delivery is not yet safe to release; the host keeps ownership and checks again after another grace period. A cleanup error is logged and also keeps ownership. Providers without the method retain their existing lifecycle.
+
+Resource release preserves the session record, transcript, drafts, and native identity. A later follow-up recreates the runtime. Volatile JavaScript variables and background shell state do not survive an expired runtime. See [ADR 0064](../../adrs/0064-codex-app-server-runtime.md).
+
 ### Two session IDs
 
 Every session has two identifiers:

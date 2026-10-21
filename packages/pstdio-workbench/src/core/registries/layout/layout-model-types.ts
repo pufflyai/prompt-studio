@@ -25,6 +25,8 @@ export type LayoutScope = string;
 export interface LayoutPersistenceAdapter {
   getLayout(scope?: LayoutScope): WorkbenchLayout | undefined;
   setLayout(layout: WorkbenchLayout, scope?: LayoutScope): void;
+  /** All saved layouts, including pending writes and inactive scopes. */
+  listLayouts?(): { scope?: string; layout: WorkbenchLayout }[];
   listScopes?(projectId: string): LayoutScope[];
   transformLayouts?(
     projectId: string,

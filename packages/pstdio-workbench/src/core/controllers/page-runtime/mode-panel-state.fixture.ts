@@ -8,6 +8,7 @@ export const modePanelFixture = (
   saved = new Map<string | undefined, WorkbenchLayout>(),
   scoped = true,
   extraPages: WorkbenchPageContribution[] = [],
+  initialPage = "alpha",
 ) => {
   const w = createWorkbench({
     initialSidePanelMode: "closed",
@@ -15,6 +16,7 @@ export const modePanelFixture = (
     layoutPersistence: {
       getLayout: (scope) => saved.get(scope),
       setLayout: (layout, scope) => saved.set(scope, structuredClone(layout)),
+      listLayouts: () => [...saved].map(([scope, layout]) => ({ scope, layout })),
     },
     resolvePagePersistenceScope: scoped
       ? ({ currentScope, projectId, modeId, pageId, resource }) => ({
@@ -74,6 +76,6 @@ export const modePanelFixture = (
     w.layout.listPanelInstances(region).flatMap((tab) => tab.resource?.id ?? []);
   for (const page of extraPages) w.pages.registerPage(page);
   w.pageLocations.setProject("project");
-  navigate("alpha");
+  navigate(initialPage);
   return { w, saved, navigate, open, ids };
 };

@@ -248,6 +248,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const navigation = createCoreNavigationRegistry(() => core);
 
   core = {
+    getOpenResources: () => layoutCache.listResources(layout.getLayout()),
     closePlacement: createPlacementCloseController(() => core),
     pinPlacement: createPlacementPinController(() => core),
     ...createPanelArrangement(() => core),
@@ -259,6 +260,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     context,
     focus,
     host: {
+      getOpenPlacements: () => layoutCache.listPlacements(layout.getLayout()),
       getSnapshot: () => ({ layout: layout.getLayout() }),
       restoreSnapshot: (snapshot) => layout.restoreLayout(snapshot.layout),
       setPersistenceScope: (scope, scopeInput = {}) =>

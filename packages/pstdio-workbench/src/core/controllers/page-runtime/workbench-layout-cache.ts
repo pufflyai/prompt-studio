@@ -85,14 +85,14 @@ export const createWorkbenchLayoutCache = (
   getTab: (contributionId: string) => WorkbenchWidgetPlacement["tab"] = () => undefined,
   getPages: () => readonly WorkbenchPageContribution[] = () => [],
 ) => {
-  // The persistence adapter does not enumerate keys. Track only scopes visited
-  // by this workbench so live removal can edit their existing cached layouts.
+  // Custom adapters may omit enumeration. Keep visited scopes available too.
   const scopes = new Set<string | undefined>();
   const memory = new Map<string | undefined, WorkbenchLayout>();
   const adapter: LayoutPersistenceAdapter = input.persistence
     ? {
         getLayout: (scope) => input.persistence?.getSnapshot(scope)?.layout,
         setLayout: (layout, scope) => input.persistence?.setSnapshot({ layout }, scope),
+        listLayouts: () => input.persistence?.listLayouts?.() ?? [],
         flush: input.persistence.flush,
         dispose: input.persistence.dispose,
       }
@@ -143,7 +143,32 @@ export const createWorkbenchLayoutCache = (
       scope,
     );
   };
+  const listPlacements = (current: WorkbenchLayout) => {
+    const placements = new Map<string, WorkbenchWidgetPlacement>();
+    const layouts = [
+      ...(adapter.listLayouts?.().map((entry) => entry.layout) ?? []),
+      ...[...scopes].map((scope) => read(scope)),
+      current,
+    ];
+    for (const layout of layouts) {
+      if (!layout) continue;
+      for (const region of Object.values(layout.regions)) {
+        for (const placement of region.widgets) {
+          placements.set(placement.widgetId, placement);
+        }
+      }
+    }
+    return [...placements.values()];
+  };
   return {
+    listPlacements,
+    listResources(current: WorkbenchLayout) {
+      const resources = new Map<string, ResourceRef>();
+      for (const placement of listPlacements(current)) {
+        if (placement.resource) resources.set(resourceKey(placement.resource), placement.resource);
+      }
+      return [...resources.values()];
+    },
     loadPageLayout(context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution | undefined) {
       const scope = input.resolvePagePersistenceScope?.(context)?.scope;
       const layout = read(scope);
@@ -177,7 +202,8 @@ export const createWorkbenchLayoutCache = (
         );
     },
     removeResource(resource: ResourceRef) {
-      for (const scope of scopes) {
+      const allScopes = new Set([...scopes, ...(adapter.listLayouts?.().map((entry) => entry.scope) ?? [])]);
+      for (const scope of allScopes) {
         const layout = read(scope);
         if (layout)
           write(
