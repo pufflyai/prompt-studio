@@ -25,7 +25,8 @@ const config = {
         POSTGRES_PASSWORD: "fixture-admin-only",
       },
       healthcheck: {
-        test: ["CMD-SHELL", "pg_isready -U fixture_admin -d authority_admin"],
+        // Initialization accepts Unix-socket connections before the final TCP listener is ready.
+        test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U fixture_admin -d authority_admin"],
         interval: "1s",
         timeout: "1s",
         retries: 20,
@@ -38,7 +39,7 @@ const config = {
       environment: {
         MANAGER_TEST_ADMIN_URL: "postgres://fixture_admin:fixture-admin-only@database:5432/authority_admin",
       },
-      command: ["bun", "test", ...(entries.length ? entries : ["src"])],
+      command: ["bun", "test", ...(entries.length ? entries : ["src", "scripts"])],
       depends_on: { database: { condition: "service_healthy" } },
     },
     smoke: {

@@ -112,3 +112,66 @@ test("separate wakes on one connection reuse the attempt signal", async () => {
     await server.stop(true);
   }
 });
+
+test("transport status follows the socket through offline and back and signals each change", async () => {
+  const controller = new AbortController();
+  let socket: Bun.ServerWebSocket<unknown> | undefined;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(client) {
+        socket = client;
+        client.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+      },
+      message() {},
+    },
+  });
+  const changes: { connected: boolean; busy: boolean }[] = [];
+  let signalled = () => {};
+  const signal = (count: number) => {
+    const reached = Promise.withResolvers<void>();
+    signalled = () => {
+      if (changes.length >= count) reached.resolve();
+    };
+    signalled();
+    return reached.promise;
+  };
+  const connection = createRelayConnection({
+    origin: server.url.origin,
+    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    access: async () => ({ token: "fixture-access", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
+    signal: controller.signal,
+    synchronize: async () => {},
+    onStatusChange: () => {
+      changes.push(connection.status());
+      signalled();
+    },
+  });
+  try {
+    // Opening the socket, then the end of the first run.
+    await signal(2);
+    expect(changes).toEqual([
+      { connected: true, busy: false },
+      { connected: true, busy: false },
+    ]);
+    // A closed socket is how the relay looks when the network drops.
+    socket?.close();
+    await signal(3);
+    expect(changes[2]).toEqual({ connected: false, busy: false });
+    // The connection retries, opens again and runs once more.
+    await signal(5);
+    expect(changes.slice(3)).toEqual([
+      { connected: true, busy: false },
+      { connected: true, busy: false },
+    ]);
+  } finally {
+    controller.abort();
+    await server.stop(true);
+    await connection.done;
+  }
+});

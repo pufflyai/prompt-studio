@@ -23,14 +23,14 @@ const callback = (request: Request) => {
 
 export const nativeLogin = async (
   auth: ReturnType<typeof createManagerAuthentication>,
-  origin: string,
+  address: string,
   request: Request,
 ) => {
   if (request.method !== "GET") return new Response(null, { status: 405 });
   try {
     const { url, state } = callback(request);
     if (new URL(request.url).pathname === "/v1/native-login") {
-      const completed = new URL("/v1/native-callback", origin);
+      const completed = new URL(`${address}/v1/native-callback`);
       completed.searchParams.set("callback", url.href);
       completed.searchParams.set("state", state);
       const response = await auth.nativeLogin(completed.href);

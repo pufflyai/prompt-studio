@@ -106,6 +106,38 @@ test("a device offline across several latest states keeps its edits and catches 
   offline.sync.close();
 });
 
+test("sync status waits for a full download and detects durable edits after a sync", async () => {
+  const f = relayFixture();
+  const first = device(f.relay);
+  expect(await first.sync.status()).toEqual({ downloaded: false, pending: false, needsAttention: false });
+  await first.sync.synchronize();
+  expect(await first.sync.status()).toEqual({ downloaded: true, pending: false, needsAttention: false });
+  await first.set("draft", "Saved on this device");
+  expect(await first.sync.status()).toEqual({ downloaded: true, pending: true, needsAttention: false });
+  await first.sync.synchronize();
+  expect((await first.sync.status()).pending).toBe(false);
+  first.sync.close();
+});
+
+test("an interrupted first download never reports complete and unreadable data needs attention", async () => {
+  const f = relayFixture();
+  let interrupted = true;
+  const first = device({
+    ...f.relay,
+    read: async (after) => {
+      if (interrupted) throw new Error("Connection interrupted");
+      return f.relay.read(after);
+    },
+  });
+  await expect(first.sync.synchronize()).rejects.toThrow("Connection interrupted");
+  expect((await first.sync.status()).downloaded).toBe(false);
+  interrupted = false;
+  await f.relay.update({ updateId: createSyncId(), payload: "AAAA", blobIds: [] });
+  await first.sync.synchronize();
+  expect(await first.sync.status()).toMatchObject({ downloaded: false, needsAttention: true });
+  first.sync.close();
+});
+
 test("another device repairs an incomplete latest state without a new local save", async () => {
   const f = relayFixture();
   const first = device(f.relay);
@@ -304,4 +336,75 @@ test("an incomplete state ahead of the cursor cannot erase edits from a complete
   first.sync.close();
   document.destroy();
   empty.destroy();
+});
+
+test("missing asset bytes keep the first download incomplete and a local draft survives retry", async () => {
+  const { sealBlob } = await import("../encryption");
+  const f = relayFixture();
+  const bytes = new TextEncoder().encode("shared picture");
+  const asset = {
+    sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),
+    byteLength: bytes.length,
+    mediaType: "image/png",
+  };
+  const sealed = await sealBlob(space, bytes);
+  const encrypted = {
+    sha256: new Bun.CryptoHasher("sha256").update(sealed.bytes).digest("hex"),
+    byteLength: sealed.bytes.length,
+    mediaType: "application/octet-stream",
+  };
+  const remote = new Y.Doc();
+  remote.getMap("records").set("picture", "picture-record");
+  remote.getMap("picture-record").set("asset", asset);
+  remote.getMap("sync-blobs").set(asset.sha256, { blobId: sealed.blobId, encrypted });
+  await f.relay.update(await sealUpdate(space, documentId, Y.encodeStateAsUpdate(remote), [sealed.blobId]));
+  const store = createMemoryDocumentStore();
+  await store.transaction(owner, async ({ document }) => {
+    document.getMap("values").set("draft", "offline edit");
+  });
+  const files = new Map<string, Uint8Array>();
+  let interrupted = true;
+  const sync = createDocumentSync({
+    owner,
+    store,
+    space,
+    documentId,
+    quarantine: async () => {},
+    relay: {
+      ...f.relay,
+      blobs: {
+        get: async () => {
+          if (interrupted) throw new Error("Asset download interrupted");
+          return sealed.bytes;
+        },
+        put: async () => {},
+      },
+    },
+    assets: {
+      verifyComplete: async (assets) => {
+        for (const entry of assets) if (!files.has(entry.sha256)) throw new Error("Missing bytes");
+      },
+      read: async (entry) => new Blob([files.get(entry.sha256)! as Uint8Array<ArrayBuffer>]).stream(),
+      receive: async (entry, read) => {
+        files.set(
+          entry.sha256,
+          new Uint8Array(await new Response(await read(0, new AbortController().signal)).arrayBuffer()),
+        );
+      },
+    },
+  });
+  try {
+    await expect(sync.synchronize()).rejects.toThrow("Asset download interrupted");
+    expect((await sync.status()).downloaded).toBe(false);
+    interrupted = false;
+    await sync.synchronize();
+    expect(await sync.status()).toEqual({ downloaded: true, pending: false, needsAttention: false });
+    expect(files.get(asset.sha256)).toEqual(bytes);
+    expect(await store.transaction(owner, async ({ document }) => document.getMap("values").get("draft"))).toBe(
+      "offline edit",
+    );
+  } finally {
+    sync.close();
+    remote.destroy();
+  }
 });

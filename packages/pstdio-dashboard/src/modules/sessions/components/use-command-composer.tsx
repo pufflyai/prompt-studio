@@ -1,4 +1,5 @@
 import { type ChatInputQuestionResponse, HarnessControls } from "@pstdio/ui/chat-ui";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import type {
   DraftHarnessCommandInput,
   HarnessCommandState,
@@ -29,6 +30,7 @@ export const useCommandComposer = (
   draft: DraftHarnessCommandInput | undefined,
   createCommand: Parameters<typeof useHarnessCommands>[3],
   onCreated: (sessionId: string, title: string) => void,
+  input: WorkbenchPanelRenderInput,
 ) => {
   const scope = JSON.stringify([sessionId, selectedAgent, sessionId ? undefined : draft]);
   const currentScope = useRef(scope);
@@ -41,7 +43,7 @@ export const useCommandComposer = (
     message?: string;
     submitted?: SubmittedCommand;
   } | null>(null);
-  const commands = useHarnessCommands(sessionId, selectedAgent, draft, createCommand);
+  const commands = useHarnessCommands(sessionId, selectedAgent, draft, createCommand, input);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [commandOutcome, setCommandOutcome] = useState<string | null>(null);
   const [intent, setIntent] = useState<ComposerIntent | null>(null);

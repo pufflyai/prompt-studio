@@ -14,7 +14,7 @@ Run the real PostgreSQL and object storage checks:
 bun run --cwd services/relay test:sync
 ```
 
-They cover duplicate updates, rejected stale latest states, blobs kept for the grace period, a storage dump with no plaintext from a seeded project, the storage bound across ten compaction cycles, protocol version errors, personal-space access, live forwarding and rate limits.
+They cover duplicate updates, rejected stale latest states, blobs kept for the grace period, a storage dump with no plaintext from a seeded project, the storage bound across ten compaction cycles, protocol version errors, access to private project data, live forwarding and rate limits.
 
 The full 10,000-update storage check is a manual benchmark: `bun run --cwd services/relay bench:storage-bound`. See [relay storage bound](../../references/performance/0003-relay-storage-bound.md).
 
@@ -200,9 +200,10 @@ The smoke generates HTTPS trust inside each run's owned volumes, so cached image
 
 ## Infrastructure boundary
 
-Portable Compose and the DigitalOcean Terraform plan are described in the
-[deployment guide](0012-portable-cloud-deployment.md). Terraform lives under
-`infra/terraform/`, separate from the service source. State and private operator
-inputs are ignored and excluded from Docker build contexts. No apply is authorized.
+The portable Compose deployment is described in the
+[deployment guide](0012-portable-cloud-deployment.md). Deployment files live under
+`infra/`, separate from the service source. The DigitalOcean module lives in
+`infra/terraform/`; Prompt Studio's own environments and secrets live in a separate
+repository.
 
 CI runs the relay's ordinary package checks through Lerna and an isolated Docker smoke job when the relay or shared tooling changes. See [package boundaries](../../references/architecture/0013-package-boundaries.md) for dependency rules. The relay stays private and is excluded from Changesets publication. Shared model changes also require the packaged CLI checks because local storage and the SDK test adapter bundle that model.

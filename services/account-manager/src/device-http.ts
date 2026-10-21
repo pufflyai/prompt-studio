@@ -38,6 +38,7 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
     return json(await auth.loginDevice(request.headers, await request.json()), 201);
   }
   const devices = auth.devices;
+  if (path === "/v1/devices/presence" && method === "POST") return ok(devices.heartbeat(bearer(request)));
   if (path === "/v1/devices" && method === "GET") return json(await devices.devices(bearer(request)));
   if (path === "/v1/workbenches" && method === "GET") return json(await devices.workbenches(bearer(request)));
   const device = /^\/v1\/devices\/([^/]+)\/(rename|remove)$/.exec(path);

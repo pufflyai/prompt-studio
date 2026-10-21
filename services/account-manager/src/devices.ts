@@ -1,4 +1,5 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { devicePresenceLeaseMs } from "pstdio-sync-contracts";
 import type { DeviceInput, DeviceRegistrationInput, WorkbenchInput } from "./contracts";
 import { createCredential, digestCredential } from "./credential";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
@@ -35,6 +36,7 @@ export const listDevices = async (db: Reader, accountId: string) => {
       platform: devices.platform,
       createdAt: devices.createdAt,
       lastSeenAt: devices.lastSeenAt,
+      online: sql<boolean>`${devices.lastSeenAt} > clock_timestamp() - ${devicePresenceLeaseMs} * interval '1 millisecond'`,
     })
     .from(devices)
     .where(and(eq(devices.accountId, accountId), isNull(devices.removedAt)))
@@ -45,6 +47,9 @@ export const listDevices = async (db: Reader, accountId: string) => {
     lastSeenAt: row.lastSeenAt.toISOString(),
   }));
 };
+
+export const heartbeatDeviceInTransaction = (transaction: ManagerTransaction, input: DeviceInput) =>
+  transaction.update(devices).set({ lastSeenAt: sql`clock_timestamp()` }).where(activeDevice(input));
 
 const activeDevice = (input: DeviceInput) =>
   and(eq(devices.accountId, input.accountId), eq(devices.id, input.deviceId), isNull(devices.removedAt));

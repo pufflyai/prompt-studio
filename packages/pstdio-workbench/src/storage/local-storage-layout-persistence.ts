@@ -4,6 +4,7 @@ import {
   type CreateWorkbenchStoragePersistenceInput,
   readJson,
   resolveStorage,
+  type WorkbenchStorageLike,
   workbenchStoragePersistenceKey,
 } from "./local-storage-persistence-helpers";
 
@@ -31,11 +32,36 @@ interface PersistedWorkbenchLayoutGeneration {
   generation: number;
 }
 
+const readSavedLayout = (storage: WorkbenchStorageLike, namespace: string, scope: string | undefined) => {
+  const saved = readJson<PersistedWorkbenchLayout>(storage, workbenchStoragePersistenceKey(namespace, "layout", scope));
+  return saved?.version === WORKBENCH_LAYOUT_VERSION ? saved.layout : undefined;
+};
+
+const createLayoutRemoval = (
+  storage: WorkbenchStorageLike,
+  namespace: string,
+  pending: { delete(key: string): boolean },
+  notify: (scope: string | undefined, layout: WorkbenchLayout | undefined) => void,
+) =>
+  storage.removeItem
+    ? (scope?: string) => {
+        const key = workbenchStoragePersistenceKey(namespace, "layout", scope);
+        const existed = pending.delete(key) || storage.getItem(key) !== null;
+        storage.removeItem?.(key);
+        if (existed) notify(scope, undefined);
+      }
+    : undefined;
+
 export const createLocalStorageLayoutPersistence = (
   input: CreateWorkbenchStoragePersistenceInput,
 ): LayoutPersistenceAdapter => {
   const storage = resolveStorage(input.storage);
   const pending = new Map<string, { generation: number; raw: string; scope: string | undefined }>();
+  const listeners = new Set<(scope: string | undefined, layout: WorkbenchLayout | undefined) => void>();
+  const notify = (scope: string | undefined, layout: WorkbenchLayout | undefined) => {
+    for (const listener of listeners) listener(scope, layout);
+  };
+  const savedLayout = (scope: string | undefined) => readSavedLayout(storage, input.namespace, scope);
   const debounceMs = input.debounceMs ?? 250;
   const eventTarget =
     input.eventTarget ??
@@ -64,6 +90,9 @@ export const createLocalStorageLayoutPersistence = (
     const generation = getGeneration() + 1;
     const persisted: PersistedWorkbenchLayoutGeneration = { version: 1, generation };
     storage.setItem(generationKey, JSON.stringify(persisted));
+    const cancelled = [...pending.values()];
+    pending.clear();
+    for (const write of cancelled) notify(write.scope, savedLayout(write.scope));
     return generation;
   };
 
@@ -121,6 +150,7 @@ export const createLocalStorageLayoutPersistence = (
     for (const evictedScope of scopes.splice(0, Math.max(0, scopes.length - WORKBENCH_LAYOUT_RESOURCE_LIMIT))) {
       storage.removeItem?.(workbenchStoragePersistenceKey(input.namespace, "layout", evictedScope));
       storage.removeItem?.(workbenchStoragePersistenceKey(input.namespace, "panel-menus", evictedScope));
+      notify(evictedScope, undefined);
     }
     writeScopes("layout-resource-index", projectId, scopes);
   };
@@ -132,7 +162,10 @@ export const createLocalStorageLayoutPersistence = (
     pending.clear();
     const generation = getGeneration();
     for (const write of writes) {
-      if (write.generation !== generation) continue;
+      if (write.generation !== generation) {
+        notify(write.scope, savedLayout(write.scope));
+        continue;
+      }
       storage.setItem(workbenchStoragePersistenceKey(input.namespace, "layout", write.scope), write.raw);
       touchProjectScope(write.scope);
       touchResourceScope(write.scope);
@@ -173,7 +206,29 @@ export const createLocalStorageLayoutPersistence = (
         raw: JSON.stringify(persisted),
         scope,
       });
+      notify(scope, persisted.layout);
       scheduleFlush();
+    },
+    onDidChangeLayout(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    removeLayout: createLayoutRemoval(storage, input.namespace, pending, notify),
+    listLayouts() {
+      const prefix = `${input.namespace}:layout:`;
+      const keys = new Set(pending.keys());
+      for (let index = 0; index < (storage.length ?? 0); index++) {
+        const key = storage.key?.(index);
+        if (key?.startsWith(prefix)) keys.add(key);
+      }
+      return [...keys].flatMap((key) => {
+        const suffix = key.slice(prefix.length);
+        const scope = suffix === "global" ? undefined : suffix;
+        const layout = this.getLayout(scope);
+        return layout ? [{ scope, layout }] : [];
+      });
     },
     flush,
     listScopes(projectId) {
@@ -195,12 +250,14 @@ export const createLocalStorageLayoutPersistence = (
         const layout = transform(persisted.layout, scope);
         if (!layout) {
           storage.removeItem?.(key);
+          notify(scope, undefined);
           continue;
         }
         storage.setItem(
           key,
           JSON.stringify({ version: WORKBENCH_LAYOUT_VERSION, layout } satisfies PersistedWorkbenchLayoutV5),
         );
+        notify(scope, layout);
       }
     },
     getCompatibilityMarker: (key) =>
@@ -216,6 +273,7 @@ export const createLocalStorageLayoutPersistence = (
     dispose() {
       flush();
       eventTarget?.removeEventListener("pagehide", flush);
+      listeners.clear();
     },
   };
 };

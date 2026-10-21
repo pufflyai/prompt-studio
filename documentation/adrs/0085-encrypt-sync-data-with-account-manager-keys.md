@@ -11,7 +11,7 @@ Status: Accepted
 metadata (R8 to R10). Clients need keys that:
 
 - every device of the user gets after Google login, without a step per project (R12, R34)
-- are split into a project key and a personal-space key from the start (R13)
+- are split into a project key and a key for the user's private project data from the start (R13)
 - survive the loss of the key store (R14)
 - change for future data when a device leaves, while older data stays readable (R15)
 

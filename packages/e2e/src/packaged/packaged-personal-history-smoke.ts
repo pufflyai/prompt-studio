@@ -92,7 +92,7 @@ export const registerPersonalHistorySmokeTests = () =>
           sourceRef: null,
           version: null,
         });
-        const login = await client.account.login(peer.server.url.origin);
+        const login = await client.account.login(peer.origin);
         const url = new URL(login.url);
         const callback = new URL(url.searchParams.get("callback")!);
         callback.searchParams.set("state", url.searchParams.get("state")!);
@@ -103,8 +103,7 @@ export const registerPersonalHistorySmokeTests = () =>
       };
       try {
         const clientA = await connect(a, join(roots[0]!, "project"));
-        const session = await clientA.sessions.create({
-          projectId,
+        const session = await clientA.sessions.create(projectId, {
           title: "Private conversation",
           agent: "test.personal-history-fixture.harness.worker",
           prompt: "Start",
@@ -120,7 +119,7 @@ export const registerPersonalHistorySmokeTests = () =>
         await waitFor(async () => (await clientB.sessions.query(projectId)).items.some((row) => row.id === session.id));
         await waitFor(async () => (await clientB.sessions.getConversation(session.id)).messages.length === 600);
         await stopProcess(b.child);
-        await peer.server.stop(true);
+        await peer.stop();
         b = await startPackagedServe(roots[1]!, env);
         clientB = createClient({ baseUrl: b.baseUrl, token: b.descriptor.token });
         const conversation = await clientB.sessions.getConversation(session.id);
@@ -154,7 +153,7 @@ export const registerPersonalHistorySmokeTests = () =>
       } finally {
         await stopProcess(a.child);
         if (b) await stopProcess(b.child);
-        await peer.server.stop(true);
+        await peer.stop();
         await rm(root, { recursive: true, force: true });
       }
     },

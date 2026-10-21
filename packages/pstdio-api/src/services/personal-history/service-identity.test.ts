@@ -59,6 +59,7 @@ test("a document read held across an account switch cannot return or republish t
           relayOrigin: "https://relay.example",
         },
         cloudProjects: [],
+        cloudProjectsLoaded: true,
       }),
     },
     projects: { list: async () => [] },

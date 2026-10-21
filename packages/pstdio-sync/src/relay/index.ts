@@ -3,5 +3,5 @@ export { createDocumentRelayConnection, createRelayConnection } from "./connecti
 export { createDocumentRelay } from "./document-http";
 export { createDocumentSync, latestStateLimits } from "./document-sync";
 export type { DocumentRelay, DocumentSyncInput, SyncFailure } from "./document-sync-types";
-export { createRelayAdapter, type RelayHttpInput, relayOrigin } from "./http";
+export { createRelayAdapter, type RelayHttpInput, serviceAddress, serviceUrl } from "./http";
 export { fetchSyncSpaces } from "./keys";

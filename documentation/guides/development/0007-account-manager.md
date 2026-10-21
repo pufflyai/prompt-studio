@@ -18,7 +18,7 @@ A device is one client runtime. Its environment ID is its device ID. Logging in 
 - Logging in again on the same device replaces its credential and undoes an earlier removal. The device keeps its name.
 - `manager_workbenches` lists the account's cloud projects. A device renews access only for those.
 - Removing a device stops its renewal. Removing a cloud project stops renewal for it on every device. Access already issued stays valid until it expires.
-- `manager_space_keys` holds the encryption keys of each cloud project: a project key and the owner's personal-space key, one row per generation. The first key request for a cloud project creates generation 1. Removing a device adds the next generation of every key of the account, so the removed device cannot read data written afterward. Older generations stay. See [ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md).
+- `manager_space_keys` holds the encryption keys of each cloud project: a project key and the key for the owner's private project data, one row per generation. The first key request for a cloud project creates generation 1. Removing a device adds the next generation of every key of the account, so the removed device cannot read data written afterward. Older generations stay. See [ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md).
 - Every renewal updates the device's last-seen time.
 
 ## Internal operations
@@ -58,7 +58,11 @@ Better Auth owns `/api/auth/*`, including Google sign-in/callback, sessions, sig
 
 The Google session is needed only to log in. Login uses the account the Google user already owns. Without one, it creates an account whose ID comes from the Google issuer and subject, so every login of one user finds the same account. Devices of one account manage each other. A device can never see or change the devices or cloud projects of another account. Operator lifecycle and recovery remain private. See [device login development](0011-device-login.md) for the supported browser and CLI flow. Errors discard sensitive causes and responses use no-store.
 
-The Bun listener requires DATABASE_URL, MANAGER_ORIGIN, RELAY_AUDIENCE, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_LIFETIME_SECONDS, SESSION_UPDATE_AGE_SECONDS and ACCESS_LIFETIME_SECONDS. Lifetimes are positive explicit policy, with update age below session lifetime. Origins use HTTPS. MANAGER_HOST/PORT select the listener; optional paired MANAGER_TLS_CERT/KEY paths supply TLS when it terminates in this process. A trusted HTTPS ingress can terminate TLS instead. Configure Google's callback for the trusted origin's /api/auth/callback/google path.
+The Bun listener requires DATABASE_URL, MANAGER_ORIGIN, RELAY_AUDIENCE, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_LIFETIME_SECONDS, SESSION_UPDATE_AGE_SECONDS and ACCESS_LIFETIME_SECONDS. Lifetimes are positive explicit policy, with update age below session lifetime. Origins use HTTPS. MANAGER_HOST/PORT select the listener; optional paired MANAGER_TLS_CERT/KEY paths supply TLS when it terminates in this process. A trusted HTTPS ingress can terminate TLS instead. Configure Google's callback as MANAGER_ORIGIN followed by /api/auth/callback/google.
+
+### Addresses with a path
+
+MANAGER_ORIGIN and RELAY_AUDIENCE are HTTPS addresses and may include a path, so both services can share one host, for example `https://base.prompt.studio/accounts` and `https://base.prompt.studio/relay`. The proxy in front of each service removes that path before forwarding, so the services keep serving at `/`. The manager uses its full address for the Google callback, the native sign-in callback and the token issuer, and adds its path back before Better Auth handles a request. Browser `Origin` checks still compare the origin without the path. Clients join every request path under the address they were given.
 
 Build the production image with `docker build -f infra/account-manager/Dockerfile .`. Apply generated migrations through operator tooling first. The slim runtime needs no source mount or dependency install. Never put secrets in command arguments, URLs or logs.
 

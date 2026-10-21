@@ -98,6 +98,7 @@ const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefi
 import { layoutPanelGuards } from "./controllers/shell/layout-panel-policy";
 import { requirePanelOpen } from "./controllers/shell/panel-open-policy";
 import { restorePanelPolicy, workbenchPanelPolicy } from "./controllers/shell/workbench-panel-policy";
+import { createWorkbenchHost } from "./workbench-core-host";
 
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   let core: WorkbenchCore;
@@ -189,10 +190,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const resources = createResourceRegistry({
-    remove: (resource, retained) => {
-      removeWorkbenchResource(core, resource, retained);
-      layoutCache.removeResource(resource);
-    },
+    remove: (resource, retained) => removeWorkbenchResource(core, resource, retained, layoutCache.removeResource),
     getPrimary: () => core.getPrimaryResource(),
     resolveView: views.getView,
   });
@@ -215,7 +213,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     loadModeLayout: layoutCache.readMode,
     saveModeLayout: layoutCache.saveMode,
     beforeApply: createPagePersistenceScopeHandler(input, layout, panelMenuState),
-    restorePageState: createPageStateRestorer(cachedInput, layoutCache.loadPageLayout),
+    restorePageState: createPageStateRestorer(cachedInput, layoutCache.loadPageLayout, layoutCache.hasPageMain),
 
     revealRegion: (region) => revealPanelRegion(core, region),
     layout,
@@ -232,6 +230,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const composition = createCoreCompositionController(() => core);
 
   core = {
+    getOpenResources: () => layoutCache.listResources(layout.getLayout()),
     closePlacement: createPlacementCloseController(() => core),
     pinPlacement: createPlacementPinController(() => core),
     ...createPanelArrangement(() => core),
@@ -243,13 +242,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     context,
     focus,
     fullscreen: createMainFullscreen(() => core),
-    host: {
-      getSnapshot: () => ({ layout: layout.getLayout() }),
-      restoreSnapshot: (snapshot) => layout.restoreLayout(snapshot.layout),
-      setPersistenceScope: (scope, scopeInput = {}) =>
-        layout.setPersistenceScope(scope, { carryRegionState: scopeInput.carryRegions }),
-      getPersistenceScope: layout.getPersistenceScope,
-    },
+    host: createWorkbenchHost(layout, layoutCache),
     keybindings: createKeybindingRegistry({ commands, context }),
     layout,
     modes,

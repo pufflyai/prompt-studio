@@ -6,7 +6,6 @@ deployment files live under `infra/`. Neither image needs a source checkout, a r
 package install or developer credentials. Both run as the unprivileged Bun user.
 
 This guide prepares deployment. It does not authorize cloud resources or spending.
-Do not run `terraform apply` without separate approval.
 
 ## Release images
 
@@ -73,7 +72,7 @@ and device list survive. Never use `down --volumes` on a deployment you want to 
 
 ## Keys and recovery
 
-The account manager's own PostgreSQL database contains project and personal-space
+The account manager's own PostgreSQL database contains project keys, private-data
 keys, older key generations, device grants and signing keys. Relay object storage
 contains ciphertext. Its latest state and later updates are the content backup;
 there is no relay backup bucket or backup worker.
@@ -111,63 +110,73 @@ uses `RELAY_ACCESS_TRUST` and the base64 recovery key uses `RELAY_RECOVERY_KEY`.
 File injection through `RELAY_ACCESS_TRUST_FILE` and `RELAY_RECOVERY_KEY_FILE` remains
 available. Environment values take precedence when supplied.
 
-## DigitalOcean plan
+## DigitalOcean module
 
-`infra/terraform/` describes two App Platform apps, separate managed PostgreSQL
-clusters and roles, app-specific database firewalls and a private Spaces bucket.
-Each app runs its own schema migration as a pre-deploy job using the same pinned
-image as its service. Only that job gets the cluster owner's database credential.
-It grants table and sequence access to the normal runtime role after migrations.
-The service gets only its normal role credential. Both commands receive the cluster
-CA through `DATABASE_CA_CERT`; the container launcher writes a private temporary CA
-file and uses `sslmode=verify-full`. TLS terminates at App Platform. The manager's managed database
-backup is separate from relay storage; also take the independent key backup described
-above. Approve region, database and app sizes through the PS-787 cost check before
-deploying. There is no provider-specific code in either service.
+`infra/terraform/` is a Terraform module that runs both services on DigitalOcean App
+Platform:
 
-Mirror each released image digest to DigitalOcean Container Registry and supply its
-`repository` and `digest` in `images`. The provider's DOCR source avoids building the
-repository during deployment. Create a bucket-scoped read/write Spaces key for the
-relay, with multipart, list and delete access; Terraform's provisioner credentials
-must remain separate. Validate the key with the [object contract probe](0006-relay.md#provider-contract)
-against a disposable existing bucket when live provider testing is authorized.
+- One app on one host. The relay serves under `/relay` and the account manager under
+  `/accounts`. App Platform removes the path before forwarding, as described in
+  the [account manager guide](0007-account-manager.md).
+- One PostgreSQL server with a database and login per service. Each service's migration
+  revokes public access to its database and grants it to that service's login only, so
+  the relay cannot reach the manager's keys.
+- A private Spaces bucket for relay data.
 
-Install Terraform 1.10 or newer, below 2.0. The provider is locked. Check and inspect an
-empty validation workspace without real credentials or remote reads:
+Use it from your own Terraform configuration and pin it to a release, together with the
+image digests of the same release:
 
-```sh
-terraform -chdir=infra/terraform init -backend=false -input=false
-terraform -chdir=infra/terraform fmt -check
-terraform -chdir=infra/terraform validate
-DIGITALOCEAN_TOKEN=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
-SPACES_ACCESS_KEY_ID=validation-only SPACES_SECRET_ACCESS_KEY=validation-only \
-terraform -chdir=infra/terraform plan -refresh=false -input=false -var-file=validation.tfvars
+```hcl
+module "cloud" {
+  source          = "git::https://github.com/pufflyai/prompt-studio.git//infra/terraform?ref=<release tag>"
+  name            = "acme-production"
+  host            = "cloud.example.com"
+  dns_zone        = "example.com"
+  app_region      = "ams"
+  database_region = "ams3"
+  spaces_region   = "ams3"
+  bucket_name     = "acme-relay"
+  image_digests   = { relay = "sha256:...", manager = "sha256:..." }
+  relay_secrets   = var.relay_secrets
+  manager_secrets = var.manager_secrets
+}
 ```
 
-This plan has 11 additions, no changes and no deletions. It checks the provider schema
-and dependency graph, not live credentials, DNS, provider capacity, backups or S3
-compatibility. The synthetic values must never be applied. No cloud API write occurs.
+`variables.tf` lists every input. Give clients the `manager_url` output:
+`pst login --manager <manager_url>`. The manager tells each device the relay address.
+Register `<manager_url>/api/auth/callback/google` in the Google OAuth client.
 
-For a first deployment, the manager must exist before the relay can trust its signing
-keys. After separate deployment approval, prepare a manager-first plan with
-`-target='digitalocean_app.service["manager"]'` and
-`-target='digitalocean_database_firewall.service["manager"]'`. Review every included
-dependency and cost; targeting the manager can also include shared plan dependencies.
-Provision that reviewed bootstrap phase only within the approved deployment scope.
-Verify the manager's public HTTPS origin and fetch `/api/auth/jwks`. Put the returned
-nonempty key set into `relay_secrets.RELAY_ACCESS_TRUST`, with the exact manager issuer
-and relay audience. Then produce and review a full plan before deploying the relay.
-The synthetic empty JWKS is for planning only and cannot start a relay. Later upgrades
-use full plans and preserve or rotate the existing public signing trust.
+The relay must trust the manager's signing keys, and those exist only once the manager
+runs. Deploy the first time with `services = ["manager"]`. Fetch
+`<manager_url>/api/auth/jwks` and put the key set into `relay_secrets.RELAY_ACCESS_TRUST`
+with issuer `<manager_url>` and audience `<relay_url>`. Then deploy both services.
 
-For an authorized real plan, use an operator workspace with real domains, released
-digests, public signing trust and secrets supplied through protected `TF_VAR_*`
-environment values or an untracked private variable file. Use
-`DIGITALOCEAN_TOKEN`, `SPACES_ACCESS_KEY_ID` and `SPACES_SECRET_ACCESS_KEY` for provider
-credentials. Plans and state can contain secrets even when their display is redacted.
-Keep them encrypted with access restricted to operators. Configure a protected remote
-backend with locking before any shared deployment; this module deliberately has no
-preselected backend or remote-state credentials. Do not run concurrent local applies.
+Plan the module without credentials or cloud calls:
+
+```sh
+terraform -chdir=infra/terraform fmt -check -recursive
+terraform -chdir=infra/terraform/validation init -input=false
+terraform -chdir=infra/terraform/validation validate
+DIGITALOCEAN_TOKEN=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+SPACES_ACCESS_KEY_ID=validation-only SPACES_SECRET_ACCESS_KEY=validation-only \
+terraform -chdir=infra/terraform/validation plan -refresh=false -input=false
+```
+
+The plan adds 8 resources. It checks the provider schema and the dependency graph, not
+live credentials, DNS or provider capacity. Never apply the validation inputs. State and
+plans contain secrets even when the output hides them: keep them in a private backend
+with locking. Prompt Studio's own hosted service uses this module from a separate
+repository that holds its environments, state and secrets.
+
+## Other platforms
+
+The images run on any container platform. Give each service its own PostgreSQL
+database and login, keep relay objects in a private S3-compatible bucket, and run each
+service's migration with the same image before the service starts. For a managed
+database, pass its CA certificate in `DATABASE_CA_CERT`; the container launcher writes it
+to a private file and connects with `sslmode=verify-full`. Give the relay a
+bucket-scoped key with read, write, multipart, list and delete access, and check it with
+the [object contract probe](0006-relay.md#provider-contract).
 
 ## Migrations and upgrades
 
@@ -179,6 +188,4 @@ Compose dependencies and App Platform pre-deploy jobs enforce this order. Migrat
 failure must stop the upgrade. Do not automatically run older images against a newer
 schema: database rollback requires a tested restore or a compatible forward fix.
 
-Terraform prevents accidental destruction of database clusters and the Spaces bucket.
-This does not replace backups or a recovery drill. A plan-only review does not prove
-a production rollout or a released image exists.
+Keep backups of every database and test a recovery before relying on it.
