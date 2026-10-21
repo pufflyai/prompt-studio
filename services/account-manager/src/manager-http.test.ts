@@ -57,6 +57,7 @@ test("renewal returns sanitized scoped access and denies other workbenches", asy
 
 test("Google login connects each device to every cloud project, and devices manage each other", async () => {
   const { authentication, request, device, renew } = setup();
+  const manager = fixture.owner();
   try {
     const user = await authentication.login(`devices-${crypto.randomUUID()}`);
     const stranger = await authentication.login(`stranger-${crypto.randomUUID()}`);
@@ -69,6 +70,7 @@ test("Google login connects each device to every cloud project, and devices mana
     };
     expect((await request("/v1/device-login", deviceProfile(), user.headers)).status).toBe(403);
     const laptop = await login(sameOrigin);
+    await manager.setFeature({ accountId: laptop.accountId, feature: "relay", enabled: true });
     const desktop = await login(sameOrigin);
     expect(desktop.accountId).toBe(laptop.accountId);
     expect(laptop.relayOrigin).toBe(authentication.config.audience);
@@ -115,7 +117,7 @@ test("Google login connects each device to every cloud project, and devices mana
     expect((await renew(desktop.token, workbenchId)).status).toBe(401);
     expect((await request("/v1/devices")).status).toBe(401);
   } finally {
-    await authentication.close();
+    await Promise.all([authentication.close(), manager.close()]);
   }
 });
 

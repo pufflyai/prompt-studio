@@ -43,8 +43,15 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
     createRoute({ method: "get", path: "/account/projects/{id}/sync", tags, request: { params }, responses }),
     async (c) => c.json(await service.projectSyncStatus(c.req.valid("param").id), 200),
   );
-  routes.openapi(createRoute({ method: "get", path: "/account", tags, responses }), async (c) =>
-    c.json(await service.status(), 200),
+  routes.openapi(
+    createRoute({
+      method: "get",
+      path: "/account",
+      description: "Read login, Cloud projects and account feature grants.",
+      tags,
+      responses,
+    }),
+    async (c) => c.json(await service.status(), 200),
   );
   routes.openapi(createRoute({ method: "post", path: "/account/logout", tags, responses }), async (c) =>
     c.json(await service.logout(), 200),

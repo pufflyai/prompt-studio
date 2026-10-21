@@ -37,13 +37,14 @@ export const createAuthorityFixture = (implementation: typeof Authority) => {
   };
 };
 
-export const provisionAccount = async (owner: ReturnType<typeof Authority.createAccountManager>) => {
+export const provisionAccount = async (owner: ReturnType<typeof Authority.createAccountManager>, relay = true) => {
   const accountId = crypto.randomUUID();
   await owner.provision({
     requestId: "provision",
     accountId,
     owner: { issuer: "https://accounts.google.com", subject: accountId },
   });
+  if (relay) await owner.setFeature({ accountId, feature: "relay", enabled: true });
   return accountId;
 };
 export const deviceProfile = (deviceId: string = crypto.randomUUID()) => ({

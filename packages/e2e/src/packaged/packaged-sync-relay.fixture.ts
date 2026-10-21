@@ -56,6 +56,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
         project: [{ generation: 1, secret: "A".repeat(43) }],
         personal: [{ generation: 1, secret: "B".repeat(43) }],
       });
+    if (path === "/v1/account") return json({ features: { relay: true } });
     if (path === "/v1/workbenches") return json([...projects].map((workbenchId) => ({ workbenchId })));
     if (path.startsWith("/v1/workbenches/")) {
       const [, , , id, action] = path.split("/");
