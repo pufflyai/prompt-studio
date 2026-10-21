@@ -42,6 +42,8 @@ try {
   await step(["run", "--rm", "--no-deps", "initialize"]);
   await step(["up", "--wait", "authority", "relay"]);
   await step(["run", "--rm", "--no-deps", "smoke"]);
+  await step(["up", "--wait", "--force-recreate", "authority", "relay"]);
+  await step(["run", "--rm", "--no-deps", "smoke", "bun", "smoke-replacement.js"]);
   await step(["stop", "relay"]);
   const relayId = await run([...compose, "ps", "--all", "--quiet", "relay"], true);
   const exitCode = await run(["docker", "inspect", "--format", "{{.State.ExitCode}}", relayId], true);

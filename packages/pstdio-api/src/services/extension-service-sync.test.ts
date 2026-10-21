@@ -46,6 +46,7 @@ beforeEach(async () => {
   installedExtensionSourcesService = createInstalledExtensionSourcesDBService(result.db);
   extensionUserDataService = createExtensionUserDataDBService(result.db);
   service = createExtensionService({
+    sourceExists: () => true,
     extensionInstancesService,
     installedExtensionSourcesService,
     extensionUserDataService,
@@ -66,10 +67,10 @@ describe("extensionService installed source sync", () => {
     );
     const enabledSources = await service.listEnabledSourcesForProject(project.id);
 
-    expect(result.installedSource.install_name).toBe("planner");
-    expect(result.instance.scope_type).toBe("project");
-    expect(result.instance.scope_id).toBe(project.id);
-    expect(result.instance.enabled).toBe(false);
+    expect(result!.installedSource.install_name).toBe("planner");
+    expect(result!.instance.scope_type).toBe("project");
+    expect(result!.instance.scope_id).toBe(project.id);
+    expect(result!.instance.enabled).toBe(false);
     expect(enabledSources).toEqual([]);
   });
 
@@ -88,12 +89,12 @@ describe("extensionService installed source sync", () => {
       }),
     );
 
-    expect(synced.installedSource.id).toBe(enabled.installedSource.id);
+    expect(synced!.installedSource.id).toBe(enabled.installedSource.id);
     // Discovery reports the new source but never adopts it, so the project keeps what it accepted.
-    expect(synced.installedSource.version).toBeNull();
-    expect(synced.installedSource.source_hash).toBe("hash-1");
-    expect(synced.instance.id).toBe(enabled.instance.id);
-    expect(synced.instance.enabled).toBe(true);
+    expect(synced!.installedSource.version).toBeNull();
+    expect(synced!.installedSource.source_hash).toBe("hash-1");
+    expect(synced!.instance.id).toBe(enabled.instance.id);
+    expect(synced!.instance.enabled).toBe(true);
   });
 
   test("enables a previously synced disabled project instance without duplicating it", async () => {
@@ -103,7 +104,7 @@ describe("extensionService installed source sync", () => {
     const enabled = await service.enableInstalledSourceForProject(createServiceInput(project.id));
     const projectInstances = await service.listProjectExtensionInstances(project.id);
 
-    expect(enabled.instance.id).toBe(synced.instance.id);
+    expect(enabled.instance.id).toBe(synced!.instance.id);
     expect(enabled.instance.enabled).toBe(true);
     expect(projectInstances).toHaveLength(1);
   });
@@ -130,6 +131,7 @@ describe("extensionService installed source sync", () => {
     const project = await projectService.create({ name: "Extension Project" });
     let notifyCount = 0;
     const quietService = createExtensionService({
+      sourceExists: () => true,
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
@@ -151,6 +153,7 @@ describe("extensionService installed source sync", () => {
     const project = await projectService.create({ name: "Extension Project" });
     const changedSourcePaths: Array<string | undefined> = [];
     const notifyingService = createExtensionService({
+      sourceExists: () => true,
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
@@ -169,6 +172,7 @@ describe("extensionService installed source sync", () => {
     const project = await projectService.create({ name: "Extension Project" });
     let notifyCount = 0;
     const quietService = createExtensionService({
+      sourceExists: () => true,
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,

@@ -23,12 +23,20 @@ export const useTreeMovement = (input: {
   latestBody.current = body;
   const queue = useRef(Promise.resolve());
   useEffect(() => {
+    // Even a no-op update can interrupt a pending transition before its rows commit.
+    if (
+      !pending.moves.some(
+        (move) => pending.scope !== scope || (move.savedAfter !== undefined && move.savedAfter !== body),
+      )
+    )
+      return;
     setPending((current) => {
+      if (current.moves.length === 0) return current;
       if (current.scope !== scope) return { scope, moves: [] };
       const moves = current.moves.filter((move) => !move.savedAfter || move.savedAfter === body);
       return moves.length === current.moves.length ? current : { scope, moves };
     });
-  }, [scope, body]);
+  }, [scope, body, pending]);
   const moves = pending.scope === scope ? pending.moves : [];
   const preview = moves.reduce((sections, move) => previewTreeMove(sections, childrenByNodeId, move.intent), body);
   return {

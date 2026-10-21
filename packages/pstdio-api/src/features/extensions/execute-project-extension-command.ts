@@ -84,15 +84,8 @@ export const executeProjectExtensionCommand = async (
     });
   const observed = expected
     ? await withStorageObservation(expected, execute)
-    : { value: await execute(), versions: undefined, conflicted: false };
+    : { value: await execute(), versions: undefined };
   let outcome: typeof observed.value & { data?: CommandExecuteResponse["outcome"]["data"] } = observed.value;
-  if (observed.conflicted)
-    outcome = {
-      ok: false,
-      status: "error",
-      reason:
-        "This file changed in another environment. Your draft is kept here and its saved version is retained as a conflict.",
-    };
   if (observed.versions && outcome.ok)
     outcome = {
       ...outcome,

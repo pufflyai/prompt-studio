@@ -1,55 +1,16 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { createLegacyRecordStorage, createRecordStorage, type GroupedState, type GroupedStore } from "pstdio-sync";
-import { type Snapshot, sealMutation } from "pstdio-sync-contracts";
+import { createDocumentStorage, createLegacyRecordStorage, type DocumentStore } from "pstdio-sync";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import type { artifactFilesFixture } from "./artifact-files.fixture";
 
-export async function acceptedHandlerState(f: Awaited<ReturnType<typeof artifactFilesFixture>>) {
-  const current = await f.storage.readState();
-  const state: GroupedState = { owner: current.owner, accepted: null, journal: current.journal };
-  const accepted: Snapshot = {
-    protocolVersion: 1,
-    scope: { accountId: "fixture", ...f.owner },
-    journalSequence: state.journal.length,
-    checkpoint: { epoch: "seed", sequence: state.journal.length },
-    records: current.working,
-    receipts: {},
-    conflicts: {},
-    publishedRevision: "fixture",
-  };
-  // These setup writes are the accepted baseline, not save-handler checkpoint writes.
-  accepted.scope = { accountId: "fixture", workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId };
-  for (const [index, entry] of state.journal.entries()) {
-    const mutation = await sealMutation({ protocolVersion: 1, scope: accepted.scope, ...entry.mutation });
-    accepted.receipts[mutation.operationId] = {
-      mutation,
-      fingerprint: mutation.fingerprint,
-      operationId: mutation.operationId,
-      order: index + 1,
-      status: "accepted",
-      checkpoint: { epoch: "seed", sequence: index + 1 },
-    };
-  }
-  state.accepted = accepted;
-  return state;
-}
-
 /** Test host port: projections and collections share the fork; disk never sees preparation. */
-export function handlerPorts(
-  f: Awaited<ReturnType<typeof artifactFilesFixture>>,
-  store: GroupedStore,
-  environmentId: string,
-) {
-  const raw = createRecordStorage({
+export function handlerPorts(f: Awaited<ReturnType<typeof artifactFilesFixture>>, store: DocumentStore) {
+  const raw = createDocumentStorage({
     store,
     owner: f.owner,
-    environmentId,
     assets: createRecordAssets(f.assets, f.owner),
   });
-  const legacy = createLegacyRecordStorage({ store, owner: f.owner, environmentId }).scope(
-    "project",
-    f.owner.workbenchId,
-  );
+  const legacy = createLegacyRecordStorage({ store, owner: f.owner }).scope("project", f.owner.workbenchId);
   const record = (path: string) => raw.records.read(f.recordId(`documents/${path}`));
   const mount = {
     exists: async (path: string) => {

@@ -218,7 +218,7 @@ API 0.2 moves `ctx.extensionFiles` from `.pstdio/ext/<publisher>.<name>/` to `.p
 
 ## Independent panel permissions in API 0.2.1
 
-`ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Published extension header and tab behavior stays compatible until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
+`ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `movable`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Published extension header and tab behavior stays compatible until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
 
 ## Storage conflict members deprecated in API 0.2.1
 
@@ -230,3 +230,19 @@ Edits from several devices are moving to automatic merging. The storage API stop
 - `storage.assets` no longer documents retained versions or unresolved alternatives.
 
 The next breaking release removes the deprecated members together. See [Deprecated conflict members](../sdk/0004-storage.md#deprecated-conflict-members).
+
+## Storage IDs and positions in API 0.2.1
+
+`storage.ids.create()`, `storage.positions.between()`, and the second migration
+callback argument, `migration.id(key)`, are additive. Existing migration callbacks
+keep working. The test storage options add optional `workbenchId`, `extensionId`,
+and `deviceId` values for simulating the same owner on two devices. These additions
+ship in the release after 0.44.0. See the
+[storage guide](../../guides/sdk/0003-storage.md#create-records-and-arrange-items).
+
+These ID helpers also accept an optional lowercase prefix. A supplied prefix selects
+a lossless 22-character Base62 UUID body; omitting it keeps canonical UUID text.
+`resources.allocate({ kind, idPrefix? })` uses the same generator and preserves its
+existing UUID output when `idPrefix` is omitted. Compact IDs are case-sensitive;
+extension adoption must keep ID lookup exact and shorthand lookup separate. These
+options do not rewrite existing IDs or change existing shorthand declarations.

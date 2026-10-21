@@ -1,7 +1,7 @@
 import { Box, Stack, type StackProps } from "@chakra-ui/react";
 import { DndContext, PointerSensor, useDndContext, useDndMonitor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Fragment, type MouseEvent as ReactMouseEvent, useContext, useState } from "react";
+import { Fragment, type MouseEvent as ReactMouseEvent, type RefObject, useContext, useState } from "react";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
 import {
   createTreeListDropHandler,
@@ -17,6 +17,7 @@ import { type TreeListMovePolicy, toSectionDragId, verticalTreeDrag } from "./tr
 import { TreeListReveal } from "./tree-list-reveal";
 import { TreeListSectionHeader } from "./tree-list-section-header";
 import { SectionGap, SortableHost } from "./tree-list-sortable-host";
+import { VirtualTreeList } from "./tree-list-virtual";
 import { useTreeListKeyboardNavigation } from "./use-tree-list-keyboard-navigation";
 
 type TreeListRowVariant = "compact" | "tree";
@@ -150,6 +151,8 @@ const SortableSections = (props: SortableSectionsProps) => {
     onToggleNode: rest.onToggleNode,
     onToggleSection: rest.onToggleSection,
   });
+  if (props.virtualize && props.scrollRef)
+    return <VirtualTreeList {...props} rows={rows} scrollRef={props.scrollRef} sortable indicator={indicator} />;
   return (
     <SortableContext
       items={sections.map((section) => toSectionDragId(section.id))}
@@ -199,6 +202,8 @@ const SortableSections = (props: SortableSectionsProps) => {
 };
 
 interface TreeListSortableProps {
+  virtualize?: boolean;
+  scrollRef?: RefObject<HTMLDivElement | null>;
   sections: TreeListSection[];
   expandedSectionIds?: string[];
   expandedNodeIds?: string[];
@@ -262,6 +267,8 @@ export const TreeListSortable = (props: TreeListSortableProps) => {
       onToggleNode={onToggleNode}
       onMoveNode={onMoveNode}
       onSectionContextMenu={onSectionContextMenu}
+      virtualize={props.virtualize}
+      scrollRef={props.scrollRef}
     />
   );
   if (usesSharedDragContext) return content;

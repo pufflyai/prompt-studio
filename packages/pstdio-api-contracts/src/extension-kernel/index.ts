@@ -42,6 +42,7 @@ export {
   gitEvents,
   projectEvents,
   projectSlots,
+  resourceEvents,
   sessionEvents,
   sessionSlots,
   viewDataEvents,

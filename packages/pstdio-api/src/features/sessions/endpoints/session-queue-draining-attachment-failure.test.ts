@@ -62,8 +62,8 @@ describe("session queue draining with a corrupted attachment entry", () => {
       // Freeing capacity drains the queue starting from the corrupted entry.
       await isolated.deps.sessionService.transitionStatus(holder.id, "completed");
 
-      await waitForSessionStatus(isolated.app, corrupted.id, "failed");
-      await waitForSessionStatus(isolated.app, healthy.id, "in_progress");
+      await waitForSessionStatus(isolated, corrupted.id, "failed");
+      await waitForSessionStatus(isolated, healthy.id, "in_progress");
 
       expect(await isolated.deps.sessionQueueEntriesService.listPending()).toEqual([]);
       expect(await isolated.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);

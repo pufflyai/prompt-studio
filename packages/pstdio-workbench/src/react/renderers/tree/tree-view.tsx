@@ -234,7 +234,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         aria-label={treeRenderer.title}
         aria-busy={loading}
       >
-        {!loading && visibleHeaderSections.length > 0 ? (
+        {visibleHeaderSections.length > 0 ? (
           <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
             <TreeList
               sections={visibleHeaderSections}
@@ -298,7 +298,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             />
           </Box>
         </ScrollArea>
-        {!loading && visibleFooterSections.length > 0 ? (
+        {visibleFooterSections.length > 0 ? (
           <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
             <TreeList
               sections={visibleFooterSections}

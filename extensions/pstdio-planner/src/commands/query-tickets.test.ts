@@ -3,6 +3,7 @@ import type { ExtensionSessionsApi, ExtensionWorkspace } from "@pstdio/sdk/exten
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket } from "../data/collections";
 import { seedDefaultStatuses } from "../data/seed";
+import { countStorageWrites } from "../data/storage-writes.fixture";
 import type { StoredTicket } from "../data/types";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
 import { queryTicketsCommand } from "./query-tickets";
@@ -38,6 +39,19 @@ const makeWorkspace = (id: string, shorthand: string, createdAt: string): Extens
 });
 
 describe("queryTicketsCommand", () => {
+  test("reading the board writes nothing once Planner storage is up to date", async () => {
+    const { storage, counter } = countStorageWrites(createMemoryStorage());
+    await putTicket(storage, makeTicket({ title: "Active" }));
+    const ctx = makeCommandContext({ storage, params: { filter: { conjunction: "and", rules: [] } } });
+    await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
+    counter.writes = 0;
+
+    const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
+
+    expect(result.rows.map((row) => row.title)).toEqual(["Active"]);
+    expect(counter.writes).toBe(0);
+  });
+
   test("returns both archive states when the view has no archive filter", async () => {
     const storage = createMemoryStorage();
     await putTicket(storage, makeTicket({ archived: false, title: "Active" }));

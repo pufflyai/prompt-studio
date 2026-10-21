@@ -1,63 +1,50 @@
 import { expect, test } from "bun:test";
+import * as Y from "yjs";
 import { captureCheckpoint } from "./checkpoint-capture";
-import { createRecordStorage } from "./storage";
-import type { GroupedState } from "./types";
+import { createDocumentStorage } from "./document-storage";
+import { memoryDocumentState } from "./document-types";
 
 const owner = { workbenchId: "w", extensionId: "e" };
-const initial = () => {
-  const state: GroupedState = { owner, accepted: null, journal: [] };
-  return state;
-};
+const storage = (document: Y.Doc) =>
+  createDocumentStorage({
+    owner,
+    store: { transaction: async (_owner, action) => action(memoryDocumentState(document)) },
+  });
 
-test("save-handler writes are captured together without publishing intermediate groups", async () => {
-  const state = initial();
-  const captured = await captureCheckpoint(state, "a", async (store) => {
-    const { records } = createRecordStorage({ owner, environmentId: "a", store });
-    for (const value of ["first", "transformed"]) {
-      const before = await records.read("projection");
+test("save-handler writes publish together as one document update", async () => {
+  const document = new Y.Doc();
+  const captured = await captureCheckpoint(document, owner, async (store) => {
+    const { records } = createDocumentStorage({ owner, store });
+    for (const value of ["first", "transformed"])
       await records.commit({
         operationId: crypto.randomUUID(),
-        edits: [{ recordId: "projection", expectedRevision: before.revision, replace: value }],
+        edits: [{ recordId: "projection", replace: value }],
       });
-    }
+    await records.commit({ operationId: "other", edits: [{ recordId: "other", replace: true }] });
     return "result";
   });
-  expect(state.journal).toHaveLength(0);
+  expect(await storage(document).records.list()).toEqual([]);
   expect(captured.value).toBe("result");
-  expect(captured.changes).toHaveLength(1);
-  expect(captured.changes[0].expectedRevision).toBe(0);
-  expect(captured.changes[0].value?.next).toBe("transformed");
-  expect(captured.parents).toEqual([]);
+  let updates = 0;
+  document.on("update", () => updates++);
+  Y.applyUpdate(document, captured.update);
+  expect(updates).toBe(1);
+  expect((await storage(document).records.read("projection")).value).toBe("transformed");
+  expect((await storage(document).records.read("other")).value).toBe(true);
+  document.destroy();
 });
 
-test("a handler failure discards every captured storage write", async () => {
-  const state = initial();
+test("a failed save handler discards all its staged writes", async () => {
+  const document = new Y.Doc();
   await expect(
-    captureCheckpoint(state, "a", async (store) => {
-      const { records } = createRecordStorage({ owner, environmentId: "a", store });
-      const before = await records.read("projection");
-      await records.commit({
+    captureCheckpoint(document, owner, async (store) => {
+      await createDocumentStorage({ owner, store }).records.commit({
         operationId: "write",
-        edits: [{ recordId: "projection", expectedRevision: before.revision, replace: "hidden" }],
+        edits: [{ recordId: "projection", replace: "hidden" }],
       });
       throw new Error("handler failed");
     }),
   ).rejects.toThrow("handler failed");
-  expect(state.journal).toHaveLength(0);
-});
-
-test("a stale second write cannot replace a successful captured write", async () => {
-  const state = initial();
-  await expect(
-    captureCheckpoint(state, "a", async (store) => {
-      const { records } = createRecordStorage({ owner, environmentId: "a", store });
-      const before = await records.read("projection");
-      for (const value of ["first", "stale"])
-        await records.commit({
-          operationId: value,
-          edits: [{ recordId: "projection", expectedRevision: before.revision, replace: value }],
-        });
-    }),
-  ).rejects.toThrow("observe earlier captured writes");
-  expect(state.journal).toHaveLength(0);
+  expect(await storage(document).records.list()).toEqual([]);
+  document.destroy();
 });

@@ -10,11 +10,15 @@
     "test:packaged:cli": "bun src/packaged/run-packaged-cli-tests.ts",
     "test:packaged:browser": "playwright test --config playwright.packaged.config.ts",
     "test:ui": "bun run src/scripts/run-playwright.ts",
+    "test:smoke": "bun run src/scripts/run-playwright.ts --config playwright.smoke.config.ts",
+    "test:pr": "bun run src/scripts/run-playwright.ts --config playwright.pr.config.ts",
     "test:vite-terminal": "bun run src/scripts/run-vite-terminal-playwright.ts",
     "perf:frontend": "bun run --cwd ../.. build -- --scope e2e --scope pstdio-dashboard --include-dependencies && bun run src/scripts/run-playwright.ts -c playwright.perf.config.ts",
     "perf:frontend:trace": "PLAYWRIGHT_TRACE=on bun run perf:frontend",
     "test:planner-stress": "bun src/perf/planner-stress.ts",
-    "report": "playwright show-report"
+    "perf:subnav": "bun src/perf/subnav-benchmark.ts",
+    "report": "playwright show-report",
+    "perf:planner-board-cold-open": "bun src/perf/planner-board-cold-open.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
@@ -44,8 +48,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remote-workspaces": "workspace:*",
-    "workbench-fixture": "workspace:*",
-    "pstdio-sync": "workspace:*",
-    "pstdio-sync-contracts": "workspace:*"
+    "workbench-fixture": "workspace:*"
   }
 }

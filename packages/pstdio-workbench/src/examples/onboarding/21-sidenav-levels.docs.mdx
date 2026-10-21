@@ -56,7 +56,8 @@ the host must add one in front of the breadcrumb.
 `createLevelNavigation(workbench)` composes one navigation tree from the active mode and every open level. Hosts use
 it to fill their navigation view:
 
-- `getSections(slot, signal)` returns the sections for `header`, `content`, or `footer`.
+- `getSections(slot, signal, onProgress)` returns the sections for `header`, `content`, or `footer`. Pass the tree
+  query's `onProgress` callback to show ready sections while slower contributions finish. Results keep their declared order.
 - `getReadKey()` changes when the owners or their resources change, so the tree starts a new read.
 - `getDefaultExpandedSectionIds()` lists the sections that start expanded.
 

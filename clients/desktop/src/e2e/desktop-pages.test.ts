@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test } from "bun:test";
-import { type Browser, type BrowserContext, chromium, type Page } from "@playwright/test";
+import { type Browser, type BrowserContext, chromium, type Page, expect as playwrightExpect } from "@playwright/test";
 import { waitForWorkbenchPage } from "./desktop-pages";
 
 let browser: Browser;
@@ -43,6 +43,28 @@ test("workbench readiness returns a newly opened page at the runtime origin", as
     await workbench.goto(server.url.origin);
     expect(await ready).toBe(workbench);
   } finally {
+    await server.stop(true);
+  }
+});
+
+test("workbench readiness accepts a saved route restored before observation starts", async () => {
+  const server = Bun.serve({
+    port: 0,
+    fetch: () => new Response("Workbench", { headers: { "content-type": "text/html" } }),
+  });
+  const workbench = await context.newPage();
+  const savedUrl = new URL("/projects/saved/sessions", server.url).href;
+  await workbench.goto(savedUrl);
+  let readyPage: Page | undefined;
+  const ready = waitForWorkbenchPage(lifecycle, server.url.origin).then((page) => {
+    readyPage = page;
+  });
+  try {
+    await playwrightExpect.poll(() => readyPage === workbench, { timeout: 1_000 }).toBe(true);
+    expect(workbench.url()).toBe(savedUrl);
+  } finally {
+    await workbench.goto(server.url.origin);
+    await ready;
     await server.stop(true);
   }
 });

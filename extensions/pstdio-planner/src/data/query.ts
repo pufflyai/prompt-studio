@@ -9,8 +9,6 @@ import { buildPlan } from "../timeline/model/build-plan";
 import { resolvePlan } from "../timeline/model/resolve-plan";
 import { timelineTicketProperties } from "../timeline/model/ticket-properties";
 import { sortedBySortOrder } from "../utils/sort";
-import { cleanupLegacyTicketFields } from "./cleanup-legacy-ticket-fields";
-import { cleanupLegacyWorkspaceStatus } from "./cleanup-legacy-workspace-status";
 import { ticketsCollection } from "./collections";
 import {
   buildTicketAttributes,
@@ -44,8 +42,6 @@ export const runTicketsQuery = async ({
   workspaces = [],
   workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
-  await cleanupLegacyWorkspaceStatus(storage);
-  await cleanupLegacyTicketFields(storage);
   const [storedTickets, tags, statuses, storedPlan, requests] = await Promise.all([
     ticketsCollection(storage).list(),
     seedDefaultTags(storage),

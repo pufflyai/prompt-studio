@@ -53,16 +53,20 @@ export const toDashboardExtensionResource = (
   };
   const workspace =
     ref.type === "workspace" ? createDashboardWorkspaces(projectId).find((entry) => entry.id === ref.id) : undefined;
+  // Ownership stays on the resource; adding it to metadata would change a file's read key after navigation.
+  const metadata =
+    ref.metadata || workspace?.resource.metadata
+      ? {
+          ...ref.metadata,
+          ...workspace?.resource.metadata,
+          ...(ref.metadata?.resourceParent ? { resourceParent: ref.metadata.resourceParent } : {}),
+        }
+      : undefined;
   return {
     ...canonicalDashboardResource(ref, projectId, kinds),
     label: workspace?.resource.label ?? ref.label ?? ref.id,
     icon: workspace?.resource.icon ?? ref.icon ?? standardResourceIcons.kanbanRenderer,
-    metadata: {
-      ...ref.metadata,
-      ...workspace?.resource.metadata,
-      ...(ref.metadata?.resourceParent ? { resourceParent: ref.metadata.resourceParent } : {}),
-      projectId: ref.projectId ?? projectId,
-    },
+    ...(metadata ? { metadata } : {}),
   };
 };
 const sameMenuPath = (left: MenuPath, right: MenuPath) =>
@@ -81,7 +85,6 @@ const rowResource = (
     extensionId: record.extensionId,
     projectId,
     label: row.title,
-    metadata: { projectId },
   };
 };
 const matchingRowAction = (registrations: MenuRegistration[], record: KanbanRecord, commandId: string) => {

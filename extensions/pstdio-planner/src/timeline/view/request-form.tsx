@@ -92,7 +92,7 @@ export function RequestForm(props: RequestFormProps) {
               onClick={() => void run("chat", () => onOpenChat(request.id))}
             >
               <Icon as={MessageSquare} />
-              Open chat
+              Open session
             </Button>
           </Flex>
         </Stack>

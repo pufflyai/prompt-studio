@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createDb } from "../../db/connection.pglite";
-import { createGroupedStorageDBService } from "./grouped-storage";
+import { createDocumentStorageDBService } from "./document-storage";
 
 test("a reported local group survives abrupt process termination before database close", async () => {
   const root = await mkdtemp(join(tmpdir(), "grouped-crash-"));
@@ -28,14 +28,12 @@ test("a reported local group survives abrupt process termination before database
     child.kill("SIGKILL");
     await child.exited;
     reopened = await createDb({ path });
-    const storage = createGroupedStorageDBService(reopened.db).open({
+    const storage = createDocumentStorageDBService(reopened.db).open({
       owner: { workbenchId: "crash-workbench", extensionId: "example.notes" },
-      environmentId: "crash-environment",
     });
     expect((await storage.records.read("one")).value).toBe("first");
     expect((await storage.records.read("two")).value).toBe("second");
     expect((await storage.records.outcome("crash-group"))?.status).toBe("saved-locally");
-    expect((await storage.readState()).journal).toHaveLength(1);
   } finally {
     if (child.exitCode === null) child.kill("SIGKILL");
     await child.exited;

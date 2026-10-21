@@ -1,4 +1,6 @@
-import type { CommandContext, JsonObject } from "@pstdio/sdk/extensions";
+import type { ExtensionContextBase, JsonObject } from "@pstdio/sdk/extensions";
+
+type MigrationContext = Pick<ExtensionContextBase, "files" | "storage">;
 
 const ownedTypes = new Set(["document", "prompt", "ticket"]);
 const normalizeName = (name: string) => name.replaceAll("_", "-");
@@ -15,7 +17,7 @@ const normalizeRecords = (records: JsonObject[], key: string) => {
   });
 };
 
-const importTemplates = async (ctx: CommandContext, templates: ReturnType<typeof normalizeRecords>) => {
+const importTemplates = async (ctx: MigrationContext, templates: ReturnType<typeof normalizeRecords>) => {
   const collection = ctx.storage.collection("templates");
   for (const { name, record } of templates) {
     if (await collection.get(name)) continue;
@@ -42,7 +44,7 @@ const importTemplates = async (ctx: CommandContext, templates: ReturnType<typeof
   }
 };
 
-const importPreferences = async (ctx: CommandContext, overrides: ReturnType<typeof normalizeRecords>) => {
+const importPreferences = async (ctx: MigrationContext, overrides: ReturnType<typeof normalizeRecords>) => {
   const collection = ctx.storage.collection("template-preferences");
   for (const { name, record } of overrides) {
     if (typeof record.enabled !== "boolean") throw new Error("Invalid legacy template preference.");
@@ -55,7 +57,7 @@ const importPreferences = async (ctx: CommandContext, overrides: ReturnType<type
 };
 
 const importDefaults = async (
-  ctx: CommandContext,
+  ctx: MigrationContext,
   records: JsonObject[],
   templates: ReturnType<typeof normalizeRecords>,
 ) => {
@@ -71,19 +73,18 @@ const importDefaults = async (
   if (Object.keys(imported).length) await ctx.storage.set("template-defaults", { ...imported, ...previous });
 };
 
-export const migratePlannerTemplates = (ctx: CommandContext) =>
-  ctx.storage.migrate(1, async () => {
-    const [source, preferences, defaults] = await Promise.all([
-      ctx.storage.readLegacy("templates"),
-      ctx.storage.readLegacy("extension_template_preferences"),
-      ctx.storage.readLegacy("project_template_defaults"),
-    ]);
-    const owned = (source?.records ?? []).filter(
-      (row) => typeof row.template_type === "string" && ownedTypes.has(row.template_type) && row.deleted_at == null,
-    );
-    const templates = normalizeRecords(owned, "name");
-    const overrides = normalizeRecords(preferences?.records ?? [], "template_key");
-    await importTemplates(ctx, templates);
-    await importPreferences(ctx, overrides);
-    await importDefaults(ctx, defaults?.records ?? [], templates);
-  });
+export const importLegacyTemplates = async (ctx: MigrationContext) => {
+  const [source, preferences, defaults] = await Promise.all([
+    ctx.storage.readLegacy("templates"),
+    ctx.storage.readLegacy("extension_template_preferences"),
+    ctx.storage.readLegacy("project_template_defaults"),
+  ]);
+  const owned = (source?.records ?? []).filter(
+    (row) => typeof row.template_type === "string" && ownedTypes.has(row.template_type) && row.deleted_at == null,
+  );
+  const templates = normalizeRecords(owned, "name");
+  const overrides = normalizeRecords(preferences?.records ?? [], "template_key");
+  await importTemplates(ctx, templates);
+  await importPreferences(ctx, overrides);
+  await importDefaults(ctx, defaults?.records ?? [], templates);
+};
