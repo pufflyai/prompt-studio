@@ -14,6 +14,7 @@ export const createPanelPositionController = (input: {
   const getPanelPositions = (region: WorkbenchPositionedRegion) => {
     if (!Object.hasOwn(panelPositions, region)) return [];
     if (!input.getPolicy(region).movable) return [];
+    if (region === "main" && !input.getPolicy("secondary").open) return [];
     if (
       (region === "main" || region === "secondary") &&
       (!input.getPolicy("main").movable || !input.getPolicy("secondary").movable)

@@ -13,8 +13,13 @@ import {
 import { createContext, type ReactNode, useContext, useId, useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchTabPosition } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
-import type { WorkbenchPanelPosition, WorkbenchPositionedRegion } from "../../core/registries/layout/panel-positions";
+import {
+  resolvePanelPosition,
+  type WorkbenchPanelPosition,
+  type WorkbenchPositionedRegion,
+} from "../../core/registries/layout/panel-positions";
 import { planTrayDrop } from "../../core/registries/layout/tray-tabs";
+import { batchWorkbenchChanges } from "../../core/shared/store/workbench-batch";
 import { panelDropCollision } from "./panel-drop-collision";
 
 interface TabDrop {
@@ -22,6 +27,7 @@ interface TabDrop {
   position: WorkbenchTabPosition;
   widgetId?: string;
   edge?: "before" | "after";
+  panelPosition?: WorkbenchPanelPosition;
 }
 const TabDragContext = createContext<{
   activeId?: string;
@@ -77,6 +83,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
       position,
       widgetId: next?.widgetId ?? previous?.widgetId,
       edge: next ? "before" : "after",
+      panelPosition: data.closed ? (data.edge as WorkbenchPanelPosition) : undefined,
     } satisfies TabDrop;
   };
   const placement = activeId ? findPlacementByWidgetId(workbench.layout.getLayout(), activeId)?.placement : undefined;
@@ -157,7 +164,15 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
           }
           const target = resolveDrop(event);
           finish();
-          if (target) workbench.movePanel(String(event.active.id), target.region, target.position);
+          if (target)
+            batchWorkbenchChanges(() => {
+              if (
+                target.panelPosition &&
+                target.panelPosition !== resolvePanelPosition(workbench.shell.getArrangement(), target.region)
+              )
+                workbench.shell.repositionPanel(target.region, target.panelPosition);
+              workbench.movePanel(String(event.active.id), target.region, target.position);
+            });
         }}
       >
         {children}

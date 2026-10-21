@@ -2,6 +2,24 @@ import { expect, test } from "bun:test";
 import { createWorkbench } from "../../workbench-core";
 import { harness, navigate, openFile } from "../composition/placement-lifecycle-test-support";
 
+test("Main can change vertical placement only while Bottom is open", async () => {
+  const w = createWorkbench();
+  w.shell.setRegionOpen("secondary", false);
+  const before = w.layout.getLayout();
+  expect(w.shell.getPanelPositions("main")).toEqual([]);
+  await expect(
+    w.commands.executeCommand("workbench.repositionPanel", { region: "main", position: "bottom" }),
+  ).rejects.toThrow("Panel cannot move");
+  expect(w.layout.getLayout()).toBe(before);
+  expect(w.shell.getPanelPositions("secondary")).toEqual(["top", "bottom"]);
+  w.shell.setRegionOpen("secondary", true);
+  expect(w.shell.getPanelPositions("main")).toEqual(["top", "bottom"]);
+  w.shell.repositionPanel("main", "bottom");
+  expect(w.shell.getArrangement().secondary).toBe("top");
+  w.shell.setRegionOpen("secondary", false);
+  expect(w.shell.getPanelPositions("main")).toEqual([]);
+});
+
 test("placement commands preserve tabs and restore the mode arrangement after reload", async () => {
   const saved = new Map();
   const w = harness(saved);
@@ -80,4 +98,12 @@ test("each supported command position preserves visibility, selection and resour
   }
   w.resetLayout();
   expect(w.shell.getArrangement()).toEqual({ side: "right", sidenav: "left", secondary: "bottom", activity: "left" });
+});
+
+test("Main cannot change order when the mode does not provide Bottom", () => {
+  const w = createWorkbench();
+  w.modes.registerMode({ id: "main-only", panels: ["main"], activate() {} });
+  w.modes.setActiveMode("main-only");
+  expect(w.shell.getPanelPolicy("main").movable).toBe(true);
+  expect(w.shell.getPanelPositions("main")).toEqual([]);
 });

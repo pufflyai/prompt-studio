@@ -76,11 +76,11 @@ for (const story of ["sidenav-open", "sidenav-closed"]) {
   });
 }
 
-for (const [story, sourceRegion, targetRegion] of [
-  ["closed-bottom", "side", "secondary"],
-  ["closed-side", "main", "side"],
-  ["closed-left-side", "main", "side"],
-  ["closed-top-bottom", "side", "secondary"],
+for (const [story, sourceRegion, targetRegion, position] of [
+  ["closed-bottom", "side", "secondary", "bottom"],
+  ["closed-side", "main", "side", "right"],
+  ["closed-left-side", "main", "side", "left"],
+  ["closed-top-bottom", "side", "secondary", "top"],
 ] as const) {
   test(`${story}: first drag opens ${targetRegion} only on a valid drop and preserves its live view`, async ({
     page,
@@ -94,7 +94,7 @@ for (const [story, sourceRegion, targetRegion] of [
     await draft.fill("Keep this draft");
     await beginDrag(page, tab);
     const target = page.locator(`[data-workbench-edge-drop="${targetRegion}"]`);
-    const hit = page.locator(`[data-workbench-edge-hit="${targetRegion}"]`);
+    const hit = page.locator(`[data-workbench-edge-hit="${targetRegion}"][data-workbench-edge-position="${position}"]`);
     await expect(target).toHaveCount(0);
     await hit.hover();
     await expect(target).toBeVisible();

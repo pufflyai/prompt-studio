@@ -6,19 +6,21 @@ import { useShallow } from "zustand/react/shallow";
 import type { WorkbenchCore } from "../../core";
 import { resolvePanelPosition, type WorkbenchPositionedRegion } from "../../core/registries/layout/panel-positions";
 import { WorkbenchIcon } from "../shared/icon";
-import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
-export const usePanelPositionActions = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
+const usePanelMovePositions = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
-  const positions = useWorkbenchStore(
+  return useWorkbenchStore(
     workbench.layout.store,
     useShallow(() => {
       const current = resolvePanelPosition(workbench.shell.getArrangement(), region);
       return workbench.shell.getPanelPositions(region).filter((position) => position !== current);
     }),
   );
-  return positions.map((position) => ({
+};
+
+export const usePanelPositionActions = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
+  return usePanelMovePositions(workbench, region).map((position) => ({
     key: `position-${position}`,
     label: `Move ${region === "activity" ? "action bar" : "panel"} to ${position}`,
     icon: (
@@ -36,8 +38,7 @@ const interactive =
 
 /** Only unused header space starts a whole-panel drag. Tab and control gestures keep their owners. */
 export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
-  const policy = usePanelPolicy(workbench, region);
-  const disabled = !policy.movable || !workbench.shell.getPanelPositions(region).length;
+  const disabled = !usePanelMovePositions(workbench, region).length;
   const drag = useDraggable({
     id: `panel:${region}`,
     data: { panelRegion: region },

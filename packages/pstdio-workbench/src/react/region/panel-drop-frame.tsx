@@ -30,7 +30,7 @@ const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
     id: `edge:${panel ? "panel" : "tab"}:${region}:${edge}`,
     data: panel ? { panelRegion: region, position: edge } : { region, closed: true, edge },
   });
-  const highlighted = panel ? panelDrop === edge : drop?.region === region;
+  const highlighted = panel ? panelDrop === edge : drop?.region === region && drop.panelPosition === edge;
   const vertical = edge === "left" || edge === "right";
   const targetId = panel ? `panel-${edge}` : region;
   return (
@@ -38,6 +38,7 @@ const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
       ref={setNodeRef}
       data-workbench-edge-drop={panel || highlighted ? targetId : undefined}
       data-workbench-edge-hit={panel ? undefined : region}
+      data-workbench-edge-position={edge}
       data-drop-active={highlighted || undefined}
       position={panel ? "relative" : "absolute"}
       {...(panel ? {} : tabEdgeAnchors[edge])}
@@ -73,8 +74,10 @@ export const WorkbenchPanelDropFrame = (props: WorkbenchPanelDropFrameProps) => 
     (region === "side" || region === "secondary") &&
     destinations?.includes(region) &&
     !workbench.shell.getPanelPolicy(region).open
-  )
-    edges = [arrangement[region]];
+  ) {
+    edges = workbench.shell.getPanelPositions(region);
+    if (!edges.length) edges = [arrangement[region]];
+  }
 
   const targets = Object.fromEntries(
     edges.map((edge) => [

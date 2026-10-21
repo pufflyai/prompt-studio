@@ -193646,7 +193646,7 @@
       "x": 55830,
       "y": 0,
       "name": "PS-796 · Shared panel placement and closed edges",
-      "context": "Tab drag targets appear only near the pointer and overlay content without changing its size. Only the nearest eligible edge has an outline. Whole-panel drag slots still reserve space. Navigation controls mirror when placed on the right, including while closed.",
+      "context": "Closed Side accepts a tab at either allowed left/right edge; closed Bottom accepts either allowed top/bottom edge. A successful drop saves the chosen edge and opens the panel. Hover and cancellation preserve saved placement. An open panel accepts tabs only in its visible bounds. Main has no vertical move actions, grab cursor, or drag targets while Bottom is closed or unavailable. Tab previews overlay stable content; exactly one nearby outline appears.",
       "width": 940,
       "height": 480,
       "fill": "$ds-bg-subtle",
@@ -193659,7 +193659,7 @@
           "id": "UAdoc",
           "name": "Placement rules",
           "fill": "$ds-fg",
-          "content": "Tabs · reveal a nearby edge only · one rounded outline at a time",
+          "content": "Closed panels · choose either edge · one nearby outline · Main moves only beside open Bottom",
           "fontFamily": "$font-body",
           "fontSize": 14,
           "fontWeight": "normal"

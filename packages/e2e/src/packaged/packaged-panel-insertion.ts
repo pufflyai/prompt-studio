@@ -88,6 +88,7 @@ const verifyNearbyTabTargets = async (page: Page) => {
   await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
   await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
   const main = page.locator('[data-workbench-panel="main"]');
+  await expect(page.getByLabel("Main panel header", { exact: true })).not.toHaveAttribute("data-panel-draggable");
   const bounds = (await main.boundingBox())!;
   const tab = main.getByRole("tab", { name: "Start", exact: true });
   const source = (await tab.boundingBox())!;
@@ -97,9 +98,18 @@ const verifyNearbyTabTargets = async (page: Page) => {
   await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, { steps: 6 });
   await expect(page.locator("[data-workbench-edge-drop]")).toHaveCount(0);
   await expect.poll(() => main.boundingBox()).toEqual(bounds);
-  for (const region of ["side", "secondary"]) {
-    await page.locator(`[data-workbench-edge-hit="${region}"]`).hover();
+  for (const [region, position] of [
+    ["side", "left"],
+    ["side", "right"],
+    ["secondary", "top"],
+    ["secondary", "bottom"],
+  ]) {
+    await page.locator(`[data-workbench-edge-hit="${region}"][data-workbench-edge-position="${position}"]`).hover();
     await expect(page.locator(`[data-workbench-edge-drop="${region}"]`)).toBeVisible();
+    await expect(page.locator(`[data-workbench-edge-drop="${region}"]`)).toHaveAttribute(
+      "data-workbench-edge-position",
+      position,
+    );
     await expect(page.locator("[data-workbench-edge-drop], [data-workbench-tab-drop][data-drop-active]")).toHaveCount(
       1,
     );
@@ -107,4 +117,35 @@ const verifyNearbyTabTargets = async (page: Page) => {
   await page.keyboard.press("Escape");
   await page.mouse.up();
   await expect(page.locator("[data-workbench-edge-drop]")).toHaveCount(0);
+  for (const [sourceRegion, region, position] of [
+    ["main", "side", "right"],
+    ["side", "secondary", "bottom"],
+  ]) {
+    const sourceTab = page.locator(`[data-workbench-panel="${sourceRegion}"]:visible`).getByRole("tab", {
+      name: "Start",
+      exact: true,
+    });
+    await sourceTab.hover();
+    const sourceBounds = (await sourceTab.boundingBox())!;
+    await page.mouse.move(sourceBounds.x + sourceBounds.width / 2, sourceBounds.y + sourceBounds.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(sourceBounds.x + sourceBounds.width / 2 + 12, sourceBounds.y + sourceBounds.height / 2, {
+      steps: 3,
+    });
+    await page.locator(`[data-workbench-edge-hit="${region}"][data-workbench-edge-position="${position}"]`).hover();
+    await page.mouse.up();
+    const moved = page.locator(`[data-workbench-panel="${region}"]:visible`);
+    await expect(moved.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
+    await expect
+      .poll(async () => {
+        const panel = (await moved.boundingBox())!;
+        const content = (await main.boundingBox())!;
+        return region === "side" ? panel.x > content.x : panel.y > content.y;
+      })
+      .toBe(true);
+  }
+  await page.reload();
+  const bottom = page.locator('[data-workbench-panel="secondary"]:visible');
+  await expect(bottom.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
+  await expect.poll(async () => (await bottom.boundingBox())!.y > (await main.boundingBox())!.y).toBe(true);
 };
