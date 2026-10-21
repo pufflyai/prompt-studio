@@ -13,6 +13,9 @@ export const windowTitleBarRecipe = defineSlotRecipe({
       color: "fg",
       userSelect: "none",
       WebkitAppRegion: "drag",
+      // Native drag regions consume the pointer events that dismiss open overlays.
+      "body:has([data-scope=menu][data-part=content][data-state=open], [data-scope=popover][data-part=content][data-state=open]) &":
+        { WebkitAppRegion: "no-drag" },
     },
     content: {
       display: "flex",
