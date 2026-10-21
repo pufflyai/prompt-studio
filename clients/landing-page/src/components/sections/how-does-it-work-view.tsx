@@ -1,5 +1,6 @@
 import { Box, Link, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
+import { FittedDemo } from "../../hooks/use-fitted-demo";
 import { useStoryStyles } from "../../hooks/use-landing-styles";
 import { ChangeToolDemo, ConnectedToolsDemo, WorkbenchOverviewDemo } from "../examples/why-story-demos";
 import { BuildingBlocks } from "./building-blocks";
@@ -44,7 +45,13 @@ const REASONS = [
   },
 ];
 
-export const HowDoesItWorkView = () => {
+export const HowDoesItWorkView = () => (
+  <FittedDemo>
+    <HowChapters />
+  </FittedDemo>
+);
+
+const HowChapters = () => {
   const [chapter, setChapter] = useState(REASONS[0].id);
   const styles = useStoryStyles();
   return (

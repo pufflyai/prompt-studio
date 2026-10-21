@@ -153,9 +153,12 @@ palette provide navigation.
 
 ## Product examples
 
-What is Prompt Studio lives at `/what-is-prompt-studio/`. It explains who the
-workbench is for, small tools people can build, and how people and agents use them.
-It links to getting-started guides and the blog posts behind the idea.
+What is Prompt Studio lives at `/what-is-prompt-studio/`. It shows a working
+reading-list tool beside editable project notes. Visitors can replay the request,
+build the tool, add and read items, then ask for an unread
+filter. Notes and list items stay intact while the example changes. These are
+local example interactions. The page keeps links to the guides and blog posts
+behind the idea.
 How does it work follows it in navigation, at `/how-does-it-work/`. Its carousel
 links each chapter to the relevant documentation and shows one chapter at a time: building blocks, a clean editor, connected tools, and tools
 adapted by an agent. A compact chapter tab row stays visible above the content. Both carousels
@@ -163,6 +166,8 @@ advance every eight seconds and wrap to the first chapter. Pointer hover,
 keyboard focus, or a hidden browser tab suspends playback. Selecting a tab
 or swiping horizontally also changes the chapter. Chapters change immediately,
 without transition animations. Arrow keys navigate focused tabs. Reduced motion disables autoplay.
+How does it work uses a fitted demo layout: its chapter, panels, and previews
+share the available height at 1440p. Standalone examples keep content sizing.
 Each chapter scrolls within the available panel height on desktop and mobile;
 scrolling never advances to another chapter. There is no numbered stepper or pause
 button. The Tweak demo focuses on the shader and its controls.

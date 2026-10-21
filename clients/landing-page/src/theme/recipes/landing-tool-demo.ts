@@ -35,6 +35,8 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
     "extensionPanels",
     "agentBoard",
     "agentDashboard",
+    "connectedTools",
+    "changeDemo",
   ],
   base: {
     agentBoard: { height: "96", minWidth: 0 },
@@ -190,6 +192,23 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
     },
   },
   variants: {
+    fill: {
+      true: {
+        iconEditor: { flex: 1, minHeight: 0, alignItems: "stretch" },
+        inspector: { flex: 1, minHeight: 0 },
+        iconCanvas: { flex: 1 },
+        shaderPanels: { flex: 1, minHeight: "min-content" },
+        shaderCanvas: { flex: 1, height: "auto", minHeight: "48" },
+        connectedTools: {
+          flex: 1,
+          minHeight: "min-content",
+          display: "grid",
+          gridTemplateRows: "auto auto minmax(min-content, 1fr)",
+        },
+        changeDemo: { flex: 1, minHeight: "min-content" },
+        prompt: { flexShrink: 0 },
+      },
+    },
     compact: {
       true: {
         iconEditor: {

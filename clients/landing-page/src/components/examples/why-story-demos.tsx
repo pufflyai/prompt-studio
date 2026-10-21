@@ -20,7 +20,7 @@ export const ChangeToolDemo = () => {
   const [changed, setChanged] = useState(false);
   const styles = useToolDemoStyles();
   return (
-    <Stack gap="md">
+    <Stack css={styles.changeDemo} gap="md">
       <Box css={styles.prompt}>
         <HStack gap="sm" flex="1">
           <BlockSymbol kind="skill" />

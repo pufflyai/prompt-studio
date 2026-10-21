@@ -16,6 +16,7 @@ export const landingStorySlotRecipe = defineSlotRecipe({
     "blockSymbol",
     "blockMark",
     "composition",
+    "scrollContent",
   ],
   base: {
     page: {
@@ -106,6 +107,18 @@ export const landingStorySlotRecipe = defineSlotRecipe({
     },
   },
   variants: {
+    fill: {
+      true: {
+        page: { flex: 1, minHeight: "full", gap: "lg", py: { base: "lg", md: "xl" } },
+        scrollContent: { height: "full", display: "flex", flexDirection: "column" },
+        section: { flex: 1, minHeight: "min-content" },
+        visual: { display: "flex", flexDirection: "column", flex: 1, minHeight: "min-content" },
+        panels: { flex: 1, alignItems: "stretch", minHeight: "min-content" },
+        panel: { minHeight: "64", maxHeight: "none" },
+        blockGrid: { flex: 1, gridAutoRows: "minmax({sizes.56}, 1fr)" },
+        block: { justifyContent: "center" },
+      },
+    },
     compact: {
       true: {
         panelHeader: { p: "xs", textStyle: "label/S/medium" },

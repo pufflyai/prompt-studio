@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { EXAMPLE_ICONS } from "../../content/icon-set-content";
 import { MATRIX_SHADER } from "../../content/shader-demo-content";
+import { useToolDemoStyles } from "../../hooks/use-landing-styles";
 import { BlockSymbol } from "../sections/building-blocks";
 import { ShaderEditorDemo } from "./shader-editor-demo";
 import { ShaderIconPicker } from "./shader-icon-picker";
@@ -10,8 +11,9 @@ import { ShaderIconPicker } from "./shader-icon-picker";
 export const ConnectedShaderDemo = (props: { withControls: boolean }) => {
   const { withControls } = props;
   const [selectedIcon, setSelectedIcon] = useState(EXAMPLE_ICONS[11]);
+  const styles = useToolDemoStyles();
   return (
-    <Stack gap="panel-gap">
+    <Stack css={styles.connectedTools} gap="panel-gap">
       <ShaderIconPicker selected={selectedIcon.id} onSelect={setSelectedIcon} />
       <HStack gap="sm" px="md" py="sm" flexWrap="wrap" textStyle="label/S/regular" aria-label="Connected tools">
         <BlockSymbol kind="editor" />
