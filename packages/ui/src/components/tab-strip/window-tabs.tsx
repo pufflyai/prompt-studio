@@ -210,6 +210,7 @@ export const WindowTabs = (props: WindowTabsProps) => {
         {/* Match panel tabs' scroll content sizing; see ADR 0049. */}
         <ScrollArea
           viewportRef={viewportRef}
+          width="fit-content"
           minW="0"
           maxW="full"
           height="window-tab"

@@ -60,14 +60,25 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const expectOpenProjectAfterTabs = async (canvasElement: HTMLElement) => {
+  const canvas = within(canvasElement);
+  const last = canvas.getAllByRole("tab").at(-1)!.closest(".ps-window-tabs__tab")!;
+  const button = canvas.getByRole("button", { name: "Open project" });
+  const gap = Number.parseFloat(getComputedStyle(button.parentElement!).columnGap);
+  await expect(button.getBoundingClientRect().left - last.getBoundingClientRect().right).toBeCloseTo(gap, 1);
+};
+
 export const SeveralTabs: Story = {
   render: () => <Example />,
   play: async ({ canvasElement }) => {
+    await expectOpenProjectAfterTabs(canvasElement);
     const tabs = within(canvasElement).getAllByRole("tab");
     for (const tab of tabs) await expect(tab.closest(".ps-window-tabs__tab")).toHaveStyle({ borderWidth: "0px" });
     await userEvent.click(tabs[1]);
     await expect(tabs[1]).toHaveAttribute("aria-selected", "true");
     for (const tab of tabs) await expect(tab.closest(".ps-window-tabs__tab")).toHaveStyle({ borderWidth: "0px" });
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "Close Agentic design" }));
+    await expectOpenProjectAfterTabs(canvasElement);
   },
 };
 export const KeyboardReordering: Story = {
@@ -188,7 +199,10 @@ export const FullScreenDark: Story = {
   ...FullScreen,
   globals: { theme: "pstdio-dark" },
 };
-export const OneTab: Story = { render: () => <Example initialTabs={projects.slice(0, 1)} /> };
+export const OneTab: Story = {
+  render: () => <Example initialTabs={projects.slice(0, 1)} />,
+  play: async ({ canvasElement }) => expectOpenProjectAfterTabs(canvasElement),
+};
 export const Overflow: Story = {
   render: () => (
     <Box maxWidth="2xl">
@@ -304,4 +318,5 @@ export const Crowded: Story = {
       />
     </Box>
   ),
+  play: async ({ canvasElement }) => expectOpenProjectAfterTabs(canvasElement),
 };
