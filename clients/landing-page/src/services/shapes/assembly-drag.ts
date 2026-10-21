@@ -39,8 +39,9 @@ export const bindAssemblyDrag = ({ scene, take, move, drop, nudge }: AssemblyDra
   };
   const end = (event: PointerEvent) => {
     if (!drag || event.pointerId !== drag.pointer) return;
-    if (event.type === "pointercancel") nudge(drag.id, drag.origin);
-    drop(drag.id, event.type !== "pointercancel");
+    const cancelled = event.type !== "pointerup";
+    if (cancelled) nudge(drag.id, drag.origin);
+    drop(drag.id, !cancelled);
     drag = undefined;
     if (scene.hasPointerCapture(event.pointerId)) scene.releasePointerCapture(event.pointerId);
   };

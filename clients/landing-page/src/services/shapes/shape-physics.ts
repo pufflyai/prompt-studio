@@ -2,6 +2,7 @@ import Matter from "matter-js";
 import type { AssemblyPiece } from "../../content/tool-assembly";
 import type { AssemblyPosition } from "./assembly-drag";
 import { type AssemblySlot, DEFAULT_FIELD_SIZE, type FieldSize } from "./assembly-layout";
+import { trackDragMomentum } from "./drag-momentum";
 import { crossRectangles, halfDiscVertices } from "./tool-shape-geometry";
 
 const radians = (degrees: number) => (degrees * Math.PI) / 180;
@@ -85,7 +86,10 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
   let size = initialSize;
   const engine = Matter.Engine.create({ gravity: { x: 0, y: 1.2 }, enableSleeping: true });
   const pieces = definitions.map(createPiece);
-  const grips = new Map<string, { piece: PhysicsPiece; target: { x: number; y: number } }>();
+  const grips = new Map<
+    string,
+    { piece: PhysicsPiece; target: { x: number; y: number }; momentum: ReturnType<typeof trackDragMomentum> }
+  >();
   const createWalls = () => [
     Matter.Bodies.rectangle(size.width / 2, -30, size.width + 120, 60, { isStatic: true }),
     Matter.Bodies.rectangle(size.width / 2, size.height + 30, size.width + 120, 60, { isStatic: true }),
@@ -95,6 +99,8 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
   let walls = createWalls();
   Matter.Composite.add(engine.world, [...walls, ...pieces.map((piece) => piece.body)]);
   const release = (piece: PhysicsPiece) => {
+    const grip = grips.get(piece.id);
+    if (grip) Matter.Body.setVelocity(piece.body, grip.momentum.velocity());
     grips.delete(piece.id);
   };
   const grab = (piece: PhysicsPiece) => {
@@ -103,7 +109,11 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
     Matter.Body.setStatic(piece.body, false);
     Matter.Sleeping.set(piece.body, false);
     const point = physicsPosition(piece);
-    grips.set(piece.id, { piece, target: { x: point.x, y: point.y } });
+    grips.set(piece.id, {
+      piece,
+      target: { x: point.x, y: point.y },
+      momentum: trackDragMomentum(piece.body.position),
+    });
   };
   const snap = (piece: PhysicsPiece, slot: AssemblySlot) => {
     release(piece);
@@ -119,7 +129,7 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
       pieces.forEach(({ body }) => {
         Matter.Sleeping.set(body, false);
       });
-    // Spread the pointer movement over the frame so the last update keeps its release velocity.
+    // Spread the pointer movement over the fixed updates in this frame.
     const moving = [...grips.values()].map(({ piece, target }) => {
       const point = physicsPosition(piece);
       const offset = Matter.Vector.mult(Matter.Vector.sub(target, point), 1 / remainingUpdates);
@@ -139,6 +149,7 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
       for (const piece of pieces) limitMomentum(piece, grips.has(piece.id));
       Matter.Engine.update(engine, delta / steps);
     }
+    for (const { piece, momentum } of grips.values()) momentum.sample(piece.body.position, delta);
   };
   return {
     pieces,
@@ -185,26 +196,39 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
         }
         if (!resized) continue;
         const point = physicsPosition(piece);
-        setPosition(piece, {
-          ...point,
-          x: Math.max(piece.width / 2, Math.min(size.width - piece.width / 2, (point.x / previous.width) * size.width)),
+        const fit = (position: { x: number; y: number }) => ({
+          x: Math.max(
+            piece.width / 2,
+            Math.min(size.width - piece.width / 2, (position.x / previous.width) * size.width),
+          ),
           y: Math.max(
             piece.height / 2,
-            Math.min(size.height - piece.height / 2, (point.y / previous.height) * size.height),
+            Math.min(size.height - piece.height / 2, (position.y / previous.height) * size.height),
           ),
         });
+        setPosition(piece, { ...point, ...fit(point) });
+        const grip = grips.get(piece.id);
+        if (grip) {
+          grip.target = fit(grip.target);
+          grip.momentum.reset(piece.body.position);
+        }
       }
     },
     move: (piece: PhysicsPiece, point: AssemblyPosition) => {
       const grip = grips.get(piece.id);
-      if (grip)
-        grip.target = {
-          x: Math.max(piece.width / 2, Math.min(size.width - piece.width / 2, point.x)),
-          y: Math.max(piece.height / 2, Math.min(size.height - piece.height / 2, point.y)),
-        };
+      if (!grip) return;
+      const target = {
+        x: Math.max(piece.width / 2, Math.min(size.width - piece.width / 2, point.x)),
+        y: Math.max(piece.height / 2, Math.min(size.height - piece.height / 2, point.y)),
+      };
+      // A reversed gesture starts a new throw; idle physics ticks must retain the old one.
+      if (Matter.Vector.dot(Matter.Vector.sub(target, grip.target), grip.momentum.velocity()) < 0)
+        grip.momentum.reset(piece.body.position);
+      grip.target = target;
     },
     nudge: (piece: PhysicsPiece, point: AssemblyPosition) => {
       setPosition(piece, point);
+      grips.get(piece.id)?.momentum.reset(piece.body.position);
       Matter.Body.setVelocity(piece.body, { x: 0, y: 0 });
       Matter.Body.setAngularVelocity(piece.body, 0);
     },

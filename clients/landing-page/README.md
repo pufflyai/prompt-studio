@@ -47,6 +47,9 @@ including the download area. Only docked shapes remain fixed. Drag or toss block
 with a mouse, touch, or pen; pulling one out of a slot makes it fall again.
 Fast drags use smaller collision steps along the pointer path so the held shape
 keeps up without skipping neighbouring shapes.
+Throws use the body's actual travel over the last 50 milliseconds, so momentum
+survives gaps between pointer events and physics ticks on high refresh displays.
+Pausing before release or cancelling a drag clears that momentum.
 The download links remain clickable above the scene.
 The build description and platform controls reserve their space while downloads
 load, so resolving a release does not shift the scene's ground on mobile.
