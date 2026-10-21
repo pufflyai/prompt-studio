@@ -205648,7 +205648,7 @@
                 {
                   "type": "frame",
                   "id": "F4lqua",
-                  "name": "project offline",
+                  "name": "local",
                   "width": 340,
                   "layout": "vertical",
                   "gap": 8,
@@ -205803,28 +205803,6 @@
                           ]
                         },
                         {
-                          "id": "hPLQd",
-                          "type": "ref",
-                          "ref": "c24zV7",
-                          "name": "Cloud settings",
-                          "height": 24,
-                          "theme": {
-                            "btn": "outline",
-                            "size": "2xs"
-                          },
-                          "descendants": {
-                            "DsEVd": {
-                              "enabled": true,
-                              "icon": "settings-2",
-                              "width": 12,
-                              "height": 12
-                            },
-                            "Hf4GT": {
-                              "content": "Cloud settings"
-                            }
-                          }
-                        },
-                        {
                           "type": "rectangle",
                           "id": "H1Z62",
                           "name": "Divider",
@@ -205949,7 +205927,7 @@
                 {
                   "type": "frame",
                   "id": "QjGC2",
-                  "name": "connection offline",
+                  "name": "offline",
                   "width": 340,
                   "layout": "vertical",
                   "gap": 8,
