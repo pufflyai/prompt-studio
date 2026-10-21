@@ -3,7 +3,7 @@ import { createWorkbench } from "./workbench-core";
 
 const page = { extensionId: "example.mail", kind: "page" as const, id: "inbox" };
 const home = { ...page, id: "home" };
-const createInbox = (cardinality: "one" | "many" = "one", closable?: boolean) => {
+const createInbox = (cardinality: "one" | "many" = "one", closable?: boolean, homeClosable?: boolean) => {
   const workbench = createWorkbench({ startPage: home });
   workbench.modes.registerMode({ id: "mail", activate: () => undefined });
   for (const id of ["inbox", "reader", "tools"]) {
@@ -21,6 +21,7 @@ const createInbox = (cardinality: "one" | "many" = "one", closable?: boolean) =>
         id: "inbox",
       },
       cardinality: "one",
+      closable: homeClosable,
     },
     slots: [],
   });
@@ -88,6 +89,36 @@ const createInbox = (cardinality: "one" | "many" = "one", closable?: boolean) =>
   return workbench;
 };
 describe("closing page resource panels", () => {
+  test("closing static Main preserves its routed section", () => {
+    const workbench = createInbox("one", true, true);
+    const location = { page: home, section: { anchors: [{ id: "summary", heading: "Summary" }] } };
+    expect(workbench.pageLocations.replay(location).ok).toBe(true);
+    const before = workbench.pages.store.getState().location;
+    workbench.closePlacement(workbench.layout.getActivePanel("main")!.placementIdentity!);
+    expect(workbench.pages.store.getState().location).toEqual(before);
+  });
+  for (const region of ["main", "side", "secondary"] as const) {
+    test(`a closeable static Main in ${region} closes and reopens through page navigation`, () => {
+      const workbench = createInbox("one", true, true);
+      workbench.pageLocations.navigate({ kind: "page", page: home });
+      const original = workbench.layout.getActivePanel("main")!;
+      if (region !== "main") workbench.movePanel(original.instanceId, region);
+      expect(workbench.layout.getActivePanel(region)?.closable).toBe(true);
+      workbench.closePlacement(original.placementIdentity!);
+      expect(workbench.layout.listPanelInstances(region).some((item) => item.instanceId === original.instanceId)).toBe(
+        false,
+      );
+      expect(workbench.pages.store.getState().location).toEqual({ page: home });
+      expect(workbench.pages.store.getState().pageStates.home?.activePrimaryInstanceKey).toBeUndefined();
+      expect(workbench.pageLocations.navigate({ kind: "page", page: home }).ok).toBe(true);
+      expect(workbench.layout.getActivePanel("main")?.instanceId).toBe(original.instanceId);
+      workbench.closePlacement(original.placementIdentity!);
+      workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "thread", id: "next" } });
+      workbench.closePlacement(workbench.layout.getActivePanel("main")!.placementIdentity!);
+      expect(workbench.pages.store.getState().location).toEqual({ page: home });
+      expect(workbench.layout.getActivePanel("main")?.instanceId).toBe(original.instanceId);
+    });
+  }
   for (const region of ["main", "side", "secondary"] as const) {
     test(`closing the routed resource in ${region} returns to its parent`, () => {
       const workbench = createInbox("one", true);

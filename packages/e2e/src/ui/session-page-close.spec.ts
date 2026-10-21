@@ -59,6 +59,17 @@ for (const destination of ["Main", "Side", "Secondary"]) {
       await expect(editor).toHaveText("Keep my new-session draft");
       await page.reload();
       await expect(editor).toHaveText("Keep my new-session draft");
+      await page.getByRole("button", { name: "Close New session", exact: true }).click();
+      await expect(page).toHaveURL(root);
+      await expect(editor).toHaveCount(0);
+      await page.keyboard.press("ControlOrMeta+Alt+s");
+      await expect(page).toHaveURL(root);
+      await expect(editor).toHaveText("Keep my new-session draft");
+      await page.getByRole("button", { name: "Close New session", exact: true }).click();
+      await page.getByRole("option", { name: session.title, exact: true }).click();
+      await page.getByRole("button", { name: `Close ${session.title}`, exact: true }).click();
+      await expect(page).toHaveURL(root);
+      await expect(editor).toHaveText("Keep my new-session draft");
     } finally {
       await request.patch(`${apiBase}/v1/sessions/${session.id}/status`, { data: { status: "cancelled" } });
     }

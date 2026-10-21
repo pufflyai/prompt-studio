@@ -55,6 +55,16 @@ test("closing a moved optional view changes only its source resource", () => {
   ).toEqual(["files"]);
 });
 
+test("a moved empty collection does not close a new resource's default views", () => {
+  const s = fixture("open");
+  s.navigate("collection", "b");
+  s.w.closePlacement(s.w.layout.getActivePanel("main")!.placementIdentity!);
+  s.w.movePanel(s.w.layout.getActivePanel("main")!.instanceId, "side");
+  s.navigate("collection", "c");
+  expect(s.w.layout.getActivePanel("main")?.placementIdentity).toMatchObject({ slotId: "files" });
+  expect(s.w.layout.getActivePanel("main")?.resource?.id).toBe("c");
+});
+
 test("reload does not reopen a resource's closed view because another resource has the same slot in Side", () => {
   const s = fixture("open");
   s.navigate("collection", "a");

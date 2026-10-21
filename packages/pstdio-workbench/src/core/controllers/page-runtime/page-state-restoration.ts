@@ -3,7 +3,7 @@ import { defaultPageResourceCodec } from "pstdio-api-contracts";
 import type { LayoutModel } from "../../registries/layout/layout-model-types";
 import { carryWorkbenchRegionState } from "../../registries/layout/layout-scope";
 import { createDefaultWorkbenchLayout, type WorkbenchLayout } from "../../registries/layout/layout-types";
-import { pageSlots } from "../../registries/pages/page-main";
+import { PAGE_MAIN_SLOT_ID, pageSlots } from "../../registries/pages/page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPageRuntimeState,
@@ -38,12 +38,20 @@ export const pageStateFromLayout = (
         matching.some(
           (placement) => pageResourceContextKey(page, placement.resource) === pageResourceContextKey(page, resource),
         )
-      )
+      ) {
         openStaticSlotIds.push(slot.id);
+        if (slot.role === "primary") activePrimaryInstanceKey = matching[0]?.placementIdentity?.instanceKey;
+      }
       continue;
     }
     const binding = slot.item.binding;
-    const instances = matching.flatMap((placement) => {
+    const current =
+      slot.role === "primary" && binding.cardinality === "one"
+        ? matching.filter(
+            (placement) => pageResourceContextKey(page, placement.resource) === pageResourceContextKey(page, resource),
+          )
+        : matching;
+    const instances = current.flatMap((placement) => {
       const identity = placement.placementIdentity;
       if (!identity || !placement.resource || !resourceMatchesConstraint(binding, placement.resource)) return [];
       return [
@@ -62,7 +70,7 @@ export const pageStateFromLayout = (
     });
     resourceInstances[slot.id] = binding.cardinality === "one" ? instances.slice(-1) : instances;
     if (slot.role === "primary") {
-      const active = matching.find((placement) => layout.activeLocationWidgetId === placement.widgetId);
+      const active = current.find((placement) => layout.activeLocationWidgetId === placement.widgetId);
       activePrimaryInstanceKey = active
         ? instances.find((instance) => instance.resource === active.resource)?.instanceKey
         : undefined;
@@ -90,6 +98,29 @@ export const loadWorkbenchLocationLayout = (
   );
 };
 
+const pagePrimaryStateLayout = (
+  pageLayout: WorkbenchLayout | undefined,
+  modeLayout: WorkbenchLayout | undefined,
+  page: WorkbenchPageContribution,
+) => {
+  if (!modeLayout || page.main.kind !== "view") return pageLayout;
+  const base = pageLayout ?? createDefaultWorkbenchLayout();
+  const regions = { ...base.regions };
+  // Moved primaries still own the route. Auxiliary tabs restore through their mode's lifetime.
+  for (const region of ["side", "secondary"] as const) {
+    regions[region] = {
+      ...modeLayout.regions[region],
+      widgets: modeLayout.regions[region].widgets.filter(
+        (placement) =>
+          placement.placementIdentity?.kind === "page" &&
+          placement.placementIdentity.pageId === page.id &&
+          placement.placementIdentity.slotId === PAGE_MAIN_SLOT_ID,
+      ),
+    };
+  }
+  return { ...base, regions, activeLocationWidgetId: modeLayout.activeLocationWidgetId ?? base.activeLocationWidgetId };
+};
+
 export const createPageStateRestorer =
   (
     input: createWorkbenchInput,
@@ -97,9 +128,10 @@ export const createPageStateRestorer =
       context: WorkbenchPagePersistenceScopeInput,
       page: WorkbenchPageContribution,
     ) => WorkbenchLayout | undefined = (context) => loadWorkbenchLocationLayout(input, context),
+    loadModeLayout?: (projectId: string, modeId: string) => WorkbenchLayout | undefined,
   ) =>
   (page: WorkbenchPageContribution, location: PageLocation, projectId: string) => {
-    const layout = loadLayout(
+    const pageLayout = loadLayout(
       {
         modeId: page.modeId,
         pageId: page.id,
@@ -108,6 +140,8 @@ export const createPageStateRestorer =
       },
       page,
     );
+    const modeLayout = loadModeLayout?.(projectId, page.modeId);
+    const layout = pagePrimaryStateLayout(pageLayout, modeLayout, page);
     const saved = input.pageLocationPersistence?.load(projectId)?.location;
     const restoresSavedLocation = workbenchPageLocationsEqual(saved, location, defaultPageResourceCodec, [page]);
     if (
@@ -116,7 +150,10 @@ export const createPageStateRestorer =
         !Object.values(layout.regions).some((region) =>
           region.widgets.some(
             (placement) =>
-              placement.placementIdentity?.kind === "page" && placement.placementIdentity.pageId === page.id,
+              placement.placementIdentity?.kind === "page" &&
+              placement.placementIdentity.pageId === page.id &&
+              (page.main.kind === "panels" ||
+                pageResourceContextKey(page, placement.resource) === pageResourceContextKey(page, location.resource)),
           ),
         ))
     )

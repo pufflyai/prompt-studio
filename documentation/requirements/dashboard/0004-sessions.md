@@ -28,8 +28,9 @@ The dashboard sessions panel is the read-and-continue surface for project sessio
 The workbench registers a `sessions` page and a resource-bound `session` page. Navigation targets those declared pages; the page-location controller owns their URL, history, and restoration.
 It loads project sessions, groups them by date in the left rail, and renders the selected session in a chat panel.
 The Sessions root is the New session page. New session actions return to that same route and composer;
-they do not create a second draft page. Saved sessions use normal resource tabs with close controls.
+they do not create a second draft page. Both New session and saved sessions use normal tabs with close controls.
 Closing the current saved-session tab returns to the Sessions root. It does not delete or stop the session.
+Closing New session hides its composer. The New session action reopens it with its retained draft.
 
 The Sessions page and mode-owned Session panels use one content renderer and action presentation.
 Their conversation, composer, workspace selector, notices, approvals, queue, and spacing match at the same available width.
@@ -39,7 +40,7 @@ A move through the shared workbench placement controls preserves the mounted con
 draft, attachments, model selection, transcript scroll, and stream subscription. It leaves the page URL,
 primary resource anchor, and browser history unchanged. Cancelling a drag leaves the source intact.
 Headerless destinations expose the temporary top drop band; multiple resources reveal their shared tab tray.
-The empty New session page has no permanent tab strip. Saved-session tabs keep the shared tab controls.
+New session and saved-session tabs keep the shared tab controls.
 
 New session and Switch session act on the invoking placement after movement. Page-owned panels navigate
 through the Sessions page contract and keep their chosen region when selecting another conversation.

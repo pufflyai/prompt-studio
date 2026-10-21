@@ -1,7 +1,7 @@
 import type { PageOpenIntent, ResourceRef } from "@pstdio/sdk/extensions";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
-import { isPageSlotClosable, primarySlot, type ResolvedPageSlot } from "./page-main";
+import { isPageSlotClosable, pageSlots, primarySlot, type ResolvedPageSlot } from "./page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPageOpenInput,
@@ -12,7 +12,7 @@ import type {
 export { primarySlot, requirePageSlot } from "./page-main";
 
 export const emptyPageState = (page: WorkbenchPageContribution): WorkbenchPageRuntimeState => ({
-  openStaticSlotIds: page.slots
+  openStaticSlotIds: pageSlots(page)
     .filter((slot) => slot.item.kind === "view" && slot.item.presence === "open")
     .map((slot) => slot.id),
   resourceInstances: {},
@@ -85,7 +85,7 @@ export const selectPrimaryTarget = (input: {
   }
   if (target.resource) return openResourceSlot({ ...input, slot });
   if (target.open) throw new Error(`Page "${page.id}" accepts open intent only with a resource`);
-  return { ...input.state, activePrimaryInstanceKey: "default" };
+  return { ...input.state, activePrimaryInstanceKey: staticSlotOpen(slot, input.state) ? "default" : undefined };
 };
 
 export const pageResourceBindingSlots = (page: WorkbenchPageContribution, resource: ResourceRef | undefined) =>
@@ -148,6 +148,7 @@ export const closePageSlot = (input: {
       ? setStaticSlotOpen(input.state, slot.id, false)
       : removeResourceInstance(input.state, slot.id, instanceKey);
   if (slot.role === "auxiliary") return { kind: "stay", state };
+  if (slot.item.kind === "view") return { kind: "stay", state: { ...state, activePrimaryInstanceKey: undefined } };
   const remaining = state.resourceInstances[slot.id] ?? [];
   if (remaining.length) {
     const previous = state.activePrimaryInstanceKey;

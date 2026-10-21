@@ -37,6 +37,20 @@ describe("closing a session page", () => {
     }
   });
   for (const region of ["main", "side", "secondary"] as const) {
+    test(`New session in ${region} can close and reopen from the New session action`, async () => {
+      const workbench = setup();
+      openSessionsPage(workbench);
+      const original = workbench.layout.getActivePanel("main")!;
+      if (region !== "main") workbench.movePanel(original.instanceId, region);
+      expect(workbench.layout.getActivePanel(region)?.closable).toBe(true);
+      workbench.closePlacement(original.placementIdentity!);
+      expect(workbench.layout.listPanelInstances(region).some((item) => item.instanceId === original.instanceId)).toBe(
+        false,
+      );
+      expect(workbench.pages.store.getState().location).toEqual({ page: workbenchPages.sessions });
+      await workbench.commands.executeCommand(dashboardCommandIds.createSession);
+      expect(workbench.layout.getActivePanel("main")?.instanceId).toBe(original.instanceId);
+    });
     test(`closing the selected session in ${region} returns to the new-session page`, () => {
       const workbench = setup();
       openSessionsPage(workbench);

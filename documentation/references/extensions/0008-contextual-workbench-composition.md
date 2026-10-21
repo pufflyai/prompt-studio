@@ -13,7 +13,8 @@ Pages declare `resource: { kinds }` separately from `main`. A Main view renders 
 In extension API 0.2.1, a routed Main view can set `closable: true` while keeping `cardinality: "one"`.
 The host shows its standard tab and close control. Closing returns to the parent page, while selecting another
 resource still replaces the one-resource view in its chosen region. Omit `closable` to keep the existing defaults:
-one-resource Main views are fixed and many-resource Main views are closeable. Static Main content stays fixed.
+one-resource Main views are fixed and many-resource Main views are closeable. Static Main content is fixed by
+default. With `closable: true`, closing hides that view without changing the route. Navigating to the page reopens it.
 
 ## Regions and targets
 

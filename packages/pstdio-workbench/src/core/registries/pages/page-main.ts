@@ -22,7 +22,9 @@ export const primarySlot = (page: WorkbenchPageContribution): ResolvedPageSlot |
     id: PAGE_MAIN_SLOT_ID,
     role: "primary",
     region: "main",
-    item: binding ? { kind: "binding", binding } : { kind: "view", view, presence: "fixed" },
+    item: binding
+      ? { kind: "binding", binding }
+      : { kind: "view", view, presence: page.main.closable ? "open" : "fixed" },
   };
 };
 

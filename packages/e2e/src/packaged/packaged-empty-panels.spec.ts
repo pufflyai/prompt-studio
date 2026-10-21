@@ -66,6 +66,12 @@ test("adding a tool keeps the other empty panel open", async () => {
       await expect(page).toHaveURL(sessionsUrl);
       await page.reload();
       await expect(editor).toHaveText("Packaged new-session draft");
+      await page.getByRole("button", { name: "Close New session", exact: true }).click();
+      await expect(editor).toHaveCount(0);
+      await expect(page).toHaveURL(sessionsUrl);
+      await page.keyboard.press("ControlOrMeta+Alt+s");
+      await expect(page).toHaveURL(sessionsUrl);
+      await expect(editor).toHaveText("Packaged new-session draft");
     });
   } finally {
     await browser?.close();

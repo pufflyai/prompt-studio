@@ -30,7 +30,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // packaged-command-palette.spec.ts checks theme selection from the palette and persistence after reload.
 // packaged-main-fullscreen.spec.ts checks Main fullscreen, its minimized Side bubble, keyboard exit and reload state.
-// packaged-empty-panels.spec.ts checks Session tab closing and the shared New session page after reload.
+// packaged-empty-panels.spec.ts checks saved and New session tab closing, reopening, and retained drafts after reload.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";

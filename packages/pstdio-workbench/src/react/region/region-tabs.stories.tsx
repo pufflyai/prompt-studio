@@ -16,6 +16,7 @@ const createPanelWorkbench = (
     multiple?: boolean;
     actions?: boolean;
     closable?: boolean;
+    mainClosable?: boolean;
     resource?: boolean;
     menu?: boolean;
     menusOnly?: boolean;
@@ -101,7 +102,12 @@ const createPanelWorkbench = (
     title: "Panel tabs",
     path: "panel-tabs",
     modeId: "panel-tabs",
-    main: { kind: "view", view: { kind: "view", id: "main.first" }, cardinality: "one" },
+    main: {
+      kind: "view",
+      view: { kind: "view", id: "main.first" },
+      cardinality: "one",
+      closable: options.mainClosable,
+    },
     slots,
   });
   const resourcePage = { ...page, id: "document" };
@@ -255,6 +261,19 @@ export const SingleClosablePanel: Story = {
     await userEvent.click(await canvas.findByRole("button", { name: "Close side first" }));
     await expect(canvas.queryByText("side.first content")).toBeNull();
     await expect(await canvas.findByRole("button", { name: "Close secondary first" })).toBeVisible();
+  },
+};
+export const ClosableStaticMain: Story = {
+  args: { workbench: createPanelWorkbench({ mainClosable: true }) },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Close main first" }));
+    await expect(canvas.queryByText("main.first content")).not.toBeInTheDocument();
+    args.workbench.pageLocations.navigate({
+      kind: "page",
+      page: { extensionId: "storybook", kind: "page", id: "panel-tabs" },
+    });
+    await expect(await canvas.findByText("main.first content")).toBeVisible();
   },
 };
 export const HiddenSingleTabs: Story = {

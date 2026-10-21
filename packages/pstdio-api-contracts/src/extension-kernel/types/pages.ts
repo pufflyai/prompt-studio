@@ -23,7 +23,7 @@ export interface PageMainView extends PlacementPresentation {
   readonly kind: "view";
   readonly view: ViewRef;
   readonly cardinality: PageSlotCardinality;
-  /** Allow closing a routed resource view to its parent. Defaults to true for many cardinality. */
+  /** Allow closing Main. Resource views return to their parent; static views reopen on page navigation. */
   readonly closable?: boolean;
 }
 

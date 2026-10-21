@@ -4,9 +4,64 @@ import { createDefaultWorkbenchLayout } from "../../registries/layout/layout-typ
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
 import { openResourceSlot, primarySlot } from "../../registries/pages/page-slot-lifecycle";
 import { createWorkbench } from "../../workbench-core";
-import { createMemoryWorkbenchPageLocationBrowser } from "../page-location/page-location-memory";
+import {
+  createMemoryWorkbenchPageLocationBrowser,
+  createMemoryWorkbenchPageLocationPersistence,
+} from "../page-location/page-location-memory";
 import type { PersistedWorkbenchPageLocation } from "../page-location/page-location-types";
 import { pageStateFromLayout } from "./page-state-restoration";
+
+test("boot preserves the routed single-resource Main beside another resource in Side", () => {
+  const saved = new Map<string | undefined, WorkbenchLayout>();
+  const locations = createMemoryWorkbenchPageLocationPersistence();
+  const home = { kind: "page" as const, extensionId: "test", id: "home" };
+  const docs = { ...home, id: "docs" };
+  const setup = () => {
+    const w = createWorkbench({
+      startPage: home,
+      pageLocationPersistence: locations,
+      layoutPersistence: {
+        getLayout: (scope) => saved.get(scope),
+        setLayout: (layout, scope) => saved.set(scope, structuredClone(layout)),
+      },
+      resolvePagePersistenceScope: ({ projectId, resource }) => ({
+        scope: `${projectId}/${resource?.id ?? "home"}/${resource?.metadata?.file ?? ""}`,
+      }),
+    });
+    w.modes.registerMode({ id: "edit", panels: ["main", "side", "secondary"], activate() {} });
+    w.views.registerView({ id: "editor", title: "Editor", body: { kind: "react", render: () => null } });
+    const main = { kind: "view" as const, view: { kind: "view" as const, id: "editor" }, cardinality: "one" as const };
+    w.pages.registerPage({ id: "home", ref: home, path: "home", modeId: "edit", main, slots: [] });
+    w.pages.registerPage({
+      id: "docs",
+      ref: docs,
+      path: "docs",
+      modeId: "edit",
+      parentId: "home",
+      resource: { kinds: [{ kind: "resource-kind", id: "file" }] },
+      document: { metadataKey: "file" },
+      main,
+      slots: [],
+    });
+    return w;
+  };
+  const first = setup();
+  first.pageLocations.setProject("project");
+  const navigate = (file: string) =>
+    first.pageLocations.navigate({
+      kind: "page",
+      page: docs,
+      resource: { type: "file", id: "workspace", metadata: { file } },
+    });
+  expect(navigate("a.md").ok).toBe(true);
+  first.movePanel(first.layout.getActivePanel("main")!.instanceId, "side");
+  expect(navigate("b.md").ok).toBe(true);
+  first.pageLocations.dispose();
+  const restored = setup();
+  expect(restored.pageLocations.boot("project").ok).toBe(true);
+  expect(restored.layout.getActivePanel("main")?.resource?.metadata?.file).toBe("b.md");
+  expect(restored.layout.getActivePanel("side")?.resource?.metadata?.file).toBe("a.md");
+});
 
 test("restores the selected primary instance after its presentation moves to Side", () => {
   const page: WorkbenchPageContribution = {

@@ -115,8 +115,16 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
       ...(target.resource ? { resource: normalizeResource(target.resource) } : {}),
     };
     const stateKey = pageStateKey(page, target.location, input.resources);
-    const currentPageState =
+    let currentPageState =
       pageStates[stateKey] ?? input.restorePageState?.(page, target.location, target.projectId) ?? emptyPageState(page);
+    const primary = primarySlot(page);
+    if (
+      primary?.item.kind === "view" &&
+      primary.item.presence === "open" &&
+      (!target.pageStates || current.activePageId !== page.id)
+    ) {
+      currentPageState = setStaticSlotOpen(currentPageState, primary.id, true);
+    }
     const primaryState = selectPrimaryTarget({ page, state: currentPageState, target: normalizedTarget, resourceKey });
     const openFollowers =
       !target.pageStates ||
@@ -127,7 +135,6 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     const pageState = openFollowers
       ? openPageResourceBindings({ page, state: primaryState, target: normalizedTarget, resourceKey })
       : primaryState;
-    const primary = primarySlot(page);
     const instanceKey = pageState.activePrimaryInstanceKey;
     const followers = openFollowers ? pageFollowerIdentities(page, normalizedTarget.resource, resourceKey) : [];
     return compose(
