@@ -114,13 +114,17 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
 
   return (
     <>
-      {!fullscreen.active && available && canFloat && policy.canOpen && mode !== "attached" ? (
+      {available && canFloat && policy.canOpen && (fullscreen.active || mode !== "attached") ? (
         <BubbleButton
           isOpen={visible}
           aria-label="Open Side Panel"
           containerProps={{ bottom: launcherBottom(bottomOffset) }}
           tooltip="Open Side Panel"
-          onClick={onOpen ?? (() => workbench.shell.setSidePanelPresentation("floating"))}
+          onClick={
+            fullscreen.active
+              ? () => workbench.commands.executeCommand("workbench.showFullscreenSide")
+              : (onOpen ?? (() => workbench.shell.setSidePanelPresentation("floating")))
+          }
         >
           {bubbleIcon ?? <MessageCircle size={20} strokeWidth={2} />}
         </BubbleButton>

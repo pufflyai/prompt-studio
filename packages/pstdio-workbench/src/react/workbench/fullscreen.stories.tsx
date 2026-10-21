@@ -29,12 +29,22 @@ const fullscreenStory = (side: "attached" | "floating" | "closed", floatable = t
       expect(lifecycle.unmounts).toBe(0);
       expect(w.host.getSnapshot()).toEqual(snapshot);
       if (floatable) {
-        if (side === "closed")
-          await userEvent.click(canvas.getByRole("button", { name: "Show fullscreen Side Panel" }));
+        if (side === "closed") await userEvent.click(body.getByRole("button", { name: "Open Side Panel" }));
         await waitFor(() => expect(body.getByRole("dialog", { name: "Side Panel" })).toBeVisible());
+        expect(body.queryByRole("button", { name: "Open Side Panel" })).toBeNull();
         await userEvent.click(body.getByRole("button", { name: "Close Side Panel" }));
         await expect(canvas.getByRole("button", { name: "Show fullscreen Side Panel" })).toHaveFocus();
-      } else expect(canvas.queryByRole("button", { name: "Show fullscreen Side Panel" })).toBeNull();
+        const bubble = await body.findByRole("button", { name: "Open Side Panel" });
+        await waitFor(() => expect(bubble).toBeVisible());
+        await userEvent.click(bubble);
+        await waitFor(() => expect(body.getByRole("dialog", { name: "Side Panel" })).toBeVisible());
+        expect(w.host.getSnapshot()).toEqual(snapshot);
+        await userEvent.click(body.getByRole("button", { name: "Close Side Panel" }));
+        await waitFor(() => expect(body.getByRole("button", { name: "Open Side Panel" })).toBeVisible());
+      } else {
+        expect(canvas.queryByRole("button", { name: "Show fullscreen Side Panel" })).toBeNull();
+        expect(body.queryByRole("button", { name: "Open Side Panel" })).toBeNull();
+      }
       await userEvent.click(canvas.getByRole("button", { name: "Exit Main fullscreen" }));
       await expect(canvas.getByRole("button", { name: "Enter Main fullscreen" })).toHaveFocus();
       await expect(editor).toHaveValue("Unsaved Main draft");

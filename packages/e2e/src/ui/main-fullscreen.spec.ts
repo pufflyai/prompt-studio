@@ -63,6 +63,7 @@ test("unhandled iframe Escape dismisses Side then exits, preserving guest drafts
   await reopen.click();
   await expect(draft).toHaveValue("Unsaved iframe Side");
   await draft.press("Escape");
+  await expect(reopen).toBeFocused();
   await main.getByRole("textbox", { name: "Guest draft" }).press("Escape");
   await expect(page.getByRole("button", { name: "Enter Main fullscreen" })).toBeFocused();
   await expect(main.getByRole("textbox", { name: "Guest draft" })).toHaveValue("Unsaved iframe Main");

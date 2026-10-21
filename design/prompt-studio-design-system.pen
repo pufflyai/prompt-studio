@@ -193278,8 +193278,9 @@
       "x": 55870,
       "y": 0,
       "name": "PS-798 · Main fullscreen and temporary Side",
+      "context": "Fullscreen keeps the Side bubble available while the temporary overlay is minimized. Opening the bubble changes only fullscreen presentation; saved panel layout is retained. Hide the bubble beneath the open overlay and respect Side availability, floating and opening permissions.",
       "width": 940,
-      "height": 740,
+      "height": 1200,
       "fill": "$ds-bg-subtle",
       "layout": "vertical",
       "gap": 12,
@@ -193586,6 +193587,224 @@
                       ]
                     }
                   }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "phv6y",
+          "name": "light · Side minimized",
+          "theme": {
+            "mode": "light"
+          },
+          "clip": true,
+          "width": "fill_container",
+          "height": 216,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "L1kco",
+              "name": "Fullscreen controls",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hbmGa",
+                  "name": "Main context spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "id": "vDsw8",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Temporary Side toggle",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "Gncpi",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Exit Main fullscreen",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "minimize",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "aDm83",
+              "name": "Retained Main with minimized Side",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YIFgQ",
+                  "x": 12,
+                  "y": 12,
+                  "name": "Minimized Side behavior",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": 680,
+                  "content": "Side minimized. The bubble reopens its temporary overlay; saved layout stays unchanged.",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "utwnD",
+                  "type": "ref",
+                  "ref": "C572TP",
+                  "name": "Reopen temporary Side bubble",
+                  "x": 820,
+                  "y": 104,
+                  "width": 48,
+                  "height": 48
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "yGx9u",
+          "name": "dark · Side minimized",
+          "theme": {
+            "mode": "dark"
+          },
+          "clip": true,
+          "width": "fill_container",
+          "height": 216,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "Rt8uM",
+              "name": "Fullscreen controls",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Ow8Mt",
+                  "name": "Main context spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "id": "YGupy",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Temporary Side toggle",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "SaHv1",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Exit Main fullscreen",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "minimize",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "p6GBq",
+              "name": "Retained Main with minimized Side",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "b4Rnc",
+                  "x": 12,
+                  "y": 12,
+                  "name": "Minimized Side behavior",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": 680,
+                  "content": "Side minimized. The bubble reopens its temporary overlay; saved layout stays unchanged.",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "TNIzr",
+                  "type": "ref",
+                  "ref": "C572TP",
+                  "name": "Reopen temporary Side bubble",
+                  "x": 820,
+                  "y": 104,
+                  "width": 48,
+                  "height": 48
                 }
               ]
             }
