@@ -41,8 +41,11 @@ const renewAccess = async (auth: Authentication, request: Request, log: RenewalL
   }
 };
 
-const betterAuth = async (auth: Authentication, request: Request, report: ReportFailure) => {
-  const response = await auth.handler(request);
+const betterAuth = async (auth: Authentication, basePath: string, request: Request, report: ReportFailure) => {
+  // The proxy removed the manager's path; Better Auth routes and signs URLs with it.
+  const url = new URL(request.url);
+  url.pathname = `${basePath}${url.pathname}`;
+  const response = await auth.handler(basePath ? new Request(url.href, request) : request);
   if (response.status < 500) return response;
   await response.body?.cancel().catch(() => {});
   if (!request.signal.aborted) report("request_exception");
@@ -55,13 +58,15 @@ export const createManagerHandler = (
   log: RenewalLog = (event) => console.error(JSON.stringify(event)),
   report: ReportFailure = () => {},
 ) => {
-  const canonicalOrigin = new URL(origin).origin;
+  const address = new URL(origin);
+  const canonicalOrigin = address.origin;
+  const basePath = address.pathname.replace(/\/+$/, "");
   return async (request: Request) => {
     try {
       const path = new URL(request.url).pathname;
-      if (path.startsWith("/api/auth/")) return await betterAuth(auth, request, report);
+      if (path.startsWith("/api/auth/")) return await betterAuth(auth, basePath, request, report);
       if (["/v1/native-login", "/v1/native-callback"].includes(path))
-        return await nativeLogin(auth, canonicalOrigin, request);
+        return await nativeLogin(auth, `${canonicalOrigin}${basePath}`, request);
       const deviceResponse = await deviceHttp(auth, canonicalOrigin, request);
       if (deviceResponse) return deviceResponse;
       if (path === "/health") return json({ ok: true });
