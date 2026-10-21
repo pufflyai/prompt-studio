@@ -57,7 +57,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Also checks native harness controls and their structured values in packaged command handlers.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
-// Navigation metadata preserves independent panel capabilities through the compiled host.
+// Navigation metadata preserves independent panel capabilities, including whole-panel movement through the compiled host.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
 // The browser suite checks typed host props, page updates, structured capability errors and saved settings.
@@ -115,6 +115,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Dropping a session preview pins it and keeps the destination terminal preview open and leftmost.
 // Unpinning a created session replaces the tray preview and keeps it leftmost.
 // Adding Terminal in Side or Session in Bottom keeps the other empty panel open.
+// The packaged empty-panel browser flow also checks nearby tab targets, mirrored Navigation, panel handles and reload.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";

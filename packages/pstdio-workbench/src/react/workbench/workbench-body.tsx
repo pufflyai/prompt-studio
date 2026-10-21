@@ -4,6 +4,7 @@ import { headerTrailingMenuPath, type WorkbenchCore, type WorkbenchRegionSize } 
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
 import { PanelHeader } from "../region/panel-header";
 import { WorkbenchRegion } from "../region/region";
 import {
@@ -82,6 +83,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
+  const position = useWorkbenchStore(workbench.layout.store, () => workbench.shell.getArrangement().secondary);
   const policy = usePanelPolicy(workbench, "secondary");
   const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
@@ -141,23 +143,25 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   );
 
   return (
-    <ResizableSplitLayout
-      as="main"
-      minH="0"
-      minW="0"
-      resizableSide="bottom"
-      contentPanel={mainContent}
-      resizablePanel={<WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />}
-      collapsed={!secondaryPanel.has || secondaryPanel.collapsed}
-      resizable={policy.resizable}
-      collapsible={policy.canClose && secondaryPanel.collapsible}
-      defaultSizePx={secondaryPanelSize.defaultPx}
-      minSizePx={secondaryPanelSize.minPx}
-      maxSizePx={secondaryPanelSize.maxPx}
-      contentMinSizePx={SECONDARY_PANEL_CONTENT_MIN_SIZE_PX}
-      resizeLabel="Resize Secondary Panel"
-      onSizeChange={(height) => workbench.shell.setRegionSize("secondary", height)}
-      onCollapsedChange={secondaryPanel.onCollapsedChange}
-    />
+    <WorkbenchPanelDropFrame workbench={workbench} region="secondary">
+      <ResizableSplitLayout
+        as="main"
+        minH="0"
+        minW="0"
+        resizableSide={position}
+        contentPanel={mainContent}
+        resizablePanel={<WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />}
+        collapsed={!secondaryPanel.has || secondaryPanel.collapsed}
+        resizable={policy.resizable}
+        collapsible={policy.canClose && secondaryPanel.collapsible}
+        defaultSizePx={secondaryPanelSize.defaultPx}
+        minSizePx={secondaryPanelSize.minPx}
+        maxSizePx={secondaryPanelSize.maxPx}
+        contentMinSizePx={SECONDARY_PANEL_CONTENT_MIN_SIZE_PX}
+        resizeLabel="Resize Secondary Panel"
+        onSizeChange={(height) => workbench.shell.setRegionSize("secondary", height)}
+        onCollapsedChange={secondaryPanel.onCollapsedChange}
+      />
+    </WorkbenchPanelDropFrame>
   );
 };

@@ -105,9 +105,10 @@ export const useWorkbenchRegionTabsState = (
       hasMovedPlacement ||
       shouldShowRegionTabs(visiblePlacements, {
         alwaysShowTabs:
-          workbench.shell.getPanelPolicy(region).legacyHeaders || region === "main"
+          regionState.headerVisible === true ||
+          (workbench.shell.getPanelPolicy(region).legacyHeaders || region === "main"
             ? workbench.layout.getRegionSettings(region)?.alwaysShowTabs
-            : (workbench.layout.getRegionSettings(region)?.alwaysShowTabs ?? true),
+            : (workbench.layout.getRegionSettings(region)?.alwaysShowTabs ?? true)),
       }));
   const hasActions =
     leadingItems.length > 0 || (eligibleSubPanels.length > 0 && (visiblePlacements.length === 0 || showTabs));
