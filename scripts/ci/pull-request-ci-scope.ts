@@ -77,7 +77,8 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
     browserSmoke,
     browserChecks: selectBrowserChecks(changedCode, browserSmoke),
     nativeChecks: [...nativeChecks].sort(),
-    packageChecks: affectedPackages.length > 0,
+    // E2E has no lint target and the unit job excludes it from its package filter.
+    packageChecks: affectedPackages.some((name) => name !== "e2e"),
     dockerBuild: changedFiles.some((file) => ["package.json", "bun.lock", "Dockerfile"].includes(basename(file))),
     lernaFilter: affectedPackages.map((name) => `--scope ${name}`).join(" "),
     relaySmoke: affectedPackages.some((name) => ["pstdio-relay", "pstdio-db", "pstdio-account-manager"].includes(name)),

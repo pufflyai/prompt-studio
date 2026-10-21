@@ -29,6 +29,41 @@ an extension cannot manufacture an acceptance checkpoint.
 
 ## Methods
 
+### IDs, positions and migration identity
+
+These additive APIs are on `main` and ship in the release after 0.44.0.
+The [storage declarations](../../../packages/pstdio-api-contracts/src/extension-kernel/types/storage.ts)
+define their exact types.
+
+| Method | Result |
+| --- | --- |
+| `storage.ids.create(prefix?)` | A random UUIDv7. An optional prefix selects a lossless, case-sensitive 22-character Base62 body; omitting it returns a canonical UUID. |
+| `storage.positions.between(before?, after?)` | A unique position strictly between the supplied neighbours. Omit either end, or both for a first position. |
+| `storage.migrate(version, run)` | Runs `run(previousVersion, migration)` once for a scope version. Existing one-argument callbacks remain supported. |
+| `migration.id(key, prefix?)` | A UUIDv8 derived from the extension, workbench, scope, target migration version and stable source key. The optional prefix selects the same compact format. |
+
+`storage.ids.create("tk")` returns `tk_` followed by 22 Base62 characters, retaining
+all 128 UUID bits. Prefixes match `[a-z][a-z0-9]{0,15}`; an empty string is invalid.
+Without a prefix, both helpers keep canonical UUID output. Keep existing IDs
+unchanged. Compact IDs require exact, case-sensitive lookup and binary ordering;
+do not lowercase them or use locale sorting. The alphabet is
+`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`.
+
+Random IDs sort by encoded millisecond only within the same prefix when timestamps
+increase. There is no same-millisecond, clock-rollback or cross-device chronological
+guarantee. Migration IDs have no time order. The prefix affects only their encoding;
+keep it fixed for every device and retry of a migration. It does not establish
+resource ownership. Numbered resources use the same generator through
+`resources.allocate({ kind, idPrefix? })`; see [Resource identities](0002-resources.md#resource-identities).
+
+Compare positions with ordinary string comparison (`<`, `>`, or default string
+`sort()`), never `localeCompare`. The complete string includes device identity
+and a random suffix. Concurrent positions remain distinct and divisible without
+rebalancing. Store one position per stable item record so concurrent moves merge
+to one item. See [Create records and arrange items](../../guides/sdk/0003-storage.md#create-records-and-arrange-items).
+
+### Records
+
 The [public declarations](../../../packages/pstdio-api-contracts/src/extension-kernel/types/storage-records.ts)
 define the exact types exported by `@pstdio/sdk/extensions`.
 
@@ -160,5 +195,9 @@ same record rules. Seeds are ready before the first read. Each
 instance has an isolated owner. It is an in-memory test adapter and provides no
 relay acknowledgment. Real database tests cover durable process restart. In
 `@pstdio/sdk` 0.43.1, `createMemoryStorage()` takes no options and has no records.
+
+The optional `workbenchId`, `extensionId`, and `deviceId` settings let tests use the
+same logical owner on different devices. Without them, each store has a random
+workbench and device ID and uses `test-extension` as its extension ID.
 
 See the [save workflow](../../guides/sdk/0003-storage.md) for examples.

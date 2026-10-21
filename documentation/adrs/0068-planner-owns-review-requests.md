@@ -16,7 +16,8 @@ The two systems decided independently whether a ticket needed a person. Answerin
 
 Planner owns every review request. The timeline renders and answers the same requests through the same commands as the CLI and the attempt workflows.
 
-- A request is immutable. It holds the title, instructions, a task or decision body, the actor who asked, and its context: workflow reason, workspace, attempt revision, and linked session.
+- A request holds the title, instructions, a task or decision body, the actor who asked, and its context: workflow reason, workspace, attempt revision, and linked session. Its content and workflow context are immutable. The conversation link is filled only when the person chooses Open session.
+- Creating a request does not create or continue an agent session. Open session starts or resumes the request conversation on demand, then reopens that saved session on later visits. Answering a form does not require a conversation.
 - Each request has one current outcome: an answer or a cancellation. The first outcome is stored in its own collection under the request ID with an atomic `createIfAbsent`, so competing initial answers and cancellations cannot both win. A validated decision revision replaces its existing answer with `update`; it cannot create an outcome after deletion. Concurrent revisions use the last saved answer. Cancelled requests and completed task confirmations stay closed.
 - State is derived. A request without an outcome is open. Planner does not store a second state field or a second copy of the response.
 - Pending input for a ticket is "any open request, or any unreadable request record". Answers never hide another open request. A manual or stale flag never owns pending input.

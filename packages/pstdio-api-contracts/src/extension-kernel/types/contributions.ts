@@ -84,6 +84,8 @@ export interface ModeRegionSettings {
   readonly acceptsTabs?: boolean;
   /** Permit resizing independently of visibility and tab acceptance. */
   readonly resizable?: boolean;
+  /** Permit whole-panel placement changes independently of tab movement. Defaults to true. */
+  readonly movable?: boolean;
   /** Side only. Overrides the mode floatingPanels setting. */
   readonly floatable?: boolean;
   readonly size?: RegionSize;

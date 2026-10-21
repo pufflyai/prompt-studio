@@ -501,6 +501,7 @@
     "packages/pstdio-api-contracts": {
       "name": "pstdio-api-contracts",
       "dependencies": {
+        "@noble/hashes": "^2.4.0",
         "pstdio-sync-contracts": "workspace:*",
         "zod": "^4.3.6",
       },
@@ -775,6 +776,7 @@
         "rolldown": "^1.2.11",
         "rolldown-plugin-dts": "^0.28.6",
         "typescript": "6.0.2",
+        "yjs": "^13.6.29",
       },
       "peerDependencies": {
         "@tanstack/react-query": "^5.0.0",

@@ -299,6 +299,12 @@ These are in 0.43.x and `main`:
 | `ctx.logger.info`, `ctx.logger.warn`, `ctx.logger.error` | Write `(message, metadata?)` to the runtime log with event `extension.log`. The default log level, `error`, drops `info` and `warn`. |
 | `ctx.settings.delete(key)` | Removes the stored value of a setting. |
 
+On `main`, `ctx.resources.allocate({ kind, idPrefix: "tk" })` opts into a compact,
+case-sensitive ID while keeping the human shorthand unchanged. This additive option
+ships in the release after 0.44.0. It shares the core generator with
+`ctx.storage.ids.create("tk")`; omitting `idPrefix` keeps UUID output. See
+[Resource identities](../sdk/0002-resources.md#resource-identities).
+
 ### Agent skill folders
 
 Harness extensions call `ctx.workspaceFiles.syncDir(dir, files)` during workspace setup to copy the skill catalog into an agent folder such as `.claude/skills`. The host records each file it writes, with a hash of its content, outside the workspace. A later sync updates or removes a file only while it still has the recorded content. It adopts an existing file that already has the wanted content. It keeps a file it did not write or that someone edited, and logs a warning with event `extension.workspace_sync.kept_file`. The host log (`logs.jsonl` in the Prompt Studio home folder) records warnings when `PSTDIO_LOG_LEVEL` is `warn`, `info`, or `debug`. The default level, `error`, does not. Deleting a kept file lets the next sync write the current version. `syncDir` does not report kept files to the extension.

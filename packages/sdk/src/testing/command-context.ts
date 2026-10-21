@@ -60,6 +60,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     input.resourcePrefixes ?? {},
     sequences,
     createMemoryResourceLinks({ projectId, extensionId: overrides?.extensionId ?? "test.extension", edges }),
+    { projectId, extensionId: overrides?.extensionId ?? "test.extension" },
   );
   const base = createCommandContextDefaults({ projectId, storage, resources });
   const context: CommandContext = {

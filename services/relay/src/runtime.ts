@@ -1,9 +1,9 @@
-import { readFileSync } from "node:fs";
 import { createEnvironmentAccessVerifier } from "pstdio-account-manager/access";
 import type { ReportFailure } from "pstdio-service-telemetry";
 import { createRelayAssets } from "./assets/assets";
 import { readRelayLimits } from "./limits";
 import { createRecoveryProofs } from "./recovery-proofs";
+import { readRuntimeSecrets } from "./runtime-secrets";
 import { scheduleSyncCleanup } from "./storage/cleanup";
 import { createRelayStorage } from "./storage/storage";
 import { createSyncOwners } from "./transport/owners";
@@ -26,10 +26,9 @@ export const createRelayRuntime = (env: Record<string, string | undefined>, repo
       forcePathStyle: true,
       credentials: { accessKeyId: required("S3_ACCESS_KEY_ID"), secretAccessKey: required("S3_SECRET_ACCESS_KEY") },
     };
-    const verifyAccess = createEnvironmentAccessVerifier(
-      JSON.parse(readFileSync(required("RELAY_ACCESS_TRUST_FILE"), "utf8")),
-    );
-    const recovery = createRecoveryProofs(readFileSync(required("RELAY_RECOVERY_KEY_FILE")));
+    const secrets = readRuntimeSecrets(env);
+    const verifyAccess = createEnvironmentAccessVerifier(secrets.trust);
+    const recovery = createRecoveryProofs(secrets.recoveryKey);
     const assets = createRelayAssets({ databaseUrl, bucket, s3 });
     const storage = createRelayStorage(databaseUrl, assets);
     const sync = createSyncOwners({ databaseUrl, bucket, s3, assets, limits: readRelayLimits(env) });
