@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { fakeHarnessId, switchSession } from "../helpers/session-side-panel";
 import { uiOrigin as apiBase } from "../ui-server";
 
 test("dragging a terminal into headerless Main retains its live view and shell state", async ({ page, request }) => {
@@ -58,4 +59,138 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
   await expect(mainHeader).not.toBeVisible();
   await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+});
+
+test("moves the live session page through every region and keeps its conversation state", async ({ page, request }) => {
+  const project = await (
+    await request.post(`${apiBase}/v1/projects`, {
+      data: folderProjectInput({ name: "Move the live session page" }),
+    })
+  ).json();
+  const session = await (
+    await request.post(`${apiBase}/v1/sessions`, {
+      data: {
+        project_id: project.id,
+        title: "Moving conversation",
+        prompt: "Moving __fake_hold__",
+        agent: fakeHarnessId,
+      },
+    })
+  ).json();
+  const other = await (
+    await request.post(`${apiBase}/v1/sessions`, {
+      data: { project_id: project.id, title: "Another conversation", prompt: "Another", agent: fakeHarnessId },
+    })
+  ).json();
+  const subscriptions: string[] = [];
+  page.on("request", (sent) => {
+    if (new URL(sent.url()).pathname.endsWith("/subscriptions") && sent.method() === "POST")
+      subscriptions.push(sent.postDataJSON().session_id);
+  });
+  await page.addInitScript((id) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb2:selected-project:global", id);
+  }, project.id);
+  try {
+    await page.goto(
+      `/projects/${project.id}/session?resource=${encodeURIComponent(`pstdio://extension-resource/session/${session.id}`)}`,
+    );
+    const editor = page.getByTestId("content-editable").filter({ visible: true });
+    await expect(editor).toBeVisible();
+    const instance = page.locator("[data-workbench-instance]").filter({ has: editor });
+    await editor.fill("Retained conversation draft");
+    await instance
+      .locator('input[type="file"]')
+      .setInputFiles({ name: "context.txt", mimeType: "text/plain", buffer: Buffer.from("Context") });
+    await expect(page.getByText("context.txt", { exact: true })).toBeVisible();
+    const instanceId = await instance.getAttribute("data-workbench-instance");
+    await editor.evaluate((node) => {
+      (window as Window & { originalEditor?: Element }).originalEditor = node;
+    });
+    await expect.poll(() => subscriptions).toEqual([session.id]);
+    const url = page.url();
+    const history = await page.evaluate(() => window.history.length);
+    const source = page
+      .locator(`[data-workbench-page-drag="${instanceId}"], [data-workbench-tab="${instanceId}"] [role="tab"]`)
+      .filter({ visible: true });
+    const drag = async (destination = "side", cancel = false) => {
+      await expect(source).toHaveCount(1);
+      const start = (await source.boundingBox())!;
+      await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(start.x + start.width / 2 + 12, start.y + start.height / 2, { steps: 3 });
+      await page.mouse.move(
+        (await page.locator('[data-workbench-panel="main"]').boundingBox())!.x + 500,
+        start.y + 100,
+        { steps: 4 },
+      );
+      if (cancel) await page.keyboard.press("Escape");
+      else {
+        const target =
+          destination === "side"
+            ? page.locator('[data-workbench-edge-hit="side"][data-workbench-edge-position="right"]')
+            : page.locator('[data-workbench-panel="main"]');
+        await expect(target).toBeAttached();
+        const box = (await target.boundingBox())!;
+        await page.mouse.move(box.x + box.width / 2, box.y + (destination === "main" ? 4 : box.height / 2), {
+          steps: 12,
+        });
+      }
+      await page.mouse.up();
+    };
+    await drag("side", true);
+    await expect(
+      page.locator('[data-workbench-panel="main"]').locator(`[data-workbench-instance="${instanceId}"]`),
+    ).toBeVisible();
+    await drag();
+    const assertRetained = async (region: string) => {
+      await expect(
+        page.locator(`[data-workbench-panel="${region}"] [data-workbench-instance="${instanceId}"]`),
+      ).toBeVisible();
+      expect(
+        await editor.evaluate((node) => node === (window as Window & { originalEditor?: Element }).originalEditor),
+      ).toBe(true);
+      await expect(editor).toHaveText("Retained conversation draft");
+      await expect(page.getByText("context.txt", { exact: true })).toBeVisible();
+      expect(page.url()).toBe(url);
+      expect(await page.evaluate(() => window.history.length)).toBe(history);
+      expect(subscriptions).toEqual([session.id]);
+    };
+    await assertRetained("side");
+    await drag("main");
+    await assertRetained("main");
+    await drag("side");
+    await assertRetained("side");
+    for (const [label, region] of [
+      ["Bottom", "secondary"],
+      ["Main", "main"],
+    ]) {
+      await source.focus();
+      await source.press("Shift+F10");
+      await page.getByRole("menuitem", { name: `Move to ${label}`, exact: true }).click();
+      await assertRetained(region!);
+    }
+    await source.focus();
+    await source.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
+    await source.focus();
+    await source.press("Shift+F10");
+    await switchSession(page, other.title);
+    const side = page.locator('[data-workbench-panel="side"]');
+    await expect(side.getByTestId("content-editable")).toBeEmpty();
+    await side.getByRole("tab", { selected: true }).focus();
+    await side.getByRole("tab", { selected: true }).press("Shift+F10");
+    await switchSession(page, session.title);
+    await expect(side.getByTestId("content-editable")).toHaveText("Retained conversation draft");
+    await page.reload();
+    await expect(side.getByTestId("content-editable")).toHaveText("Retained conversation draft");
+    await side.getByRole("tab", { selected: true }).focus();
+    await side.getByRole("tab", { selected: true }).press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
+    await expect(page.locator('[data-workbench-panel="main"]').getByTestId("content-editable")).toHaveText(
+      "Retained conversation draft",
+    );
+  } finally {
+    await request.patch(`${apiBase}/v1/sessions/${session.id}/status`, { data: { status: "cancelled" } });
+  }
 });

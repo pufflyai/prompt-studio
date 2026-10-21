@@ -10,6 +10,7 @@ import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/pag
 import { pageResourceContextKey } from "../../registries/pages/page-resource-context";
 import { ownsStaticPageInstance } from "../../registries/pages/page-state-key";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
+import { isSingleViewContinuation, singleViewDestinations } from "./single-view-destination";
 
 type State = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
 
@@ -132,6 +133,10 @@ const canRestoreSharedPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPl
     identity?.kind === "page" &&
     Boolean(input.getWidget(widget.contributionId)) &&
     input.state.pages[identity.pageId]?.modeId === input.state.activeModeId &&
+    !(
+      isSingleViewContinuation(input.state, widget) &&
+      !input.state.placements.some((entry) => placementIdentityKey(entry.identity) === placementIdentityKey(identity))
+    ) &&
     !(leavingPage && widget.tabRetention === "preview") &&
     !pagePlacementClosed(widget, input.state, input.previous)
   );
@@ -179,7 +184,7 @@ export const scopePageMainTabs = (input: PageTabsInput) => {
     reconciliation: reconcileOwnedPlacements({
       current: previous.placements,
       desired: placements,
-      destinations: state.reconciliation.destinations,
+      destinations: singleViewDestinations(state, previous, layout),
       activate: state.reconciliation.activate
         .filter((entry) =>
           placements.some(

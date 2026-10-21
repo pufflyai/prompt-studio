@@ -7,6 +7,7 @@ import type {
 } from "@pstdio/workbench";
 import { rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { sessionPanelRef } from "./session-panel-placements";
 
 interface OpenSessionBubbleWidgetsInput {
@@ -42,6 +43,7 @@ interface OpenDashboardSessionPanelInput extends OpenSessionBubbleWidgetsInput {
 // A tab's own session menu switches that tab; a session already open elsewhere keeps its one tab.
 const replaceSessionPanel = (ctx: WorkbenchModuleContext, input: OpenDashboardSessionPanelInput) => {
   const identity = input.replacePanel;
+  if (identity?.kind === "page") return openSessionsPage(ctx, input.resource);
   if (identity?.kind !== "mode") return undefined;
   const placements = Object.values(ctx.layout.getLayout().regions).flatMap((region) => region.widgets);
   const destination = placements.find(

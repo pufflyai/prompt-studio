@@ -67,6 +67,9 @@ test("a routed resource view exposes its placement presentation to breadcrumbs",
   expect(
     resolvePageBreadcrumbPlacement(workbench.layout.getLayout(), page, { type: "note", id: "b" })?.resource?.id,
   ).toBe("b");
+  const moved = workbench.layout.getLayout().regions.main.widgets.pop()!;
+  workbench.layout.getLayout().regions.side.widgets.push(moved);
+  expect(resolvePageBreadcrumbPlacement(workbench.layout.getLayout(), page, { type: "note", id: "b" })).toBe(moved);
 });
 
 test("a related Main document cannot replace the routed resource's breadcrumb actions", () => {

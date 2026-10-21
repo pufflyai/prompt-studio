@@ -28,6 +28,23 @@ The dashboard sessions panel is the read-and-continue surface for project sessio
 The workbench registers a `sessions` page and a resource-bound `session` page. Navigation targets those declared pages; the page-location controller owns their URL, history, and restoration.
 It loads project sessions, groups them by date in the left rail, and renders the selected session in a chat panel.
 
+The Sessions page and mode-owned Session panels use one content renderer and action presentation.
+Their conversation, composer, workspace selector, notices, approvals, queue, and spacing match at the same available width.
+Choosing a workspace updates the draft; the separate Open workspace action opens it.
+
+The shared workbench grip beside a single-resource page's breadcrumb moves its live panel to Main, Side, or Bottom.
+Click the grip or press Shift+F10 to use the shared move menu. A move preserves the mounted conversation,
+draft, attachments, model selection, transcript scroll, and stream subscription. It leaves the page URL,
+primary resource anchor, and browser history unchanged. Cancelling a drag leaves the source intact.
+Headerless destinations expose the temporary top drop band; multiple resources reveal their shared tab tray.
+Single-resource pages have no permanent tab strip or close action.
+
+New session and Switch session act on the invoking placement after movement. Page-owned panels navigate
+through the Sessions page contract and keep their chosen region when selecting another conversation.
+Mode-owned panels retain their own placement and lifetime. Selecting another conversation restores its independent
+draft and attachments. Reload restores durable layout and draft state; Reset layout returns to declared placement
+without clearing the draft.
+
 ## Requirements
 
 ### Functional Requirements

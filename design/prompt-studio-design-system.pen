@@ -214853,6 +214853,168 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "HyAam",
+      "x": 58910,
+      "y": 0,
+      "name": "PS-684 · Single resource panel movement",
+      "context": "The shared workbench breadcrumb offers a small ghost grip button when a single-resource page has no visible tab tray. Drag moves its existing live placement through workbench.movePanel; click or Shift+F10 opens the shared resource and move menu. A visible tab takes over as the single drag source after moving. Keep page ownership in Main, Side or Secondary, with no permanent close action. During tab drags the shared temporary top drop band is 32px high and uses the tab drop zone tokens. Real tabs keep insertion priority, followed by that band and then panel edge targets. A second resource reveals the shared tray.",
+      "width": 920,
+      "height": 320,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "wBFnf",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Move the live page panel",
+          "fontFamily": "$font-label",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "riff8",
+          "name": "light breadcrumb",
+          "theme": {
+            "mode": "light"
+          },
+          "width": "fill_container",
+          "height": 40,
+          "fill": "$ds-bg",
+          "gap": 8,
+          "padding": [
+            4,
+            8
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "aMZOt",
+              "type": "ref",
+              "ref": "N3VfvY",
+              "name": "Sessions breadcrumb",
+              "descendants": {
+                "g7l5u": {
+                  "content": "Sessions"
+                }
+              }
+            },
+            {
+              "id": "G6elU",
+              "type": "ref",
+              "ref": "N3VfvY",
+              "name": "Current session breadcrumb",
+              "descendants": {
+                "QAdbs": {
+                  "icon": "message-circle"
+                },
+                "g7l5u": {
+                  "content": "Review workspace changes"
+                }
+              }
+            },
+            {
+              "id": "I0CeXT",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Move page panel · drag or open menu",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "width": 28,
+              "height": 28,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "grip-vertical",
+                  "width": 14,
+                  "height": 14
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "OSW2I",
+          "name": "dark breadcrumb",
+          "theme": {
+            "mode": "dark"
+          },
+          "width": "fill_container",
+          "height": 40,
+          "fill": "$ds-bg",
+          "gap": 8,
+          "padding": [
+            4,
+            8
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "K9DIB",
+              "type": "ref",
+              "ref": "N3VfvY",
+              "name": "Sessions breadcrumb",
+              "descendants": {
+                "g7l5u": {
+                  "content": "Sessions"
+                }
+              }
+            },
+            {
+              "id": "M7tqCD",
+              "type": "ref",
+              "ref": "N3VfvY",
+              "name": "Current session breadcrumb",
+              "descendants": {
+                "QAdbs": {
+                  "icon": "message-circle"
+                },
+                "g7l5u": {
+                  "content": "Review workspace changes"
+                }
+              }
+            },
+            {
+              "id": "Gv96Z",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Move page panel · drag or open menu",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "width": 28,
+              "height": 28,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "grip-vertical",
+                  "width": 14,
+                  "height": 14
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "aJY1u",
+          "name": "Usage",
+          "fill": "$ds-fg-muted",
+          "content": "Drag the grip to another panel. Enter opens Move to Main / Side / Bottom. Escape cancels a drag.",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
     }
   ],
   "themes": {

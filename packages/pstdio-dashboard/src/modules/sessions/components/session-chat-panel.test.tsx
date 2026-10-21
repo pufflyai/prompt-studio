@@ -4,7 +4,7 @@ import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createWorkspacesModule } from "../../workspaces/module";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
-import { openReviewWorkspace, openSelectedWorkspace } from "./session-chat-panel";
+import { openReviewWorkspace } from "./session-chat-panel";
 
 const localWorkspace = {
   id: "workspace-1",
@@ -65,58 +65,6 @@ describe("openReviewWorkspace", () => {
         workspaceId: "workspace-1",
         workspaceBranch: "workspace/PS-307_A1",
         workspaceShorthand: "PS-307_A1",
-      },
-    });
-  });
-});
-
-describe("openSelectedWorkspace", () => {
-  test("opens the selected workspace dropdown option", async () => {
-    const workbench = createWorkbench();
-
-    workbench.registerModule(createWorkspacesModule());
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
-    await openSelectedWorkspace(
-      { workbench },
-      {
-        id: "workspace-2",
-        title: "Second attempt",
-        shorthand: "PS-307_A2",
-        branch: "workspace/PS-307_A2",
-        type: "worktree",
-        isDefault: false,
-        executionKind: "local",
-        providerState: "ready",
-        supportsFiles: true,
-        supportsDiff: true,
-        supportsDelete: true,
-        workspacePath: "/repo/.pstdio/workspaces/PS-307_A2",
-        updatedAt: "2026-05-22T08:55:00Z",
-      },
-      "project-1",
-    );
-
-    expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(workbench.pages.store.getState().location).toMatchObject({
-      page: workbenchPages.workspace,
-      resource: {
-        type: "workspace",
-        id: "workspace-2",
-        label: "Second attempt",
-      },
-    });
-    expect(workbench.getPrimaryResource()).toMatchObject({
-      type: "workspace",
-      id: "workspace-2",
-      label: "Second attempt",
-      metadata: {
-        workspaceId: "workspace-2",
-        workspaceBranch: "workspace/PS-307_A2",
-        workspaceShorthand: "PS-307_A2",
-        workspaceIsDefault: false,
-        workspaceSupportsDelete: true,
-        workspacePath: "/repo/.pstdio/workspaces/PS-307_A2",
       },
     });
   });

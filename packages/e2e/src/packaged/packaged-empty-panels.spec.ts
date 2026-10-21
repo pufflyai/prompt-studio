@@ -9,6 +9,7 @@ import { verifyEmptyPanelAddition } from "./packaged-empty-panel-addition";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPanelInsertionTargets } from "./packaged-panel-insertion";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { verifySessionPageMovement } from "./packaged-session-page-movement";
 
 test.afterEach(stopPendingTestProcesses);
 test.afterAll(stopPendingTestProcesses);
@@ -41,6 +42,8 @@ test("adding a tool keeps the other empty panel open", async () => {
     await expect(page.getByText("Project home", { exact: true })).toBeVisible();
     await test.step("Add tools while preserving the other empty panel", () => verifyEmptyPanelAddition(page));
     await test.step("Place panels and cancel from the grab point", () => verifyPanelInsertionTargets(page));
+    await test.step("Move the live Sessions page through shared keyboard menus", () =>
+      verifySessionPageMovement(page, started.baseUrl, project.id));
   } finally {
     await browser?.close();
     if (child) await stopProcess(child);

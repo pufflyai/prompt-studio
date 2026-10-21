@@ -76,12 +76,6 @@ export const openReviewWorkspace = (
   return openWorkspacesPage(input.workbench, resource);
 };
 
-export const openSelectedWorkspace = (
-  input: Pick<WorkbenchPanelRenderInput, "workbench">,
-  workspace: DashboardWorkspaceOption,
-  projectId: string | undefined,
-) => openWorkspacesPage(input.workbench, createDashboardWorkspaceOptionResource(workspace, projectId));
-
 const nonEmptyHarnessParams = (params: HarnessParamValues) => (Object.keys(params).length > 0 ? params : undefined);
 
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
@@ -151,7 +145,6 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     view.lastRequestStarted,
     view.status === "in_progress",
   );
-  const openWorkspaceOnSelection = input.panel.region !== "side";
 
   const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId, queue, pendingFollowUp);
   const chatMessages = useApiFileParts(splitDisplay.messages);
@@ -284,11 +277,6 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
                 projectId={projectId}
                 selectedWorkspaceId={selectedWorkspaceId}
                 setSelectedWorkspaceId={setSelectedWorkspaceId}
-                onSelectWorkspace={
-                  openWorkspaceOnSelection
-                    ? (workspace) => void openSelectedWorkspace(input, workspace, projectId)
-                    : undefined
-                }
                 additions={view.additions}
                 deletions={view.deletions}
                 action={workspaceAction}

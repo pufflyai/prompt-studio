@@ -1,4 +1,3 @@
-import { Spinner } from "@chakra-ui/react";
 import { resourceKey, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import {
   type ResourceRef,
@@ -6,7 +5,6 @@ import {
   type WorkbenchModuleContribution,
   workbenchCommandPaletteMenuPath,
 } from "@pstdio/workbench";
-import { lazy, Suspense } from "react";
 import {
   forgetDashboardSession,
   getDashboardSelectedSession,
@@ -30,29 +28,9 @@ import { subscribeSessionListData } from "./data/session-data-subscription";
 import { createSessionIndicator } from "./session-indicator";
 import { registerSessionResourceActions } from "./session-resource-actions";
 import { registerSessionResourceSync } from "./session-resource-sync";
+import { registerSessionView } from "./session-view";
 import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./sessions-sidenav-tree";
 
-const SessionWidget = lazy(() =>
-  import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionWidget })),
-);
-
-const registerSessionWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardSessionDraftPersistence) => {
-  ctx.views.registerView(
-    {
-      id: dashboardWidgetIds.session,
-      title: "Session",
-      body: {
-        kind: "react",
-        render: (input) => (
-          <Suspense fallback={<Spinner />}>
-            <SessionWidget input={input} drafts={drafts} />
-          </Suspense>
-        ),
-      },
-    },
-    { priority: 40 },
-  );
-};
 const removeMatchingSessionPanelPreview = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   for (const placement of Object.values(ctx.layout.getLayout().regions).flatMap((region) => region.widgets)) {
     if (
@@ -220,7 +198,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         subscribe: subscribeSessionListData,
       });
       ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "MessageSquarePlus" });
-      registerSessionWidgets(ctx, input.sessionDraftPersistence);
+      registerSessionView(ctx, dashboardWidgetIds.session, input.sessionDraftPersistence);
       registerSessionsPage(ctx);
       registerSidenavSessions(ctx);
       registerSessionResourceActions(ctx);

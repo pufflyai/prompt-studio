@@ -5,6 +5,16 @@ import { pageResourceContextKey } from "./page-resource-context";
 
 export const resolvePageActivePlacement = (layout: WorkbenchLayout, page?: WorkbenchPageContribution) => {
   if (!page) return;
+  if (page.main.kind === "view" && page.main.cardinality === "one") {
+    return Object.values(layout.regions)
+      .flatMap((region) => region.widgets)
+      .find(
+        (entry) =>
+          entry.placementIdentity?.kind === "page" &&
+          entry.placementIdentity.pageId === page.id &&
+          entry.placementIdentity.slotId === "$main",
+      );
+  }
   const main = layout.regions.main;
   const selected = main.widgets.find((entry) => entry.widgetId === main.activeWidgetId) ?? main.widgets[0];
   return selected?.placementIdentity?.kind === "page" && selected.placementIdentity.pageId === page.id

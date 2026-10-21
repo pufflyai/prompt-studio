@@ -284,6 +284,47 @@ describe("createSessionBubbleModule", () => {
   });
 });
 describe("New session while a session page is open", () => {
+  for (const region of ["side", "secondary", "main"] as const) {
+    test(`session actions follow the page-owned panel in ${region}`, async () => {
+      const workbench = createWorkbench();
+      workbench.registerModule(createWorkspacesModule());
+      workbench.registerModule(createSessionBubbleModule());
+      workbench.registerModule(createSessionsModule());
+      selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+      const first = createDashboardResource("session", "page-first", "First", "MessageCircle", "project-1");
+      const second = createDashboardResource("session", "page-second", "Second", "MessageCircle", "project-1");
+      openSessionsPage(workbench, first);
+      const origin = workbench.layout.getLayout().regions.main.widgets[0]!;
+      workbench.movePanel(origin.widgetId, region);
+      await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+        resource: second,
+        replacePanel: origin.placementIdentity,
+      });
+      expect(
+        workbench.layout.getLayout().regions[region].widgets.filter((p) => p.viewId === dashboardWidgetIds.session),
+      ).toMatchObject([
+        {
+          resource: { id: second.id },
+        },
+      ]);
+      expect(workbench.pages.store.getState().location?.resource?.id).toBe(second.id);
+      await workbench.commands.executeCommand(dashboardCommandIds.createSession, {
+        replacePanel: origin.placementIdentity,
+      });
+      expect(
+        workbench.layout.getLayout().regions[region].widgets.filter((p) => p.viewId === dashboardWidgetIds.session),
+      ).toMatchObject([
+        {
+          resource: { type: "session-draft" },
+        },
+      ]);
+      expect(
+        Object.values(workbench.layout.getLayout().regions)
+          .flatMap((r) => r.widgets)
+          .filter((p) => p.viewId === dashboardWidgetIds.sessionBubble),
+      ).toHaveLength(0);
+    });
+  }
   test("adds a Side Panel session tab from the panel's add button", async () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());

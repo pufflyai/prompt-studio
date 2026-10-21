@@ -1,4 +1,3 @@
-import { Spinner } from "@chakra-ui/react";
 import { type PlacementIdentity, workbenchPages } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
@@ -7,7 +6,6 @@ import type {
   WorkbenchPanelRegion,
   WorkbenchTabRetention,
 } from "@pstdio/workbench";
-import { lazy, Suspense } from "react";
 import { forgetDashboardSession } from "@/modules/sessions/state/session-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -18,13 +16,10 @@ import {
   createDashboardWorkspaceOptionResource,
   createDashboardWorkspaceOptions,
 } from "@/shared/workspaces/workspace-options";
+import { registerSessionView } from "../session-view";
 import { openDashboardSessionPanel, openSessionBubbleWidgets, selectSidenavSessionNode } from "./session-bubble";
 import { registerSessionPanelPlacements } from "./session-panel-placements";
 import { registerSessionPicker } from "./session-picker";
-
-const SessionWidget = lazy(() =>
-  import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionWidget })),
-);
 
 const metadataString = (resource: ResourceRef | undefined, key: string) => {
   const value = resource?.metadata?.[key];
@@ -62,24 +57,6 @@ const createNewSessionDraftResource = (workspace: ResourceRef | undefined): Reso
     },
   };
 };
-const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardSessionDraftPersistence) => {
-  ctx.views.registerView(
-    {
-      id: dashboardWidgetIds.sessionBubble,
-      title: "Session",
-      icon: "MessageCircle",
-      body: {
-        kind: "react",
-        render: (input) => (
-          <Suspense fallback={<Spinner />}>
-            <SessionWidget input={input} drafts={drafts} />
-          </Suspense>
-        ),
-      },
-    },
-    { priority: 30 },
-  );
-};
 const openNewSessionDraft = (
   ctx: WorkbenchModuleContext,
   input: {
@@ -95,6 +72,7 @@ const openNewSessionDraft = (
   forgetDashboardSession(ctx);
   selectSidenavSessionNode(ctx, undefined);
   const identity = input.replacePanel;
+  if (identity?.kind === "page") return openSessionsPage(ctx, draftResource);
   if (identity?.kind === "mode") {
     const origin = Object.values(ctx.layout.getLayout().regions)
       .flatMap((region) => region.widgets)
@@ -199,7 +177,7 @@ export const createSessionBubbleModule = (input: CreateSessionBubbleModuleInput 
   ({
     id: "dashboard.session-bubble",
     activate(ctx) {
-      registerSessionBubbleWidgets(ctx, input.sessionDraftPersistence);
+      registerSessionView(ctx, dashboardWidgetIds.sessionBubble, input.sessionDraftPersistence);
       registerSessionBubbleCommands(ctx);
       registerSessionPicker(ctx);
       return registerSessionPanelPlacements(ctx);

@@ -42,6 +42,13 @@ An auxiliary resource binding with `cardinality: "one"` keeps one placement when
 
 The host exposes `getPanelDestinations(instanceId)`, `movePanel(instanceId, region, position?)`, and `resetLayout()`. A position is `"start"`, `"end"`, `{ beforeWidgetId }`, or `{ afterWidgetId }`. Moves preserve the current page route and the primary resource anchor. The `workbench.movePanel` and `workbench.resetLayout` commands expose the same operations to commands and agents. `onDidResetLayout` lets host UI clear its active layout preferences after the reset.
 
+A single-resource page exposes a grip beside its breadcrumb. Drag it to move the existing live placement;
+click it or press Shift+F10 to open the shared resource and move menu. It has no permanent close action or
+tab strip. The control follows the page-owned placement into other regions. Selecting a different resource
+on that same one-resource page replaces its content in the chosen region, while preserving separate resource
+navigation identities. A single-view parent and its resource page also keep that region when they use the
+same view. Other pages and mode-owned panels keep their declared lifetimes.
+
 Retention is local to the current project and workbench. Removing a view contribution, switching projects, or closing the workbench releases its retained views. A full application reload starts new views. Views are not mounted merely because they are registered; `mountStrategy: "keep-mounted"` can mount inactive placements before their first selection.
 
 Resource removal uses the shared registry cleanup for page, mode and shell placements. It matches the full resource identity, including project and extension, and invalidates pending related openings. Session deletion and archive use this same cleanup; closing a Session view alone does not delete or stop the Session. Resource cleanup does not save a manual panel closure. A retained dirty editor may stay visible while its pending related lookup is cancelled.

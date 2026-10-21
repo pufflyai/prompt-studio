@@ -1,4 +1,4 @@
-import { type PlacementIdentity, workbenchPages } from "@pstdio/sdk/extensions";
+import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -14,8 +14,6 @@ export const registerSessionPicker = (ctx: WorkbenchModuleContext) => {
         const { placementIdentity } = (args ?? {}) as { placementIdentity?: PlacementIdentity };
         const projectId = getDashboardSelectedProjectId(ctx);
         const activate = (resource: ResourceRef) => {
-          if (placementIdentity?.kind === "page")
-            return ctx.navigation.openTarget({ kind: "page", page: workbenchPages.session, resource });
           return ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
             resource,
             replacePanel: placementIdentity,

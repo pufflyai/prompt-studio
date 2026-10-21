@@ -34,23 +34,31 @@ const drafts: DashboardSessionDraftPersistence = {
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
-const SessionChatDraftStory = (props: { initiallyClosed?: boolean; showMain?: boolean }) => {
-  const { initiallyClosed = false, showMain = false } = props;
+const SessionChatDraftStory = (props: {
+  initiallyClosed?: boolean;
+  showMain?: boolean;
+  pageRegion?: "main" | "side" | "secondary";
+  width?: number;
+}) => {
+  const { initiallyClosed = false, showMain = false, pageRegion, width } = props;
   const [workbench] = useState(() => {
     const workbench = createWorkbench({ initialSidePanelMode: initiallyClosed ? "closed" : "attached" });
     workbench.registerModule(createWorkspacesModule());
     workbench.registerModule(createSessionBubbleModule({ sessionDraftPersistence: drafts }));
-    if (showMain) workbench.registerModule(createSessionsModule({ sessionDraftPersistence: drafts }));
+    if (showMain || pageRegion) workbench.registerModule(createSessionsModule({ sessionDraftPersistence: drafts }));
     selectDashboardProject(workbench, { id: "project-story", name: "Prompt Studio" });
-    if (showMain) openSessionsPage(workbench);
+    if (showMain || pageRegion) openSessionsPage(workbench, draftResource);
     else openWorkspacesPage(workbench);
     if (showMain) workbench.shell.setRegionOpen("secondary", false);
-    if (!initiallyClosed) openSessionBubbleWidgets(workbench, { resource: draftResource });
+    if (pageRegion) {
+      workbench.movePanel(workbench.layout.getLayout().regions.main.widgets[0]!.widgetId, pageRegion);
+      workbench.shell.setRegionOpen("sidenav", false);
+    } else if (!initiallyClosed) openSessionBubbleWidgets(workbench, { resource: draftResource });
     return workbench;
   });
   return (
     <QueryClientProvider client={queryClient}>
-      <Box h="100dvh" w="full">
+      <Box h="100dvh" w={width ?? "full"}>
         <Workbench workbench={workbench} onOpenSidePanel={() => void openDashboardSidePanel(workbench)} />
       </Box>
     </QueryClientProvider>
@@ -75,6 +83,10 @@ export const MainAndSidePanels: Story = {
     },
   },
 };
+export const PageNarrow: Story = { args: { pageRegion: "main", width: 480 } };
+export const PageWide: Story = { args: { pageRegion: "main", width: 1200 } };
+export const MovedPageNarrow: Story = { args: { pageRegion: "side", width: 480 } };
+export const MovedPageWide: Story = { args: { pageRegion: "secondary", width: 1200 } };
 export const OpenFromBubble: Story = {
   args: { initiallyClosed: true },
   play: async ({ canvasElement }) => {

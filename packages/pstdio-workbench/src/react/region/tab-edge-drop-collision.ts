@@ -12,7 +12,7 @@ export const tabHeaderDropCollisions = (args: Parameters<CollisionDetection>[0])
   const tabs = args.droppableContainers.filter((container) => {
     const node = container.node.current;
     return (
-      container.data.current?.widgetId &&
+      (container.data.current?.widgetId || container.data.current?.headerBand) &&
       (!owner || container.data.current.region === owner) &&
       container.id !== args.active.id &&
       node?.getClientRects().length &&
@@ -43,7 +43,11 @@ export const tabHeaderDropCollisions = (args: Parameters<CollisionDetection>[0])
       height: rect.height + y,
     });
   }
-  return pointerWithin({ ...args, droppableContainers: tabs, droppableRects: rects });
+  return pointerWithin({ ...args, droppableContainers: tabs, droppableRects: rects }).sort(
+    (a, b) =>
+      Number(Boolean(b.data?.droppableContainer.data.current?.widgetId)) -
+      Number(Boolean(a.data?.droppableContainer.data.current?.widgetId)),
+  );
 };
 
 export const tabEdgeDropCollisions = (args: Parameters<CollisionDetection>[0]) => {

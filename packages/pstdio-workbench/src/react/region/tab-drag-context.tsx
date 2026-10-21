@@ -29,6 +29,7 @@ interface TabDrop {
   widgetId?: string;
   edge?: "before" | "after";
   panelPosition?: WorkbenchPanelPosition;
+  headerBand?: boolean;
 }
 const TabDragContext = createContext<{
   activeId?: string;
@@ -85,6 +86,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
       widgetId: next?.widgetId ?? previous?.widgetId,
       edge: next ? "before" : "after",
       panelPosition: data.panelPosition as WorkbenchPanelPosition | undefined,
+      headerBand: data.headerBand === true,
     } satisfies TabDrop;
   };
   const placement = activeId ? findPlacementByWidgetId(workbench.layout.getLayout(), activeId)?.placement : undefined;
@@ -188,6 +190,8 @@ export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion; vi
   const dragging = Boolean(activeId && visible);
   const allowed = dragging && Boolean(destinations?.includes(region));
   const { setNodeRef } = useDroppable({ id, data: { region }, disabled: !allowed });
+  const bandId = useId();
+  const band = useDroppable({ id: bandId, data: { region, headerBand: true }, disabled: !allowed });
   const highlighted = allowed && drop?.region === region && !drop.panelPosition;
   return (
     <Box
@@ -201,7 +205,17 @@ export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion; vi
       // destination. Native file drops still reach the guest outside tab drags.
       pointerEvents={dragging ? "auto" : "none"}
       visibility={dragging ? "visible" : "hidden"}
-      layerStyle={highlighted ? "tabDropZone" : undefined}
-    />
+      layerStyle={highlighted && !drop?.headerBand ? "tabDropZone" : undefined}
+    >
+      <Box
+        ref={band.setNodeRef}
+        data-workbench-tab-band={region}
+        position="absolute"
+        top="0"
+        insetInline="0"
+        h="8"
+        layerStyle={highlighted && drop?.headerBand ? "tabDropZone" : undefined}
+      />
+    </Box>
   );
 };

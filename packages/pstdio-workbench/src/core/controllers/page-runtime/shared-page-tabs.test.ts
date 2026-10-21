@@ -41,7 +41,7 @@ for (const scoped of [true, false]) {
   }
 }
 
-test("a single-resource page moved to Side keeps its resource when another resource opens", () => {
+test("a single-resource page selects another resource in its chosen Side region", () => {
   const s = modePanelFixture();
   s.w.pages.registerPage({
     id: "single",
@@ -57,8 +57,8 @@ test("a single-resource page moved to Side keeps its resource when another resou
   const original = s.w.layout.getActivePanel("main")!;
   s.w.movePanel(original.instanceId, "side");
   s.navigate("single", "b");
-  expect(s.ids("side")).toEqual(["a"]);
-  expect(s.ids("main")).toEqual(["b"]);
+  expect(s.ids("side")).toEqual(["b"]);
+  expect(s.ids("main")).toEqual([]);
   expect(s.w.getPrimaryResource()?.id).toBe("b");
 });
 

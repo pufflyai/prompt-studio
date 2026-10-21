@@ -69,3 +69,54 @@ test("returning to a page keeps its tab position and the mode's latest shared ta
   s.navigate("inspector", "ticket");
   expect(s.ids("side")).toEqual(["two", "one", "ticket"]);
 });
+
+test("a single resource page replaces its conversation in the chosen region", () => {
+  const s = inspectorFixture("one");
+  s.navigate("inspector", "first");
+  const page = s.w.layout.getLayout().regions.main.widgets[0]!;
+  s.w.movePanel(page.widgetId, "secondary");
+  s.navigate("inspector", "second");
+  const primary = () =>
+    Object.values(s.w.layout.getLayout().regions)
+      .flatMap((r) => r.widgets)
+      .filter(
+        (p) =>
+          p.placementIdentity?.kind === "page" &&
+          p.placementIdentity.slotId === "$main" &&
+          p.placementIdentity.pageId === "inspector",
+      );
+  expect(primary()).toHaveLength(1);
+  expect(s.w.layout.getLayout().regions.secondary.widgets).toContainEqual(
+    expect.objectContaining({ resource: { type: "document", id: "second" } }),
+  );
+  s.w.pageLocations.goBack();
+  expect(primary()).toHaveLength(1);
+  expect(primary()[0]?.resource?.id).toBe("first");
+  expect(s.w.layout.getLayout().regions.secondary.widgets).toContainEqual(primary()[0]);
+});
+
+test.each([
+  false,
+  true,
+])("a single-view parent and resource page keep the chosen region; visit another page=%s", (away) => {
+  const s = inspectorFixture("one");
+  const root = s.w.layout.getLayout().regions.main.widgets[0]!;
+  s.w.movePanel(root.widgetId, "secondary");
+  if (away) s.navigate("alpha-list");
+  s.navigate("inspector", "first");
+  expect(s.w.layout.getLayout().regions.secondary.widgets).toContainEqual(
+    expect.objectContaining({ role: "location", resource: { type: "document", id: "first" } }),
+  );
+  expect(s.w.layout.getLayout().regions.secondary.widgets.some((p) => p.widgetId === root.widgetId)).toBe(false);
+});
+
+test("a single-resource panel keeps its region when selected from another active page", () => {
+  const s = inspectorFixture("one");
+  s.navigate("inspector", "first");
+  s.w.movePanel(s.w.layout.getLayout().regions.main.widgets[0]!.widgetId, "side");
+  s.navigate("alpha-list");
+  s.navigate("inspector", "second");
+  expect(s.w.layout.getLayout().regions.side.widgets).toContainEqual(
+    expect.objectContaining({ role: "location", resource: { type: "document", id: "second" } }),
+  );
+});
