@@ -6,7 +6,7 @@ See [Log in and sync cloud projects](../sdk/0004-device-login.md) for the comman
 
 ## Account service setup
 
-Use an owned HTTPS account service configured as described in [account authority development](0007-account-manager.md). Register its full Google callback URL, for example `https://accounts.example.test/api/auth/callback/google`, in the owned Google OAuth client. `MANAGER_ORIGIN` is that account service's origin; `RELAY_AUDIENCE` is the full HTTPS relay origin. These are separate services and identities.
+Use an owned HTTPS account service configured as described in [account authority development](0007-account-manager.md). Register its full Google callback URL, for example `https://accounts.example.test/api/auth/callback/google`, in the owned Google OAuth client. `MANAGER_ORIGIN` is that account service's HTTPS address; `RELAY_AUDIENCE` is the relay's HTTPS address. Either address may include a path, as described in [account authority development](0007-account-manager.md#addresses-with-a-path). These are separate services and identities.
 
 This repository supplies no live Google OAuth client or account service. The commands assume an existing owned service. They do not create cloud resources or deploy anything.
 
