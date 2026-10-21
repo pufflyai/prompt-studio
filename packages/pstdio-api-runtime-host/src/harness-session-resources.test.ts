@@ -30,6 +30,52 @@ const setup = () => {
 };
 
 describe("session resource retention", () => {
+  test("closing many retained sessions with the same deadline shares one cleanup timer", async () => {
+    let schedules = 0;
+    const resources = createHarnessSessionResources({
+      now: () => 0,
+      schedule: () => {
+        schedules++;
+        return () => {};
+      },
+    });
+    const owner = {};
+    const interests = [];
+    for (let index = 0; index < 10_000; index++) {
+      const id = `session-${index}`;
+      interests.push(resources.retain(id));
+      const done = await resources.acquire(owner, id, async () => true);
+      done();
+    }
+    for (const close of interests) close();
+    expect(schedules).toBe(1);
+    await resources.retire(owner);
+  });
+
+  test("ten thousand owners expire without releasing the sessions still retained by tabs", async () => {
+    const { resources, advance, timers } = setup();
+    const owner = {};
+    const retained = [];
+    let released = 0;
+    for (let index = 0; index < 10_000; index++) {
+      const id = `session-${index}`;
+      if (index < 1_000) retained.push(resources.retain(id));
+      const done = await resources.acquire(owner, id, async () => {
+        released++;
+        return true;
+      });
+      done();
+    }
+    await advance(30 * minute - 1);
+    expect(released).toBe(0);
+    await advance(1);
+    expect(released).toBe(9_000);
+    for (const close of retained) close();
+    await advance(30 * minute);
+    expect(released).toBe(10_000);
+    expect(timers.size).toBe(0);
+  });
+
   test("releases an unused conversation at thirty minutes", async () => {
     const { resources, advance } = setup();
     let released = 0;

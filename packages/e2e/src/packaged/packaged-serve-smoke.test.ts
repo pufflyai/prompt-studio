@@ -6,13 +6,14 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
+// Account checks include project sync status, native sign-in cancellation, and authenticated presence.
 import { registerAccountSmokeTests } from "./packaged-account-smoke";
 import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
 // Includes retained creation drafts, backdrop protection, and creation without row activation.
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
-// Chat checks retain all replay chunks, cached history, and panel animation and resize behavior.
+// Chat checks retain replay chunks, shared open-tab membership, cached history, and panel animation and resize behavior.
 import { registerPackagedChatMotionSmokeTests } from "./packaged-chat-motion-smoke";
 // Localized parameter guidance is readable in compiled CLI help.
 import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
@@ -33,6 +34,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
+// Document sync checks the local, synced and needs-attention project states from the sync owners.
 import { registerDocumentSyncSmokeTests } from "./packaged-document-sync-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 // Includes linked dependency loading and missing dependency diagnostics.
@@ -123,6 +125,8 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Adding Terminal in Side or Session in Bottom keeps the other empty panel open.
 // The packaged empty-panel browser flow also checks nearby tab targets, mirrored Navigation, panel handles and reload.
 
+// Two hosts check an interrupted first download, offline and back, and local edits that merge when sync restarts.
+import { registerTwoDeviceSyncSmokeTests } from "./packaged-two-device-sync-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";
 
@@ -306,3 +310,4 @@ registerPageParamsSmokeTests();
 registerResourcePageSmokeTests();
 
 registerDocumentSyncSmokeTests();
+registerTwoDeviceSyncSmokeTests();

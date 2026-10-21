@@ -1,6 +1,7 @@
 import type { TerminalSessionHandle, TerminalSessionRequest } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type { Skill } from "../../skills";
+import type { ExtensionAccountApi } from "./account";
 import type { ExtensionAutomationApi } from "./automation";
 import type {
   CommandHelpersApi,
@@ -212,6 +213,8 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   connections: ExtensionConnectionsApi;
   logger: ExtensionLoggerApi;
   settings: ExtensionSettingsApi<TSettings>;
+  /** This device's Cloud account, its devices and each project's sync status. */
+  account: ExtensionAccountApi;
 }
 
 export interface CommandStreamWriter<TChunk extends JsonValue = JsonValue> {

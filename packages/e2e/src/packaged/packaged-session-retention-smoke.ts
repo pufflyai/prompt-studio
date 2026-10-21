@@ -28,6 +28,13 @@ export const assertPackagedSessionRetention = async (
     });
     expect(retained.status).toBe(204);
     expect((await fetch(`${path}/open-tab`, { method: "DELETE", headers })).status).toBe(204);
+    const rejected = await fetch(path, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ subscription_id: "deleted-tab", retain_session_id: "deleted-session" }),
+    });
+    expect(rejected.status).toBe(404);
+    expect(await rejected.json()).toMatchObject({ code: "SESSION_NOT_FOUND" });
   } finally {
     await reader.cancel();
   }

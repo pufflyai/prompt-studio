@@ -11,6 +11,9 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
   >();
   let deviceId = "";
   let storedStates = 0;
+  // While set, document reads fail, so a device cannot finish its first download.
+  let failReads = false;
+  let failedReads = 0;
   const document = (id: string) => {
     let value = documents.get(id);
     if (!value) {
@@ -20,6 +23,20 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     return value;
   };
   const json = (body: unknown) => Response.json(body);
+  // Like the relay, tell connected devices that a document changed so they read it again.
+  const publishChange = (documentId: string) => {
+    const doc = document(documentId);
+    server.publish(
+      "changed",
+      JSON.stringify({
+        type: "changed",
+        spaceOwner: null,
+        documentId: documentId.slice(1),
+        lastSequence: doc.updates.length,
+        stateId: doc.state?.stateId ?? null,
+      }),
+    );
+  };
   const managerRequest = async (request: Request, path: string, origin: string) => {
     const input = async () => (await request.json()) as Record<string, unknown>;
     if (path === "/api/auth/one-time-token/verify")
@@ -41,7 +58,9 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
       });
     if (path === "/v1/workbenches") return json([...projects].map((workbenchId) => ({ workbenchId })));
     if (path.startsWith("/v1/workbenches/")) {
-      projects.add(decodeURIComponent(path.split("/").at(-1)!));
+      const [, , , id, action] = path.split("/");
+      if (action === "remove") projects.delete(decodeURIComponent(id!));
+      else projects.add(decodeURIComponent(id!));
       return json({ ok: true });
     }
 
@@ -71,6 +90,10 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     const input = async () => (await request.json()) as Record<string, unknown>;
     const doc = document(id);
     if (path.endsWith("/read")) {
+      if (failReads) {
+        failedReads++;
+        return new Response(null, { status: 503 });
+      }
       const { after } = await input();
       return json({
         status: "updates",
@@ -93,6 +116,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
         deviceId,
         createdAt: new Date().toISOString(),
       });
+      publishChange(id);
       return json({ sequence, duplicate: false });
     }
     expect(body.summary).toBeString();
@@ -107,39 +131,55 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
       deviceId,
       createdAt: new Date().toISOString(),
     };
+    publishChange(id);
     return json({ state: doc.state });
   };
-  const server = Bun.serve({
-    hostname: "127.0.0.1",
-    port: 0,
-    tls,
-    async fetch(request, server) {
-      const path = new URL(request.url).pathname;
-      const managed = await managerRequest(request, path, server.url.origin);
-      if (managed) return managed;
-      if (!path.startsWith("/sync/")) return new Response(null, { status: 404 });
-      expect(request.headers.get("pstdio-sync-protocol")).toBe("1");
-      expect(request.headers.get("authorization")).toBe("Bearer relay-access");
-      if (path.endsWith("/live")) {
-        if (server.upgrade(request)) return;
-        return new Response(null, { status: 426 });
-      }
-      const parts = path.split("/");
-      if (parts[4] === "blobs") return blobRequest(request, path, parts);
-      return documentRequest(request, path, parts);
-    },
-    websocket: {
-      open(socket) {
-        socket.subscribe("changed");
-        socket.send(JSON.stringify({ type: "ready", protocolVersion: 1 }));
+  const serve = (port: number) =>
+    Bun.serve({
+      hostname: "127.0.0.1",
+      port,
+      tls,
+      async fetch(request, server) {
+        const path = new URL(request.url).pathname;
+        const managed = await managerRequest(request, path, server.url.origin);
+        if (managed) return managed;
+        if (!path.startsWith("/sync/")) return new Response(null, { status: 404 });
+        expect(request.headers.get("pstdio-sync-protocol")).toBe("1");
+        expect(request.headers.get("authorization")).toBe("Bearer relay-access");
+        if (path.endsWith("/live")) {
+          if (server.upgrade(request)) return;
+          return new Response(null, { status: 426 });
+        }
+        const parts = path.split("/");
+        if (parts[4] === "blobs") return blobRequest(request, path, parts);
+        return documentRequest(request, path, parts);
       },
-      message() {},
-    },
-  });
+      websocket: {
+        open(socket) {
+          socket.subscribe("changed");
+          socket.send(JSON.stringify({ type: "ready", protocolVersion: 1 }));
+        },
+        message() {},
+      },
+    });
+  let server = serve(0);
+  const port = server.port;
   return {
-    server,
+    get origin() {
+      return server.url.origin;
+    },
     documents,
     states: () => storedStates,
+    failedReads: () => failedReads,
+    failReads(value: boolean) {
+      failReads = value;
+    },
+    /** Drops every connection, as a lost network does. */
+    stop: () => server.stop(true),
+    /** Serves again on the same address with the stored data. */
+    restart() {
+      server = serve(port!);
+    },
     corrupt() {
       for (const [documentId, doc] of documents) {
         doc.updates.push({
@@ -149,16 +189,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
           deviceId,
           createdAt: new Date().toISOString(),
         });
-        server.publish(
-          "changed",
-          JSON.stringify({
-            type: "changed",
-            spaceOwner: null,
-            documentId: documentId.slice(1),
-            lastSequence: doc.updates.length,
-            stateId: doc.state?.stateId ?? null,
-          }),
-        );
+        publishChange(documentId);
       }
     },
   };

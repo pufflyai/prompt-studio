@@ -24,6 +24,7 @@ export type {
   WorktreeRemovedPayload,
 } from "pstdio-api-contracts/extension-kernel";
 export {
+  accountEvents,
   applyEditingChanges,
   DEFAULT_DATA_TABLE_SETTINGS,
   defineSlot,
@@ -127,6 +128,7 @@ export {
   type TerminalSessionBridge,
   type TerminalSessionExit,
 } from "./terminal-session-bridge";
+export type { WebviewAccountClient } from "./webview-account-client";
 export { type ArtifactMountKey, artifactMountId, artifactsRead } from "./webview-capabilities";
 export {
   createWebviewClient,

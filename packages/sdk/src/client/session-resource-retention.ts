@@ -1,4 +1,5 @@
 import type { createSessionStreamTransport } from "./session-stream";
+import { isSessionStreamRejection } from "./session-stream-errors";
 
 export const retainSessionResources = (streams: ReturnType<typeof createSessionStreamTransport>, sessionId: string) => {
   let closed = false;
@@ -11,8 +12,8 @@ export const retainSessionResources = (streams: ReturnType<typeof createSessionS
         onEvent: () => {},
         // A dropped client stream releases the host's interest. Restore that
         // interest when the connection returns, even if the tab never changes.
-        onError: () => {
-          if (!closed) retry = setTimeout(connect, 1000);
+        onError: (error) => {
+          if (!closed && !isSessionStreamRejection(error)) retry = setTimeout(connect, 1000);
         },
       },
     );

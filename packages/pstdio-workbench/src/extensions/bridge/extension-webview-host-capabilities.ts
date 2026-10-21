@@ -8,6 +8,7 @@ import type {
 import type { HostCapability } from "pstdio-extensions/bridge/contract";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import { z } from "zod";
+import { createAccountCapability } from "./account-capability";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
 import { parseWebviewCapabilityParams, WebviewHostCapabilityError } from "./webview-capability-params";
@@ -85,6 +86,7 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
   const terminalCapability =
     terminal && hostEvents ? createTerminalSessionCapability({ terminal, hostEvents }) : undefined;
   const readHarnesses = adapters.harnesses?.read.bind(adapters.harnesses);
+  const account = createAccountCapability(adapters.account);
   return {
     "harnesses.read": capability("harnesses.read", readHarnesses),
     "resources.actions": capability("resources.actions", adapters.resourceActions),
@@ -176,5 +178,7 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
     "files.list": capability("files.list", files && ((request) => files.list(request))),
     "files.delete": capability("files.delete", files && ((request) => files.delete(request))),
     "artifacts.read": capability("artifacts.read", artifacts && ((request) => artifacts.read(request))),
+    "account.read": capability("account.read", account),
+    "account.manage": capability("account.manage", account),
   } satisfies Record<WebviewHostCapability, HostCapability>;
 };

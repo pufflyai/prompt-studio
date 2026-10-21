@@ -40,6 +40,7 @@ export type {
   WorktreeRemovedPayload,
 } from "./kernel-slots";
 export {
+  accountEvents,
   gitEvents,
   projectEvents,
   projectSlots,

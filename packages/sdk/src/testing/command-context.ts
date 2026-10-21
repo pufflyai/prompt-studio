@@ -26,6 +26,7 @@ type ContextNamespace =
   | "connections"
   | "logger"
   | "settings"
+  | "account"
   | "stream"
   | "invocation";
 export type CommandContextOverrides = Partial<Omit<CommandContext, ContextNamespace>> & {
@@ -91,6 +92,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     connections: { ...base.connections, ...overrides?.connections },
     logger: { ...base.logger, ...overrides?.logger },
     settings: { ...base.settings, ...overrides?.settings },
+    account: { ...base.account, ...overrides?.account },
     stream: { ...base.stream, ...overrides?.stream },
     invocation: { ...base.invocation, ...overrides?.invocation },
   };

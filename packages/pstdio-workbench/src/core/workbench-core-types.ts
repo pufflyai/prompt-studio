@@ -145,13 +145,17 @@ export interface WorkbenchSnapshot {
 export interface WorkbenchPersistenceAdapter {
   getSnapshot(scope?: string): WorkbenchSnapshot | undefined;
   setSnapshot(snapshot: WorkbenchSnapshot, scope?: string): void;
+  /** Remove a saved scope and cancel its pending writes. */
+  removeSnapshot?(scope?: string): void;
   listLayouts?(): { scope?: string; layout: WorkbenchLayout }[];
+  onDidChangeLayout?(listener: (scope: string | undefined, layout: WorkbenchLayout | undefined) => void): () => void;
   flush?(): void;
   dispose?(): void;
 }
 
 export interface WorkbenchHost {
   getOpenPlacements(): WorkbenchWidgetPlacement[];
+  getOpenPlacementIds(): ReadonlySet<string>;
   getSnapshot(): WorkbenchSnapshot;
   restoreSnapshot(snapshot: WorkbenchSnapshot): void;
   setPersistenceScope(scope: string | undefined, input?: { carryRegions?: readonly WorkbenchRegion[] }): void;

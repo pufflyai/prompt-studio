@@ -16,6 +16,7 @@ export const startResourceNumberSync = (input: {
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
   signal: AbortSignal;
+  statusChanged?: () => void;
 }) => {
   const { config, deps } = input;
   const owner = { workbenchId: config.workbenchId, extensionId: resourceNumbersOwnerId };
@@ -35,6 +36,8 @@ export const startResourceNumberSync = (input: {
   let sync: ReturnType<typeof createDocumentSync> | undefined;
   let attempt: AbortSignal | undefined;
   let generation: number | undefined;
+  // Each reconnect replaces the document sync. The first download stays done.
+  let firstDownloaded = false;
   const connection = createDocumentRelayConnection({
     origin: config.relayOrigin,
     projectId: config.workbenchId,
@@ -67,20 +70,29 @@ export const startResourceNumberSync = (input: {
         generation = space.generation;
       }
       await sync.synchronize();
+      if ((await sync.status()).downloaded) firstDownloaded = true;
     },
     onError: () =>
       apiLogger.warn(
         { event: "relay.resource-numbers.reconnecting", workbenchId: config.workbenchId },
         "Resource number sync will retry",
       ),
+    onStatusChange: input.statusChanged,
   });
   const stop = deps.extensionResourceSequencesService.watchChanges((changed) => {
-    if (changed.workbenchId === owner.workbenchId) connection.wake();
+    if (changed.workbenchId !== owner.workbenchId) return;
+    connection.wake();
+    input.statusChanged?.();
   });
   return {
     done: connection.done.finally(() => {
       stop();
       sync?.close();
+    }),
+    status: async () => ({
+      firstDownloaded,
+      ...((await sync?.status()) ?? { downloaded: false, pending: false, needsAttention: false }),
+      ...connection.status(),
     }),
     close: () => controller.abort(),
   };

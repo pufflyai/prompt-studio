@@ -12,6 +12,8 @@ import type { WorkbenchPageContribution } from "../../registries/pages/page-regi
 import { pageResourceContextKey } from "../../registries/pages/page-resource-context";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createWorkbenchInput, WorkbenchPagePersistenceScopeInput } from "../../workbench-core-types";
+import { createOpenPlacementInventory } from "./open-placement-inventory";
+import { isDefaultPageMain } from "./page-layout-baseline";
 
 const selectPlacements = (
   layout: WorkbenchLayout,
@@ -85,30 +87,38 @@ export const createWorkbenchLayoutCache = (
   getTab: (contributionId: string) => WorkbenchWidgetPlacement["tab"] = () => undefined,
   getPages: () => readonly WorkbenchPageContribution[] = () => [],
 ) => {
-  // Custom adapters may omit enumeration. Keep visited scopes available too.
-  const scopes = new Set<string | undefined>();
   const memory = new Map<string | undefined, WorkbenchLayout>();
+  const inventory = createOpenPlacementInventory();
+  let restored = false;
   const adapter: LayoutPersistenceAdapter = input.persistence
     ? {
         getLayout: (scope) => input.persistence?.getSnapshot(scope)?.layout,
         setLayout: (layout, scope) => input.persistence?.setSnapshot({ layout }, scope),
+        removeLayout: input.persistence.removeSnapshot
+          ? (scope) => input.persistence?.removeSnapshot?.(scope)
+          : undefined,
         listLayouts: () => input.persistence?.listLayouts?.() ?? [],
+        onDidChangeLayout: input.persistence?.onDidChangeLayout,
         flush: input.persistence.flush,
         dispose: input.persistence.dispose,
       }
     : (input.layoutPersistence ?? {
         getLayout: (scope) => memory.get(scope),
         setLayout: (layout, scope) => memory.set(scope, layout),
+        removeLayout: (scope) => {
+          memory.delete(scope);
+        },
       });
+  const stopInventory = adapter.onDidChangeLayout?.((scope, layout) => inventory.set(scope, layout));
   const read = (scope?: string) => {
-    scopes.add(scope);
     const layout = runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter.getLayout(scope));
+    if (layout) inventory.set(scope, layout);
     return layout ? restoreLayoutPresentation(layout, getTab) : undefined;
   };
   const write = (layout: WorkbenchLayout, scope?: string) => {
-    scopes.add(scope);
     return runWorkbenchEffect(`layout cache write for ${scope ?? "unscoped"}`, () => {
       adapter.setLayout(layout, scope);
+      inventory.set(scope, layout);
       return true;
     });
   };
@@ -143,31 +153,28 @@ export const createWorkbenchLayoutCache = (
       scope,
     );
   };
-  const listPlacements = (current: WorkbenchLayout) => {
-    const placements = new Map<string, WorkbenchWidgetPlacement>();
-    const layouts = [
-      ...(adapter.listLayouts?.().map((entry) => entry.layout) ?? []),
-      ...[...scopes].map((scope) => read(scope)),
-      current,
-    ];
-    for (const layout of layouts) {
-      if (!layout) continue;
-      for (const region of Object.values(layout.regions)) {
-        for (const placement of region.widgets) {
-          placements.set(placement.widgetId, placement);
-        }
-      }
+  const restoreInventory = (current: WorkbenchLayout) => {
+    if (!restored) {
+      restored = true;
+      for (const { scope, layout } of adapter.listLayouts?.() ?? []) inventory.set(scope, layout);
     }
-    return [...placements.values()];
+    inventory.setCurrent(current);
   };
   return {
-    listPlacements,
+    listPlacements(current: WorkbenchLayout) {
+      restoreInventory(current);
+      return inventory.getPlacements();
+    },
+    placementIds(current: WorkbenchLayout) {
+      restoreInventory(current);
+      return inventory.getIds();
+    },
     listResources(current: WorkbenchLayout) {
-      const resources = new Map<string, ResourceRef>();
-      for (const placement of listPlacements(current)) {
-        if (placement.resource) resources.set(resourceKey(placement.resource), placement.resource);
-      }
-      return [...resources.values()];
+      restoreInventory(current);
+      return inventory.getResources();
+    },
+    hasPageMain(context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution) {
+      return Boolean(read(mainScope(context, page)));
     },
     loadPageLayout(context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution | undefined) {
       const scope = input.resolvePagePersistenceScope?.(context)?.scope;
@@ -194,26 +201,47 @@ export const createWorkbenchLayoutCache = (
       context: WorkbenchPagePersistenceScopeInput,
       layout: WorkbenchLayout,
       page: WorkbenchPageContribution | undefined,
+      beforePreviewRemoval = layout,
     ) {
-      if (context.pageId && context.modeId)
-        write(
-          selectPlacements(layout, (_widget, region) => region === "main"),
-          mainScope(context, page),
-        );
+      if (!context.pageId || !context.modeId) return;
+      const scope = mainScope(context, page);
+      const snapshot = selectPlacements(layout, (_widget, region) => region === "main");
+      if (
+        isDefaultPageMain(page, context.resource, layout, input.pageResources) ||
+        (beforePreviewRemoval !== layout &&
+          isDefaultPageMain(page, context.resource, beforePreviewRemoval, input.pageResources))
+      ) {
+        runWorkbenchEffect(`remove default page layout for ${scope}`, () => {
+          if (adapter.removeLayout) adapter.removeLayout(scope);
+          // Adapters without deletion can still replace an existing override.
+          else if (adapter.getLayout(scope)) adapter.setLayout(snapshot, scope);
+        });
+        // The live layout owns its default tabs. Saving a baseline must not
+        // turn a visited page into another owner after that tray is replaced.
+        inventory.set(scope, adapter.removeLayout ? undefined : adapter.getLayout(scope));
+      } else write(snapshot, scope);
     },
     removeResource(resource: ResourceRef) {
-      const allScopes = new Set([...scopes, ...(adapter.listLayouts?.().map((entry) => entry.scope) ?? [])]);
-      for (const scope of allScopes) {
+      if (!restored) {
+        restored = true;
+        for (const { scope, layout } of adapter.listLayouts?.() ?? []) inventory.set(scope, layout);
+      }
+      for (const scope of inventory.getScopes(resource)) {
         const layout = read(scope);
         if (layout)
           write(
             selectPlacements(layout, (placement) => resourceKey(placement.resource) !== resourceKey(resource)),
             scope,
           );
+        else inventory.removeResource(scope, resource);
       }
     },
     layout: {
       ...adapter,
+      dispose() {
+        stopInventory?.();
+        adapter.dispose?.();
+      },
       getLayout: read,
       setLayout: (layout: WorkbenchLayout, scope?: string) => {
         const snapshot = selectPlacements(

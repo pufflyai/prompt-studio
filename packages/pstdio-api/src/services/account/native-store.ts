@@ -10,6 +10,7 @@ export const deviceLoginSchema = z.strictObject({
   accountId: identitySchema,
   deviceId: identitySchema,
   token: z.string().min(1),
+  email: z.string().optional(),
 });
 const fileSchema = z.strictObject({ login: deviceLoginSchema.nullable() });
 export type DeviceLogin = z.infer<typeof deviceLoginSchema>;

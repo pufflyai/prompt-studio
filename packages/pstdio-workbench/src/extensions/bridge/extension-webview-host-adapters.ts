@@ -2,6 +2,7 @@ import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import type { CommandStreamClientEvent } from "@pstdio/sdk/client";
 import type {
   CommandNotice,
+  ExtensionAccountApi,
   MaybePromise,
   NavigationTarget,
   PageLocation,
@@ -80,5 +81,7 @@ export interface ExtensionWebviewHostAdapters {
   preferences?: ExtensionWebviewPreferencesAdapter;
   files?: ExtensionWebviewFilesAdapter;
   artifacts?: { read(input: WebviewArtifactsReadParams): MaybePromise<WebviewHostCapabilityResults["artifacts.read"]> };
+  /** The host's Cloud account. Methods without a project id use the webview's project. */
+  account?: ExtensionAccountApi;
   terminal?: WorkbenchTerminalController;
 }
