@@ -57,3 +57,39 @@ test("browser Google sign-in returns a single-use native code only to a valid lo
     await authentication.close();
   }
 });
+
+test("an account manager under a path signs in after the proxy removes the path", async () => {
+  const origin = "https://shared.fixture.test/accounts";
+  const authentication = createAuthenticationFixture(fixture.databaseUrl, {
+    origin,
+    audience: "https://shared.fixture.test/relay",
+  });
+  const handler = implementation.createManagerHandler(authentication.auth, origin);
+  // The proxy forwards https://shared.fixture.test/accounts/<path> to the manager as /<path>.
+  const get = (path: string, headers?: HeadersInit) =>
+    handler(new Request(`https://shared.fixture.test${path}`, { headers }));
+  const params = new URLSearchParams({
+    callback: "http://127.0.0.1:54321/callback",
+    state: "owned-native-state-012345678901234567890",
+  });
+  try {
+    const login = await get(`/v1/native-login?${params}`);
+    expect(login.status).toBe(302);
+    const provider = new URL(login.headers.get("location")!);
+    expect(provider.searchParams.get("redirect_uri")).toBe(`${origin}/api/auth/callback/google`);
+    const session = await authentication.login(crypto.randomUUID());
+    const callback = await get(`/v1/native-callback?${params}`, session.headers);
+    expect(callback.status).toBe(302);
+    const code = new URL(callback.headers.get("location")!).searchParams.get("code");
+    const verified = await handler(
+      new Request("https://shared.fixture.test/api/auth/one-time-token/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "https://shared.fixture.test" },
+        body: JSON.stringify({ token: code }),
+      }),
+    );
+    expect(verified.status).toBe(200);
+  } finally {
+    await authentication.close();
+  }
+});

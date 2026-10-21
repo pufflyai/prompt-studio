@@ -7,7 +7,7 @@ import {
   syncProtocolHeader,
   syncProtocolVersion,
 } from "pstdio-sync-contracts";
-import { relayOrigin } from "./http";
+import { serviceAddress, serviceUrl } from "./http";
 
 const NativeWebSocket = globalThis.WebSocket as { new (url: string | URL, options?: Bun.WebSocketOptions): WebSocket };
 
@@ -23,7 +23,7 @@ interface RelaySocketInput {
 }
 
 const createRelaySocket = (input: RelaySocketInput) => {
-  const origin = relayOrigin(input.origin);
+  const address = serviceAddress(input.origin);
   let socket: WebSocket | undefined;
   let dirty = false;
   let running: Promise<void> | undefined;
@@ -67,7 +67,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
       try {
         const access = await input.access();
         if (input.signal.aborted) break;
-        const url = new URL(input.path, origin);
+        const url = serviceUrl(address, input.path);
         url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
         const closed = Promise.withResolvers<void>();
         const connection = new NativeWebSocket(url, {
