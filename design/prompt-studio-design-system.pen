@@ -197350,7 +197350,7 @@
                   "type": "frame",
                   "id": "Cwt8M",
                   "name": "Sidenav · Workspaces page",
-                  "context": "Project sidenav on the Workspaces page. Workspaces has no navigation of its own, so the sidenav shows the project entries with Workspaces selected.",
+                  "context": "Project sidenav. The Workspaces extension adds the Project Workspaces group: Files opens the project workspace (the project folder) to browse files, Workspaces opens the workspace list.",
                   "clip": true,
                   "width": 287,
                   "height": "fill_container",
@@ -197474,6 +197474,100 @@
                     },
                     {
                       "type": "frame",
+                      "id": "Q0mKW",
+                      "name": "Tickets",
+                      "width": "fill_container",
+                      "height": 28,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "b9DOy6",
+                          "name": "Tickets icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "square-kanban",
+                          "library": "lucide",
+                          "fill": "#8B9099"
+                        },
+                        {
+                          "type": "text",
+                          "id": "SPCUH",
+                          "name": "Tickets label",
+                          "fill": "#8B9099",
+                          "content": "Tickets",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xhLx2",
+                      "name": "Header / Resource Region Divider",
+                      "width": "fill_container",
+                      "height": 12,
+                      "stroke": "#2E333F",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "strokeLinejoin": "round"
+                    },
+                    {
+                      "type": "text",
+                      "id": "n5I9I",
+                      "name": "Project Workspaces",
+                      "fill": "#646973",
+                      "content": "PROJECT WORKSPACES",
+                      "fontFamily": "Onest",
+                      "fontSize": 9,
+                      "fontWeight": "600",
+                      "letterSpacing": 1.2
+                    },
+                    {
+                      "type": "frame",
+                      "id": "aycHu",
+                      "name": "Files",
+                      "width": "fill_container",
+                      "height": 28,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Xo2Za",
+                          "name": "Tickets icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "folder-tree",
+                          "library": "lucide",
+                          "fill": "#8B9099"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wBq1R",
+                          "name": "Tickets label",
+                          "fill": "#8B9099",
+                          "content": "Files",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
                       "id": "l4RB8",
                       "name": "Workspaces",
                       "width": "fill_container",
@@ -197503,41 +197597,6 @@
                           "name": "Workspaces label",
                           "fill": "$ds-fg",
                           "content": "Workspaces",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "Q0mKW",
-                      "name": "Tickets",
-                      "width": "fill_container",
-                      "height": 28,
-                      "gap": 8,
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "id": "b9DOy6",
-                          "name": "Tickets icon",
-                          "width": 13,
-                          "height": 13,
-                          "icon": "square-kanban",
-                          "library": "lucide",
-                          "fill": "#8B9099"
-                        },
-                        {
-                          "type": "text",
-                          "id": "SPCUH",
-                          "name": "Tickets label",
-                          "fill": "#8B9099",
-                          "content": "Tickets",
                           "fontFamily": "Inter",
                           "fontSize": 10,
                           "fontWeight": "normal"
@@ -199182,6 +199241,2109 @@
               ]
             }
           ]
+        },
+        {
+          "type": "text",
+          "id": "YsHGO",
+          "name": "Files title",
+          "fill": "$ds-fg",
+          "content": "W4 · Files — the project workspace, one click away",
+          "fontFamily": "$font-heading",
+          "fontSize": 16,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "uG9ai",
+          "name": "Files description",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Files in the Project Workspaces group opens the project workspace (the project folder) straight to its file tree. It is the same workspace page as opening WS-1 from the list, without the detour. The project folder has no diff, so there is no Changes tab.",
+          "lineHeight": 1.45,
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "trRO4",
+          "name": "Files · Production Window",
+          "clip": true,
+          "width": "fill_container",
+          "height": 760,
+          "fill": "#07090E",
+          "cornerRadius": 10,
+          "stroke": "#2E333F",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "LxU0H",
+              "name": "Workbench Body",
+              "width": "fill_container",
+              "height": "fill_container",
+              "gap": 4,
+              "padding": [
+                4,
+                4,
+                0,
+                4
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Ta3eg",
+                  "name": "Sidenav · Workspaces page",
+                  "context": "Project sidenav. The Workspaces extension adds the Project Workspaces group: Files opens the project workspace (the project folder) to browse files, Workspaces opens the workspace list.",
+                  "clip": true,
+                  "width": 287,
+                  "height": "fill_container",
+                  "fill": "#0E1016",
+                  "cornerRadius": 8,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "layout": "vertical",
+                  "gap": 7,
+                  "padding": [
+                    8,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Tn7FK",
+                      "name": "Search",
+                      "width": "fill_container",
+                      "height": 28,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "mBzTl",
+                          "name": "Search icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "search",
+                          "library": "lucide",
+                          "fill": "#8B9099"
+                        },
+                        {
+                          "type": "text",
+                          "id": "woblp",
+                          "name": "Search label",
+                          "fill": "#8B9099",
+                          "content": "Search",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "kZvot",
+                      "name": "Notifications",
+                      "width": "fill_container",
+                      "height": 28,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "d7Rhux",
+                          "name": "Notifications icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "inbox",
+                          "library": "lucide",
+                          "fill": "#8B9099"
+                        },
+                        {
+                          "type": "text",
+                          "id": "G9GzX",
+                          "name": "Notifications label",
+                          "fill": "#8B9099",
+                          "content": "Notifications",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Z00q9L",
+                      "name": "Sessions",
+                      "width": "fill_container",
+                      "height": 28,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "pKEDN",
+                          "name": "Sessions icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "message-circle",
+                          "library": "lucide",
+                          "fill": "#8B9099"
+                        },
+                        {
+                          "type": "text",
+                          "id": "UdjV3",
+                          "name": "Sessions label",
+                          "fill": "#8B9099",
+                          "content": "Sessions",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "KcOII",
+                      "name": "Tickets",
+                      "width": "fill_container",
+                      "height": 28,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "RSdje",
+                          "name": "Tickets icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "square-kanban",
+                          "library": "lucide",
+                          "fill": "#8B9099"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wMOSz",
+                          "name": "Tickets label",
+                          "fill": "#8B9099",
+                          "content": "Tickets",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nw3KS",
+                      "name": "Header / Resource Region Divider",
+                      "width": "fill_container",
+                      "height": 12,
+                      "stroke": "#2E333F",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "strokeLinejoin": "round"
+                    },
+                    {
+                      "type": "text",
+                      "id": "gVPV9",
+                      "name": "Project Workspaces",
+                      "fill": "#646973",
+                      "content": "PROJECT WORKSPACES",
+                      "fontFamily": "Onest",
+                      "fontSize": 9,
+                      "fontWeight": "600",
+                      "letterSpacing": 1.2
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZjgDL",
+                      "name": "Files",
+                      "width": "fill_container",
+                      "height": 28,
+                      "fill": "$ds-bg-active",
+                      "cornerRadius": 6,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "A5Rewu",
+                          "name": "Tickets icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "folder-tree",
+                          "library": "lucide",
+                          "fill": "$ds-fg"
+                        },
+                        {
+                          "type": "text",
+                          "id": "B8TtDO",
+                          "name": "Tickets label",
+                          "fill": "$ds-fg",
+                          "content": "Files",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qJl5Q",
+                      "name": "Workspaces",
+                      "width": "fill_container",
+                      "height": 28,
+                      "fill": "#00000000",
+                      "cornerRadius": 6,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "KXuya",
+                          "name": "Workspaces icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "computer",
+                          "library": "lucide",
+                          "fill": "#8B9099"
+                        },
+                        {
+                          "type": "text",
+                          "id": "QC5zB",
+                          "name": "Workspaces label",
+                          "fill": "#8B9099",
+                          "content": "Workspaces",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "bOLYj",
+                  "name": "Resource Workbench",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "id": "s81sp1",
+                      "type": "ref",
+                      "ref": "Uke3B",
+                      "name": "Nav Chrome",
+                      "width": "fill_container",
+                      "descendants": {
+                        "LLPuw": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          }
+                        },
+                        "t5jSf": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          }
+                        },
+                        "WG70V/El0v0": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          }
+                        },
+                        "WG70V/Jq4g3": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          }
+                        },
+                        "rKPgR": {
+                          "theme": {
+                            "crumb": "default",
+                            "size": "sm"
+                          }
+                        },
+                        "rKPgR/QAdbs": {
+                          "icon": "layers"
+                        },
+                        "rKPgR/g7l5u": {
+                          "content": "Workspaces"
+                        },
+                        "U8yd35": {
+                          "theme": {
+                            "crumb": "default",
+                            "size": "sm"
+                          }
+                        },
+                        "U8yd35/QAdbs": {
+                          "icon": "folder"
+                        },
+                        "U8yd35/g7l5u": {
+                          "content": "Project workspace"
+                        },
+                        "R8Q6C": {
+                          "theme": {
+                            "crumb": "default",
+                            "size": "sm"
+                          }
+                        },
+                        "R8Q6C/QAdbs": {
+                          "icon": "files"
+                        },
+                        "R8Q6C/g7l5u": {
+                          "content": "Files"
+                        },
+                        "AZ9VV": {
+                          "theme": {
+                            "crumb": "current",
+                            "size": "sm"
+                          }
+                        },
+                        "AZ9VV/QAdbs": {
+                          "icon": "file-code"
+                        },
+                        "AZ9VV/g7l5u": {
+                          "content": "timeline-title.tsx"
+                        },
+                        "saN8L": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          }
+                        },
+                        "kUCSG": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
+                        "q7B3uG": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
+                        "ups0z": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TqFGr",
+                      "name": "Main and Secondary Placement",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "c4aVSA",
+                          "name": "Main Panel",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "fill": "$ds-surface",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "L7cbgH",
+                              "name": "Main Panel Header",
+                              "width": "fill_container",
+                              "height": 40,
+                              "fill": "#0E1016",
+                              "stroke": "#2E333F",
+                              "strokeWidth": {
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
+                              "gap": 5,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "NprII",
+                                  "type": "ref",
+                                  "ref": "TwCXd",
+                                  "name": "Changes tab",
+                                  "theme": {
+                                    "size": "sm",
+                                    "tab": "default",
+                                    "tab-status": "none"
+                                  },
+                                  "height": 24,
+                                  "enabled": false,
+                                  "descendants": {
+                                    "w7NkD3": {
+                                      "icon": "git-compare",
+                                      "width": 14,
+                                      "height": 14
+                                    },
+                                    "k9XlqC": {
+                                      "content": "Changes"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "v0vyQi",
+                                  "type": "ref",
+                                  "ref": "TwCXd",
+                                  "name": "Files tab",
+                                  "theme": {
+                                    "size": "sm",
+                                    "tab": "active",
+                                    "tab-status": "none"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "w7NkD3": {
+                                      "icon": "files",
+                                      "width": 14,
+                                      "height": 14
+                                    },
+                                    "k9XlqC": {
+                                      "content": "Files"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "fr9n6",
+                                  "type": "ref",
+                                  "ref": "nvvgg",
+                                  "name": "Add Panel",
+                                  "width": 24,
+                                  "height": 24,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "descendants": {
+                                    "k7mgm": {
+                                      "icon": "plus",
+                                      "width": 12,
+                                      "height": 12
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "uf099",
+                                  "name": "Main header spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "BC1A2",
+                              "name": "Main Panel Body",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "ba85S",
+                                  "name": "Files Tree Panel",
+                                  "width": 240,
+                                  "height": "fill_container",
+                                  "fill": "#0E1016",
+                                  "stroke": "#2E333F",
+                                  "strokeWidth": {
+                                    "right": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": 10,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "V2oKo",
+                                      "name": "Files header",
+                                      "width": "fill_container",
+                                      "gap": 4,
+                                      "padding": [
+                                        2,
+                                        2,
+                                        4,
+                                        2
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "wppPI",
+                                          "name": "Files label",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "FILES",
+                                          "fontFamily": "Onest",
+                                          "fontSize": 10,
+                                          "fontWeight": "600",
+                                          "letterSpacing": 0.6
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "mMU8P",
+                                          "name": "Files spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "id": "TxwJK",
+                                          "type": "ref",
+                                          "ref": "nvvgg",
+                                          "name": "New file",
+                                          "theme": {
+                                            "btn": "ghost",
+                                            "size": "2xs"
+                                          },
+                                          "height": 24,
+                                          "width": 24,
+                                          "descendants": {
+                                            "k7mgm": {
+                                              "icon": "file-plus",
+                                              "width": 12,
+                                              "height": 12
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "H6VcSN",
+                                          "type": "ref",
+                                          "ref": "nvvgg",
+                                          "name": "New folder",
+                                          "theme": {
+                                            "btn": "ghost",
+                                            "size": "2xs"
+                                          },
+                                          "height": 24,
+                                          "width": 24,
+                                          "descendants": {
+                                            "k7mgm": {
+                                              "icon": "folder-plus",
+                                              "width": 12,
+                                              "height": 12
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "bcAvD",
+                                      "name": "Files tree",
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 1,
+                                      "children": [
+                                        {
+                                          "id": "jPRY7",
+                                          "type": "ref",
+                                          "ref": "t5G2s8",
+                                          "name": "packages/ui",
+                                          "theme": {
+                                            "tree": "default",
+                                            "depth": "0"
+                                          },
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "Mbu4C": {
+                                              "icon": "folder-open"
+                                            },
+                                            "ROY2j": {
+                                              "content": "packages/ui"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "r6Amxg",
+                                          "type": "ref",
+                                          "ref": "t5G2s8",
+                                          "name": "components/activity",
+                                          "theme": {
+                                            "tree": "default",
+                                            "depth": "1"
+                                          },
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "Mbu4C": {
+                                              "icon": "folder-open"
+                                            },
+                                            "ROY2j": {
+                                              "content": "components/activity"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "z7yX0U",
+                                          "type": "ref",
+                                          "ref": "t5G2s8",
+                                          "name": "timeline-title.tsx",
+                                          "theme": {
+                                            "tree": "active",
+                                            "depth": "2"
+                                          },
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "w2TSr": {
+                                              "enabled": false
+                                            },
+                                            "Mbu4C": {
+                                              "icon": "file-code"
+                                            },
+                                            "ROY2j": {
+                                              "content": "timeline-title.tsx"
+                                            },
+                                            "uFz3m": {
+                                              "type": "frame",
+                                              "id": "L9NUX",
+                                              "name": "End",
+                                              "gap": 4,
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "text",
+                                                  "id": "GpGih",
+                                                  "name": "Marker",
+                                                  "fill": "$ds-warning",
+                                                  "content": "M",
+                                                  "fontFamily": "JetBrains Mono",
+                                                  "fontSize": 10,
+                                                  "fontWeight": "600"
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "VhKDk",
+                                          "type": "ref",
+                                          "ref": "t5G2s8",
+                                          "name": "timeline-title.test.tsx",
+                                          "theme": {
+                                            "tree": "default",
+                                            "depth": "2"
+                                          },
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "w2TSr": {
+                                              "enabled": false
+                                            },
+                                            "Mbu4C": {
+                                              "icon": "file-code"
+                                            },
+                                            "ROY2j": {
+                                              "content": "timeline-title.test.tsx"
+                                            },
+                                            "uFz3m": {
+                                              "type": "frame",
+                                              "id": "f61A7k",
+                                              "name": "End",
+                                              "gap": 4,
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "text",
+                                                  "id": "WQYTu",
+                                                  "name": "Marker",
+                                                  "fill": "$ds-success",
+                                                  "content": "A",
+                                                  "fontFamily": "JetBrains Mono",
+                                                  "fontSize": 10,
+                                                  "fontWeight": "600"
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "Jkzkz",
+                                          "type": "ref",
+                                          "ref": "t5G2s8",
+                                          "name": "index.ts",
+                                          "theme": {
+                                            "tree": "default",
+                                            "depth": "2"
+                                          },
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "w2TSr": {
+                                              "enabled": false
+                                            },
+                                            "Mbu4C": {
+                                              "icon": "file-code"
+                                            },
+                                            "ROY2j": {
+                                              "content": "index.ts"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "viHna",
+                                          "type": "ref",
+                                          "ref": "t5G2s8",
+                                          "name": "packages/pstdio-dashboard",
+                                          "theme": {
+                                            "tree": "default",
+                                            "depth": "0"
+                                          },
+                                          "width": "fill_container",
+                                          "descendants": {
+                                            "w2TSr": {
+                                              "icon": "chevron-right"
+                                            },
+                                            "Mbu4C": {
+                                              "icon": "folder"
+                                            },
+                                            "ROY2j": {
+                                              "content": "packages/pstdio-das…"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "A3mEj0",
+                                  "name": "Code Document Content",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "fill": "#07090E",
+                                  "layout": "vertical",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "W2762z",
+                                      "name": "Editor file bar",
+                                      "width": "fill_container",
+                                      "height": 36,
+                                      "gap": 6,
+                                      "padding": [
+                                        0,
+                                        12
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "c46Hc",
+                                          "name": "File icon",
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "file-code",
+                                          "library": "lucide",
+                                          "fill": "$ds-fg-muted"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Z0y7lz",
+                                          "name": "File path",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "packages › ui › src › components › activity › timeline-title.tsx",
+                                          "fontFamily": "JetBrains Mono",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Ifz1u",
+                                          "name": "Dirty marker",
+                                          "fill": "$ds-warning",
+                                          "content": "M",
+                                          "fontFamily": "JetBrains Mono",
+                                          "fontSize": 10,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "ChLtm",
+                                          "name": "File bar spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "Tt3mk",
+                                      "name": "Code lines",
+                                      "clip": true,
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "layout": "vertical",
+                                      "padding": [
+                                        8,
+                                        16
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "r5mB5K",
+                                          "name": "Line 1",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "RiUT8",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "1",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "JAfyE",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "Lc4YN",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "import { escapeShellTokens } from \"./escape-shell-tokens\"",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "GKc7Q",
+                                          "name": "Line 2",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "lwyzQ",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "2",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "RgzNv",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "Cpwqj",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "import type { TimelineCommand } from \"./types\"",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "umzyX",
+                                          "name": "Line 3",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "DHOtf",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "3",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "PBg3u",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "gTkH5",
+                                          "name": "Line 4",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "U5fWZu",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "4",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "ntDPi",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "Gaue9",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "const MAX_TITLE_LENGTH = 80",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "wv2xK",
+                                          "name": "Line 5",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "QOsQZ",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "5",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "Xj44f",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "xMmoS",
+                                          "name": "Line 6",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "drKrI",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "6",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "Q1EtMd",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center",
+                                              "children": [
+                                                {
+                                                  "type": "rectangle",
+                                                  "cornerRadius": 2,
+                                                  "id": "BZJNe",
+                                                  "name": "Change bar",
+                                                  "fill": "$ds-info",
+                                                  "width": 3,
+                                                  "height": 17
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "G38wH",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "export function renderTimelineTitle(command: TimelineCommand) {",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "W9kcSq",
+                                          "name": "Line 7",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "M5iiM",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "7",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "pFay5",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center",
+                                              "children": [
+                                                {
+                                                  "type": "rectangle",
+                                                  "cornerRadius": 2,
+                                                  "id": "fEJOD",
+                                                  "name": "Change bar",
+                                                  "fill": "$ds-success",
+                                                  "width": 3,
+                                                  "height": 17
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "DDGtY",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "  const raw = command.args ?? []",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "NOhRI",
+                                          "name": "Line 8",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "Fptg8",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "8",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "wfk22",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center",
+                                              "children": [
+                                                {
+                                                  "type": "rectangle",
+                                                  "cornerRadius": 2,
+                                                  "id": "DhcAs",
+                                                  "name": "Change bar",
+                                                  "fill": "$ds-success",
+                                                  "width": 3,
+                                                  "height": 17
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "Yb8tZ",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "  if (raw.length === 0) return command.tool",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "dQ7H4",
+                                          "name": "Line 9",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "X4ozxU",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "9",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "d3dW35",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center",
+                                              "children": [
+                                                {
+                                                  "type": "rectangle",
+                                                  "cornerRadius": 2,
+                                                  "id": "Sc7xx",
+                                                  "name": "Change bar",
+                                                  "fill": "$ds-success",
+                                                  "width": 3,
+                                                  "height": 17
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "kXQGK",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "  const title = escapeShellTokens(raw).join(\" \")",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "uc8Co",
+                                          "name": "Line 10",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "t3N74Y",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "10",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "Gvh1h",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center",
+                                              "children": [
+                                                {
+                                                  "type": "rectangle",
+                                                  "cornerRadius": 2,
+                                                  "id": "ydsxd",
+                                                  "name": "Change bar",
+                                                  "fill": "$ds-success",
+                                                  "width": 3,
+                                                  "height": 17
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "d71QVO",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "  return truncate(title, MAX_TITLE_LENGTH)",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "mfWLh",
+                                          "name": "Line 11",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "r9pXzA",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "11",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "J5LC6o",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "EW6xZ",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "}",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "f3CS4c",
+                                          "name": "Line 12",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "ns6jC",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "12",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "dxBqa",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "bix6m",
+                                          "name": "Line 13",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "OGUrv",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "13",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "XaQpq",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "xij4h",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "function truncate(value: string, max: number) {",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "OJYq9",
+                                          "name": "Line 14",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "fro3N",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "14",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "gb75Z",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "wU7Qi",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "  if (value.length <= max) return value",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "WQmUy",
+                                          "name": "Line 15",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "ELTJD",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "15",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "tPJD7",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "ijY8V",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "  return value.slice(0, max - 1) + \"…\"",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "CCUcm",
+                                          "name": "Line 16",
+                                          "width": "fill_container",
+                                          "height": 17,
+                                          "gap": 10,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "E16GKJ",
+                                              "name": "Num",
+                                              "fill": "#4B505B",
+                                              "textGrowth": "fixed-width",
+                                              "width": 24,
+                                              "content": "16",
+                                              "textAlign": "right",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "V9kGO",
+                                              "name": "Gutter",
+                                              "width": 4,
+                                              "height": 17,
+                                              "layout": "vertical",
+                                              "justifyContent": "center"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "eRmZm",
+                                              "name": "Code",
+                                              "fill": "#C8CBD0",
+                                              "content": "}",
+                                              "fontFamily": "JetBrains Mono",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "G63fJ",
+                          "name": "Secondary Panel Top Boundary · resize divider",
+                          "width": "fill_container",
+                          "height": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "SIdAs",
+                              "type": "ref",
+                              "ref": "WZWqN",
+                              "name": "Resize Handle",
+                              "width": "fill_container",
+                              "height": 4
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hXV2y",
+                          "name": "Secondary Panel",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 180,
+                          "fill": "$ds-surface",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "JQUmI",
+                              "name": "Secondary Panel Header",
+                              "width": "fill_container",
+                              "height": 40,
+                              "fill": "#0E1016",
+                              "stroke": "#2E333F",
+                              "strokeWidth": {
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
+                              "gap": 5,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "qGRP2",
+                                  "type": "ref",
+                                  "ref": "TwCXd",
+                                  "name": "Terminal tab",
+                                  "theme": {
+                                    "size": "sm",
+                                    "tab": "active",
+                                    "tab-status": "none"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "w7NkD3": {
+                                      "icon": "square-terminal",
+                                      "width": 14,
+                                      "height": 14
+                                    },
+                                    "k9XlqC": {
+                                      "content": "Terminal"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "ZXdPP",
+                                  "type": "ref",
+                                  "ref": "TwCXd",
+                                  "name": "Problems tab",
+                                  "theme": {
+                                    "size": "sm",
+                                    "tab": "default",
+                                    "tab-status": "none"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "w7NkD3": {
+                                      "icon": "folder",
+                                      "width": 14,
+                                      "height": 14
+                                    },
+                                    "k9XlqC": {
+                                      "content": "Problems"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "Sn6OG",
+                                  "type": "ref",
+                                  "ref": "nvvgg",
+                                  "name": "Add Panel",
+                                  "width": 24,
+                                  "height": 24,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "descendants": {
+                                    "k7mgm": {
+                                      "icon": "plus",
+                                      "width": 12,
+                                      "height": 12
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "d7vHxq",
+                                  "name": "Secondary header spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "DlJkh",
+                              "name": "Secondary Panel Body",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "w9P0ar",
+                                  "name": "Secondary Panel Left Menu · Processes",
+                                  "width": 180,
+                                  "height": "fill_container",
+                                  "fill": "#0E1016",
+                                  "stroke": "#2E333F",
+                                  "strokeWidth": {
+                                    "right": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
+                                  "layout": "vertical",
+                                  "gap": 7,
+                                  "padding": 10,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "V0QVvi",
+                                      "name": "Processes",
+                                      "fill": "#8B9099",
+                                      "content": "web · running\nstorybook · running",
+                                      "lineHeight": 1.6,
+                                      "fontFamily": "JetBrains Mono",
+                                      "fontSize": 9,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "wfwnL",
+                                  "name": "Terminal Content",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "fill": "#10131A",
+                                  "layout": "vertical",
+                                  "gap": 6,
+                                  "padding": 12,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "jDHmO",
+                                      "name": "Terminal output",
+                                      "fill": "#B8E08D",
+                                      "content": "$ bun test renderer\n✓ code document renderer mounts with theme preference\n2 tests passed",
+                                      "lineHeight": 1.6,
+                                      "fontFamily": "JetBrains Mono",
+                                      "fontSize": 9,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "cKAMI",
+                                  "name": "Secondary Panel Right Menu · Variables",
+                                  "width": 180,
+                                  "height": "fill_container",
+                                  "fill": "#0E1016",
+                                  "stroke": "#2E333F",
+                                  "strokeWidth": {
+                                    "left": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
+                                  "layout": "vertical",
+                                  "gap": 7,
+                                  "padding": 10,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "XhqAE",
+                                      "name": "Variables",
+                                      "fill": "#8B9099",
+                                      "content": "NODE_ENV  test\nTHEME  system",
+                                      "lineHeight": 1.6,
+                                      "fontFamily": "JetBrains Mono",
+                                      "fontSize": 9,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "egO5f",
+                  "name": "Side Panel",
+                  "clip": true,
+                  "width": 400,
+                  "height": "fill_container",
+                  "fill": "$ds-surface",
+                  "cornerRadius": 8,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "v9Kxbw",
+                      "name": "Side Panel Header",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "#0E1016",
+                      "stroke": "#2E333F",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
+                      "gap": 5,
+                      "padding": [
+                        0,
+                        10
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "vYc2o",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Session · running",
+                          "theme": {
+                            "size": "sm",
+                            "tab": "active",
+                            "tab-status": "in_progress"
+                          },
+                          "height": 24,
+                          "descendants": {
+                            "w7NkD3": {
+                              "icon": "loader-circle",
+                              "width": 14,
+                              "height": 14
+                            },
+                            "k9XlqC": {
+                              "content": "Session"
+                            },
+                            "g1LJJh": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "id": "GivBL",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Files",
+                          "theme": {
+                            "size": "sm",
+                            "tab": "default",
+                            "tab-status": "none"
+                          },
+                          "height": 24,
+                          "descendants": {
+                            "w7NkD3": {
+                              "icon": "folder",
+                              "width": 14,
+                              "height": 14
+                            },
+                            "k9XlqC": {
+                              "content": "Files"
+                            },
+                            "g1LJJh": {
+                              "enabled": true
+                            }
+                          }
+                        },
+                        {
+                          "id": "pZNSJ",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Add Panel",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "width": 24,
+                          "height": 24,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "plus",
+                              "width": 12,
+                              "height": 12
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "rdyqT",
+                          "name": "Side header spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "id": "vQ91U",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Left Menu · collapsed",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "width": 24,
+                          "height": 24,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "paperclip",
+                              "width": 12,
+                              "height": 12
+                            }
+                          }
+                        },
+                        {
+                          "id": "rla7B",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Right Menu · collapsed",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "width": 24,
+                          "height": 24,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "sliders-horizontal",
+                              "width": 12,
+                              "height": 12
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "zPTtV",
+                      "name": "Side Panel Body",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "TwszE",
+                          "name": "Session Content",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 14,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "lse6t",
+                              "name": "Session status",
+                              "fill": "#F7F8F8",
+                              "content": "Implement PS-784 device list",
+                              "fontFamily": "Onest",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ofhZj",
+                              "name": "Session message",
+                              "fill": "#8B9099",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Running in PS-784_A1 on this device. Selecting a session row in Workspaces opens it here.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wdQg7",
+              "name": "Status Bar",
+              "context": "Always full workbench width.",
+              "width": "fill_container",
+              "height": 32,
+              "gap": 14,
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ZfNTx",
+                  "name": "main",
+                  "gap": 5,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "x3Bf8",
+                      "name": "main icon",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "git-branch",
+                      "library": "lucide",
+                      "fill": "#8B9099"
+                    },
+                    {
+                      "type": "text",
+                      "id": "BpZPH",
+                      "name": "main label",
+                      "fill": "#8B9099",
+                      "content": "main",
+                      "fontFamily": "Inter",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "u5RgPl",
+                  "name": "Status spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "id": "G4XUgG",
+                  "type": "ref",
+                  "ref": "bWgi1",
+                  "name": "Cloud",
+                  "descendants": {
+                    "V7sfJl": {
+                      "icon": "cloud-check",
+                      "fill": "$ds-fg-muted"
+                    },
+                    "Vxs37": {
+                      "content": "Synced",
+                      "fill": "$ds-fg-muted"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -199189,7 +201351,7 @@
       "type": "frame",
       "id": "lz9aH",
       "x": 26120,
-      "y": 19661,
+      "y": 20496,
       "name": "Workspaces · Devices and limits · Exploration",
       "theme": {
         "mode": "dark"
