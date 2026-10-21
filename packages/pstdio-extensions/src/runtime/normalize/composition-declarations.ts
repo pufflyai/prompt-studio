@@ -67,6 +67,7 @@ export const pageDeclarationSchema = z
           kind: z.literal("view"),
           view: localRefSchema("view"),
           cardinality: z.enum(["one", "many"]),
+          closable: z.boolean().optional(),
           ...presentation,
         })
         .strict(),

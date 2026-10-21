@@ -3,7 +3,7 @@ import { createWorkbench } from "./workbench-core";
 
 const page = { extensionId: "example.mail", kind: "page" as const, id: "inbox" };
 const home = { ...page, id: "home" };
-const createInbox = (cardinality: "one" | "many" = "one") => {
+const createInbox = (cardinality: "one" | "many" = "one", closable?: boolean) => {
   const workbench = createWorkbench({ startPage: home });
   workbench.modes.registerMode({ id: "mail", activate: () => undefined });
   for (const id of ["inbox", "reader", "tools"]) {
@@ -45,6 +45,7 @@ const createInbox = (cardinality: "one" | "many" = "one") => {
         id: "inbox",
       },
       cardinality,
+      closable,
     },
     slots: [
       {
@@ -87,6 +88,22 @@ const createInbox = (cardinality: "one" | "many" = "one") => {
   return workbench;
 };
 describe("closing page resource panels", () => {
+  for (const region of ["main", "side", "secondary"] as const) {
+    test(`closing the routed resource in ${region} returns to its parent`, () => {
+      const workbench = createInbox("one", true);
+      const main = workbench.layout.getLayout().regions.main.widgets[0]!;
+      if (region !== "main") workbench.movePanel(main.widgetId, region);
+      workbench.closePlacement(main.placementIdentity!);
+      expect(workbench.pages.store.getState().location).toEqual({ page: home });
+    });
+  }
+  test("a single-resource page can opt into closing back to its parent", () => {
+    const workbench = createInbox("one", true);
+    const main = workbench.layout.getLayout().regions.main.widgets[0]!;
+    expect(main.closable).toBe(true);
+    expect(workbench.pageLocations.closePlacement(main.placementIdentity!).ok).toBe(true);
+    expect(workbench.pages.store.getState().location).toEqual({ page: home });
+  });
   test("single-resource Main is fixed while its optional panels remain closable", () => {
     const workbench = createInbox();
     const main = workbench.layout.getLayout().regions.main.widgets[0]!;

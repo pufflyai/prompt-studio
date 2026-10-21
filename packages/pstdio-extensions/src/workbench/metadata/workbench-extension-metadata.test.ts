@@ -244,6 +244,42 @@ describe("createWorkbenchExtensionMetadata", () => {
   });
 });
 describe("createWorkbenchExtensionMetadata pages", () => {
+  test("publishes closable single-resource pages without changing their cardinality", () => {
+    const item = defineResourceKind({ id: "item" });
+    const view = defineView({
+      id: "item",
+      title: "Item",
+      body: { kind: "webview", entry: packageAsset("./item.tsx", "file:///fake/lab/") },
+    });
+    const parent = definePage({
+      id: "items",
+      title: "Items",
+      path: "items",
+      mode: workbenchModes.project,
+      main: { kind: "panels", empty: view.ref },
+      slots: [],
+    });
+    const page = definePage({
+      id: "item",
+      title: "Item",
+      path: "item",
+      mode: workbenchModes.project,
+      parent: parent.ref,
+      resource: { kinds: [item.ref] },
+      main: { kind: "view", view: view.ref, cardinality: "one", closable: true },
+      slots: [],
+    });
+    const runtime = normalizeExtensionSources([
+      source(defineExtension({ resourceKinds: [item], views: [view], pages: [parent, page] })),
+    ]);
+    expect(runtime.diagnostics).toEqual([]);
+    const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
+    expect(metadata.pages.find((record) => record.localId === "item")?.main).toMatchObject({
+      kind: "view",
+      cardinality: "one",
+      closable: true,
+    });
+  });
   test("publishes pages and keeps page and panel targets explicit", () => {
     const view = defineView({
       id: "tickets",

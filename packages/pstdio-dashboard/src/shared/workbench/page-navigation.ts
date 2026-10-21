@@ -28,11 +28,13 @@ export const navigateDashboardPage = (ctx: WorkbenchModuleContext, input: Naviga
   if (!result.ok) throw new Error(result.diagnostic.message);
   return result.location;
 };
-export const openSessionsPage = (ctx: WorkbenchModuleContext, resource?: ResourceRef) =>
-  navigateDashboardPage(ctx, {
-    page: resource ? workbenchPages.session : workbenchPages.sessions,
-    ...(resource ? { resource } : {}),
+export const openSessionsPage = (ctx: WorkbenchModuleContext, resource?: ResourceRef) => {
+  const session = resource?.type === "session-draft" ? undefined : resource;
+  return navigateDashboardPage(ctx, {
+    page: session ? workbenchPages.session : workbenchPages.sessions,
+    ...(session ? { resource: session } : {}),
   });
+};
 export const openWorkspacesPage = (
   ctx: WorkbenchModuleContext,
   resource?: ResourceRef,

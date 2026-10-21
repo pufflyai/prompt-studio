@@ -99,6 +99,7 @@ const registerSessionsPage = (ctx: WorkbenchModuleContext) => {
         id: dashboardWidgetIds.session,
       },
       cardinality: "one",
+      closable: true,
       tab: createSessionTabPresentation(ctx),
     },
     slots: [],

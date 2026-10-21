@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { createWorkbench } from "@pstdio/workbench";
+import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -22,7 +22,8 @@ const draftResource = {
 };
 const emptyAttachments = { attachments: [], uploading: false };
 const drafts: DashboardSessionDraftPersistence = {
-  getDraft: (draftKey) => (draftKey === draftResource.id ? "Keep the restored Side Panel attached after refresh." : ""),
+  getDraft: (draftKey) =>
+    draftKey === draftResource.id || draftKey === "draft" ? "Keep the restored Side Panel attached after refresh." : "",
   setDraft: () => undefined,
   getAttachmentDraft: () => ({
     getSnapshot: () => emptyAttachments,
@@ -34,20 +35,22 @@ const drafts: DashboardSessionDraftPersistence = {
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
-const SessionChatDraftStory = (props: {
+interface SessionChatDraftStoryProps {
   initiallyClosed?: boolean;
   showMain?: boolean;
   pageRegion?: "main" | "side" | "secondary";
   width?: number;
-}) => {
-  const { initiallyClosed = false, showMain = false, pageRegion, width } = props;
+  resource?: ResourceRef;
+}
+const SessionChatDraftStory = (props: SessionChatDraftStoryProps) => {
+  const { initiallyClosed = false, showMain = false, pageRegion, width, resource = draftResource } = props;
   const [workbench] = useState(() => {
     const workbench = createWorkbench({ initialSidePanelMode: initiallyClosed ? "closed" : "attached" });
     workbench.registerModule(createWorkspacesModule());
     workbench.registerModule(createSessionBubbleModule({ sessionDraftPersistence: drafts }));
     if (showMain || pageRegion) workbench.registerModule(createSessionsModule({ sessionDraftPersistence: drafts }));
     selectDashboardProject(workbench, { id: "project-story", name: "Prompt Studio" });
-    if (showMain || pageRegion) openSessionsPage(workbench, draftResource);
+    if (showMain || pageRegion) openSessionsPage(workbench, resource);
     else openWorkspacesPage(workbench);
     if (showMain) workbench.shell.setRegionOpen("secondary", false);
     if (pageRegion) {
@@ -87,6 +90,20 @@ export const PageNarrow: Story = { args: { pageRegion: "main", width: 480 } };
 export const PageWide: Story = { args: { pageRegion: "main", width: 1200 } };
 export const MovedPageNarrow: Story = { args: { pageRegion: "side", width: 480 } };
 export const MovedPageWide: Story = { args: { pageRegion: "secondary", width: 1200 } };
+export const ClosableSession: Story = {
+  args: {
+    pageRegion: "main",
+    width: 1200,
+    resource: { type: "session", id: "story-session", label: "Session X" },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Close Session X" }));
+    await expect(await canvas.findByRole("textbox")).toHaveTextContent(
+      "Keep the restored Side Panel attached after refresh.",
+    );
+  },
+};
 export const OpenFromBubble: Story = {
   args: { initiallyClosed: true },
   play: async ({ canvasElement }) => {

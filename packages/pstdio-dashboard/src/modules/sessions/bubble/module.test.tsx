@@ -308,14 +308,15 @@ describe("New session while a session page is open", () => {
         },
       ]);
       expect(workbench.pages.store.getState().location?.resource?.id).toBe(second.id);
+      const selected = workbench.layout.getLayout().regions[region].widgets.find((p) => p.resource?.id === second.id)!;
       await workbench.commands.executeCommand(dashboardCommandIds.createSession, {
-        replacePanel: origin.placementIdentity,
+        replacePanel: selected.placementIdentity,
       });
       expect(
         workbench.layout.getLayout().regions[region].widgets.filter((p) => p.viewId === dashboardWidgetIds.session),
       ).toMatchObject([
         {
-          resource: { type: "session-draft" },
+          resource: undefined,
         },
       ]);
       expect(

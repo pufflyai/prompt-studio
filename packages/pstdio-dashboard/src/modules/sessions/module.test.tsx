@@ -88,7 +88,7 @@ describe("createSessionsModule", () => {
     expect(mainTabs).toHaveLength(1);
     expect(mainTabs[0]?.resourceKey).toBe(resourceKey(second));
   });
-  test("updates the breadcrumb when starting a new session from sessions", async () => {
+  test("returns to the sessions root when starting a new session", async () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
     const session = createDashboardSessionResource("session-1", "My session", "project-1", {
@@ -99,7 +99,8 @@ describe("createSessionsModule", () => {
     workbench.registerModule(createSessionsModule());
     openSessionsPage(workbench, session);
     await workbench.commands.executeCommand(dashboardCommandIds.createSession);
-    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions", "New session"]);
+    expect(workbench.pages.store.getState().location).toEqual({ page: workbenchPages.sessions });
+    expect(workbench.layout.getActivePanel("main")?.resource).toBeUndefined();
   });
   test("navigates back from a session to the sessions root", async () => {
     const workbench = createWorkbench();

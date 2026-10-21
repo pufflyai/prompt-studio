@@ -1,6 +1,7 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { placementIdentityKey, reconcileOwnedPlacements } from "../../registries/layout/placement-reconciliation";
+import { PAGE_MAIN_SLOT_ID } from "../../registries/pages/page-main";
 import { editPagePlacementStates, type PagePlacementEdit } from "../../registries/pages/page-placement-state";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { pageResourceContextKey } from "../../registries/pages/page-resource-context";
@@ -11,8 +12,9 @@ export const isDetachedPagePlacement = (core: WorkbenchCore, placement: Workbenc
   const identity = placement.placementIdentity;
   if (identity?.kind !== "page") return false;
   const state = core.pages.store.getState();
+  const routedPrimary = identity.slotId === PAGE_MAIN_SLOT_ID && Boolean(state.pages[identity.pageId]?.resource);
   return (
-    !core.layout.getLayout().regions.main.widgets.includes(placement) ||
+    (!routedPrimary && !core.layout.getLayout().regions.main.widgets.includes(placement)) ||
     identity.pageId !== state.activePageId ||
     (Boolean(state.pages[identity.pageId]?.resource) &&
       pageResourceContextKey(state.pages[identity.pageId], placement.resource) !==

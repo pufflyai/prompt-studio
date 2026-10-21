@@ -13,6 +13,7 @@ const mainSchema = z.discriminatedUnion("kind", [
       kind: z.literal("view"),
       view: viewRefSchema,
       cardinality: z.enum(["one", "many"]),
+      closable: z.boolean().optional(),
     })
     .strict(),
   z.object({ kind: z.literal("panels"), empty: viewRefSchema }).strict(),

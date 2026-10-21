@@ -50,7 +50,9 @@ An auxiliary resource binding with `cardinality: "one"` keeps one placement when
 
 The host exposes `getPanelDestinations(instanceId)`, `movePanel(instanceId, region, position?)`, and `resetLayout()`. A position is `"start"`, `"end"`, `{ beforeWidgetId }`, or `{ afterWidgetId }`. Moves preserve the current page route and the primary resource anchor. The `workbench.movePanel` and `workbench.resetLayout` commands expose the same operations to commands and agents. `onDidResetLayout` lets host UI clear its active layout preferences after the reset.
 
-Single-resource pages have no permanent tab strip or close action. Selecting a different resource
+Single-resource pages hide the tab strip and close action by default. A routed Main view can set
+`closable: true` to use a closeable resource tab; closing it returns to its declared parent.
+Selecting a different resource
 on that same one-resource page replaces its content in the chosen region, while preserving separate resource
 navigation identities. A single-view parent and its resource page also keep that region when they use the
 same view. Other pages and mode-owned panels keep their declared lifetimes.

@@ -8,6 +8,13 @@ const view = defineView({
 });
 const base = { id: "tickets", title: "Tickets", path: "tickets", mode: workbenchModes.project };
 definePage({ ...base, main: { kind: "view", view: view.ref, cardinality: "one" }, slots: [] });
+definePage({
+  ...base,
+  parent: workbenchPages.start,
+  resource: { kinds: [ticket.ref] },
+  main: { kind: "view", view: view.ref, cardinality: "one", closable: true },
+  slots: [],
+});
 // @ts-expect-error A routed resource view needs a parent destination when its last tab closes.
 definePage({
   ...base,

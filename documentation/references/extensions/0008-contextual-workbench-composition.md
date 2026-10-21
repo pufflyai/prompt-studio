@@ -10,6 +10,11 @@ Define each view body once with `defineView`. Native tree, file, controls, table
 
 Pages declare `resource: { kinds }` separately from `main`. A Main view renders routed content; a Main collection renders peer panels and an empty view. Page `slots` and mode placements use the same item contract: a static view, or a resource binding. A binding declares `kinds`, `view`, `cardinality`, and an optional `add` action. Presence, mounting, and tab presentation mean the same thing for both.
 
+In extension API 0.2.1, a routed Main view can set `closable: true` while keeping `cardinality: "one"`.
+The host shows its standard tab and close control. Closing returns to the parent page, while selecting another
+resource still replaces the one-resource view in its chosen region. Omit `closable` to keep the existing defaults:
+one-resource Main views are fixed and many-resource Main views are closeable. Static Main content stays fixed.
+
 ## Regions and targets
 
 Main, Side, and Secondary are the three panel regions. Page and mode owners can contribute to the same region.
