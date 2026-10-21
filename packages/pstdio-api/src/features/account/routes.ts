@@ -1,6 +1,10 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { managerOriginSchema } from "../../services/account/manager-client";
-import { AccountRequestError, type createNativeAccount } from "../../services/account/native-account";
+import {
+  AccountRequestError,
+  accountUnavailableMessage,
+  type createNativeAccount,
+} from "../../services/account/native-account";
 import type { AppBindings } from "../../types";
 
 const json = <T extends z.ZodType>(schema: T) => ({ content: { "application/json": { schema } } });
@@ -15,22 +19,14 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
   const routes = new OpenAPIHono<AppBindings>();
   // Account service errors never reach generic API error logging or extension event payloads.
   routes.onError((error, c) =>
-    c.json(
-      {
-        error:
-          error instanceof AccountRequestError
-            ? error.message
-            : "Account request unavailable. Check the login and the account service.",
-      },
-      400,
-    ),
+    c.json({ error: error instanceof AccountRequestError ? error.message : accountUnavailableMessage }, 400),
   );
   routes.openapi(
     createRoute({
       method: "post",
       path: "/account/login",
       tags,
-      request: { body: json(z.object({ managerOrigin: managerOriginSchema.optional() })) },
+      request: { body: json(z.object({ managerOrigin: managerOriginSchema })) },
       responses,
     }),
     async (c) => c.json(await service.login(c.req.valid("json").managerOrigin), 200),

@@ -156,6 +156,19 @@ On `main`, extension API 0.2.1 adds two declared webview capabilities. Use `harn
 
 Use `resources.actions` with `{ operation: "list", resource }` to read the same current menu actions as a native resource card. Pass the resource's own `extensionId` for extension resource kinds; the host does not fill it in with the calling extension. Each action has a `label`, a workbench `icon` name or an `iconSrc` image URL, `isDisabled`, and a `description` that explains a disabled action. Render those actions with `ResourceContextMenu`. Invoke one with `{ operation: "execute", resource, key }`. The host resolves the menu again before execution, applies its availability rules, and opens the normal parameter form when an action needs input. The call rejects when the action is no longer available or its command fails, so the webview reports the error. A listed snapshot does not update by itself. After the first list, the host sends `{ type: "changed" }` on the `resources.actions` event scope whenever the actions may have changed. Listen with `host.onEvent("resources.actions", ...)` and list again. Declare each named capability on the view.
 
+### Cloud account and sync status
+
+On `main`, extension API 0.2.1 also adds `account.read` and `account.manage`. `client.account` has the same methods as [`ctx.account`](0003-command-and-process-api.md#cloud-account-and-sync-status). Declare `account.read` for `client.account.status`, `loginStatus`, `devices`, and `projectSyncStatus`. Declare `account.manage` for `client.account.login`, `cancelLogin`, `logout`, `renameDevice`, `removeDevice`, `syncProject`, and `stopProjectSync`. Without a project ID, a call uses the webview's project.
+
+```ts
+const client = createWebviewClient<typeof commands>(host);
+const refresh = async () => render(await client.account.projectSyncStatus());
+await refresh();
+const stop = client.events.subscribe(accountEvents.projectSyncChanged, refresh);
+```
+
+The dashboard delivers `accountEvents.projectSyncChanged` only to webviews of the project that changed. The extension testbench does not provide an account; both capabilities answer `unsupported` there.
+
 ### Navigate from a webview
 
 Add `navigation.open` to the view and pass an explicit page or panel target:

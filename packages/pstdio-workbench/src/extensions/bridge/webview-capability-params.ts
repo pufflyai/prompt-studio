@@ -51,6 +51,8 @@ const terminalRequest = z.object({
   env: z.record(z.string(), z.string()).optional(),
 });
 
+const projectId = { projectId: identifier.optional() };
+
 const schemas = {
   "harnesses.read": z.object({ harnessId: identifier.optional(), model: z.string().optional() }),
   "resources.actions": z.discriminatedUnion("operation", [
@@ -122,6 +124,21 @@ const schemas = {
     z.object({ op: z.literal("list"), mount: identifier, prefix: z.string().optional() }),
     z.object({ op: z.literal("readText"), mount: identifier, path: z.string() }),
     z.object({ op: z.literal("imageUrl"), mount: identifier, path: z.string() }),
+  ]),
+  "account.read": z.discriminatedUnion("op", [
+    z.object({ op: z.literal("status") }),
+    z.object({ op: z.literal("loginStatus"), id: identifier }),
+    z.object({ op: z.literal("devices") }),
+    z.object({ op: z.literal("projectSyncStatus"), ...projectId }),
+  ]),
+  "account.manage": z.discriminatedUnion("op", [
+    z.object({ op: z.literal("login"), managerOrigin: identifier }),
+    z.object({ op: z.literal("cancelLogin"), id: identifier }),
+    z.object({ op: z.literal("logout") }),
+    z.object({ op: z.literal("renameDevice"), id: identifier, name: z.string() }),
+    z.object({ op: z.literal("removeDevice"), id: identifier }),
+    z.object({ op: z.literal("syncProject"), ...projectId }),
+    z.object({ op: z.literal("stopProjectSync"), ...projectId }),
   ]),
 } satisfies Record<WebviewHostCapability, z.ZodType>;
 

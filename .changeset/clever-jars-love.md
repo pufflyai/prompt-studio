@@ -1,6 +1,7 @@
 ---
 "@pstdio/sdk": minor
+"@pstdio/workbench": minor
 "pstdio": minor
 ---
 
-Show account devices and honest project sync states with Cloud settings.
+Let extensions read the Cloud account, devices and each project's sync status, and sign in, sign out or change which projects sync.

@@ -5,7 +5,6 @@ import { lazy, Suspense } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "@/shared/app/project-context";
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
-import { registerCloudSettings } from "./cloud-settings";
 import { AppearanceSettingsPanel } from "./components/appearance-settings-panel";
 import { BetaFeaturesPanel } from "./components/beta-features-panel";
 import { ExtensionsPanel } from "./components/extensions-panel";
@@ -61,7 +60,6 @@ export const machineTokensSettingsPanel = {
 // settings registry. The unified surface (`createWorkbenchSettingsModule`) turns
 // these into the navigation tree and dispatching panel.
 export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContext) => {
-  registerCloudSettings(ctx);
   ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10, scope: "global" });
   ctx.settings.registerSection({ id: "experimental", title: "Experimental", order: 30, scope: "global" });
   ctx.views.registerView({

@@ -35,10 +35,10 @@ const workbenchesSchema = z.array(z.object({ workbenchId: identitySchema }));
 
 // Messages that are safe to show; other account failures stay generic.
 export class AccountRequestError extends Error {}
+export const accountUnavailableMessage = "Account request unavailable. Check the login and the account service.";
 
 export const createNativeAccount = (input: {
   file: string;
-  managerOrigin?: string;
   environment: RouteDeps["environmentService"];
   projects: Pick<RouteDeps["projectService"], "get">;
 }) => {
@@ -192,10 +192,8 @@ export const createNativeAccount = (input: {
       void refresh();
     },
     refresh,
-    async login(managerOrigin?: string) {
-      const selected = managerOrigin ?? input.managerOrigin ?? (await readLogin())?.managerOrigin;
-      if (!selected) throw new AccountRequestError("Cloud sign-in is not available on this runtime yet.");
-      const origin = managerOriginSchema.parse(selected);
+    async login(managerOrigin: string) {
+      const origin = managerOriginSchema.parse(managerOrigin);
       for (const [id, login] of logins)
         if (login.status() !== "pending") {
           login.close();
@@ -216,18 +214,17 @@ export const createNativeAccount = (input: {
     },
     async status() {
       const login = await readLogin();
-      if (!login)
-        return { login: null, cloudProjects: [], cloudProjectsLoaded: true, signInAvailable: !!input.managerOrigin };
+      if (!login) return { login: null, cloudProjects: [], cloudProjectsLoaded: true };
       const { token: _, ...device } = login;
       const projects = projectsFor(login);
-      return { login: device, cloudProjects: projects ?? [], cloudProjectsLoaded: !!projects, signInAvailable: true };
+      return { login: device, cloudProjects: projects ?? [], cloudProjectsLoaded: !!projects };
     },
     async projectSyncStatus(projectId: string) {
       if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
       const login = await readLogin();
       const projects = projectsFor(login);
       if (login && !projects) return { state: "offline" as const, offlineReady: false };
-      if (!projects?.includes(projectId)) return { state: "saved-locally" as const, offlineReady: false };
+      if (!projects?.includes(projectId)) return { state: "local" as const, offlineReady: false };
       return projectStatus(projectId);
     },
     logout,

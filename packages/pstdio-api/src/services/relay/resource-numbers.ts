@@ -16,6 +16,7 @@ export const startResourceNumberSync = (input: {
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
   signal: AbortSignal;
+  statusChanged?: () => void;
 }) => {
   const { config, deps } = input;
   const owner = { workbenchId: config.workbenchId, extensionId: resourceNumbersOwnerId };
@@ -73,14 +74,21 @@ export const startResourceNumberSync = (input: {
         { event: "relay.resource-numbers.reconnecting", workbenchId: config.workbenchId },
         "Resource number sync will retry",
       ),
+    onStatusChange: input.statusChanged,
   });
   const stop = deps.extensionResourceSequencesService.watchChanges((changed) => {
-    if (changed.workbenchId === owner.workbenchId) connection.wake();
+    if (changed.workbenchId !== owner.workbenchId) return;
+    connection.wake();
+    input.statusChanged?.();
   });
   return {
     done: connection.done.finally(() => {
       stop();
       sync?.close();
+    }),
+    status: async () => ({
+      ...((await sync?.status()) ?? { downloaded: false, pending: false, needsAttention: false }),
+      ...connection.status(),
     }),
     close: () => controller.abort(),
   };

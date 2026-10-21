@@ -1,3 +1,4 @@
+export type * from "./account";
 export type * from "./assets";
 export type * from "./automation";
 export type * from "./collection-view";

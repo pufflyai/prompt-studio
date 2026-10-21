@@ -67,12 +67,7 @@ test("logout clears the login even when the account service is unreachable", asy
     await Bun.write(host.file, JSON.stringify({ login: login(environmentId) }));
     expect((await host.account.status()).login?.deviceId).toBe(environmentId);
     expect(await host.account.logout()).toEqual({ ok: true, removed: false });
-    expect(await host.account.status()).toEqual({
-      login: null,
-      cloudProjects: [],
-      cloudProjectsLoaded: true,
-      signInAvailable: false,
-    });
+    expect(await host.account.status()).toEqual({ login: null, cloudProjects: [], cloudProjectsLoaded: true });
     expect(JSON.parse(await readFile(host.file, "utf8"))).toEqual({ login: null });
   } finally {
     await host.close();
@@ -86,12 +81,7 @@ test("a login saved for another device counts as logged out and syncs nothing", 
   try {
     await Bun.write(host.file, JSON.stringify({ login: login("another-database") }));
     await host.account.refresh();
-    expect(await host.account.status()).toEqual({
-      login: null,
-      cloudProjects: [],
-      cloudProjectsLoaded: true,
-      signInAvailable: false,
-    });
+    expect(await host.account.status()).toEqual({ login: null, cloudProjects: [], cloudProjectsLoaded: true });
     expect(host.synced()).toEqual([]);
   } finally {
     await host.close();

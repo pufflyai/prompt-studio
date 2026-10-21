@@ -8,8 +8,6 @@ export type ExtensionRelease = { source: "git"; ref: string } | { source: "works
 export interface AppConfig {
   /** Private file with this device's cloud login. Defaults to `native-account.json` beside the database. */
   accountFile?: string;
-  /** Account service selected by the runtime operator for the normal Google sign-in entry. */
-  accountManagerOrigin?: string;
   database: { path: string };
   storage: { root: string };
   sync: { eventBufferSize: number };
@@ -59,9 +57,6 @@ export const resolveAppConfig = (input: ResolveAppConfigInput): AppConfig => {
   const home = input.env.HOME?.trim() || undefined;
   return {
     ...(input.env.PSTDIO_ACCOUNT_FILE ? { accountFile: input.env.PSTDIO_ACCOUNT_FILE } : {}),
-    ...(input.env.PSTDIO_ACCOUNT_MANAGER_ORIGIN
-      ? { accountManagerOrigin: input.env.PSTDIO_ACCOUNT_MANAGER_ORIGIN }
-      : {}),
     database: {
       path: resolvePath(input.env.PSTDIO_DB_PATH, resolvePstdioDbPath({ env: input.env }), home),
     },

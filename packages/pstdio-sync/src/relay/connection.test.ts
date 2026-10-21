@@ -112,3 +112,59 @@ test("separate wakes on one connection reuse the attempt signal", async () => {
     await server.stop(true);
   }
 });
+
+test("transport status follows the socket through offline and back and signals each change", async () => {
+  const controller = new AbortController();
+  let opened = 0;
+  let socket: Bun.ServerWebSocket<unknown> | undefined;
+  const reconnected = Promise.withResolvers<void>();
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(client) {
+        opened++;
+        socket = client;
+        client.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+        if (opened === 2) reconnected.resolve();
+      },
+      message() {},
+    },
+  });
+  const changes: { connected: boolean; busy: boolean }[] = [];
+  const firstRun = Promise.withResolvers<void>();
+  const connection = createRelayConnection({
+    origin: server.url.origin,
+    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    access: async () => ({ token: "fixture-access", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
+    signal: controller.signal,
+    synchronize: async () => {
+      firstRun.resolve();
+    },
+    onStatusChange: () => changes.push(connection.status()),
+  });
+  try {
+    await firstRun.promise;
+    await Bun.sleep(10);
+    expect(changes[0]).toEqual({ connected: true, busy: false });
+    expect(changes.at(-1)).toEqual({ connected: true, busy: false });
+    const signalled = changes.length;
+    // A closed socket is how the relay looks when the network drops.
+    socket?.close();
+    await Bun.sleep(50);
+    expect(changes.slice(signalled)).toContainEqual({ connected: false, busy: false });
+    expect(connection.status().connected).toBe(false);
+    await reconnected.promise;
+    await Bun.sleep(10);
+    expect(connection.status().connected).toBe(true);
+    expect(changes.at(-1)?.connected).toBe(true);
+  } finally {
+    controller.abort();
+    await server.stop(true);
+    await connection.done;
+  }
+});

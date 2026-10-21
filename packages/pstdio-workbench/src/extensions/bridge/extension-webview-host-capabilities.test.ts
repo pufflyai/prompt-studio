@@ -25,6 +25,8 @@ const requests = {
   "files.list": {},
   "files.delete": { id: "file" },
   "artifacts.read": { op: "readText", mount: "notes", path: "note.md" },
+  "account.read": { op: "status" },
+  "account.manage": { op: "logout" },
 };
 
 test("every host capability returns the same unsupported error without its service", async () => {
@@ -322,4 +324,49 @@ test("setting write results use the saved value instead of echoing the input", a
     value: 4,
   });
   expect(await capabilities["extension.settings.get"]({ key: "columns" })).toBe(4);
+});
+
+test("account capabilities route reads and changes to the host account and validate operations", async () => {
+  const calls: unknown[][] = [];
+  const record =
+    (name: string, result?: unknown) =>
+    async (...args: unknown[]) => {
+      calls.push([name, ...args]);
+      return result as never;
+    };
+  const capabilities = createExtensionWebviewHostCapabilities({
+    account: {
+      status: record("status"),
+      login: record("login"),
+      loginStatus: record("loginStatus"),
+      cancelLogin: record("cancelLogin"),
+      logout: record("logout"),
+      devices: record("devices"),
+      renameDevice: record("renameDevice"),
+      removeDevice: record("removeDevice"),
+      projectSyncStatus: record("projectSyncStatus", { state: "synced", offlineReady: true }),
+      syncProject: record("syncProject"),
+      stopProjectSync: record("stopProjectSync"),
+    },
+  });
+
+  expect(await capabilities["account.read"]({ op: "projectSyncStatus" })).toEqual({
+    state: "synced",
+    offlineReady: true,
+  });
+  await capabilities["account.manage"]({ op: "renameDevice", id: "device-2", name: "Studio Mac" });
+  await capabilities["account.manage"]({ op: "stopProjectSync", projectId: "project-2" });
+  expect(calls).toEqual([
+    ["projectSyncStatus", undefined],
+    ["renameDevice", "device-2", "Studio Mac"],
+    ["stopProjectSync", "project-2"],
+  ]);
+  // Reads cannot change the account, and changes need their own capability.
+  await expect(Promise.resolve().then(() => capabilities["account.read"]({ op: "logout" }))).rejects.toMatchObject({
+    code: "invalid_params",
+  });
+  await expect(Promise.resolve().then(() => capabilities["account.manage"]({ op: "devices" }))).rejects.toMatchObject({
+    code: "invalid_params",
+  });
+  expect(calls).toHaveLength(3);
 });

@@ -94,11 +94,16 @@ export const registerDocumentSyncSmokeTests = () =>
             edits: [{ recordId: note.recordId, replace: `packaged-secret${"x".repeat(1_048_576)}`, asset }],
           },
         });
+        const syncState = async () => (await client.account.projectSyncStatus(project.id)).state;
+        expect(await syncState()).toBe("local");
         await client.account.syncProject(project.id);
         await waitFor(() => peer.states() > 0);
+        await waitFor(async () => (await syncState()) === "synced");
+        expect(await client.account.projectSyncStatus(project.id)).toEqual({ state: "synced", offlineReady: true });
         peer.corrupt();
         const quarantine = join(root, "state", "sync-quarantine");
         await waitFor(async () => (await readdir(quarantine).catch(() => [])).some((file) => file.endsWith(".json")));
+        await waitFor(async () => (await syncState()) === "needs-attention");
         await command("commit", {
           group: {
             operationId: "healthy-after-corrupt",

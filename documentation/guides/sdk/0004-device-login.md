@@ -62,6 +62,10 @@ await client.account.syncProject("PROJECT_ID");
 
 See [AccountClient](../../../packages/sdk/src/client/account.ts) for the exact methods and response types.
 
-On current `main`, the dashboard also provides [Cloud settings and sync status](../getting-started/0006-cloud-sync.md). `account.login()` without an origin uses the runtime's configured service. `account.cancelLogin(id)` cancels a pending native login. `account.projectSyncStatus(projectId)` returns one of the six project states and whether all known content has been verified locally. These additions use the same API 0.2.1 additive step as device login.
+On `main`, `account.cancelLogin(id)` cancels a pending native login. `account.projectSyncStatus(projectId)` returns the project's sync `state` and whether all known content has been verified on this device. These additions use the same API 0.2.1 additive step as device login.
 
 `account.devices()` includes `online` for each device. The native runtime sends a presence heartbeat every 15 seconds without needing a Cloud project. Online means the account service heard from that device within 45 seconds. The manager computes the window with its own clock; clients do not infer online state from their wall clocks. `pst devices list` shows this status next to last seen.
+
+## Extensions
+
+Extensions use the same account through `ctx.account` and, in webviews, `client.account` with the `account.read` and `account.manage` capabilities. They receive `accountEvents.projectSyncChanged` when a project's sync status changes. See [Cloud account and sync status](../../references/extensions/0003-command-and-process-api.md#cloud-account-and-sync-status) for the methods and the meaning of each sync state.

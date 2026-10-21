@@ -15,11 +15,11 @@ export const registerAccountSmokeTests = () => {
       let host = await startPackagedServe(root);
       try {
         let client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
-        const loggedOut = { login: null, cloudProjects: [], cloudProjectsLoaded: true, signInAvailable: false };
+        const loggedOut = { login: null, cloudProjects: [], cloudProjectsLoaded: true };
         expect(await client.account.status()).toEqual(loggedOut);
         const project = await client.projects.create(folderProjectInput({ name: "Local without owner" }, root));
         expect(await client.account.projectSyncStatus(project.id)).toEqual({
-          state: "saved-locally",
+          state: "local",
           offlineReady: false,
         });
         const environment = await client.runtime.environment();

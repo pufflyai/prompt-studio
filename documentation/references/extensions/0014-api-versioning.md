@@ -246,3 +246,7 @@ a lossless 22-character Base62 UUID body; omitting it keeps canonical UUID text.
 existing UUID output when `idPrefix` is omitted. Compact IDs are case-sensitive;
 extension adoption must keep ID lookup exact and shorthand lookup separate. These
 options do not rewrite existing IDs or change existing shorthand declarations.
+
+## Cloud account and sync status in API 0.2.1
+
+`ctx.account`, the `account.read` and `account.manage` webview capabilities, `client.account` on the typed webview client, and the `accountEvents.projectSyncChanged` host event are additive. They ship in the release after 0.44.0. The `/client` account methods add `cancelLogin` and `projectSyncStatus`, and `AccountDevice` adds `online`. `makeCommandContext` from `@pstdio/sdk/testing` provides a signed-out account whose projects are `local`. Publish the SDK and host before separately released extensions use these additions. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).
