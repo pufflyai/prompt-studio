@@ -256,6 +256,10 @@ existing UUID output when `idPrefix` is omitted. Compact IDs are case-sensitive;
 extension adoption must keep ID lookup exact and shorthand lookup separate. These
 options do not rewrite existing IDs or change existing shorthand declarations.
 
+## Personal device references in API 0.2.1
+
+Workspace/session read results and resource references may include `device: { ownerId, id, name }`. A synced record is readable on its owner's other devices. Execution stays on its source device. Shared personal references contain only owner and device details; another user cannot open the underlying record. This additive field ships in the release after 0.44.0.
+
 ## Cloud account and sync status in API 0.2.1
 
 `ctx.account`, the `account.read` and `account.manage` webview capabilities, `client.account` on the typed webview client, and the `accountEvents.projectSyncChanged` host event are additive. They ship in the release after 0.44.0. The `/client` account methods add `cancelLogin` and `projectSyncStatus`. `AccountDevice` adds `online`, `AccountStatus` adds `cloudProjectsLoaded`, and `DeviceLogin` adds an optional `email`. `makeCommandContext` from `@pstdio/sdk/testing` provides a signed-out account whose projects are `local`. Publish the SDK and host before separately released extensions use these additions. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).

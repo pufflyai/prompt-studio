@@ -47,6 +47,7 @@ export const sessionExitSchema: z.ZodType<SessionExit> = z.object({
 });
 
 export const extensionSessionSchema = z.object({
+  device: z.object({ ownerId: z.string(), id: z.string(), name: z.string() }).optional(),
   id: z.string(),
   title: z.string(),
   status: sessionStatusSchema,
@@ -72,6 +73,7 @@ export const extensionSessionSchema = z.object({
 });
 
 export const sessionSchema = z.object({
+  device: z.object({ ownerId: z.string(), id: z.string(), name: z.string() }).optional(),
   id: z.string(),
   project_id: z.string().nullable(),
   title: z.string(),

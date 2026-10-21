@@ -11,6 +11,8 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
   >();
   let deviceId = "";
   let storedStates = 0;
+  const personalDocumentIds = new Set<string>();
+  const devices = new Map<string, string>();
   // While set, document reads fail, so a device cannot finish its first download.
   let failReads = false;
   let failedReads = 0;
@@ -24,13 +26,13 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
   };
   const json = (body: unknown) => Response.json(body);
   // Like the relay, tell connected devices that a document changed so they read it again.
-  const publishChange = (documentId: string) => {
+  const publishChange = (documentId: string, spaceOwner: string | null) => {
     const doc = document(documentId);
     server.publish(
       "changed",
       JSON.stringify({
         type: "changed",
-        spaceOwner: null,
+        spaceOwner,
         documentId: documentId.slice(1),
         lastSequence: doc.updates.length,
         stateId: doc.state?.stateId ?? null,
@@ -45,9 +47,22 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
         user: { id: "owner", email: "owner@example.test" },
       });
     if (path === "/v1/device-login") {
-      deviceId = String((await input()).deviceId);
+      const profile = await input();
+      deviceId = String(profile.deviceId);
+      devices.set(deviceId, String(profile.name));
       return json({ accountId: "owner", deviceId, token: "device-credential", relayOrigin: origin });
     }
+    if (path === "/v1/devices")
+      return json({
+        deviceId,
+        devices: [...devices].map(([id, name]) => ({
+          id,
+          name,
+          platform: "fixture",
+          createdAt: new Date().toISOString(),
+          lastSeenAt: new Date().toISOString(),
+        })),
+      });
     if (path === "/api/auth/sign-out") return json({ ok: true });
     if (path === "/v1/environment-access")
       return json({ token: "relay-access", expiresAt: new Date(Date.now() + 60_000).toISOString() });
@@ -85,8 +100,9 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     }
     return new Response(null, { status: 404 });
   };
-  const documentRequest = async (request: Request, path: string, parts: string[]) => {
+  const documentRequest = async (request: Request, path: string, parts: string[], spaceOwner: string | null) => {
     const id = parts[5]!;
+    if (spaceOwner) personalDocumentIds.add(id);
     const input = async () => (await request.json()) as Record<string, unknown>;
     const doc = document(id);
     if (path.endsWith("/read")) {
@@ -116,7 +132,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
         deviceId,
         createdAt: new Date().toISOString(),
       });
-      publishChange(id);
+      publishChange(id, spaceOwner);
       return json({ sequence, duplicate: false });
     }
     expect(body.summary).toBeString();
@@ -131,8 +147,15 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
       deviceId,
       createdAt: new Date().toISOString(),
     };
-    publishChange(id);
+    publishChange(id, spaceOwner);
     return json({ state: doc.state });
+  };
+  // Private project data lives under /spaces/~<owner>; the rest of the path matches project documents.
+  const privateSpaceOwner = (parts: string[]) => {
+    if (parts[4] !== "spaces") return null;
+    const owner = decodeURIComponent(parts[5]!.slice(1));
+    parts.splice(4, 2);
+    return owner;
   };
   const serve = (port: number) =>
     Bun.serve({
@@ -151,8 +174,10 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
           return new Response(null, { status: 426 });
         }
         const parts = path.split("/");
+        const spaceOwner = privateSpaceOwner(parts);
+        if (spaceOwner !== null && spaceOwner !== "owner") return new Response(null, { status: 403 });
         if (parts[4] === "blobs") return blobRequest(request, path, parts);
-        return documentRequest(request, path, parts);
+        return documentRequest(request, path, parts, spaceOwner);
       },
       websocket: {
         open(socket) {
@@ -171,6 +196,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     documents,
     states: () => storedStates,
     failedReads: () => failedReads,
+    personalDocuments: () => [...personalDocumentIds].map((id) => documents.get(id)!),
     failReads(value: boolean) {
       failReads = value;
     },
@@ -189,7 +215,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
           deviceId,
           createdAt: new Date().toISOString(),
         });
-        publishChange(documentId);
+        publishChange(documentId, null);
       }
     },
   };

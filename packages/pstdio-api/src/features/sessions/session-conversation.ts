@@ -20,6 +20,7 @@ const applyMessagePatch = (messages: SessionMessage[], patch: JsonPatch) => {
 export const createSessionConversation = (
   events: EventStore & { close(): void },
   initialMessages: SessionMessage[] = [],
+  changed?: () => void,
 ) => {
   let messages = [...initialMessages];
   let closed = false;
@@ -31,6 +32,7 @@ export const createSessionConversation = (
       if (closed) throw new Error("Conversation is closed");
       messages = applyMessagePatch(messages, patch);
       events.push(patch);
+      changed?.();
     },
     getMessages: () => [...messages],
     snapshotAndSubscribe() {

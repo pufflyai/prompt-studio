@@ -1,12 +1,13 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { ResourceRef, WorkbenchPanelInstance } from "@pstdio/workbench";
-import type { HarnessParams } from "pstdio-api-contracts";
+import type { HarnessParams, Session } from "pstdio-api-contracts";
 import { getCollection, getIndexedRows, getRuntimeCollections, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardSessionResource } from "@/shared/app/resources";
 import { type DashboardRows, isDashboardProjectRow, isVisibleDashboardRow } from "@/shared/sync/dashboard-rows";
 import { type DashboardResourceAnchor, listResourceAnchors } from "@/shared/sync/resource-anchors";
 import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
 export interface DashboardSession {
+  device?: Session["device"];
   id: string;
   title: string;
   status: string;
@@ -22,6 +23,7 @@ export interface DashboardSession {
   resource: ResourceRef;
 }
 export interface DashboardSessionView {
+  device?: Session["device"];
   status?: string;
   lastRequestStarted: string | null;
   id: string;
@@ -49,6 +51,7 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
   const anchors = [...listResourceAnchors(session), ...(workspace ? listResourceAnchors(workspace) : [])];
   const parent = anchors[0];
   return {
+    device: session.device as Session["device"],
     id: session.id,
     title,
     status: (session.status as string) ?? "unknown",
@@ -167,6 +170,7 @@ export const resolveDashboardSessionView = (sessionId: string | undefined): Dash
   const workspace = session.workspaceId ? getCollection("workspaces").get(session.workspaceId) : undefined;
   const summary = session.workspaceId ? getDashboardWorkspaceDiffSummary(session.workspaceId) : undefined;
   return {
+    device: session.device,
     id: session.id,
     draftKey: session.id,
     sessionId: session.id,
