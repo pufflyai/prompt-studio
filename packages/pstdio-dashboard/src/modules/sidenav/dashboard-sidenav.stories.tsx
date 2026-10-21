@@ -335,7 +335,7 @@ export const SessionMode: Story = {
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
     await fireEvent.contextMenu(canvas.getByRole("option", { name: "Search" }));
-    await waitFor(() => expect(document.getByRole("menuitem", { name: "Reset to default" })).toBeVisible());
+    await waitFor(() => expect(document.getByRole("menuitem", { name: "Hide/show items" })).toBeVisible());
     await waitFor(() => expect(document.getByRole("menu")).toHaveFocus());
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
