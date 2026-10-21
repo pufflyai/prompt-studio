@@ -21116,6 +21116,334 @@
                     },
                     {
                       "type": "frame",
+                      "id": "w3bZk",
+                      "name": "cmp/ResourceListRow",
+                      "context": "The row of the resource list renderer. Same density as cmp/KanbanRendererListRow (h 34, one hairline, no card). Lead is a 14px status icon chosen by the extension; resources without a status show their kind icon in $ds-fg-subtle. The mono ID is the human shorthand, never a storage ID. Title fills the row and truncates in the middle. Properties ride right in declared order: chips, badge, diff, date. Diff and Date have fixed widths so they line up down the page. Actions appear on hover and keyboard focus only. Rows are read-only presentation: they never drag between groups.",
+                      "theme": {
+                        "row": "default"
+                      },
+                      "reusable": true,
+                      "width": 900,
+                      "height": 34,
+                      "fill": "$row-fill",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        12,
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "djUXE",
+                          "name": "Lead",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "loader-circle",
+                          "library": "lucide",
+                          "fill": "$ds-info"
+                        },
+                        {
+                          "type": "text",
+                          "id": "oKLRi",
+                          "name": "ID",
+                          "fill": "$ds-fg-subtle",
+                          "textGrowth": "fixed-width",
+                          "width": 64,
+                          "content": "PS-784_A1",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "EsaTt",
+                          "name": "Title",
+                          "fill": "$row-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Show devices and sync status",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "vDfIe",
+                          "name": "Chips",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "MJiar",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "Chip",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "PS-784"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "id": "T1tkNK",
+                          "type": "ref",
+                          "ref": "dbK8Z",
+                          "name": "Badge",
+                          "padding": [
+                            3,
+                            9
+                          ],
+                          "height": 20,
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "purple"
+                          },
+                          "descendants": {
+                            "ohhQY": {
+                              "enabled": false
+                            },
+                            "FaaBK": {
+                              "content": "Git worktree",
+                              "fontSize": 11
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "UxW3U",
+                          "name": "Diff",
+                          "width": 84,
+                          "gap": 6,
+                          "justifyContent": "end",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "KXX3a",
+                              "name": "Added",
+                              "fill": "$ds-success",
+                              "content": "+412",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "KhA28",
+                              "name": "Removed",
+                              "fill": "$ds-error",
+                              "content": "−96",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "TthhF",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Unavailable",
+                              "enabled": false,
+                              "fill": "$ds-fg-subtle",
+                              "content": "—",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "U6Map",
+                          "name": "Date",
+                          "fill": "$ds-fg-subtle",
+                          "textGrowth": "fixed-width",
+                          "width": 48,
+                          "content": "12 min",
+                          "textAlign": "right",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "yWMZM",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Actions",
+                          "enabled": true,
+                          "width": 24,
+                          "height": 24,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "opacity": 0,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "ellipsis",
+                              "width": 12,
+                              "height": 12
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "c9pxK1",
+                      "name": "cmp/ResourceListGroupHeader",
+                      "context": "Group header of the resource list renderer, drawn like the kanban list group header (h 28, $ds-bg-subtle). Chevron collapses the group; a collapsed group keeps its count. The icon and label come from the grouped value (for devices: laptop, monitor, server). Tag marks the current value, for example This device. Presence shows a live state with a dot: Online uses $ds-success, Offline uses $ds-fg-subtle and the last-seen time. Add creates a resource in this group and only appears where creation is possible.",
+                      "reusable": true,
+                      "width": 900,
+                      "height": 28,
+                      "fill": "$ds-bg-subtle",
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "djgwP",
+                          "name": "Chevron",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "k1pJb",
+                          "name": "Icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "laptop",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "m8sbH",
+                          "name": "Label",
+                          "fill": "$ds-fg",
+                          "content": "MacBook Pro",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "kqhmi",
+                          "name": "Count",
+                          "fill": "$ds-fg-subtle",
+                          "content": "4",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "XHi6J",
+                          "type": "ref",
+                          "ref": "dbK8Z",
+                          "name": "Tag",
+                          "height": 18,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "gray"
+                          },
+                          "descendants": {
+                            "ohhQY": {
+                              "enabled": false
+                            },
+                            "FaaBK": {
+                              "content": "This device",
+                              "fontSize": 10
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "j4YBtZ",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Presence",
+                          "enabled": false,
+                          "gap": 5,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "ellipse",
+                              "id": "r3hXmv",
+                              "name": "Dot",
+                              "fill": "$ds-success",
+                              "width": 6,
+                              "height": 6
+                            },
+                            {
+                              "type": "text",
+                              "id": "oLWGm",
+                              "name": "State",
+                              "fill": "$ds-fg-subtle",
+                              "content": "Online",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "lXeyy",
+                          "name": "Sp",
+                          "width": "fill_container",
+                          "height": 2
+                        },
+                        {
+                          "id": "Z7tHxo",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Add",
+                          "width": 24,
+                          "height": 24,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "plus",
+                              "width": 12,
+                              "height": 12
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
                       "id": "XrEDw",
                       "name": "cmp/CollectionViewBar",
                       "context": "Views use layers-plus. The top Filter button is the only normal filter entry point. Field labels stay fixed; values commit and continue in their bubble.",
@@ -193645,6 +193973,4161 @@
                       "content": "Open chat"
                     }
                   }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Xr7iI",
+      "x": 55910,
+      "y": 0,
+      "name": "Resource List Renderer · Component",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1960,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 30,
+      "padding": [
+        48,
+        40
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "DtWeB",
+          "name": "Frame Header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "gs4zB",
+              "name": "Kicker",
+              "fill": "$ds-fg-subtle",
+              "content": "COMPONENT · NEW NATIVE RENDERER · WORKSPACES EXTENSION",
+              "fontFamily": "$font-heading",
+              "fontSize": 12,
+              "fontWeight": "600",
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "text",
+              "id": "y6wIm",
+              "name": "Title",
+              "fill": "$ds-fg",
+              "content": "Resource list",
+              "lineHeight": 1.05,
+              "fontFamily": "$font-display",
+              "fontSize": 44,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "ul51L",
+              "name": "Sub",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 1180,
+              "content": "A dense, grouped list of resources for any extension. It takes the detailed list display of the kanban renderer and makes it a renderer of its own: the same view bar, group headers and 34px rows, without a board, without status columns and without dragging between groups. Workspaces is the first user. It replaces the workspace data table and groups workspaces by the device they live on.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "LfMFG",
+          "name": "Display · Grouped by device",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "t4fJL9",
+              "name": "Caption",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 5,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "q2ogY7",
+                  "name": "TR",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "bdL7c",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "grouped list",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "BEcwz",
+                      "name": "B",
+                      "fill": "$ds-surface",
+                      "cornerRadius": 999,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        4,
+                        9
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "q5QFAp",
+                          "name": "T",
+                          "fill": "$ds-fg-muted",
+                          "content": "default view · grouped by device",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ob5ZI",
+                      "name": "Sp",
+                      "width": "fill_container",
+                      "height": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "xBOs1",
+                  "name": "D",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Workspaces open grouped by the device they live on. This device comes first and is the only group with Add. Other devices follow: online devices by name, then offline devices by when they were last seen. Rows from another device open that workspace's synced session history; its files and diff stay on that device, so Diff shows a dash. Collapsing a group hides its rows, not its count.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rLYNk",
+              "name": "Renderer",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$ds-bg",
+              "cornerRadius": 12,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "id": "TRzZs",
+                  "type": "ref",
+                  "ref": "XrEDw",
+                  "name": "View Bar",
+                  "width": "fill_container",
+                  "descendants": {
+                    "Js4rH/w7NkD3": {
+                      "icon": "layers"
+                    },
+                    "Js4rH/k9XlqC": {
+                      "content": "All workspaces"
+                    },
+                    "Js4rH/D7RWr": {
+                      "enabled": false
+                    },
+                    "UWfsk/w7NkD3": {
+                      "icon": "circle-alert"
+                    },
+                    "UWfsk/k9XlqC": {
+                      "content": "Needs attention"
+                    },
+                    "O10oTj/w7NkD3": {
+                      "icon": "laptop"
+                    },
+                    "O10oTj/k9XlqC": {
+                      "content": "This device"
+                    },
+                    "o6x3a": {
+                      "enabled": false
+                    },
+                    "zsbBi": {
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      }
+                    },
+                    "zsbBi/Hf4GT": {
+                      "enabled": false
+                    },
+                    "FjxiE": {
+                      "enabled": false
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "gPWUz",
+                  "name": "Body",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "id": "yCBo1",
+                      "type": "ref",
+                      "ref": "c9pxK1",
+                      "name": "Group · MacBook Pro",
+                      "width": "fill_container",
+                      "descendants": {
+                        "djgwP": {
+                          "icon": "chevron-down"
+                        },
+                        "k1pJb": {
+                          "icon": "laptop"
+                        },
+                        "m8sbH": {
+                          "content": "MacBook Pro"
+                        },
+                        "kqhmi": {
+                          "content": "4"
+                        },
+                        "XHi6J": {
+                          "enabled": true
+                        },
+                        "j4YBtZ": {
+                          "enabled": false
+                        },
+                        "r3hXmv": {
+                          "fill": "$ds-success"
+                        },
+                        "oLWGm": {
+                          "content": "Online"
+                        },
+                        "Z7tHxo": {
+                          "enabled": true
+                        }
+                      }
+                    },
+                    {
+                      "id": "ToDln",
+                      "type": "ref",
+                      "ref": "w3bZk",
+                      "name": "PS-784_A1",
+                      "width": "fill_container",
+                      "theme": {
+                        "row": "default"
+                      },
+                      "descendants": {
+                        "djUXE": {
+                          "icon": "loader-circle",
+                          "fill": "$ds-info"
+                        },
+                        "oKLRi": {
+                          "content": "PS-784_A1"
+                        },
+                        "EsaTt": {
+                          "content": "Show devices and sync status"
+                        },
+                        "vDfIe": {
+                          "enabled": true
+                        },
+                        "MJiar/L109Bg": {
+                          "content": "PS-784"
+                        },
+                        "T1tkNK": {
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "purple"
+                          }
+                        },
+                        "T1tkNK/FaaBK": {
+                          "content": "Git worktree"
+                        },
+                        "KXX3a": {
+                          "enabled": true,
+                          "content": "+412"
+                        },
+                        "KhA28": {
+                          "enabled": true,
+                          "content": "−96"
+                        },
+                        "TthhF": {
+                          "enabled": false
+                        },
+                        "U6Map": {
+                          "content": "12 min"
+                        },
+                        "yWMZM": {
+                          "enabled": true,
+                          "opacity": 0
+                        }
+                      }
+                    },
+                    {
+                      "id": "tcT3n",
+                      "type": "ref",
+                      "ref": "w3bZk",
+                      "name": "PS-826_A1",
+                      "width": "fill_container",
+                      "theme": {
+                        "row": "default"
+                      },
+                      "descendants": {
+                        "djUXE": {
+                          "icon": "circle-alert",
+                          "fill": "$ds-warning"
+                        },
+                        "oKLRi": {
+                          "content": "PS-826_A1"
+                        },
+                        "EsaTt": {
+                          "content": "Sync sessions to the personal space"
+                        },
+                        "vDfIe": {
+                          "enabled": true
+                        },
+                        "MJiar/L109Bg": {
+                          "content": "PS-826"
+                        },
+                        "T1tkNK": {
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "purple"
+                          }
+                        },
+                        "T1tkNK/FaaBK": {
+                          "content": "Git worktree"
+                        },
+                        "KXX3a": {
+                          "enabled": true,
+                          "content": "+1,208"
+                        },
+                        "KhA28": {
+                          "enabled": true,
+                          "content": "−211"
+                        },
+                        "TthhF": {
+                          "enabled": false
+                        },
+                        "U6Map": {
+                          "content": "48 min"
+                        },
+                        "yWMZM": {
+                          "enabled": true,
+                          "opacity": 0
+                        }
+                      }
+                    },
+                    {
+                      "id": "AQX6B",
+                      "type": "ref",
+                      "ref": "w3bZk",
+                      "name": "WS-41",
+                      "width": "fill_container",
+                      "theme": {
+                        "row": "default"
+                      },
+                      "descendants": {
+                        "djUXE": {
+                          "icon": "circle-check",
+                          "fill": "$ds-success"
+                        },
+                        "oKLRi": {
+                          "content": "WS-41"
+                        },
+                        "EsaTt": {
+                          "content": "Resource list renderer designs"
+                        },
+                        "vDfIe": {
+                          "enabled": false
+                        },
+                        "MJiar/L109Bg": {
+                          "content": ""
+                        },
+                        "T1tkNK": {
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "purple"
+                          }
+                        },
+                        "T1tkNK/FaaBK": {
+                          "content": "Git worktree"
+                        },
+                        "KXX3a": {
+                          "enabled": true,
+                          "content": "+86"
+                        },
+                        "KhA28": {
+                          "enabled": true,
+                          "content": "−4"
+                        },
+                        "TthhF": {
+                          "enabled": false
+                        },
+                        "U6Map": {
+                          "content": "3 h"
+                        },
+                        "yWMZM": {
+                          "enabled": true,
+                          "opacity": 0
+                        }
+                      }
+                    },
+                    {
+                      "id": "Y0iAMg",
+                      "type": "ref",
+                      "ref": "w3bZk",
+                      "name": "WS-1",
+                      "width": "fill_container",
+                      "theme": {
+                        "row": "default"
+                      },
+                      "descendants": {
+                        "djUXE": {
+                          "icon": "folder",
+                          "fill": "$ds-fg-subtle"
+                        },
+                        "oKLRi": {
+                          "content": "WS-1"
+                        },
+                        "EsaTt": {
+                          "content": "Project workspace"
+                        },
+                        "vDfIe": {
+                          "enabled": false
+                        },
+                        "MJiar/L109Bg": {
+                          "content": ""
+                        },
+                        "T1tkNK": {
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "gray"
+                          }
+                        },
+                        "T1tkNK/FaaBK": {
+                          "content": "Project folder"
+                        },
+                        "KXX3a": {
+                          "enabled": false,
+                          "content": ""
+                        },
+                        "KhA28": {
+                          "enabled": false,
+                          "content": ""
+                        },
+                        "TthhF": {
+                          "enabled": true
+                        },
+                        "U6Map": {
+                          "content": "3 d"
+                        },
+                        "yWMZM": {
+                          "enabled": true,
+                          "opacity": 0
+                        }
+                      }
+                    },
+                    {
+                      "id": "jIeuM",
+                      "type": "ref",
+                      "ref": "c9pxK1",
+                      "name": "Group · Studio iMac",
+                      "width": "fill_container",
+                      "descendants": {
+                        "djgwP": {
+                          "icon": "chevron-down"
+                        },
+                        "k1pJb": {
+                          "icon": "monitor"
+                        },
+                        "m8sbH": {
+                          "content": "Studio iMac"
+                        },
+                        "kqhmi": {
+                          "content": "3"
+                        },
+                        "XHi6J": {
+                          "enabled": false
+                        },
+                        "j4YBtZ": {
+                          "enabled": true
+                        },
+                        "r3hXmv": {
+                          "fill": "$ds-success"
+                        },
+                        "oLWGm": {
+                          "content": "Online"
+                        },
+                        "Z7tHxo": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "K1dv6",
+                      "type": "ref",
+                      "ref": "w3bZk",
+                      "name": "PS-842_A1",
+                      "width": "fill_container",
+                      "theme": {
+                        "row": "default"
+                      },
+                      "descendants": {
+                        "djUXE": {
+                          "icon": "circle-check",
+                          "fill": "$ds-success"
+                        },
+                        "oKLRi": {
+                          "content": "PS-842_A1"
+                        },
+                        "EsaTt": {
+                          "content": "Keep resource numbers unique offline"
+                        },
+                        "vDfIe": {
+                          "enabled": true
+                        },
+                        "MJiar/L109Bg": {
+                          "content": "PS-842"
+                        },
+                        "T1tkNK": {
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "purple"
+                          }
+                        },
+                        "T1tkNK/FaaBK": {
+                          "content": "Git worktree"
+                        },
+                        "KXX3a": {
+                          "enabled": false,
+                          "content": ""
+                        },
+                        "KhA28": {
+                          "enabled": false,
+                          "content": ""
+                        },
+                        "TthhF": {
+                          "enabled": true
+                        },
+                        "U6Map": {
+                          "content": "2 h"
+                        },
+                        "yWMZM": {
+                          "enabled": true,
+                          "opacity": 0
+                        }
+                      }
+                    },
+                    {
+                      "id": "N8Xgu",
+                      "type": "ref",
+                      "ref": "w3bZk",
+                      "name": "PS-830_A1",
+                      "width": "fill_container",
+                      "theme": {
+                        "row": "default"
+                      },
+                      "descendants": {
+                        "djUXE": {
+                          "icon": "circle-x",
+                          "fill": "$ds-error"
+                        },
+                        "oKLRi": {
+                          "content": "PS-830_A1"
+                        },
+                        "EsaTt": {
+                          "content": "Keep ticket numbers current after merges"
+                        },
+                        "vDfIe": {
+                          "enabled": true
+                        },
+                        "MJiar/L109Bg": {
+                          "content": "PS-830"
+                        },
+                        "T1tkNK": {
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "purple"
+                          }
+                        },
+                        "T1tkNK/FaaBK": {
+                          "content": "Git worktree"
+                        },
+                        "KXX3a": {
+                          "enabled": false,
+                          "content": ""
+                        },
+                        "KhA28": {
+                          "enabled": false,
+                          "content": ""
+                        },
+                        "TthhF": {
+                          "enabled": true
+                        },
+                        "U6Map": {
+                          "content": "5 h"
+                        },
+                        "yWMZM": {
+                          "enabled": true,
+                          "opacity": 0
+                        }
+                      }
+                    },
+                    {
+                      "id": "zxkZQ",
+                      "type": "ref",
+                      "ref": "w3bZk",
+                      "name": "WS-2",
+                      "width": "fill_container",
+                      "theme": {
+                        "row": "default"
+                      },
+                      "descendants": {
+                        "djUXE": {
+                          "icon": "folder",
+                          "fill": "$ds-fg-subtle"
+                        },
+                        "oKLRi": {
+                          "content": "WS-2"
+                        },
+                        "EsaTt": {
+                          "content": "Project workspace"
+                        },
+                        "vDfIe": {
+                          "enabled": false
+                        },
+                        "MJiar/L109Bg": {
+                          "content": ""
+                        },
+                        "T1tkNK": {
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "gray"
+                          }
+                        },
+                        "T1tkNK/FaaBK": {
+                          "content": "Project folder"
+                        },
+                        "KXX3a": {
+                          "enabled": false,
+                          "content": ""
+                        },
+                        "KhA28": {
+                          "enabled": false,
+                          "content": ""
+                        },
+                        "TthhF": {
+                          "enabled": true
+                        },
+                        "U6Map": {
+                          "content": "2 wk"
+                        },
+                        "yWMZM": {
+                          "enabled": true,
+                          "opacity": 0
+                        }
+                      }
+                    },
+                    {
+                      "id": "e9hDkZ",
+                      "type": "ref",
+                      "ref": "c9pxK1",
+                      "name": "Group · Build box",
+                      "width": "fill_container",
+                      "descendants": {
+                        "djgwP": {
+                          "icon": "chevron-right"
+                        },
+                        "k1pJb": {
+                          "icon": "server"
+                        },
+                        "m8sbH": {
+                          "content": "Build box"
+                        },
+                        "kqhmi": {
+                          "content": "2"
+                        },
+                        "XHi6J": {
+                          "enabled": false
+                        },
+                        "j4YBtZ": {
+                          "enabled": true
+                        },
+                        "r3hXmv": {
+                          "fill": "$ds-fg-subtle"
+                        },
+                        "oLWGm": {
+                          "content": "Offline · seen 2 d ago"
+                        },
+                        "Z7tHxo": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "t6ZdyW",
+          "name": "Anatomy · Groups and rows",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "Xv2TK",
+              "name": "Caption",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 5,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "QscIr",
+                  "name": "TR",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "aCwnX",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "groups and row states",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "fpRoN",
+                      "name": "B",
+                      "fill": "$ds-surface",
+                      "cornerRadius": 999,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        4,
+                        9
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Qyaty",
+                          "name": "T",
+                          "fill": "$ds-fg-muted",
+                          "content": "grouping value · row state",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sDgyC",
+                      "name": "Sp",
+                      "width": "fill_container",
+                      "height": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "hec0q",
+                  "name": "D",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "A group header draws the grouped value. For devices the value carries a tag for this device and a live presence for the others. When nobody is signed in, every workspace belongs to one group, This device. Row states never change the layout: setup and deletion swap the type badge for a state badge, and the lead icon always shows the latest session status.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "k1GQTm",
+              "name": "Exhibits",
+              "width": "fill_container",
+              "gap": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "KQgAa",
+                  "name": "Group headers",
+                  "width": 700,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "PWMwK",
+                      "name": "Label",
+                      "fill": "$ds-fg-subtle",
+                      "content": "GROUP HEADERS",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 10,
+                      "fontWeight": "600",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "W1tGE",
+                      "name": "Headers",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 12,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "id": "YeftZ",
+                          "type": "ref",
+                          "ref": "c9pxK1",
+                          "name": "Group · MacBook Pro",
+                          "width": "fill_container",
+                          "descendants": {
+                            "djgwP": {
+                              "icon": "chevron-down"
+                            },
+                            "k1pJb": {
+                              "icon": "laptop"
+                            },
+                            "m8sbH": {
+                              "content": "MacBook Pro"
+                            },
+                            "kqhmi": {
+                              "content": "4"
+                            },
+                            "XHi6J": {
+                              "enabled": true
+                            },
+                            "j4YBtZ": {
+                              "enabled": false
+                            },
+                            "r3hXmv": {
+                              "fill": "$ds-success"
+                            },
+                            "oLWGm": {
+                              "content": "Online"
+                            },
+                            "Z7tHxo": {
+                              "enabled": true
+                            }
+                          }
+                        },
+                        {
+                          "id": "QvX8n",
+                          "type": "ref",
+                          "ref": "c9pxK1",
+                          "name": "Group · Studio iMac",
+                          "width": "fill_container",
+                          "descendants": {
+                            "djgwP": {
+                              "icon": "chevron-down"
+                            },
+                            "k1pJb": {
+                              "icon": "monitor"
+                            },
+                            "m8sbH": {
+                              "content": "Studio iMac"
+                            },
+                            "kqhmi": {
+                              "content": "3"
+                            },
+                            "XHi6J": {
+                              "enabled": false
+                            },
+                            "j4YBtZ": {
+                              "enabled": true
+                            },
+                            "r3hXmv": {
+                              "fill": "$ds-success"
+                            },
+                            "oLWGm": {
+                              "content": "Online"
+                            },
+                            "Z7tHxo": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "id": "YM5lE",
+                          "type": "ref",
+                          "ref": "c9pxK1",
+                          "name": "Group · Build box",
+                          "width": "fill_container",
+                          "descendants": {
+                            "djgwP": {
+                              "icon": "chevron-right"
+                            },
+                            "k1pJb": {
+                              "icon": "server"
+                            },
+                            "m8sbH": {
+                              "content": "Build box"
+                            },
+                            "kqhmi": {
+                              "content": "2"
+                            },
+                            "XHi6J": {
+                              "enabled": false
+                            },
+                            "j4YBtZ": {
+                              "enabled": true
+                            },
+                            "r3hXmv": {
+                              "fill": "$ds-fg-subtle"
+                            },
+                            "oLWGm": {
+                              "content": "Offline · seen 2 d ago"
+                            },
+                            "Z7tHxo": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "id": "V3KQcQ",
+                          "type": "ref",
+                          "ref": "c9pxK1",
+                          "name": "Group · This device",
+                          "width": "fill_container",
+                          "descendants": {
+                            "djgwP": {
+                              "icon": "chevron-down"
+                            },
+                            "k1pJb": {
+                              "icon": "laptop"
+                            },
+                            "m8sbH": {
+                              "content": "This device"
+                            },
+                            "kqhmi": {
+                              "content": "4"
+                            },
+                            "XHi6J": {
+                              "enabled": false
+                            },
+                            "j4YBtZ": {
+                              "enabled": false
+                            },
+                            "r3hXmv": {
+                              "fill": "$ds-success"
+                            },
+                            "oLWGm": {
+                              "content": "Online"
+                            },
+                            "Z7tHxo": {
+                              "enabled": true
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "u5jH1Z",
+                      "name": "Header notes",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": [
+                        4,
+                        2
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wkbcf",
+                          "name": "Note",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1 · This device: tag, Add, always first.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "y7sxq5",
+                          "name": "Note",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "2 · Online device: green presence dot. No Add until remote commands exist (PS-827).",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "X5Vf3G",
+                          "name": "Note",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "3 · Offline device: subtle dot and last-seen time. Collapsed here; the count stays.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wU2tK",
+                          "name": "Note",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "4 · Signed out: one group named This device, without a tag.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ZFc9L",
+                  "name": "Row states",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "guu3Y",
+                      "name": "Label",
+                      "fill": "$ds-fg-subtle",
+                      "content": "ROW STATES",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 10,
+                      "fontWeight": "600",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nXyLq",
+                      "name": "Rows",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 12,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "y1VhNV",
+                          "name": "State · default",
+                          "width": "fill_container",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "SgK5R",
+                              "name": "State label",
+                              "width": 120,
+                              "height": 34,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": {
+                                "right": 1,
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "fmYaQ",
+                                  "name": "T",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "default",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "j7QWa",
+                              "type": "ref",
+                              "ref": "w3bZk",
+                              "name": "PS-784_A1",
+                              "width": "fill_container",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "djUXE": {
+                                  "icon": "loader-circle",
+                                  "fill": "$ds-info"
+                                },
+                                "oKLRi": {
+                                  "content": "PS-784_A1"
+                                },
+                                "EsaTt": {
+                                  "content": "Show devices and sync status"
+                                },
+                                "vDfIe": {
+                                  "enabled": true
+                                },
+                                "MJiar/L109Bg": {
+                                  "content": "PS-784"
+                                },
+                                "T1tkNK": {
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "purple"
+                                  }
+                                },
+                                "T1tkNK/ohhQY": {
+                                  "enabled": false
+                                },
+                                "T1tkNK/FaaBK": {
+                                  "content": "Git worktree"
+                                },
+                                "KXX3a": {
+                                  "enabled": true,
+                                  "content": "+412"
+                                },
+                                "KhA28": {
+                                  "enabled": true,
+                                  "content": "−96"
+                                },
+                                "TthhF": {
+                                  "enabled": false
+                                },
+                                "U6Map": {
+                                  "content": "12 min"
+                                },
+                                "yWMZM": {
+                                  "enabled": true,
+                                  "opacity": 0
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "FxNGh",
+                          "name": "State · hover",
+                          "width": "fill_container",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "vkODy",
+                              "name": "State label",
+                              "width": 120,
+                              "height": 34,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": {
+                                "right": 1,
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "R2fRF",
+                                  "name": "T",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "hover",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "v4D4p6",
+                              "type": "ref",
+                              "ref": "w3bZk",
+                              "name": "PS-784_A1",
+                              "width": "fill_container",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "fill": "$ds-surface-hover",
+                              "descendants": {
+                                "djUXE": {
+                                  "icon": "loader-circle",
+                                  "fill": "$ds-info"
+                                },
+                                "oKLRi": {
+                                  "content": "PS-784_A1"
+                                },
+                                "EsaTt": {
+                                  "content": "Show devices and sync status"
+                                },
+                                "vDfIe": {
+                                  "enabled": true
+                                },
+                                "MJiar/L109Bg": {
+                                  "content": "PS-784"
+                                },
+                                "T1tkNK": {
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "purple"
+                                  }
+                                },
+                                "T1tkNK/ohhQY": {
+                                  "enabled": false
+                                },
+                                "T1tkNK/FaaBK": {
+                                  "content": "Git worktree"
+                                },
+                                "KXX3a": {
+                                  "enabled": true,
+                                  "content": "+412"
+                                },
+                                "KhA28": {
+                                  "enabled": true,
+                                  "content": "−96"
+                                },
+                                "TthhF": {
+                                  "enabled": false
+                                },
+                                "U6Map": {
+                                  "content": "12 min"
+                                },
+                                "yWMZM": {
+                                  "enabled": true,
+                                  "opacity": 1
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jRVk5",
+                          "name": "State · selected",
+                          "width": "fill_container",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "xcJYT",
+                              "name": "State label",
+                              "width": 120,
+                              "height": 34,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": {
+                                "right": 1,
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "ipyjN",
+                                  "name": "T",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "selected",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "b08pNE",
+                              "type": "ref",
+                              "ref": "w3bZk",
+                              "name": "PS-784_A1",
+                              "width": "fill_container",
+                              "theme": {
+                                "row": "active"
+                              },
+                              "descendants": {
+                                "djUXE": {
+                                  "icon": "loader-circle",
+                                  "fill": "$ds-info"
+                                },
+                                "oKLRi": {
+                                  "content": "PS-784_A1"
+                                },
+                                "EsaTt": {
+                                  "content": "Show devices and sync status"
+                                },
+                                "vDfIe": {
+                                  "enabled": true
+                                },
+                                "MJiar/L109Bg": {
+                                  "content": "PS-784"
+                                },
+                                "T1tkNK": {
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "purple"
+                                  }
+                                },
+                                "T1tkNK/ohhQY": {
+                                  "enabled": false
+                                },
+                                "T1tkNK/FaaBK": {
+                                  "content": "Git worktree"
+                                },
+                                "KXX3a": {
+                                  "enabled": true,
+                                  "content": "+412"
+                                },
+                                "KhA28": {
+                                  "enabled": true,
+                                  "content": "−96"
+                                },
+                                "TthhF": {
+                                  "enabled": false
+                                },
+                                "U6Map": {
+                                  "content": "12 min"
+                                },
+                                "yWMZM": {
+                                  "enabled": true,
+                                  "opacity": 0
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "nu1dd",
+                          "name": "State · other device",
+                          "width": "fill_container",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "yzcls",
+                              "name": "State label",
+                              "width": 120,
+                              "height": 34,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": {
+                                "right": 1,
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "GOfLQ",
+                                  "name": "T",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "other device",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "L2Wdq",
+                              "type": "ref",
+                              "ref": "w3bZk",
+                              "name": "PS-842_A1",
+                              "width": "fill_container",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "djUXE": {
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
+                                },
+                                "oKLRi": {
+                                  "content": "PS-842_A1"
+                                },
+                                "EsaTt": {
+                                  "content": "Keep resource numbers unique offline"
+                                },
+                                "vDfIe": {
+                                  "enabled": true
+                                },
+                                "MJiar/L109Bg": {
+                                  "content": "PS-842"
+                                },
+                                "T1tkNK": {
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "purple"
+                                  }
+                                },
+                                "T1tkNK/ohhQY": {
+                                  "enabled": false
+                                },
+                                "T1tkNK/FaaBK": {
+                                  "content": "Git worktree"
+                                },
+                                "KXX3a": {
+                                  "enabled": false,
+                                  "content": ""
+                                },
+                                "KhA28": {
+                                  "enabled": false,
+                                  "content": ""
+                                },
+                                "TthhF": {
+                                  "enabled": true
+                                },
+                                "U6Map": {
+                                  "content": "2 h"
+                                },
+                                "yWMZM": {
+                                  "enabled": true,
+                                  "opacity": 0
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ElzxX",
+                          "name": "State · no session",
+                          "width": "fill_container",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "EDI66",
+                              "name": "State label",
+                              "width": 120,
+                              "height": 34,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": {
+                                "right": 1,
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "o8UKx",
+                                  "name": "T",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "no session",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "nIbvA",
+                              "type": "ref",
+                              "ref": "w3bZk",
+                              "name": "WS-43",
+                              "width": "fill_container",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "djUXE": {
+                                  "icon": "git-branch",
+                                  "fill": "$ds-fg-subtle"
+                                },
+                                "oKLRi": {
+                                  "content": "WS-43"
+                                },
+                                "EsaTt": {
+                                  "content": "Try the narrow side panel layout"
+                                },
+                                "vDfIe": {
+                                  "enabled": false
+                                },
+                                "MJiar/L109Bg": {
+                                  "content": ""
+                                },
+                                "T1tkNK": {
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "purple"
+                                  }
+                                },
+                                "T1tkNK/ohhQY": {
+                                  "enabled": false
+                                },
+                                "T1tkNK/FaaBK": {
+                                  "content": "Git worktree"
+                                },
+                                "KXX3a": {
+                                  "enabled": true,
+                                  "content": "+0"
+                                },
+                                "KhA28": {
+                                  "enabled": true,
+                                  "content": "−0"
+                                },
+                                "TthhF": {
+                                  "enabled": false
+                                },
+                                "U6Map": {
+                                  "content": "now"
+                                },
+                                "yWMZM": {
+                                  "enabled": true,
+                                  "opacity": 0
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "e4i8op",
+                          "name": "State · setting up",
+                          "width": "fill_container",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "dDdbv",
+                              "name": "State label",
+                              "width": 120,
+                              "height": 34,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": {
+                                "right": 1,
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "rZwKc",
+                                  "name": "T",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "setting up",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "suHXG",
+                              "type": "ref",
+                              "ref": "w3bZk",
+                              "name": "WS-44",
+                              "width": "fill_container",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "djUXE": {
+                                  "icon": "git-branch",
+                                  "fill": "$ds-fg-subtle"
+                                },
+                                "oKLRi": {
+                                  "content": "WS-44"
+                                },
+                                "EsaTt": {
+                                  "content": "Compare grouping options"
+                                },
+                                "vDfIe": {
+                                  "enabled": false
+                                },
+                                "MJiar/L109Bg": {
+                                  "content": ""
+                                },
+                                "T1tkNK": {
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "blue"
+                                  }
+                                },
+                                "T1tkNK/ohhQY": {
+                                  "enabled": true
+                                },
+                                "T1tkNK/FaaBK": {
+                                  "content": "Setting up"
+                                },
+                                "KXX3a": {
+                                  "enabled": false,
+                                  "content": ""
+                                },
+                                "KhA28": {
+                                  "enabled": false,
+                                  "content": ""
+                                },
+                                "TthhF": {
+                                  "enabled": true
+                                },
+                                "U6Map": {
+                                  "content": "now"
+                                },
+                                "yWMZM": {
+                                  "enabled": true,
+                                  "opacity": 0
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ELWa6",
+                          "name": "State · setup failed",
+                          "width": "fill_container",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "rJpXB",
+                              "name": "State label",
+                              "width": 120,
+                              "height": 34,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": {
+                                "right": 1,
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "QW2Dm",
+                                  "name": "T",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "setup failed",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "dabHT",
+                              "type": "ref",
+                              "ref": "w3bZk",
+                              "name": "WS-45",
+                              "width": "fill_container",
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "djUXE": {
+                                  "icon": "git-branch",
+                                  "fill": "$ds-fg-subtle"
+                                },
+                                "oKLRi": {
+                                  "content": "WS-45"
+                                },
+                                "EsaTt": {
+                                  "content": "Base branch was deleted"
+                                },
+                                "vDfIe": {
+                                  "enabled": false
+                                },
+                                "MJiar/L109Bg": {
+                                  "content": ""
+                                },
+                                "T1tkNK": {
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "red"
+                                  }
+                                },
+                                "T1tkNK/ohhQY": {
+                                  "enabled": true
+                                },
+                                "T1tkNK/FaaBK": {
+                                  "content": "Setup failed"
+                                },
+                                "KXX3a": {
+                                  "enabled": false,
+                                  "content": ""
+                                },
+                                "KhA28": {
+                                  "enabled": false,
+                                  "content": ""
+                                },
+                                "TthhF": {
+                                  "enabled": true
+                                },
+                                "U6Map": {
+                                  "content": "4 min"
+                                },
+                                "yWMZM": {
+                                  "enabled": true,
+                                  "opacity": 0
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "qbmpB",
+                          "name": "State · deleting",
+                          "width": "fill_container",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "kx3mr",
+                              "name": "State label",
+                              "width": 120,
+                              "height": 34,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": {
+                                "right": 1,
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "k4mDkI",
+                                  "name": "T",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "deleting",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "ckHmB",
+                              "type": "ref",
+                              "ref": "w3bZk",
+                              "name": "WS-39",
+                              "width": "fill_container",
+                              "theme": {
+                                "row": "locked"
+                              },
+                              "descendants": {
+                                "djUXE": {
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
+                                },
+                                "oKLRi": {
+                                  "content": "WS-39"
+                                },
+                                "EsaTt": {
+                                  "content": "Old spike on presence leases"
+                                },
+                                "vDfIe": {
+                                  "enabled": false
+                                },
+                                "MJiar/L109Bg": {
+                                  "content": ""
+                                },
+                                "T1tkNK": {
+                                  "theme": {
+                                    "badge": "subtle",
+                                    "palette": "gray"
+                                  }
+                                },
+                                "T1tkNK/ohhQY": {
+                                  "enabled": true
+                                },
+                                "T1tkNK/FaaBK": {
+                                  "content": "Deleting"
+                                },
+                                "KXX3a": {
+                                  "enabled": false,
+                                  "content": ""
+                                },
+                                "KhA28": {
+                                  "enabled": false,
+                                  "content": ""
+                                },
+                                "TthhF": {
+                                  "enabled": true
+                                },
+                                "U6Map": {
+                                  "content": "1 d"
+                                },
+                                "yWMZM": {
+                                  "enabled": true,
+                                  "opacity": 0
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "p1A7I",
+          "name": "Display menu and actions",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "ejXpA",
+              "name": "Caption",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 5,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "d9KhtS",
+                  "name": "TR",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "u2Ur5",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "display and actions",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "CHnzR",
+                      "name": "B",
+                      "fill": "$ds-surface",
+                      "cornerRadius": 999,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        4,
+                        9
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wOsMM",
+                          "name": "T",
+                          "fill": "$ds-fg-muted",
+                          "content": "grouping · ordering · properties",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "eX4Ni",
+                      "name": "Sp",
+                      "width": "fill_container",
+                      "height": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "FT0oO",
+                  "name": "D",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Display keeps the kanban display menu without the List and Board switch, because this renderer has one display. Grouping is the main choice. Workspaces declare Device, Type, Session status and None, and default to Device. Ordering and properties work as in the kanban list. Row actions come from the extension's resource menus.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "z9jnnI",
+              "name": "Exhibits",
+              "width": "fill_container",
+              "gap": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "XiHW0",
+                  "name": "Display column",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Y2NMp",
+                      "name": "Label",
+                      "fill": "$ds-fg-subtle",
+                      "content": "DISPLAY",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 10,
+                      "fontWeight": "600",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "id": "Y53I2",
+                      "type": "ref",
+                      "ref": "s0FaJ",
+                      "name": "Display menu",
+                      "descendants": {
+                        "vmOca": {
+                          "enabled": false
+                        },
+                        "H7ekRJ": {
+                          "enabled": false
+                        },
+                        "yPVg1": {
+                          "content": "Device"
+                        },
+                        "BouNg": {
+                          "enabled": false
+                        },
+                        "vhpqf": {
+                          "content": "Updated"
+                        },
+                        "FgHE8": {
+                          "content": "Newest first"
+                        },
+                        "pF0OH": {
+                          "type": "frame",
+                          "id": "Gra6B",
+                          "name": "Properties",
+                          "width": "fill_container",
+                          "gap": 5,
+                          "padding": [
+                            2,
+                            8,
+                            6,
+                            8
+                          ],
+                          "children": [
+                            {
+                              "id": "i9CVc",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "ID",
+                              "fill": "$ds-bg-active",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "ID",
+                                  "fill": "$ds-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "nUxTl",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "Ticket",
+                              "fill": "$ds-bg-active",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "Ticket",
+                                  "fill": "$ds-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "kR3x6",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "Type",
+                              "fill": "$ds-bg-active",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "Type",
+                                  "fill": "$ds-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "l7iNUJ",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "Diff",
+                              "fill": "$ds-bg-active",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "Diff",
+                                  "fill": "$ds-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "OEDuy",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "Updated",
+                              "fill": "$ds-bg-active",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "Updated",
+                                  "fill": "$ds-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "YE3d7",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "Branch",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "Branch",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ytUCI",
+                  "name": "Grouping column",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "s2xg4",
+                      "name": "Label",
+                      "fill": "$ds-fg-subtle",
+                      "content": "GROUPING",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 10,
+                      "fontWeight": "600",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "S0gUs3",
+                      "name": "Grouping options",
+                      "clip": true,
+                      "width": 240,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "padding": 6,
+                      "children": [
+                        {
+                          "id": "KL0fw",
+                          "type": "ref",
+                          "ref": "sgbRV",
+                          "name": "Device",
+                          "width": "fill_container",
+                          "theme": {
+                            "menu": "selected"
+                          },
+                          "descendants": {
+                            "UEgTp": {
+                              "icon": "laptop",
+                              "fill": "$ds-fg-muted"
+                            },
+                            "UTbhN": {
+                              "content": "Device",
+                              "fill": "$menu-fg"
+                            },
+                            "zFstx": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "id": "b4cFmG",
+                          "type": "ref",
+                          "ref": "sgbRV",
+                          "name": "Type",
+                          "width": "fill_container",
+                          "theme": {
+                            "menu": "default"
+                          },
+                          "descendants": {
+                            "UEgTp": {
+                              "icon": "shapes",
+                              "fill": "$ds-fg-muted"
+                            },
+                            "UTbhN": {
+                              "content": "Type",
+                              "fill": "$menu-fg"
+                            },
+                            "zFstx": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "id": "grr5k",
+                          "type": "ref",
+                          "ref": "sgbRV",
+                          "name": "Session status",
+                          "width": "fill_container",
+                          "theme": {
+                            "menu": "default"
+                          },
+                          "descendants": {
+                            "UEgTp": {
+                              "icon": "circle-dot",
+                              "fill": "$ds-fg-muted"
+                            },
+                            "UTbhN": {
+                              "content": "Session status",
+                              "fill": "$menu-fg"
+                            },
+                            "zFstx": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Hq7lL",
+                          "name": "Div",
+                          "width": "fill_container",
+                          "padding": [
+                            4,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "id": "zIRac",
+                              "name": "R",
+                              "fill": "$ds-border-subtle",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "id": "hwTFm",
+                          "type": "ref",
+                          "ref": "sgbRV",
+                          "name": "None",
+                          "width": "fill_container",
+                          "theme": {
+                            "menu": "default"
+                          },
+                          "descendants": {
+                            "UEgTp": {
+                              "icon": "minus",
+                              "fill": "$ds-fg-muted"
+                            },
+                            "UTbhN": {
+                              "content": "None",
+                              "fill": "$menu-fg"
+                            },
+                            "zFstx": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "VM1Gj",
+                  "name": "Row menu column",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "HI1aQ",
+                      "name": "Label",
+                      "fill": "$ds-fg-subtle",
+                      "content": "ROW ACTIONS · THIS DEVICE",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 10,
+                      "fontWeight": "600",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bpVSS",
+                      "name": "Row menu",
+                      "clip": true,
+                      "width": 240,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "padding": 6,
+                      "children": [
+                        {
+                          "id": "D8eRR",
+                          "type": "ref",
+                          "ref": "sgbRV",
+                          "name": "Open",
+                          "width": "fill_container",
+                          "theme": {
+                            "menu": "default"
+                          },
+                          "descendants": {
+                            "UEgTp": {
+                              "icon": "arrow-up-right",
+                              "fill": "$ds-fg-muted"
+                            },
+                            "UTbhN": {
+                              "content": "Open",
+                              "fill": "$menu-fg"
+                            },
+                            "zFstx": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "id": "N6eI8",
+                          "type": "ref",
+                          "ref": "sgbRV",
+                          "name": "Open session",
+                          "width": "fill_container",
+                          "theme": {
+                            "menu": "default"
+                          },
+                          "descendants": {
+                            "UEgTp": {
+                              "icon": "message-square",
+                              "fill": "$ds-fg-muted"
+                            },
+                            "UTbhN": {
+                              "content": "Open session",
+                              "fill": "$menu-fg"
+                            },
+                            "zFstx": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "id": "o7uedV",
+                          "type": "ref",
+                          "ref": "sgbRV",
+                          "name": "Rename workspace",
+                          "width": "fill_container",
+                          "theme": {
+                            "menu": "default"
+                          },
+                          "descendants": {
+                            "UEgTp": {
+                              "icon": "pencil",
+                              "fill": "$ds-fg-muted"
+                            },
+                            "UTbhN": {
+                              "content": "Rename workspace",
+                              "fill": "$menu-fg"
+                            },
+                            "zFstx": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Rsx7q",
+                          "name": "Div",
+                          "width": "fill_container",
+                          "padding": [
+                            4,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "id": "veSgG",
+                              "name": "R",
+                              "fill": "$ds-border-subtle",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "id": "W18pdj",
+                          "type": "ref",
+                          "ref": "sgbRV",
+                          "name": "Delete workspace",
+                          "width": "fill_container",
+                          "theme": {
+                            "menu": "default"
+                          },
+                          "descendants": {
+                            "UEgTp": {
+                              "icon": "trash-2",
+                              "fill": "$ds-error"
+                            },
+                            "UTbhN": {
+                              "content": "Delete workspace",
+                              "fill": "$ds-error"
+                            },
+                            "zFstx": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ESWQc",
+                  "name": "Remote row menu column",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "jV3Vl",
+                      "name": "Label",
+                      "fill": "$ds-fg-subtle",
+                      "content": "ROW ACTIONS · OTHER DEVICE",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 10,
+                      "fontWeight": "600",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Pkmib",
+                      "name": "Remote row menu",
+                      "clip": true,
+                      "width": 240,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "padding": 6,
+                      "children": [
+                        {
+                          "id": "ZmSdb",
+                          "type": "ref",
+                          "ref": "sgbRV",
+                          "name": "Open session history",
+                          "width": "fill_container",
+                          "theme": {
+                            "menu": "default"
+                          },
+                          "descendants": {
+                            "UEgTp": {
+                              "icon": "history",
+                              "fill": "$ds-fg-muted"
+                            },
+                            "UTbhN": {
+                              "content": "Open session history",
+                              "fill": "$menu-fg"
+                            },
+                            "zFstx": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "tRQsz",
+                      "name": "Note",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": 240,
+                      "content": "Rename and Delete run on the device that owns the workspace. They appear here once remote commands exist (PS-827).",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "fJkQv",
+          "name": "Empty and loading",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "RFRgs",
+              "name": "Caption",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 5,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "lUeq5",
+                  "name": "TR",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "e0tXGL",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "empty and loading",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "kFfXc",
+                      "name": "B",
+                      "fill": "$ds-surface",
+                      "cornerRadius": 999,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        4,
+                        9
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "TJe89",
+                          "name": "T",
+                          "fill": "$ds-fg-muted",
+                          "content": "no rows · first load",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "S005DH",
+                      "name": "Sp",
+                      "width": "fill_container",
+                      "height": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "DnAy6",
+                  "name": "D",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "An empty project shows the shared empty state with one action. A device group is never empty; a device without workspaces has no group. First load uses the kanban list skeleton, so switching between Tickets and Workspaces keeps the same shape.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "cQyV4",
+              "name": "Empty renderer",
+              "clip": true,
+              "width": 900,
+              "fill": "$ds-bg",
+              "cornerRadius": 12,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "id": "kD9i4",
+                  "type": "ref",
+                  "ref": "XrEDw",
+                  "name": "View Bar",
+                  "width": "fill_container",
+                  "descendants": {
+                    "Js4rH/w7NkD3": {
+                      "icon": "layers"
+                    },
+                    "Js4rH/k9XlqC": {
+                      "content": "All workspaces"
+                    },
+                    "Js4rH/D7RWr": {
+                      "enabled": false
+                    },
+                    "UWfsk/w7NkD3": {
+                      "icon": "circle-alert"
+                    },
+                    "UWfsk/k9XlqC": {
+                      "content": "Needs attention"
+                    },
+                    "O10oTj/w7NkD3": {
+                      "icon": "laptop"
+                    },
+                    "O10oTj/k9XlqC": {
+                      "content": "This device"
+                    },
+                    "o6x3a": {
+                      "enabled": false
+                    },
+                    "zsbBi": {
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      }
+                    },
+                    "zsbBi/Hf4GT": {
+                      "enabled": false
+                    },
+                    "FjxiE": {
+                      "enabled": false
+                    }
+                  }
+                },
+                {
+                  "id": "WvX5d",
+                  "type": "ref",
+                  "ref": "FFYGX",
+                  "name": "Empty state",
+                  "descendants": {
+                    "V2HQbt": {
+                      "icon": "layers"
+                    },
+                    "lQ9r9": {
+                      "content": "No workspaces yet"
+                    },
+                    "SVYyv": {
+                      "content": "Create a workspace to start an isolated attempt for this project."
+                    },
+                    "SBfbL/DsEVd": {
+                      "icon": "plus"
+                    },
+                    "SBfbL/Hf4GT": {
+                      "content": "New workspace"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TI3DT",
+          "name": "Contract",
+          "width": "fill_container",
+          "fill": "$ds-surface",
+          "cornerRadius": 12,
+          "stroke": "$ds-border",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "gap": 14,
+          "padding": [
+            18,
+            20
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "sDqxq",
+              "name": "Title",
+              "fill": "$ds-fg",
+              "content": "What the extension declares (proposed)",
+              "fontFamily": "$font-heading",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "m9Ktep",
+              "name": "Cols",
+              "width": "fill_container",
+              "gap": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "JGJlN",
+                  "name": "kind: \"resourceList\"",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "pyDXy",
+                      "name": "K",
+                      "fill": "$ds-fg",
+                      "content": "kind: \"resourceList\"",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Y3qThM",
+                      "name": "V",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "A native workbench view body next to dataTable and kanban. It renders in the workbench React tree, with no webview.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "y0O7q8",
+                  "name": "rows",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "DyDth",
+                      "name": "K",
+                      "fill": "$ds-fg",
+                      "content": "rows",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "jxQFv",
+                      "name": "V",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The view's query returns resources with a shorthand, title, lead icon, properties and group values. The renderer never fetches data itself.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ZubMR",
+                  "name": "groupings",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "x9ncR",
+                      "name": "K",
+                      "fill": "$ds-fg",
+                      "content": "groupings",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "rZLRh",
+                      "name": "V",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Each grouping names a field and, per value, a label, icon, optional tag and optional presence. The extension picks the default grouping.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "PtLII",
+                  "name": "views",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "s4BKnu",
+                      "name": "K",
+                      "fill": "$ds-fg",
+                      "content": "views",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "FHl6A",
+                      "name": "V",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Saved views store filter, sorts, grouping and visible properties, the same model as kanban list views.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Q0YNdd",
+              "name": "Div",
+              "width": "fill_container",
+              "padding": [
+                2,
+                0
+              ],
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "J0yWGj",
+                  "name": "R",
+                  "fill": "$ds-border-subtle",
+                  "width": "fill_container",
+                  "height": 1
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "nk8r9",
+              "name": "Device data",
+              "fill": "$ds-fg-subtle",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Device grouping needs data the SDK does not expose yet: the current device id, device names and presence. Workspaces already carry device { ownerId, id, name } from PS-826. This device, Online and last seen need a public devices API, the same one a Prompt Studio Cloud extension would use.",
+              "lineHeight": 1.45,
+              "fontFamily": "$font-body",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "DoI8h",
+      "x": 26120,
+      "y": 18634,
+      "name": "Workspaces extension · Production",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 2200,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": [
+        36,
+        48,
+        48,
+        48
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "nZo6o",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "W3 · Workspaces page — grouped by device",
+          "fontFamily": "$font-heading",
+          "fontSize": 16,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "CQ5uL",
+          "name": "Description",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "The Workspaces extension owns this page. Its main view is a resource list grouped by device instead of the workspace data table. The selected row's latest session stays open in the Side panel. Rows from other devices open their synced history there.",
+          "lineHeight": 1.45,
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "kNvVm",
+          "name": "Workspaces page · Production Window",
+          "clip": true,
+          "width": "fill_container",
+          "height": 760,
+          "fill": "#07090E",
+          "cornerRadius": 10,
+          "stroke": "#2E333F",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "aaHE2",
+              "name": "Workbench Body",
+              "width": "fill_container",
+              "height": "fill_container",
+              "gap": 4,
+              "padding": [
+                4,
+                4,
+                0,
+                4
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Cwt8M",
+                  "name": "Sidenav · Workspaces page",
+                  "context": "Project sidenav on the Workspaces page. Workspaces has no navigation of its own, so the sidenav shows the project entries with Workspaces selected.",
+                  "clip": true,
+                  "width": 287,
+                  "height": "fill_container",
+                  "fill": "#0E1016",
+                  "cornerRadius": 8,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "layout": "vertical",
+                  "gap": 7,
+                  "padding": [
+                    8,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jEgzZ",
+                      "name": "Search",
+                      "width": "fill_container",
+                      "height": 28,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "ziIHe",
+                          "name": "Search icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "search",
+                          "library": "lucide",
+                          "fill": "#8B9099"
+                        },
+                        {
+                          "type": "text",
+                          "id": "CG0xr",
+                          "name": "Search label",
+                          "fill": "#8B9099",
+                          "content": "Search",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "w1AFpg",
+                      "name": "Notifications",
+                      "width": "fill_container",
+                      "height": 28,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Pade3",
+                          "name": "Notifications icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "inbox",
+                          "library": "lucide",
+                          "fill": "#8B9099"
+                        },
+                        {
+                          "type": "text",
+                          "id": "z8Tpo",
+                          "name": "Notifications label",
+                          "fill": "#8B9099",
+                          "content": "Notifications",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "R4P9S",
+                      "name": "Sessions",
+                      "width": "fill_container",
+                      "height": 28,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "E70mA6",
+                          "name": "Sessions icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "message-circle",
+                          "library": "lucide",
+                          "fill": "#8B9099"
+                        },
+                        {
+                          "type": "text",
+                          "id": "dDMUp",
+                          "name": "Sessions label",
+                          "fill": "#8B9099",
+                          "content": "Sessions",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "l4RB8",
+                      "name": "Workspaces",
+                      "width": "fill_container",
+                      "height": 28,
+                      "fill": "$ds-bg-active",
+                      "cornerRadius": 6,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "zgA1a",
+                          "name": "Workspaces icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "computer",
+                          "library": "lucide",
+                          "fill": "$ds-fg"
+                        },
+                        {
+                          "type": "text",
+                          "id": "TC4KV",
+                          "name": "Workspaces label",
+                          "fill": "$ds-fg",
+                          "content": "Workspaces",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Q0mKW",
+                      "name": "Tickets",
+                      "width": "fill_container",
+                      "height": 28,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "b9DOy6",
+                          "name": "Tickets icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "square-kanban",
+                          "library": "lucide",
+                          "fill": "#8B9099"
+                        },
+                        {
+                          "type": "text",
+                          "id": "SPCUH",
+                          "name": "Tickets label",
+                          "fill": "#8B9099",
+                          "content": "Tickets",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "aEwrt",
+                  "name": "Resource Workbench",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "id": "eeuoW",
+                      "type": "ref",
+                      "ref": "Uke3B",
+                      "name": "Nav Chrome",
+                      "width": "fill_container",
+                      "descendants": {
+                        "LLPuw": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          }
+                        },
+                        "t5jSf": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          }
+                        },
+                        "WG70V/El0v0": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          }
+                        },
+                        "WG70V/Jq4g3": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          }
+                        },
+                        "rKPgR": {
+                          "theme": {
+                            "crumb": "current",
+                            "size": "sm"
+                          }
+                        },
+                        "rKPgR/QAdbs": {
+                          "icon": "layers"
+                        },
+                        "rKPgR/g7l5u": {
+                          "content": "Workspaces"
+                        },
+                        "U8yd35": {
+                          "theme": {
+                            "crumb": "default",
+                            "size": "sm"
+                          },
+                          "enabled": false
+                        },
+                        "U8yd35/QAdbs": {
+                          "icon": "git-branch"
+                        },
+                        "U8yd35/g7l5u": {
+                          "content": "PS-195 A1"
+                        },
+                        "R8Q6C": {
+                          "theme": {
+                            "crumb": "current",
+                            "size": "sm"
+                          },
+                          "enabled": false
+                        },
+                        "R8Q6C/QAdbs": {
+                          "icon": "git-compare"
+                        },
+                        "R8Q6C/g7l5u": {
+                          "content": "Changes"
+                        },
+                        "AZ9VV": {
+                          "enabled": false,
+                          "theme": {
+                            "crumb": "current",
+                            "size": "sm"
+                          }
+                        },
+                        "saN8L": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          }
+                        },
+                        "kUCSG": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
+                        "q7B3uG": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        },
+                        "ups0z": {
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "l12wlH",
+                      "name": "Main Panel",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-surface",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "e0ZJF7",
+                          "name": "Main Panel Header",
+                          "width": "fill_container",
+                          "height": 40,
+                          "fill": "#0E1016",
+                          "stroke": "#2E333F",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 5,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "VzNHB",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Workspaces tab",
+                              "theme": {
+                                "size": "sm",
+                                "tab": "active",
+                                "tab-status": "none"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "layers",
+                                  "width": 14,
+                                  "height": 14
+                                },
+                                "k9XlqC": {
+                                  "content": "Workspaces"
+                                },
+                                "CrGIR": {
+                                  "enabled": false,
+                                  "width": "fit_content",
+                                  "children": [
+                                    {
+                                      "id": "GGPiT",
+                                      "type": "ref",
+                                      "ref": "dbK8Z",
+                                      "name": "Changed count",
+                                      "theme": {},
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "descendants": {
+                                        "ohhQY": {
+                                          "enabled": false
+                                        },
+                                        "FaaBK": {
+                                          "content": "12",
+                                          "fontSize": 10
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "id": "TTeQF",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Add Panel",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "plus",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "D72NUg",
+                              "name": "Main header spacer",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "HVPKU",
+                          "name": "Main Panel Body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "id": "s3I0c",
+                              "type": "ref",
+                              "ref": "XrEDw",
+                              "name": "View Bar",
+                              "width": "fill_container",
+                              "descendants": {
+                                "Js4rH/w7NkD3": {
+                                  "icon": "layers"
+                                },
+                                "Js4rH/k9XlqC": {
+                                  "content": "All workspaces"
+                                },
+                                "Js4rH/D7RWr": {
+                                  "enabled": false
+                                },
+                                "UWfsk/w7NkD3": {
+                                  "icon": "circle-alert"
+                                },
+                                "UWfsk/k9XlqC": {
+                                  "content": "Needs attention"
+                                },
+                                "O10oTj/w7NkD3": {
+                                  "icon": "laptop"
+                                },
+                                "O10oTj/k9XlqC": {
+                                  "content": "This device"
+                                },
+                                "o6x3a": {
+                                  "enabled": false
+                                },
+                                "zsbBi": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  }
+                                },
+                                "zsbBi/Hf4GT": {
+                                  "enabled": false
+                                },
+                                "FjxiE": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Z14o85",
+                              "name": "Workspace list",
+                              "width": "fill_container",
+                              "fill": "#00000000",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "id": "FP6JZ",
+                                  "type": "ref",
+                                  "ref": "c9pxK1",
+                                  "name": "Group · MacBook Pro",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "djgwP": {
+                                      "icon": "chevron-down"
+                                    },
+                                    "k1pJb": {
+                                      "icon": "laptop"
+                                    },
+                                    "m8sbH": {
+                                      "content": "MacBook Pro"
+                                    },
+                                    "kqhmi": {
+                                      "content": "4"
+                                    },
+                                    "XHi6J": {
+                                      "enabled": true
+                                    },
+                                    "j4YBtZ": {
+                                      "enabled": false
+                                    },
+                                    "r3hXmv": {
+                                      "fill": "$ds-success"
+                                    },
+                                    "oLWGm": {
+                                      "content": "Online"
+                                    },
+                                    "Z7tHxo": {
+                                      "enabled": true
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "U7cvb",
+                                  "type": "ref",
+                                  "ref": "w3bZk",
+                                  "name": "PS-784_A1",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "row": "active"
+                                  },
+                                  "descendants": {
+                                    "djUXE": {
+                                      "icon": "loader-circle",
+                                      "fill": "$ds-info"
+                                    },
+                                    "oKLRi": {
+                                      "content": "PS-784_A1"
+                                    },
+                                    "EsaTt": {
+                                      "content": "Show devices and sync status"
+                                    },
+                                    "vDfIe": {
+                                      "enabled": true
+                                    },
+                                    "MJiar/L109Bg": {
+                                      "content": "PS-784"
+                                    },
+                                    "T1tkNK": {
+                                      "theme": {
+                                        "badge": "subtle",
+                                        "palette": "purple"
+                                      }
+                                    },
+                                    "T1tkNK/FaaBK": {
+                                      "content": "Git worktree"
+                                    },
+                                    "KXX3a": {
+                                      "enabled": true,
+                                      "content": "+412"
+                                    },
+                                    "KhA28": {
+                                      "enabled": true,
+                                      "content": "−96"
+                                    },
+                                    "TthhF": {
+                                      "enabled": false
+                                    },
+                                    "U6Map": {
+                                      "content": "12 min"
+                                    },
+                                    "yWMZM": {
+                                      "enabled": true,
+                                      "opacity": 0
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "b0Acx",
+                                  "type": "ref",
+                                  "ref": "w3bZk",
+                                  "name": "PS-826_A1",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "row": "default"
+                                  },
+                                  "descendants": {
+                                    "djUXE": {
+                                      "icon": "circle-alert",
+                                      "fill": "$ds-warning"
+                                    },
+                                    "oKLRi": {
+                                      "content": "PS-826_A1"
+                                    },
+                                    "EsaTt": {
+                                      "content": "Sync sessions to the personal space"
+                                    },
+                                    "vDfIe": {
+                                      "enabled": true
+                                    },
+                                    "MJiar/L109Bg": {
+                                      "content": "PS-826"
+                                    },
+                                    "T1tkNK": {
+                                      "theme": {
+                                        "badge": "subtle",
+                                        "palette": "purple"
+                                      }
+                                    },
+                                    "T1tkNK/FaaBK": {
+                                      "content": "Git worktree"
+                                    },
+                                    "KXX3a": {
+                                      "enabled": true,
+                                      "content": "+1,208"
+                                    },
+                                    "KhA28": {
+                                      "enabled": true,
+                                      "content": "−211"
+                                    },
+                                    "TthhF": {
+                                      "enabled": false
+                                    },
+                                    "U6Map": {
+                                      "content": "48 min"
+                                    },
+                                    "yWMZM": {
+                                      "enabled": true,
+                                      "opacity": 0
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "ZFa0W",
+                                  "type": "ref",
+                                  "ref": "w3bZk",
+                                  "name": "WS-41",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "row": "default"
+                                  },
+                                  "descendants": {
+                                    "djUXE": {
+                                      "icon": "circle-check",
+                                      "fill": "$ds-success"
+                                    },
+                                    "oKLRi": {
+                                      "content": "WS-41"
+                                    },
+                                    "EsaTt": {
+                                      "content": "Resource list renderer designs"
+                                    },
+                                    "vDfIe": {
+                                      "enabled": false
+                                    },
+                                    "MJiar/L109Bg": {
+                                      "content": ""
+                                    },
+                                    "T1tkNK": {
+                                      "theme": {
+                                        "badge": "subtle",
+                                        "palette": "purple"
+                                      }
+                                    },
+                                    "T1tkNK/FaaBK": {
+                                      "content": "Git worktree"
+                                    },
+                                    "KXX3a": {
+                                      "enabled": true,
+                                      "content": "+86"
+                                    },
+                                    "KhA28": {
+                                      "enabled": true,
+                                      "content": "−4"
+                                    },
+                                    "TthhF": {
+                                      "enabled": false
+                                    },
+                                    "U6Map": {
+                                      "content": "3 h"
+                                    },
+                                    "yWMZM": {
+                                      "enabled": true,
+                                      "opacity": 0
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "R0z3vN",
+                                  "type": "ref",
+                                  "ref": "w3bZk",
+                                  "name": "WS-1",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "row": "default"
+                                  },
+                                  "descendants": {
+                                    "djUXE": {
+                                      "icon": "folder",
+                                      "fill": "$ds-fg-subtle"
+                                    },
+                                    "oKLRi": {
+                                      "content": "WS-1"
+                                    },
+                                    "EsaTt": {
+                                      "content": "Project workspace"
+                                    },
+                                    "vDfIe": {
+                                      "enabled": false
+                                    },
+                                    "MJiar/L109Bg": {
+                                      "content": ""
+                                    },
+                                    "T1tkNK": {
+                                      "theme": {
+                                        "badge": "subtle",
+                                        "palette": "gray"
+                                      }
+                                    },
+                                    "T1tkNK/FaaBK": {
+                                      "content": "Project folder"
+                                    },
+                                    "KXX3a": {
+                                      "enabled": false,
+                                      "content": ""
+                                    },
+                                    "KhA28": {
+                                      "enabled": false,
+                                      "content": ""
+                                    },
+                                    "TthhF": {
+                                      "enabled": true
+                                    },
+                                    "U6Map": {
+                                      "content": "3 d"
+                                    },
+                                    "yWMZM": {
+                                      "enabled": true,
+                                      "opacity": 0
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "eglhy",
+                                  "type": "ref",
+                                  "ref": "c9pxK1",
+                                  "name": "Group · Studio iMac",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "djgwP": {
+                                      "icon": "chevron-down"
+                                    },
+                                    "k1pJb": {
+                                      "icon": "monitor"
+                                    },
+                                    "m8sbH": {
+                                      "content": "Studio iMac"
+                                    },
+                                    "kqhmi": {
+                                      "content": "3"
+                                    },
+                                    "XHi6J": {
+                                      "enabled": false
+                                    },
+                                    "j4YBtZ": {
+                                      "enabled": true
+                                    },
+                                    "r3hXmv": {
+                                      "fill": "$ds-success"
+                                    },
+                                    "oLWGm": {
+                                      "content": "Online"
+                                    },
+                                    "Z7tHxo": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "YEbrO",
+                                  "type": "ref",
+                                  "ref": "w3bZk",
+                                  "name": "PS-842_A1",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "row": "default"
+                                  },
+                                  "descendants": {
+                                    "djUXE": {
+                                      "icon": "circle-check",
+                                      "fill": "$ds-success"
+                                    },
+                                    "oKLRi": {
+                                      "content": "PS-842_A1"
+                                    },
+                                    "EsaTt": {
+                                      "content": "Keep resource numbers unique offline"
+                                    },
+                                    "vDfIe": {
+                                      "enabled": true
+                                    },
+                                    "MJiar/L109Bg": {
+                                      "content": "PS-842"
+                                    },
+                                    "T1tkNK": {
+                                      "theme": {
+                                        "badge": "subtle",
+                                        "palette": "purple"
+                                      }
+                                    },
+                                    "T1tkNK/FaaBK": {
+                                      "content": "Git worktree"
+                                    },
+                                    "KXX3a": {
+                                      "enabled": false,
+                                      "content": ""
+                                    },
+                                    "KhA28": {
+                                      "enabled": false,
+                                      "content": ""
+                                    },
+                                    "TthhF": {
+                                      "enabled": true
+                                    },
+                                    "U6Map": {
+                                      "content": "2 h"
+                                    },
+                                    "yWMZM": {
+                                      "enabled": true,
+                                      "opacity": 0
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "nMbLd",
+                                  "type": "ref",
+                                  "ref": "w3bZk",
+                                  "name": "PS-830_A1",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "row": "default"
+                                  },
+                                  "descendants": {
+                                    "djUXE": {
+                                      "icon": "circle-x",
+                                      "fill": "$ds-error"
+                                    },
+                                    "oKLRi": {
+                                      "content": "PS-830_A1"
+                                    },
+                                    "EsaTt": {
+                                      "content": "Keep ticket numbers current after merges"
+                                    },
+                                    "vDfIe": {
+                                      "enabled": true
+                                    },
+                                    "MJiar/L109Bg": {
+                                      "content": "PS-830"
+                                    },
+                                    "T1tkNK": {
+                                      "theme": {
+                                        "badge": "subtle",
+                                        "palette": "purple"
+                                      }
+                                    },
+                                    "T1tkNK/FaaBK": {
+                                      "content": "Git worktree"
+                                    },
+                                    "KXX3a": {
+                                      "enabled": false,
+                                      "content": ""
+                                    },
+                                    "KhA28": {
+                                      "enabled": false,
+                                      "content": ""
+                                    },
+                                    "TthhF": {
+                                      "enabled": true
+                                    },
+                                    "U6Map": {
+                                      "content": "5 h"
+                                    },
+                                    "yWMZM": {
+                                      "enabled": true,
+                                      "opacity": 0
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "EDzFb",
+                                  "type": "ref",
+                                  "ref": "w3bZk",
+                                  "name": "WS-2",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "row": "default"
+                                  },
+                                  "descendants": {
+                                    "djUXE": {
+                                      "icon": "folder",
+                                      "fill": "$ds-fg-subtle"
+                                    },
+                                    "oKLRi": {
+                                      "content": "WS-2"
+                                    },
+                                    "EsaTt": {
+                                      "content": "Project workspace"
+                                    },
+                                    "vDfIe": {
+                                      "enabled": false
+                                    },
+                                    "MJiar/L109Bg": {
+                                      "content": ""
+                                    },
+                                    "T1tkNK": {
+                                      "theme": {
+                                        "badge": "subtle",
+                                        "palette": "gray"
+                                      }
+                                    },
+                                    "T1tkNK/FaaBK": {
+                                      "content": "Project folder"
+                                    },
+                                    "KXX3a": {
+                                      "enabled": false,
+                                      "content": ""
+                                    },
+                                    "KhA28": {
+                                      "enabled": false,
+                                      "content": ""
+                                    },
+                                    "TthhF": {
+                                      "enabled": true
+                                    },
+                                    "U6Map": {
+                                      "content": "2 wk"
+                                    },
+                                    "yWMZM": {
+                                      "enabled": true,
+                                      "opacity": 0
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "k1u2Q",
+                                  "type": "ref",
+                                  "ref": "c9pxK1",
+                                  "name": "Group · Build box",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "djgwP": {
+                                      "icon": "chevron-right"
+                                    },
+                                    "k1pJb": {
+                                      "icon": "server"
+                                    },
+                                    "m8sbH": {
+                                      "content": "Build box"
+                                    },
+                                    "kqhmi": {
+                                      "content": "2"
+                                    },
+                                    "XHi6J": {
+                                      "enabled": false
+                                    },
+                                    "j4YBtZ": {
+                                      "enabled": true
+                                    },
+                                    "r3hXmv": {
+                                      "fill": "$ds-fg-subtle"
+                                    },
+                                    "oLWGm": {
+                                      "content": "Offline · seen 2 d ago"
+                                    },
+                                    "Z7tHxo": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Ra7eI",
+                  "name": "Side Panel",
+                  "clip": true,
+                  "width": 400,
+                  "height": "fill_container",
+                  "fill": "$ds-surface",
+                  "cornerRadius": 8,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "IcxNK",
+                      "name": "Side Panel Header",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "#0E1016",
+                      "stroke": "#2E333F",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
+                      "gap": 5,
+                      "padding": [
+                        0,
+                        10
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "rM8cO",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Session · running",
+                          "theme": {
+                            "size": "sm",
+                            "tab": "active",
+                            "tab-status": "in_progress"
+                          },
+                          "height": 24,
+                          "descendants": {
+                            "w7NkD3": {
+                              "icon": "loader-circle",
+                              "width": 14,
+                              "height": 14
+                            },
+                            "k9XlqC": {
+                              "content": "Session"
+                            },
+                            "g1LJJh": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "id": "lVJho",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Files",
+                          "theme": {
+                            "size": "sm",
+                            "tab": "default",
+                            "tab-status": "none"
+                          },
+                          "height": 24,
+                          "descendants": {
+                            "w7NkD3": {
+                              "icon": "folder",
+                              "width": 14,
+                              "height": 14
+                            },
+                            "k9XlqC": {
+                              "content": "Files"
+                            },
+                            "g1LJJh": {
+                              "enabled": true
+                            }
+                          }
+                        },
+                        {
+                          "id": "YEKP0",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Add Panel",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "width": 24,
+                          "height": 24,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "plus",
+                              "width": 12,
+                              "height": 12
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Gjjmy",
+                          "name": "Side header spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "id": "KyCmU",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Left Menu · collapsed",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "width": 24,
+                          "height": 24,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "paperclip",
+                              "width": 12,
+                              "height": 12
+                            }
+                          }
+                        },
+                        {
+                          "id": "medg1",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Right Menu · collapsed",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "width": 24,
+                          "height": 24,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "sliders-horizontal",
+                              "width": 12,
+                              "height": 12
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "L9nxqW",
+                      "name": "Side Panel Body",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "UoLdj",
+                          "name": "Session Content",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 14,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DaUjg",
+                              "name": "Session status",
+                              "fill": "#F7F8F8",
+                              "content": "PS-784_A1 · Show devices and sync status",
+                              "fontFamily": "Onest",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "aNHxC",
+                              "name": "Session message",
+                              "fill": "#8B9099",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Running on this device. Selecting a row in Workspaces opens that workspace's latest session here.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zPBSd",
+              "name": "Status Bar",
+              "context": "Always full workbench width.",
+              "width": "fill_container",
+              "height": 32,
+              "gap": 14,
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "DTidw",
+                  "name": "main",
+                  "gap": 5,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "W4cmA",
+                      "name": "main icon",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "git-branch",
+                      "library": "lucide",
+                      "fill": "#8B9099"
+                    },
+                    {
+                      "type": "text",
+                      "id": "BcFp5",
+                      "name": "main label",
+                      "fill": "#8B9099",
+                      "content": "main",
+                      "fontFamily": "Inter",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nZUQ5",
+                  "name": "Status spacer",
+                  "width": "fill_container",
+                  "height": 1
                 }
               ]
             }
