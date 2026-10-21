@@ -12,6 +12,9 @@ export const FormulaDemo = deferredComponent(async () => ({
 export const WhatIsPage = deferredComponent(async () => ({
   default: (await import("../components/sections/what-is-prompt-studio-view")).WhatIsPromptStudioView,
 }));
+export const HowItWorksPage = deferredComponent(async () => ({
+  default: (await import("../components/sections/how-does-it-work-view")).HowDoesItWorkView,
+}));
 export const ExamplesPage = deferredComponent(async () => ({
   default: (await import("../components/sections/examples-view")).ExamplesView,
 }));
@@ -36,6 +39,7 @@ export const BACKGROUND_MODULES = [
   AgentDemo,
   FormulaDemo,
   WhatIsPage,
+  HowItWorksPage,
   ExamplesPage,
   FeaturesPage,
   ReadingPage,

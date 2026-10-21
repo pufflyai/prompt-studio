@@ -48,6 +48,14 @@ export const LANDING_PAGES: LandingPage[] = [
     label: VIEW_META["what-is-prompt-studio"].label,
     title: "What is Prompt Studio? | A workbench for your tools",
     description:
+      "Build the small tools your work needs. Describe a useful result, let your coding agent build it, and keep shaping it in a shared workbench.",
+  },
+  {
+    path: "/how-does-it-work/",
+    view: "how-does-it-work",
+    label: VIEW_META["how-does-it-work"].label,
+    title: "How does it work? | Prompt Studio",
+    description:
       "Give the tools you build a place to live. Combine pages, editors, commands, skills, hooks, and workflows in your own workbench.",
   },
   ...TOOL_EXAMPLES.map((example) => ({

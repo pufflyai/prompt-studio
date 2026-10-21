@@ -56,6 +56,15 @@ export const LargeShadersComplete: Story = {
 };
 export const AgentsComplete: Story = {
   args: { view: { example: "agents", parts: ["page", "command", "skill", "hook", "automation"] } },
+  parameters: {
+    docs: { description: { story: "The coding agent panel and kanban board fill the workbench content height." } },
+  },
+};
+export const LargeAgentsComplete: Story = {
+  args: { scale: 1.8, view: { example: "agents", parts: ["page", "command", "skill", "hook", "automation"] } },
+};
+export const AgentPageAdded: Story = {
+  args: { view: { example: "agents", parts: ["page"] } },
 };
 export const NarrowAgentsComplete: Story = {
   args: { scale: 0.5, view: { example: "agents", parts: ["page", "command", "skill", "hook", "automation"] } },

@@ -88,7 +88,12 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
   const pieces = definitions.map(createPiece);
   const grips = new Map<
     string,
-    { piece: PhysicsPiece; target: { x: number; y: number }; momentum: ReturnType<typeof trackDragMomentum> }
+    {
+      piece: PhysicsPiece;
+      target: { x: number; y: number };
+      direction: { x: number; y: number };
+      momentum: ReturnType<typeof trackDragMomentum>;
+    }
   >();
   const createWalls = () => [
     Matter.Bodies.rectangle(size.width / 2, -30, size.width + 120, 60, { isStatic: true }),
@@ -112,6 +117,7 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
     grips.set(piece.id, {
       piece,
       target: { x: point.x, y: point.y },
+      direction: { x: 0, y: 0 },
       momentum: trackDragMomentum(piece.body.position),
     });
   };
@@ -149,7 +155,7 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
       for (const piece of pieces) limitMomentum(piece, grips.has(piece.id));
       Matter.Engine.update(engine, delta / steps);
     }
-    for (const { piece, momentum } of grips.values()) momentum.sample(piece.body.position, delta);
+    for (const { piece, momentum, direction } of grips.values()) momentum.sample(piece.body.position, delta, direction);
   };
   return {
     pieces,
@@ -221,9 +227,8 @@ export const createShapePhysics = (definitions: AssemblyPiece[], initialSize: Fi
         x: Math.max(piece.width / 2, Math.min(size.width - piece.width / 2, point.x)),
         y: Math.max(piece.height / 2, Math.min(size.height - piece.height / 2, point.y)),
       };
-      // A reversed gesture starts a new throw; idle physics ticks must retain the old one.
-      if (Matter.Vector.dot(Matter.Vector.sub(target, grip.target), grip.momentum.velocity()) < 0)
-        grip.momentum.reset(piece.body.position);
+      const direction = Matter.Vector.sub(target, grip.target);
+      if (direction.x || direction.y) grip.direction = direction;
       grip.target = target;
     },
     nudge: (piece: PhysicsPiece, point: AssemblyPosition) => {

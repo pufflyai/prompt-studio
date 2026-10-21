@@ -49,6 +49,8 @@ Fast drags use smaller collision steps along the pointer path so the held shape
 keeps up without skipping neighbouring shapes.
 Throws use the body's actual travel over the last 50 milliseconds, so momentum
 survives gaps between pointer events and physics ticks on high refresh displays.
+A reversed gesture starts a new throw once the body moves in the new direction;
+a final pointer event cannot erase travel before the physics world follows it.
 Pausing before release or cancelling a drag clears that momentum.
 The download links remain clickable above the scene.
 The build description and platform controls reserve their space while downloads
@@ -88,6 +90,8 @@ hides its scrollbars while allowing the animated agents to reveal their controls
 The shader code pane fills its panel's remaining height.
 The icon set editor fills the workbench preview, with its panels stretched to fit.
 The standalone icon editor keeps its content-sized panels.
+The coding agent dashboard and its board also fill the workbench preview. Its
+standalone example retains its fixed board height and session detail.
 The measured download column and the theme's font scaling keep that layout
 aligned on large displays too.
 Shapes keep their original size when inserted,
@@ -149,8 +153,11 @@ palette provide navigation.
 
 ## Product examples
 
-What is Prompt Studio lives at `/what-is-prompt-studio`. Its carousel shows one
-chapter at a time: building blocks, a clean editor, connected tools, and tools
+What is Prompt Studio lives at `/what-is-prompt-studio/`. It explains who the
+workbench is for, small tools people can build, and how people and agents use them.
+It links to getting-started guides and the blog posts behind the idea.
+How does it work follows it in navigation, at `/how-does-it-work/`. Its carousel
+links each chapter to the relevant documentation and shows one chapter at a time: building blocks, a clean editor, connected tools, and tools
 adapted by an agent. A compact chapter tab row stays visible above the content. Both carousels
 advance every eight seconds and wrap to the first chapter. Pointer hover,
 keyboard focus, or a hidden browser tab suspends playback. Selecting a tab

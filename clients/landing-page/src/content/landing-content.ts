@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BadgeCheck, LayoutGrid, PanelsTopLeft, Sparkles } from "lucide-react";
+import { BadgeCheck, CircleHelp, LayoutGrid, PanelsTopLeft, Sparkles } from "lucide-react";
 import { siteMetadata } from "../config/site-metadata";
 
 export const SITE_LINKS = {
@@ -16,6 +16,7 @@ export const SITE_LINKS = {
 export type LandingView =
   | "start"
   | "what-is-prompt-studio"
+  | "how-does-it-work"
   | "examples"
   | "features"
   | "legal"
@@ -25,7 +26,7 @@ export type LandingView =
   | "post";
 
 /** Views the Prompt Studio sidebar lists, in order. */
-export type SidebarView = "start" | "what-is-prompt-studio" | "examples" | "features";
+export type SidebarView = "start" | "what-is-prompt-studio" | "how-does-it-work" | "examples" | "features";
 
 export interface ViewMeta {
   label: string;
@@ -35,8 +36,15 @@ export interface ViewMeta {
 export const VIEW_META: Record<SidebarView, ViewMeta> = {
   start: { label: "Home", icon: Sparkles },
   "what-is-prompt-studio": { label: "What is Prompt Studio", icon: BadgeCheck },
+  "how-does-it-work": { label: "How does it work", icon: CircleHelp },
   examples: { label: "Examples", icon: PanelsTopLeft },
   features: { label: "Features", icon: LayoutGrid },
 };
 
-export const SIDEBAR_VIEWS: SidebarView[] = ["start", "what-is-prompt-studio", "examples", "features"];
+export const SIDEBAR_VIEWS: SidebarView[] = [
+  "start",
+  "what-is-prompt-studio",
+  "how-does-it-work",
+  "examples",
+  "features",
+];

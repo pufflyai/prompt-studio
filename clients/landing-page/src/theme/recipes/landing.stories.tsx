@@ -53,5 +53,6 @@ export const Mobile: Story = {
   ],
 };
 export const WhatIsPromptStudio: Story = { args: { initialPath: "/what-is-prompt-studio/" } };
+export const HowDoesItWork: Story = { args: { initialPath: "/how-does-it-work/" } };
 export const Examples: Story = { args: { initialPath: "/examples/coding-agent-dashboard/" } };
 export const Features: Story = { args: { initialPath: "/features/" } };

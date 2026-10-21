@@ -34,6 +34,7 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
     "shaderControl",
     "extensionPanels",
     "agentBoard",
+    "agentDashboard",
   ],
   base: {
     agentBoard: { height: "96", minWidth: 0 },
@@ -217,7 +218,12 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
         shaderControl: { gap: "xs" },
         session: { p: "sm", gap: "xs" },
         sessions: { gap: "xs" },
-        agentBoard: { height: "64", zoom: 0.72 },
+        agentDashboard: {
+          height: "full",
+          minHeight: 0,
+          "& > [data-demo-part=page]": { height: "full", minHeight: 0, maxHeight: "none" },
+        },
+        agentBoard: { height: "auto", flex: 1, minHeight: 0, zoom: 0.72 },
       },
     },
   },
