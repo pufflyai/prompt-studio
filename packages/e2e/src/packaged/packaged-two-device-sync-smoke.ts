@@ -178,6 +178,11 @@ export const registerTwoDeviceSyncSmokeTests = () =>
         );
         expect(history.current).toEqual({ state: "synced", offlineReady: true });
         expect(history.events).toEqual(expect.arrayContaining(["local", "offline", "synced"]));
+        // Reconnecting after the first download catches up; it never reports the first download again.
+        const firstSynced = history.events.indexOf("synced");
+        const madeLocal = history.events.indexOf("local", firstSynced);
+        expect(history.events.slice(firstSynced, madeLocal)).toContain("offline");
+        expect(history.events.slice(firstSynced, madeLocal)).not.toContain("first-download-incomplete");
       } finally {
         await stopProcess(first.host.child);
         await stopProcess(second.host.child);

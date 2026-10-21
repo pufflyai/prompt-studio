@@ -1,8 +1,8 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createNativeAccount } from "./native-account";
+import { AccountRequestError, createNativeAccount } from "./native-account";
 import { createAccountHostFixture } from "./native-host.fixture";
 
 const login = (deviceId: string) => ({
@@ -108,7 +108,6 @@ test("an offline account lookup never labels an unknown Cloud project local-only
 });
 
 test("an existing project starts syncing after another device enables Cloud", async () => {
-  const { spyOn } = await import("bun:test");
   const realTimeout = setTimeout;
   let nextRefresh: (() => void) | undefined;
   const clock = spyOn(globalThis, "setTimeout").mockImplementation(((...args: Parameters<typeof setTimeout>) => {
@@ -142,10 +141,13 @@ test("an existing project starts syncing after another device enables Cloud", as
   });
   let synced: string[] = [];
   const discovered = Promise.withResolvers<void>();
-  account.start(async (connections) => {
-    synced = connections.map((entry) => entry.workbenchId);
-    if (synced.length) discovered.resolve();
-  });
+  account.start(
+    async (connections) => {
+      synced = connections.map((entry) => entry.workbenchId);
+      if (synced.length) discovered.resolve();
+    },
+    async () => ({ state: "synced", offlineReady: true }),
+  );
   try {
     await account.refresh();
     expect(synced).toEqual([]);
@@ -162,6 +164,27 @@ test("an existing project starts syncing after another device enables Cloud", as
     account.close();
     clock.mockRestore();
     await manager.stop(true);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("signing in with an address that is not an https account service explains the problem", async () => {
+  const root = await mkdtemp(join(tmpdir(), "native-account-origin-"));
+  const account = createNativeAccount({
+    file: join(root, "native-account.json"),
+    environment: { get: async () => ({ environmentId: "device" }) },
+    projects: {
+      get: async () => {
+        throw new Error("Signing in reads no project");
+      },
+    },
+  });
+  try {
+    const failure = await account.login("http://accounts.example.test").catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(AccountRequestError);
+    expect((failure as Error).message).toContain("https");
+  } finally {
+    account.close();
     await rm(root, { recursive: true, force: true });
   }
 });

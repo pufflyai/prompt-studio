@@ -1,13 +1,20 @@
 import { expect, test } from "bun:test";
 import { projectSyncStatus } from "./project-status";
 
-const ready = { downloaded: true, pending: false, needsAttention: false, connected: true, busy: false };
+const ready = {
+  firstDownloaded: true,
+  downloaded: true,
+  pending: false,
+  needsAttention: false,
+  connected: true,
+  busy: false,
+};
 test("a project cannot be synced or ready offline while any document is missing", () => {
-  expect(projectSyncStatus([ready, { ...ready, downloaded: false }])).toEqual({
+  expect(projectSyncStatus([ready, { ...ready, firstDownloaded: false, downloaded: false }])).toEqual({
     state: "first-download-incomplete",
     offlineReady: false,
   });
-  expect(projectSyncStatus([{ ...ready, connected: false, downloaded: false }]).state).toBe(
+  expect(projectSyncStatus([{ ...ready, connected: false, firstDownloaded: false, downloaded: false }]).state).toBe(
     "first-download-incomplete",
   );
 });
@@ -20,4 +27,9 @@ test("project sync state comes from the document and transport owners", () => {
     state: "needs-attention",
     offlineReady: false,
   });
+});
+test("catching up after the first download waits to sync instead of restarting the first download", () => {
+  const catchingUp = { ...ready, downloaded: false };
+  expect(projectSyncStatus([catchingUp])).toEqual({ state: "waiting-to-sync", offlineReady: false });
+  expect(projectSyncStatus([{ ...catchingUp, connected: false }])).toEqual({ state: "offline", offlineReady: false });
 });

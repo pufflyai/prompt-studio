@@ -1,12 +1,12 @@
 import type { ProjectSyncStatus } from "pstdio-api-contracts";
 
 // Owners signal that a status may have changed. Reads run one at a time, and only a changed
-// derived status is published, so frequent local saves do not flood extension events.
+// derived status is published, so frequent local saves and host starts do not flood extension events.
 export const createProjectSyncEvents = (input: {
   status: (projectId: string) => Promise<ProjectSyncStatus>;
   publish: (projectId: string, status: ProjectSyncStatus) => void;
 }) => {
-  const published = new Map<string, string>();
+  const known = new Map<string, string>();
   const dirty = new Set<string>();
   let running: Promise<void> | undefined;
   let closed = false;
@@ -16,15 +16,16 @@ export const createProjectSyncEvents = (input: {
         if (closed) return;
         dirty.delete(projectId);
         const status = await input.status(projectId).catch(() => null);
-        // A project that cannot be read now (for example, deleted) publishes again once it can.
+        // A project that cannot be read now, for example a deleted one, starts again from its next read.
         if (!status) {
-          published.delete(projectId);
+          known.delete(projectId);
           continue;
         }
         const key = JSON.stringify(status);
-        if (closed || published.get(projectId) === key) continue;
-        published.set(projectId, key);
-        input.publish(projectId, status);
+        const previous = known.get(projectId);
+        known.set(projectId, key);
+        // The first read is where extensions start; they read it themselves. Later differences are changes.
+        if (!closed && previous !== undefined && previous !== key) input.publish(projectId, status);
       }
     } finally {
       running = undefined;

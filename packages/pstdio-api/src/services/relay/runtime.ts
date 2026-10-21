@@ -41,7 +41,10 @@ export const startRelayRuntime = async (input: {
       projectId: workbenchId,
       eventId: "pstdio.event.storage-changed",
     });
-  const statusChanged = (workbenchId: string) => input.statusChanged?.(workbenchId);
+  // Shutdown closes every connection. That is not a status change to announce.
+  const statusChanged = (workbenchId: string) => {
+    if (!controller.signal.aborted) input.statusChanged?.(workbenchId);
+  };
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
     if (!resourceConnections.has(workbenchId))
@@ -146,7 +149,14 @@ export const startRelayRuntime = async (input: {
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
         ),
       ];
-      const missing = { downloaded: false, pending: false, needsAttention: false, connected: false, busy: false };
+      const missing = {
+        firstDownloaded: false,
+        downloaded: false,
+        pending: false,
+        needsAttention: false,
+        connected: false,
+        busy: false,
+      };
       return projectSyncStatus(await Promise.all(owners.map((owner) => owner?.status() ?? missing)));
     },
     // Replaces the synced workbenches. Only workbenches whose login changed restart their connections.

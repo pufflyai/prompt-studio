@@ -311,7 +311,7 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 
 | Method | What it does |
 | --- | --- |
-| `ctx.account.status()` | Returns `{ login, cloudProjects, cloudProjectsLoaded }`. `login` is `null` when this device is signed out. `cloudProjectsLoaded` stays `false` until the account service answered for this login. |
+| `ctx.account.status()` | Returns `{ login, cloudProjects, cloudProjectsLoaded }`. `login` is `null` when this device is signed out; otherwise it has the account and device IDs, the service addresses, and the signed-in `email`. `cloudProjectsLoaded` stays `false` until the account service answered for this login. |
 | `ctx.account.login(managerOrigin)` | Starts a native browser sign-in with the given account service and returns `{ id, url }`. Open `url` in a browser on the computer that runs Prompt Studio. |
 | `ctx.account.loginStatus(id)` | Returns `pending`, `complete`, or `failed`. |
 | `ctx.account.cancelLogin(id)` | Cancels a pending sign-in and returns `failed`. A sign-in that already finished returns `complete`. |
@@ -331,18 +331,16 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 | `waiting-to-sync` | Saved local changes have not reached Cloud yet, or a sync run is still working. |
 | `synced` | Every known document and required file is on this device, and saved changes have reached Cloud. |
 | `offline` | The Cloud connection is lost, or the account service has not confirmed which projects sync. Work continues locally. |
-| `first-download-incomplete` | Some documents or files are not on this device yet. |
+| `first-download-incomplete` | The first download since the relay connection started has not finished, so some documents or files may not be on this device yet. |
 | `needs-attention` | Some encrypted data could not be read. Healthy updates continue. |
 
-`offlineReady` is `true` only when every known document and required file was verified on this device. The host never reports `synced` or `offlineReady` while content is missing. An incomplete download stays `first-download-incomplete` when the connection drops.
+`offlineReady` is `true` only when every known document and required file was verified on this device. The host never reports `synced` or `offlineReady` while content is missing. An incomplete first download stays `first-download-incomplete` when the connection drops. Later downloads, such as catching up after a reconnect, report `waiting-to-sync` with `offlineReady` set to `false` until they finish. The first download starts again when the runtime restarts or a project starts syncing again.
 
 Stopping and restarting sync are account-wide. Stopping keeps the project keys, the encrypted Cloud data, and each device's local copy. Edits made on several devices while the project is local merge when it syncs again.
 
-Listen to `accountEvents.projectSyncChanged` from `@pstdio/sdk/extensions` for changes. The host sends it for one project only when that project's `state` or `offlineReady` changes. The payload is `{ projectId, state, offlineReady }`. Webviews receive only the event ID, so read the status again.
+Listen to `accountEvents.projectSyncChanged` from `@pstdio/sdk/extensions` for changes. The host sends it for one project only when that project's `state` or `offlineReady` changes. Read the status once when the extension starts; the first value is not announced. The payload is `{ projectId, state, offlineReady }`. Webviews receive only the event ID, so read the status again.
 
 Account service failures reach the extension as a generic message, so private service details stay in the host. Device presence comes from the account service: a signed-in runtime sends a heartbeat every 15 seconds, and `online` means the service heard from the device within the last 45 seconds.
-
-The account status does not include an early access flag yet.
 
 ### Agent skill folders
 

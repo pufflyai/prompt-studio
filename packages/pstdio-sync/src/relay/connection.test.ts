@@ -115,9 +115,7 @@ test("separate wakes on one connection reuse the attempt signal", async () => {
 
 test("transport status follows the socket through offline and back and signals each change", async () => {
   const controller = new AbortController();
-  let opened = 0;
   let socket: Bun.ServerWebSocket<unknown> | undefined;
-  const reconnected = Promise.withResolvers<void>();
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -127,41 +125,50 @@ test("transport status follows the socket through offline and back and signals e
     },
     websocket: {
       open(client) {
-        opened++;
         socket = client;
         client.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
-        if (opened === 2) reconnected.resolve();
       },
       message() {},
     },
   });
   const changes: { connected: boolean; busy: boolean }[] = [];
-  const firstRun = Promise.withResolvers<void>();
+  let signalled = () => {};
+  const signal = (count: number) => {
+    const reached = Promise.withResolvers<void>();
+    signalled = () => {
+      if (changes.length >= count) reached.resolve();
+    };
+    signalled();
+    return reached.promise;
+  };
   const connection = createRelayConnection({
     origin: server.url.origin,
     scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
     access: async () => ({ token: "fixture-access", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
     signal: controller.signal,
-    synchronize: async () => {
-      firstRun.resolve();
+    synchronize: async () => {},
+    onStatusChange: () => {
+      changes.push(connection.status());
+      signalled();
     },
-    onStatusChange: () => changes.push(connection.status()),
   });
   try {
-    await firstRun.promise;
-    await Bun.sleep(10);
-    expect(changes[0]).toEqual({ connected: true, busy: false });
-    expect(changes.at(-1)).toEqual({ connected: true, busy: false });
-    const signalled = changes.length;
+    // Opening the socket, then the end of the first run.
+    await signal(2);
+    expect(changes).toEqual([
+      { connected: true, busy: false },
+      { connected: true, busy: false },
+    ]);
     // A closed socket is how the relay looks when the network drops.
     socket?.close();
-    await Bun.sleep(50);
-    expect(changes.slice(signalled)).toContainEqual({ connected: false, busy: false });
-    expect(connection.status().connected).toBe(false);
-    await reconnected.promise;
-    await Bun.sleep(10);
-    expect(connection.status().connected).toBe(true);
-    expect(changes.at(-1)?.connected).toBe(true);
+    await signal(3);
+    expect(changes[2]).toEqual({ connected: false, busy: false });
+    // The connection retries, opens again and runs once more.
+    await signal(5);
+    expect(changes.slice(3)).toEqual([
+      { connected: true, busy: false },
+      { connected: true, busy: false },
+    ]);
   } finally {
     controller.abort();
     await server.stop(true);

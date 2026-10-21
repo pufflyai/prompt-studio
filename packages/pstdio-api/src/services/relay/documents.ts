@@ -12,6 +12,8 @@ export const createExtensionDocumentSync = (input: {
 }) => {
   let attempt: AbortSignal | undefined;
   let generation: number | undefined;
+  // Each reconnect replaces the document syncs. The first download stays done for this owner.
+  let firstDownloaded = false;
   const documents = new Map<string, ReturnType<typeof createDocumentSync>>();
   const close = () => {
     for (const document of documents.values()) document.close();
@@ -25,6 +27,7 @@ export const createExtensionDocumentSync = (input: {
         [...new Set(["records", ...names])].map((name) => documents.get(name)?.status()),
       );
       return {
+        firstDownloaded,
         downloaded: statuses.every((status) => status?.downloaded),
         pending: statuses.some((status) => status?.pending),
         needsAttention: statuses.some((status) => status?.needsAttention),
@@ -70,6 +73,8 @@ export const createExtensionDocumentSync = (input: {
       await synchronize("records");
       for (const name of await deps.extensionStorageService.documents.list(owner))
         if (name !== "records") await synchronize(name);
+      const statuses = await Promise.all([...documents.values()].map((sync) => sync.status()));
+      if (statuses.every((status) => status.downloaded)) firstDownloaded = true;
     },
   };
 };

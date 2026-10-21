@@ -13,7 +13,7 @@ export interface AccountStatus {
   /** Cloud projects of the account. This device syncs the ones that exist on it. */
   cloudProjects: string[];
   /** False until this login's Cloud project list has been read from the account service. */
-  cloudProjectsLoaded?: boolean;
+  cloudProjectsLoaded: boolean;
 }
 
 export interface AccountDevice {

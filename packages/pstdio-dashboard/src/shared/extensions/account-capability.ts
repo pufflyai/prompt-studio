@@ -3,7 +3,7 @@ import type { ExtensionAccountApi } from "pstdio-api-contracts/extension-kernel"
 import { getApiClient } from "@/lib/api";
 
 // Webview account calls use the runtime's account routes, the same owner as `ctx.account`.
-export const createAccountCapability = (projectId: string, client: Pick<PstdioClient, "account"> = getApiClient()) =>
+export const createAccountAdapter = (projectId: string, client: Pick<PstdioClient, "account"> = getApiClient()) =>
   ({
     status: () => client.account.status(),
     login: (managerOrigin) => client.account.login(managerOrigin),

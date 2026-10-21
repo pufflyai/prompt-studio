@@ -54,7 +54,8 @@ export const createNativeAccount = (input: {
   const projectsFor = (login: DeviceLogin | null) =>
     login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
-  let projectStatus: (projectId: string) => Promise<ProjectSyncStatus> = async () => ({
+  // Until the relay runtime starts, no sync owner has downloaded anything in this run.
+  let projectStatus = async (_projectId: string): Promise<ProjectSyncStatus> => ({
     state: "first-download-incomplete",
     offlineReady: false,
   });
@@ -186,14 +187,19 @@ export const createNativeAccount = (input: {
   };
 
   return {
-    start(relay: (connections: RelayWorkbench[]) => Promise<void>, status?: typeof projectStatus) {
+    start(relay: (connections: RelayWorkbench[]) => Promise<void>, status: typeof projectStatus) {
       update = relay;
-      if (status) projectStatus = status;
+      projectStatus = status;
       void refresh();
     },
     refresh,
     async login(managerOrigin: string) {
-      const origin = managerOriginSchema.parse(managerOrigin);
+      const parsed = managerOriginSchema.safeParse(managerOrigin);
+      if (!parsed.success)
+        throw new AccountRequestError(
+          "Use the https address of an account service, such as https://accounts.example.test.",
+        );
+      const origin = parsed.data;
       for (const [id, login] of logins)
         if (login.status() !== "pending") {
           login.close();

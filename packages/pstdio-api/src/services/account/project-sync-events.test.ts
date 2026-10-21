@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { ProjectSyncStatus } from "pstdio-api-contracts";
 import { createProjectSyncEvents } from "./project-sync-events";
 
-test("a project's sync event fires only when its derived status changes", async () => {
+test("a project's sync event fires only when its derived status changes from the first one read", async () => {
   const states = new Map<string, ProjectSyncStatus>([
     ["cloud", { state: "first-download-incomplete", offlineReady: false }],
     ["local", { state: "local", offlineReady: false }],
@@ -13,18 +13,17 @@ test("a project's sync event fires only when its derived status changes", async 
     publish: (projectId, status) => published.push([projectId, status]),
   });
 
+  // The first read is the starting point that extensions read themselves, so it is not announced.
   await events.changed("cloud");
   await events.changed("local");
   await events.changed("cloud");
-  expect(published).toEqual([
-    ["cloud", { state: "first-download-incomplete", offlineReady: false }],
-    ["local", { state: "local", offlineReady: false }],
-  ]);
+  expect(published).toEqual([]);
 
   states.set("cloud", { state: "synced", offlineReady: true });
   await events.changed("cloud");
-  expect(published.at(-1)).toEqual(["cloud", { state: "synced", offlineReady: true }]);
-  expect(published).toHaveLength(3);
+  await events.changed("cloud");
+  await events.changed("local");
+  expect(published).toEqual([["cloud", { state: "synced", offlineReady: true }]]);
 });
 
 test("signals that arrive during a status read are coalesced into one more read", async () => {

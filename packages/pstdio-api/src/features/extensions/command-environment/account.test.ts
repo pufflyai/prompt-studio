@@ -8,10 +8,22 @@ import { createWorkspaceContextFixture } from "../workspace-context.test-fixture
 
 let fixture: Awaited<ReturnType<typeof createWorkspaceContextFixture>>;
 let account: ReturnType<typeof createNativeAccount>;
+let file: string;
+// Nothing listens on port 1, so the account service is unreachable.
+const unreachableLogin = {
+  login: {
+    managerOrigin: "https://127.0.0.1:1",
+    relayOrigin: "https://127.0.0.1:1",
+    accountId: "account",
+    deviceId: "device",
+    token: "device-credential",
+  },
+};
 beforeEach(async () => {
   fixture = await createWorkspaceContextFixture();
+  file = join(fixture.root, "native-account.json");
   account = createNativeAccount({
-    file: join(fixture.root, "native-account.json"),
+    file,
     environment: { get: async () => ({ environmentId: "device" }) },
     projects: fixture.deps.projectService,
   });
@@ -33,7 +45,7 @@ test("an extension receives a project sync change and reads the same state from 
     sourcePath: fixture.root,
     eventId: accountEvents.projectSyncChanged.id,
     handler: async (ctx, event) => {
-      received.push({ event, read: await ctx.account.projectSyncStatus(), status: await ctx.account.status() });
+      received.push({ event, read: await ctx.account.projectSyncStatus() });
     },
   });
   const deliveries: Promise<unknown>[] = [];
@@ -44,19 +56,22 @@ test("an extension receives a project sync change and reads the same state from 
   });
 
   await events.changed("project-1");
+  expect(await account.projectSyncStatus("project-1")).toEqual({ state: "local", offlineReady: false });
+  // Signing in while the account service cannot say which projects sync leaves the project offline.
+  await Bun.write(file, JSON.stringify(unreachableLogin));
   await events.changed("project-1");
   await Promise.all(deliveries);
 
   expect(received).toEqual([
     {
-      event: expect.objectContaining({ projectId: "project-1", state: "local", offlineReady: false }),
-      read: { state: "local", offlineReady: false },
-      status: { login: null, cloudProjects: [], cloudProjectsLoaded: true },
+      event: expect.objectContaining({ projectId: "project-1", state: "offline", offlineReady: false }),
+      read: { state: "offline", offlineReady: false },
     },
   ]);
 });
 
 test("account service failures reach extensions without private service details", async () => {
+  await Bun.write(file, JSON.stringify(unreachableLogin));
   const deps = { ...fixture.deps, accountService: account };
   const snapshot = await deps.extensionRuntimeCatalog.get("project-1");
   let failure: unknown;
@@ -68,7 +83,7 @@ test("account service failures reach extensions without private service details"
     sourcePath: fixture.root,
     eventId: "project.opened",
     handler: async (ctx) => {
-      failure = await ctx.account.login("not a service address").catch((error: Error) => error.message);
+      failure = await ctx.account.devices().catch((error: Error) => error.message);
     },
   });
 

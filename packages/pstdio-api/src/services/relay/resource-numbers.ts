@@ -36,6 +36,8 @@ export const startResourceNumberSync = (input: {
   let sync: ReturnType<typeof createDocumentSync> | undefined;
   let attempt: AbortSignal | undefined;
   let generation: number | undefined;
+  // Each reconnect replaces the document sync. The first download stays done.
+  let firstDownloaded = false;
   const connection = createDocumentRelayConnection({
     origin: config.relayOrigin,
     projectId: config.workbenchId,
@@ -68,6 +70,7 @@ export const startResourceNumberSync = (input: {
         generation = space.generation;
       }
       await sync.synchronize();
+      if ((await sync.status()).downloaded) firstDownloaded = true;
     },
     onError: () =>
       apiLogger.warn(
@@ -87,6 +90,7 @@ export const startResourceNumberSync = (input: {
       sync?.close();
     }),
     status: async () => ({
+      firstDownloaded,
       ...((await sync?.status()) ?? { downloaded: false, pending: false, needsAttention: false }),
       ...connection.status(),
     }),

@@ -70,7 +70,9 @@ These checks use owned provider and session fixtures. They do not prove live Goo
 
 The document owner verifies blob bytes before marking a download complete. Status compares durable local edits against the relay replica, so later local changes stop reporting synced. The project aggregate waits for the core resource numbers and for every enabled extension's records document and discovered text documents. Quarantined data reports needs attention. A missing account project list is unknown, rather than evidence that every project is local-only.
 
-The relay owners signal when a connection opens or closes, when a sync run ends, and when local storage changes. Account changes signal every project. The host then reads each signalled project's status again and sends `accountEvents.projectSyncChanged` only when the status differs from the last one it sent.
+The relay owners signal when a connection opens or closes, when a sync run ends, and when local storage changes. Account changes signal every project. The host then reads each signalled project's status again and sends `accountEvents.projectSyncChanged` only when the status differs from the last one it read. The first read of each project is not announced, so a runtime start does not send an event to every project. Signals stop when the relay runtime closes.
+
+Each document and resource-number owner remembers that it finished its first download, so a reconnect reports `waiting-to-sync` instead of `first-download-incomplete`. The memory lasts for the owner's relay connection. A runtime restart, or making a project local and syncing it again, starts a new first download.
 
 The native account owner sends `POST /v1/devices/presence` every 15 seconds, even without a Cloud project. The account manager updates its existing `lastSeenAt`; device lists derive `online` from that timestamp and a 45-second lease using the database clock. A successful login or access renewal also proves contact. No separate stored online flag or new table is needed. Removal rejects future heartbeats; logout stops them. Other manager replicas see the same presence because PostgreSQL owns the timestamp.
 
