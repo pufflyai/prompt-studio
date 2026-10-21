@@ -15,7 +15,6 @@ export const expectPackagedChatHistory = async (page: Page, sessionId: string) =
           };
         }
       ).__pstdioDashboardWorkbench;
-      // Reload finishes loading the document before the dashboard initializes its workbench.
       if (!workbench) return false;
       const placement = workbench.host.getOpenPlacements().find((entry) => entry.resource?.id === id);
       return Boolean(placement && workbench.host.getOpenPlacementIds().has(placement.widgetId));
