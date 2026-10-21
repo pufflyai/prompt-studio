@@ -3,6 +3,7 @@ import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
+import { createWorkbenchEditingSessionAdapter } from "./webview-editing-session";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
 import { createWebviewResourceActions } from "./webview-resource-actions";
 
@@ -21,6 +22,7 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
   return {
     resourceActions: createWebviewResourceActions(workbench, projectId, hostEvents),
     hostEvents,
+    editing: createWorkbenchEditingSessionAdapter(input),
     executeCommand: async (request, signal) => ({
       outcome: {
         ok: true,

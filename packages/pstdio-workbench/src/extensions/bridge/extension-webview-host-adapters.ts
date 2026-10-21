@@ -7,6 +7,8 @@ import type {
   PageLocation,
   WebviewArtifactsReadParams,
   WebviewCommandsExecuteParams,
+  WebviewEditingSessionParams,
+  WebviewEditingSnapshot,
   WebviewExtensionSettingSetParams,
   WebviewFilesDeleteParams,
   WebviewFilesListParams,
@@ -64,6 +66,12 @@ export interface ExtensionWebviewHostAdapters {
   streamCommand?(input: WebviewCommandsExecuteParams, signal: AbortSignal): AsyncIterable<CommandStreamClientEvent>;
   commandCompleted?(response: CommandExecutionResult): void;
   hostEvents?: HostEventPublisher;
+  editing?: {
+    request(
+      input: WebviewEditingSessionParams,
+      execute: (input: WebviewCommandsExecuteParams) => Promise<unknown>,
+    ): Promise<WebviewEditingSnapshot | undefined>;
+  };
   navigation?: { open(target: NavigationTarget): MaybePromise<unknown> };
   pageParams?: { update(params: WebviewPageParamsUpdateParams["params"]): MaybePromise<PageLocation> };
   placement?: { close(): MaybePromise<void> };

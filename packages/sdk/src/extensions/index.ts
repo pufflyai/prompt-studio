@@ -24,8 +24,10 @@ export type {
   WorktreeRemovedPayload,
 } from "pstdio-api-contracts/extension-kernel";
 export {
+  applyEditingChanges,
   DEFAULT_DATA_TABLE_SETTINGS,
   defineSlot,
+  diffEditingState,
   dockedWorkbenchRegions,
   EXTENSION_API_VERSION,
   extensionPanelRegions,
@@ -43,6 +45,7 @@ export {
   packageAsset,
   projectEvents,
   projectSlots,
+  rebaseEditingChanges,
   resourceEvents,
   sessionEvents,
   sessionSlots,
@@ -133,6 +136,12 @@ export {
   type WebviewCommandsClient,
   type WebviewSettingsClient,
 } from "./webview-client";
+export type {
+  EditingSessionOptions,
+  EditingSnapshot,
+  WebviewEditingClient,
+  WebviewEditingSession,
+} from "./webview-editing";
 export { EXTENSION_EVENTS_SCOPE, type WebviewEventsClient, type WebviewExtensionEvent } from "./webview-events";
 export { matchesResourceWhen } from "./when";
 export const projectPrefix = () => ({ $prefix: "project" as const });

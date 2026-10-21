@@ -27,6 +27,7 @@ export {
   localContributionIdPattern,
 } from "./contribution-id";
 export { resolveDataTableComparableValue, resolveDataTableFieldKind } from "./data-table-values";
+export { applyEditingChanges, diffEditingState, rebaseEditingChanges } from "./editing-state";
 export * from "./event-reference";
 export type {
   CommitPayload,

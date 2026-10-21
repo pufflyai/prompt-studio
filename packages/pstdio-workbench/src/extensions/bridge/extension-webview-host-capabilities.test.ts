@@ -6,6 +6,7 @@ const requests = {
   "harnesses.read": {},
   "resources.actions": { operation: "list", resource: { type: "ticket", id: "one" } },
   "commands.execute": { commandId: "notes.read" },
+  "editing.session": { operation: "close", sessionId: "editor" },
   "commands.stream": { operation: "cancel", streamId: "stream" },
   "navigation.open": { target: { kind: "page", page: { kind: "page", id: "notes" } } },
   "page.params.update": { params: {} },

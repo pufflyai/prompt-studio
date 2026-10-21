@@ -31,5 +31,6 @@ export type * from "./tree-renderer";
 export type * from "./view-toolbar-action";
 export type * from "./views";
 export * from "./webview-capabilities";
+export type * from "./webview-editing";
 export type * from "./webview-host-props";
 export type * from "./workspaces";
