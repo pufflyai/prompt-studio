@@ -158087,7 +158087,7 @@
                   "x": 0,
                   "y": 0,
                   "name": "Full panel hover overlay",
-                  "context": "Shared panel tab drop overlay: 4% accent fill, 1 px accent outline, full panel bounds, pointer-transparent, shown only for the hovered valid destination.",
+                  "context": "Full rounded target outline and subtle accent fill. Pin-on-drop preserves the destination preview; insertion marker only, no dropzone text.",
                   "reusable": true,
                   "width": 568,
                   "height": 180,
@@ -158115,19 +158115,7 @@
                   "stroke": "$ds-accent",
                   "strokeWidth": 1,
                   "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "LS4yC",
-                      "name": "Drop guidance",
-                      "fill": "$ds-fg-muted",
-                      "content": "Drop here to add a tab",
-                      "fontFamily": "$font-body",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
-                    }
-                  ]
+                  "alignItems": "center"
                 },
                 {
                   "type": "text",
@@ -193647,6 +193635,283 @@
                   }
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "W0fN8d",
+      "x": 55830,
+      "y": 0,
+      "name": "PS-796 · Shared panel placement and closed edges",
+      "context": "Closed panel tab targets appear only near the pointer. The selected rounded slot reserves layout space just like a whole-panel target; it never covers content. Invisible hit areas use stable owning boundaries, so preview resizing does not change the nearest edge at corners. Only one outline is visible. Leaving the edge restores content size. Hover and cancellation preserve saved placement; successful drops open the chosen edge. Main moves only beside an open Bottom. Dragging the sole tab of an open Side or Bottom also offers the opposite permitted edge. Its slot reserves space and owns the only active outline. A successful drop moves the same panel and pins the tab; cancellation keeps its placement and retention. Multiple-tab and fixed panels do not offer an alternate edge for their own tab.",
+      "width": 940,
+      "height": 480,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "UAdoc",
+          "name": "Placement rules",
+          "fill": "$ds-fg",
+          "content": "Tab insertion · nearby slot takes space · one stable outline · Main moves beside open Bottom",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "Z3GAG7",
+          "name": "Closed eligible panel edge targets",
+          "width": "fill_container",
+          "height": 320,
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "rvkzF",
+              "name": "light · Closed Side and Bottom edges",
+              "context": "Closed panel tab targets appear only near the pointer. The selected rounded slot reserves layout space just like a whole-panel target; it never covers content. Invisible hit areas use stable owning boundaries, so preview resizing does not change the nearest edge at corners. Only one outline is visible. Leaving the edge restores content size. Hover and cancellation preserve saved placement; successful drops open the chosen edge. Main moves only beside an open Bottom.",
+              "theme": {
+                "mode": "light"
+              },
+              "width": 430,
+              "height": 320,
+              "fill": "$ds-bg",
+              "cornerRadius": 4,
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "HIE0E",
+                  "name": "Navigation",
+                  "width": 72,
+                  "height": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 4
+                },
+                {
+                  "type": "frame",
+                  "id": "xZ6ge",
+                  "name": "Side insertion target · selected",
+                  "width": 48,
+                  "height": "fill_container",
+                  "padding": 2,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "fCVyw",
+                      "name": "Selected target",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "opacity": 0.2,
+                        "rotation": 0,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "$ds-accent",
+                            "position": 0
+                          },
+                          {
+                            "color": "$ds-accent",
+                            "position": 1
+                          }
+                        ]
+                      },
+                      "cornerRadius": 6,
+                      "stroke": "$ds-accent",
+                      "strokeWidth": 1,
+                      "justifyContent": "center",
+                      "alignItems": "center"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "UU9Rz",
+                  "name": "Main and Bottom",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "frfOR",
+                      "name": "Main content",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 4
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "EnM65",
+              "name": "dark · Closed Side and Bottom edges",
+              "context": "Closed panel tab targets appear only near the pointer. The selected rounded slot reserves layout space just like a whole-panel target; it never covers content. Invisible hit areas use stable owning boundaries, so preview resizing does not change the nearest edge at corners. Only one outline is visible. Leaving the edge restores content size. Hover and cancellation preserve saved placement; successful drops open the chosen edge. Main moves only beside an open Bottom.",
+              "theme": {
+                "mode": "dark"
+              },
+              "width": 430,
+              "height": 320,
+              "fill": "$ds-bg",
+              "cornerRadius": 4,
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "XnHP7",
+                  "name": "Navigation",
+                  "width": 72,
+                  "height": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 4
+                },
+                {
+                  "type": "frame",
+                  "id": "ZWqyK",
+                  "name": "Side insertion target · selected",
+                  "width": 48,
+                  "height": "fill_container",
+                  "padding": 2,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "o2loR",
+                      "name": "Selected target",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "opacity": 0.2,
+                        "rotation": 0,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "$ds-accent",
+                            "position": 0
+                          },
+                          {
+                            "color": "$ds-accent",
+                            "position": 1
+                          }
+                        ]
+                      },
+                      "cornerRadius": 6,
+                      "stroke": "$ds-accent",
+                      "strokeWidth": 1,
+                      "justifyContent": "center",
+                      "alignItems": "center"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ftwZH",
+                  "name": "Main and Bottom",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nAqyQ",
+                      "name": "Main content",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 4
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "dKI0B",
+          "name": "Navigation toggle orientations",
+          "width": "fill_container",
+          "gap": 16,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Uxvqu",
+              "name": "Left position",
+              "fill": "$ds-fg",
+              "content": "Navigation left",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "JHp6i",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Navigation toggle · left",
+              "theme": {
+                "btn": "ghost",
+                "size": "sm"
+              },
+              "width": 32,
+              "height": 32,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "list-tree"
+                }
+              }
+            },
+            {
+              "type": "text",
+              "id": "R0tEP",
+              "name": "Right position",
+              "fill": "$ds-fg",
+              "content": "Navigation right",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "wl24n",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Navigation toggle · right",
+              "theme": {
+                "btn": "ghost",
+                "size": "sm"
+              },
+              "width": 32,
+              "height": 32,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "list-tree",
+                  "flipX": true
+                }
+              }
             }
           ]
         }

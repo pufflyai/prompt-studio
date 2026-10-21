@@ -41,6 +41,7 @@ import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 // CRDT storage checks atomic saves, ignored revisions, local retry outcomes and durable restart.
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
+// scripts/verify/storage-package-consumer.ts checks the packaged SDK's two-device merge and replacement report.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -57,7 +58,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Also checks native harness controls and their structured values in packaged command handlers.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
-// Navigation metadata preserves independent panel capabilities through the compiled host.
+// Navigation metadata preserves independent panel capabilities, including whole-panel movement through the compiled host.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
 // The browser suite checks typed host props, page updates, structured capability errors and saved settings.
@@ -68,6 +69,7 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
 // Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
+// Review requests start conversations only when opened and reuse them on later visits.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
@@ -115,6 +117,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Dropping a session preview pins it and keeps the destination terminal preview open and leftmost.
 // Unpinning a created session replaces the tray preview and keeps it leftmost.
 // Adding Terminal in Side or Session in Bottom keeps the other empty panel open.
+// The packaged empty-panel browser flow also checks nearby tab targets, mirrored Navigation, panel handles and reload.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";

@@ -176,13 +176,24 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
   });
   await execute("set-ticket-tags", { rowId: ticket.id, tagIds: [] });
   expect((await execute("get-ticket", { id: ticket.id })).tagIds).toContain(reviewNeeded);
-  expect(handoff).toMatchObject({ state: "open", context: { sessionId: expect.any(String) } });
+  for (const request of [handoff, task, decision]) {
+    expect(request).toMatchObject({ state: "open", context: { sessionId: null } });
+  }
 
   await execute("review", { requestId: task.id, response: { confirmed: true } });
   await execute("review", { requestId: decision.id, response: { answers: { platforms: ["mac", "win"] } } });
   await execute("review", { requestId: decision.id, response: { answers: { platforms: ["win"] } } });
   expect(await execute("review-requests.read", { requestId: decision.id })).toMatchObject({
     state: "answered",
+    context: { sessionId: null },
+    outcome: { response: { answers: { platforms: ["win"] } } },
+  });
+  const conversation = await execute("review-requests.open", { requestId: decision.id });
+  expect(conversation).toMatchObject({ type: "session", id: expect.any(String) });
+  expect(await execute("review-requests.open", { requestId: decision.id })).toEqual(conversation);
+  expect(await execute("review-requests.read", { requestId: decision.id })).toMatchObject({
+    state: "answered",
+    context: { sessionId: conversation.id },
     outcome: { response: { answers: { platforms: ["win"] } } },
   });
   const mixed = await execute("timeline.plan.read", {});

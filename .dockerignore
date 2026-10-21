@@ -28,3 +28,6 @@ infra/relay/.env*
 infra/account-manager/terraform
 services/relay/.env*
 services/account-manager/.env*
+infra/terraform
+infra/relay/compose.yaml
+infra/relay/Caddyfile

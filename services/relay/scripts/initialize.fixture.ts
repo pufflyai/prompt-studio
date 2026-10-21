@@ -6,17 +6,19 @@ import { createFixtureAuthentication, fixtureManagerConfig } from "./manager.fix
 
 await initializeRecoveryKey("/recovery/key");
 
-const admin = new Client({ connectionString: process.env.FIXTURE_ADMIN_URL! });
-await admin.connect();
-try {
-  for (const name of ["manager_owner", "relay_owner"]) {
-    await admin.query(`CREATE ROLE ${name} LOGIN PASSWORD '${name}_fixture_only'`);
-    await admin.query(`CREATE DATABASE ${name} OWNER ${name}`);
-    await admin.query(`REVOKE ALL ON DATABASE ${name} FROM PUBLIC`);
-    await admin.query(`GRANT CONNECT ON DATABASE ${name} TO ${name}`);
+if (process.env.FIXTURE_ADMIN_URL) {
+  const admin = new Client({ connectionString: process.env.FIXTURE_ADMIN_URL });
+  await admin.connect();
+  try {
+    for (const name of ["manager_owner", "relay_owner"]) {
+      await admin.query(`CREATE ROLE ${name} LOGIN PASSWORD '${name}_fixture_only'`);
+      await admin.query(`CREATE DATABASE ${name} OWNER ${name}`);
+      await admin.query(`REVOKE ALL ON DATABASE ${name} FROM PUBLIC`);
+      await admin.query(`GRANT CONNECT ON DATABASE ${name} TO ${name}`);
+    }
+  } finally {
+    await admin.end();
   }
-} finally {
-  await admin.end();
 }
 const managerUrl = process.env.MANAGER_DATABASE_URL!;
 const databaseUrl = process.env.DATABASE_URL!;

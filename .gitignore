@@ -207,3 +207,10 @@ infra/relay/terraform/*.tfstate*
 infra/relay/terraform/*.tfvars
 infra/relay/terraform/*.tfvars.json
 infra/relay/terraform/crash*.log
+infra/terraform/.terraform/
+infra/terraform/*.tfstate*
+infra/terraform/*.tfvars
+!infra/terraform/validation.tfvars
+infra/terraform/*.tfvars.json
+infra/terraform/*.tfplan
+infra/terraform/crash*.log

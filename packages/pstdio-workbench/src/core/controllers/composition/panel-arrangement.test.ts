@@ -241,3 +241,51 @@ test("reset clears shared auxiliary tabs even when another page created them", a
   expect(w.layout.getLayout().regions.secondary.widgets).toEqual([]);
   expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
 });
+
+test("first drop into a closed empty panel pins the tab without seeding content", async () => {
+  const w = harness();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget({ kind: "panel", panel, resource: resource("draft"), open: "preview" });
+  w.shell.setRegionOpen("secondary", false);
+  const original = w.layout.getLayout().regions.side.widgets[0]!;
+  expect(w.getPanelDestinations(original.widgetId)).toContain("secondary");
+  w.movePanel(original.widgetId, "secondary");
+  expect(w.layout.getLayout().regions.secondary.widgets).toEqual([
+    { ...original, pinned: true, tabRetention: "persistent", relatedSource: undefined },
+  ]);
+  expect(w.shell.getRegionState("secondary").open).toBe(true);
+  expect(w.shell.getRegionState("side").open).toBe(false);
+});
+
+test("dropping a preview in its own tray pins it and preserves the destination preview on later moves", async () => {
+  const w = harness();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget({ kind: "panel", panel, resource: resource("draft"), open: "preview" });
+  const draft = w.layout.getLayout().regions.side.widgets[0]!;
+  w.movePanel(draft.widgetId, "side", "end");
+  expect(w.layout.getLayout().regions.side.widgets[0]?.tabRetention).toBe("persistent");
+  await w.navigation.openTarget({
+    kind: "panel",
+    panel,
+    resource: resource("kept-preview"),
+    open: "preview",
+    region: "secondary",
+  });
+  const preview = w.layout.getLayout().regions.secondary.widgets[0]!;
+  w.movePanel(draft.widgetId, "secondary", "start");
+  expect(w.layout.getLayout().regions.secondary.widgets.map((tab) => tab.widgetId)).toEqual([
+    preview.widgetId,
+    draft.widgetId,
+  ]);
+  expect(w.layout.getLayout().regions.secondary.widgets[0]).toEqual(preview);
+});
+
+test("a drop onto closed Side opens attached even when its previous presentation floated", async () => {
+  const w = harness();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget(openFile("draft"));
+  w.shell.setSidePanelPresentation("floating");
+  w.shell.setRegionOpen("side", false);
+  w.movePanel(w.layout.getLayout().regions.main.widgets[0]!.widgetId, "side");
+  expect(w.shell.getSidePanelPresentation()).toBe("attached");
+});
