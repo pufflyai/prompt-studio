@@ -1,10 +1,36 @@
-import type { CollisionDetection } from "@dnd-kit/core";
+import type { CollisionDetection, UniqueIdentifier } from "@dnd-kit/core";
+
+interface Point {
+  x: number;
+  y: number;
+}
+interface PanelDropTarget {
+  id: UniqueIdentifier;
+  rect: { left: number; right: number; top: number; bottom: number };
+}
+
+export const resolvePanelDropTarget = (pointer: Point, origin: Point, targets: PanelDropTarget[]) => {
+  let closest: UniqueIdentifier | undefined;
+  // The grab point competes with destinations, leaving a generous way to keep the current placement.
+  let distance = Math.hypot(pointer.x - origin.x, pointer.y - origin.y);
+  for (const { id, rect } of targets) {
+    const candidate = Math.hypot(
+      Math.max(rect.left - pointer.x, 0, pointer.x - rect.right),
+      Math.max(rect.top - pointer.y, 0, pointer.y - rect.bottom),
+    );
+    if (candidate < distance) {
+      closest = id;
+      distance = candidate;
+    }
+  }
+  return closest;
+};
 
 /** The pointer can approach an insertion anywhere in its layout, including over a live view. */
-export const panelDropCollision: CollisionDetection = (args) => {
+export const panelDropCollision = (args: Parameters<CollisionDetection>[0], origin: Point | undefined) => {
   const pointer = args.pointerCoordinates;
-  if (!pointer) return [];
-  return args.droppableContainers
+  if (!pointer || !origin) return [];
+  const targets = args.droppableContainers
     .filter((container) => container.data.current?.panelRegion === args.active.data.current?.panelRegion)
     .flatMap((container) => {
       const frame = container.node.current
@@ -20,11 +46,8 @@ export const panelDropCollision: CollisionDetection = (args) => {
         pointer.y > frame.bottom
       )
         return [];
-      const distance = Math.hypot(
-        Math.max(rect.left - pointer.x, 0, pointer.x - rect.right),
-        Math.max(rect.top - pointer.y, 0, pointer.y - rect.bottom),
-      );
-      return [{ id: container.id, data: { droppableContainer: container, value: distance } }];
-    })
-    .sort((a, b) => a.data.value - b.data.value);
+      return [{ id: container.id, rect }];
+    });
+  const id = resolvePanelDropTarget(pointer, origin, targets);
+  return id === undefined ? [] : [{ id }];
 };

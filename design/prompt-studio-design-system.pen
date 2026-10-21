@@ -193658,7 +193658,7 @@
           "id": "UAdoc",
           "name": "Placement rules",
           "fill": "$ds-fg",
-          "content": "Panel insertion · nearest valid target wins · current position has no target",
+          "content": "Panel insertion · return toward drag start to cancel · rounded target without center bar",
           "fontFamily": "$font-body",
           "fontSize": 14,
           "fontWeight": "normal"
@@ -193675,7 +193675,7 @@
               "type": "frame",
               "id": "rvkzF",
               "name": "light · Closed Side and Bottom edges",
-              "context": "Insertion slots occupy layout space. Outline at rest; accent fill and a centered insertion line for the nearest target. Side target sits between Navigation and Main; Bottom target stays inside Main.",
+              "context": "Insertion slots occupy layout space. Full rounded outline at rest; accent fill selects a target, with no center bar. The drag start competes with destinations so release near the starting point keeps placement. Main is grabbed only from its own moving panel header. Empty movable chrome uses grab / grabbing cursors.",
               "theme": {
                 "mode": "light"
               },
@@ -193733,18 +193733,7 @@
                       "stroke": "$ds-accent",
                       "strokeWidth": 1,
                       "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "xkGoX",
-                          "name": "Vertical insertion line",
-                          "width": 2,
-                          "height": "fill_container",
-                          "fill": "$ds-accent",
-                          "cornerRadius": 2
-                        }
-                      ]
+                      "alignItems": "center"
                     }
                   ]
                 },
@@ -193794,7 +193783,7 @@
               "type": "frame",
               "id": "EnM65",
               "name": "dark · Closed Side and Bottom edges",
-              "context": "Insertion slots occupy layout space. Outline at rest; accent fill and a centered insertion line for the nearest target. Side target sits between Navigation and Main; Bottom target stays inside Main.",
+              "context": "Insertion slots occupy layout space. Full rounded outline at rest; accent fill selects a target, with no center bar. The drag start competes with destinations so release near the starting point keeps placement. Main is grabbed only from its own moving panel header. Empty movable chrome uses grab / grabbing cursors.",
               "theme": {
                 "mode": "dark"
               },
@@ -193852,18 +193841,7 @@
                       "stroke": "$ds-accent",
                       "strokeWidth": 1,
                       "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "fs1Y3",
-                          "name": "Vertical insertion line",
-                          "width": 2,
-                          "height": "fill_container",
-                          "fill": "$ds-accent",
-                          "cornerRadius": 2
-                        }
-                      ]
+                      "alignItems": "center"
                     }
                   ]
                 },

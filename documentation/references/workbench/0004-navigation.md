@@ -88,7 +88,7 @@ The legacy public `onOpenFile` callback remains available and is deprecated in f
 
 ## Shared panel commands
 
-Global panel controls render in the web navigation header: closed Sidenav recovery before history, and Bottom/Side controls after breadcrumbs. Desktop hosts use the exported `WorkbenchPanelToggles` beside project tabs and set `Workbench.panelControlsPlacement="host"`. Custom mode navigation chrome keeps these host controls. Session panels are available in each mode that allows Side or Bottom and retain that project/mode’s own tabs. The breadcrumb stays with Main.
+Global panel controls render in the web navigation header: closed Sidenav recovery before history, and Bottom/Side controls after breadcrumbs. Desktop hosts use the exported `WorkbenchPanelToggles` beside project tabs and set `Workbench.panelControlsPlacement="host"`. Custom mode navigation chrome keeps these host controls. Session panels are available in each mode that allows Side or Bottom and retain that project/mode’s own tabs. Project navigation stays above the shared Main and Bottom layout.
 
 `shell.getPanelPolicy(region)` resolves availability, visibility, opening, closing, tab acceptance, resizing, floating and header visibility. UI controls, tab destinations, public commands and restoration use this policy. `workbench.movePanel` moves a tab; whole-panel docking is separate work.
 
@@ -99,15 +99,15 @@ Global panel controls render in the web navigation header: closed Sidenav recove
 | `workbench.resizePanel` | `region: sidenav, secondary, side`, `size: number` in pixels |
 | `workbench.setSidePanelPresentation` | `presentation: attached, floating, closed` |
 
-The matching shell methods enforce the same permissions. Header show/hide also has a context menu on the header or hidden top edge with keyboard and touch access. Header choices stay in the mode layout and layout reset clears them. Optional panels collapse after their last tab closes, including panels previously opened empty.
+The matching shell methods enforce the same permissions. Header show/hide also has a context menu on the header or hidden top edge with keyboard and touch access. Explicitly showing a header also shows its tabs, including a single Start page. Header choices stay in the mode layout and layout reset clears them. Optional panels collapse after their last tab closes, including panels previously opened empty.
 
 ## Panel placement and closed-edge drops
 
 The shared shell owns whole-panel positions in the existing project and mode layout. Side can sit left or right of Main. Navigation sits at the far left or far right. Main and Bottom can flip their vertical order. The action bar can sit on any outer edge. Moving a panel keeps its tabs, resources, selection and live content. Reset layout restores the default positions.
 
-Drag empty Side or Bottom header space to an allowed edge. Drag empty breadcrumb-row space to move Main. Navigation and the action bar also accept drags from empty space. Buttons, tabs and resource controls keep their own gestures. The header context menu offers the same placement actions through right-click, Shift+F10, the Context Menu key and touch hold. Unavailable moves and the current position are omitted. Actions refresh after each placement change.
+Drag empty Main, Side or Bottom header space to an allowed edge. Main moves with its own header; the project navigation row is not a Main drag handle. Navigation and the action bar also accept drags from empty space. Buttons, tabs and resource controls keep their own gestures. The header context menu offers the same placement actions through right-click, Shift+F10, the Context Menu key and touch hold. Unavailable moves and the current position are omitted. Actions refresh after each placement change.
 
-Insertion targets reserve space at the boundary that owns the panel: Side sits between Navigation and Main, and Bottom stays within Main's column. The current placement has no target. During a whole-panel drag, the nearest allowed target in the workbench is selected even when the pointer has not reached its outline. It fills with the accent color and shows an insertion line along the correct axis. Leaving the workbench or cancelling preserves the placement.
+Insertion targets reserve space at the boundary that owns the panel: Side sits between Navigation and Main, and Bottom stays within Main's column. The current placement has no target. During a whole-panel drag, the original grab point competes with allowed destinations. Releasing closer to that point keeps the current placement, so returning toward the start cancels a move. Approaching a destination selects its full rounded outline and accent fill, without a center bar. Empty movable chrome uses a grab cursor and dragging uses a grabbing cursor. Leaving the workbench or cancelling also preserves the placement.
 
 Agents use the same shell operations through these commands:
 
@@ -115,4 +115,4 @@ Agents use the same shell operations through these commands:
 - `workbench.setActionBarPosition` takes `position` on any outer edge.
 - `workbench.movePanel` continues to move a single tab. It respects the destination policy and the placement's allowed trays.
 
-During a tab drag, a closed eligible Side or Bottom reserves a target at its saved edge, including before its first opening. A valid drop opens the panel and inserts the pinned tab in one step. Closed Side opens attached. Cancelling or dropping elsewhere leaves visibility and tab retention unchanged. The target has a complete rounded outline, with a filled background and an insertion marker when selected, without guidance text. An existing destination preview stays open and leftmost; the dropped tab never replaces it. Removed page panels have no targets.
+During a tab drag, a closed eligible Side or Bottom reserves a target at its saved edge, including before its first opening. A valid drop opens the panel and inserts the pinned tab in one step. Closed Side opens attached. Cancelling or dropping elsewhere leaves visibility and tab retention unchanged. The target has a complete rounded outline, with a filled background when selected, without guidance text. An existing destination preview stays open and leftmost; the dropped tab never replaces it. Removed page panels have no targets.

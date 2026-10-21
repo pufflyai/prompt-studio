@@ -180,10 +180,7 @@ for (const [region, story, edge] of [
     await expect(target).toHaveAttribute("data-drop-active", "true");
     const fill = await target.evaluate((element) => getComputedStyle(element, "::after").backgroundColor);
     expect(fill).not.toBe("rgba(0, 0, 0, 0)");
-    const line = target.locator("[data-workbench-insertion-line]");
-    await expect(line).toBeVisible();
-    const marker = (await line.boundingBox())!;
-    expect(region === "side" ? marker.height > marker.width : marker.width > marker.height).toBe(true);
+    await expect(target).toBeEmpty();
     await page.screenshot({ path: test.info().outputPath(`${region}-${story}-insertion.png`) });
     await page.keyboard.press("Escape");
     await page.mouse.up();
@@ -262,10 +259,10 @@ for (const [region, edge] of [
     await page.goto(storyUrl(baseUrl, `pstdio-workbench-reference-core-api-whole-panel-placement--${story}`));
     await waitForStoryPlayback(page);
     const surface = page.locator(`[data-workbench-panel-drag="${region}"]:visible`);
-    const source = region === "main" ? surface.locator("[data-workbench-breadcrumb-action-slot] + div") : surface;
+    const source = surface;
     const box = (await source.boundingBox())!;
     let startX = box.x + 3;
-    if (region === "main" || (region === "activity" && box.width > box.height)) startX = box.x + box.width / 2;
+    if (region === "activity" && box.width > box.height) startX = box.x + box.width / 2;
     await page.mouse.move(startX, box.y + box.height / 2);
     await page.mouse.down();
     await page.mouse.move(startX + 12, box.y + box.height / 2, { steps: 3 });
@@ -308,6 +305,48 @@ test("an invalid drop leaves its preview unpinned in the source", async ({ page 
   await expect(page.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
 });
 
+test("showing the header on a single-page Start exposes its tab and its own Main drag surface", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-panel-header-visibility--single-page-header"));
+  await waitForStoryPlayback(page);
+  const main = page.locator('[data-workbench-panel="main"]');
+  await expect(main.getByRole("tab")).toHaveCount(0);
+  const edge = page.getByLabel("Main header edge", { exact: true });
+  await edge.focus();
+  await edge.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
+  await expect(main.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
+  await expect(main.locator('[data-workbench-panel-drag="main"]')).toBeVisible();
+  await expect(page.locator('[data-workbench-region="nav"] [data-workbench-panel-drag]')).toHaveCount(0);
+});
+
+for (const region of ["side", "secondary", "main", "sidenav", "activity"]) {
+  test(`${region}: returning near the drag start keeps placement and resets the grab cursor`, async ({ page }) => {
+    await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-whole-panel-placement--interactive"));
+    await waitForStoryPlayback(page);
+    const surface = page.locator(`[data-workbench-panel-drag="${region}"]`);
+    const before = (await surface.boundingBox())!;
+    const start = { x: before.x + 3, y: before.y + before.height / 2 };
+    await page.mouse.move(start.x, start.y);
+    await expect(surface).toHaveCSS("cursor", "grab");
+    await page.mouse.down();
+    await page.mouse.move(start.x + 20, start.y, { steps: 4 });
+    const shield = page.locator("[data-workbench-panel-drag-shield]");
+    await expect(shield).toHaveCSS("cursor", "grabbing");
+    await expect(page.locator("[data-workbench-edge-drop][data-drop-active]")).toHaveCount(0);
+    const target = page.locator('[data-workbench-edge-drop^="panel-"]').first();
+    const slot = (await target.boundingBox())!;
+    await page.mouse.move(slot.x + slot.width / 2, slot.y + slot.height / 2, { steps: 6 });
+    await expect(target).toHaveAttribute("data-drop-active", "true");
+    await expect(target).toBeEmpty();
+    await page.mouse.move(start.x + 40, start.y + 20, { steps: 6 });
+    await expect(page.locator("[data-workbench-edge-drop][data-drop-active]")).toHaveCount(0);
+    await page.mouse.up();
+    await expect(shield).toHaveCount(0);
+    await expect(surface).toHaveCSS("cursor", "grab");
+    await expect.poll(() => surface.boundingBox()).toEqual(before);
+  });
+}
+
 test("restricted modes omit whole-panel move controls and targets", async ({ page }) => {
   await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-whole-panel-placement--restricted"));
   await waitForStoryPlayback(page);
@@ -322,4 +361,51 @@ test("restricted modes omit whole-panel move controls and targets", async ({ pag
   await page.mouse.move(box.x + 15, box.y + box.height / 2, { steps: 3 });
   await expect(page.locator('[data-workbench-edge-drop^="panel-"]')).toHaveCount(0);
   await page.mouse.up();
+});
+
+test("panel grab styling preserves tab and button cursors", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-whole-panel-placement--interactive"));
+  await waitForStoryPlayback(page);
+  const header = page.getByLabel("Side panel header", { exact: true });
+  const tab = header.getByRole("tab").first();
+  await tab.hover();
+  await expect(tab).toHaveCSS("cursor", "pointer");
+  await expect(header).toHaveCSS("cursor", "auto");
+  const button = header.getByRole("button", { name: "Float Side Panel", exact: true });
+  await button.hover();
+  await expect(button).toHaveCSS("cursor", "pointer");
+});
+
+test("touch drags can return toward their starting point without moving the panel", async ({ browser }) => {
+  const context = await browser.newContext({ hasTouch: true });
+  const page = await context.newPage();
+  try {
+    await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-whole-panel-placement--interactive"));
+    await waitForStoryPlayback(page);
+    const header = page.getByLabel("Bottom panel header", { exact: true });
+    const before = (await header.boundingBox())!;
+    const start = { x: before.x + before.width / 2, y: before.y + before.height / 2 };
+    const input = await context.newCDPSession(page);
+    await input.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [start] });
+    await input.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: start.x + 20, y: start.y }] });
+    await expect(page.locator("[data-workbench-panel-drag-shield]")).toBeVisible();
+    await expect(page.locator("[data-workbench-edge-drop][data-drop-active]")).toHaveCount(0);
+    const target = page.locator('[data-workbench-edge-drop="panel-top"]');
+    const slot = (await target.boundingBox())!;
+    await input.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: slot.x + slot.width / 2, y: slot.y + slot.height / 2 }],
+    });
+    await expect(target).toHaveAttribute("data-drop-active", "true");
+    await input.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: start.x + 40, y: start.y + 20 }],
+    });
+    await expect(target).not.toHaveAttribute("data-drop-active");
+    await input.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect.poll(() => header.boundingBox()).toEqual(before);
+    await expect(page.locator("[data-workbench-panel-drag-shield]")).toHaveCount(0);
+  } finally {
+    await context.close();
+  }
 });

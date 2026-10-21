@@ -21,7 +21,8 @@ test("adding a tool keeps the other empty panel open", async () => {
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
   try {
-    const started = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
+    const started = await test.step("Start the packaged runtime", () =>
+      startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: "[]" }));
     child = started.child;
     const folder = join(root, "project");
     mkdirSync(folder);
@@ -38,8 +39,8 @@ test("adding a tool keeps the other empty panel open", async () => {
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
     await expect(page.getByText("Project home", { exact: true })).toBeVisible();
-    await verifyEmptyPanelAddition(page);
-    await verifyPanelInsertionTargets(page);
+    await test.step("Add tools while preserving the other empty panel", () => verifyEmptyPanelAddition(page));
+    await test.step("Place panels and cancel from the grab point", () => verifyPanelInsertionTargets(page));
   } finally {
     await browser?.close();
     if (child) await stopProcess(child);

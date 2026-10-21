@@ -67,6 +67,17 @@ export const layerStyles = defineLayerStyles({
       "&[data-drop-active]::after": { bg: "bg.accent-primary.default/20" },
     },
   },
+  panelDragSurface: {
+    value: {
+      "&[data-panel-draggable]": { cursor: "grab" },
+      "&[data-panel-draggable]:has(:is(button, a, input, textarea, select, iframe, [role=tab], [role=treeitem], [role=button], [role=menuitem], [contenteditable=true]):hover)":
+        {
+          cursor: "auto",
+        },
+      "&[data-panel-dragging]": { cursor: "grabbing" },
+    },
+  },
+  panelDragging: { value: { cursor: "grabbing" } },
   filterPicker: {
     value: {
       height: "min({sizes.filter-picker-height}, calc(100dvh - {spacing.xl}))",

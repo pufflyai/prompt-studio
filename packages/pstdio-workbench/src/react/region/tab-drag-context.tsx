@@ -10,7 +10,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { createContext, type ReactNode, useContext, useId, useState } from "react";
+import { createContext, type ReactNode, useContext, useId, useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchTabPosition } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
 import type { WorkbenchPanelPosition, WorkbenchPositionedRegion } from "../../core/registries/layout/panel-positions";
@@ -38,11 +38,13 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
   const [activePanel, setActivePanel] = useState<WorkbenchPositionedRegion>();
   const [panelDrop, setPanelDrop] = useState<WorkbenchPanelPosition>();
   const [drop, setDrop] = useState<TabDrop>();
+  const origin = useRef<{ x: number; y: number } | undefined>(undefined);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { distance: 5 } }),
   );
   const finish = () => {
+    origin.current = undefined;
     setActiveId(undefined);
     setActivePanel(undefined);
     setPanelDrop(undefined);
@@ -91,7 +93,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
       <DndContext
         sensors={sensors}
         collisionDetection={(args) => {
-          if (args.active.data.current?.panelRegion) return panelDropCollision(args);
+          if (args.active.data.current?.panelRegion) return panelDropCollision(args, origin.current);
           const collisions = pointerWithin(args);
           const closed = collisions.filter((c) => c.data?.droppableContainer.data.current?.closed);
           if (closed.length) return closed;
@@ -113,8 +115,12 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
             });
         }}
         onDragStart={(event) => {
-          if (event.active.data.current?.panelRegion) setActivePanel(event.active.data.current.panelRegion);
-          else setActiveId(String(event.active.id));
+          if (event.active.data.current?.panelRegion) {
+            const input = event.activatorEvent as MouseEvent | TouchEvent;
+            const point = "touches" in input ? input.touches[0] : input;
+            origin.current = { x: point.clientX, y: point.clientY };
+            setActivePanel(event.active.data.current.panelRegion);
+          } else setActiveId(String(event.active.id));
         }}
         onDragOver={(event) => {
           setDrop(resolveDrop(event));

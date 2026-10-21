@@ -37,10 +37,11 @@ const interactive =
 /** Only unused header space starts a whole-panel drag. Tab and control gestures keep their owners. */
 export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
   const policy = usePanelPolicy(workbench, region);
+  const disabled = !policy.movable || !workbench.shell.getPanelPositions(region).length;
   const drag = useDraggable({
     id: `panel:${region}`,
     data: { panelRegion: region },
-    disabled: !policy.movable || !workbench.shell.getPanelPositions(region).length,
+    disabled,
   });
   const empty = (event: MouseEvent | TouchEvent) => !(event.target as Element).closest(interactive);
   return {
@@ -48,6 +49,9 @@ export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchP
     tabIndex: 0,
     "aria-label": `Move ${region} panel`,
     "data-workbench-panel-drag": region,
+    "data-panel-draggable": !disabled || undefined,
+    "data-panel-dragging": drag.isDragging || undefined,
+    layerStyle: "panelDragSurface",
     onMouseDown: (event: MouseEvent<HTMLElement>) => {
       if (empty(event)) drag.listeners?.onMouseDown?.(event);
     },

@@ -1,6 +1,5 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { useDroppable } from "@dnd-kit/core";
-import { DropIndicator } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchCore } from "../../core";
 import {
@@ -36,15 +35,7 @@ const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
       w={vertical ? "12" : "full"}
       h={vertical ? "full" : "12"}
       layerStyle="panelDropZone"
-    >
-      {highlighted ? (
-        <DropIndicator
-          data-workbench-insertion-line=""
-          orientation={vertical ? "vertical" : "horizontal"}
-          {...(vertical ? { insetY: "xs", left: "50%" } : { insetX: "xs", top: "50%" })}
-        />
-      ) : null}
-    </Box>
+    />
   );
 };
 
@@ -102,7 +93,14 @@ export const WorkbenchPanelDropFrame = (props: WorkbenchPanelDropFrameProps) => 
       {targets.bottom}
       {region === "activity" && activePanel ? (
         // Keep pointer movement and release in the host, including over Navigation and other iframe views.
-        <Box data-workbench-panel-drag-shield="" aria-hidden position="absolute" inset="0" zIndex="overlay" />
+        <Box
+          data-workbench-panel-drag-shield=""
+          aria-hidden
+          layerStyle="panelDragging"
+          position="absolute"
+          inset="0"
+          zIndex="overlay"
+        />
       ) : null}
     </Flex>
   );

@@ -1,5 +1,5 @@
 import { Box, useRecipe } from "@chakra-ui/react";
-import { Header, ResourceContextMenu } from "@pstdio/ui";
+import { type Header, ResourceContextMenu } from "@pstdio/ui";
 import type { ComponentProps } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
@@ -29,14 +29,11 @@ export const PanelHeader = (props: PanelHeaderProps) => {
     "aria-label": `${label} panel header`,
     tabIndex: 0,
   };
-  const header =
-    region === "main" ? (
-      <Header {...headerProps}>{children}</Header>
-    ) : (
-      <PanelDragHeader workbench={workbench} region={region} {...headerProps}>
-        {children}
-      </PanelDragHeader>
-    );
+  const header = (
+    <PanelDragHeader workbench={workbench} region={region} {...headerProps}>
+      {children}
+    </PanelDragHeader>
+  );
   return (
     <ResourceContextMenu
       actions={[

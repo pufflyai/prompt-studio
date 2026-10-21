@@ -8,6 +8,7 @@ import { createArrangementWorkbench } from "./panel-arrangement.stories";
 
 const createPlacementWorkbench = (embeddedNavigation = false) => {
   const w = createArrangementWorkbench();
+  w.shell.setHeaderVisible("main", true);
   for (const region of ["sidenav", "activity"] as const) {
     getWorkbenchRenderers(w).registerRenderer({
       id: region,
