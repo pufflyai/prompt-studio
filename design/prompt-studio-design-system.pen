@@ -202976,7 +202976,7 @@
                       "id": "N0GmtK",
                       "name": "T",
                       "fill": "$ds-fg",
-                      "content": "project offline",
+                      "content": "local",
                       "fontFamily": "$font-mono",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -202989,7 +202989,7 @@
                       "textGrowth": "fixed-width-height",
                       "width": "fill_container",
                       "height": 48,
-                      "content": "The project was taken offline in Project settings. The item stays muted; bringing the project back online also happens in settings.",
+                      "content": "The project does not sync. It was made local in Cloud settings, where syncing it again also happens. The item stays muted.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 11,
@@ -203072,7 +203072,7 @@
                                   "fill": "$ds-fg-muted"
                                 },
                                 "Vxs37": {
-                                  "content": "Local only",
+                                  "content": "Local",
                                   "fill": "$ds-fg-muted"
                                 }
                               }
@@ -203345,7 +203345,7 @@
                       "id": "QGwSD",
                       "name": "T",
                       "fill": "$ds-fg",
-                      "content": "connection offline",
+                      "content": "offline",
                       "fontFamily": "$font-mono",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -203358,7 +203358,7 @@
                       "textGrowth": "fixed-width-height",
                       "width": "fill_container",
                       "height": 48,
-                      "content": "The connection is down. Work continues; changes wait on this device.",
+                      "content": "The connection is lost. Work continues; changes wait on this device.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 11,
@@ -204388,7 +204388,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The popover first says whether Cloud is active for this project, then lists only the devices that have this project, then who is signed in. It has no switch: taking a project offline is a deliberate step in Project settings, behind a warning. While the connection is offline the device list is hidden, because nobody's presence is known.",
+                  "content": "The popover first says whether Cloud is active for this project, then lists your devices, then who is signed in. Devices show only while the project syncs and the connection is up: a local project has no devices to show, and offline nobody's presence is known. There is no switch here. Making a project local is a deliberate step in Cloud settings, behind a warning. Cloud settings is the popover's only link.",
                   "lineHeight": 1.45,
                   "fontFamily": "$font-body",
                   "fontSize": 12,
@@ -204751,7 +204751,7 @@
                       "textGrowth": "fixed-width-height",
                       "width": "fill_container",
                       "height": 48,
-                      "content": "The normal state: Cloud is active, every change is up, and the devices that have this project.",
+                      "content": "The normal state: Cloud is active, every change is up, and your devices with their presence.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 11,
@@ -204895,7 +204895,7 @@
                           "id": "ZdqPD",
                           "name": "Section",
                           "fill": "$ds-fg-subtle",
-                          "content": "DEVICES WITH THIS PROJECT",
+                          "content": "DEVICES",
                           "fontFamily": "$font-heading",
                           "fontSize": 9,
                           "fontWeight": "600",
@@ -205163,7 +205163,7 @@
                           "id": "IOgo7",
                           "type": "ref",
                           "ref": "c24zV7",
-                          "name": "Account and devices",
+                          "name": "Cloud settings",
                           "height": 24,
                           "theme": {
                             "btn": "ghost",
@@ -205177,7 +205177,7 @@
                               "height": 12
                             },
                             "Hf4GT": {
-                              "content": "Account and devices"
+                              "content": "Cloud settings"
                             }
                           }
                         }
@@ -205355,7 +205355,7 @@
                           "id": "uCzMt",
                           "name": "Section",
                           "fill": "$ds-fg-subtle",
-                          "content": "DEVICES WITH THIS PROJECT",
+                          "content": "DEVICES",
                           "fontFamily": "$font-heading",
                           "fontSize": 9,
                           "fontWeight": "600",
@@ -205623,7 +205623,7 @@
                           "id": "yNOVY",
                           "type": "ref",
                           "ref": "c24zV7",
-                          "name": "Account and devices",
+                          "name": "Cloud settings",
                           "height": 24,
                           "theme": {
                             "btn": "ghost",
@@ -205637,7 +205637,7 @@
                               "height": 12
                             },
                             "Hf4GT": {
-                              "content": "Account and devices"
+                              "content": "Cloud settings"
                             }
                           }
                         }
@@ -205658,7 +205658,7 @@
                       "id": "g1Rnm",
                       "name": "T",
                       "fill": "$ds-fg",
-                      "content": "project offline",
+                      "content": "local",
                       "fontFamily": "$font-mono",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -205671,7 +205671,7 @@
                       "textGrowth": "fixed-width-height",
                       "width": "fill_container",
                       "height": 48,
-                      "content": "The project was taken offline in Project settings. No devices: none of them sync it.",
+                      "content": "The project is local. No devices: they only matter for a project that syncs.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 11,
@@ -205779,7 +205779,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Cloud is off for this project",
+                                  "content": "This project is local",
                                   "lineHeight": 1.45,
                                   "fontFamily": "$font-body",
                                   "fontSize": 12,
@@ -205792,7 +205792,7 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "It was taken offline. Copies on your devices no longer sync.",
+                                  "content": "It does not sync. Each device keeps its own copy.",
                                   "lineHeight": 1.45,
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -205806,7 +205806,7 @@
                           "id": "hPLQd",
                           "type": "ref",
                           "ref": "c24zV7",
-                          "name": "Project settings",
+                          "name": "Cloud settings",
                           "height": 24,
                           "theme": {
                             "btn": "outline",
@@ -205820,7 +205820,7 @@
                               "height": 12
                             },
                             "Hf4GT": {
-                              "content": "Project settings"
+                              "content": "Cloud settings"
                             }
                           }
                         },
@@ -205915,7 +205915,7 @@
                           "id": "qprLt",
                           "type": "ref",
                           "ref": "c24zV7",
-                          "name": "Account and devices",
+                          "name": "Cloud settings",
                           "height": 24,
                           "theme": {
                             "btn": "ghost",
@@ -205929,7 +205929,7 @@
                               "height": 12
                             },
                             "Hf4GT": {
-                              "content": "Account and devices"
+                              "content": "Cloud settings"
                             }
                           }
                         }
@@ -205959,7 +205959,7 @@
                       "id": "R5vt7",
                       "name": "T",
                       "fill": "$ds-fg",
-                      "content": "connection offline",
+                      "content": "offline",
                       "fontFamily": "$font-mono",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -205972,7 +205972,7 @@
                       "textGrowth": "fixed-width-height",
                       "width": "fill_container",
                       "height": 48,
-                      "content": "An amber alert says work is safe. Devices are hidden while presence is unknown.",
+                      "content": "The connection is lost. An amber alert says work is safe. Devices are hidden while their presence is unknown.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 11,
@@ -206048,10 +206048,10 @@
                           },
                           "descendants": {
                             "sAoE1": {
-                              "icon": "wifi-off"
+                              "icon": "cloud-off"
                             },
                             "GL4gS": {
-                              "content": "No connection"
+                              "content": "Offline"
                             },
                             "B8etL": {
                               "content": "Keep working. Changes save on this device and sync when the connection returns."
@@ -206220,7 +206220,7 @@
                           "id": "Z6kCu",
                           "type": "ref",
                           "ref": "c24zV7",
-                          "name": "Account and devices",
+                          "name": "Cloud settings",
                           "height": 24,
                           "theme": {
                             "btn": "ghost",
@@ -206234,7 +206234,7 @@
                               "height": 12
                             },
                             "Hf4GT": {
-                              "content": "Account and devices"
+                              "content": "Cloud settings"
                             }
                           }
                         }
@@ -206479,7 +206479,7 @@
                           "id": "dzNfA",
                           "name": "Section",
                           "fill": "$ds-fg-subtle",
-                          "content": "DEVICES WITH THIS PROJECT",
+                          "content": "DEVICES",
                           "fontFamily": "$font-heading",
                           "fontSize": 9,
                           "fontWeight": "600",
@@ -206747,7 +206747,7 @@
                           "id": "ZKmDv",
                           "type": "ref",
                           "ref": "c24zV7",
-                          "name": "Account and devices",
+                          "name": "Cloud settings",
                           "height": 24,
                           "theme": {
                             "btn": "ghost",
@@ -206761,7 +206761,7 @@
                               "height": 12
                             },
                             "Hf4GT": {
-                              "content": "Account and devices"
+                              "content": "Cloud settings"
                             }
                           }
                         }
@@ -206965,7 +206965,7 @@
                           "id": "nRKcT",
                           "name": "Section",
                           "fill": "$ds-fg-subtle",
-                          "content": "DEVICES WITH THIS PROJECT",
+                          "content": "DEVICES",
                           "fontFamily": "$font-heading",
                           "fontSize": 9,
                           "fontWeight": "600",
@@ -207233,7 +207233,7 @@
                           "id": "aqNQl",
                           "type": "ref",
                           "ref": "c24zV7",
-                          "name": "Account and devices",
+                          "name": "Cloud settings",
                           "height": 24,
                           "theme": {
                             "btn": "ghost",
@@ -207247,7 +207247,7 @@
                               "height": 12
                             },
                             "Hf4GT": {
-                              "content": "Account and devices"
+                              "content": "Cloud settings"
                             }
                           }
                         }
@@ -207406,7 +207406,7 @@
         {
           "type": "frame",
           "id": "WTMNT",
-          "name": "project settings · take offline",
+          "name": "cloud settings · make local",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 10,
@@ -207432,7 +207432,7 @@
                       "id": "i33jgW",
                       "name": "T",
                       "fill": "$ds-fg",
-                      "content": "project settings · take offline",
+                      "content": "cloud settings · make local",
                       "fontFamily": "$font-heading",
                       "fontSize": 18,
                       "fontWeight": "600"
@@ -207456,7 +207456,7 @@
                           "id": "tBsTI",
                           "name": "T",
                           "fill": "$ds-fg-muted",
-                          "content": "settings · extensions · cloud",
+                          "content": "settings · cloud · account, devices, this project",
                           "fontFamily": "$font-body",
                           "fontSize": 11,
                           "fontWeight": "normal"
@@ -207479,7 +207479,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Taking a project offline is rare and affects every device, so it lives in Project settings, not in the popover. The action sits in its own card with a warning sign and asks for confirmation. The warning says what really happens: every device keeps its copy, the copies drift apart, and bringing the project online again merges them, where one of two conflicting changes is lost.",
+                  "content": "Making a project local is rare and affects every device, so it lives in Cloud settings, not in the popover. The action sits in its own card with a warning sign and asks for confirmation. The warning says what really happens: every device keeps its copy, the copies drift apart, and syncing again merges them, where one of two conflicting changes is lost. The same page holds the account and device management that the popover links to.",
                   "lineHeight": 1.45,
                   "fontFamily": "$font-body",
                   "fontSize": 12,
@@ -207506,7 +207506,7 @@
                       "id": "vaJGw",
                       "name": "Label",
                       "fill": "$ds-fg",
-                      "content": "cloud active",
+                      "content": "cloud settings · project syncs",
                       "fontFamily": "$font-mono",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -207517,7 +207517,7 @@
                       "name": "Settings · Cloud active",
                       "clip": true,
                       "width": 1100,
-                      "height": 470,
+                      "height": 610,
                       "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
                       "stroke": "$ds-border",
@@ -207755,7 +207755,7 @@
                               "width": "fill_container",
                               "height": "fill_container",
                               "layout": "vertical",
-                              "gap": 16,
+                              "gap": 12,
                               "padding": 24,
                               "children": [
                                 {
@@ -207792,8 +207792,392 @@
                                   ]
                                 },
                                 {
+                                  "type": "text",
+                                  "id": "UOPdT",
+                                  "name": "Section",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "ACCOUNT",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1
+                                },
+                                {
                                   "type": "frame",
-                                  "id": "JVis6",
+                                  "id": "cQrIM",
+                                  "name": "Account card",
+                                  "width": "fill_container",
+                                  "cornerRadius": 6,
+                                  "stroke": "$ds-border-subtle",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "gap": 10,
+                                  "padding": [
+                                    12,
+                                    16
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "ZixbB",
+                                      "name": "Row",
+                                      "width": "fill_container",
+                                      "gap": 10,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "id": "q0xkpY",
+                                          "type": "ref",
+                                          "ref": "Rt8F5",
+                                          "name": "Avatar",
+                                          "descendants": {
+                                            "joBhu": {
+                                              "content": "AM"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "pIvIz",
+                                          "name": "Who",
+                                          "width": "fill_container",
+                                          "layout": "vertical",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "Q2NhaW",
+                                              "name": "Text",
+                                              "fill": "$ds-fg",
+                                              "content": "Alex Morgan",
+                                              "lineHeight": 1.45,
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 13,
+                                              "fontWeight": "500"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "k5QUH6",
+                                              "name": "Text",
+                                              "fill": "$ds-fg-muted",
+                                              "content": "alex@example.com · Google account",
+                                              "lineHeight": 1.45,
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 11,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "id": "vz7hF",
+                                          "type": "ref",
+                                          "ref": "c24zV7",
+                                          "name": "Sign out",
+                                          "height": 28,
+                                          "theme": {
+                                            "btn": "outline",
+                                            "size": "xs"
+                                          },
+                                          "descendants": {
+                                            "DsEVd": {
+                                              "enabled": true,
+                                              "icon": "log-out",
+                                              "width": 12,
+                                              "height": 12
+                                            },
+                                            "Hf4GT": {
+                                              "content": "Sign out"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "g5upS",
+                                  "name": "Section",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "YOUR DEVICES",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "YlPyY",
+                                  "name": "Devices card",
+                                  "width": "fill_container",
+                                  "cornerRadius": 6,
+                                  "stroke": "$ds-border-subtle",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "gap": 10,
+                                  "padding": [
+                                    12,
+                                    16
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "IVxLx",
+                                      "name": "MacBook Pro",
+                                      "width": "fill_container",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "REheK",
+                                          "name": "Icon",
+                                          "width": 14,
+                                          "height": 14,
+                                          "icon": "laptop",
+                                          "library": "lucide",
+                                          "fill": "$ds-fg-muted"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "xLbYZ",
+                                          "name": "Text",
+                                          "fill": "$ds-fg",
+                                          "content": "MacBook Pro",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "ellipse",
+                                          "id": "o2t6zS",
+                                          "name": "Dot",
+                                          "fill": "$ds-success",
+                                          "width": 6,
+                                          "height": 6
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "tVgXi",
+                                          "name": "Text",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "This device",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "cAUhX",
+                                          "name": "Sp",
+                                          "width": "fill_container",
+                                          "height": 2
+                                        },
+                                        {
+                                          "id": "ethzq",
+                                          "type": "ref",
+                                          "ref": "nvvgg",
+                                          "name": "Device actions",
+                                          "width": 24,
+                                          "height": 24,
+                                          "theme": {
+                                            "btn": "ghost",
+                                            "size": "2xs"
+                                          },
+                                          "descendants": {
+                                            "k7mgm": {
+                                              "icon": "ellipsis",
+                                              "width": 12,
+                                              "height": 12
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "reKmd",
+                                      "name": "Studio iMac",
+                                      "width": "fill_container",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "b1F1fF",
+                                          "name": "Icon",
+                                          "width": 14,
+                                          "height": 14,
+                                          "icon": "monitor",
+                                          "library": "lucide",
+                                          "fill": "$ds-fg-muted"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Ap70r",
+                                          "name": "Text",
+                                          "fill": "$ds-fg",
+                                          "content": "Studio iMac",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "ellipse",
+                                          "id": "B2hZmg",
+                                          "name": "Dot",
+                                          "fill": "$ds-success",
+                                          "width": 6,
+                                          "height": 6
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "FZyLr",
+                                          "name": "Text",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "Online",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "RazV0",
+                                          "name": "Sp",
+                                          "width": "fill_container",
+                                          "height": 2
+                                        },
+                                        {
+                                          "id": "tySOD",
+                                          "type": "ref",
+                                          "ref": "nvvgg",
+                                          "name": "Device actions",
+                                          "width": 24,
+                                          "height": 24,
+                                          "theme": {
+                                            "btn": "ghost",
+                                            "size": "2xs"
+                                          },
+                                          "descendants": {
+                                            "k7mgm": {
+                                              "icon": "ellipsis",
+                                              "width": 12,
+                                              "height": 12
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "vYCQC",
+                                      "name": "Build box",
+                                      "width": "fill_container",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "K6dXSi",
+                                          "name": "Icon",
+                                          "width": 14,
+                                          "height": 14,
+                                          "icon": "server",
+                                          "library": "lucide",
+                                          "fill": "$ds-fg-muted"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "X1jHq9",
+                                          "name": "Text",
+                                          "fill": "$ds-fg",
+                                          "content": "Build box",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "ellipse",
+                                          "id": "AJHE9",
+                                          "name": "Dot",
+                                          "fill": "$ds-fg-subtle",
+                                          "width": 6,
+                                          "height": 6
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "cDhmu",
+                                          "name": "Text",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "Last seen 2 d ago",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "gQx66",
+                                          "name": "Sp",
+                                          "width": "fill_container",
+                                          "height": 2
+                                        },
+                                        {
+                                          "id": "Ecyhs",
+                                          "type": "ref",
+                                          "ref": "nvvgg",
+                                          "name": "Device actions",
+                                          "width": 24,
+                                          "height": 24,
+                                          "theme": {
+                                            "btn": "ghost",
+                                            "size": "2xs"
+                                          },
+                                          "descendants": {
+                                            "k7mgm": {
+                                              "icon": "ellipsis",
+                                              "width": 12,
+                                              "height": 12
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "QCB20",
+                                      "name": "Text",
+                                      "fill": "$ds-fg-subtle",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Every device signed in to your account syncs your cloud projects. The menu renames or removes a device; a removed device keeps what it already downloaded.",
+                                      "lineHeight": 1.45,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "tikhD",
+                                  "name": "Section",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "THIS PROJECT",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "A54jC",
                                   "name": "State card",
                                   "width": "fill_container",
                                   "cornerRadius": 6,
@@ -207801,12 +208185,15 @@
                                   "strokeWidth": 1,
                                   "strokeAlignment": "inner",
                                   "layout": "vertical",
-                                  "gap": 12,
-                                  "padding": 16,
+                                  "gap": 10,
+                                  "padding": [
+                                    12,
+                                    16
+                                  ],
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "Lhj5p",
+                                      "id": "hCA6R",
                                       "name": "Row",
                                       "width": "fill_container",
                                       "gap": 12,
@@ -207814,7 +208201,7 @@
                                       "children": [
                                         {
                                           "type": "icon",
-                                          "id": "ahr8S",
+                                          "id": "ASNuV",
                                           "name": "Icon",
                                           "width": 16,
                                           "height": 16,
@@ -207824,7 +208211,7 @@
                                         },
                                         {
                                           "type": "frame",
-                                          "id": "r5zWf",
+                                          "id": "vnRTo",
                                           "name": "Label",
                                           "width": "fill_container",
                                           "layout": "vertical",
@@ -207832,7 +208219,7 @@
                                           "children": [
                                             {
                                               "type": "text",
-                                              "id": "tunFk",
+                                              "id": "h4uXS",
                                               "name": "Text",
                                               "fill": "$ds-fg",
                                               "textGrowth": "fixed-width",
@@ -207845,12 +208232,12 @@
                                             },
                                             {
                                               "type": "text",
-                                              "id": "DRUwm",
+                                              "id": "IkMpe",
                                               "name": "Text",
                                               "fill": "$ds-fg-muted",
                                               "textGrowth": "fixed-width",
                                               "width": "fill_container",
-                                              "content": "Synced · ready offline. These devices have this project:",
+                                              "content": "Synced · ready offline on your devices.",
                                               "lineHeight": 1.45,
                                               "fontFamily": "$font-body",
                                               "fontSize": 11,
@@ -207859,208 +208246,28 @@
                                           ]
                                         }
                                       ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "F58B6",
-                                      "name": "MacBook Pro",
-                                      "width": "fill_container",
-                                      "gap": 8,
-                                      "padding": [
-                                        2,
-                                        0
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "icon",
-                                          "id": "odfZv",
-                                          "name": "Icon",
-                                          "width": 14,
-                                          "height": 14,
-                                          "icon": "laptop",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "Iv9GO",
-                                          "name": "Text",
-                                          "fill": "$ds-fg",
-                                          "content": "MacBook Pro",
-                                          "lineHeight": 1.45,
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 12,
-                                          "fontWeight": "normal"
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "CR9eY",
-                                          "name": "Sp",
-                                          "width": "fill_container",
-                                          "height": 2
-                                        },
-                                        {
-                                          "type": "ellipse",
-                                          "id": "N0h0z",
-                                          "name": "Dot",
-                                          "fill": "$ds-success",
-                                          "width": 6,
-                                          "height": 6
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "yMTqR",
-                                          "name": "Text",
-                                          "fill": "$ds-fg-subtle",
-                                          "content": "This device",
-                                          "lineHeight": 1.45,
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "zsNiD",
-                                      "name": "Studio iMac",
-                                      "width": "fill_container",
-                                      "gap": 8,
-                                      "padding": [
-                                        2,
-                                        0
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "icon",
-                                          "id": "U6hpo",
-                                          "name": "Icon",
-                                          "width": 14,
-                                          "height": 14,
-                                          "icon": "monitor",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "cUsGa",
-                                          "name": "Text",
-                                          "fill": "$ds-fg",
-                                          "content": "Studio iMac",
-                                          "lineHeight": 1.45,
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 12,
-                                          "fontWeight": "normal"
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "bEHER",
-                                          "name": "Sp",
-                                          "width": "fill_container",
-                                          "height": 2
-                                        },
-                                        {
-                                          "type": "ellipse",
-                                          "id": "XRE6c",
-                                          "name": "Dot",
-                                          "fill": "$ds-success",
-                                          "width": 6,
-                                          "height": 6
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "sAx69",
-                                          "name": "Text",
-                                          "fill": "$ds-fg-subtle",
-                                          "content": "Online",
-                                          "lineHeight": 1.45,
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "X2zrE",
-                                      "name": "Build box",
-                                      "width": "fill_container",
-                                      "gap": 8,
-                                      "padding": [
-                                        2,
-                                        0
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "icon",
-                                          "id": "IHl86",
-                                          "name": "Icon",
-                                          "width": 14,
-                                          "height": 14,
-                                          "icon": "server",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "EJzwX",
-                                          "name": "Text",
-                                          "fill": "$ds-fg",
-                                          "content": "Build box",
-                                          "lineHeight": 1.45,
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 12,
-                                          "fontWeight": "normal"
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "cDAJ3",
-                                          "name": "Sp",
-                                          "width": "fill_container",
-                                          "height": 2
-                                        },
-                                        {
-                                          "type": "ellipse",
-                                          "id": "PBBIh",
-                                          "name": "Dot",
-                                          "fill": "$ds-fg-subtle",
-                                          "width": 6,
-                                          "height": 6
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "XI1FZ",
-                                          "name": "Text",
-                                          "fill": "$ds-fg-subtle",
-                                          "content": "Last seen 2 d ago",
-                                          "lineHeight": 1.45,
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
                                     }
                                   ]
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "Dx0VG",
-                                  "name": "Take offline card",
+                                  "id": "XdW4a",
+                                  "name": "Make local card",
                                   "width": "fill_container",
                                   "cornerRadius": 6,
                                   "stroke": "$ds-warning-border",
                                   "strokeWidth": 1,
                                   "strokeAlignment": "inner",
                                   "layout": "vertical",
-                                  "gap": 12,
-                                  "padding": 16,
+                                  "gap": 10,
+                                  "padding": [
+                                    12,
+                                    16
+                                  ],
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "vuWed",
+                                      "id": "HhFdx",
                                       "name": "Row",
                                       "width": "fill_container",
                                       "gap": 12,
@@ -208068,7 +208275,7 @@
                                       "children": [
                                         {
                                           "type": "icon",
-                                          "id": "IBGG8",
+                                          "id": "NIIit",
                                           "name": "Icon",
                                           "width": 16,
                                           "height": 16,
@@ -208078,7 +208285,7 @@
                                         },
                                         {
                                           "type": "frame",
-                                          "id": "HnvIT",
+                                          "id": "SxqKE",
                                           "name": "Label",
                                           "width": "fill_container",
                                           "layout": "vertical",
@@ -208086,12 +208293,12 @@
                                           "children": [
                                             {
                                               "type": "text",
-                                              "id": "Wntoa",
+                                              "id": "FcPvS",
                                               "name": "Text",
                                               "fill": "$ds-fg",
                                               "textGrowth": "fixed-width",
                                               "width": "fill_container",
-                                              "content": "Take this project offline",
+                                              "content": "Make this project local",
                                               "lineHeight": 1.45,
                                               "fontFamily": "$font-body",
                                               "fontSize": 13,
@@ -208099,12 +208306,12 @@
                                             },
                                             {
                                               "type": "text",
-                                              "id": "VowO8",
+                                              "id": "UPbON",
                                               "name": "Text",
                                               "fill": "$ds-fg-muted",
                                               "textGrowth": "fixed-width",
                                               "width": "fill_container",
-                                              "content": "Stops syncing on all your devices. Each device keeps its own copy, and the copies drift apart until the project is back online.",
+                                              "content": "Stops syncing on all your devices. Each device keeps its own copy, and the copies drift apart until the project syncs again.",
                                               "lineHeight": 1.45,
                                               "fontFamily": "$font-body",
                                               "fontSize": 11,
@@ -208113,10 +208320,10 @@
                                           ]
                                         },
                                         {
-                                          "id": "QQpIv",
+                                          "id": "olpEC",
                                           "type": "ref",
                                           "ref": "c24zV7",
-                                          "name": "Take offline…",
+                                          "name": "Make local…",
                                           "height": 28,
                                           "theme": {
                                             "btn": "outline",
@@ -208127,7 +208334,7 @@
                                               "enabled": false
                                             },
                                             "Hf4GT": {
-                                              "content": "Take offline…"
+                                              "content": "Make local…"
                                             }
                                           }
                                         }
@@ -208207,7 +208414,7 @@
                               "id": "feneG",
                               "name": "Text",
                               "fill": "$ds-fg",
-                              "content": "Take Prompt Studio offline?",
+                              "content": "Make Prompt Studio local?",
                               "lineHeight": 1.45,
                               "fontFamily": "$font-body",
                               "fontSize": 15,
@@ -208314,7 +208521,7 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "If you bring the project online again, the copies merge. Where two devices changed the same thing, only one change is kept. Daily snapshots keep the last 30 days.",
+                                  "content": "If you sync it again, the copies merge. Where two devices changed the same thing, only one change is kept. Daily snapshots keep the last 30 days.",
                                   "lineHeight": 1.45,
                                   "fontFamily": "$font-body",
                                   "fontSize": 12,
@@ -208356,7 +208563,7 @@
                               "id": "yKPpU",
                               "type": "ref",
                               "ref": "c24zV7",
-                              "name": "Take project offline",
+                              "name": "Make project local",
                               "height": 32,
                               "theme": {
                                 "btn": "destructive",
@@ -208367,7 +208574,7 @@
                                   "enabled": false
                                 },
                                 "Hf4GT": {
-                                  "content": "Take project offline"
+                                  "content": "Make project local"
                                 }
                               }
                             }
@@ -208389,10 +208596,10 @@
                 {
                   "type": "frame",
                   "id": "LVnwt",
-                  "name": "Settings · Project offline",
+                  "name": "Settings · Project local",
                   "clip": true,
                   "width": 1100,
-                  "height": 380,
+                  "height": 640,
                   "fill": "$ds-bg",
                   "cornerRadius": "$overlay-radius",
                   "stroke": "$ds-border",
@@ -208630,7 +208837,7 @@
                           "width": "fill_container",
                           "height": "fill_container",
                           "layout": "vertical",
-                          "gap": 16,
+                          "gap": 12,
                           "padding": 24,
                           "children": [
                             {
@@ -208667,8 +208874,392 @@
                               ]
                             },
                             {
+                              "type": "text",
+                              "id": "dLZim",
+                              "name": "Section",
+                              "fill": "$ds-fg-subtle",
+                              "content": "ACCOUNT",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
                               "type": "frame",
-                              "id": "nxVIs",
+                              "id": "KIxH0",
+                              "name": "Account card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "padding": [
+                                12,
+                                16
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "z2reP",
+                                  "name": "Row",
+                                  "width": "fill_container",
+                                  "gap": 10,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "id": "MPikk",
+                                      "type": "ref",
+                                      "ref": "Rt8F5",
+                                      "name": "Avatar",
+                                      "descendants": {
+                                        "joBhu": {
+                                          "content": "AM"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "wgIjx",
+                                      "name": "Who",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "Vo4hV",
+                                          "name": "Text",
+                                          "fill": "$ds-fg",
+                                          "content": "Alex Morgan",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "gs9My",
+                                          "name": "Text",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "alex@example.com · Google account",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "wFS2o",
+                                      "type": "ref",
+                                      "ref": "c24zV7",
+                                      "name": "Sign out",
+                                      "height": 28,
+                                      "theme": {
+                                        "btn": "outline",
+                                        "size": "xs"
+                                      },
+                                      "descendants": {
+                                        "DsEVd": {
+                                          "enabled": true,
+                                          "icon": "log-out",
+                                          "width": 12,
+                                          "height": 12
+                                        },
+                                        "Hf4GT": {
+                                          "content": "Sign out"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "dwGDG",
+                              "name": "Section",
+                              "fill": "$ds-fg-subtle",
+                              "content": "YOUR DEVICES",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "type": "frame",
+                              "id": "y6iEE",
+                              "name": "Devices card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "padding": [
+                                12,
+                                16
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Xu6f9",
+                                  "name": "MacBook Pro",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "HsaDr",
+                                      "name": "Icon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "laptop",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "SNaDQ",
+                                      "name": "Text",
+                                      "fill": "$ds-fg",
+                                      "content": "MacBook Pro",
+                                      "lineHeight": 1.45,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "ellipse",
+                                      "id": "GbwIh",
+                                      "name": "Dot",
+                                      "fill": "$ds-success",
+                                      "width": 6,
+                                      "height": 6
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "PveRM",
+                                      "name": "Text",
+                                      "fill": "$ds-fg-subtle",
+                                      "content": "This device",
+                                      "lineHeight": 1.45,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "i12CBd",
+                                      "name": "Sp",
+                                      "width": "fill_container",
+                                      "height": 2
+                                    },
+                                    {
+                                      "id": "cdR4U",
+                                      "type": "ref",
+                                      "ref": "nvvgg",
+                                      "name": "Device actions",
+                                      "width": 24,
+                                      "height": 24,
+                                      "theme": {
+                                        "btn": "ghost",
+                                        "size": "2xs"
+                                      },
+                                      "descendants": {
+                                        "k7mgm": {
+                                          "icon": "ellipsis",
+                                          "width": 12,
+                                          "height": 12
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "h1C8T",
+                                  "name": "Studio iMac",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "gZNZT",
+                                      "name": "Icon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "monitor",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "v3YB5q",
+                                      "name": "Text",
+                                      "fill": "$ds-fg",
+                                      "content": "Studio iMac",
+                                      "lineHeight": 1.45,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "ellipse",
+                                      "id": "qxmIf",
+                                      "name": "Dot",
+                                      "fill": "$ds-success",
+                                      "width": 6,
+                                      "height": 6
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "urbWX",
+                                      "name": "Text",
+                                      "fill": "$ds-fg-subtle",
+                                      "content": "Online",
+                                      "lineHeight": 1.45,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "NIwYp",
+                                      "name": "Sp",
+                                      "width": "fill_container",
+                                      "height": 2
+                                    },
+                                    {
+                                      "id": "h92PE",
+                                      "type": "ref",
+                                      "ref": "nvvgg",
+                                      "name": "Device actions",
+                                      "width": 24,
+                                      "height": 24,
+                                      "theme": {
+                                        "btn": "ghost",
+                                        "size": "2xs"
+                                      },
+                                      "descendants": {
+                                        "k7mgm": {
+                                          "icon": "ellipsis",
+                                          "width": 12,
+                                          "height": 12
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "X1BEF7",
+                                  "name": "Build box",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "RCt1U",
+                                      "name": "Icon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "server",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "TWhNS",
+                                      "name": "Text",
+                                      "fill": "$ds-fg",
+                                      "content": "Build box",
+                                      "lineHeight": 1.45,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "ellipse",
+                                      "id": "bILuL",
+                                      "name": "Dot",
+                                      "fill": "$ds-fg-subtle",
+                                      "width": 6,
+                                      "height": 6
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "dLNoU",
+                                      "name": "Text",
+                                      "fill": "$ds-fg-subtle",
+                                      "content": "Last seen 2 d ago",
+                                      "lineHeight": 1.45,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "KJIav",
+                                      "name": "Sp",
+                                      "width": "fill_container",
+                                      "height": 2
+                                    },
+                                    {
+                                      "id": "XFBS8",
+                                      "type": "ref",
+                                      "ref": "nvvgg",
+                                      "name": "Device actions",
+                                      "width": 24,
+                                      "height": 24,
+                                      "theme": {
+                                        "btn": "ghost",
+                                        "size": "2xs"
+                                      },
+                                      "descendants": {
+                                        "k7mgm": {
+                                          "icon": "ellipsis",
+                                          "width": 12,
+                                          "height": 12
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "O6ppz",
+                                  "name": "Text",
+                                  "fill": "$ds-fg-subtle",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Every device signed in to your account syncs your cloud projects. The menu renames or removes a device; a removed device keeps what it already downloaded.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "juhRv",
+                              "name": "Section",
+                              "fill": "$ds-fg-subtle",
+                              "content": "THIS PROJECT",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "type": "frame",
+                              "id": "XkwpC",
                               "name": "State card",
                               "width": "fill_container",
                               "cornerRadius": 6,
@@ -208676,12 +209267,15 @@
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "layout": "vertical",
-                              "gap": 12,
-                              "padding": 16,
+                              "gap": 10,
+                              "padding": [
+                                12,
+                                16
+                              ],
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "g6cXYT",
+                                  "id": "jVeMa",
                                   "name": "Row",
                                   "width": "fill_container",
                                   "gap": 12,
@@ -208689,7 +209283,7 @@
                                   "children": [
                                     {
                                       "type": "icon",
-                                      "id": "PoUyy",
+                                      "id": "GeCaz",
                                       "name": "Icon",
                                       "width": 16,
                                       "height": 16,
@@ -208699,7 +209293,7 @@
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "smRqa",
+                                      "id": "IOLYW",
                                       "name": "Label",
                                       "width": "fill_container",
                                       "layout": "vertical",
@@ -208707,12 +209301,12 @@
                                       "children": [
                                         {
                                           "type": "text",
-                                          "id": "vh5WD",
+                                          "id": "HXvwq",
                                           "name": "Text",
                                           "fill": "$ds-fg",
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
-                                          "content": "This project is offline",
+                                          "content": "This project is local",
                                           "lineHeight": 1.45,
                                           "fontFamily": "$font-body",
                                           "fontSize": 13,
@@ -208720,12 +209314,12 @@
                                         },
                                         {
                                           "type": "text",
-                                          "id": "Q8KfY",
+                                          "id": "iqA2F",
                                           "name": "Text",
                                           "fill": "$ds-fg-muted",
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
-                                          "content": "It stays on this device. Copies on your other devices no longer sync.",
+                                          "content": "It does not sync. Each of your devices keeps its own copy.",
                                           "lineHeight": 1.45,
                                           "fontFamily": "$font-body",
                                           "fontSize": 11,
@@ -208734,10 +209328,10 @@
                                       ]
                                     },
                                     {
-                                      "id": "iSllS",
+                                      "id": "KPBV7",
                                       "type": "ref",
                                       "ref": "c24zV7",
-                                      "name": "Bring project online",
+                                      "name": "Sync with Cloud",
                                       "height": 28,
                                       "theme": {
                                         "btn": "primary",
@@ -208751,7 +209345,7 @@
                                           "height": 12
                                         },
                                         "Hf4GT": {
-                                          "content": "Bring project online"
+                                          "content": "Sync with Cloud"
                                         }
                                       }
                                     }
@@ -208760,7 +209354,7 @@
                               ]
                             },
                             {
-                              "id": "mDqLk",
+                              "id": "hl0g6",
                               "type": "ref",
                               "ref": "So6vB",
                               "name": "Merge note",
@@ -208772,10 +209366,10 @@
                                   "icon": "info"
                                 },
                                 "GL4gS": {
-                                  "content": "Bringing the project online merges every device's copy"
+                                  "content": "Syncing again merges every device's copy"
                                 },
                                 "B8etL": {
-                                  "content": "Changes made while offline are kept. Where two devices changed the same thing, one change wins. Daily snapshots keep the last 30 days if something is missing."
+                                  "content": "Changes made while the project was local are kept. Where two devices changed the same thing, one change wins. Daily snapshots keep the last 30 days if something is missing."
                                 }
                               }
                             }
