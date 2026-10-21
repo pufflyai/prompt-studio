@@ -43,6 +43,7 @@ export {
   packageAsset,
   projectEvents,
   projectSlots,
+  resourceEvents,
   sessionEvents,
   sessionSlots,
   VIEW_FILTER_CONDITIONS,

@@ -3,6 +3,7 @@ import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
 import { startRelayExtension } from "./extension-owner";
+import { startResourceNumberSync } from "./resource-numbers";
 
 export type RelayWorkbench = {
   accountId: string;
@@ -19,6 +20,7 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
   const access = new Map<string, ReturnType<typeof createRelayAccess>>();
   const controller = new AbortController();
   const { deps } = input;
+  const resourceConnections = new Map<string, ReturnType<typeof startResourceNumberSync>>();
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
@@ -35,6 +37,11 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
     });
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
+    if (!resourceConnections.has(workbenchId))
+      resourceConnections.set(
+        workbenchId,
+        startResourceNumberSync({ config, deps, access: access.get(workbenchId)!, signal: controller.signal }),
+      );
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
     if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
     const workspace = await deps.workspaceService.getDefault(workbenchId);
@@ -122,6 +129,10 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
           .map(([id]) => id),
       );
       for (const id of changed) {
+        const resourceConnection = resourceConnections.get(id);
+        resourceConnection?.close();
+        await resourceConnection?.done;
+        resourceConnections.delete(id);
         workbenches.delete(id);
         access.delete(id);
       }
@@ -141,8 +152,10 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
       stopEvents();
       clearTimeout(retry);
       controller.abort();
+      for (const connection of resourceConnections.values()) connection.close();
       for (const connection of connections.values()) connection.close();
       await running;
+      await Promise.all([...resourceConnections.values()].map((connection) => connection.done));
       await Promise.all([...connections.values()].map((connection) => connection.done));
     },
   };

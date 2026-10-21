@@ -1,6 +1,6 @@
 # Device login development
 
-The native host keeps one device credential per login. The account manager owns Google sign-in, accounts, devices, cloud projects and renewal ([PRD 0014](../../requirements/platform/0014-local-first-sync.md), R34, R35, R37). Extensions keep their normal storage, file and editor APIs. The dashboard UI is separate work in PS-784.
+The native host keeps one device credential per login. The account manager owns Google sign-in, accounts, devices, cloud projects and renewal ([PRD 0014](../../requirements/platform/0014-local-first-sync.md), R34, R35, R37). Extensions keep their normal storage, file and editor APIs. The Cloud UI is separate work: PS-784 gives extensions the account, devices and sync status through the SDK, and the bundled Prompt Studio Cloud extension shows them (PS-875, R55).
 
 See [Log in and sync cloud projects](../sdk/0004-device-login.md) for the commands, the native file path and SDK usage.
 

@@ -10,6 +10,17 @@ export { initialRecordRevision, scopeRecordStorage, storageRecordId } from "./na
 export { appendGroups, projectGroups, type RecordProjection } from "./projection";
 export { applyRecordChange, blankRecord, recordConflict } from "./records";
 export { type ResolutionState, validateResolution } from "./resolution-validation";
+export type { NumberedResource } from "./resource-numbers";
+export {
+  nextResourceNumber,
+  reconcileResourceNumbers,
+  rememberResourceNumber,
+  resourceIdentity,
+  resourceNumbers,
+  resourceNumbersDocumentId,
+  resourceNumbersOwnerId,
+  resourceShorthand,
+} from "./resource-numbers";
 export { createRecordStorage } from "./storage";
 export { createTextDocumentStorage } from "./text-document";
 export type {
