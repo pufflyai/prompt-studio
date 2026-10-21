@@ -1,7 +1,24 @@
-import type { JsonObject } from "@pstdio/sdk/extensions";
+import type { ExtensionStorageApi, JsonObject } from "@pstdio/sdk/extensions";
+import { ticketsCollection } from "./collections";
 import type { StoredTicket } from "./types";
 
 export type TicketParentLookup = Map<string, StoredTicket>;
+
+export const readTicketParentLookup = async (storage: ExtensionStorageApi, ticketIds: string[]) => {
+  const lookup: TicketParentLookup = new Map();
+  let pending = new Set(ticketIds);
+  const collection = ticketsCollection(storage);
+  while (pending.size > 0) {
+    const tickets = await Promise.all([...pending].map((id) => collection.get(id)));
+    for (const ticket of tickets) {
+      if (ticket) lookup.set(ticket.id, ticket);
+    }
+    pending = new Set(
+      tickets.flatMap((ticket) => (ticket?.parentId && !lookup.has(ticket.parentId) ? [ticket.parentId] : [])),
+    );
+  }
+  return lookup;
+};
 
 export interface TicketResourceReference extends JsonObject {
   type: "ticket";

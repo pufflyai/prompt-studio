@@ -1,7 +1,8 @@
 import { defineCommand, type ExtensionContextBase, params, type ResourceRef } from "@pstdio/sdk/extensions";
 import { attachmentDataUrl } from "../data/attachment-data-url";
+import { ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
-import { findTicket } from "../data/resolve";
+import { findStoredTicket } from "../data/resolve";
 
 const BODY_PLACEHOLDER = "Write the ticket description…";
 const FILE_PLACEHOLDER = "Write…";
@@ -12,7 +13,9 @@ export const getTicketContent = async (
 ) => {
   const ticketId = input.id ?? (input.resource?.type === "ticket" ? input.resource.id : undefined);
   if (!ticketId) return { content: "", placeholder: BODY_PLACEHOLDER };
-  const ticket = await findTicket(ctx.storage, ticketId);
+  const ticket = input.id
+    ? await findStoredTicket(ctx.storage, input.id)
+    : await ticketsCollection(ctx.storage).get(ticketId);
   if (!ticket) return { content: "", placeholder: BODY_PLACEHOLDER };
 
   const documentId = selectedDocumentFromResource(input.resource);

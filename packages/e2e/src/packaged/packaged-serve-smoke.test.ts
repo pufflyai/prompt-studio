@@ -13,7 +13,7 @@ import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
-// Chat checks retain all replay chunks, cached history, and panel animation and resize behavior.
+// Chat checks retain replay chunks, shared open-tab membership, cached history, and panel animation and resize behavior.
 import { registerPackagedChatMotionSmokeTests } from "./packaged-chat-motion-smoke";
 // Localized parameter guidance is readable in compiled CLI help.
 import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
@@ -73,6 +73,7 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
 // Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
 // Review requests start conversations only when opened and reuse them on later visits.
+// Ticket document loads observe only the selected ticket's storage version.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
@@ -91,6 +92,7 @@ import { registerResourceRemovalSmokeTests } from "./packaged-resource-removal-s
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionLaunchSmokeTests } from "./packaged-session-launch-smoke";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
+// The session query smoke also checks open-tab resource retention in the compiled host.
 // The fixed 1,000-session / 1,000-ticket compiled navigation gate lives in ../perf/subnav-benchmark.ts.
 // Packaged browser coverage also checks shared Session action groups and lazy title search in the tab menu.
 // Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
