@@ -43,6 +43,7 @@
     "pstdio-planner": "workspace:*",
     "pstdio-reports": "workspace:*",
     "pstdio-skills": "workspace:*",
+    "pstdio-sync": "workspace:*",
     "pstdio-wt": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

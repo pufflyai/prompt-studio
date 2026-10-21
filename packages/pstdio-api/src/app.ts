@@ -208,6 +208,7 @@ const buildApp = async (
     artifactMountWrites,
     resourceLinksService: dbs.resourceLinksDBService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,
+    projectInfoService: dbs.projectInfoDBService,
     extensionWebviewAccess: createExtensionWebviewAccess(),
     readiness: { database: true, storage: true },
     eventBus,

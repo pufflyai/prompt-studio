@@ -33,6 +33,15 @@ const devicesSchema = z.object({
 });
 const workbenchesSchema = z.array(z.object({ workbenchId: identitySchema }));
 
+const connectionFor = (login: DeviceLogin, workbenchId: string) => ({
+  accountId: login.accountId,
+  workbenchId,
+  environmentId: login.deviceId,
+  relayOrigin: login.relayOrigin,
+  managerOrigin: login.managerOrigin,
+  renewalGrant: login.token,
+});
+
 // Messages that are safe to show; other account failures stay generic.
 export class AccountRequestError extends Error {}
 export const accountUnavailableMessage = "Account request unavailable. Check the login and the account service.";
@@ -54,6 +63,8 @@ export const createNativeAccount = (input: {
   const projectsFor = (login: DeviceLogin | null) =>
     login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
+  // Creates a cloud project that does not exist on this device yet. Until the relay runtime starts, nothing can.
+  let recover: (connection: RelayWorkbench) => Promise<void> = async () => {};
   // Until the relay runtime starts, no sync owner has downloaded anything in this run.
   let projectStatus = async (_projectId: string): Promise<ProjectSyncStatus> => ({
     state: "first-download-incomplete",
@@ -91,26 +102,23 @@ export const createNativeAccount = (input: {
   const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
   const projectPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}`;
 
-  // Syncs every cloud project that also exists on this device. Others start once they are created or bound here.
+  // Syncs every cloud project of the account. A project missing here is created from its synced info first;
+  // one that cannot be recovered yet is tried again on the next refresh.
   const publish = async (login: DeviceLogin | null) => {
     void presence.update(login);
-    const local = await Promise.all(
-      (projectsFor(login) ?? []).map(async (id) => ((await input.projects.get(id)) ? id : null)),
-    );
-    await update(
-      login
-        ? local
-            .filter((id) => id !== null)
-            .map((workbenchId) => ({
-              accountId: login.accountId,
-              workbenchId,
-              environmentId: login.deviceId,
-              relayOrigin: login.relayOrigin,
-              managerOrigin: login.managerOrigin,
-              renewalGrant: login.token,
-            }))
-        : [],
-    );
+    const local: string[] = [];
+    // One at a time: the first recovered project on a fresh device installs the default extensions.
+    for (const id of login ? (projectsFor(login) ?? []) : []) {
+      if (!(await input.projects.get(id)))
+        await recover(connectionFor(login!, id)).catch((error: unknown) =>
+          apiLogger.warn(
+            { event: "account.cloud_project.recovery_failed", projectId: id, error },
+            "Recovery will retry",
+          ),
+        );
+      if (await input.projects.get(id)) local.push(id);
+    }
+    await update(login ? local.map((id) => connectionFor(login, id)) : []);
   };
   const load = async () => {
     clearTimeout(retry);
@@ -187,9 +195,14 @@ export const createNativeAccount = (input: {
   };
 
   return {
-    start(relay: (connections: RelayWorkbench[]) => Promise<void>, status: typeof projectStatus) {
+    start(
+      relay: (connections: RelayWorkbench[]) => Promise<void>,
+      status: typeof projectStatus,
+      recoverProject: typeof recover,
+    ) {
       update = relay;
       projectStatus = status;
+      recover = recoverProject;
       void refresh();
     },
     refresh,
@@ -264,6 +277,7 @@ export const createNativeAccount = (input: {
       presence.close();
       clearTimeout(retry);
       update = async () => {};
+      recover = async () => {};
       for (const login of logins.values()) login.close();
       logins.clear();
     },

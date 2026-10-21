@@ -124,7 +124,8 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Adding Terminal in Side or Session in Bottom keeps the other empty panel open.
 // The packaged empty-panel browser flow also checks nearby tab targets, mirrored Navigation, panel handles and reload.
 
-// Two hosts check an interrupted first download, offline and back, and local edits that merge when sync restarts.
+// Two hosts check that a new device gets the cloud project after login, an interrupted first download, cloning its
+// folder later, offline and back, and local edits that merge when sync restarts.
 import { registerTwoDeviceSyncSmokeTests } from "./packaged-two-device-sync-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";

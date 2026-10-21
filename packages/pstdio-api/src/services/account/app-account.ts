@@ -2,6 +2,7 @@ import { accountEvents } from "pstdio-api-contracts/extension-kernel";
 import type { AppConfig } from "../../app-config";
 import type { RouteDeps } from "../../features/deps";
 import { fireExtensionEventAsync } from "../../features/extensions/extension-event-runtime";
+import { recoverCloudProject } from "../../features/projects/cloud-project-recovery";
 import { connectAppRelay } from "../relay/runtime";
 import { createNativeAccount, nativeAccountFile } from "./native-account";
 import { createProjectSyncEvents } from "./project-sync-events";
@@ -42,12 +43,16 @@ export const createAppAccount = (
           stopEvents = app.deps.eventBus.subscribe((event) => {
             if (event.table === "projects") void accountService.refresh();
           });
-          accountService.start(async (connections) => {
-            await relay.update(connections);
-            // Signing in or out, or a membership change, can change any project's state, including
-            // projects that never synced: they move between local and offline.
-            for (const project of await projects.list()) void syncEvents.changed(project.id);
-          }, relay.status);
+          accountService.start(
+            async (connections) => {
+              await relay.update(connections);
+              // Signing in or out, or a membership change, can change any project's state, including
+              // projects that never synced: they move between local and offline.
+              for (const project of await projects.list()) void syncEvents.changed(project.id);
+            },
+            relay.status,
+            (connection) => recoverCloudProject(app.deps, connection),
+          );
         },
       },
     );

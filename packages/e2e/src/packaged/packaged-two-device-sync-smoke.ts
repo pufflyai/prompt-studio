@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import type { ProjectSyncState, StorageRecord } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { coreOwnerId, createSyncSpace, projectInfoDocumentId } from "pstdio-sync";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
@@ -79,6 +80,28 @@ const signIn = async (device: Awaited<ReturnType<typeof startDevice>>, origin: s
   expect((await fetch(callback)).status).toBe(200);
 };
 
+const git = (cwd: string, ...args: string[]) =>
+  expect(Bun.spawnSync(["git", ...args], { cwd, stdout: "ignore", stderr: "ignore" }).exitCode).toBe(0);
+
+// A repository with one commit, served from a local path like any git remote.
+const writeRepository = async (path: string) => {
+  await mkdir(path);
+  git(path, "init", "-q");
+  await Bun.write(join(path, "README.md"), "Shared notes");
+  git(path, "add", ".");
+  git(path, "-c", "user.name=Test", "-c", "user.email=test@example.test", "commit", "-qm", "first");
+};
+
+// The peer serves every project with one fixed key, so the test can name the encrypted project info document.
+const projectInfoDocument = async (projectId: string) => {
+  const space = await createSyncSpace({
+    projectId,
+    spaceOwner: null,
+    keys: [{ generation: 1, secret: "A".repeat(43) }],
+  });
+  return space.documentId(JSON.stringify([coreOwnerId, projectInfoDocumentId]));
+};
+
 const write = (device: Awaited<ReturnType<typeof startDevice>>, projectId: string, field: string, value: string) =>
   device.command<Record<string, StorageRecord>>(projectId, "read").then((records) =>
     device.command(projectId, "commit", {
@@ -88,7 +111,7 @@ const write = (device: Awaited<ReturnType<typeof startDevice>>, projectId: strin
 
 export const registerTwoDeviceSyncSmokeTests = () =>
   test(
-    "two compiled hosts report honest sync states through an interrupted download, offline, local and synced again",
+    "a new device gets the cloud project after login, reports an interrupted download honestly, and clones its folder later",
     async () => {
       const root = await mkdtemp(join(tmpdir(), "packaged-two-device-sync-"));
       const tls = writeCertificate(root);
@@ -101,33 +124,24 @@ export const registerTwoDeviceSyncSmokeTests = () =>
       const first = await startDevice(join(root, "first"), env);
       const second = await startDevice(join(root, "second"), env);
       try {
-        const project = await first.client.projects.create(folderProjectInput({ name: "Shared notes" }));
+        const remote = join(root, "origin");
+        await writeRepository(remote);
+        const checkout = join(root, "first-checkout");
+        git(root, "clone", "-q", remote, checkout);
+        const project = await first.client.projects.create(folderProjectInput({ name: "Shared notes" }, checkout));
         await write(first, project.id, "note", "written on the first device");
         await signIn(first, peer.origin);
         await first.client.account.syncProject(project.id);
         await first.reach(project.id, "synced");
 
-        // The second device starts its first download while the relay cannot serve documents.
-        peer.failReads(true);
+        // The new device can read the project info but none of the project's data yet.
+        const info = await projectInfoDocument(project.id);
+        peer.failReads((documentId) => documentId !== info);
         await signIn(second, peer.origin);
-        const { environmentId } = await second.client.runtime.environment();
-        await second.client.projects.bindEnvironment(project.id, {
-          environmentId,
-          name: "Shared notes",
-          initial_workspace: folderProjectInput({}).initial_workspace,
-        });
-        // A bound folder starts without extensions. Enable the one the first device uses.
-        await second.client.extensions.enableInstalled(project.id, "shared-notes", {
-          displayName: "Shared notes",
-          extensionId: "example.shared-notes",
-          name: "shared-notes",
-          manifest: { name: "shared-notes" },
-          sourceKind: "local_path",
-          sourcePath: source,
-          sourceHash: null,
-          sourceRef: null,
-          version: null,
-        });
+        await waitFor(async () => (await second.client.projects.query()).items.some((item) => item.id === project.id));
+        expect((await second.client.projects.get(project.id)).name).toBe("Shared notes");
+        await waitFor(async () => (await second.client.projects.folder(project.id)).gitRemote === remote);
+        expect((await second.client.projects.folder(project.id)).path).toBeNull();
         await waitFor(() => peer.failedReads() > 0);
         await second.reach(project.id, "first-download-incomplete");
 
@@ -150,6 +164,13 @@ export const registerTwoDeviceSyncSmokeTests = () =>
         expect((await second.command<Record<string, StorageRecord>>(project.id, "read")).note?.value).toBe(
           "written on the first device",
         );
+
+        // The first work on files asks for a folder. Cloning the recorded remote gives the device the same files.
+        const clone = join(root, "second-checkout");
+        await second.client.projects.chooseFolder(project.id, { path: clone, clone: true });
+        expect(await Bun.file(join(clone, "README.md")).text()).toBe("Shared notes");
+        expect((await second.client.projects.folder(project.id)).path).toBe(await realpath(clone));
+        await second.reach(project.id, "synced");
 
         // Making the project local is account-wide. The second device learns it on its next account refresh,
         // which a project change starts at once.

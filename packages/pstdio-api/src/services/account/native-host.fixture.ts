@@ -20,12 +20,14 @@ export const createAccountHostFixture = async (root: string) => {
   const file = nativeAccountFile(join(root, "db"), join(root, "storage"));
   let synced: RelayWorkbench[] = [];
   const account = createNativeAccount({ file, projects, environment: environmentService });
-  // No relay runs here, so a synced project never finishes its first download.
+  // No relay runs here, so a synced project never finishes its first download, and a cloud project
+  // missing on this device cannot be recovered.
   account.start(
     async (connections) => {
       synced = connections;
     },
     async () => ({ state: "first-download-incomplete", offlineReady: false }),
+    async () => {},
   );
   await account.refresh();
   const app = new OpenAPIHono().route("/v1", createAccountRoutes(account));

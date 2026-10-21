@@ -1,4 +1,5 @@
 import type { HarnessWorkspaceContext, WorkspaceProviderRef } from "pstdio-api-contracts";
+import { ProjectFolderMissingError } from "../projects/project-folder-missing";
 
 type WorkspaceRecord = {
   id: string;
@@ -7,6 +8,7 @@ type WorkspaceRecord = {
   execution_kind?: "local" | "remote";
   display_path?: string | null;
   root_path?: string | null;
+  is_default?: boolean;
 };
 
 export const toHarnessWorkspaceContext = (
@@ -32,6 +34,7 @@ export const toHarnessWorkspaceContext = (
   }
 
   const rootPath = workspace.root_path;
+  if (!rootPath && workspace.is_default) throw new ProjectFolderMissingError();
   if (!rootPath) throw new Error(`Workspace ${workspace.id} has no local execution target.`);
 
   return {

@@ -1,11 +1,11 @@
 import { and, eq, sql } from "drizzle-orm";
 import { createStorageId } from "pstdio-api-contracts";
 import {
+  coreOwnerId,
   nextResourceNumber,
   rememberResourceNumber,
   resourceIdentity,
   resourceNumbers,
-  resourceNumbersOwnerId,
 } from "pstdio-sync";
 import type { DbClient } from "../db/connection.pglite";
 import { extension_resource_sequences as sequences } from "../db/schemas.pg";
@@ -25,7 +25,7 @@ export const createExtensionResourceSequencesDBService = (
   documents = createDocumentStorageDBService(db),
 ) => {
   const store = createResourceNumberStore(documents);
-  const owner = (projectId: string) => ({ workbenchId: projectId, extensionId: resourceNumbersOwnerId });
+  const owner = (projectId: string) => ({ workbenchId: projectId, extensionId: coreOwnerId });
   const identity = (input: Omit<AllocationInput, "prefix"> & { id: string }) =>
     store.documentStore.transaction(owner(input.projectId), async ({ document }) => {
       const resource = resourceNumbers(document).get(input.id);

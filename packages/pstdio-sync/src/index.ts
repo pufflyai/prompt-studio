@@ -7,18 +7,24 @@ export * from "./encryption";
 export { createLegacyRecordStorage } from "./legacy";
 export { createMemoryDocumentStore } from "./memory-document-store";
 export { initialRecordRevision, scopeRecordStorage, storageRecordId } from "./namespaces";
+export {
+  type ProjectInfo,
+  projectInfoDocumentId,
+  readProjectInfo,
+  writeProjectInfo,
+} from "./project-info";
 export { appendGroups, projectGroups, type RecordProjection } from "./projection";
 export { applyRecordChange, blankRecord, recordConflict } from "./records";
 export { type ResolutionState, validateResolution } from "./resolution-validation";
 export type { NumberedResource } from "./resource-numbers";
 export {
+  coreOwnerId,
   nextResourceNumber,
   reconcileResourceNumbers,
   rememberResourceNumber,
   resourceIdentity,
   resourceNumbers,
   resourceNumbersDocumentId,
-  resourceNumbersOwnerId,
   resourceShorthand,
 } from "./resource-numbers";
 export { createRecordStorage } from "./storage";

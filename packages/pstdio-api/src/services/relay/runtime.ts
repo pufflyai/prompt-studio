@@ -2,9 +2,9 @@ import { createRelayAccess } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
+import { startCoreDocumentSync } from "./core-documents";
 import { startRelayExtension } from "./extension-owner";
 import { projectSyncStatus } from "./project-status";
-import { startResourceNumberSync } from "./resource-numbers";
 
 export type RelayWorkbench = {
   accountId: string;
@@ -26,7 +26,7 @@ export const startRelayRuntime = async (input: {
   const access = new Map<string, ReturnType<typeof createRelayAccess>>();
   const controller = new AbortController();
   const { deps } = input;
-  const resourceConnections = new Map<string, ReturnType<typeof startResourceNumberSync>>();
+  const coreConnections = new Map<string, ReturnType<typeof startCoreDocumentSync>>();
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
@@ -47,10 +47,10 @@ export const startRelayRuntime = async (input: {
   };
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
-    if (!resourceConnections.has(workbenchId))
-      resourceConnections.set(
+    if (!coreConnections.has(workbenchId))
+      coreConnections.set(
         workbenchId,
-        startResourceNumberSync({
+        startCoreDocumentSync({
           config,
           deps,
           access: access.get(workbenchId)!,
@@ -139,12 +139,12 @@ export const startRelayRuntime = async (input: {
   });
   await refresh();
   return {
-    // Every owner of project data reports: core resource numbers and each enabled extension.
+    // Every owner of project data reports: core documents and each enabled extension.
     // An owner that has not started yet counts as not downloaded.
     async status(workbenchId: string) {
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
-        resourceConnections.get(workbenchId),
+        coreConnections.get(workbenchId),
         ...snapshot.enabledSources.map(({ installedSource }) =>
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
         ),
@@ -168,10 +168,10 @@ export const startRelayRuntime = async (input: {
           .map(([id]) => id),
       );
       for (const id of changed) {
-        const resourceConnection = resourceConnections.get(id);
-        resourceConnection?.close();
-        await resourceConnection?.done;
-        resourceConnections.delete(id);
+        const coreConnection = coreConnections.get(id);
+        coreConnection?.close();
+        await coreConnection?.done;
+        coreConnections.delete(id);
         workbenches.delete(id);
         access.delete(id);
       }
@@ -192,10 +192,10 @@ export const startRelayRuntime = async (input: {
       stopEvents();
       clearTimeout(retry);
       controller.abort();
-      for (const connection of resourceConnections.values()) connection.close();
+      for (const connection of coreConnections.values()) connection.close();
       for (const connection of connections.values()) connection.close();
       await running;
-      await Promise.all([...resourceConnections.values()].map((connection) => connection.done));
+      await Promise.all([...coreConnections.values()].map((connection) => connection.done));
       await Promise.all([...connections.values()].map((connection) => connection.done));
     },
   };

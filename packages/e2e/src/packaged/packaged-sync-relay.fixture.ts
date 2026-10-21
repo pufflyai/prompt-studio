@@ -11,8 +11,9 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
   >();
   let deviceId = "";
   let storedStates = 0;
-  // While set, document reads fail, so a device cannot finish its first download.
-  let failReads = false;
+  // While set, document reads fail, so a device cannot finish its first download. A function picks the
+  // documents whose reads fail.
+  let failReads: boolean | ((documentId: string) => boolean) = false;
   let failedReads = 0;
   const document = (id: string) => {
     let value = documents.get(id);
@@ -90,7 +91,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     const input = async () => (await request.json()) as Record<string, unknown>;
     const doc = document(id);
     if (path.endsWith("/read")) {
-      if (failReads) {
+      if (typeof failReads === "function" ? failReads(id.slice(1)) : failReads) {
         failedReads++;
         return new Response(null, { status: 503 });
       }
@@ -171,7 +172,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     documents,
     states: () => storedStates,
     failedReads: () => failedReads,
-    failReads(value: boolean) {
+    failReads(value: boolean | ((documentId: string) => boolean)) {
       failReads = value;
     },
     /** Drops every connection, as a lost network does. */
