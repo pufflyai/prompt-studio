@@ -270,12 +270,8 @@ describe("attempt workflow commands", () => {
     const ticket = await findTicket(fixture.storage, "ticket-1");
     expect(ticket?.statusId).toBe("in-review");
     expect(ticket?.tagIds).toContain("default-human-requested-true");
-    expect(fixture.addedAnchors).toEqual([
-      expect.objectContaining({
-        sessionId: "implementation-1",
-        anchors: [expect.objectContaining({ type: "planner-human-request" })],
-      }),
-    ]);
+    expect(fixture.addedAnchors).toEqual([]);
+    expect(fixture.followups).toEqual([]);
     await expect(runReviewCommand.run(...fixture.context({ workspaceId: "workspace-1" }))).rejects.toThrow(
       "not ready for review",
     );
