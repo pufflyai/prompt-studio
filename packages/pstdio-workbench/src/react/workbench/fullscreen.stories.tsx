@@ -22,6 +22,11 @@ const fullscreenStory = (side: "attached" | "floating" | "closed", floatable = t
       await userEvent.type(editor, "Unsaved Main draft");
       const snapshot = structuredClone(w.host.getSnapshot());
       const mounts = lifecycle.mounts;
+      if (side !== "closed") {
+        const header = body.getByLabelText("Side panel header");
+        if (side === "floating") expect(header).not.toHaveAttribute("data-panel-draggable");
+        else expect(header).toHaveAttribute("data-panel-draggable");
+      }
       await userEvent.click(canvas.getByRole("button", { name: "Enter Main fullscreen" }));
       await expect(canvas.getByRole("button", { name: "Exit Main fullscreen" })).toBeVisible();
       await expect(editor).toBeVisible();
@@ -32,6 +37,7 @@ const fullscreenStory = (side: "attached" | "floating" | "closed", floatable = t
         if (side === "closed") await userEvent.click(body.getByRole("button", { name: "Open Side Panel" }));
         await waitFor(() => expect(body.getByRole("dialog", { name: "Side Panel" })).toBeVisible());
         expect(body.getAllByLabelText("Side panel header")).toHaveLength(1);
+        expect(body.getByLabelText("Side panel header")).not.toHaveAttribute("data-panel-draggable");
         expect(body.queryByRole("button", { name: "Open Side Panel" })).toBeNull();
         await userEvent.click(body.getByRole("button", { name: "Close Side Panel" }));
         await waitFor(() => expect(body.getByRole("button", { name: "Open Side Panel" })).toHaveFocus());
@@ -52,6 +58,7 @@ const fullscreenStory = (side: "attached" | "floating" | "closed", floatable = t
       expect(w.host.getSnapshot()).toEqual(snapshot);
       expect(lifecycle.mounts).toBe(mounts);
       expect(lifecycle.unmounts).toBe(0);
+      if (side === "attached") expect(body.getByLabelText("Side panel header")).toHaveAttribute("data-panel-draggable");
     },
   };
 };
