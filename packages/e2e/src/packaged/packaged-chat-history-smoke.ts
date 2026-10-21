@@ -7,7 +7,7 @@ export const expectPackagedChatHistory = async (page: Page, sessionId: string) =
     page.evaluate((id) => {
       const workbench = (
         window as Window & {
-          __pstdioDashboardWorkbench: {
+          __pstdioDashboardWorkbench?: {
             host: {
               getOpenPlacementIds(): ReadonlySet<string>;
               getOpenPlacements(): { widgetId: string; resource?: { id: string } }[];
