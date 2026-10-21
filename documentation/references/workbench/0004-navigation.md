@@ -55,7 +55,8 @@ Single-resource pages hide the tab strip and close action by default. A routed M
 Selecting a different resource
 on that same one-resource page replaces its content in the chosen region, while preserving separate resource
 navigation identities. A single-view parent and its resource page also keep that region when they use the
-same view. Other pages and mode-owned panels keep their declared lifetimes.
+same view. Pages with a declared document keep each document's separate layout and do not replace a moved
+document when opening another. Other pages and mode-owned panels keep their declared lifetimes.
 
 Retention is local to the current project and workbench. Removing a view contribution, switching projects, or closing the workbench releases its retained views. A full application reload starts new views. Views are not mounted merely because they are registered; `mountStrategy: "keep-mounted"` can mount inactive placements before their first selection.
 

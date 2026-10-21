@@ -14,6 +14,8 @@ export const isSingleViewContinuation = (state: State, widget: WorkbenchWidgetPl
     origin?.main.kind !== "view" ||
     page.main.cardinality !== "one" ||
     origin.main.cardinality !== "one" ||
+    page.document ||
+    origin.document ||
     origin.modeId !== state.activeModeId
   )
     return false;
@@ -31,6 +33,7 @@ export const isSinglePageMain = (state: State, widget: WorkbenchWidgetPlacement)
   return (
     page?.main.kind === "view" &&
     page.main.cardinality === "one" &&
+    !page.document &&
     identity?.kind === "page" &&
     identity.pageId === page.id &&
     identity.slotId === "$main"
@@ -39,6 +42,7 @@ export const isSinglePageMain = (state: State, widget: WorkbenchWidgetPlacement)
 
 // A one-resource page changes conversation in its chosen region. The resource still owns
 // its navigation identity; only the slot's current destination follows the replacement.
+// Declared documents keep separate layouts, so opening one does not replace another.
 export const singleViewDestinations = (state: State, previous: State, layout: WorkbenchLayout) => {
   const explicit = state.reconciliation.destinations ?? [];
   if (state.projectId !== previous.projectId || state.activeModeId !== previous.activeModeId) return explicit;
