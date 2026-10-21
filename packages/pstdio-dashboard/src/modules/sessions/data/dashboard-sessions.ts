@@ -90,11 +90,13 @@ export const buildDashboardSessionsFromRows = (
 };
 const sessionSnapshots = new WeakMap<
   ReturnType<typeof getRuntimeCollections>,
-  { version: number; projects: Map<string | undefined, DashboardSession[]> }
+  { version: string; projects: Map<string | undefined, DashboardSession[]> }
 >();
 export const createDashboardSessions = (projectId?: string) => {
   const owner = getRuntimeCollections();
-  const version = owner.getCollectionsVersion();
+  const version = (["sessions", "workspaces", "workspace_sessions"] as const)
+    .map((table) => owner.getCollectionVersion(table))
+    .join(":");
   let cached = sessionSnapshots.get(owner);
   if (cached?.version !== version) {
     cached = { version, projects: new Map() };

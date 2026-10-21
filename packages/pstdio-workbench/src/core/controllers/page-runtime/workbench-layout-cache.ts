@@ -213,7 +213,9 @@ export const createWorkbenchLayoutCache = (
           // Adapters without deletion can still replace an existing override.
           else if (adapter.getLayout(scope)) adapter.setLayout(snapshot, scope);
         });
-        inventory.set(scope, snapshot);
+        // The live layout owns its default tabs. Saving a baseline must not
+        // turn a visited page into another owner after that tray is replaced.
+        inventory.set(scope, adapter.removeLayout ? undefined : adapter.getLayout(scope));
       } else write(snapshot, scope);
     },
     removeResource(resource: ResourceRef) {

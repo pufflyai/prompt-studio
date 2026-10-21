@@ -4,4 +4,4 @@
 "@pstdio/sdk": patch
 ---
 
-Share open-tab inventory, save page layout overrides only when customized, index idle deadlines, and clean up claims after lost responses.
+Share open-tab inventory without retaining replaced default pages, save only customized layouts, index idle deadlines, cache session lists by their source tables, and stop retrying rejected retention claims while cleaning up lost responses.

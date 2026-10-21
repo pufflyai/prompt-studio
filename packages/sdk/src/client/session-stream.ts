@@ -1,11 +1,14 @@
 import {
   type ClientOptions,
   createRequestHeaders,
+  PstdioApiError,
   type RequestFn,
   resolveBaseUrl,
   resolveClientUrl,
   resolveFetch,
+  responseError,
 } from "./request";
+import { isSessionStreamRejection } from "./session-stream-errors";
 import { removeSessionStreamSubscription } from "./session-stream-removal";
 import { readSseStream } from "./sse";
 
@@ -45,8 +48,13 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
       () => {},
       (error: unknown) => {
         if (subscriptions.get(id) !== subscription) return;
+        if (isSessionStreamRejection(error) && error.code === "SESSION_STREAM_NOT_FOUND") {
+          if (connection) fail(connection, new Error("Session stream no longer exists", { cause: error }));
+          return;
+        }
         // A failed response can still have created the server subscription.
-        release(id, true);
+        // A definitive rejection cannot, so it needs no compensating DELETE.
+        release(id, !isSessionStreamRejection(error));
         subscription.onError(error);
       },
     );
@@ -94,7 +102,10 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
     current.controller.abort();
     const failed = [...subscriptions.values()];
     subscriptions.clear();
-    const failure = new Error(error instanceof Error ? error.message : String(error), { cause: error });
+    const failure =
+      error instanceof PstdioApiError
+        ? error
+        : new Error(error instanceof Error ? error.message : String(error), { cause: error });
     for (const subscription of failed) subscription.onError(failure);
   };
 
@@ -107,7 +118,8 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
         resolveClientUrl(resolveBaseUrl(clientOptions), "/v1/session-stream"),
         { headers: Object.fromEntries(createRequestHeaders(clientOptions).entries()), signal },
       );
-      if (!response.ok || !response.body) throw new Error(`Connection failed: ${response.status}`);
+      if (!response.ok) throw await responseError(response);
+      if (!response.body) throw new Error("Session stream response has no body");
       await readSseStream(response.body, ({ event, data }) => dispatch(current, event, JSON.parse(data)), { signal });
       throw new Error("Session stream closed");
     };

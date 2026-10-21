@@ -21,14 +21,36 @@ const conversations = () =>
     },
   ]);
 
-test("ordinary page navigation retains open resources without creating Main overrides", () => {
+test("default page tabs stop claiming resources when replaced, consistently across reload", () => {
   const s = conversations();
   s.navigate("conversation", "first");
+  expect(s.w.getOpenResources().map((resource) => resource.id)).toContain("first");
   s.navigate("conversation", "second");
   expect(mainScopes(s.saved)).toEqual([]);
-  expect(s.w.getOpenResources().map((resource) => resource.id)).toEqual(expect.arrayContaining(["first", "second"]));
-  s.w.resources.removed({ type: "document", id: "first" });
-  expect(s.w.getOpenResources().some((resource) => resource.id === "first")).toBe(false);
+  expect(s.w.getOpenResources().map((resource) => resource.id)).toEqual(["second"]);
+  const restored = modePanelFixture(s.saved, true, [s.w.pages.getPage("conversation")!]);
+  restored.navigate("conversation", "second");
+  expect(restored.w.getOpenResources().map((resource) => resource.id)).toEqual(["second"]);
+});
+
+test("explicitly opened tabs retain resources across navigation and reload until closed", () => {
+  const s = conversations();
+  s.navigate("conversation", "first");
+  s.open("extra", "main", "pin");
+  s.navigate("conversation", "second");
+  expect(s.w.getOpenResources().map((resource) => resource.id)).toEqual(
+    expect.arrayContaining(["first", "extra", "second"]),
+  );
+  const restored = modePanelFixture(s.saved, true, [s.w.pages.getPage("conversation")!]);
+  restored.navigate("conversation", "second");
+  expect(restored.w.getOpenResources().map((resource) => resource.id)).toEqual(
+    expect.arrayContaining(["first", "extra", "second"]),
+  );
+  restored.navigate("conversation", "first");
+  const extra = restored.w.layout.listPanelInstances("main").find((panel) => panel.resource?.id === "extra")!;
+  restored.w.closePlacement(extra.placementIdentity!);
+  restored.navigate("conversation", "second");
+  expect(restored.w.getOpenResources().map((resource) => resource.id)).toEqual(["second"]);
 });
 
 test("a custom Main tray survives navigation and its override disappears after returning to baseline", () => {
@@ -92,7 +114,7 @@ test("ten thousand default resource pages keep no full page snapshots", () => {
     cache.savePageMain({ projectId: "project", modeId: "alpha", pageId: page.id, resource }, layout, page);
   }
   expect(saved.size).toBe(0);
-  expect(cache.listResources(createDefaultWorkbenchLayout())).toHaveLength(10_000);
+  expect(cache.listResources(createDefaultWorkbenchLayout())).toHaveLength(0);
 });
 
 test("closing the outgoing default preview during navigation does not create an empty override", () => {
