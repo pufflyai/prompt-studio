@@ -34,6 +34,8 @@ Every entry except `@pstdio/sdk/extensions/react` works without React. That entr
 
 The [method reference](0003-api.md) lists the client groups and what each entry exports.
 
+`createMemoryStorageDevices` from `/testing` creates two offline devices for the same extension data. Its `devices` tuple contains two storage APIs; `merge()` applies the product's merge rules to both and returns `MemoryStorageReplacement` entries for competing edits. `MemoryStorageOptions` accepts the same seeds as `createMemoryStorage`. See [Test offline edits on two devices](../../guides/extensions/0006-smoke-checks.md#test-offline-edits-on-two-devices). This addition ships after SDK 0.44.0.
+
 ## Where to start
 
 Extension authors should start with the [workbench cookbook](../../guides/extensions/0002-workbench-cookbook.md) and [Extension Lab](../../../extensions/extension-lab/README.md). These examples use public contracts for editing, persistence, inspectors, shared mode panels, and navigation. The [Extension API](../extensions/0001-api.md) reference covers every contribution.
