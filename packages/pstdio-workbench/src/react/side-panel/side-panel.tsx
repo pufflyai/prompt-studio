@@ -48,7 +48,9 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   const { workbench, contentSlotRef, header } = props;
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
   const hasTabs = useWorkbenchRegionTabsVisible(workbench, "side");
-  const attached = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode() === "attached");
+  const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
+  const attached = mode === "attached" && !fullscreen;
 
   return (
     <WorkbenchFocusRegion workbench={workbench} region="side" h="full" minH="0" minW="0" w="full">
