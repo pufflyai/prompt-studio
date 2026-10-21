@@ -26,5 +26,6 @@ clients/landing-page/public
 infra/relay/.env*
 services/relay/.env*
 services/account-manager/.env*
+infra/terraform
 infra/relay/compose.yaml
 infra/relay/Caddyfile

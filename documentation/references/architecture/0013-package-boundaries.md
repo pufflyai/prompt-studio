@@ -130,7 +130,7 @@ imports. This lets the package graph select that proof when a handler changes.
 manager, and the telemetry library they share. The relay and the account
 manager each keep their source, migrations, and Dockerfiles in their own
 folder. `infra/` holds only deployment and environment setup, such as Docker
-Compose files. Prompt Studio's own hosting lives in a separate infrastructure repository. The relay's test and local Compose files live in `infra/relay/`.
+Compose files and the reusable DigitalOcean Terraform module in `infra/terraform/`. Prompt Studio's own environments and secrets live in a separate repository. The relay's test and local Compose files live in `infra/relay/`.
 `infra/local/` is the local development stack and the example extensions it
 installs. Service code does not belong in `infra/`.
 

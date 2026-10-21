@@ -110,18 +110,73 @@ uses `RELAY_ACCESS_TRUST` and the base64 recovery key uses `RELAY_RECOVERY_KEY`.
 File injection through `RELAY_ACCESS_TRUST_FILE` and `RELAY_RECOVERY_KEY_FILE` remains
 available. Environment values take precedence when supplied.
 
+## DigitalOcean module
+
+`infra/terraform/` is a Terraform module that runs both services on DigitalOcean App
+Platform:
+
+- One app on one host. The relay serves under `/relay` and the account manager under
+  `/accounts`. App Platform removes the path before forwarding, as described in
+  [addresses with a path](0007-account-manager.md#addresses-with-a-path).
+- One PostgreSQL server with a database and login per service. Each service's migration
+  revokes public access to its database and grants it to that service's login only, so
+  the relay cannot reach the manager's keys.
+- A private Spaces bucket for relay data.
+
+Use it from your own Terraform configuration and pin it to a release, together with the
+image digests of the same release:
+
+```hcl
+module "cloud" {
+  source          = "git::https://github.com/pufflyai/prompt-studio.git//infra/terraform?ref=<release tag>"
+  name            = "acme-production"
+  host            = "cloud.example.com"
+  dns_zone        = "example.com"
+  app_region      = "ams"
+  database_region = "ams3"
+  spaces_region   = "ams3"
+  bucket_name     = "acme-relay"
+  image_digests   = { relay = "sha256:...", manager = "sha256:..." }
+  relay_secrets   = var.relay_secrets
+  manager_secrets = var.manager_secrets
+}
+```
+
+`variables.tf` lists every input. Give clients the `manager_url` output:
+`pst login --manager <manager_url>`. The manager tells each device the relay address.
+Register `<manager_url>/api/auth/callback/google` in the Google OAuth client.
+
+The relay must trust the manager's signing keys, and those exist only once the manager
+runs. Deploy the first time with `services = ["manager"]`. Fetch
+`<manager_url>/api/auth/jwks` and put the key set into `relay_secrets.RELAY_ACCESS_TRUST`
+with issuer `<manager_url>` and audience `<relay_url>`. Then deploy both services.
+
+Plan the module without credentials or cloud calls:
+
+```sh
+terraform -chdir=infra/terraform fmt -check -recursive
+terraform -chdir=infra/terraform/validation init -input=false
+terraform -chdir=infra/terraform/validation validate
+DIGITALOCEAN_TOKEN=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+SPACES_ACCESS_KEY_ID=validation-only SPACES_SECRET_ACCESS_KEY=validation-only \
+terraform -chdir=infra/terraform/validation plan -refresh=false -input=false
+```
+
+The plan adds 8 resources. It checks the provider schema and the dependency graph, not
+live credentials, DNS or provider capacity. Never apply the validation inputs. State and
+plans contain secrets even when the output hides them: keep them in a private backend
+with locking. Prompt Studio's own hosted service uses this module from a separate
+repository that holds its environments, state and secrets.
+
 ## Other platforms
 
 The images run on any container platform. Give each service its own PostgreSQL
-database and role, keep relay objects in a private S3-compatible bucket, and run each
+database and login, keep relay objects in a private S3-compatible bucket, and run each
 service's migration with the same image before the service starts. For a managed
 database, pass its CA certificate in `DATABASE_CA_CERT`; the container launcher writes it
 to a private file and connects with `sslmode=verify-full`. Give the relay a
 bucket-scoped key with read, write, multipart, list and delete access, and check it with
 the [object contract probe](0006-relay.md#provider-contract).
-
-Prompt Studio's own hosted service runs these images from a separate infrastructure
-repository. This repository has no provider-specific deployment files.
 
 ## Migrations and upgrades
 
@@ -129,7 +184,7 @@ Test the release against restored disposable persistence first. Capture a manage
 backup, preserve object data, database volumes and recovery/auth secrets, and record
 the old image digests. Stop writes while making changes that require downtime. Run
 each migration once with its matching release image before admitting new traffic.
-Compose dependencies enforce this order; on other platforms, run the migration first. Migration
+Compose dependencies and App Platform pre-deploy jobs enforce this order. Migration
 failure must stop the upgrade. Do not automatically run older images against a newer
 schema: database rollback requires a tested restore or a compatible forward fix.
 

@@ -49,6 +49,24 @@ jobs:
         with:
           name: service-container-${{ matrix.service }}
           path: /tmp/${{ matrix.service }}.tar
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.15.7"
+      - run: terraform -chdir=infra/terraform fmt -check -recursive
+      - run: terraform -chdir=infra/terraform/validation init -input=false
+      - run: terraform -chdir=infra/terraform/validation validate
+      - name: Plan the module with synthetic inputs and no cloud access
+        env:
+          DIGITALOCEAN_TOKEN: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          SPACES_ACCESS_KEY_ID: validation-only
+          SPACES_SECRET_ACCESS_KEY: validation-only
+        run: terraform -chdir=infra/terraform/validation plan -refresh=false -input=false
   portable_smoke:
     runs-on: ubuntu-latest
     steps:

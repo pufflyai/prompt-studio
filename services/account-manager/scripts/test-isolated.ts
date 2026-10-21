@@ -38,7 +38,7 @@ const config = {
       environment: {
         MANAGER_TEST_ADMIN_URL: "postgres://fixture_admin:fixture-admin-only@database:5432/authority_admin",
       },
-      command: ["bun", "test", ...(entries.length ? entries : ["src"])],
+      command: ["bun", "test", ...(entries.length ? entries : ["src", "scripts"])],
       depends_on: { database: { condition: "service_healthy" } },
     },
     smoke: {
