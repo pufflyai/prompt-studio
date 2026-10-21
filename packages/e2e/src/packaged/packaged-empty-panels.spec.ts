@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium, expect, test } from "@playwright/test";
+import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyEmptyPanelAddition } from "./packaged-empty-panel-addition";
@@ -23,14 +24,16 @@ test("adding a tool keeps the other empty panel open", async () => {
   let browser: Browser | null = null;
   try {
     const started = await test.step("Start the packaged runtime", () =>
-      startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: "[]" }));
+      startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") }));
     child = started.child;
     const folder = join(root, "project");
     mkdirSync(folder);
     const response = await fetch(`${started.baseUrl}/v1/projects`, {
       method: "POST",
       headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "empty-panels" }, folder)),
+      body: JSON.stringify(
+        folderProjectInput({ name: "empty-panels", agents: ["pstdio.workbench-fixture.harness.fake"] }, folder),
+      ),
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
