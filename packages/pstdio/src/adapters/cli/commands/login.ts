@@ -6,7 +6,11 @@ export const command = "login";
 export const describe = "Log in with Google and connect this device to every cloud project of your account";
 export const builder = (yargs: Argv) =>
   yargs
-    .option("manager", { type: "string", demandOption: true, describe: "HTTPS account service origin" })
+    .option("manager", {
+      type: "string",
+      demandOption: true,
+      describe: "HTTPS account manager address, which may include a path",
+    })
     .option("open-browser", { type: "boolean", default: true, describe: "Open the sign-in URL in the system browser" });
 export const handler = async (args: Arguments<{ manager: string; openBrowser: boolean }>) => {
   const client = apiClient().account;

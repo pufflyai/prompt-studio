@@ -18,7 +18,8 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
   const config = parseManagerAuthConfig(input);
   const connection = connectManager(config.databaseUrl);
   const auth = betterAuth({
-    baseURL: config.origin,
+    // Better Auth adds /api/auth only to a bare origin, so name the full path for addresses with a path.
+    baseURL: `${config.origin}/api/auth`,
     secret: config.secret,
     database: drizzleAdapter(connection.db, { provider: "pg", schema: authSchema }),
     socialProviders: { google: { clientId: config.googleClientId, clientSecret: config.googleClientSecret } },
