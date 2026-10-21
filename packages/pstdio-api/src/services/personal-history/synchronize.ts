@@ -28,6 +28,15 @@ export const createPersonalDocumentSync = (input: {
     await sync.synchronize();
   };
   return {
+    async status() {
+      const names = ["records", ...(await input.history.transcriptNames()).map(input.history.transcriptName)];
+      const statuses = await Promise.all(names.map((name) => documents.get(name)?.status()));
+      return {
+        downloaded: statuses.every((status) => status?.downloaded),
+        pending: statuses.some((status) => status?.pending),
+        needsAttention: statuses.some((status) => status?.needsAttention),
+      };
+    },
     async synchronize(capture: () => Promise<void>) {
       await capture();
       await synchronize();

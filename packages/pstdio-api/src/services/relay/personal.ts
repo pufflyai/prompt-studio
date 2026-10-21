@@ -19,6 +19,7 @@ export const startRelayPersonalHistory = (input: {
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
   access: () => Promise<{ token: string; expiresAt: string }>;
+  statusChanged?: () => void;
 }) => {
   const { config, deps } = input;
   const controller = new AbortController();
@@ -38,6 +39,16 @@ export const startRelayPersonalHistory = (input: {
   let attempt: AbortSignal | undefined;
   let generation: number | undefined;
   let projectGeneration: number | undefined;
+  // A reconnect replaces sync objects, but does not undo the owner's first full download.
+  let firstDownloaded = false;
+  const documentStatus = async () => {
+    const statuses = [await documents?.status(), await shared?.status()];
+    return {
+      downloaded: statuses.every((status) => status?.downloaded),
+      pending: statuses.some((status) => status?.pending),
+      needsAttention: statuses.some((status) => status?.needsAttention),
+    };
+  };
   const published = new Map<string, string>();
   const publish = async () => {
     const state = await deps.personalHistoryService.fullState(config.workbenchId);
@@ -119,6 +130,7 @@ export const startRelayPersonalHistory = (input: {
       attemptSignal.throwIfAborted();
       await shared!.synchronize();
       attemptSignal.throwIfAborted();
+      if ((await documentStatus()).downloaded) firstDownloaded = true;
       await publish();
       deps.eventBus.emit("extension_events", "set", {
         id: crypto.randomUUID(),
@@ -131,12 +143,20 @@ export const startRelayPersonalHistory = (input: {
         { event: "relay.personal.reconnecting", workbenchId: config.workbenchId },
         "Personal history sync will retry",
       ),
+    onStatusChange: input.statusChanged,
   });
   const stopEvents = deps.eventBus.subscribe((event) => {
-    if (["sessions", "workspaces", "workspace_sessions"].includes(event.table)) connection.wake();
+    if (["sessions", "workspaces", "workspace_sessions"].includes(event.table)) {
+      connection.wake();
+      input.statusChanged?.();
+    }
   });
-  const stopConversations = deps.sessionService.store.watch(() => connection.wake());
+  const stopConversations = deps.sessionService.store.watch(() => {
+    connection.wake();
+    input.statusChanged?.();
+  });
   return {
+    status: async () => ({ firstDownloaded, ...(await documentStatus()), ...connection.status() }),
     done: connection.done.finally(() => {
       documents?.close();
       shared?.close();

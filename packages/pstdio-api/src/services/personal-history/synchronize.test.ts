@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createMemoryDocumentStore, createSyncSpace, openUpdate } from "pstdio-sync";
 import type { DocumentRelay } from "pstdio-sync/relay";
 import type { StoredUpdate } from "pstdio-sync-contracts";
+import { projectSyncStatus } from "../relay/project-status";
 import { createPersonalHistoryStore } from "./store";
 import { createPersonalDocumentSync } from "./synchronize";
 
@@ -19,15 +20,7 @@ const localDocuments = () => {
   };
 };
 
-test("another device downloads full transcripts after the source device stops, using personal keys", async () => {
-  const projectId = "project";
-  const managerOrigin = "https://manager.example";
-  const accountId = "alice";
-  const space = await createSyncSpace({
-    projectId,
-    spaceOwner: accountId,
-    keys: [{ generation: 1, secret: "B".repeat(43) }],
-  });
+const testRelay = () => {
   const encrypted = new Map<string, StoredUpdate[]>();
   const relay = (documentId: string): DocumentRelay => {
     const updates = encrypted.get(documentId) ?? [];
@@ -53,6 +46,19 @@ test("another device downloads full transcripts after the source device stops, u
       },
     };
   };
+  return { encrypted, relay };
+};
+
+test("another device downloads full transcripts after the source device stops, using personal keys", async () => {
+  const projectId = "project";
+  const managerOrigin = "https://manager.example";
+  const accountId = "alice";
+  const space = await createSyncSpace({
+    projectId,
+    spaceOwner: accountId,
+    keys: [{ generation: 1, secret: "B".repeat(43) }],
+  });
+  const { encrypted, relay } = testRelay();
   const source = createPersonalHistoryStore({ projectId, managerOrigin, accountId, documents: localDocuments() });
   const destination = createPersonalHistoryStore({ projectId, managerOrigin, accountId, documents: localDocuments() });
   const rejected: unknown[] = [];
@@ -101,4 +107,86 @@ test("another device downloads full transcripts after the source device stops, u
   await c.synchronize(async () => {});
   expect(await bob.readRecords("sessions")).toEqual([]);
   c.close();
+});
+
+test("private transcripts keep a project incomplete or needing attention after shared documents finish", async () => {
+  const space = await createSyncSpace({
+    projectId: "project",
+    spaceOwner: "alice",
+    keys: [{ generation: 1, secret: "B".repeat(43) }],
+  });
+  const history = createPersonalHistoryStore({
+    projectId: "project",
+    accountId: "alice",
+    managerOrigin: "https://manager.example",
+    documents: localDocuments(),
+  });
+  await history.writeRecords("sessions", { ownerId: "alice", id: "source", name: "Laptop" }, [{ id: "session" }]);
+  await history.writeTranscript("session", []);
+  const transcriptId = await space.documentId(
+    JSON.stringify(["pstdio.personal-history", history.transcriptName("session")]),
+  );
+  const { encrypted, relay } = testRelay();
+  const entered = Promise.withResolvers<void>();
+  const released = Promise.withResolvers<void>();
+  const sync = createPersonalDocumentSync({
+    history,
+    space,
+    relay: (id) => {
+      const remote = relay(id);
+      if (id !== transcriptId) return remote;
+      return {
+        ...remote,
+        read: async (after) => {
+          entered.resolve();
+          await released.promise;
+          return remote.read(after);
+        },
+      };
+    },
+    quarantine: async () => {},
+  });
+  const ready = {
+    firstDownloaded: true,
+    downloaded: true,
+    pending: false,
+    needsAttention: false,
+    connected: true,
+    busy: false,
+  };
+  const running = sync.synchronize(async () => {});
+  try {
+    await entered.promise;
+    expect(projectSyncStatus([ready, { ...ready, ...(await sync.status()), firstDownloaded: false }])).toEqual({
+      state: "first-download-incomplete",
+      offlineReady: false,
+    });
+    released.resolve();
+    await running;
+    expect(projectSyncStatus([ready, { ...ready, ...(await sync.status()) }])).toEqual({
+      state: "synced",
+      offlineReady: true,
+    });
+    const updates = encrypted.get(transcriptId)!;
+    updates.push({
+      updateId: "invalid",
+      payload: "AAAA",
+      sequence: updates.length + 1,
+      deviceId: "source",
+      createdAt: new Date().toISOString(),
+    });
+    await sync.synchronize(async () => {});
+    expect(projectSyncStatus([ready, { ...ready, ...(await sync.status()) }])).toEqual({
+      state: "needs-attention",
+      offlineReady: false,
+    });
+    await history.writeRecords("sessions", { ownerId: "alice", id: "source", name: "Laptop" }, []);
+    expect(await sync.status()).toMatchObject({ needsAttention: false });
+    await history.writeRecords("sessions", { ownerId: "alice", id: "source", name: "Laptop" }, [{ id: "new-session" }]);
+    expect(await sync.status()).toMatchObject({ downloaded: false });
+  } finally {
+    released.resolve();
+    await running;
+    sync.close();
+  }
 });

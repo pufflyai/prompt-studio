@@ -118,6 +118,8 @@ export const registerPersonalHistorySmokeTests = () =>
         let clientB = await connect(b, join(roots[1]!, "project"));
         await waitFor(async () => (await clientB.sessions.query(projectId)).items.some((row) => row.id === session.id));
         await waitFor(async () => (await clientB.sessions.getConversation(session.id)).messages.length === 600);
+        await waitFor(async () => (await clientB.account.projectSyncStatus(projectId)).state === "synced");
+        expect(await clientB.account.projectSyncStatus(projectId)).toEqual({ state: "synced", offlineReady: true });
         await stopProcess(b.child);
         await peer.stop();
         b = await startPackagedServe(roots[1]!, env);

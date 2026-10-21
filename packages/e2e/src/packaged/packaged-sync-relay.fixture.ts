@@ -61,6 +61,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
           platform: "fixture",
           createdAt: new Date().toISOString(),
           lastSeenAt: new Date().toISOString(),
+          online: true,
         })),
       });
     if (path === "/api/auth/sign-out") return json({ ok: true });

@@ -52,7 +52,13 @@ export const startRelayRuntime = async (input: {
     if (!personal.has(workbenchId))
       personal.set(
         workbenchId,
-        startRelayPersonalHistory({ config, deps, signal: controller.signal, access: access.get(workbenchId)! }),
+        startRelayPersonalHistory({
+          config,
+          deps,
+          signal: controller.signal,
+          access: access.get(workbenchId)!,
+          statusChanged: () => statusChanged(workbenchId),
+        }),
       );
     if (!resourceConnections.has(workbenchId))
       resourceConnections.set(
@@ -146,11 +152,12 @@ export const startRelayRuntime = async (input: {
   });
   await refresh();
   return {
-    // Every owner of project data reports: core resource numbers and each enabled extension.
+    // Every owner reports: private history, core resource numbers, and each enabled extension.
     // An owner that has not started yet counts as not downloaded.
     async status(workbenchId: string) {
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
+        personal.get(workbenchId),
         resourceConnections.get(workbenchId),
         ...snapshot.enabledSources.map(({ installedSource }) =>
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
