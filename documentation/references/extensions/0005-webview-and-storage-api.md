@@ -337,6 +337,11 @@ The low-level `commands.stream` bridge accepts `start`, `cancel`, and `ack` oper
 
 ## Local editing sessions
 
+To try the API, run `bun run --cwd packages/pstdio-workbench storybook` and open
+**Reference → Extension API → Shared editing sessions → Playground**. Hold and release saves,
+edit either shared view, preview or cancel a move, and fail a held save to test retrying.
+The story uses the real SDK and host session with in-memory transport and persistence.
+
 On `main` (extension API 0.2.1, after release 0.44.0), declare `editing.session` and use
 `client.editing.open` when several webviews edit the same document. The host keeps one local
 session for the calling project, extension and key. Views receive edits before a backend save
