@@ -1,8 +1,36 @@
 import { expect, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createBuildCache } from "./build-cache";
+
+test("cache readiness is always complete when another process observes it", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "ci-build-cache-ready-"));
+  const server = { url: "http://127.0.0.1:12345", pid: process.pid };
+  const publisher = Bun.spawn(
+    [
+      process.execPath,
+      "-e",
+      `import { publishBuildCacheReady } from ${JSON.stringify(join(import.meta.dirname, "build-cache.ts"))};
+       for (let index = 0; index < 1000; index++) publishBuildCacheReady(${JSON.stringify(directory)} + "/ready-" + index, ${JSON.stringify(server)});`,
+    ],
+    { stdout: "ignore", stderr: "inherit" },
+  );
+  try {
+    const deadline = Date.now() + 2000;
+    for (let index = 0; index < 1000; index++) {
+      const ready = join(directory, `ready-${index}`);
+      while (!existsSync(ready) && Date.now() < deadline) {}
+      expect(JSON.parse(readFileSync(ready, "utf8"))).toEqual(server);
+    }
+    expect(await publisher.exited).toBe(0);
+  } finally {
+    publisher.kill();
+    await publisher.exited;
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test("the job cache stays available after its setup process exits", async () => {
   const directory = await mkdtemp(join(tmpdir(), "ci-build-cache-launch-"));
