@@ -17,13 +17,13 @@ export const tagsCollection = (storage: ExtensionStorageApi) => storage.collecti
 // The runtime's collection.create() stores the value *without* the generated id,
 // so list()/get() would lose it. We own the id and persist it inside the value.
 export const putTicket = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
-  const next = await deriveReviewNeededFlag(storage, await withIndependentBlocker(storage, ticket));
+  const next = await withDerivedTicketState(storage, ticket);
   await ticketsCollection(storage).put(ticket.id, next);
   return next;
 };
 
 export const updateTicket = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
-  const next = await deriveReviewNeededFlag(storage, await withIndependentBlocker(storage, ticket));
+  const next = await withDerivedTicketState(storage, ticket);
   await ticketsCollection(storage).update(ticket.id, next);
   return next;
 };
@@ -50,6 +50,9 @@ export const readTicketSnapshot = async (storage: ExtensionStorageApi) => {
 
 export const readTicketsWithReviewState = async (storage: ExtensionStorageApi) =>
   (await readTicketSnapshot(storage)).tickets;
+
+export const withDerivedTicketState = async (storage: ExtensionStorageApi, ticket: StoredTicket) =>
+  deriveReviewNeededFlag(storage, await withIndependentBlocker(storage, ticket));
 
 const withIndependentBlocker = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
   if (!dependencyBlockerRefs(ticket.blockedReason)) return ticket;

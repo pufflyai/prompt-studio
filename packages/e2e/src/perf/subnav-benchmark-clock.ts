@@ -5,6 +5,8 @@ export interface SubnavSample {
   visit: "first" | "repeat";
   structureMs: number;
   dataMs: number;
+  editorMs?: number;
+  editorResources?: { path: string; startMs: number; durationMs: number; bytes: number }[];
   lastRequestMs: number;
   mountedRows: number;
   requests: {
@@ -22,8 +24,10 @@ export interface SubnavSample {
 interface SubnavClockState {
   destination: string;
   title: string;
+  editorTitle: string;
   started: number;
   structure: number;
+  editor: number;
   stableFrame: number;
   lastMutation: number;
   revision: number;
@@ -41,8 +45,10 @@ export const installSubnavClock = (page: Page) =>
     const state: SubnavClockState = {
       destination: "",
       title: "",
+      editorTitle: "",
       started: 0,
       structure: 0,
+      editor: 0,
       stableFrame: 0,
       lastMutation: 0,
       revision: 0,
@@ -78,12 +84,24 @@ export const installSubnavClock = (page: Page) =>
     };
     const afterPaintOpportunity = (callback: () => void) =>
       requestAnimationFrame(() => requestAnimationFrame(callback));
+    const checkEditor = () => {
+      if (state.destination !== "ticket" || state.editor) return;
+      const editor = [...document.querySelectorAll('[data-workbench-region="main"] [contenteditable="true"]')].find(
+        (element) => visible(element) && element.textContent?.includes(state.editorTitle),
+      );
+      if (!editor) return;
+      afterPaintOpportunity(() => {
+        if (!state.editor && visible(editor) && editor.textContent?.includes(state.editorTitle))
+          state.editor = performance.now();
+      });
+    };
     document.addEventListener(
       "click",
       (event) => {
         if (!(event.target instanceof Element) || !event.target.closest("[data-subnav-benchmark-trigger]")) return;
         state.started = performance.now();
         state.structure = 0;
+        state.editor = 0;
         state.stableFrame = 0;
         state.revision++;
         state.lastMutation = performance.now();
@@ -92,7 +110,8 @@ export const installSubnavClock = (page: Page) =>
             afterPaintOpportunity(() => {
               if (!state.structure && structureVisible()) state.structure = performance.now();
             });
-          if (!state.structure) requestAnimationFrame(check);
+          checkEditor();
+          if (!state.structure || (state.destination === "ticket" && !state.editor)) requestAnimationFrame(check);
         };
         requestAnimationFrame(check);
       },
@@ -166,22 +185,28 @@ export const measureSubnav = async (
   destination: SubnavSample["destination"],
   visit: SubnavSample["visit"],
   title: string,
+  editorTitle = "",
 ) => {
   await trigger.evaluate((element) => element.setAttribute("data-subnav-benchmark-trigger", ""));
   await page.evaluate(
-    ({ destination, title }) =>
+    ({ destination, title, editorTitle }) => {
+      performance.clearResourceTimings();
       Object.assign(window.__subnavBenchmark, {
         destination,
         title,
+        editorTitle,
         started: 0,
         structure: 0,
+        editor: 0,
         stableFrame: 0,
-      }),
-    { destination, title },
+      });
+    },
+    { destination, title, editorTitle },
   );
   const since = performance.now();
   await trigger.click();
   await page.waitForFunction(() => window.__subnavBenchmark.structure > 0);
+  if (destination === "ticket") await page.waitForFunction(() => window.__subnavBenchmark.editor > 0);
   await recorder.settled(since);
   // Waiting for quiescence verifies completion, but the quiet interval is excluded from the sample.
   await page.waitForFunction(() => performance.now() - window.__subnavBenchmark.lastMutation >= 200);
@@ -213,11 +238,28 @@ export const measureSubnav = async (
   const structureMs = state.structure - state.started;
   const lastRequestMs = Math.max(0, ...requestRows.map((row) => row.completedMs));
   const dataMs = Math.max(structureMs, state.stableFrame - state.started, lastRequestMs);
+  const editorResources =
+    destination === "ticket"
+      ? await page.evaluate(
+          (started) =>
+            performance
+              .getEntriesByType("resource")
+              .filter((entry) => entry.startTime >= started)
+              .map((entry) => ({
+                path: new URL(entry.name).pathname,
+                startMs: entry.startTime - started,
+                durationMs: entry.duration,
+                bytes: (entry as PerformanceResourceTiming).transferSize,
+              })),
+          state.started,
+        )
+      : undefined;
   return {
     destination,
     visit,
     structureMs,
     dataMs,
+    ...(destination === "ticket" ? { editorMs: state.editor - state.started, editorResources } : {}),
     lastRequestMs,
     mountedRows: await page.locator('[data-workbench-region="sidenav"] [role="option"]').count(),
     requests: requestRows,
