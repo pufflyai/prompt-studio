@@ -1,6 +1,7 @@
 import { isAbsolute } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import { chooseProjectFolderInputSchema, projectFolderSchema } from "pstdio-api-contracts";
+import { expandHomePath } from "pstdio-paths";
 import type { AppRouteHandler } from "../../../types";
 import { workspaceResponseSchema } from "../../workspaces/dto";
 import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
@@ -77,7 +78,8 @@ export const chooseProjectFolderHandler =
   (deps: ProjectsRouteDeps): AppRouteHandler<typeof chooseProjectFolderRoute> =>
   async (c) => {
     const { id } = c.req.valid("param");
-    const { path, clone } = c.req.valid("json");
+    const { clone } = c.req.valid("json");
+    const path = expandHomePath(c.req.valid("json").path);
     if (!(await deps.projectService.get(id))) return c.json({ error: "Project not found." }, 404);
     if (!isAbsolute(path)) return c.json({ error: "Choose an absolute folder path." }, 400);
     return withFolderCreation(path, async () => {

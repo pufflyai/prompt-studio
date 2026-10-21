@@ -7,7 +7,7 @@ export const projectFolderSchema = z.object({
   gitRemote: z.string().nullable(),
 });
 export const chooseProjectFolderInputSchema = z.object({
-  path: z.string().min(1).describe("Absolute folder path. A clone creates it."),
+  path: z.string().min(1).describe("Absolute folder path, or one under `~/`. A clone creates it."),
   clone: z.boolean().describe("Clone the project's recorded git remote into the folder."),
 });
 export type ProjectFolder = z.infer<typeof projectFolderSchema>;
