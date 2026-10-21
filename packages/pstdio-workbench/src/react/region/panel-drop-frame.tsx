@@ -34,20 +34,33 @@ const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
   const vertical = edge === "left" || edge === "right";
   const targetId = panel ? `panel-${edge}` : region;
   return (
-    <Box
-      ref={setNodeRef}
-      data-workbench-edge-drop={panel || highlighted ? targetId : undefined}
-      data-workbench-edge-hit={panel ? undefined : region}
-      data-workbench-edge-position={edge}
-      data-drop-active={highlighted || undefined}
-      position={panel ? "relative" : "absolute"}
-      {...(panel ? {} : tabEdgeAnchors[edge])}
-      flexShrink={0}
-      w={vertical ? "12" : "full"}
-      h={vertical ? "full" : "12"}
-      layerStyle={panel || highlighted ? "panelDropZone" : undefined}
-      zIndex={panel ? undefined : "overlay"}
-    />
+    <>
+      {!panel ? (
+        <Box
+          ref={setNodeRef}
+          data-workbench-edge-hit={region}
+          data-workbench-edge-position={edge}
+          position="absolute"
+          {...tabEdgeAnchors[edge]}
+          w={vertical ? "12" : "full"}
+          h={vertical ? "full" : "12"}
+          zIndex="overlay"
+        />
+      ) : null}
+      {panel || highlighted ? (
+        <Box
+          ref={panel ? setNodeRef : undefined}
+          data-workbench-edge-drop={targetId}
+          data-workbench-edge-position={edge}
+          data-drop-active={highlighted || undefined}
+          position="relative"
+          flexShrink={0}
+          w={vertical ? "12" : "full"}
+          h={vertical ? "full" : "12"}
+          layerStyle="panelDropZone"
+        />
+      ) : null}
+    </>
   );
 };
 
@@ -57,7 +70,7 @@ interface WorkbenchPanelDropFrameProps {
   children: ReactNode;
 }
 
-/** Panel moves reserve space; tab targets overlay their stable layout boundary. */
+/** Visible targets reserve space at the layout boundary that owns the panel. */
 export const WorkbenchPanelDropFrame = (props: WorkbenchPanelDropFrameProps) => {
   const { workbench, region, children } = props;
   const { activeId, destinations, activePanel } = useTabDrag();

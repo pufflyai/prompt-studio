@@ -193646,7 +193646,7 @@
       "x": 55830,
       "y": 0,
       "name": "PS-796 · Shared panel placement and closed edges",
-      "context": "Closed Side accepts a tab at either allowed left/right edge; closed Bottom accepts either allowed top/bottom edge. A successful drop saves the chosen edge and opens the panel. Hover and cancellation preserve saved placement. An open panel accepts tabs only in its visible bounds. Main has no vertical move actions, grab cursor, or drag targets while Bottom is closed or unavailable. Tab previews overlay stable content; exactly one nearby outline appears.",
+      "context": "Closed panel tab targets appear only near the pointer. The selected rounded slot reserves layout space just like a whole-panel target; it never covers content. Invisible hit areas use stable owning boundaries, so preview resizing does not change the nearest edge at corners. Only one outline is visible. Leaving the edge restores content size. Hover and cancellation preserve saved placement; successful drops open the chosen edge. Main moves only beside an open Bottom.",
       "width": 940,
       "height": 480,
       "fill": "$ds-bg-subtle",
@@ -193659,7 +193659,7 @@
           "id": "UAdoc",
           "name": "Placement rules",
           "fill": "$ds-fg",
-          "content": "Closed panels · choose either edge · one nearby outline · Main moves only beside open Bottom",
+          "content": "Tab insertion · nearby slot takes space · one stable outline · Main moves beside open Bottom",
           "fontFamily": "$font-body",
           "fontSize": 14,
           "fontWeight": "normal"
@@ -193676,7 +193676,7 @@
               "type": "frame",
               "id": "rvkzF",
               "name": "light · Closed Side and Bottom edges",
-              "context": "Tab edge outlines stay invisible until the pointer approaches and overlay content without taking layout space. Only the nearest eligible target appears, including at corners. Whole-panel insertion slots still reserve space. Navigation controls mirror on the right, including when closed.",
+              "context": "Closed panel tab targets appear only near the pointer. The selected rounded slot reserves layout space just like a whole-panel target; it never covers content. Invisible hit areas use stable owning boundaries, so preview resizing does not change the nearest edge at corners. Only one outline is visible. Leaving the edge restores content size. Hover and cancellation preserve saved placement; successful drops open the chosen edge. Main moves only beside an open Bottom.",
               "theme": {
                 "mode": "light"
               },
@@ -193698,38 +193698,15 @@
                 },
                 {
                   "type": "frame",
-                  "id": "UU9Rz",
-                  "name": "Main and Bottom",
-                  "width": "fill_container",
-                  "height": "fill_container",
-                  "layout": "vertical",
-                  "gap": 4,
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "frfOR",
-                      "name": "Main content",
-                      "width": "fill_container",
-                      "height": "fill_container",
-                      "fill": "$ds-bg-subtle",
-                      "cornerRadius": 4
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "q0ye6F",
-                  "layoutPosition": "absolute",
-                  "x": 80,
-                  "y": 4,
+                  "id": "xZ6ge",
                   "name": "Side insertion target · selected",
                   "width": 48,
-                  "height": 312,
+                  "height": "fill_container",
                   "padding": 2,
                   "children": [
                     {
                       "type": "frame",
-                      "id": "OP2g3",
+                      "id": "fCVyw",
                       "name": "Selected target",
                       "width": "fill_container",
                       "height": "fill_container",
@@ -193760,6 +193737,26 @@
                       "alignItems": "center"
                     }
                   ]
+                },
+                {
+                  "type": "frame",
+                  "id": "UU9Rz",
+                  "name": "Main and Bottom",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "frfOR",
+                      "name": "Main content",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 4
+                    }
+                  ]
                 }
               ]
             },
@@ -193767,7 +193764,7 @@
               "type": "frame",
               "id": "EnM65",
               "name": "dark · Closed Side and Bottom edges",
-              "context": "Tab edge outlines stay invisible until the pointer approaches and overlay content without taking layout space. Only the nearest eligible target appears, including at corners. Whole-panel insertion slots still reserve space. Navigation controls mirror on the right, including when closed.",
+              "context": "Closed panel tab targets appear only near the pointer. The selected rounded slot reserves layout space just like a whole-panel target; it never covers content. Invisible hit areas use stable owning boundaries, so preview resizing does not change the nearest edge at corners. Only one outline is visible. Leaving the edge restores content size. Hover and cancellation preserve saved placement; successful drops open the chosen edge. Main moves only beside an open Bottom.",
               "theme": {
                 "mode": "dark"
               },
@@ -193789,38 +193786,15 @@
                 },
                 {
                   "type": "frame",
-                  "id": "ftwZH",
-                  "name": "Main and Bottom",
-                  "width": "fill_container",
-                  "height": "fill_container",
-                  "layout": "vertical",
-                  "gap": 4,
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "nAqyQ",
-                      "name": "Main content",
-                      "width": "fill_container",
-                      "height": "fill_container",
-                      "fill": "$ds-bg-subtle",
-                      "cornerRadius": 4
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "nCkhf",
-                  "layoutPosition": "absolute",
-                  "x": 80,
-                  "y": 4,
+                  "id": "ZWqyK",
                   "name": "Side insertion target · selected",
                   "width": 48,
-                  "height": 312,
+                  "height": "fill_container",
                   "padding": 2,
                   "children": [
                     {
                       "type": "frame",
-                      "id": "LwcOO",
+                      "id": "o2loR",
                       "name": "Selected target",
                       "width": "fill_container",
                       "height": "fill_container",
@@ -193849,6 +193823,26 @@
                       "strokeWidth": 1,
                       "justifyContent": "center",
                       "alignItems": "center"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ftwZH",
+                  "name": "Main and Bottom",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nAqyQ",
+                      "name": "Main content",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 4
                     }
                   ]
                 }

@@ -113,10 +113,20 @@ const verifyNearbyTabTargets = async (page: Page) => {
     await expect(page.locator("[data-workbench-edge-drop], [data-workbench-tab-drop][data-drop-active]")).toHaveCount(
       1,
     );
+    const slot = (await page.locator(`[data-workbench-edge-drop="${region}"]`).boundingBox())!;
+    await expect
+      .poll(() => main.boundingBox())
+      .toEqual({
+        x: bounds.x + (position === "left" ? slot.width : 0),
+        y: bounds.y + (position === "top" ? slot.height : 0),
+        width: bounds.width - (region === "side" ? slot.width : 0),
+        height: bounds.height - (region === "secondary" ? slot.height : 0),
+      });
   }
   await page.keyboard.press("Escape");
   await page.mouse.up();
   await expect(page.locator("[data-workbench-edge-drop]")).toHaveCount(0);
+  await expect.poll(() => main.boundingBox()).toEqual(bounds);
   for (const [sourceRegion, region, position] of [
     ["main", "side", "right"],
     ["side", "secondary", "bottom"],

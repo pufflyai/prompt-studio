@@ -20,6 +20,7 @@ import {
 } from "../../core/registries/layout/panel-positions";
 import { planTrayDrop } from "../../core/registries/layout/tray-tabs";
 import { batchWorkbenchChanges } from "../../core/shared/store/workbench-batch";
+import { closedTabDropCollisions } from "./closed-tab-drop-collision";
 import { panelDropCollision } from "./panel-drop-collision";
 
 interface TabDrop {
@@ -101,26 +102,9 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
         sensors={sensors}
         collisionDetection={(args) => {
           if (args.active.data.current?.panelRegion) return panelDropCollision(args, origin.current);
-          const collisions = pointerWithin(args);
-          const closed = collisions.filter((c) => c.data?.droppableContainer.data.current?.closed);
+          const closed = closedTabDropCollisions(args, workbench.shell.getPanelPolicy("side").open);
+          if (closed.length) return closed;
           const pointer = args.pointerCoordinates;
-          if (closed.length && pointer) {
-            const distance = (collision: (typeof closed)[number]) => {
-              const container = collision.data?.droppableContainer;
-              const rect = args.droppableRects.get(collision.id)!;
-              switch (container.data.current.edge) {
-                case "left":
-                  return pointer.x - rect.left;
-                case "right":
-                  return rect.right - pointer.x;
-                case "top":
-                  return pointer.y - rect.top;
-                default:
-                  return rect.bottom - pointer.y;
-              }
-            };
-            return closed.sort((a, b) => distance(a) - distance(b)).slice(0, 1);
-          }
           const panel = pointer
             ? document
                 .elementFromPoint(pointer.x, pointer.y)

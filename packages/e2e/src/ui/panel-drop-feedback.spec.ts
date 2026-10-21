@@ -12,15 +12,17 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => stopStorybook(storybook));
 
-for (const reversed of [false, true]) {
-  test(`${reversed ? "left/top" : "right/bottom"}: nearby tab targets keep one stable outline through direct corner transitions`, async ({
+for (const [left, top] of [
+  [false, false],
+  [true, true],
+  [false, true],
+  [true, false],
+] as const) {
+  test(`${left ? "left" : "right"}/${top ? "top" : "bottom"}: nearby tab targets reserve space with one stable outline through corner transitions`, async ({
     page,
   }) => {
     await page.goto(
-      storyUrl(
-        baseUrl,
-        `pstdio-workbench-reference-core-api-panel-arrangement--closed-${reversed ? "reversed" : "side"}`,
-      ),
+      storyUrl(baseUrl, `pstdio-workbench-reference-core-api-panel-arrangement--closed-${left ? "reversed" : "side"}`),
     );
     await waitForStoryPlayback(page);
     const main = page.locator('[data-workbench-panel="main"]');
@@ -32,12 +34,12 @@ for (const reversed of [false, true]) {
     await page.mouse.move(start.x + start.width / 2 + 12, start.y + start.height / 2, { steps: 3 });
     const closed = page.locator("[data-workbench-edge-drop]");
     const outlines = page.locator("[data-workbench-edge-drop], [data-workbench-tab-drop][data-drop-active]");
-    await expect.poll(() => main.boundingBox()).toEqual(before);
     await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2, { steps: 5 });
     await expect(closed).toHaveCount(0);
+    await expect.poll(() => main.boundingBox()).toEqual(before);
     await expect(outlines).toHaveCount(1);
-    const edgeX = (inset: number) => before.x + (reversed ? inset : before.width - inset);
-    const edgeY = (inset: number) => before.y + (reversed ? inset : before.height - inset);
+    const edgeX = (inset: number) => before.x + (left ? inset : before.width - inset);
+    const edgeY = (inset: number) => before.y + (top ? inset : before.height - inset);
     for (const [region, x, y] of [
       ["side", edgeX(12), before.y + before.height / 2],
       ["secondary", before.x + before.width / 2, edgeY(12)],
@@ -45,9 +47,19 @@ for (const reversed of [false, true]) {
       ["secondary", edgeX(8), edgeY(3)],
     ] as const) {
       await page.mouse.move(x, y, { steps: 6 });
-      await expect(page.locator(`[data-workbench-edge-drop="${region}"]`)).toBeVisible();
+      const target = page.locator(`[data-workbench-edge-drop="${region}"]`);
+      await expect(target).toBeVisible();
       await expect(outlines).toHaveCount(1);
-      await expect.poll(() => main.boundingBox()).toEqual(before);
+      const slot = (await target.boundingBox())!;
+      const horizontal = region === "side";
+      await expect
+        .poll(() => main.boundingBox())
+        .toEqual({
+          x: before.x + (horizontal && left ? slot.width : 0),
+          y: before.y + (!horizontal && top ? slot.height : 0),
+          width: before.width - (horizontal ? slot.width : 0),
+          height: before.height - (horizontal ? 0 : slot.height),
+        });
     }
     await page.mouse.move(edgeX(3), edgeY(8), { steps: 3 });
     await expect(page.locator('[data-workbench-edge-drop="side"]')).toBeVisible();
@@ -103,3 +115,31 @@ for (const story of ["headerless-main", "detached-side"]) {
     await page.mouse.up();
   });
 }
+
+test("Bottom tab insertion takes space only in Main's column beside an open Side", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-panel-arrangement--headerless-main"));
+  await waitForStoryPlayback(page);
+  await page.getByRole("button", { name: "Hide Bottom Panel", exact: true }).click();
+  await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
+  const side = page.locator('[data-workbench-panel="side"]:visible');
+  const main = page.locator('[data-workbench-panel="main"]');
+  const before = (await main.boundingBox())!;
+  const sideBounds = (await side.boundingBox())!;
+  const start = (await side.getByRole("tab", { selected: true }).boundingBox())!;
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(start.x + start.width / 2 + 12, start.y + start.height / 2, { steps: 3 });
+  await page.mouse.move(sideBounds.x + sideBounds.width / 2, sideBounds.y + sideBounds.height - 3, { steps: 6 });
+  const target = page.locator('[data-workbench-edge-drop="secondary"]');
+  await expect(target).toHaveCount(0);
+  await expect(page.locator('[data-workbench-tab-drop="side"][data-drop-active]')).toHaveCount(1);
+  await page.mouse.move(before.x + before.width / 2, before.y + before.height - 3, { steps: 6 });
+  await expect(target).toBeVisible();
+  const slot = (await target.boundingBox())!;
+  expect(slot.x + slot.width).toBeLessThanOrEqual(sideBounds.x);
+  await expect.poll(() => main.boundingBox()).toEqual({ ...before, height: before.height - slot.height });
+  await expect.poll(() => side.boundingBox()).toEqual(sideBounds);
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect.poll(() => main.boundingBox()).toEqual(before);
+});
