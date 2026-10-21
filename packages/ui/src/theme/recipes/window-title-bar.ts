@@ -42,7 +42,7 @@ export const windowTabsRecipe = defineSlotRecipe({
   className: "ps-window-tabs",
   slots: ["list", "tab", "trigger", "label", "close"],
   base: {
-    list: { display: "flex", alignItems: "center", gap: "2xs", minWidth: 0, overflowX: "auto", scrollbarWidth: "none" },
+    list: { display: "flex", alignItems: "center", gap: "2xs", minWidth: 0, height: "full" },
     tab: {
       position: "relative",
       display: "flex",
@@ -56,7 +56,7 @@ export const windowTabsRecipe = defineSlotRecipe({
       bg: "transparent",
       _selected: { bg: "bg.muted", color: "fg" },
       _hover: { bg: "bg.hover", color: "fg" },
-      _dragging: { bg: "bg.hover", color: "fg", zIndex: "docked" },
+      _dragging: { opacity: 0.5 },
       WebkitAppRegion: "no-drag",
     },
     trigger: {
@@ -64,6 +64,7 @@ export const windowTabsRecipe = defineSlotRecipe({
       alignItems: "center",
       gap: "window-tab-gap",
       minWidth: 0,
+      flex: "1 1 auto",
       height: "full",
       paddingInlineStart: "compact",
       paddingInlineEnd: "window-tab-gap",
@@ -73,11 +74,12 @@ export const windowTabsRecipe = defineSlotRecipe({
       focusVisibleRing: "inside",
       WebkitAppRegion: "no-drag",
       touchAction: "none",
+      "&[aria-pressed]": { cursor: "grab" },
       _icon: { width: "icon-xs", height: "icon-xs", flexShrink: 0 },
     },
     label: {
       minWidth: 0,
-      maxWidth: "window-tab-label-max",
+      maxWidth: "tab-label-max",
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap",
