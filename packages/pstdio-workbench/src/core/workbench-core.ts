@@ -204,10 +204,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const resources = createResourceRegistry({
-    remove: (resource, retained) => {
-      removeWorkbenchResource(core, resource, retained);
-      layoutCache.removeResource(resource);
-    },
+    remove: (resource, retained) => removeWorkbenchResource(core, resource, retained, layoutCache.removeResource),
     getPrimary: () => core.getPrimaryResource(),
     resolveView: views.getView,
   });

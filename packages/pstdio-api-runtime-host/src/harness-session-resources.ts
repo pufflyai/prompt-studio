@@ -1,3 +1,7 @@
+import { SESSION_RESOURCE_RETENTION_MS } from "pstdio-api-contracts";
+
+export { SESSION_RESOURCE_RETENTION_MS } from "pstdio-api-contracts";
+
 interface ResourceClock {
   now: () => number;
   schedule: (run: () => void, delay: number) => () => void;
@@ -11,8 +15,6 @@ interface SessionResources {
   release: () => Promise<boolean>;
   releasing?: Promise<void>;
 }
-
-export const SESSION_RESOURCE_RETENTION_MS = 30 * 60_000;
 
 // The host owns interest and inactivity. Providers decide how to release their own
 // resources, and may defer when their native execution is not safely idle yet.

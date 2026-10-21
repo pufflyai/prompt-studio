@@ -14,7 +14,7 @@ test("registered chrome views keep their state across mode changes", () => {
   expect(retainViewPlacements([chrome], [], new Set(["music-bar"]))).toEqual([chrome]);
 });
 
-test("closing a tab releases its retained view even when its view contribution is still registered", () => {
+test("an expired closed tab releases its view even when its contribution is still registered", () => {
   expect(retainViewPlacements([playlist], [], new Set(["playlist-view"]), new Set())).toEqual([]);
 });
 

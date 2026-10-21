@@ -143,6 +143,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     commandDraft,
     (operation) => createDraftCommandSession(commandDraft, operation),
     openCreatedSession,
+    input,
   );
   const { pendingFollowUp, displayedMessages, streamingStartedAt, pendingWork } = usePendingSessionFollowUp(
     view.draftKey,

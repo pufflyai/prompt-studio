@@ -1,6 +1,25 @@
 import { expect, test } from "bun:test";
 import { modePanelFixture } from "./mode-panel-state.fixture";
 
+test("resource removal publishes layout membership after clearing inactive saved tabs", () => {
+  const s = modePanelFixture();
+  const resource = { type: "document", id: "inactive", projectId: "project" };
+  s.w.shellPlacements.openPlacement({ placementId: "shared-side", resource, open: "pin" });
+  const instanceId = s.w.layout.getActivePanel("side")!.instanceId;
+  s.navigate("beta");
+  const selections: boolean[] = [];
+  const stop = s.w.layout.store.subscribe(() =>
+    selections.push(s.w.host.getOpenPlacements().some((p) => p.widgetId === instanceId)),
+  );
+  try {
+    s.w.resources.removed(resource);
+    expect(selections.length).toBeGreaterThan(0);
+    expect(selections.every((open) => !open)).toBe(true);
+  } finally {
+    stop();
+  }
+});
+
 test("restoring another mode retains persisted open tabs without visiting them", () => {
   const first = modePanelFixture();
   first.open("persisted-session", "side", "pin");
