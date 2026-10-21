@@ -15,6 +15,7 @@ export const expectPackagedChatHistory = async (page: Page, sessionId: string) =
           };
         }
       ).__pstdioDashboardWorkbench;
+      if (!workbench) return false;
       const placement = workbench.host.getOpenPlacements().find((entry) => entry.resource?.id === id);
       return Boolean(placement && workbench.host.getOpenPlacementIds().has(placement.widgetId));
     }, sessionId);
