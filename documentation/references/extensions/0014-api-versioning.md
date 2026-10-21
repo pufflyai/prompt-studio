@@ -222,6 +222,13 @@ API 0.2.1 also adds optional `HarnessProvider.releaseSession(ctx, { sessionId })
 
 `ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `movable`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Published extension header and tab behavior stays compatible until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
 
+## Local editing sessions in API 0.2.1
+
+The additive `editing.session` capability and `client.editing.open` share local document edits
+across isolated webviews before persistence completes. The host scopes sessions to their project
+and extension. See [local editing sessions](0005-webview-and-storage-api.md#local-editing-sessions).
+This is on `main` and ships after 0.44.0. Existing public APIs remain available.
+
 ## Storage conflict members deprecated in API 0.2.1
 
 Edits from several devices are moving to automatic merging. The storage API stops promising conflicts. These changes are additive and ship in the release after 0.44.0:

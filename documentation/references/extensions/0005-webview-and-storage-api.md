@@ -348,6 +348,73 @@ The host allows 16 live streams per frame and 8 MiB of unread JSON per stream. O
 
 The low-level `commands.stream` bridge accepts `start`, `cancel`, and `ack` operations. `createWebviewClient` handles IDs, consumed-byte acknowledgements, and scoped `data`/`end` events for you.
 
+## Local editing sessions
+
+To try the API, run `bun run --cwd packages/pstdio-workbench storybook` and open
+**Reference → Extension API → Shared editing sessions → Playground**. Hold and release saves,
+edit either shared view, preview or cancel a move, and fail a held save to test retrying.
+The story uses the real SDK and host session with in-memory transport and persistence.
+
+On `main` (extension API 0.2.1, after release 0.44.0), declare `editing.session` and use
+`client.editing.open` when several webviews edit the same document. The host keeps one local
+session for the calling project, extension and key. Views receive edits before a backend save
+finishes. The session keeps one save queue and combines pending field changes while a write
+is in flight. This is local workbench state; it is not cross-device synchronization or durable storage.
+
+```ts
+const session = await client.editing.open({
+  key: documentId,
+  initial: await client.commands["document.read"]({ documentId }),
+  save: {
+    commandId: `${host.extensionId}.command.document.save`,
+    params: { documentId },
+  },
+});
+const unsubscribe = session.subscribe(() => showDocument(session.getSnapshot().value));
+await session.commit([{ path: ["title"], value: "New title" }]);
+```
+
+The save command receives its fixed `params` plus a `changes` array. It must belong to the
+calling extension, apply the complete batch before announcing success, and return only after saving. Use
+`applyEditingChanges` in that command and `diffEditingState` to compare JSON objects. Both
+helpers are exported from `@pstdio/sdk/extensions`. Paths traverse objects and set fields; an empty path replaces
+the root object. Replace arrays as a whole. Changes can replace arrays or objects, including removing old properties.
+Prototype paths and non-object roots are rejected.
+
+`session.getSnapshot()` returns `value`, `version`, `revision` and `savedRevision`. `version`
+orders every local update. `revision` counts committed edits; `savedRevision` advances only
+after a successful write. A save failure retains the edit. `session.save()` retries or awaits
+the shared queue. A commit promise waits for the queue, while subscriptions update immediately.
+Keep errors beside the initiating control.
+
+Use `session.preview(changes)` during a gesture. Successive previews add to that view's draft
+and appear in every participating view without saving. `session.commit()` commits that draft
+once; `session.cancel()` removes it without a write. Other views' drafts remain separate.
+Keep view-only selection, active tool, scroll and zoom outside the durable document.
+`diffEditingState` builds patches and `applyEditingChanges` applies a batch atomically to a JSON object.
+`rebaseEditingChanges(value, drafts)` composes a map of independent patch batches and drops
+batches whose paths no longer apply. Extension-owned persisted patch stores can use that
+same rule to keep parent replacements readable when concurrent child patches arrive.
+
+Subscribe to the extension's saved-change event and call
+`session.refresh(() => client.commands["document.read"]({ documentId }))` for backend or agent
+edits. Refresh waits for pending saves and repeats the backend read if shared state changed while reading.
+Events remain invalidation signals. Do not publish document data through `lastCommand`.
+
+A structural commit or refresh cancels drafts whose paths no longer apply.
+On disposal, unsubscribe and call `session.close()`. Closing a view cancels its preview and
+revokes its connection. Pending saves belong to the document and continue after a view closes.
+The host drops a clean session after its final view closes; reopening reads durable state.
+Unsaved state remains local to the live workbench after a failure and is lost if that workbench
+is destroyed. A late view joins the current session instead of replacing it with its older read.
+
+The low-level `editing.session` bridge accepts `open`, `commit`, `preview`, `cancel`, `refresh`,
+`save` and `close`. The SDK manages connection IDs, edit sequences, subscriptions and stale replies.
+A stale low-level `refresh` returns no snapshot; the SDK retries the backend read.
+Sessions cannot choose another project or extension, and an open key must use the same save command.
+Global views without a project do not provide this capability. Publish SDK and host support before
+adopting it in separately released extensions.
+
 ## Page params
 
 Page params are on `main` (extension API 0.1.7 and later) and ship in the release after 0.43.x. `@pstdio/sdk` 0.43.1 and the 0.43.1 app do not have them.
