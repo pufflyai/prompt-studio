@@ -117,7 +117,7 @@ Platform:
 
 - One app on one host. The relay serves under `/relay` and the account manager under
   `/accounts`. App Platform removes the path before forwarding, as described in
-  [addresses with a path](0007-account-manager.md#addresses-with-a-path).
+  the [account manager guide](0007-account-manager.md).
 - One PostgreSQL server with a database and login per service. Each service's migration
   revokes public access to its database and grants it to that service's login only, so
   the relay cannot reach the manager's keys.
