@@ -33,7 +33,6 @@ const createPiece = (definition: AssemblyPiece) => {
   const { body, origin } = createShapeBody(definition);
   const piece = { ...definition, body, origin, slot: undefined as AssemblySlot | undefined };
   setPosition(piece, definition.source);
-  Matter.Sleeping.set(body, true);
   return piece;
 };
 export type PhysicsPiece = ReturnType<typeof createPiece>;

@@ -41,7 +41,7 @@ Narrow layouts use 95% of the fitted editor width, aligning more closely with th
 download content. Desktop layouts keep their compact 85% fit.
 The download button uses a download icon. The platform menu uses monochrome macOS,
 Windows, or Linux logos for each build.
-All 28 building-block shapes start in a settled pile beneath the editor. Matter.js supplies gravity,
+Twelve building-block shapes, two of each kind, start in a low pile on the floor beneath the editor. Matter.js supplies gravity,
 collisions, rotation, momentum, and wall bounces across the entire main area,
 including the download area. Only docked shapes remain fixed. Drag or toss blocks
 with a mouse, touch, or pen; pulling one out of a slot makes it fall again.
@@ -49,8 +49,8 @@ The download links remain clickable above the scene.
 The build description and platform controls reserve their space while downloads
 load, so resolving a release does not shift the scene's ground on mobile.
 The settled pile is included in the static HTML and appears before JavaScript loads.
-Its ground-relative positions are shared with the physics engine, which starts the
-shapes asleep instead of calculating their resting positions during startup. The
+Its floor positions are shared with the physics engine. Flat shapes support the upper
+shapes, and all bodies start awake with only slight contact settling. The
 editor outline also appears in the static HTML at its fitted size. The live editor
 and cursors appear once their layout is measured. Idle cursors drift slowly over
 short distances while they wait for their next task. Initialization does not
