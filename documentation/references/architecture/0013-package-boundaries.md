@@ -130,7 +130,7 @@ imports. This lets the package graph select that proof when a handler changes.
 manager, and the telemetry library they share. The relay and the account
 manager each keep their source, migrations, and Dockerfiles in their own
 folder. `infra/` holds only deployment and environment setup, such as Docker
-Compose files and Terraform. The relay's test and local Compose files live in `infra/relay/`.
+Compose files and the reusable DigitalOcean Terraform module in `infra/terraform/`. Prompt Studio's own environments and secrets live in a separate repository. The relay's test and local Compose files live in `infra/relay/`.
 `infra/local/` is the local development stack and the example extensions it
 installs. Service code does not belong in `infra/`.
 
@@ -146,8 +146,7 @@ use the manager's operator exports to create disposable accounts and devices. Pr
 modules never import the test-only conformance export. It must not import the API
 host, UI, clients, database implementation, or prototype. PostgreSQL persistence
 belongs to the relay; the real local adapter belongs to `pstdio-db`.
-Future Terraform configuration belongs under `infra/relay/terraform/`,
-separate from relay source. See the [relay development guide](../../guides/development/0006-relay.md)
+See the [relay development guide](../../guides/development/0006-relay.md)
 for isolated storage fixtures and container checks.
 
 ## Service diagnostics

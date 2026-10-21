@@ -1,10 +1,11 @@
-resource "digitalocean_database_cluster" "service" {
-  for_each   = toset(["relay", "manager"])
-  name       = "${var.name}-${each.key}"
+# One PostgreSQL server with a database and login per service. Each service's migration
+# limits its database to its own login, so the relay cannot reach the manager's keys.
+resource "digitalocean_database_cluster" "cloud" {
+  name       = var.name
   engine     = "pg"
   version    = "16"
-  size       = "db-s-1vcpu-1gb"
-  region     = var.region
+  size       = var.database_size
+  region     = var.database_region
   node_count = 1
   lifecycle {
     prevent_destroy = true
@@ -12,28 +13,26 @@ resource "digitalocean_database_cluster" "service" {
 }
 
 resource "digitalocean_database_db" "service" {
-  for_each   = digitalocean_database_cluster.service
-  cluster_id = each.value.id
+  for_each   = local.services
+  cluster_id = digitalocean_database_cluster.cloud.id
   name       = each.key
 }
 
 resource "digitalocean_database_user" "service" {
-  for_each   = digitalocean_database_cluster.service
-  cluster_id = each.value.id
+  for_each   = local.services
+  cluster_id = digitalocean_database_cluster.cloud.id
   name       = each.key
 }
 
-data "digitalocean_database_ca" "service" {
-  for_each   = digitalocean_database_cluster.service
-  cluster_id = each.value.id
+data "digitalocean_database_ca" "cloud" {
+  cluster_id = digitalocean_database_cluster.cloud.id
 }
 
-resource "digitalocean_database_firewall" "service" {
-  for_each   = digitalocean_database_cluster.service
-  cluster_id = each.value.id
+resource "digitalocean_database_firewall" "cloud" {
+  cluster_id = digitalocean_database_cluster.cloud.id
   rule {
     type  = "app"
-    value = digitalocean_app.service[each.key].id
+    value = digitalocean_app.cloud.id
   }
 }
 
