@@ -131,7 +131,7 @@ export async function readNextTickets(
   const started = new Set(
     attempts.filter(({ workspaceId }) => !retired.has(workspaceId)).map(({ ticketId }) => ticketId),
   );
-  const { selected, completed, configurationError } = await selectScopedWork(ctx, {
+  const { selected, scoped, completed, configurationError } = await selectScopedWork(ctx, {
     plan,
     tickets,
     mode,
@@ -220,6 +220,8 @@ export async function readNextTickets(
     capacity,
     completed,
     matchingTicketCount: selected.length,
+    reviewRequests: scoped.flatMap((row) => row.requests.filter((request) => request.state === "open")),
+    requestErrors: scoped.flatMap((row) => row.requestErrors),
     observations,
     configurationError,
     ...state,

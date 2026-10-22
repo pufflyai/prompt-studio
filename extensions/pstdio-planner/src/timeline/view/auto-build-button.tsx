@@ -3,6 +3,7 @@ import { installPrismGlobal } from "@pstdio/ui";
 import { Play } from "lucide-react";
 import { lazy, Suspense, useRef, useState } from "react";
 import type { WaitingTicket } from "../../commands/next-ticket-types";
+import type { ReviewRequestView } from "../../data/review-request-types";
 import { AutoBuildActivity } from "./auto-build-activity";
 import type { AutoBuildFormProps } from "./auto-build-form";
 import { AutoBuildHelp } from "./auto-build-help";
@@ -16,6 +17,12 @@ const AutoBuildForm = lazy(async () => {
 
 export interface AutoBuildButtonProps {
   enabled: boolean;
+  paused?: boolean;
+  reviewRequests?: ReviewRequestView[];
+  requestErrors?: string[];
+  onOpenRequest?: (request: ReviewRequestView) => void;
+  onPause?: () => Promise<boolean>;
+  onResume?: () => Promise<boolean>;
   completed?: boolean;
   supervisor?: AutoBuildSession | null;
   sessions: AutoBuildSession[];
@@ -26,6 +33,7 @@ export interface AutoBuildButtonProps {
   waitingTickets?: WaitingTicket[];
   starting?: boolean;
   error?: string;
+  actionError?: string;
   stuck?: boolean;
   disabled?: boolean;
   configuration?: Omit<AutoBuildFormProps, "onClose" | "t">;
@@ -35,14 +43,27 @@ export interface AutoBuildButtonProps {
 }
 
 export function AutoBuildButton(props: AutoBuildButtonProps) {
-  const { enabled, completed, supervisor, running, error, stuck, disabled, configuration, onTurnOff, starting, t } =
-    props;
+  const {
+    enabled,
+    paused,
+    completed,
+    supervisor,
+    running,
+    error,
+    stuck,
+    disabled,
+    configuration,
+    onTurnOff,
+    starting,
+    t,
+  } = props;
   const [content, setContent] = useState<"configuration" | "sessions" | null>(null);
   const anchor = useRef<HTMLButtonElement>(null);
   const failed = (!completed && supervisor?.status === "failed") || Boolean(error);
-  const inspectable = enabled || failed;
+  const inspectable = enabled || paused || failed;
   const status = resolveAutoBuildIndicatorStatus({
     enabled,
+    paused,
     completed,
     failed,
     stuck,
@@ -63,7 +84,7 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
       <Button
         ref={anchor}
         aria-label={t("timeline.autoBuild.start", "Auto Build")}
-        aria-description={enabled || failed ? `Auto Build ${activity}` : undefined}
+        aria-description={enabled || paused || failed ? `Auto Build ${activity}` : undefined}
         size="xs"
         variant="outline"
         disabled={disabled}

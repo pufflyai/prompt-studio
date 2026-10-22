@@ -213,7 +213,7 @@ test("starting saves the mode and supervisor reset together before notifying obs
           recordId: storage.records.id("auto-build"),
           replace: expect.objectContaining({
             revision: mode.revision,
-            enabled: true,
+            state: "running",
             prompt: "Start a fresh run",
             eligible: mode.eligible,
           }),
@@ -222,9 +222,10 @@ test("starting saves the mode and supervisor reset together before notifying obs
       ],
     },
   ]);
+  const { enabled: _enabled, ...stored } = mode;
   expect(observed).toEqual([
-    { mode, supervisor: {} },
-    { mode, supervisor: {} },
+    { mode: JSON.parse(JSON.stringify(stored)), supervisor: {} },
+    { mode: JSON.parse(JSON.stringify(stored)), supervisor: {} },
   ]);
 });
 

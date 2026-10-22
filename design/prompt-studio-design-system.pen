@@ -32643,7 +32643,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -77354,7 +77354,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -97987,7 +97987,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -126991,7 +126991,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -153485,7 +153485,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153507,7 +153507,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154231,7 +154231,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154253,7 +154253,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154867,7 +154867,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154889,7 +154889,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -156234,7 +156234,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -156256,7 +156256,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -216491,63 +216491,137 @@
               "id": "kutCB",
               "name": "Auto Build activity popover",
               "width": 440,
+              "height": 520,
               "fill": "$ds-elevated",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border",
               "strokeWidth": 1,
               "layout": "vertical",
-              "gap": 12,
-              "padding": 16,
               "children": [
                 {
-                  "type": "text",
-                  "id": "W8M9n",
-                  "name": "Auto Build",
-                  "fill": "$ds-fg",
-                  "content": "Auto Build",
-                  "fontFamily": "$font-heading",
-                  "fontSize": 14,
-                  "fontWeight": "600"
-                },
-                {
-                  "type": "text",
-                  "id": "bmZ9e",
-                  "name": "ONGOING SESSIONS\nAuto Build supervisor · sleeping\nP-1 · Preview A: greeting · in progress\n\nRunning · 1 of 2 agents",
-                  "fill": "$ds-fg-muted",
-                  "textGrowth": "fixed-width",
+                  "type": "frame",
+                  "id": "Se5fu",
+                  "name": "Fixed activity header",
                   "width": "fill_container",
-                  "content": "ONGOING SESSIONS\nAuto Build supervisor · sleeping\nP-1 · Preview A: greeting · in progress\n\nRunning · 1 of 2 agents",
-                  "lineHeight": 1.5,
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XnvYp",
+                      "name": "Auto Build title",
+                      "fill": "$ds-fg",
+                      "content": "Auto Build",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
                 },
                 {
-                  "id": "m1jut",
-                  "type": "ref",
-                  "ref": "c24zV7",
-                  "name": "Stop Auto Build",
-                  "height": 32,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "sm"
-                  },
-                  "descendants": {
-                    "DsEVd": {
-                      "enabled": false,
-                      "width": 16,
-                      "height": 16
+                  "type": "frame",
+                  "id": "I9ellx",
+                  "name": "Scrollable requests and sessions",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "btYQT",
+                      "name": "Needs attention heading",
+                      "fill": "$ds-fg-muted",
+                      "content": "NEEDS ATTENTION",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 12,
+                      "fontWeight": "600"
                     },
-                    "Hf4GT": {
-                      "content": "Stop"
+                    {
+                      "type": "text",
+                      "id": "ioRaN",
+                      "name": "Review request",
+                      "fill": "$ds-fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "P-1 · Choose the release scope\nWhich tool should the builder finish first?",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     },
-                    "khvEs": {
+                    {
+                      "id": "o3yyq",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Open review request",
                       "theme": {
-                        "kbd": "raised",
-                        "size": "md"
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "height": 24,
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Open request"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "Zphkv",
+                      "name": "Ongoing sessions",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "ONGOING SESSIONS\nAuto Build supervisor · sleeping\nP-1 · Build shared tool · in progress\nP-3 · Review release · awaiting input\nP-8 · Build feedback inbox · in progress\nP-9 · Add feedback filters · queued\n\nRunning · 3 of 4 agents",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "egCbM",
+                  "name": "Fixed footer · running",
+                  "width": "fill_container",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": 16,
+                  "justifyContent": "end",
+                  "children": [
+                    {
+                      "id": "numz9",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Pause Auto Build",
+                      "height": 32,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Pause"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
                       }
                     }
-                  }
+                  ]
                 }
               ]
             },
@@ -216642,6 +216716,221 @@
                         },
                         "Hf4GT": {
                           "content": "ID"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "G3vJdE",
+                  "name": "Milestones heading",
+                  "fill": "$ds-fg-muted",
+                  "content": "MILESTONES",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "id": "X4Yv9",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Show passed milestones · on",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "xs"
+                  },
+                  "height": 24,
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "✓ Show passed milestones"
+                    },
+                    "khvEs": {
+                      "enabled": false
+                    }
+                  }
+                },
+                {
+                  "id": "fsWeG",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Show completed milestones · on",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "xs"
+                  },
+                  "height": 24,
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "✓ Show completed milestones"
+                    },
+                    "khvEs": {
+                      "enabled": false
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "c3gou",
+              "name": "Auto Build activity · paused",
+              "width": 440,
+              "height": 520,
+              "fill": "$ds-elevated",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "cbhv8",
+                  "name": "Fixed activity header",
+                  "width": "fill_container",
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "JW18g",
+                      "name": "Auto Build title",
+                      "fill": "$ds-fg",
+                      "content": "Auto Build · Paused",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "AN8Mf",
+                  "name": "Scrollable requests and sessions",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "V5zx9B",
+                      "name": "Needs attention heading",
+                      "fill": "$ds-fg-muted",
+                      "content": "NEEDS ATTENTION",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "jbsZB",
+                      "name": "Review request",
+                      "fill": "$ds-fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "P-1 · Choose the release scope\nWhich tool should the builder finish first?",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "ISTdj",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Open review request",
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "height": 24,
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Open request"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "ercET",
+                      "name": "Ongoing sessions",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "ONGOING SESSIONS\nAuto Build supervisor · sleeping\nP-1 · Build shared tool · in progress\nP-3 · Review release · awaiting input\nP-8 · Build feedback inbox · in progress\nP-9 · Add feedback filters · queued\n\nRunning · 3 of 4 agents",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "vCCkA",
+                  "name": "Fixed footer · paused",
+                  "width": "fill_container",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": 16,
+                  "justifyContent": "end",
+                  "children": [
+                    {
+                      "id": "t3P1I",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Resume Auto Build",
+                      "height": 32,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Resume"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "e9OvvU",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Stop Auto Build · danger",
+                      "height": 32,
+                      "theme": {
+                        "btn": "destructive",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Stop Auto Build"
                         },
                         "khvEs": {
                           "enabled": false

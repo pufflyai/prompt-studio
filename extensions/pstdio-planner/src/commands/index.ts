@@ -14,8 +14,10 @@ import { attemptReadinessCommand } from "./attempt-readiness";
 import { autoBuildCommand } from "./auto-build";
 import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
+import { pauseAutoBuildCommand, resumeAutoBuildCommand } from "./auto-build-lifecycle";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { autoBuildScopeCommand } from "./auto-build-scope";
+import { stopAutoBuildCommand } from "./auto-build-stop";
 import { automationPolicyCommand } from "./automation-policy";
 import { submitChangeRequestCommand } from "./change-requests";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
@@ -127,6 +129,9 @@ export const plannerCommands = [
   autoBuildCandidatesCommand,
   autoBuildDispatchCommand,
   autoBuildScopeCommand,
+  pauseAutoBuildCommand,
+  resumeAutoBuildCommand,
+  stopAutoBuildCommand,
   configureAutoBuildCommand,
   readAutoBuildCommand,
   checkAutoBuildCommand,

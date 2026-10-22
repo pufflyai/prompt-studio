@@ -118,7 +118,7 @@ export const autoBuildDispatchCommand = defineCommand({
         if (next.snapshot !== snapshot) throw new Error("Work changed before dispatch. Read tickets next again.");
       };
       const result = await dispatchNext(ctx, candidate, beforeDispatch, input);
-      if (result.decision === "started") {
+      if (["started", "resumed", "queued"].includes(result.decision) && "workspaceId" in result && result.workspaceId) {
         if (owner.sessionId)
           await autoBuildDispatches(ctx, owner.sessionId).put(result.workspaceId, {
             workspaceId: result.workspaceId,

@@ -4,6 +4,7 @@ import { useCollectionViewStore } from "@pstdio/ui/collection-view";
 import { type AttributeDescriptor, buildDisplayPropertyOptions } from "@pstdio/ui/kanban-renderer";
 import { Settings2 } from "lucide-react";
 import { useRef } from "react";
+import { useTimelinePresentation } from "./timeline-presentation";
 import { timelineInitialState } from "./timeline-query";
 
 interface TimelineDisplayMenuProps {
@@ -14,6 +15,7 @@ interface TimelineDisplayMenuProps {
 export function TimelineDisplayMenu(props: TimelineDisplayMenuProps) {
   const { storageKey, attributes } = props;
   const { settings, setSettings } = useCollectionViewStore(storageKey, timelineInitialState, (state) => state);
+  const presentation = useTimelinePresentation();
   const properties = settings.displayProperties;
   const triggerRef = useRef<HTMLButtonElement>(null);
   return (
@@ -62,6 +64,27 @@ export function TimelineDisplayMenu(props: TimelineDisplayMenuProps) {
                   ))}
                 </Wrap>
               </ScrollArea>
+              <Text textStyle="label/XS/medium" color="fg.muted" textTransform="uppercase" py="xs">
+                Milestones
+              </Text>
+              <Wrap gap="2xs">
+                {(
+                  [
+                    ["showPassedMilestones", "Show passed milestones"],
+                    ["showCompletedMilestones", "Show completed milestones"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <Button
+                    key={key}
+                    size="2xs"
+                    variant="ghost"
+                    aria-pressed={presentation.value[key] !== false}
+                    onClick={() => presentation.update({ [key]: presentation.value[key] === false })}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </Wrap>
             </Popover.Body>
           </Popover.Content>
         </Popover.Positioner>

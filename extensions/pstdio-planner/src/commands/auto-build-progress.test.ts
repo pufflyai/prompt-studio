@@ -190,7 +190,7 @@ test("failed scheduled followups pause Auto Build", async () => {
     throw new Error("Agent unavailable");
   };
   await expect(checkAutoBuildCommand.run(ctx, {})).rejects.toThrow("Agent unavailable");
-  expect(await ctx.storage.get("auto-build")).toMatchObject({ enabled: false });
+  expect(await ctx.storage.get("auto-build")).toMatchObject({ state: "paused" });
 });
 
 test("a failed supervisor can resume before it has dispatched any work", async () => {
@@ -224,5 +224,5 @@ test("a supervisor startup failure pauses Auto Build after the run state changes
     throw new Error("Agent startup failed");
   };
   await expect(checkAutoBuildCommand.run(ctx, {})).rejects.toThrow("Agent startup failed");
-  expect(await ctx.storage.get("auto-build")).toMatchObject({ enabled: false });
+  expect(await ctx.storage.get("auto-build")).toMatchObject({ state: "paused" });
 });

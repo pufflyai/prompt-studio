@@ -9,7 +9,9 @@ import { withWriteGuard } from "./write-guard";
 
 export interface AutoBuildMode {
   revision: string;
+  /** Derived from state when read. Never persisted separately. */
   enabled: boolean;
+  state?: "running" | "paused" | "stopped";
   prompt: string;
   supervisorModel?: ExtensionHarnessInput;
   /** @deprecated Use requireMergedDependencies. Review evidence is optional. */
@@ -22,9 +24,11 @@ export const autoBuildChanged = eventRef({ extensionId: "pstdio.pstdio-planner",
 
 export const readAutoBuildMode = async (ctx: Pick<ExtensionContextBase, "storage">) => {
   const mode = await ctx.storage.get<AutoBuildMode>("auto-build");
+  const state = mode?.state ?? (mode?.enabled ? "running" : "stopped");
   return {
+    state,
     revision: mode?.revision ?? "",
-    enabled: Boolean(mode?.enabled && mode.prompt && mode.eligible),
+    enabled: Boolean(state === "running" && mode?.prompt && mode.eligible),
     prompt: mode?.prompt ?? "",
     supervisorModel: mode?.supervisorModel,
     blockOnReview: mode?.blockOnReview ?? false,
@@ -39,7 +43,8 @@ export const pauseAutoBuildMode = async (ctx: ExtensionContextBase, mode: AutoBu
     "auto-build-mode",
     async () => {
       const current = await readAutoBuildMode(ctx);
-      if (current.revision === mode.revision) await saveAutoBuildMode(ctx, { ...current, enabled: false });
+      if (current.revision === mode.revision && current.state === "running")
+        await saveAutoBuildMode(ctx, { ...current, enabled: false, state: "paused" });
     },
     () => undefined,
   );
@@ -50,13 +55,15 @@ export const saveAutoBuildMode = async (
   mode: AutoBuildMode,
   relatedEdits: StorageGroup["edits"] = [],
 ) => {
+  const { enabled, ...stored } = mode;
+  const state = stored.state ?? (enabled ? "running" : "stopped");
   await ctx.storage.records.commit({
     operationId: crypto.randomUUID(),
     edits: [
-      { recordId: ctx.storage.records.id("auto-build"), replace: JSON.parse(JSON.stringify(mode)) },
+      { recordId: ctx.storage.records.id("auto-build"), replace: JSON.parse(JSON.stringify({ ...stored, state })) },
       ...relatedEdits,
     ],
   });
   await ctx.events.emit(autoBuildChanged, {});
-  return mode;
+  return { ...mode, state, enabled: state === "running" };
 };
