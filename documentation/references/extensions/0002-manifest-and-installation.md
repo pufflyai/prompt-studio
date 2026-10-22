@@ -223,7 +223,7 @@ Packages under `$PSTDIO_HOME/extensions/<install-name>/` are discovered for each
 
 Extensions are toggled on or off per project. The source is shared. If one project needs a customized variant, copy the extension folder, change `package.json#name` so the derived id is distinct, modify it, and enable that copy for the project.
 
-On `main` (extension API 0.2.1, after 0.44.0), the host catalog may mark an entry
+On `main` (extension API 0.2.2, after 0.45.0), the host catalog may mark an entry
 `alwaysEnabled: true`. That installed user extension is enabled during discovery
 for every existing and new project. Project disable, uninstall, and replacement
 with another provider of its extension ID are refused. Ordinary catalog defaults

@@ -24,7 +24,8 @@ The host decides what loads. It compares its own extension API version with `eng
 | --- | --- | --- |
 | 0.43.1 | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
 | 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
-| `main` | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
+| 0.45.0 | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
+| `main` | 0.2.2 | Adds [app-wide and device settings](#app-wide-and-device-settings-in-api-022). Existing `^0.2.0` ranges still load. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
@@ -264,10 +265,10 @@ Workspace/session read results and resource references may include `device: { ow
 
 `ctx.account`, the `account.read` and `account.manage` webview capabilities, `client.account` on the typed webview client, and the `accountEvents.projectSyncChanged` host event are additive. They ship in the release after 0.44.0. The `/client` account methods add `cancelLogin` and `projectSyncStatus`. `AccountDevice` adds `online`, `AccountStatus` adds `cloudProjectsLoaded`, and `DeviceLogin` adds an optional `email`. `makeCommandContext` from `@pstdio/sdk/testing` provides a signed-out account whose projects are `local`. Publish the SDK and host before separately released extensions use these additions. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).
 
-## App-wide and device settings in API 0.2.1
+## App-wide and device settings in API 0.2.2
 
 `workbenchSlots.globalSettings` and the `"device"` extension setting scope are
-additive. They ship after 0.44.0 within the existing 0.2.1 release step. Existing
+additive. They ship after 0.45.0 as the next additive API step. Existing
 project/global settings, extension detail panels, and published custom global
 slots keep working. Device settings use `ctx.settings` and the existing typed
 webview settings capabilities. Publish the SDK and host before extensions adopt
