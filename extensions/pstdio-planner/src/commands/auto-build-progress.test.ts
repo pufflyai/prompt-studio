@@ -305,3 +305,81 @@ test.each([
   await checkAutoBuildCommand.run(ctx, {});
   expect(followups).toEqual(["supervisor", dispatched.sessionId]);
 });
+
+test("unchanged PR evidence wakes once while a human request prevents repair, then new evidence wakes again", async () => {
+  const { ctx, task, dispatched, collection, supervisor, followups } = await monitorFixture();
+  const attempt = (await collection<AttemptRecord>("planner-attempts").get(dispatched.workspaceId))!;
+  await putAttempt(ctx.storage, {
+    ...attempt,
+    revisions: [
+      {
+        revision: 1,
+        baseSha: "main-sha",
+        headSha: "submitted-head",
+        changeRequestReportId: "report",
+        submittedAt: ago(5),
+        submittedBy: { type: "agent", id: "owner", displayName: "Owner" },
+        reviews: [],
+      },
+    ],
+  });
+  await ticketsCollection(ctx.storage).put(task.id, {
+    ...task,
+    reviewLinks: [
+      {
+        id: "pr",
+        provider: "github",
+        kind: "pull_request",
+        url: "https://github.com/example/project/pull/1",
+        externalId: "1",
+        title: null,
+        createdAt: ago(5),
+        updatedAt: ago(5),
+      },
+    ],
+  });
+  const request = {
+    id: "input",
+    ticketId: task.id,
+    title: "Provide access",
+    instructions: "Configure access.",
+    request: { kind: "task" },
+    requestedAt: ago(2),
+    requestedBy: { type: "human", id: "user", displayName: "User" },
+    context: {
+      reason: null,
+      workspaceId: attempt.workspaceId,
+      attemptRevision: 1,
+      sessionId: null,
+      relatedSessionId: null,
+    },
+  };
+  await collection("planner-review-requests").put(request.id, request);
+  const process = ctx.process.run;
+  let conflict = false;
+  ctx.process.run = async (input) =>
+    input.command[0] === "gh"
+      ? {
+          exitCode: 0,
+          stderr: "",
+          stdout: JSON.stringify({
+            headRefOid: "submitted-head",
+            state: "OPEN",
+            mergeable: conflict ? "CONFLICTING" : "MERGEABLE",
+            statusCheckRollup: [{ conclusion: "FAILURE" }],
+          }),
+        }
+      : process(input);
+  supervisor.lastRequestStarted = new Date(Date.now() + 1000).toISOString();
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual(["supervisor"]);
+  supervisor.status = "completed";
+  for (let check = 0; check < 2; check++) await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual(["supervisor"]);
+  expect(await collection("planner-attempt-events").list()).not.toContainEqual(
+    expect.objectContaining({ type: "implementation_resumed" }),
+  );
+  conflict = true;
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual(["supervisor", "supervisor"]);
+});
