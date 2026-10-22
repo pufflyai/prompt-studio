@@ -44,8 +44,6 @@ const plan = buildPlan({
       sortOrder: 0,
       isDefault: false,
       canCreate: true,
-      canDragIn: true,
-      canDragOut: true,
       columnActions: [],
     },
   ],

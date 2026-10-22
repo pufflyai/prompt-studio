@@ -21,8 +21,6 @@ export const readTicketStatusesCommand = defineCommand({
 
 const statusActionParams = {
   canCreate: params.boolean({ label: "Allow creating tickets", required: false }),
-  canDragIn: params.boolean({ label: "Allow dragging tickets in", required: false }),
-  canDragOut: params.boolean({ label: "Allow dragging tickets out", required: false }),
   columnActions: params.json<string[]>(),
 };
 
@@ -44,8 +42,6 @@ export const createTicketStatusCommand = defineCommand({
       color: commandParams.color,
       icon: commandParams.icon,
       canCreate: commandParams.canCreate,
-      canDragIn: commandParams.canDragIn,
-      canDragOut: commandParams.canDragOut,
       columnActions: commandParams.columnActions,
     });
     await ctx.events.emit(plannerTicketsChanged, {});
@@ -79,8 +75,6 @@ export const updateTicketStatusCommand = defineCommand({
       icon: commandParams.icon,
       sortOrder: commandParams.sortOrder,
       canCreate: commandParams.canCreate,
-      canDragIn: commandParams.canDragIn,
-      canDragOut: commandParams.canDragOut,
       columnActions: commandParams.columnActions,
     });
     await ctx.events.emit(plannerTicketsChanged, {});
