@@ -5,8 +5,8 @@ import { assertMeasurementWindow } from "storage-scale-fixture";
 
 const inventory = () => {
   // Command names avoid persisting bearer tokens from unrelated command arguments.
-  if (platform() === "win32") return execFileSync("tasklist", ["/FO", "CSV"], { encoding: "utf8" });
-  return execFileSync("ps", ["-axo", "pid=,ppid=,pcpu=,comm="], { encoding: "utf8" });
+  if (platform() === "win32") return execFileSync("tasklist", ["/FO", "CSV"], { encoding: "utf8", timeout: 1_000 });
+  return execFileSync("ps", ["-axo", "pid=,ppid=,pcpu=,comm="], { encoding: "utf8", timeout: 1_000 });
 };
 
 export const enterMeasurementWindow = (ownerPath: string, emit: (data: object) => void) => {

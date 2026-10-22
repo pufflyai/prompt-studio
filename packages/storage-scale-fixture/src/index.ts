@@ -1,3 +1,4 @@
+export * from "./benchmark-case";
 export * from "./contract";
 export * from "./coverage";
 export * from "./evidence";
