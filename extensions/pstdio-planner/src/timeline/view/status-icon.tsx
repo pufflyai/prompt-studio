@@ -1,7 +1,6 @@
 import { Box, Icon } from "@chakra-ui/react";
 import { getIconComponent, Tooltip } from "@pstdio/ui";
 import { CollectionBadge } from "@pstdio/ui/kanban-renderer";
-import { CircleAlert } from "lucide-react";
 import { REVIEW_REQUEST_ICON, reviewRequestSummary } from "../../data/review-request-summary";
 import type { PlanRow } from "../contracts";
 
@@ -41,25 +40,5 @@ export function ReviewStatusIcon(props: { row: PlanRow; onOpen?: () => void }) {
       tooltip={summary.tooltip}
       onClick={onOpen}
     />
-  );
-}
-
-export function NeedsAttentionIcon(props: { row: PlanRow }) {
-  const { row } = props;
-  if (row.done || (!row.flags.length && !row.blocks.length)) return null;
-  return (
-    <Tooltip content={row.blockedReason ? `Needs attention · ${row.blockedReason}` : "Needs attention"}>
-      <Box
-        as="span"
-        role="img"
-        aria-label="Needs attention"
-        tabIndex={0}
-        color="orange.fg"
-        display="inline-flex"
-        flexShrink="0"
-      >
-        <Icon as={CircleAlert} boxSize="4" />
-      </Box>
-    </Tooltip>
   );
 }

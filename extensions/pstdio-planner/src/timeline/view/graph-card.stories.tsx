@@ -70,10 +70,7 @@ export const ReviewAnswered: Story = {
 };
 export const AllProperties: Story = {
   render: (args) => (
-    <EditableCardPreview
-      {...args}
-      displayProperties={["id", "status", "type", "workspace", "needsAttention", "reviewRequests"]}
-    />
+    <EditableCardPreview {...args} displayProperties={["id", "status", "type", "workspace", "needsAttention"]} />
   ),
 };
 const request: ReviewRequestView = {

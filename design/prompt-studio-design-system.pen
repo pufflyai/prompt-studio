@@ -216443,28 +216443,6 @@
                       }
                     },
                     {
-                      "id": "tMyTv",
-                      "type": "ref",
-                      "ref": "c24zV7",
-                      "name": "Review requests",
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "xs"
-                      },
-                      "height": 24,
-                      "descendants": {
-                        "DsEVd": {
-                          "enabled": false
-                        },
-                        "Hf4GT": {
-                          "content": "Review requests"
-                        },
-                        "khvEs": {
-                          "enabled": false
-                        }
-                      }
-                    },
-                    {
                       "id": "jIdZO",
                       "type": "ref",
                       "ref": "c24zV7",

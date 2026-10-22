@@ -14,7 +14,7 @@ import type { PlanRow } from "../contracts";
 import { card } from "./graph-geometry";
 import { graphLayers } from "./graph-layers";
 import type { Relation } from "./plan-view";
-import { NeedsAttentionIcon, ReviewStatusIcon } from "./status-icon";
+import { ReviewStatusIcon } from "./status-icon";
 import { TicketCardError, type TicketCardInteraction, useTicketCardActions } from "./ticket-card-interaction";
 
 interface GraphCardProps {
@@ -116,8 +116,7 @@ export function GraphCard(props: GraphCardProps) {
           onBadgeChange={interaction ? menu.onBadgeChange : undefined}
           customSlots={[
             ...slots,
-            properties.includes("needsAttention") ? <NeedsAttentionIcon key="attention" row={row} /> : null,
-            properties.includes("reviewRequests") ? (
+            properties.includes("needsAttention") ? (
               <ReviewStatusIcon
                 key="review"
                 row={row}

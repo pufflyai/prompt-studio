@@ -4,4 +4,4 @@ import type { ViewRef } from "@pstdio/sdk/extensions";
 export const ticketBoard: ViewRef = { kind: "view", id: "tickets" };
 export const timelineBoard: ViewRef = { kind: "view", id: "timeline-tickets" };
 
-export const DEFAULT_TIMELINE_DISPLAY_PROPERTIES = ["status", "needsAttention", "reviewRequests"];
+export const DEFAULT_TIMELINE_DISPLAY_PROPERTIES = ["status", "needsAttention"];

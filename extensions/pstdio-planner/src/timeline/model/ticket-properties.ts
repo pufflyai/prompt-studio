@@ -80,7 +80,7 @@ export function timelineTicketAttributes(deadlines: readonly Deadline[]) {
         ],
       },
       filterable: true,
-      displayable: true,
+      displayable: false,
     },
   ];
   return attributes;
