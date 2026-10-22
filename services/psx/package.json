@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "bun build src/server.ts src/index.ts --target bun --outdir dist",
-    "start": "bun dist/server.js",
+    "start": "bun ./dist/server.js",
     "db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
