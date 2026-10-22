@@ -46,6 +46,7 @@ import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 // CRDT storage checks atomic saves, ignored revisions, local retry outcomes and durable restart.
 // Declared indexes, filtered cursor pages, selected fields, aggregates and batch reads survive restart.
+// Accepted Unicode normalization and NUL preservation agree before and after restart.
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
 // scripts/verify/storage-package-consumer.ts checks the packaged SDK's two-device merge and replacement report.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";

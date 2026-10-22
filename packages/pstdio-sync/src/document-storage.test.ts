@@ -168,3 +168,32 @@ test("an invalid later edit leaves every record and operation unsaved", async ()
   expect(await first.records.list()).toEqual([]);
   expect(await first.records.outcome("invalid")).toBeUndefined();
 });
+
+test("accepted text has the same Unicode values and keys before and after serialization", async () => {
+  const first = device();
+  await first.save({
+    title: "a\ud800b",
+    "\udc00key": { lines: "one\n\ud800", values: ["😀", "\udc00", "\u0000"] },
+  });
+  await first.records.commit({
+    operationId: "shared-unicode",
+    edits: [
+      { recordId: "map", shared: [{ kind: "map.set", key: "\ud800key", value: ["\udc00"] }] },
+      { recordId: "text", shared: [{ kind: "text.insert", index: 0, text: "\ud800\n😀" }] },
+      { recordId: "list", shared: [{ kind: "list.insert", index: 0, values: [{ "\ud800": "\udc00" }] }] },
+    ],
+  });
+  const second = device(first.document);
+  expect((await first.records.read("note")).value).toEqual({
+    title: "a�b",
+    "�key": { lines: "one\n�", values: ["😀", "�", "\u0000"] },
+  });
+  expect(await first.records.list()).toEqual(await second.records.list());
+  await first.records.commit({
+    operationId: "delete-normalized-key",
+    edits: [{ recordId: "map", shared: [{ kind: "map.delete", key: "\ud800key" }] }],
+  });
+  expect((await first.records.read("map")).shared?.value).toEqual({});
+  first.document.destroy();
+  second.document.destroy();
+});
