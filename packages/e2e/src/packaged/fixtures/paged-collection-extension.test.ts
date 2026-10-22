@@ -70,3 +70,73 @@ test("paged search ignores surrounding whitespace and empty queries", async () =
     expect(result.page.filteredTotal).toBe(expected.length);
   }
 });
+
+test("paged table search matches visible scalar cells and ignores hidden grouping fields", async () => {
+  const storage = createMemoryStorage({ indexes: createPagedCollectionFixture("owner").storageIndexes });
+  await storage.records.commit({
+    operationId: "visible-search",
+    edits: [
+      { recordId: "alpha", replace: { title: "Alpha", rank: 112, status: "todo" } },
+      { recordId: "beta", replace: { title: "Beta", rank: 2, status: "done" } },
+    ],
+  });
+  for (const [search, hiddenColumns, expected] of [
+    ["done", ["status"], []],
+    ["alpha", ["title"], []],
+    ["12", [], ["alpha"]],
+    ["12", ["rank"], []],
+  ] as const) {
+    const result = await queryFixturePage(
+      { storage },
+      {
+        renderer: { projectId: "project" },
+        filter: { conjunction: "and", rules: [] },
+        sorts: [{ attributeId: "rank", direction: "asc" }],
+        settings: { ...DEFAULT_DATA_TABLE_SETTINGS, showStats: false, hiddenColumns: [...hiddenColumns] },
+        page: { ...initialFixturePage, search },
+      },
+    );
+    expect(result.records.map((row) => row.recordId)).toEqual(expected);
+    expect(result.page.total).toBe(2);
+    expect(result.page.filteredTotal).toBe(expected.length);
+  }
+});
+
+test("paged board search follows the title and displayed properties", async () => {
+  const storage = createMemoryStorage({ indexes: createPagedCollectionFixture("owner").storageIndexes });
+  await storage.records.commit({
+    operationId: "board-search",
+    edits: [
+      { recordId: "alpha", replace: { title: "Alpha", rank: 112, status: "todo" } },
+      { recordId: "beta", replace: { title: "Beta", rank: 2, status: "done" } },
+    ],
+  });
+  for (const viewMode of ["board", "list"] as const) {
+    for (const [search, displayProperties, expected] of [
+      ["alpha", [], ["alpha"]],
+      ["12", ["rank"], ["alpha"]],
+      ["12", [], []],
+      ["done", [], []],
+      ["DONE", ["status"], ["beta"]],
+    ] as const) {
+      const result = await queryFixturePage(
+        { storage },
+        {
+          renderer: { projectId: "project" },
+          filter: { conjunction: "and", rules: [] },
+          sorts: [{ attributeId: "rank", direction: "asc" }],
+          settings: {
+            viewMode,
+            columnGrouping: "status",
+            rowGrouping: "none",
+            displayProperties: [...displayProperties],
+          },
+          page: { ...initialFixturePage, search },
+        },
+      );
+      expect(result.records.map((row) => row.recordId)).toEqual(expected);
+      expect(result.page.total).toBe(2);
+      expect(result.page.filteredTotal).toBe(expected.length);
+    }
+  }
+});

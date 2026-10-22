@@ -561,6 +561,15 @@ locale-independent JavaScript lowercase matching, as do `contains` and
 `not` storage predicates. An empty text rule is incomplete and does not filter
 rows; use `empty` and `notEmpty` for the explicit empty-value controls.
 
+Search trims surrounding whitespace and uses the same locale-independent
+lowercase rule. It matches displayed text: visible table columns, or the board's
+title and displayed properties. A selected grouping field can still be hidden
+and must not become searchable only because it occurs in `page.fields`.
+`textContains` supports ordinary string, number, and boolean display text.
+Providers with date labels, custom display labels, diff summaries, or other
+formatted cells must translate searches to those display semantics before
+paging; matching their raw stored value is not equivalent.
+
 Return `{ rows, page }`, where `page` contains:
 
 - `revision`: the committed owner/query revision shared by rows and aggregates.

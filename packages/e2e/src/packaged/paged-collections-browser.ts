@@ -166,6 +166,13 @@ const exerciseSelectionAndSearch = async (page: Page, expectedIds: string[]) => 
   await page.getByRole("textbox", { name: "Search this view", exact: true }).fill("row 024");
   await expect(page.getByRole("cell", { name: /^paged-owner-0 row / })).toHaveCount(10);
   await expect(page.getByText("10 of 250", { exact: true })).toBeVisible();
+  await page.getByRole("textbox", { name: "Search this view", exact: true }).fill(" 124 ");
+  await expect(page.getByRole("cell", { name: /^paged-owner-0 row / })).toHaveCount(3);
+  for (const ordinal of [124, 248, 249])
+    await expect(
+      page.getByRole("cell", { name: `paged-owner-0 row ${String(ordinal).padStart(4, "0")}`, exact: true }),
+    ).toBeVisible();
+  await expect(page.getByText("3 of 250", { exact: true })).toBeVisible();
   await page.getByRole("textbox", { name: "Search this view", exact: true }).fill("not present");
   await expect(page.getByRole("cell", { name: /^paged-owner-0 row / })).toHaveCount(0);
   await expect(page.getByText("0 of 250", { exact: true })).toBeVisible();

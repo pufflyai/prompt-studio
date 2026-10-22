@@ -91,8 +91,13 @@ export const queryFixturePage = async (
   const index = `${grouped ? "group-" : ""}${sort.attributeId}-${sort.direction}`;
   const filter = predicate(input.filter);
   const needle = request.search.trim();
+  const settings = input.settings;
+  const searchFields =
+    "hiddenColumns" in settings
+      ? ["title", "rank", "status"].filter((field) => !settings.hiddenColumns.includes(field))
+      : ["title", ...settings.displayProperties].filter((field) => field in fields);
   const search: StoragePredicate = needle
-    ? { any: ["title", "status"].map((field) => ({ field, op: "contains", value: needle })) }
+    ? { any: searchFields.map((field) => ({ field, op: "textContains", value: needle })) }
     : { all: [] };
   const searched: StoragePredicate = { all: [filter, search] };
   const where: StoragePredicate = {
