@@ -39,6 +39,18 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
       }),
     );
   };
+  const workbenchRequest = (path: string) => {
+    if (path.endsWith("/keys"))
+      return json({
+        project: [{ generation: 1, secret: "A".repeat(43) }],
+        personal: [{ generation: 1, secret: "B".repeat(43) }],
+      });
+    if (path === "/v1/workbenches") return json([...projects].map((workbenchId) => ({ workbenchId })));
+    const [, , , id, action] = path.split("/");
+    if (action === "remove") projects.delete(decodeURIComponent(id!));
+    else projects.add(decodeURIComponent(id!));
+    return json({ ok: true });
+  };
   const managerRequest = async (request: Request, path: string, origin: string) => {
     const input = async () => (await request.json()) as Record<string, unknown>;
     if (path === "/api/auth/one-time-token/verify")
@@ -67,18 +79,8 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     if (path === "/api/auth/sign-out") return json({ ok: true });
     if (path === "/v1/environment-access")
       return json({ token: "relay-access", expiresAt: new Date(Date.now() + 60_000).toISOString() });
-    if (path.endsWith("/keys"))
-      return json({
-        project: [{ generation: 1, secret: "A".repeat(43) }],
-        personal: [{ generation: 1, secret: "B".repeat(43) }],
-      });
-    if (path === "/v1/workbenches") return json([...projects].map((workbenchId) => ({ workbenchId })));
-    if (path.startsWith("/v1/workbenches/")) {
-      const [, , , id, action] = path.split("/");
-      if (action === "remove") projects.delete(decodeURIComponent(id!));
-      else projects.add(decodeURIComponent(id!));
-      return json({ ok: true });
-    }
+    if (path === "/v1/account") return json({ features: { relay: true } });
+    if (path === "/v1/workbenches" || path.startsWith("/v1/workbenches/")) return workbenchRequest(path);
 
     return null;
   };

@@ -23,6 +23,7 @@ export const createAccountClient = (request: RequestFn) => {
     cancelLogin: (id: string) =>
       request<Ok & { status: Exclude<AccountLoginStatus, "pending"> }>(login(id), { method: "DELETE" }),
     projectSyncStatus: (projectId: string) => request<ProjectSyncStatus>(`${project(projectId)}/sync`),
+    /** Includes account feature grants. `features` is null until discovery or when signed out. */
     status: () => request<AccountStatus>("/v1/account"),
     /** `removed` is false when the account service could not be reached; remove the device from another one. */
     logout: () => request<Ok & { removed: boolean }>("/v1/account/logout", { method: "POST" }),
