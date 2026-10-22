@@ -89,6 +89,17 @@ export const registerDocumentSyncSmokeTests = () =>
         callback.searchParams.set("state", url.searchParams.get("state")!);
         callback.searchParams.set("code", "one-use");
         expect((await fetch(callback)).status).toBe(200);
+        await mkdir(join(root, "unreadable"));
+        peer.corruptNewDocuments(true);
+        const unreadable = await client.projects.create(
+          folderProjectInput({ name: "Unreadable download" }, join(root, "unreadable")),
+        );
+        await client.account.syncProject(unreadable.id);
+        await waitFor(async () => (await client.account.projectSyncStatus(unreadable.id)).state === "needs-attention");
+        expect(await client.projects.snapshots(unreadable.id)).toEqual([]);
+        await client.account.stopProjectSync(unreadable.id);
+        peer.documents.clear();
+        peer.corruptNewDocuments(false);
         const { note } = await command<{ note: StorageRecord }>("read");
         const asset = await command("stage", { operationId: "offline-image", content: "packaged-secret image" });
         await command("commit", {
@@ -155,7 +166,7 @@ export const registerDocumentSyncSmokeTests = () =>
         });
         await waitFor(() => [...peer.documents.values()].some((document) => document.updates.length >= 3));
         const files = await readdir(quarantine);
-        const saved = await Bun.file(join(quarantine, files[0]!)).text();
+        const saved = (await Promise.all(files.map((file) => Bun.file(join(quarantine, file)).text()))).join("\n");
         expect(saved).toContain("invalidciphertext000000");
         expect(saved).not.toContain("packaged-secret");
       } finally {

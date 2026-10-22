@@ -14,7 +14,6 @@ export const startRelayExtension = async (input: {
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
   notify: () => void;
-  onSynchronized: () => void;
   statusChanged: () => void;
   contextKey: string;
   snapshot: Awaited<ReturnType<ExtensionsRouteDeps["extensionRuntimeCatalog"]["get"]>>;
@@ -50,7 +49,6 @@ export const startRelayExtension = async (input: {
         }))
     : [];
   let connection: ReturnType<typeof createDocumentRelayConnection> | undefined;
-  let synchronized = false;
   const watches: ReturnType<typeof watchArtifactMount>[] = [];
   const refreshFiles = async () => {
     const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(
@@ -81,10 +79,6 @@ export const startRelayExtension = async (input: {
         await refreshFiles();
         await documents.synchronize(attemptSignal);
         await refreshFiles();
-        if (!synchronized) {
-          synchronized = true;
-          input.onSynchronized();
-        }
         input.notify();
       },
       onError: () =>
@@ -97,7 +91,6 @@ export const startRelayExtension = async (input: {
     const active = connection;
     return {
       owner,
-      synchronized: () => synchronized,
       contextKey: input.contextKey,
       wake: connection.wake,
       done: connection.done.finally(documents.close),

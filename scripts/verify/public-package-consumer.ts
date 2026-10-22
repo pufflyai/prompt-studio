@@ -104,6 +104,10 @@ void [filtered, viewBar];
       (react && imports.includes("@pstdio/workbench/react")
         ? `
 import type { ReactAttributeDescriptor, ReactBoardColumnConfig } from "@pstdio/workbench/react";
+import type { createWorkbenchWebviewHostAdapters } from "@pstdio/workbench/extensions";
+type HostAdapters = ReturnType<typeof createWorkbenchWebviewHostAdapters>;
+export type HostPage = ReturnType<HostAdapters["pageParams"]["update"]>["page"];
+export type HostCommandOutcome = Awaited<ReturnType<HostAdapters["executeCommand"]>>["outcome"];
 const invalidAttribute: ReactAttributeDescriptor = {
   id: "title", label: "Title", type: { kind: "string" },
   // @ts-expect-error React cell callbacks must return React nodes.

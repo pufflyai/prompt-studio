@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
+import { extension_instances } from "../../db/schemas.pg";
+import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
+import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
 import { createDocumentSnapshots } from "./document-snapshots";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
@@ -12,6 +15,20 @@ afterEach(async () => {
 const allocateFixture = async () => {
   const f = await createExtensionStorageFixture();
   closes.push(f.close);
+  for (const id of ["other", "new"]) {
+    const source = await createInstalledExtensionSourcesDBService(f.db).register({
+      install_name: id,
+      extension_id: id,
+      display_name: id,
+      source_kind: "local_path",
+      source_path: `/builtin/${id}`,
+    });
+    await createExtensionInstancesDBService(f.db).create({
+      installed_extension_id: source.id,
+      scope_type: "project",
+      scope_id: f.projectAId,
+    });
+  }
   const service = createDocumentStorageDBService(f.db);
   const owner = { workbenchId: f.projectAId, extensionId: "ext.example" };
   const storage = service.open({ owner });
@@ -127,4 +144,52 @@ test("an actual database capacity failure retries the 12-hour capture after roll
   const rows = await snapshots.list(f.projectAId);
   expect(rows.map((row) => row.hours)).toEqual([12]);
   expect((await f.storage.records.read("note")).value).toBe("Saved");
+});
+
+test("project recovery preserves private history and core documents while restoring disabled extension data", async () => {
+  const f = await fixture();
+  const privateOwner = { ...f.owner, extensionId: JSON.stringify(["pstdio.personal-history", "manager", "account"]) };
+  const transcript = f.service.documents.open(JSON.stringify(["transcript", "session"]));
+  const writePrivate = (value: string) =>
+    transcript.transaction(privateOwner, async ({ document }) => {
+      const text = document.getText("content");
+      text.delete(0, text.length);
+      text.insert(0, value);
+    });
+  const privateRecords = f.service.documents.open("records");
+  await privateRecords.transaction(privateOwner, async ({ document }) => {
+    document.getMap("sessions").set("session", "Before");
+  });
+  await writePrivate("Before");
+  await f.storage.records.commit({ operationId: "before", edits: [{ recordId: "note", replace: "Before" }] });
+  await f.db.update(extension_instances).set({ enabled: false });
+  const snapshots = createDocumentSnapshots(f.db);
+  await snapshots.capture(f.projectAId);
+  await privateRecords.transaction(privateOwner, async ({ document }) => {
+    document.getMap("sessions").set("session", "After");
+  });
+  await writePrivate("After");
+  await f.service.documents
+    .open("resource-identities")
+    .transaction({ ...f.owner, extensionId: "pstdio" }, async ({ document }) => {
+      document.getMap("resource-numbers").set("ticket", { value: 42 });
+    });
+  await f.storage.records.commit({ operationId: "after", edits: [{ recordId: "note", replace: "After" }] });
+  const [point] = await snapshots.list(f.projectAId);
+  expect(point!.extensions).toEqual([f.owner.extensionId]);
+  await snapshots.restore(f.projectAId, point!);
+  expect((await f.storage.records.read("note")).value).toBe("Before");
+  expect(
+    await privateRecords.transaction(privateOwner, async ({ document }) => document.getMap("sessions").get("session")),
+  ).toBe("After");
+  expect(
+    await transcript.transaction(privateOwner, async ({ document }) => document.getText("content").toString()),
+  ).toBe("After");
+  expect(
+    await f.service.documents
+      .open("resource-identities")
+      .transaction({ ...f.owner, extensionId: "pstdio" }, async ({ document }) =>
+        document.getMap("resource-numbers").get("ticket"),
+      ),
+  ).toEqual({ value: 42 });
 });

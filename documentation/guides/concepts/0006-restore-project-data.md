@@ -48,6 +48,7 @@ If this safety write fails, no project data changes.
 
 Recovery points contain extension records, asset references, and declared shared
 text documents. They do not back up your Git checkout, local workspace folders,
-credentials, or account access. Referenced asset bytes must still be available
+credentials, account access, or private session history. Project resource identities
+and their assigned numbers also stay unchanged. Referenced asset bytes must still be available
 on the device or through normal sync. The relay keeps no recovery history.
 Explicitly removing an extension's data also removes it from local recovery points.

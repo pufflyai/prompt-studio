@@ -18,6 +18,15 @@ test("the project API lists recovery points and restores a deleted ticket throug
   });
   expect(res.status).toBe(201);
   const project = await res.json();
+  await handle.deps.extensionService.enableInstalledSourceForProject({
+    displayName: "Example",
+    extensionId: "example",
+    installName: "example",
+    manifest: {},
+    name: "example",
+    projectId: project.id,
+    sourcePath: "/builtin/example",
+  });
   const snapshots = handle.deps.extensionStorageService.snapshots;
   const storage = await handle.deps.extensionStorageService.open({
     owner: { workbenchId: project.id, extensionId: "example" },

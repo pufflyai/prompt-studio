@@ -1,5 +1,13 @@
 import { expect } from "bun:test";
 
+const invalidUpdate = (deviceId: string) => ({
+  updateId: "invalid-first-download",
+  payload: "AAAA",
+  sequence: 1,
+  deviceId,
+  createdAt: new Date().toISOString(),
+});
+
 // A wire-level peer for the compiled host. Real PostgreSQL/object-store behavior is checked in
 // services/relay/src/transport/document-client.integration.ts.
 export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFile }) => {
@@ -15,11 +23,13 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
   const devices = new Map<string, string>();
   // While set, document reads fail, so a device cannot finish its first download.
   let failReads = false;
+  let corruptNewDocuments = false;
   let failedReads = 0;
   const document = (id: string) => {
     let value = documents.get(id);
     if (!value) {
       value = { state: null, updates: [] };
+      if (corruptNewDocuments) value.updates.push(invalidUpdate(deviceId));
       documents.set(id, value);
     }
     return value;
@@ -197,6 +207,9 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     documents,
     states: () => storedStates,
     failedReads: () => failedReads,
+    corruptNewDocuments(value: boolean) {
+      corruptNewDocuments = value;
+    },
     personalDocuments: () => [...personalDocumentIds].map((id) => documents.get(id)!),
     failReads(value: boolean) {
       failReads = value;

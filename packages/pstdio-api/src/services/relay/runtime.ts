@@ -30,17 +30,20 @@ export const startRelayRuntime = async (input: {
   const { deps } = input;
   const resourceConnections = new Map<string, ReturnType<typeof startResourceNumberSync>>();
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
-  const expectedExtensions = new Map<string, Set<string>>();
   const recovery = startRecoverySnapshots({
     storage: deps.extensionStorageService,
-    projects: () =>
-      [...workbenches.keys()].filter((id) => {
-        const expected = expectedExtensions.get(id);
-        return (
-          !!expected?.size &&
-          [...expected].every((extensionId) => connections.get(JSON.stringify([id, extensionId]))?.synchronized())
+    projects: async () => {
+      const ready: string[] = [];
+      for (const id of workbenches.keys()) {
+        const catalog = await deps.extensionRuntimeCatalog.get(id);
+        const owners = catalog.enabledSources.map(({ installedSource }) =>
+          connections.get(JSON.stringify([id, installedSource.extension_id])),
         );
-      }),
+        const statuses = await Promise.all(owners.map((owner) => owner?.status()));
+        if (statuses.length && statuses.every((status) => status?.downloaded && !status.needsAttention)) ready.push(id);
+      }
+      return ready;
+    },
   });
   const personal = new Map<string, ReturnType<typeof startRelayPersonalHistory>>();
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
@@ -59,7 +62,10 @@ export const startRelayRuntime = async (input: {
   };
   // Shutdown closes every connection. That is not a status change to announce.
   const statusChanged = (workbenchId: string) => {
-    if (!controller.signal.aborted) input.statusChanged?.(workbenchId);
+    if (!controller.signal.aborted) {
+      input.statusChanged?.(workbenchId);
+      void recovery.capture();
+    }
   };
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
@@ -89,7 +95,6 @@ export const startRelayRuntime = async (input: {
       workspace?.provider_capabilities_json,
     ]);
     const desired = new Set(snapshot.enabledSources.map(({ installedSource }) => installedSource.extension_id));
-    expectedExtensions.set(workbenchId, desired);
     const obsolete = [...connections].filter(
       ([, connection]) =>
         connection.owner.workbenchId === workbenchId &&
@@ -109,7 +114,6 @@ export const startRelayRuntime = async (input: {
         deps,
         signal: controller.signal,
         notify: () => notify(workbenchId),
-        onSynchronized: () => void recovery.capture(),
         statusChanged: () => statusChanged(workbenchId),
       });
       if (controller.signal.aborted || workbenches.get(workbenchId) !== config) {

@@ -4,7 +4,7 @@ import { apiLogger } from "../../lib/logger";
 /** Runs independently of network sync, so a disconnected running device still keeps recovery points. */
 export const startRecoverySnapshots = (input: {
   storage: ExtensionsRouteDeps["extensionStorageService"];
-  projects: () => string[];
+  projects: () => string[] | Promise<string[]>;
 }) => {
   let running: Promise<void> | undefined;
   let closed = false;
@@ -13,7 +13,7 @@ export const startRecoverySnapshots = (input: {
     if (!running)
       running = Promise.resolve().then(async () => {
         try {
-          const projects = new Set([...(await input.storage.snapshots.projects()), ...input.projects()]);
+          const projects = new Set([...(await input.storage.snapshots.projects()), ...(await input.projects())]);
           for (const projectId of projects) {
             if (closed) break;
             await input.storage.snapshots.capture(projectId).catch((error) => {

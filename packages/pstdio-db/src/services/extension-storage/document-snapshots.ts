@@ -2,10 +2,16 @@ import { statfs } from "node:fs/promises";
 import { and, asc, eq, ne } from "drizzle-orm";
 import { restoreDocument, type StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { document_snapshots, projects, storage_documents } from "../../db/schemas.pg";
+import { document_snapshots, projects } from "../../db/schemas.pg";
 import { createEnvironmentDBService } from "../environment/environment";
 import { runDocumentTransaction } from "./document-persistence";
-import { captureSnapshotContent, readSnapshotContent, type SnapshotTransaction } from "./snapshot-content";
+import {
+  captureSnapshotContent,
+  isRecoveryDocument,
+  projectRecoveryDocuments,
+  readSnapshotContent,
+  type SnapshotTransaction,
+} from "./snapshot-content";
 
 export class SnapshotSelectionError extends Error {}
 const hourMs = 3_600_000;
@@ -101,10 +107,7 @@ export const createDocumentSnapshots = (
       return rows.map((row) => row.id);
     },
     async list(projectId: string) {
-      const current = await db
-        .selectDistinct({ id: storage_documents.extension_id })
-        .from(storage_documents)
-        .where(eq(storage_documents.workbench_id, projectId));
+      const { owners, documents: current } = await projectRecoveryDocuments(db, projectId);
       const rows = await db
         .select()
         .from(document_snapshots)
@@ -115,8 +118,10 @@ export const createDocumentSnapshots = (
         capturedAt: row.captured_at,
         extensions: [
           ...new Set([
-            ...current.map((row) => row.id),
-            ...readSnapshotContent(row.state).map((document) => document.extensionId),
+            ...current.map((row) => row.extension_id),
+            ...readSnapshotContent(row.state)
+              .filter((document) => owners.has(document.extensionId) && isRecoveryDocument(document.documentId))
+              .map((document) => document.extensionId),
           ]),
         ].sort(),
       }));
@@ -131,8 +136,10 @@ export const createDocumentSnapshots = (
           .where(and(where(projectId), eq(document_snapshots.hours, input.hours)));
         if (!selected || selected.captured_at !== input.capturedAt)
           throw new SnapshotSelectionError("Snapshot changed or is unavailable. Refresh the recovery points.");
-        const content = readSnapshotContent(selected.state);
-        const current = await tx.select().from(storage_documents).where(eq(storage_documents.workbench_id, projectId));
+        const { owners, documents: current } = await projectRecoveryDocuments(tx, projectId);
+        const content = readSnapshotContent(selected.state).filter(
+          (document) => owners.has(document.extensionId) && isRecoveryDocument(document.documentId),
+        );
         if (
           input.extensionId &&
           ![...content.map((doc) => doc.extensionId), ...current.map((row) => row.extension_id)].includes(
