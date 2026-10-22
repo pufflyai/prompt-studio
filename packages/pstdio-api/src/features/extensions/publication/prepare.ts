@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { checkExtensionSource } from "../extension-runtime";
@@ -6,11 +5,6 @@ import { buildExtensionWebview } from "../extension-webview-builder";
 import { collectExtensionWebviews, resolvePackageAssetFile } from "../extension-webviews";
 import { installDependencies } from "../install-extension-dependencies";
 import { unpackExtension } from "./package";
-
-export const packageRevision = async (bytes: Blob) =>
-  createHash("sha256")
-    .update(new Uint8Array(await bytes.arrayBuffer()))
-    .digest("hex");
 
 export const preparePublishedExtension = async (input: {
   bytes: Blob;
