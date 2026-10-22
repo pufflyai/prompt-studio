@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
+import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
 import { createExtensionScheduler } from "./extension-scheduler";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
@@ -118,7 +119,7 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     extensionService,
     projectService,
     extensionStorageService: {
-      open: async () => ({ records: { list: async () => [], read: async () => ({ value: null }) } }),
+      ...createTestDocumentStorage(),
       getKv: async () => null,
       setKv: async () => {},
       deleteKv: async () => {},

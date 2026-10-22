@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
 import { createProjectExtensionLifecycle } from "./project-extension-lifecycle";
 
 const installedSource = {
@@ -35,9 +36,7 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
       eventBus: { emit: mock(() => {}) },
       extensionAutomationPreferencesService: { set: mock(async (row: unknown) => row) },
       extensionConnectionService: { removeExtension: mock(async () => {}) },
-      extensionStorageService: {
-        open: async () => ({ records: { list: async () => [], read: async () => ({ value: null }) } }),
-      },
+      extensionStorageService: createTestDocumentStorage(),
       extensionRuntimeCatalog: {
         get: mock(async () => ({ runtime: { schedules: [] as Array<Record<string, unknown>> } })),
         getSourcesRuntime: mock(async () => ({ hooks: [], skills: input.skills ?? [] })),
