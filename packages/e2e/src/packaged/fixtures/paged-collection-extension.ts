@@ -90,8 +90,9 @@ export const queryFixturePage = async (
   const sort = input.sorts[0] ?? { attributeId: "rank", direction: "asc" };
   const index = `${grouped ? "group-" : ""}${sort.attributeId}-${sort.direction}`;
   const filter = predicate(input.filter);
-  const search: StoragePredicate = request.search
-    ? { any: ["title", "status"].map((field) => ({ field, op: "contains", value: request.search })) }
+  const needle = request.search.trim();
+  const search: StoragePredicate = needle
+    ? { any: ["title", "status"].map((field) => ({ field, op: "contains", value: needle })) }
     : { all: [] };
   const searched: StoragePredicate = { all: [filter, search] };
   const where: StoragePredicate = {
