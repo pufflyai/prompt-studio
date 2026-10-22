@@ -9,6 +9,7 @@ export {
   snapshotDocumentBinary,
   trackDocumentBinary,
 } from "./document-binary";
+export { buildRecordFragments, type RecordFragment } from "./document-fragments";
 export { type DocumentHistory, documentHistory } from "./document-history";
 export { trackDocumentPayload } from "./document-payload";
 export { documentRecordTypes, type RecordType, readDocumentRecord } from "./document-record";

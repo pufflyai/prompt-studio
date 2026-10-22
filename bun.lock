@@ -681,6 +681,7 @@
       "name": "pstdio-sync",
       "dependencies": {
         "fast-diff": "^1.3.0",
+        "lib0": "0.2.117",
         "pstdio-sync-contracts": "workspace:*",
         "yjs": "^13.6.29",
       },

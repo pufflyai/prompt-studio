@@ -12,6 +12,8 @@ After the [root-name encoding correction](0092-temporary-yjs-root-name-index.md)
 
 Every first durable write failed the 1,000 ms operation ceiling. Its range was 2,545.223–3,389.744 ms, with p50 2,880.814 ms. The first sample blocked the event loop for 2,967.186 ms during a 2,968.236 ms write. Warm writes had p95 13.522 ms, and writes across checkpoint boundaries had p95 4.589 ms. Peak reported RSS across all phases was 14,307,786,752 bytes. Explicit checkpoint drain had p95 7,406.715 ms.
 
+This memory failure is not confined to seeding. Database-open endpoints were 356–539 MB; first-write endpoints were 7.205–8.151 GB across the ten cold samples, and warm-write endpoints remained 7.205–8.153 GB. List endpoints reached 9.682 GB and folding-write endpoints reached 12.791 GB. The 14.308 GB process high-water mark was first observed at checkpoint drain. These phase endpoints and high-water observations do not by themselves attribute every allocation or separate concurrent background work. The revised boundary must reduce cold and retained memory, not only edit duration.
+
 RP-1178 retains all phases, supervisor results, inventories and acknowledgements. These are database layer diagnostics, not full application acceptance. They establish that moving whole-owner preparation outside the database lock is insufficient. The cost of a one-record edit must depend on that record and its causal history, rather than unrelated records in the owner.
 
 ## Ideal design
@@ -52,6 +54,10 @@ Only the storage adapter owns a working document. Callers receive the existing r
 
 Capture only new transaction update events as the outgoing edit. Verify that their structs and deletion ranges are real changes to selected records and that no virtual clock filler is emitted. Existing root names and item IDs remain unchanged; normal new edits use a fresh actor. Include deterministic migration/text-promotion actor handling in the compatibility proof.
 
+Actor clocks require their own authoritative lookup. A deterministic actor may already have clocks outside the selected fragment; starting it at zero would silently collide with existing source items. Check the actor heads of a private draft before exposing its events. If a required head was omitted, reconstruct the private view with that head and replay only the fixed, internal record edit description. Do not replay extension callbacks, observers, asset writes or already published outcomes. Recheck affected actor heads at durable admission. The prototype has a red/green fixture for an actor used by an unrelated root before the selected edit.
+
+Fragment lookup uses a persisted record-to-root ownership index, followed by exact structural dependencies. It must not enumerate all owner roots, client structures or fragments during a selected edit. Build ownership explicitly during backfill and maintain touched ownership with accepted updates. The prototype makes owner-directory enumeration throw after indexing and checks selected-state size as unrelated records grow.
+
 An atomic group loads the union of its records once, validates expected revisions, performs the existing edits, and commits original incremental bytes, retry identity, query projection changes and updated structural fragments together. A failed transaction publishes none of these. A cache miss must not trigger whole-owner hydration.
 
 Generic full-document work remains explicit: legacy full lists, export, text-document operations, migrations and index rebuilds do not silently become selected-record transactions. Point reads and retry outcome lookup should use their durable bounded interfaces.
@@ -62,6 +68,8 @@ Build the structural index during explicit upgrade/index installation using the 
 
 Late 0.45 offline updates keep their original IDs and apply to the authoritative owner history. Retired original generations and explicit restored generations retain the rules established by PS-906. A fragment rebuild must preserve pending structs and delete sets whose predecessors have not arrived. It must not convert a missing predecessor into authoritative deletion.
 
+Only integrated source structs enter a working fragment. Canonical pending updates remain exclusively in the complete authoritative source until their real predecessors arrive. Applying them to a view with virtual clock coverage could otherwise satisfy a missing predecessor and expose a value early.
+
 ### Receive, admission and fairness
 
 Large incoming preparation must run outside foreground owner admission and outside the database transaction. A completed preparation carries its source revision and affected-record evidence. Durable publication rechecks that source and updates source bytes, current rows and structural fragments atomically.
@@ -69,6 +77,24 @@ Large incoming preparation must run outside foreground owner admission and outsi
 A concurrent local write must not force repeated whole-owner preparation until incoming sync starves. The implementation must prove bounded incremental rebase of a prepared receive against the later tail, or use affected-record revision guards with a proved merge rule. The final admission section may include only bounded work; it cannot hide another full-owner decode under a different lock. Keep worker admission before snapshot allocation, cancellation, pending-envelope retention and fair service across owners.
 
 The exact receive preparation/rebase protocol is an open design proof. It must be resolved before this proposal is marked accepted. Fixing an idle cold edit alone does not pass the busy-sync contract.
+
+## Structural prototype evidence
+
+RP-1178 contains a report-only prototype with one actor interleaving three rounds across 1, 1,000 and 100,000 unrelated records. Selected reconstruction retained 15 original structs, 19 working structs, seven roots and four virtual ranges at every size. Sparse bytes were 995, 1,007 and 1,019; larger original clocks require larger variable-length integers. Owner-root and client-directory enumeration was forbidden after explicit index creation. Applying the emitted selected edit to the complete source reproduced the private result and preserved unrelated state.
+
+All three unchanged structural cases completed within their existing 60-second cap with no cleanup errors. External packaged browser and Docker work was active and unacknowledged. This is structural and semantic evidence only: its durations and memory are ineligible for acceptance, and its fixture is not the fixed database workload.
+
+Nine focused prototype tests also cover pending predecessors, two-record union, deterministic actor reuse, retired generations, failed private edits and supported map/text/list deletion. A failed edit initially left earlier private mutations alive. The corrected prototype destroys and reconstructs the private view from original sparse fragments and accepted events before another attempt. Named-root deletion operations emitted real Items and deletion sets; none emitted virtual ranges. These tests do not yet prove durable fragment publication, asynchronous actor-head consistency or fair receive.
+
+### Causal activation blocks selected publication
+
+A further hostile fixture exposes a correctness blocker. A remote text promotion's original seed is delayed while its real actor suffix and a later edit to another record arrive first. The source retains them as pending. Local edits replace the first field with a number, then its original primitive string. Promoting that string locally emits the original deterministic character IDs. Those real predecessors unblock the remote suffix and the other record's pending edit. Publishing only the locally selected record would leave the other record's query row and structural fragment stale.
+
+The report retains the failing `record-working-causal-activation.test.ts` fixture and its output: canonical pending state becomes empty, record B changes, and the prepared publication contains only A. The selected adapter must remain disconnected until this is fixed. Preserving pending bytes exclusively in the canonical source is necessary but insufficient; local events can legitimately activate them.
+
+Before publication, compute the exact ready causal closure from newly emitted actor ranges. This needs indexed pending waits and actor-clock-to-record ownership. Repeatedly advance ready original client prefixes, include every newly integrated affected record, and publish source bytes, rows, fragments, actor heads, waits and retry outcome atomically under the captured source revision. Pending deletion ranges need equivalent handling. Never apply all pending owner bytes to a filled view, or hide a whole-owner rebuild behind a fallback.
+
+The minimal persisted representation remains under review. Opaque whole-record blobs require a separate actor-clock ownership index to resolve inherited Item parents. Original struct chunks keyed by actor-clock ranges with a record lookup index may provide both selected reads and causal ownership without duplicating that index. Only rebuildable structural data is proposed; product data and original wire history remain authoritative. A large real causal cascade is actual affected work, distinct from unrelated owner records, and must not be mislabeled as constant work.
 
 ## Required proofs
 
