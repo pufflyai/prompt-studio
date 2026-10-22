@@ -100,7 +100,10 @@ export const createDeviceAutomationFixture = async () => {
       const workspaceService = { get: async () => null, getDefault: async () => null };
       const deps = {
         environmentService: { get: async () => ({ environmentId: deviceId }) },
-        accountService: { projectSyncStatus: async () => ({ state: "synced", offlineReady: true }) },
+        accountService: {
+          watch: () => () => {},
+          projectSyncStatus: async () => ({ state: "synced", offlineReady: true }),
+        },
         eventBus: new EventBus(),
         extensionStorageService,
         extensionService,

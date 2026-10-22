@@ -104,7 +104,7 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
   };
   return {
-    accountService: { projectSyncStatus: async () => ({ state: "local" }) },
+    accountService: { watch: () => () => {}, projectSyncStatus: async () => ({ state: "local" }) },
     environmentService: { get: async () => ({ environmentId: "local" }) },
     extensionAutomationPreferencesService: {
       list: async () => automationPreferences,
@@ -263,7 +263,7 @@ test("a cloud schedule without a device assignment stays idle", async () => {
   const sourcePath = writeScheduledExtension();
   const deps = {
     ...(createDeps(sourcePath) as unknown as Record<string, unknown>),
-    accountService: { projectSyncStatus: async () => ({ state: "synced", offlineReady: true }) },
+    accountService: { watch: () => () => {}, projectSyncStatus: async () => ({ state: "synced", offlineReady: true }) },
   };
   const cron = createTestCronDriver();
   const scheduler = createExtensionScheduler({
