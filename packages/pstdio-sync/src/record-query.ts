@@ -179,6 +179,18 @@ export interface QueryCursor {
 }
 export const encodeQueryCursor = (cursor: QueryCursor) => btoa(unescape(encodeURIComponent(JSON.stringify(cursor))));
 
+const queryWindow = (query: StorageRecordQuery, revision: string) => {
+  const limit = query.limit ?? 100;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+    throw new Error("Query limit must be between 1 and 100");
+  const offset = query.offset ?? 0;
+  if (!Number.isSafeInteger(offset) || offset < 0 || (offset > 0 && query.cursor))
+    throw new Error("Query offset must be a nonnegative integer without a cursor");
+  if (query.revision !== undefined && query.revision !== revision)
+    throw new Error("Query revision is stale; restart the query");
+  return { limit, offset };
+};
+
 export const prepareRecordQuery = async (
   owner: { workbenchId: string; extensionId: string },
   index: StorageRecordIndex,
@@ -188,9 +200,7 @@ export const prepareRecordQuery = async (
   validatePredicate(index, query.where);
   const fields = query.fields ?? Object.keys(index.fields);
   for (const name of fields) queryField(index, name);
-  const limit = query.limit ?? 100;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
-    throw new Error("Query limit must be between 1 and 100");
+  const { limit, offset } = queryWindow(query, revision);
   const identity = await fingerprint({
     owner,
     index: index as unknown as Json,
@@ -213,5 +223,5 @@ export const prepareRecordQuery = async (
     )
       throw new Error("Invalid query cursor");
   }
-  return { fields, limit, identity, after };
+  return { fields, limit, offset, identity, after };
 };

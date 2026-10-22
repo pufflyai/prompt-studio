@@ -137,7 +137,7 @@ export const pageOrderSql = (index: StorageRecordIndex) =>
     sql`, `,
   );
 
-export const recordPageSql = (index: StorageRecordIndex, fields: string[], where: SQL, limit: number) => {
+export const recordPageSql = (index: StorageRecordIndex, fields: string[], where: SQL, limit: number, offset = 0) => {
   const selected = fields.flatMap((name) => [
     sqlLiteral(projectionKey(name)),
     sql`coalesce(${recordFieldSql(index, name)}, 'null'::jsonb)`,
@@ -149,7 +149,7 @@ export const recordPageSql = (index: StorageRecordIndex, fields: string[], where
       jsonb_build_array(${sql.join(sort, sql`, `)}) AS sort_values
     FROM storage_current_records
     WHERE ${where}
-    ORDER BY ${pageOrderSql(index)} LIMIT ${limit}`;
+    ORDER BY ${pageOrderSql(index)} LIMIT ${limit} OFFSET ${offset}`;
 };
 
 export const pageAfterSql = (index: StorageRecordIndex, after?: { recordId: string; values: Json[] }) => {

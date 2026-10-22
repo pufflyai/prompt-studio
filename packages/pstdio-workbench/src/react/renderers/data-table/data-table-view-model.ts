@@ -32,8 +32,11 @@ export const resolveDataTableRendererColumns = (
   const firstRow = result.rows[0];
   return firstRow ? Object.keys(firstRow.values).map((id): DataTableRendererColumn => ({ id })) : [];
 };
-export const buildDataTableRendererData = (rows: DataTableRendererRow[], columns: DataTableRendererColumn[]) => {
-  const rowByData = new WeakMap<Record<string, unknown>, DataTableRendererRow>();
+export const buildDataTableRendererData = (
+  rows: DataTableRendererRow[],
+  columns: DataTableRendererColumn[],
+  rowByData = new WeakMap<Record<string, unknown>, DataTableRendererRow>(),
+) => {
   const data = rows.map((row) => {
     const values = Object.fromEntries(columns.map((column) => [column.id, row.values[column.id]]));
     rowByData.set(values, row);

@@ -144,6 +144,7 @@ export const createRecordQueries = (
             page.fields,
             sql`${visible(index)} AND ${predicateSql(index, query.where)} AND ${pageAfterSql(index, page.after)}`,
             page.limit,
+            page.offset,
           ),
         );
         const last = result.rows.at(-1);

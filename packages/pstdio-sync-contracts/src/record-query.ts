@@ -33,6 +33,10 @@ export interface StorageRecordQuery {
   limit?: number;
   /** Opaque. A changed owner revision rejects the cursor; restart from the first page. */
   cursor?: string;
+  /** Direct zero-based page offset. Cannot be combined with a cursor. Skipped rows stay in the database. */
+  offset?: number;
+  /** Expected owner revision for direct page jumps; reject if committed data changed. */
+  revision?: string;
 }
 
 export interface StorageQueryRecord {

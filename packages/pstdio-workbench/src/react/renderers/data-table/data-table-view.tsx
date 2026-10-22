@@ -9,7 +9,7 @@ import {
   type RowData,
   useDataTableViewStore,
 } from "@pstdio/ui/data-table";
-import { type ReactNode, useSyncExternalStore } from "react";
+import { type ReactNode, useRef, useSyncExternalStore } from "react";
 import type {
   DataTableRendererQueryResult,
   RegisteredDataTableRendererContribution,
@@ -17,12 +17,15 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
+import { acceptRendererPage } from "../../../core/registries/renderers/renderer-page";
 import { runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
+import { tablePageFields } from "../renderer-page-fields";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { usePageParams } from "../use-page-params";
+import { useRendererPages } from "../use-renderer-pages";
 import { useRendererRead } from "../use-renderer-read";
 import { ViewToolbarActions } from "../view-toolbar-actions";
 import {
@@ -52,6 +55,29 @@ const DataTableViewFrame = (props: { children: ReactNode }) => (
   </Box>
 );
 
+const requirePageStatistics = (
+  result: DataTableRendererQueryResult,
+  columns: RegisteredDataTableRendererContribution["columns"],
+  hiddenColumns: string[],
+) => {
+  for (const column of result.columns ?? columns ?? []) {
+    if (column.hidden || hiddenColumns.includes(column.id)) continue;
+    if (column.stat && result.page?.statistics?.[column.id]?.type !== column.stat.type)
+      throw new Error(`The page provider did not return the requested ${column.id} statistic`);
+  }
+};
+
+const emptyTablePlaceholder = (
+  result: DataTableRendererQueryResult,
+  search: string,
+  contribution: RegisteredDataTableRendererContribution,
+) => {
+  if (result.rows.length || search) return undefined;
+  return (
+    <EmptyState h="full" title={contribution.emptyTitle ?? "No rows"} description={contribution.emptyDescription} />
+  );
+};
+
 export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const { workbench, contribution, placement } = props;
   const pageParams = usePageParams(workbench, placement);
@@ -67,6 +93,13 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const filter = useDataTableViewStore(storageKey, (state) => state.filter, contribution);
   const sorts = useDataTableViewStore(storageKey, (state) => state.sorts, contribution);
   const settings = useDataTableViewStore(storageKey, (state) => state.settings, contribution);
+  const paged = contribution.queryMode === "paged";
+  const pages = useRendererPages<DataTableRendererQueryResult["rows"][number]>({
+    identity: JSON.stringify([storageKey, filter, sorts, settings, pageParams]),
+    scope: JSON.stringify([storageKey, settings.grouping]),
+    fields: tablePageFields(contribution.columns ?? [], settings),
+    initialPageSize: contribution.initialPageSize,
+  });
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
@@ -76,10 +109,10 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       workbench.modes.getActiveModeId(),
       contextValues,
     ),
-    // Filter and sorts can narrow what the query returns. Display settings and search never run it again.
-    refreshKey: JSON.stringify([filter, sorts, pageParams]),
-    load: (signal) =>
-      contribution.executeQuery(
+    // Paged providers also receive display fields and search before selecting a bounded page.
+    refreshKey: JSON.stringify([filter, sorts, pageParams, ...(paged ? [settings, pages.request, pages.key] : [])]),
+    load: async (signal) => {
+      const result = await contribution.executeQuery(
         {
           pageParams,
           resource: placement.resource,
@@ -87,13 +120,22 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
           filter,
           sorts,
           settings,
+          ...(paged && { page: pages.request }),
         },
         signal,
-      ),
+      );
+      if (paged && settings.showStats) requirePageStatistics(result, contribution.columns, settings.hiddenColumns);
+      return paged
+        ? { ...result, ...pages.accept(acceptRendererPage(result, pages.request), signal) }
+        : { ...result, position: undefined };
+    },
     subscribe: (refresh) => {
-      const subscription = contribution.subscribe?.(refresh);
+      const invalidate = () => {
+        if (!paged || !pages.reset()) refresh();
+      };
+      const subscription = contribution.subscribe?.(invalidate);
       const events = getWorkbenchRenderers(workbench).onDidRefreshDataTableRenderer((event) => {
-        if (event.dataTableRendererId === contribution.id) refresh();
+        if (event.dataTableRendererId === contribution.id) invalidate();
       });
       return () => {
         if (typeof subscription === "function") subscription();
@@ -103,9 +145,13 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     },
   });
   const result = read.value ?? initialResult;
+  const retry = () => {
+    if (!paged || !pages.reset()) void read.retry();
+  };
   const loading = read.loading && !read.value;
   const columns = resolveDataTableRendererColumns(result, contribution.columns);
-  const model = buildDataTableRendererData(result.rows, columns);
+  const rowByData = useRef(new WeakMap<Record<string, unknown>, DataTableRendererQueryResult["rows"][number]>());
+  const model = buildDataTableRendererData(result.rows, columns, rowByData.current);
   const labels = Object.fromEntries(
     columns.filter((column) => column.label).map((column) => [column.id, column.label!]),
   );
@@ -156,7 +202,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       </DataTableViewFrame>
     );
   }
-  if (!read.value && read.error) return <RendererReadNotice error={read.error} retry={read.retry} />;
+  if (!read.value && read.error) return <RendererReadNotice error={read.error} retry={retry} />;
   if (provider && !viewsSource)
     return (
       <DataTableViewFrame>
@@ -166,8 +212,9 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
 
   return (
     <DataTableViewFrame>
-      {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
+      {read.error ? <RendererReadNotice error={read.error} retry={retry} /> : null}
       <DataTable
+        page={pages.controls(result.page, read.loading, paged, read.value?.position)}
         itemLabel={
           contribution.resourceKind ? workbench.resources.getKind(contribution.resourceKind)?.label : undefined
         }
@@ -179,15 +226,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
             renderParamField={props.renderParamField}
           />
         }
-        contentPlaceholder={
-          result.rows.length === 0 ? (
-            <EmptyState
-              h="full"
-              title={contribution.emptyTitle ?? "No rows"}
-              description={contribution.emptyDescription}
-            />
-          ) : undefined
-        }
+        contentPlaceholder={emptyTablePlaceholder(result, pages.search, contribution)}
         data={model.data}
         getRowId={(data) => model.rowByData.get(data)?.id ?? ""}
         toolbarStorageKey={storageKey}

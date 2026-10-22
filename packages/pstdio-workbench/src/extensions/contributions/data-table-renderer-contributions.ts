@@ -1,4 +1,4 @@
-import type { DataTableRendererSettings } from "@pstdio/sdk/extensions";
+import type { CollectionPage, DataTableRendererSettings } from "@pstdio/sdk/extensions";
 import { dataTableBuiltInViews, type WorkbenchExtensionDataTableRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
@@ -10,6 +10,7 @@ import type {
   Disposable,
   ResourceRef,
 } from "../../core";
+import { acceptRendererPage } from "../../core/registries/renderers/renderer-page";
 import { WorkbenchIcon } from "../../react";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { createExtensionSlot, executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
@@ -43,6 +44,7 @@ const isQueryResult = (
     resource?: ResourceRef;
   }>;
   columns?: WorkbenchExtensionDataTableRendererRecord["columns"];
+  page?: CollectionPage;
 } =>
   Boolean(
     value &&
@@ -104,6 +106,7 @@ const registerRenderer = (
     icon: record.icon,
     body: {
       kind: "dataTable",
+      queryMode: record.queryMode,
       resourceKind: record.resourceKind,
       toolbarActions: mapViewToolbarActions(record),
       columns: record.columns?.map(toColumn),
@@ -126,16 +129,19 @@ const registerRenderer = (
       })),
       emptyTitle: record.emptyTitle ? localize(record.emptyTitle) : undefined,
       emptyDescription: record.emptyDescription ? localize(record.emptyDescription) : undefined,
-      executeQuery: async ({ resource, modeId, filter, sorts, settings, pageParams }, signal) => {
+      executeQuery: async ({ resource, modeId, filter, sorts, settings, pageParams, page }, signal) => {
         const value = await run(
           record.queryHandlerId,
-          { filter, sorts, settings },
+          { filter, sorts, settings, ...(page && { page }) },
           resource,
           modeId,
           signal,
           pageParams,
         );
-        if (!isQueryResult(value)) return { rows: [] };
+        if (!isQueryResult(value)) {
+          if (record.queryMode === "paged") throw new Error("A paged provider must return rows and page metadata");
+          return { rows: [] };
+        }
         const rows = value.rows.map((row) => {
           const mapped = toRow(row);
           if (adapter.resolveRowResource) mapped.resource = adapter.resolveRowResource(record, row);
@@ -145,6 +151,7 @@ const registerRenderer = (
         return {
           rows,
           columns: value.columns?.map(toColumn),
+          ...(record.queryMode === "paged" && page ? acceptRendererPage({ rows, page: value.page }, page) : {}),
         } satisfies DataTableRendererQueryResult;
       },
       rowActions: record.rowActions?.map((action) => ({

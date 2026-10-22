@@ -78,7 +78,7 @@ export const createMemoryRecordQueries = (owner: StorageOwner, store: DocumentSt
           .map((record) => ({ record, recordId: record.recordId, values: values(record) }))
           .filter((record) => !page.after || compare(record, page.after) > 0)
           .sort(compare);
-        const visible = selected.slice(0, page.limit);
+        const visible = selected.slice(page.offset, page.offset + page.limit);
         const last = visible.at(-1);
         return {
           revision,
@@ -90,7 +90,7 @@ export const createMemoryRecordQueries = (owner: StorageOwner, store: DocumentSt
             ),
           })),
           cursor:
-            last && selected.length > page.limit
+            last && selected.length > page.offset + page.limit
               ? encodeQueryCursor({ identity: page.identity, revision, recordId: last.recordId, values: last.values })
               : null,
         };

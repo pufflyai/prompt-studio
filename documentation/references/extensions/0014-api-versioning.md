@@ -25,7 +25,7 @@ The host decides what loads. It compares its own extension API version with `eng
 | 0.43.1 | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
 | 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
 | 0.45.0 | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
-| `main` | 0.2.2 | Adds account feature grants, indexed record queries and batches, and always allows Kanban dragging. Existing `^0.2.0` ranges still load. |
+| `main` | 0.2.2 | Adds account feature grants, indexed record queries and batches, optional paged collection views, and always allows Kanban dragging. Existing `^0.2.0` ranges still load. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
@@ -268,3 +268,14 @@ Workspace/session read results and resource references may include `device: { ow
 ## Kanban dragging in API 0.2
 
 Every board column allows cards to be dragged in and out. This includes groups for missing or unknown values. `canDragIn` and `canDragOut` remain as deprecated input fields, but their values are ignored. Remove these fields from column configurations. This alpha change stays on the `0.2` API line; manifests need no new version range. The next coordinated removal of deprecated APIs can remove the fields themselves.
+
+## Paged collection views in API 0.2.2
+
+`dataTable` and `kanban` view bodies can opt into `queryMode: "paged"`. Their
+query input adds an optional `page` request, and their result adds optional page
+revision, cursor, count, group, and statistics metadata. Both additions are
+required only for opted-in providers. Existing providers keep their full-result
+contract. Storage queries also accept optional `offset` and expected `revision`
+for direct page jumps. This shares the next compatible release step with indexed
+storage queries; it does not add another API version step before that release.
+See [paged tables and boards](0004-contribution-api.md#paged-tables-and-boards).

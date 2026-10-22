@@ -540,3 +540,55 @@ The host provides these project-scoped `ctx.sessions` methods:
 An active `HarnessSession` may provide `steer({ deliveryId, prompt, attachments, signal })`. It must use native input without cancelling or starting a turn. Before returning accepted, emit exactly one normalized user message whose ID is `deliveryId`. Native history must preserve that correlation for recovery. A successful pipe write alone is insufficient. A transport failure after input may have been sent is uncertain. Only return rejected when native input was definitely refused. Older harnesses remain supported without this optional method.
 
 Publish the additive SDK before harness extensions adopt it. Codex native acceptance and persisted `clientUserMessageId` were verified on 0.160.0. Claude Code 2.1.294 validation is blocked by a weekly usage limit; OpenCode is unverified. This host change enables neither adapter by itself.
+
+## Paged tables and boards
+
+Set `queryMode: "paged"` on a `dataTable` or `kanban` view body to opt in. This is
+an additive API 0.2.2 change. Existing providers keep their full-result query and
+local filtering, sorting, and search.
+
+The host passes `params.page` with a limit of at most 100, a zero-based offset,
+optional cursor and expected revision, search text, selected field IDs, and
+collapsed table group keys. Fields include visible columns/properties and active
+grouping fields. Badge-list displays also request their companion item field.
+Apply `params.filter`, `params.sorts`, and search to the complete indexed collection
+before selecting a page. Return the requested fields and only the bounded rows.
+Do not load every record to calculate a page, group count, badge, or total.
+
+Return `{ rows, page }`, where `page` contains:
+
+- `revision`: the committed owner/query revision shared by rows and aggregates.
+- `cursor`: the next opaque cursor, or `null` at the end.
+- `total`: rows matching the view filter before search.
+- `filteredTotal`: rows matching filter and search, excluding collapsed table groups.
+- `groups`: complete grouping counts, each with `field`, `value`, and `count`.
+  Subgroups also identify their parent field/value. Missing values use `null`.
+- `statistics`: requested table column summaries, keyed by field ID, when a
+  visible statistics control requests them. Never calculate these from one page.
+
+Use declared `storageIndexes`, `ctx.storage.records.query`, and `aggregate` to
+serve these requests. Select the index matching the requested ordering, including
+a stable tie order. Check that every aggregate revision matches the selected page.
+When `page.cursor` is present, pass it to storage and omit `offset`; otherwise
+pass `offset`. Pass `page.revision` in either case. Direct page navigation therefore
+uses one indexed query, without visiting earlier cursors. See
+[direct page navigation](../sdk/0004-storage.md#direct-page-navigation).
+
+Resolve related records only for returned rows, using `readMany` or
+`ctx.resources.identityMany` batches of at most 100. Keep full bodies out of row
+responses unless those bodies are the explicitly selected content. Row and
+selection actions receive the selected row IDs and can read their details when
+the action runs. Selection retains explicitly chosen rows across table pages;
+Select all selects loaded rows, not unseen records.
+
+Table page controls and board scrolling request new pages. Board columns and
+lists also provide a keyboard-accessible Load more action. A column can have a
+positive complete count before any of its cards occur in the loaded page; the
+load action requests the next bounded page rather than fetching the whole group.
+During table navigation, the visible page label and row numbers stay with the
+accepted rows, while a loading status names the requested page. Changing search,
+filters, ordering, display fields, or grouping starts from the first page. An
+obsolete request is cancelled and cannot replace a newer page. Refresh events
+remain scoped to the renderer; after an edit they reset its page sequence while
+keeping the previous rows visible until the replacement arrives. A stale revision
+keeps those rows and shows Retry, which reloads from the first page.
