@@ -163,6 +163,11 @@ export default defineExtension({
   commands: [discoverHighImpactIssuesCommand, openInVscodeCommand, openInIsolationCommand, stopIsolationCommand],
   skills: [
     defineSkill({
+      id: "patch-release",
+      title: "Patch release",
+      source: packageAsset("./skills/patch-release", import.meta.url),
+    }),
+    defineSkill({
       id: "discord-release-announcement",
       title: "Discord release announcement",
       source: packageAsset("./skills/discord-release-announcement", import.meta.url),
