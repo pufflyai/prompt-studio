@@ -62,6 +62,7 @@ test("finishes a native turn only after its viewed image has been captured", asy
         transcriptPath: () => null,
         write: () => {},
         onFinish: () => {},
+        onLoginRejected: () => {},
         onProtocolError: (error) => {
           throw error;
         },
