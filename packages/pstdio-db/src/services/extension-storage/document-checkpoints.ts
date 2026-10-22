@@ -4,6 +4,7 @@ import type * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { type DocumentAddress, documentWhere, foldEvery, updatesWhere } from "./document-persistence";
+import type { StorageDiagnostics } from "./storage-diagnostics";
 
 export const readDocumentSnapshot = async (
   db: DbClient,
@@ -62,7 +63,7 @@ export const saveDocumentCheckpoint = async (
     return true;
   });
 
-export const createDocumentCheckpoints = (db: DbClient) => {
+export const createDocumentCheckpoints = (db: DbClient, diagnostics?: StorageDiagnostics) => {
   const pending = new Map<string, Promise<void>>();
   const errors = new Map<string, unknown>();
   const requested = new Map<
@@ -74,13 +75,28 @@ export const createDocumentCheckpoints = (db: DbClient) => {
       while (requested.has(key)) {
         const { address, reference, revision, sequence } = requested.get(key)!;
         requested.delete(key);
+        const report = (
+          phase: "checkpoint-captured" | "checkpoint-compacted" | "checkpoint-persisted",
+          bytes: number,
+        ) =>
+          diagnostics?.({
+            phase,
+            owner: { workbenchId: address.workbench_id, extensionId: address.extension_id },
+            bytes,
+          });
         let snapshot: Awaited<ReturnType<typeof readDocumentSnapshot>>;
         const prepared = await runBinaryTask(async () => {
           snapshot = await readDocumentSnapshot(db, address, undefined, revision);
           if (snapshot && snapshot.revision - snapshot.foldedRevision < foldEvery) snapshot = undefined;
+          if (snapshot && diagnostics)
+            report(
+              "checkpoint-captured",
+              snapshot.updates.reduce((sum, update) => sum + update.length, 0),
+            );
           return { kind: "compact", updates: snapshot?.updates ?? [new Uint8Array([0, 0])] };
         });
         if (!snapshot) continue;
+        report("checkpoint-compacted", prepared.state.length);
         const accepted = await saveDocumentCheckpoint(db, address, {
           state: prepared.state,
           revision,
@@ -88,6 +104,7 @@ export const createDocumentCheckpoints = (db: DbClient) => {
         });
         const document = reference.deref();
         if (accepted && document) acceptDocumentCheckpoint(document, sequence, prepared.state);
+        if (accepted) report("checkpoint-persisted", prepared.state.length);
         errors.delete(key);
       }
     })()

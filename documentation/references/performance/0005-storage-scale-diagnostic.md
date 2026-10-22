@@ -296,6 +296,19 @@ crossing the actual fold boundary. Each of ten cold database processes receives
 a copy of the same closed seed; each also records ten warm writes. Do not report
 those 100 warm observations as ten independent cold observations.
 
+Set `PSTDIO_STORAGE_PHASE_DIAGNOSTICS=1` for a separate memory-attribution run of
+the database layer. It keeps the same workload and external case deadlines and
+adds source-byte and process-memory samples after database capture, Yjs hydration,
+payload ownership indexing, checkpoint capture, worker result delivery and
+successful durable checkpoint publication. `elapsedMs` is relative to diagnostic
+service creation after database open. These are sampled phase endpoints and a
+cumulative process RSS high-water mark, not allocation stacks or per-worker memory.
+Checkpoint capture happens after worker queue admission. Its interval to worker
+result delivery includes worker startup, work and message delivery, but excludes
+queue wait. The diagnostic does not separately measure worker queue latency.
+Instrumentation runs must be labeled separately from uninstrumented acceptance
+samples; the extra sampling and output are inside the existing operation timers.
+
 Phase telemetry includes wall time, process CPU, event-loop delay, RSS high-water
 mark, retained memory, encoded/decoded bytes, clones and database size where
 available. API consumers report materialized rows and rows scanned in their own

@@ -25,7 +25,7 @@ export const createDocumentStorageDBService = (
 ) => {
   const cache = createDocumentCache();
   const admit = createDocumentAdmission();
-  const checkpoints = createDocumentCheckpoints(db);
+  const checkpoints = createDocumentCheckpoints(db, diagnostics);
   const listeners = new Set<(owner: StorageOwner) => void>();
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
   const getEnvironment = () => (environment ??= createEnvironmentDBService(db).get());

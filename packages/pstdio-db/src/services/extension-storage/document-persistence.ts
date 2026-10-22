@@ -73,16 +73,20 @@ export const prepareDocument = async (
   const { row, updates } = await db.transaction((tx) =>
     readDocument(tx, input.address, input.owner, input.environmentId),
   );
+  const report = (phase: "document-captured" | "document-hydrated" | "document-loaded") =>
+    input.diagnostics?.({
+      phase,
+      owner: input.owner,
+      bytes: updates.reduce((sum, update) => sum + update.length, 0),
+    });
+  report("document-captured");
   const document = new Y.Doc();
   try {
     for (const update of updates) Y.applyUpdate(document, update);
     trackDocumentBinary(document, updates);
+    report("document-hydrated");
     if (input.address.document_id === "records") trackDocumentPayload(document);
-    input.diagnostics?.({
-      phase: "document-loaded",
-      owner: input.owner,
-      bytes: updates.reduce((sum, update) => sum + update.length, 0),
-    });
+    report("document-loaded");
     return { revision: row.revision, document };
   } catch (error) {
     document.destroy();

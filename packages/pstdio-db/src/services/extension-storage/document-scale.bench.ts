@@ -28,7 +28,24 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
   const { db, close } = opened.value;
   const emit = (name: string, data: object) =>
     console.log(JSON.stringify({ layer: "database", kind, count, phase: name, ...data }));
-  const service = createDocumentStorageDBService(db);
+  const diagnosticStarted = performance.now();
+  const service = createDocumentStorageDBService(
+    db,
+    undefined,
+    process.env.PSTDIO_STORAGE_PHASE_DIAGNOSTICS === "1"
+      ? (event) => {
+          if (event.phase === "records-projected" || event.phase === "records-queried") return;
+          emit("storage-diagnostic", {
+            storagePhase: event.phase,
+            owner: event.owner,
+            bytes: event.bytes,
+            elapsedMs: performance.now() - diagnosticStarted,
+            memory: process.memoryUsage(),
+            maxRssBytes: process.resourceUsage().maxRSS * 1_024,
+          });
+        }
+      : undefined,
+  );
   const storage = service.open({ owner: address });
   const target = {
     commit: ({ operationId, rows, deleted }: Parameters<Parameters<typeof seedOwner>[0]["commit"]>[0]) =>

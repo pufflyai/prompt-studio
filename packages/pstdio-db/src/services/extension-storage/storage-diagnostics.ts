@@ -1,7 +1,15 @@
 import type { StorageOwner } from "pstdio-sync";
 
 export interface StorageDiagnostic {
-  phase: "document-loaded" | "records-projected" | "records-queried";
+  phase:
+    | "document-captured"
+    | "document-hydrated"
+    | "document-loaded"
+    | "checkpoint-captured"
+    | "checkpoint-compacted"
+    | "checkpoint-persisted"
+    | "records-projected"
+    | "records-queried";
   owner: StorageOwner;
   records?: number;
   bytes?: number;
