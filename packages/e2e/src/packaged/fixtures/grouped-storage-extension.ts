@@ -113,7 +113,7 @@ const seedQueryRecords = defineCommand({
       operationId: "seed-query-records",
       edits: [3, 1, 2].map((rank) => ({
         recordId: ctx.storage.records.id(`indexed-${rank}`),
-        replace: { state: "ready", rank, body: "full value" },
+        replace: { state: "ready", rank, body: rank === 1 ? "full \ud800 value" : "full\u0000value" },
       })),
     }),
 });

@@ -215,6 +215,32 @@ test("projection preserves strings and object keys outside PostgreSQL text", asy
   ).toHaveLength(1);
 });
 
+test("indexed values and revisions match the authoritative document after a cold reopen", async () => {
+  const f = await fixture();
+  const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;
+  const index: StorageRecordIndex = {
+    name: "text",
+    fields: { body: { path: ["body"], type: "string" } },
+    equality: ["body"],
+  };
+  const group = {
+    operationId: "normalize-text",
+    edits: [{ recordId: "note", replace: { body: "x\ud800y", "\udc00key": ["\u0000", "😀", "\ud800"] } }],
+  };
+  for (const records of [f.records, memory]) {
+    await records.defineIndexes([index]);
+    await records.commit(group);
+  }
+  const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner }).records;
+  const authoritative = await reopened.list();
+  expect(await f.records.readMany(["note"])).toEqual(authoritative);
+  expect(await reopened.readMany(["note"])).toEqual(authoritative);
+  expect(await memory.readMany(["note"])).toEqual(authoritative);
+  expect(authoritative[0].value).toEqual({ body: "x�y", "�key": ["\u0000", "😀", "�"] });
+  const page = await reopened.query({ index: "text", where: { field: "body", op: "eq", value: "x�y" } });
+  expect(page.records[0].revision).toBe(authoritative[0].revision);
+});
+
 test("Unicode predicates, wrapped arrays and reserved object keys match memory", async () => {
   const f = await fixture();
   const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;

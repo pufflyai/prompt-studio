@@ -68,8 +68,8 @@ export const registerGroupedStorageSmokeTests = () => {
           expect(selected.next.records.map((row) => row.fields.rank)).toEqual([3]);
           expect(selected.next.cursor).toBeNull();
           expect(selected.rows.map((row) => row.value)).toEqual([
-            { state: "ready", rank: 1, body: "full value" },
-            { state: "ready", rank: 2, body: "full value" },
+            { state: "ready", rank: 1, body: "full � value" },
+            { state: "ready", rank: 2, body: "full\u0000value" },
           ]);
           expect(selected.count.count).toBe(3);
         };

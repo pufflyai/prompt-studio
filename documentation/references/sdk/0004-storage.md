@@ -155,6 +155,11 @@ does not establish the separate cold-save and synchronization performance target
 A record can hold JSON in `value`, one shared primitive, an immutable asset
 reference, and deletion state. A group contains at most one edit per record.
 
+Accepted string values and object keys use well-formed UTF-16. An unpaired
+surrogate is replaced with U+FFFD before saving, matching the existing CRDT wire
+encoding. NUL and valid surrogate pairs are preserved. Memory, indexed and
+reopened reads therefore return the same values and content revisions.
+
 | Edit field | Behavior |
 | --- | --- |
 | `replace` | Replace the whole JSON value. |
