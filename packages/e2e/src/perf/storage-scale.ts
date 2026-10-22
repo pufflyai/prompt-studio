@@ -132,6 +132,16 @@ unsupported controls and missing phase evidence remain explicit coverage failure
     const profile = option("--profile", "native") as Profile;
     if (!(profile in contract.profiles)) throw new Error("Unknown CPU profile");
     const container = configuredContainer(home);
+    if (container && process.argv.includes("--sync")) {
+      emit({
+        phase: "coverage",
+        profile,
+        passed: false,
+        failures: ["container-sync-relay-network-and-certificate-mount-unavailable"],
+      });
+      process.exitCode = 1;
+      return;
+    }
     if (container) emit({ phase: "runtime-control", profile, ...applyContainerProfile(container, profile) });
     if (contract.profiles[profile].runtimeCpus !== null && !container) {
       emit({
