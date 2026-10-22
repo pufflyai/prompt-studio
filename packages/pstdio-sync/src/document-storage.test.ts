@@ -179,12 +179,15 @@ test("save-handler capture reuses binary state and encodes only its incremental 
   try {
     const captured = await storage.capture(async (fork) => {
       await createDocumentStorage({ owner, store: fork }).records.commit({
-        operationId: "captured-edit", edits: [{ recordId: "note", replace: "after" }],
+        operationId: "captured-edit",
+        edits: [{ recordId: "note", replace: "after" }],
       });
     });
     expect(encode.mock.calls.filter(([, vector]) => vector === undefined)).toHaveLength(0);
     expect((await storage.records.read("note")).value).toBe("before");
     await storage.applyUpdate(captured.update);
     expect((await storage.records.read("note")).value).toBe("after");
-  } finally { encode.mockRestore(); }
+  } finally {
+    encode.mockRestore();
+  }
 });

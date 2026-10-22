@@ -1,9 +1,9 @@
 import { fingerprint, type StorageRecord } from "pstdio-sync-contracts";
-import * as Y from "yjs";
+import type * as Y from "yjs";
 import { runBinaryTask } from "./binary-background";
 import { captureCheckpoint } from "./checkpoint-capture";
 import { migrationAuthor } from "./document-author";
-import { exportDocumentBinary } from "./document-binary";
+import { exportDocumentBinary, snapshotDocumentBinary } from "./document-binary";
 import { applyDocumentEdit } from "./document-edits";
 import { applyDocumentUpdate, type DocumentStore } from "./document-types";
 import { validateDocumentGroup } from "./document-validation";
@@ -67,15 +67,11 @@ export const createDocumentStorage = (input: { owner: StorageOwner; store: Docum
         applyDocumentUpdate(state, update);
       }),
     capture: async <T>(action: (store: DocumentStore) => Promise<T>) => {
-      const update = await store.transaction(owner, async ({ document }) => exportDocumentBinary(document));
-      const snapshot = new Y.Doc();
-      Y.applyUpdate(snapshot, update);
+      const snapshot = store.snapshot
+        ? await store.snapshot(owner)
+        : await store.transaction(owner, async ({ document }) => snapshotDocumentBinary(document));
       // Handlers may stage assets in the same database. Release its lock before running them.
-      try {
-        return await captureCheckpoint(snapshot, owner, action, store.observer);
-      } finally {
-        snapshot.destroy();
-      }
+      return captureCheckpoint(snapshot.updates, owner, action, store.observer);
     },
     records: {
       read: (id: string, _branch?: { operationId: string }) =>

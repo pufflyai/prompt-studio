@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
+import { createDocumentStorage } from "pstdio-sync";
 import { extension_storage_journal, storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
@@ -19,6 +20,38 @@ const fixture = async () => {
   const storage = service.open({ owner });
   return { ...f, owner, service, storage };
 };
+
+test("save-handler capture reads the durable snapshot and releases the database before staging writes", async () => {
+  const f = await fixture();
+  await f.storage.records.commit({
+    operationId: "seed-capture",
+    edits: [{ recordId: "note", replace: { title: "before", count: 0 } }],
+  });
+  const cold = createDocumentStorageDBService(f.db);
+  const storage = createDocumentStorage({
+    owner: f.owner,
+    store: {
+      ...cold,
+      transaction: async () => {
+        throw new Error("Capture must use its durable binary snapshot");
+      },
+    },
+  });
+  const captured = await storage.capture(async (fork) => {
+    await f.storage.records.commit({
+      operationId: "concurrent-capture",
+      edits: [{ recordId: "note", replace: { title: "before", count: 1 } }],
+    });
+    await createDocumentStorage({ owner: f.owner, store: fork }).records.commit({
+      operationId: "staged-capture",
+      edits: [{ recordId: "note", replace: { title: "after", count: 0 } }],
+    });
+  });
+  expect((await f.storage.records.read("note")).value).toEqual({ title: "before", count: 1 });
+  await f.storage.applyUpdate(captured.update);
+  const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  expect((await reopened.records.read("note")).value).toEqual({ title: "after", count: 1 });
+});
 
 test("clearing owner data refreshes every open store and allows operation IDs to be reused", async () => {
   const f = await fixture();
@@ -280,6 +313,37 @@ test("checkpointing retains accepted updates whose predecessor is still offline"
     two: 2,
   });
   source.destroy();
+});
+
+test("checkpoint draining includes writes accepted while an earlier fold is pending", async () => {
+  const { runBinaryTask } = await import("pstdio-sync");
+  const { foldEvery } = await import("./document-persistence");
+  const f = await fixture();
+  const gate = Promise.withResolvers<void>();
+  const entered = Promise.withResolvers<void>();
+  const held = runBinaryTask(async () => {
+    entered.resolve();
+    await gate.promise;
+    return { kind: "checkpoint", updates: [new Uint8Array([0, 0])] };
+  });
+  await entered.promise;
+  try {
+    for (let index = 0; index < foldEvery * 2 + 4; index++)
+      await f.storage.records.commit({
+        operationId: `drain-${index}`,
+        edits: [{ recordId: "note", replace: index }],
+      });
+  } finally {
+    gate.resolve();
+    await held;
+  }
+  await f.service.flushCheckpoints();
+  const [saved] = await f.db.select().from(storage_documents);
+  expect(saved.revision - saved.folded_revision).toBeLessThan(foldEvery);
+  expect(await f.db.select().from(storage_document_updates)).toHaveLength(saved.revision - saved.folded_revision);
+  expect((await createDocumentStorageDBService(f.db).open({ owner: f.owner }).records.read("note")).value).toBe(
+    foldEvery * 2 + 3,
+  );
 });
 
 test("a delayed checkpoint keeps newer edits and cannot restore purged data", async () => {

@@ -1,20 +1,19 @@
 import * as Y from "yjs";
-import { exportDocumentBinary, trackDocumentBinary } from "./document-binary";
+import { trackDocumentBinary } from "./document-binary";
 import { type DocumentStore, memoryDocumentState } from "./document-types";
 import type { StorageOwner } from "./types";
 
 /** Stage ordinary save-handler writes as one update without publishing intermediate values. */
 export async function captureCheckpoint<T>(
-  document: Y.Doc,
+  updates: Uint8Array[],
   owner: StorageOwner,
   action: (store: DocumentStore) => Promise<T>,
   observer?: DocumentStore["observer"],
 ) {
   const fork = new Y.Doc();
-  const baseline = Y.encodeStateVector(document);
-  const update = exportDocumentBinary(document);
-  Y.applyUpdate(fork, update);
-  trackDocumentBinary(fork, update);
+  for (const update of updates) Y.applyUpdate(fork, update);
+  const baseline = Y.encodeStateVector(fork);
+  trackDocumentBinary(fork, updates);
   const state = memoryDocumentState(fork);
   const store: DocumentStore = {
     observer,

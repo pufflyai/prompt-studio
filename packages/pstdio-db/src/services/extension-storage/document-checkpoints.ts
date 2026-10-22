@@ -65,44 +65,60 @@ export const saveDocumentCheckpoint = async (
 export const createDocumentCheckpoints = (db: DbClient) => {
   const pending = new Map<string, Promise<void>>();
   const errors = new Map<string, unknown>();
+  const requested = new Map<
+    string,
+    { address: DocumentAddress; reference: WeakRef<Y.Doc>; revision: number; sequence: number }
+  >();
+  const start = (key: string) => {
+    const job = (async () => {
+      while (requested.has(key)) {
+        const { address, reference, revision, sequence } = requested.get(key)!;
+        requested.delete(key);
+        let snapshot: Awaited<ReturnType<typeof readDocumentSnapshot>>;
+        const prepared = await runBinaryTask(async () => {
+          snapshot = await readDocumentSnapshot(db, address, undefined, revision);
+          if (snapshot && snapshot.revision - snapshot.foldedRevision < foldEvery) snapshot = undefined;
+          return { kind: "checkpoint", updates: snapshot?.updates ?? [new Uint8Array([0, 0])] };
+        });
+        if (!snapshot) continue;
+        const accepted = await saveDocumentCheckpoint(db, address, {
+          state: prepared.state,
+          revision,
+          foldedRevision: snapshot.foldedRevision,
+        });
+        const document = reference.deref();
+        if (accepted && document) acceptDocumentCheckpoint(document, sequence, prepared.state);
+        errors.delete(key);
+      }
+    })()
+      .catch((error: unknown) => {
+        errors.set(key, error);
+        requested.delete(key);
+      })
+      .finally(() => {
+        pending.delete(key);
+        if (requested.has(key)) start(key);
+      });
+    pending.set(key, job);
+  };
   const schedule = (
     address: DocumentAddress,
     loaded: { document: Y.Doc; revision: number; foldedRevision: number },
   ) => {
+    if (loaded.revision - loaded.foldedRevision < foldEvery) return;
     const key = JSON.stringify(address);
-    if (pending.has(key)) return;
-    const { revision, foldedRevision } = loaded;
-    const reference = new WeakRef(loaded.document);
-    const sequence = documentRevision(loaded.document);
-    const job = (async () => {
-      if (revision - foldedRevision < foldEvery) return;
-      let snapshot: Awaited<ReturnType<typeof readDocumentSnapshot>>;
-      const prepared = await runBinaryTask(async () => {
-        snapshot = await readDocumentSnapshot(db, address, undefined, revision);
-        return { kind: "checkpoint", updates: snapshot?.updates ?? [new Uint8Array([0, 0])] };
-      });
-      if (!snapshot) return;
-      await saveDocumentCheckpoint(db, address, {
-        state: prepared.state,
-        revision,
-        foldedRevision: snapshot.foldedRevision,
-      });
-      const document = reference.deref();
-      if (document) acceptDocumentCheckpoint(document, sequence, prepared.state);
-      errors.delete(key);
-    })()
-      .catch((error: unknown) => {
-        errors.set(key, error);
-      })
-      .finally(() => {
-        pending.delete(key);
-      });
-    pending.set(key, job);
+    requested.set(key, {
+      address,
+      reference: new WeakRef(loaded.document),
+      revision: loaded.revision,
+      sequence: documentRevision(loaded.document),
+    });
+    if (!pending.has(key)) start(key);
   };
   return {
     schedule,
     async flush() {
-      await Promise.all(pending.values());
+      while (pending.size) await Promise.all(pending.values());
       if (errors.size) throw errors.values().next().value;
     },
   };

@@ -15,6 +15,13 @@ established for the PS-905 implementation yet.
 | Local save | Append the incremental update and local retry metadata. Return after database commit. |
 | Checkpoint | Capture the accepted revision, merge binary updates in the worker, then save with a folded-revision guard. Keep later updates and reject a baseline changed by purge or another checkpoint. |
 | Export | Read persisted binary state and its tail, then merge outside the transaction. |
+| Save-handler capture | Read persisted checkpoint bytes and the update tail, release the database transaction, and hydrate one staging fork. Encode only the resulting incremental update. |
+
+Checkpoint scheduling retains the latest requested revision while a fold is
+pending. After each fold it drains that request if the remaining tail still
+crosses the threshold. Flush waits for the complete drain, including requests
+received during the first fold. Cached binary state advances only after the
+database accepts the checkpoint.
 
 One shared worker bounds background CPU concurrency. An owner awaits each batch
 before submitting another. Already queued work runs first. This scheduling rule
