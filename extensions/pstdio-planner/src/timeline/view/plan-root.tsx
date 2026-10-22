@@ -45,6 +45,7 @@ interface PlanRootProps {
 export function PlanRoot(props: PlanRootProps) {
   const { host, t } = props;
   const { client, plan } = usePlan(host);
+  // Restore project presentation before mounting controls or applying collapsed geometry.
   const [storage, setStorage] = useState<HostStorage>();
   useEffect(() => {
     let active = true;
