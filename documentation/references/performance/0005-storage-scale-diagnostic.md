@@ -102,6 +102,7 @@ Build the native binary before timing, then select it to prevent another build:
 
 ```sh
 bun run --cwd scripts build:host
+bun run --cwd packages/e2e perf:storage-scale:build
 export E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
 bun packages/e2e/src/perf/storage-scale.ts --help
 bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /path/evidence/rich --emit-fixture --timing-owner /path/owner.json
@@ -157,9 +158,9 @@ and worker cleanup all consume that same allowance.
 | One database seed/churn/sample process | Database open/close and every operation in that phase. A cold sample's copy of the closed seed is inside its cap. Ten independent cold cases are still required. |
 | One explicit preparation command | Full `--emit-fixture`, `--seed`, `--refresh-source`, `--verify-fixture` or container setup invocation. Partial setup is invalid; it does not qualify a smaller fixture for measurement. |
 
-Separate binary builds run before these cases under their existing build limits.
-The diagnostic never compiles a runtime binary implicitly. Fixture extension
-bundling is setup inside its capped worker. Preparation and startup remain separate
+Separate binary and fixture extension builds run before these cases under their existing build limits.
+Run `perf:storage-scale:build` again after changing the fixture consumer; seed and
+refresh commands require that output and never invoke the bundler. Preparation and startup remain separate
 phase records and do not enter navigation/edit latency timers; keeping them out
 of the foreground timer does not exempt them from the case cap. A setup timeout
 must be repaired or reported as missing coverage, never hidden by restarting it.

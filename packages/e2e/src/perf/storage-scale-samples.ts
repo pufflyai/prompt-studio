@@ -176,7 +176,10 @@ export const sampleScaleScenario = async (input: ScaleSampleCase, emit: (row: ob
       emit,
       oracles,
       environment: sync?.environment ?? {},
-      begin: scenario.background === "idle" ? undefined : (runtime) => sync!.begin(runtime, scenario.background),
+      begin:
+        scenario.background === "idle"
+          ? undefined
+          : (runtime) => sync!.begin(runtime, scenario.background, scenario.operation),
     };
     emit({ phase: "case-setup", scenario, status: "completed" });
     const isEdit =
