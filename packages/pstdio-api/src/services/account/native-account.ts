@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
 import type { RelayWorkbench } from "../relay/runtime";
+import { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
 import { startNativeLogin } from "./native-login";
 import { createNativePresence } from "./native-presence";
@@ -31,7 +32,6 @@ const devicesSchema = z.object({
     }),
   ),
 });
-const workbenchesSchema = z.array(z.object({ workbenchId: identitySchema }));
 
 // Messages that are safe to show; other account failures stay generic.
 export class AccountRequestError extends Error {}
@@ -50,7 +50,7 @@ export const createNativeAccount = (input: {
     },
   });
   const logins = new Map<string, ReturnType<typeof startNativeLogin>>();
-  let cloudProjects: { credential: string; ids: string[] } | undefined;
+  let cloudProjects: { credential: string; ids: string[]; features: { relay: boolean } } | undefined;
   const projectsFor = (login: DeviceLogin | null) =>
     login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
@@ -117,14 +117,7 @@ export const createNativeAccount = (input: {
     if (closed) return;
     let login = await readLogin();
     try {
-      cloudProjects = login
-        ? {
-            credential: login.token,
-            ids: workbenchesSchema
-              .parse(await managerRequest(login.managerOrigin, "/v1/workbenches", login.token))
-              .map((row) => row.workbenchId),
-          }
-        : undefined;
+      cloudProjects = login ? await readManagerAccount(login) : undefined;
     } catch (error) {
       if (login && denied(error)) {
         // Another device removed this one. A newer login saved meanwhile stays.
@@ -220,10 +213,15 @@ export const createNativeAccount = (input: {
     },
     async status() {
       const login = await readLogin();
-      if (!login) return { login: null, cloudProjects: [], cloudProjectsLoaded: true };
+      if (!login) return { login: null, cloudProjects: [], cloudProjectsLoaded: true, features: null };
       const { token: _, ...device } = login;
       const projects = projectsFor(login);
-      return { login: device, cloudProjects: projects ?? [], cloudProjectsLoaded: !!projects };
+      return {
+        login: device,
+        cloudProjects: projects ?? [],
+        cloudProjectsLoaded: !!projects,
+        features: projects ? cloudProjects!.features : null,
+      };
     },
     async projectSyncStatus(projectId: string) {
       if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");

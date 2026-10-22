@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
-// Account checks include project sync status, native sign-in cancellation, and authenticated presence.
+// Account checks include project sync status, native sign-in cancellation, early access and authenticated presence.
 import { registerAccountSmokeTests } from "./packaged-account-smoke";
 import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
 // Includes retained creation drafts, backdrop protection, and creation without row activation.
@@ -52,6 +52,7 @@ import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smo
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { registerLinkIconsSmokeTests } from "./packaged-link-icons-smoke";
 // Harness discovery/models live in harness-npm-detection.test.ts; Codex exit outcomes in codex-transport.test.ts.
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
@@ -78,6 +79,7 @@ import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-s
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
 // Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
 // Review requests start conversations only when opened and reuse them on later visits.
+// Auto Build saves and restarts retain settings while clearing the old supervisor scope.
 // Ticket document loads observe only the selected ticket's storage version.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
@@ -145,6 +147,7 @@ beforeAll(() => {
 registerSharedCodexSmokeTests();
 registerWorkspaceCleanupSmokeTests();
 registerCliHelpSmokeTests();
+registerLinkIconsSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
 registerExtensionPublicationSmokeTests();

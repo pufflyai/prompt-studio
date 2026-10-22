@@ -1,2 +1,5 @@
 # .ignore keeps build output searchable; Nx must only hash source inputs.
 **/dist/**
+
+# Extension storage contains saved projects that are not workspace packages.
+.pstdio/extension-storage/**

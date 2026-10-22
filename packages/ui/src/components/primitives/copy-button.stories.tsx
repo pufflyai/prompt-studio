@@ -10,7 +10,7 @@ const meta: Meta<typeof CopyButton> = {
     docs: {
       description: {
         component:
-          "Copies exact text and briefly shows Copied or a retry message. Extension webviews must declare clipboard.write.",
+          "Copies exact text and briefly shows Copied or a retry message. Pass a function as text to read changing content at click time. Extension webviews must declare clipboard.write.",
       },
     },
   },
@@ -26,7 +26,7 @@ export const Draft: Story = {
   render: (args) => (
     <Stack gap="sm">
       <Text textStyle="paragraph/S/regular" whiteSpace="pre-wrap">
-        {args.text}
+        {typeof args.text === "function" ? args.text() : args.text}
       </Text>
       <CopyButton {...args} />
     </Stack>

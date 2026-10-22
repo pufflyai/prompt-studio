@@ -4,10 +4,7 @@ import * as implementation from "./index";
 
 const fixture = createAuthorityFixture(implementation);
 const importedFixture = createAuthorityFixture(implementation);
-beforeAll(async () => {
-  await fixture.initialize();
-  await importedFixture.initialize();
-});
+beforeAll(() => Promise.all([fixture.initialize(), importedFixture.initialize()]));
 afterAll(() => Promise.all([fixture.close(), importedFixture.close()]));
 
 test("restored receipt results stay within their account", async () => {
@@ -68,7 +65,7 @@ test("an older restore preserves newer request outcomes and cannot reactivate a 
   }
 });
 
-test("a fresh manager imports snapshot history while requiring new device logins", async () => {
+test("a fresh manager imports snapshot history while requiring new device logins and current feature grants", async () => {
   const owner = fixture.owner();
   const imported = importedFixture.owner();
   try {
@@ -84,6 +81,8 @@ test("a fresh manager imports snapshot history while requiring new device logins
       state: "active",
     });
     const fresh = await imported.registerDevice({ accountId, ...deviceProfile(device.deviceId) });
+    expect(await imported.authorize(fresh.token, device.workbenchId)).toBeNull();
+    await imported.setFeature({ accountId, feature: "relay", enabled: true });
     expect(await imported.authorize(fresh.token, device.workbenchId)).not.toBeNull();
   } finally {
     await Promise.all([owner.close(), imported.close()]);

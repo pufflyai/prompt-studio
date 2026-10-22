@@ -14,6 +14,41 @@ const login = (deviceId: string) => ({
   token: "device-credential",
 });
 
+test("account status exposes early access grants and revocation without logging the device out", async () => {
+  const root = await mkdtemp(join(tmpdir(), "native-account-features-"));
+  let relay = false;
+  let projectId = "";
+  const manager = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request) {
+      if (new URL(request.url).pathname === "/v1/account") return Response.json({ features: { relay } });
+      return Response.json(relay ? [{ workbenchId: projectId }] : []);
+    },
+  });
+  const host = await createAccountHostFixture(root);
+  try {
+    projectId = (await host.projects.create({ name: "Early access project" })).id;
+    const { environmentId } = await host.deps.environmentService.get();
+    await Bun.write(
+      host.file,
+      JSON.stringify({ login: { ...login(environmentId), managerOrigin: manager.url.origin } }),
+    );
+    for (const enabled of [false, true, false]) {
+      relay = enabled;
+      await host.account.refresh();
+      const response = await host.app.request("/v1/account");
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ features: { relay: enabled }, login: { deviceId: environmentId } });
+      expect(host.synced().map((entry) => entry.workbenchId)).toEqual(enabled ? [projectId] : []);
+    }
+  } finally {
+    await host.close();
+    await manager.stop(true);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("membership discovery finishing after shutdown cannot restart device presence", async () => {
   const root = await mkdtemp(join(tmpdir(), "native-account-close-"));
   const requested = Promise.withResolvers<void>();
@@ -67,7 +102,12 @@ test("logout clears the login even when the account service is unreachable", asy
     await Bun.write(host.file, JSON.stringify({ login: login(environmentId) }));
     expect((await host.account.status()).login?.deviceId).toBe(environmentId);
     expect(await host.account.logout()).toEqual({ ok: true, removed: false });
-    expect(await host.account.status()).toEqual({ login: null, cloudProjects: [], cloudProjectsLoaded: true });
+    expect(await host.account.status()).toEqual({
+      login: null,
+      cloudProjects: [],
+      cloudProjectsLoaded: true,
+      features: null,
+    });
     expect(JSON.parse(await readFile(host.file, "utf8"))).toEqual({ login: null });
   } finally {
     await host.close();
@@ -81,7 +121,12 @@ test("a login saved for another device counts as logged out and syncs nothing", 
   try {
     await Bun.write(host.file, JSON.stringify({ login: login("another-database") }));
     await host.account.refresh();
-    expect(await host.account.status()).toEqual({ login: null, cloudProjects: [], cloudProjectsLoaded: true });
+    expect(await host.account.status()).toEqual({
+      login: null,
+      cloudProjects: [],
+      cloudProjectsLoaded: true,
+      features: null,
+    });
     expect(host.synced()).toEqual([]);
   } finally {
     await host.close();
@@ -119,7 +164,12 @@ test("an existing project starts syncing after another device enables Cloud", as
   const manager = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
-    fetch: () => Response.json(ids.map((workbenchId) => ({ workbenchId }))),
+    fetch: (request) =>
+      Response.json(
+        new URL(request.url).pathname === "/v1/account"
+          ? { features: { relay: true } }
+          : ids.map((workbenchId) => ({ workbenchId })),
+      ),
   });
   const project = {
     id: "project",
