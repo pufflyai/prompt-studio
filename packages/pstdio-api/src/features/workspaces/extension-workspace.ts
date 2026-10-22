@@ -1,9 +1,12 @@
 import type { WorkspacesRouteDeps } from "./deps";
 
-type WorkspaceRow = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
+type WorkspaceRow = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>> & {
+  device?: { ownerId: string; id: string; name: string };
+};
 
 export const toExtensionWorkspace = (workspace: WorkspaceRow) => ({
   id: workspace.id,
+  ...(workspace.device ? { device: workspace.device } : {}),
   name: workspace.name,
   branch: workspace.branch,
   initializing: workspace.initializing,

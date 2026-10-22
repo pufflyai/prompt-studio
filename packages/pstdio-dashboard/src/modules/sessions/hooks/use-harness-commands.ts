@@ -1,3 +1,4 @@
+import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DraftHarnessCommandInput, HarnessCommandState, HarnessOperation } from "pstdio-api-contracts";
 import { getApiClient } from "@/lib/api";
@@ -10,12 +11,16 @@ export const useHarnessCommands = (
   createCommand: (
     operation: HarnessOperation,
   ) => Promise<{ status: "completed" | "started"; sessionId: string; message?: string }>,
+  input: WorkbenchPanelRenderInput,
 ) => {
+  const open = useWorkbenchStore(input.workbench.layout.store, () =>
+    input.workbench.host.getOpenPlacementIds().has(input.instance.instanceId),
+  );
   const client = useQueryClient();
   const queryKey = ["harness-commands", sessionId, harnessId, sessionId ? undefined : draft];
   const state = useQuery<HarnessCommandState & { harnessId: string }>({
     queryKey,
-    enabled: Boolean(harnessId && (sessionId || draft)),
+    enabled: open && Boolean(harnessId && (sessionId || draft)),
     // Failed draft discovery recovers when its workspace becomes ready. Healthy
     // drafts refresh with inputs, focus, and native actions; conversations keep
     // polling so modes created by the agent become visible.

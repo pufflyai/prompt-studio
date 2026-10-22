@@ -1,8 +1,9 @@
-import { Box, HStack, IconButton } from "@chakra-ui/react";
+import { Box, Button, HStack, IconButton, Popover, Portal, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Folder, ListTree, PanelBottom, PanelRight, Plus } from "lucide-react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
+import { ResourceActionMenu, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { WindowTabs } from "./window-tabs";
 import { WindowTitleBar } from "./window-title-bar";
 
@@ -85,6 +86,35 @@ const checkAlignment = async (canvasElement: HTMLElement, overlay: boolean) => {
   await expect(actions.getBoundingClientRect().right).toBeCloseTo(content.getBoundingClientRect().right - padding, 0);
 };
 
+const MenuExample = () => {
+  const actions = [{ key: "archive", label: "Archive project" }];
+  return (
+    <>
+      <Example />
+      <Stack p="md" align="start">
+        <ResourceContextMenu actions={actions}>
+          <Box p="md">Right-click project</Box>
+        </ResourceContextMenu>
+        <ResourceActionMenu actions={actions}>
+          <Button>Project actions</Button>
+        </ResourceActionMenu>
+        <Popover.Root>
+          <Popover.Trigger asChild>
+            <Button>Project details</Button>
+          </Popover.Trigger>
+          <Portal>
+            <Popover.Positioner>
+              <Popover.Content>
+                <Popover.Body>Project details</Popover.Body>
+              </Popover.Content>
+            </Popover.Positioner>
+          </Portal>
+        </Popover.Root>
+      </Stack>
+    </>
+  );
+};
+
 const meta = {
   title: "Components/Navigation/Window Title Bar",
   component: WindowTitleBar,
@@ -94,7 +124,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Place project tabs and their open-project button in children. Use actions for trailing panel controls. The title bar reserves native control bounds and adds a subtle separator before Windows and Linux controls. Empty actions collapse. macOS full screen releases the leading control reservation.",
+          "Place project tabs and their open-project button in children. Use actions for trailing panel controls. The title bar reserves native control bounds and adds a subtle separator before Windows and Linux controls. Empty actions collapse. macOS full screen releases the leading control reservation. Open menus and popovers pause window dragging so title-bar clicks can dismiss them.",
       },
     },
   },
@@ -138,6 +168,55 @@ export const EmptyActions: Story = {
   render: () => <Example platform="win32" emptyActions />,
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelector(".ps-window-title-bar__actions")).not.toBeVisible();
+  },
+};
+
+export const DismissMenus: Story = {
+  tags: ["!manifest"],
+  render: () => <MenuExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const titleBar = canvasElement.querySelector<HTMLElement>("[data-window-title-bar]")!;
+    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("drag");
+
+    fireEvent.contextMenu(canvas.getByText("Right-click project"));
+    await waitFor(() => expect(body.getByRole("menu")).toBeVisible());
+    await waitFor(() => expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("no-drag"));
+    await userEvent.click(titleBar);
+    await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
+    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("drag");
+
+    await userEvent.click(canvas.getByRole("button", { name: "Project actions" }));
+    await waitFor(() => expect(body.getByRole("menu")).toBeVisible());
+    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("no-drag");
+    const toggle = canvas.getByRole("button", { name: "Toggle Sidenav" });
+    await userEvent.click(toggle);
+    await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("drag");
+
+    fireEvent.contextMenu(canvas.getByText("Right-click project"));
+    await waitFor(() => expect(body.getByRole("menu")).toHaveFocus());
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
+    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("drag");
+  },
+};
+
+export const DismissPopovers: Story = {
+  tags: ["!manifest"],
+  render: () => <MenuExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const titleBar = canvasElement.querySelector<HTMLElement>("[data-window-title-bar]")!;
+    await userEvent.click(canvas.getByRole("button", { name: "Project details" }));
+    await waitFor(() => expect(body.getByRole("dialog")).toBeVisible());
+    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("no-drag");
+    await userEvent.click(titleBar);
+    await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
+    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("drag");
   },
 };
 export const WindowsDark: Story = { ...Windows, globals: { theme: "pstdio-dark" } };

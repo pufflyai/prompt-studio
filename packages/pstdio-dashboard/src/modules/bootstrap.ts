@@ -10,7 +10,7 @@ import {
   subscribeDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { createDashboardSessions } from "./sessions/data/dashboard-sessions";
+import { findDashboardSession } from "./sessions/data/dashboard-sessions";
 
 interface CreateBootstrapModuleInput {
   isInitialSyncComplete?: () => boolean;
@@ -30,7 +30,7 @@ const isCorePageLocation = (location: PageLocation | undefined) => {
 };
 
 const selectedSession = (ctx: BootstrapContext, sessionId: string) =>
-  createDashboardSessions(getDashboardSelectedProjectId(ctx)).find((session) => session.id === sessionId);
+  findDashboardSession(sessionId, getDashboardSelectedProjectId(ctx));
 
 const restoreSelectedSession = (
   ctx: BootstrapContext,

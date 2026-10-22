@@ -9,7 +9,7 @@ import { runtimeAuthorization, startPackagedServe, stopProcess } from "../packag
 
 export const SUBNAV_WORKLOAD = { files: 15_000, tickets: 1_000, sessions: 1_000, linkedWorkspaces: 5 };
 const repoRoot = resolve(import.meta.dirname, "../../../..");
-export const subnavFixtureRoot = join(repoRoot, "work/subnav-benchmark");
+export const subnavFixtureRoot = join(repoRoot, "__test-tmp__/subnav-benchmark");
 
 const buildBenchmarkBinary = () => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) {

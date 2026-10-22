@@ -1,0 +1,1 @@
+export const SESSION_RESOURCE_RETENTION_MS = 30 * 60_000;

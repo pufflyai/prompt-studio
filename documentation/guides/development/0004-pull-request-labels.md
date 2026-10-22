@@ -11,8 +11,9 @@ The `PR area labels` workflow marks changes that need focused review. Labels des
 | `security` | Runtime authentication, secrets, webview access, and desktop isolation |
 | `sync` | Event delivery, ordering, reconnects, and consistency |
 | `release` | CI permissions, packaging, publishing, and label policy |
+| `dashboard-ui` | Core UI and dashboard chrome: compare with the Pencil design and [DESIGN.md](../../../design/DESIGN.md) |
 
-`.github/labeler.yml` is the executable mapping source. Whole-package rules include tests and documentation. Several labels can match one file. The security paths identify known boundaries and do not detect every security change.
+`.github/labeler.yml` is the executable mapping source. Whole-package rules include tests and documentation. `dashboard-ui` is the exception: it covers the sources of the dashboard, the workbench and `@pstdio/ui`, the dashboard's `index.html` and `public/` assets, the icon font and the design system file, but not test files or test fixtures, support, utilities and helpers. Stories, story fixtures and locale strings count. Extension views are not core UI: the `extensions` label tracks them. Several labels can match one file. The security paths identify known boundaries and do not detect every security change.
 
 Reviewers own two separate labels: `breaking-change` for incompatible behavior or contracts, and `needs-migration` for required data transitions. Explain the affected consumers or migration in the PR description. These labels are never managed by the workflow.
 
@@ -26,7 +27,7 @@ The PR author owns `waiting-for-release`. Add it to an extension PR that uses SD
 
 The workflow publishes pending before classification, then success, failure, or error on the evaluated PR head commit. It evaluates immediately after label synchronization; bot label events are not needed. Manually deleting an area label triggers reclassification and cannot clear the rule. A changed head or base during classification produces an error on the old evaluated head, never success on a newer commit. Runs are serialized by PR with cancellation disabled.
 
-The pinned labeler has GitHub API limits: the files endpoint returns at most 3,000 files and a PR holds at most 100 labels. The policy reports an error for a diff over 3,000 files, fewer than seven free label slots before classification, or a full label list afterward. It never treats a partial classification as success. Remove unnecessary labels or split the diff, then rerun.
+The pinned labeler has GitHub API limits: the files endpoint returns at most 3,000 files and a PR holds at most 100 labels. The policy reports an error for a diff over 3,000 files, fewer than eight free label slots before classification, or a full label list afterward. It never treats a partial classification as success. Remove unnecessary labels or split the diff, then rerun.
 
 ## Trusted execution
 

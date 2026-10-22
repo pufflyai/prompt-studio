@@ -8,6 +8,7 @@ import {
   accountOfCredential,
   addWorkbenchInTransaction,
   findDevice,
+  heartbeatDeviceInTransaction,
   listDevices,
   listWorkbenches,
   registerDeviceInTransaction,
@@ -66,6 +67,8 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
     });
   };
   return {
+    heartbeat: (token: string) =>
+      apply(token, (transaction, device) => heartbeatDeviceInTransaction(transaction, device)),
     devices: (token: string) =>
       apply(token, async (transaction, device) => ({
         ...device,

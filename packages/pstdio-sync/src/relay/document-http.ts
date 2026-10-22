@@ -11,7 +11,7 @@ import {
 } from "pstdio-sync-contracts";
 import type { SyncSpace } from "../encryption";
 import { DocumentBlobMissing, type DocumentRelay, DocumentUpdateTooLarge } from "./document-sync-types";
-import { relayOrigin } from "./http";
+import { serviceAddress, serviceUrl } from "./http";
 
 export const createDocumentRelay = (input: {
   origin: string;
@@ -20,14 +20,14 @@ export const createDocumentRelay = (input: {
   token: () => Promise<string>;
   signal: AbortSignal;
 }) => {
-  const origin = relayOrigin(input.origin);
+  const address = serviceAddress(input.origin);
   const space = { projectId: input.space.projectId, spaceOwner: input.space.spaceOwner };
   const request = async (route: SyncRoute, init: RequestInit = {}) => {
     input.signal.throwIfAborted();
     const headers = new Headers(init.headers);
     headers.set("authorization", `Bearer ${await input.token()}`);
     headers.set(syncProtocolHeader, String(syncProtocolVersion));
-    return fetch(new URL(syncPath(route), origin), { ...init, headers, signal: input.signal });
+    return fetch(serviceUrl(address, syncPath(route)), { ...init, headers, signal: input.signal });
   };
   const checked = async (response: Response) => {
     if (response.ok) return response;

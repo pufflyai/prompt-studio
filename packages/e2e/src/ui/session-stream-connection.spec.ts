@@ -34,6 +34,7 @@ test("streams every opened session over one shared connection", async ({ page, r
     let opened = 0;
     const perSessionStreams: string[] = [];
     const subscribed: string[] = [];
+    const retained: string[] = [];
     page.on("request", (sent) => {
       const path = new URL(sent.url()).pathname;
       if (isSessionStream(sent)) {
@@ -41,7 +42,11 @@ test("streams every opened session over one shared connection", async ({ page, r
         mostOpen = Math.max(mostOpen, ++open);
       }
       if (/^\/v1\/sessions\/[^/]+\/stream$/.test(path)) perSessionStreams.push(path);
-      if (path.endsWith("/subscriptions") && sent.method() === "POST") subscribed.push(sent.postDataJSON().session_id);
+      if (path.endsWith("/subscriptions") && sent.method() === "POST") {
+        const subscription = sent.postDataJSON();
+        if (subscription.session_id) subscribed.push(subscription.session_id);
+        if (subscription.retain_session_id) retained.push(subscription.retain_session_id);
+      }
     });
     const closed = (sent: Request) => {
       if (isSessionStream(sent)) open--;
@@ -55,9 +60,11 @@ test("streams every opened session over one shared connection", async ({ page, r
     await page.goto(`/projects/${project.id}/`);
     await page.getByRole("button", { name: "Session A", exact: true }).click();
     await expect.poll(() => subscribed).toEqual([sessions[0]!.id]);
+    await expect.poll(() => retained).toEqual([sessions[0]!.id]);
     const sidenav = page.getByRole("region", { name: "Sidenav" }).first();
     await sidenav.getByRole("option", { name: "Session B", exact: true }).click();
     await expect.poll(() => subscribed).toEqual([sessions[0]!.id, sessions[1]!.id]);
+    await expect.poll(() => retained).toEqual([sessions[0]!.id, sessions[1]!.id]);
     await sidenav.getByRole("option", { name: "Session A", exact: true }).click();
     await expect(page.getByRole("log").getByText(/^Fake Agent: completed "Session A/)).toBeVisible();
 

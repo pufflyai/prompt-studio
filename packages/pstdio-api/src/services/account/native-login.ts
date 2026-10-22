@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { serviceUrl } from "pstdio-sync/relay";
 import { z } from "zod";
 import { managerRequest } from "./manager-client";
 
@@ -6,11 +7,15 @@ const sessionSchema = z.object({
   session: z.object({ token: z.string().min(1), expiresAt: z.coerce.date() }),
   user: z.object({ id: z.string(), email: z.string() }),
 });
-export const startNativeLogin = (origin: string, save: (token: string, signal: AbortSignal) => Promise<void>) => {
+export const startNativeLogin = (
+  origin: string,
+  save: (token: string, signal: AbortSignal, user: { email: string }) => Promise<void>,
+) => {
   const controller = new AbortController();
   const state = randomBytes(32).toString("base64url");
   let status: "pending" | "complete" | "failed" = "pending";
   let consuming = false;
+  let saving: Promise<void> | undefined;
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -43,7 +48,8 @@ export const startNativeLogin = (origin: string, save: (token: string, signal: A
         );
         if (session.session.expiresAt <= new Date()) throw new Error("Expired session");
         controller.signal.throwIfAborted();
-        await save(session.session.token, controller.signal);
+        saving = save(session.session.token, controller.signal, { email: session.user.email });
+        await saving;
         controller.signal.throwIfAborted();
         status = "complete";
         return new Response("Sign-in complete. You can close this window.", {
@@ -66,10 +72,11 @@ export const startNativeLogin = (origin: string, save: (token: string, signal: A
     clearTimeout(expiry);
     if (status === "pending") status = "failed";
     void server.stop(true);
+    return saving?.catch(() => {}) ?? Promise.resolve();
   };
   const expiry = setTimeout(close, 3 * 60_000);
   expiry.unref();
-  const url = new URL("/v1/native-login", origin);
+  const url = serviceUrl(origin, "/v1/native-login");
   url.searchParams.set("callback", new URL("/callback", server.url).href);
   url.searchParams.set("state", state);
   return { origin, url: url.href, status: () => status, close };

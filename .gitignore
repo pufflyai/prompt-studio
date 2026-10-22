@@ -201,16 +201,10 @@ packages/pstdio/.readme.generated
 # Shape Art drafts. A page keeps its own copy of each piece it uses.
 design/art
 
-# Relay infrastructure state and local inputs
-infra/relay/terraform/.terraform/
-infra/relay/terraform/*.tfstate*
-infra/relay/terraform/*.tfvars
-infra/relay/terraform/*.tfvars.json
-infra/relay/terraform/crash*.log
-infra/terraform/.terraform/
-infra/terraform/*.tfstate*
-infra/terraform/*.tfvars
-!infra/terraform/validation.tfvars
-infra/terraform/*.tfvars.json
-infra/terraform/*.tfplan
-infra/terraform/crash*.log
+# Deployment module state and local inputs
+infra/terraform/**/.terraform/
+infra/terraform/**/*.tfstate*
+infra/terraform/**/*.tfvars
+infra/terraform/**/*.tfvars.json
+infra/terraform/**/*.tfplan
+infra/terraform/**/crash*.log

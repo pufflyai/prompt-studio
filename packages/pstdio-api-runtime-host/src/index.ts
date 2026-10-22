@@ -11,4 +11,5 @@ export {
   type HarnessRegistry,
   validateHarnessParams,
 } from "./harness-registry";
+export { createHarnessSessionResources, type HarnessSessionResources } from "./harness-session-resources";
 export { createQuestionService, type QuestionServiceHooks } from "./question-service";

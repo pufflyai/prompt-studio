@@ -24,7 +24,10 @@ type SessionRecord = {
 
 export type SessionHookDeps = Pick<
   RouteDeps,
+  | "accountService"
   | "artifactMountWrites"
+  | "personalHistoryService"
+  | "accountService"
   | "assetTransferService"
   | "automationService"
   | "activityEventsService"

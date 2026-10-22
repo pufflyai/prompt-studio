@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { link, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
@@ -34,12 +34,19 @@ export const createBuildCache = (directory: string) => {
   });
 };
 
+export const publishBuildCacheReady = (path: string, server: { url: string; pid: number }) => {
+  // The launcher treats existence as readiness, so publish only the complete descriptor.
+  const temporary = `${path}.${randomUUID()}.tmp`;
+  writeFileSync(temporary, JSON.stringify(server));
+  renameSync(temporary, path);
+};
+
 if (import.meta.main) {
   const directory = resolve(".cache/ci-build");
   const ready = join(process.env.RUNNER_TEMP!, "ci-build-cache-ready");
   if (process.argv.includes("--serve")) {
     const server = createBuildCache(directory);
-    writeFileSync(ready, JSON.stringify({ url: server.url.origin, pid: process.pid }));
+    publishBuildCacheReady(ready, { url: server.url.origin, pid: process.pid });
   } else {
     // unref() releases the parent event loop; detaching also survives Windows shell cleanup.
     // GitHub's runner cleans it up when the job finishes.

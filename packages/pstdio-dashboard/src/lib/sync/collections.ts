@@ -49,10 +49,14 @@ export const createRuntimeCollections = (connection = apiClientOptions()) => {
   const syncedTableSet = new Set<string>(SYNCED_TABLES);
   const indexes = new Map<SyncedTable, Map<string, Map<unknown, Set<string>>>>();
   let collectionsVersion = 0;
+  const tableVersions = new Map<SyncedTable, number>();
   let initialCollectionsSyncComplete = false;
 
   const notifyCollectionsChanged = (change?: CollectionChange) => {
-    if (change) updateCollectionIndexes(indexes.get(change.table), change);
+    if (change) {
+      updateCollectionIndexes(indexes.get(change.table), change);
+      tableVersions.set(change.table, (tableVersions.get(change.table) ?? 0) + 1);
+    }
     collectionsVersion += 1;
     for (const listener of listeners) listener(change);
   };
@@ -204,6 +208,7 @@ export const createRuntimeCollections = (connection = apiClientOptions()) => {
     getAllCollections,
     getIndexedRows,
     getCollectionsVersion,
+    getCollectionVersion: (table: SyncedTable) => tableVersions.get(table) ?? 0,
     isInitialCollectionsSyncComplete,
     markInitialCollectionsSyncComplete,
     subscribeCollections,

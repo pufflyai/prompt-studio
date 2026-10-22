@@ -31184,6 +31184,25 @@
                               }
                             }
                           ]
+                        },
+                        {
+                          "id": "aLd9o",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Enter Main fullscreen",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "maximize",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
                         }
                       ]
                     },
@@ -31435,6 +31454,25 @@
                               }
                             }
                           ]
+                        },
+                        {
+                          "id": "z0gAu",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Enter Main fullscreen",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "maximize",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
                         },
                         {
                           "type": "rectangle",
@@ -215313,6 +215351,405 @@
                   "height": 48
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "wjZff",
+      "x": 59950,
+      "y": 0,
+      "name": "Cloud · Account and devices · PS-784",
+      "clip": true,
+      "width": 720,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "A2n145",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Account and devices",
+          "fontFamily": "$font-body",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "V1tQ7",
+          "name": "Signed in",
+          "fill": "$ds-fg",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Signed in · Google account",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "id": "lBEwI",
+          "type": "ref",
+          "ref": "c24zV7",
+          "name": "Sign out",
+          "height": 32,
+          "theme": {
+            "btn": "outline",
+            "size": "sm"
+          },
+          "descendants": {
+            "DsEVd": {
+              "enabled": false
+            },
+            "Hf4GT": {
+              "content": "Sign out"
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "PvSzL",
+          "name": "Devices heading",
+          "fill": "$ds-fg",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Devices",
+          "fontFamily": "$font-body",
+          "fontSize": 18,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "p0brlL",
+          "name": "Device This Mac",
+          "width": "fill_container",
+          "stroke": "$ds-border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            16,
+            0
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "uswMK",
+              "name": "Name",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "This Mac",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "UYTOc",
+              "name": "Last seen",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Current device · Online",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "dOeUy",
+              "name": "Device actions",
+              "gap": 8,
+              "children": [
+                {
+                  "id": "VF5ro",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Rename",
+                  "height": 32,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Rename"
+                    }
+                  }
+                },
+                {
+                  "id": "a9KsBq",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Remove",
+                  "height": 32,
+                  "theme": {
+                    "btn": "destructive-ghost",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Remove"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "chKS9",
+          "name": "Device Linux laptop",
+          "width": "fill_container",
+          "stroke": "$ds-border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            16,
+            0
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "zcOyb",
+              "name": "Name",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Linux laptop",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "H0GkE",
+              "name": "Last seen",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Offline · Last seen 19 October",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "WIkhu",
+              "name": "Device actions",
+              "gap": 8,
+              "children": [
+                {
+                  "id": "jguIJ",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Rename",
+                  "height": 32,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Rename"
+                    }
+                  }
+                },
+                {
+                  "id": "vZ1jM",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Remove",
+                  "height": 32,
+                  "theme": {
+                    "btn": "destructive-ghost",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Remove"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "G5ntf",
+          "name": "Removal guidance",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Removing a device stops future access renewal. Downloaded data stays on it.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "kEadp",
+          "name": "Cloud project heading",
+          "fill": "$ds-fg",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Project sync",
+          "fontFamily": "$font-body",
+          "fontSize": 18,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "P7PkYW",
+          "name": "Project Cloud switch",
+          "width": "fill_container",
+          "gap": 16,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "Nyihl",
+              "type": "ref",
+              "ref": "ZVbcE",
+              "name": "Cloud on",
+              "theme": {
+                "switch": "on"
+              },
+              "width": 40,
+              "height": 20
+            },
+            {
+              "type": "text",
+              "id": "i5GemI",
+              "name": "Cloud label",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Sync this project with Cloud",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "pjZuY",
+          "name": "Incomplete guidance",
+          "fill": "$ds-warning",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "First download incomplete · Not ready offline",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "l79Ba",
+          "name": "Trailing status bar · six states",
+          "width": "fill_container",
+          "fill": "$ds-bg-subtle",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "G6wMqX",
+              "name": "Saved locally",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Saved locally",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "n8HcTd",
+              "name": "Waiting to sync",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Waiting to sync",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "M52Nzq",
+              "name": "Synced",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Synced",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "mz0cO",
+              "name": "Offline",
+              "fill": "$ds-warning",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Offline",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "L8MTVn",
+              "name": "First download incomplete",
+              "fill": "$ds-warning",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "First download incomplete",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "XGK7z",
+              "name": "Needs attention",
+              "fill": "$ds-warning",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Needs attention",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
             }
           ]
         }

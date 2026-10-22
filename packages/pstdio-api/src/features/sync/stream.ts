@@ -72,10 +72,10 @@ export const streamHandler = (deps: StreamDeps) => {
 
       await writeInitialEvents();
 
-      // Drain buffered events that arrived after the snapshot boundary
-      const pendingEvents = buffer.filter((e) => e.seq > snapshotSeq);
-      for (const event of pendingEvents) {
-        await stream.writeSSE(formatSSE(event));
+      // Writes can yield to new events. Drain the owned queue before switching subscribers.
+      while (buffer.length > 0) {
+        const event = buffer.shift()!;
+        if (event.seq > snapshotSeq) await stream.writeSSE(formatSSE(event));
       }
 
       // Switch to live drain mode

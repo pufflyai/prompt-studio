@@ -85,7 +85,9 @@
         // Packaged smoke tests bundle these extension entries by path.
         "src/packaged/fixtures/*-extension.ts",
         // Specs install fixture extensions by path.
-        "src/fixtures/**/extension.ts"
+        "src/fixtures/**/extension.ts",
+        // Extension manifests load this webview entry by packageAsset path.
+        "src/fixtures/editing-session/view.ts"
       ],
       "project": ["playwright*.config.ts", "src/**/*.ts"],
       "ignore": ["playwright-report/**", "screenshots/**", "test-results/**"],

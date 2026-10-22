@@ -1,36 +1,28 @@
+import type {
+  AccountDevice,
+  AccountLogin,
+  AccountLoginStatus,
+  AccountStatus,
+  ProjectSyncStatus,
+} from "pstdio-api-contracts";
 import type { RequestFn } from "./request";
 
-/** This device's cloud login. The device credential stays in the native host. */
-export interface DeviceLogin {
-  managerOrigin: string;
-  relayOrigin: string;
-  accountId: string;
-  deviceId: string;
-}
-export interface AccountStatus {
-  login: DeviceLogin | null;
-  /** Cloud projects of the account. This device syncs the ones that exist on it. */
-  cloudProjects: string[];
-}
-export interface AccountDevice {
-  id: string;
-  name: string;
-  platform: string;
-  createdAt: string;
-  lastSeenAt: string;
-  /** True for the device that answered the request. */
-  current: boolean;
-}
+export type { AccountDevice, AccountStatus, DeviceLogin } from "pstdio-api-contracts";
+
 type Ok = { ok: boolean };
 
 export const createAccountClient = (request: RequestFn) => {
   const device = (id: string) => `/v1/account/devices/${encodeURIComponent(id)}`;
   const project = (id: string) => `/v1/account/projects/${encodeURIComponent(id)}`;
+  const login = (id: string) => `/v1/account/login/${encodeURIComponent(id)}`;
   return {
     login: (managerOrigin: string) =>
-      request<{ id: string; url: string }>("/v1/account/login", { method: "POST", body: { managerOrigin } }),
-    loginStatus: (id: string) =>
-      request<{ status: "pending" | "complete" | "failed" }>(`/v1/account/login/${encodeURIComponent(id)}`),
+      request<AccountLogin>("/v1/account/login", { method: "POST", body: { managerOrigin } }),
+    loginStatus: (id: string) => request<{ status: AccountLoginStatus }>(login(id)),
+    /** Cancels a pending sign-in. A sign-in that already completed stays complete. */
+    cancelLogin: (id: string) =>
+      request<Ok & { status: Exclude<AccountLoginStatus, "pending"> }>(login(id), { method: "DELETE" }),
+    projectSyncStatus: (projectId: string) => request<ProjectSyncStatus>(`${project(projectId)}/sync`),
     status: () => request<AccountStatus>("/v1/account"),
     /** `removed` is false when the account service could not be reached; remove the device from another one. */
     logout: () => request<Ok & { removed: boolean }>("/v1/account/logout", { method: "POST" }),

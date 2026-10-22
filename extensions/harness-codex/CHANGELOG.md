@@ -1,5 +1,13 @@
 # harness-codex
 
+## 0.45.0
+
+_2026-10-22_
+
+### Patch Changes
+
+- 10e6f68: Resume Codex sessions after signing in to Codex again, without restarting Prompt Studio.
+
 ## 0.44.0
 
 _2026-10-18_

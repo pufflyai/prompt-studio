@@ -1,5 +1,69 @@
 # pstdio
 
+## 0.45.0
+
+_2026-10-22_
+
+### Minor Changes
+
+- 9a6b0d2: Merge extension data locally with durable CRDT documents and history-independent saves.
+- 57ac840: Let extensions read the Cloud account, devices and each project's sync status, and sign in, sign out or change which projects sync.
+- c29a2bf: Release unused session resources after thirty minutes while preserving open tabs and active work.
+- a4145c6: Read workspaces, sessions, and full transcripts from your other devices through encrypted private project data, and preserve updates while sync streams initialize.
+- c1c9533: Log in once with Google to make a computer a device that syncs every cloud project, and manage devices with `pst devices`.
+- 107c9e0: Add Windows drive selection to the folder picker and expose runtime drive discovery through the SDK.
+- 9286f4a: Share harness controls and native resource actions with webviews and preserve popover keyboard focus.
+- e7f8c90: Enforce independent mode panel permissions and share accessible panel controls across hosts.
+- edc7b4b: Sync encrypted documents and blobs, upload latest states, and repair missing offline edits.
+- da5f884: Add a two-device storage test helper with automatic merging and replaced-value reports.
+
+### Patch Changes
+
+- d63201a: Allow panel placement changes with valid move actions and clear insertion targets, and pin tabs dropped onto closed panels.
+- 5a2fceb: Add the blind relay protocol and store for encrypted updates, latest states and blobs.
+- 6e0c8b9: Keep local record and legacy reads bounded as retained journal history grows.
+- 77fb351: Show each website's own icon on web links in chat.
+- d15c674: Render sortable subnavigation lists by visible rows, show declared structure before loading contents, defer row menus and editor mounting, and return session launches before agent startup finishes while preserving requests for recovery.
+- 9cea817: Align project tab drop indicators, drag bounds, and label sizing with shared tabs, and keep the add button beside them.
+- 09a3062: Dismiss open menus and popovers when clicking the desktop title bar.
+- f26fa35: Report that an extension is not in the catalog, instead of "Project not found", when `pst extensions add` names an unknown extension.
+- 0069306: Let the relay and account manager run under a path of one address, such as `https://base.prompt.studio/accounts`.
+- f70dd3f: Present Main fullscreen while preserving the global panel layout and live views.
+- 1072010: Prepare independent default extensions concurrently during first-project setup.
+- f601ef4: Encrypt synced project data on each device with keys from the account manager, and give future data a new key when a device is removed.
+- aad171f: Resolve resource identifiers before running commands without a parameter form.
+- aad171f: Keep keyboard focus in the performance popover when it opens.
+- 217a38b: Keep toast close buttons and actions clickable over the desktop title bar in macOS fullscreen.
+- db3783d: Show harness availability on Start and in sessions, surface harness issues through extension health indicators, preserve pending answers and confirmations, and keep outline action borders consistent.
+- 63d2424: Update ticket properties immediately while changes save in the background.
+- c112323: Prepare desktop browser login while the startup window loads to reduce warm relaunch time.
+- aad171f: Show streamed conversations when opening them while content keeps arriving.
+- 91a1da7: Add covered checkpoint contracts and isolated recovery conformance.
+- 3d230ff: Fix theme selection from the command palette.
+- bf68de5: Keep system errors in a scrollable status-bar widget with a count tag, keep action failures local, and align compact ghost alert controls with semantic interaction colors.
+- 07028df: Keep desktop and browser panel controls together at the right edge and separate Windows and Ubuntu window controls.
+- 2528225: Keep deleted resources closed and discard stale related-opening results.
+- 080759b: Include the service telemetry workspace metadata in container builds.
+- 1072010: Restore failed native command drafts when their acknowledgement arrives after failure.
+- 8dc65bf: Speed up extension startup checks by reusing import scanners and unchanged source parses.
+- 9a6b0d2: Open large Planner boards faster after a restart, show loading placeholders until views and field labels are ready, and keep visible navigation mounted during refreshes.
+- b7a29c2: Share open-tab inventory without retaining replaced default pages, save only customized layouts, index idle deadlines, cache session lists by their source tables, and stop retrying rejected retention claims while cleaning up lost responses.
+- 501fd58: Keep a synced project ready when another device's folders arrive in personal history.
+- d10df43: Show chat file bubbles only for files and items that exist, keep text and formatting when copying a message, and open line links to tickets, notes and artifacts.
+- 51d5449: Leave webview command failures for the caller to report, so each failure shows once.
+- 1f3d64e: Let Planner and Reports migrate their own legacy templates with public storage helpers, and remove the template migration from core.
+- b23436c: Group the desktop maximize button with the top-bar panel controls.
+- c5a1641: Show active work in concise cards with icons and readable automation names in the scrollable desktop quit warning.
+- 00d29f9: Keep offline resource numbers unique and preserve earlier numbers as aliases.
+- e7f8c90: Restore web panel controls and fix extension sessions, required panels, status widget sizing, tab menu dismissal, and resource actions.
+- 2e021e3: Share local document edits across extension views before saving finishes.
+- dff61b6: Report each storage save's sync `state`, make `expectedRevision` optional on `records.commit`, and deprecate the storage conflict members.
+- 1072010: Preserve retained views and menu focus, finish navigation rendering, prevent extension discovery from undoing uninstall, and wait for extension command exit on cancellation.
+- c2807ac: Load tickets by ID without waiting for editor modules or reloading hidden boards.
+- a2df0cb: Add shared compact prefixed IDs, stable migration IDs, and device-unique order positions.
+- b838ba9: Render multiline parameter text at full width with its label above.
+- 2f7efac: Bound concurrent workspace deletion and session writes, and fetch only the session summaries needed by Planner badges to reduce bulk archive CPU spikes.
+
 ## 0.44.0
 
 _2026-10-18_
