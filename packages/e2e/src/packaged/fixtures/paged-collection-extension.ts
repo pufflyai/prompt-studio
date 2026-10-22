@@ -34,7 +34,7 @@ const indexes: StorageRecordIndex[] = ["rank", "title", "status"].flatMap((field
     })),
   ),
 );
-const textPredicate = (rule: ViewFilterRule): StoragePredicate[] => {
+const textPredicate = (rule: ViewFilterRule) => {
   if (typeof rule.value !== "string" || !rule.value) return [];
   const match: StoragePredicate = {
     field: rule.attributeId,
