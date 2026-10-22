@@ -437,3 +437,43 @@ test("unchanged durable status reads only revision metadata without opening the 
   expect(seen).toEqual([undefined, 0, 0, 1]);
   sync.close();
 });
+
+test("status stays readable when a replaced document closes during its queued comparison", async () => {
+  const { runBinaryTask } = await import("../binary-background");
+  const f = relayFixture();
+  const first = device(f.relay);
+  await first.sync.synchronize();
+  await first.set("unsent", "retained locally");
+  const admitted = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const preceding = runBinaryTask(async () => {
+    admitted.resolve();
+    await release.promise;
+    return { kind: "checkpoint", updates: [new Uint8Array([0, 0])] };
+  });
+  await admitted.promise;
+  const status = first.sync.status().catch((error: unknown) => error);
+  // Let status capture its local revision and queue behind the preceding owner.
+  await first.store.transaction(owner, async () => {});
+  first.sync.close();
+  release.resolve();
+  await preceding;
+  expect(await status).toEqual({ downloaded: false, pending: false, needsAttention: false });
+  expect(await first.sync.status()).toEqual({ downloaded: false, pending: false, needsAttention: false });
+  expect(await first.values()).toEqual({ unsent: "retained locally" });
+  const replacement = createDocumentSync({
+    owner,
+    store: first.store,
+    space,
+    documentId,
+    relay: f.relay,
+    quarantine: async () => {},
+  });
+  try {
+    expect((await replacement.status()).pending).toBe(true);
+    await replacement.synchronize();
+    expect(await replacement.status()).toEqual({ downloaded: true, pending: false, needsAttention: false });
+  } finally {
+    replacement.close();
+  }
+});

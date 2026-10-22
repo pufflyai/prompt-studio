@@ -210,9 +210,17 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
       return running;
     },
     async status() {
-      requireOpen();
-      const document = await local.compare(remote.state, remoteRevision);
-      return { downloaded, pending: !!document.update, needsAttention: incomplete };
+      const retired = { downloaded: false, pending: false, needsAttention: incomplete };
+      if (closed) return retired;
+      try {
+        const document = await local.compare(remote.state, remoteRevision);
+        return closed ? retired : { downloaded, pending: !!document.update, needsAttention: incomplete };
+      } catch (error) {
+        // Reconnect replaces owners while a status read can still be queued.
+        // That retired owner cannot claim a completed download or pending work.
+        if (closed && error === abort.signal.reason) return retired;
+        throw error;
+      }
     },
     close() {
       closed = true;
