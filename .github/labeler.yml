@@ -45,8 +45,8 @@ release:
           - scripts/release/**
           - scripts/embed.json
           - .changeset/config.json
-# What people see in the dashboard: its modules, the workbench chrome, shared components and theme, and
-# the design system. Test-only files do not count.
+# Core UI only: the dashboard chrome, the workbench, shared components and theme, and the design system.
+# Extension views are tracked by the `extensions` label. Test-only files do not count.
 dashboard-ui:
   - changed-files:
       - all-globs-to-any-file:
