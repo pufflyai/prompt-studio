@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderWorkspaceCapabilities } from "pstdio-db";
 import { apiLogger } from "../../lib/logger";
+import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
 import { EventBus } from "../sync/event-bus";
 import { fireExtensionEvent } from "./extension-event-runtime";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
@@ -95,6 +96,7 @@ describe("fireExtensionEvent", () => {
           ],
         },
         extensionStorageService: {
+          ...createTestDocumentStorage(),
           getKv: async () => null,
           setKv: async (input: unknown) => {
             writes.push(input);
@@ -177,6 +179,7 @@ describe("extension event scope and diagnostics", () => {
         ],
       },
       extensionStorageService: {
+        ...createTestDocumentStorage(),
         getKv: async () => null,
         setKv: async (input: unknown) => writes.push(input),
         deleteKv: async () => {},
@@ -239,6 +242,7 @@ describe("extension event scope and diagnostics", () => {
           ],
         },
         extensionStorageService: {
+          ...createTestDocumentStorage(),
           getKv: async () => null,
           setKv: async (value: { value_json?: unknown }) => writes.push(value),
           deleteKv: async () => {},
@@ -313,6 +317,7 @@ describe("extension event scope and diagnostics", () => {
             ],
           },
           extensionStorageService: {
+            ...createTestDocumentStorage(),
             getKv: async () => null,
             setKv: async () => {},
             deleteKv: async () => {},
