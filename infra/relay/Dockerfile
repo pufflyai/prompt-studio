@@ -6,6 +6,8 @@ COPY services/relay/package.json ./services/relay/package.json
 COPY services/account-manager/package.json ./services/account-manager/package.json
 COPY packages/pstdio-sync/package.json ./packages/pstdio-sync/package.json
 COPY packages/pstdio-sync-contracts/package.json ./packages/pstdio-sync-contracts/package.json
+# The relay benchmark's writer is a development dependency; the production install skips it but needs its manifest.
+COPY packages/benchmarks/package.json ./packages/benchmarks/package.json
 RUN bun install --frozen-lockfile --production --filter pstdio-relay
 COPY services/relay/src ./services/relay/src
 COPY services/relay/scripts ./services/relay/scripts

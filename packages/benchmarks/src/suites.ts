@@ -179,6 +179,8 @@ export const suites: BenchmarkSuite[] = [
     id: "runtime",
     label: "Runtime",
     source: "pstdio-api, pstdio-api-runtime-host, and pstdio-workbench *.bench.ts",
+    // The workbench benchmark imports the SDK through its published entry points.
+    prepare: () => [{ command: ["bun", "run", "build", "--", "--scope", "@pstdio/sdk", "--include-dependencies"] }],
     sample: (context) => [
       { command: ["bun", "run", "bench:session-resources"], cwd: "packages/pstdio-api-runtime-host" },
       { command: ["bun", "run", "bench:open-resources"], cwd: "packages/pstdio-workbench" },
