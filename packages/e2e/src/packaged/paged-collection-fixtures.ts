@@ -1,24 +1,31 @@
-import { mkdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 
-export const writePagedCollectionFixtures = async (root: string) => {
-  const bundle = await Bun.build({
-    entrypoints: [join(import.meta.dir, "fixtures/paged-collection-extension.ts")],
-    target: "bun",
-  });
-  if (!bundle.success) throw new AggregateError(bundle.logs, "Could not build paged public fixtures");
+export const writePagedCollectionFixtures = (root: string) => {
+  mkdirSync(root, { recursive: true });
+  const bundlePath = join(root, "paged-fixture.js");
+  execFileSync("bun", [
+    "build",
+    join(import.meta.dirname, "fixtures/paged-collection-extension.ts"),
+    "--target",
+    "bun",
+    "--outfile",
+    bundlePath,
+  ]);
+  const bundle = readFileSync(bundlePath);
   const extensions = [];
   for (let owner = 0; owner < 10; owner++) {
     const name = `paged-owner-${owner}`;
     const source = join(root, name);
     mkdirSync(source, { recursive: true });
-    await Bun.write(join(source, "fixture.js"), bundle.outputs[0]!);
-    await Bun.write(
+    writeFileSync(join(source, "fixture.js"), bundle);
+    writeFileSync(
       join(source, "extension.ts"),
       `import {createPagedCollectionFixture} from "./fixture.js";\nexport default createPagedCollectionFixture(${JSON.stringify(name)});\n`,
     );
-    await Bun.write(
+    writeFileSync(
       join(source, "package.json"),
       JSON.stringify({
         name,
