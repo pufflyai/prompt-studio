@@ -1,4 +1,4 @@
-import { type ExtensionContextBase, eventRef, type ViewFilterGroup } from "@pstdio/sdk/extensions";
+import { type ExtensionContextBase, eventRef, type StorageGroup, type ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { seedDefaultStatuses } from "./seed";
 import { withWriteGuard } from "./write-guard";
 
@@ -48,8 +48,15 @@ export const pauseAutoBuildMode = async (ctx: ExtensionContextBase, mode: AutoBu
   );
 };
 
-export const saveAutoBuildMode = async (ctx: ExtensionContextBase, mode: AutoBuildMode) => {
-  await ctx.storage.set("auto-build", mode);
+export const saveAutoBuildMode = async (
+  ctx: ExtensionContextBase,
+  mode: AutoBuildMode,
+  relatedEdits: StorageGroup["edits"] = [],
+) => {
+  await ctx.storage.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: ctx.storage.records.id("auto-build"), replace: { ...mode } }, ...relatedEdits],
+  });
   await ctx.events.emit(autoBuildChanged, {});
   return mode;
 };

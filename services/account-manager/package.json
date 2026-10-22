@@ -8,7 +8,8 @@
     "./access": "./src/environment-access.ts"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/environment-access.ts src/server.ts --target bun --outdir dist",
+    "build": "bun build src/index.ts src/environment-access.ts src/server.ts --target bun --outdir dist && bun build scripts/account-feature.ts --target bun --outfile dist/account-feature.js",
+    "account-feature": "bun scripts/account-feature.ts",
     "start": "bun ./dist/server.js",
     "test:isolated": "bun scripts/test-isolated.ts",
     "typecheck": "tsc --noEmit",

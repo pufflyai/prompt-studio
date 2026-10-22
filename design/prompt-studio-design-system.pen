@@ -18197,7 +18197,7 @@
                       "type": "frame",
                       "id": "So6vB",
                       "name": "cmp/AlertMessage",
-                      "context": "Problems in the chat appear in the conversation as inline alerts. The Actions slot holds Retry, shown only for a temporary failure, and Close, shown on every problem.",
+                      "context": "Shared AlertMessage: variable title and message wrap and scroll, capped at 384px or half the viewport and shrink within constrained flex parents. The scrollbar inherits the alert semantic foreground and sits at the far right of the scrolling area, beyond the fixed dismiss control. Error alerts include Copy error message in the bottom-right recovery footer; copy includes the full title and message, excluding controls.",
                       "theme": {
                         "status": "info"
                       },
@@ -215750,6 +215750,190 @@
               "fontFamily": "$font-body",
               "fontSize": 12,
               "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "x3J8o",
+      "x": 60750,
+      "y": 0,
+      "name": "AlertMessage · Variable content",
+      "width": 440,
+      "height": 400,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 16,
+      "children": [
+        {
+          "type": "text",
+          "id": "aGqFr",
+          "name": "Pattern heading",
+          "fill": "$ds-fg",
+          "content": "Variable alert content",
+          "fontFamily": "$font-body",
+          "fontSize": 16,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "uFXnZ",
+          "name": "Bounded alert",
+          "theme": {
+            "status": "error"
+          },
+          "width": "fill_container",
+          "height": 260,
+          "fill": "$status-bg",
+          "cornerRadius": "$alert-radius",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            4,
+            8
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "ctAWZ",
+              "name": "Content and close",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "OhBIn",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Error indicator",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "circle-alert",
+                  "library": "lucide",
+                  "fill": "$status-fg"
+                },
+                {
+                  "type": "frame",
+                  "id": "F3e5h",
+                  "x": 26,
+                  "y": 0,
+                  "name": "Scrollable title and diagnostic text",
+                  "clip": true,
+                  "width": 366,
+                  "height": 204,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "gtvVX",
+                      "name": "Long error title",
+                      "fill": "$status-fg",
+                      "textGrowth": "fixed-width",
+                      "width": 330,
+                      "content": "Service unavailable",
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "b8Dykw",
+                      "name": "Variable diagnostics",
+                      "fill": "$status-fg",
+                      "textGrowth": "fixed-width",
+                      "width": 330,
+                      "content": "Diagnostic 0: network request unavailable\nDiagnostic 1: network request unavailable\nDiagnostic 2: network request unavailable\nDiagnostic 3: network request unavailable\nDiagnostic 4: network request unavailable\nDiagnostic 5: network request unavailable\nDiagnostic 6: network request unavailable\nDiagnostic 7: network request unavailable\nDiagnostic 8: network request unavailable\nDiagnostic 9: network request unavailable\nDiagnostic 10: network request unavailable\nDiagnostic 11: network request unavailable\nDiagnostic 12: network request unavailable\nDiagnostic 13: network request unavailable\nDiagnostic 14: network request unavailable\nDiagnostic 15: network request unavailable\nDiagnostic 16: network request unavailable\nDiagnostic 17: network request unavailable\nDiagnostic 18: network request unavailable\nDiagnostic 19: network request unavailable\nDiagnostic 20: network request unavailable\nDiagnostic 21: network request unavailable\nDiagnostic 22: network request unavailable\nDiagnostic 23: network request unavailable\nDiagnostic 24: network request unavailable\nDiagnostic 25: network request unavailable\nDiagnostic 26: network request unavailable\nDiagnostic 27: network request unavailable\nDiagnostic 28: network request unavailable\nDiagnostic 29: network request unavailable",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "kvACQ",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Dismiss",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "x": 360,
+                  "y": 0,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "x",
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "Upw8Y",
+                  "x": 390,
+                  "y": 0,
+                  "name": "Semantic error scrollbar",
+                  "fill": "$status-fg",
+                  "width": 2,
+                  "height": 48
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "j9DoT",
+              "name": "Fixed recovery footer",
+              "width": "fill_container",
+              "justifyContent": "end",
+              "children": [
+                {
+                  "id": "nJnVL",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Copy error message",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "copy",
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "T2A9O",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Retry",
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Retry"
+                    }
+                  }
+                }
+              ]
             }
           ]
         }

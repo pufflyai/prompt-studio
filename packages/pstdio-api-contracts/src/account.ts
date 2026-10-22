@@ -10,6 +10,8 @@ export interface DeviceLogin {
 
 export interface AccountStatus {
   login: DeviceLogin | null;
+  /** Last loaded account grants, or null before discovery or when signed out. Relay enables Cloud early access. */
+  features: { relay: boolean } | null;
   /** Cloud projects of the account. This device syncs the ones that exist on it. */
   cloudProjects: string[];
   /** False until this login's Cloud project list has been read from the account service. */

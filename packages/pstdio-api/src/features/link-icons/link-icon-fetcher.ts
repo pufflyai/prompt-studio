@@ -25,10 +25,10 @@ const contentType = (response: Response) =>
 // Bun inflates compressed bodies ahead of the reader, so byte limits would not limit memory.
 const isCompressed = (response: Response) => (response.headers.get("content-encoding") ?? "identity") !== "identity";
 
-const withinTimeLimit = <T>(work: Promise<T>, signal: AbortSignal) => {
+const withinTimeLimit = <T>(work: () => Promise<T>, signal: AbortSignal) => {
   signal.throwIfAborted();
   return Promise.race([
-    work,
+    work(),
     new Promise<never>((_, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true })),
   ]);
 };
@@ -73,7 +73,7 @@ export const createLinkIconFetcher = (options: LinkIconFetcherOptions = {}) => {
   const isAllowedHost = async (hostname: string, signal: AbortSignal) => {
     const host = hostname.replace(/^\[(.*)\]$/, "$1");
     if (isIP(host)) return isAllowedAddress(host);
-    const addresses = await withinTimeLimit(lookup(host, { all: true }), signal).catch(() => []);
+    const addresses = await withinTimeLimit(() => lookup(host, { all: true }), signal).catch(() => []);
     return addresses.length > 0 && addresses.every(({ address }) => isAllowedAddress(address));
   };
 
