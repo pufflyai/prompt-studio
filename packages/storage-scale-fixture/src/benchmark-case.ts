@@ -69,6 +69,26 @@ const stopContainers = async (filters: string[]) => {
 
 type CaseStatus = "completed" | "failed" | "timed-out" | "aborted";
 
+interface CaseCompletion {
+  status: CaseStatus;
+  completionReceived: boolean;
+  cleanupErrors: string[];
+  error?: string;
+  elapsedWallMs: number;
+  limitMs: number;
+}
+
+export const finalizeBenchmarkCase = (input: CaseCompletion) => {
+  const cleanupErrors = [...input.cleanupErrors];
+  if (input.error) cleanupErrors.push(input.error);
+  let status = input.status;
+  if (!input.completionReceived && status !== "timed-out" && status !== "aborted")
+    cleanupErrors.push("Worker exited without completion handshake; detached-child cleanup is unverified");
+  if (cleanupErrors.length && status === "completed") status = "failed";
+  if (input.elapsedWallMs >= input.limitMs) status = "timed-out";
+  return { status, complete: status === "completed", passed: status === "completed", cleanupErrors };
+};
+
 export const runBenchmarkCase = async (input: BenchmarkCase) => {
   const limitMs = Math.min(input.timeoutMs ?? contract.caseTimeoutMs, contract.caseTimeoutMs);
   if (!Number.isFinite(limitMs) || limitMs <= 0) throw new Error("Case allowance must be positive and finite");
@@ -100,6 +120,7 @@ export const runBenchmarkCase = async (input: BenchmarkCase) => {
     termination = stopContainers(input.containerFilters ?? []).then((results) => [...errors, ...results]);
     // A failed OS kill must not leave the supervisor awaiting exit indefinitely.
     reapTimer = setTimeout(() => {
+      if (child.connected) child.disconnect();
       child.unref();
       unreaped.resolve({
         code: null,
@@ -134,19 +155,19 @@ export const runBenchmarkCase = async (input: BenchmarkCase) => {
     const workerWallMs = performance.now() - started;
     if (!termination) terminate("failed");
     const cleanupErrors = await termination!;
-    let finalStatus = status as CaseStatus;
-    if (completionCode === undefined && finalStatus !== "timed-out" && finalStatus !== "aborted")
-      cleanupErrors.push("Worker exited without completion handshake; detached-child cleanup is unverified");
-    if (cleanupErrors.length && finalStatus === "completed") finalStatus = "failed";
-    // No successful run can exceed its effective cap, including supervisor cleanup.
-    if (performance.now() - started >= limitMs) finalStatus = "timed-out";
+    const elapsedWallMs = performance.now() - started;
     const result = {
       case: input.name,
-      status: finalStatus,
-      complete: finalStatus === "completed",
-      passed: finalStatus === "completed",
+      ...finalizeBenchmarkCase({
+        status: status as CaseStatus,
+        completionReceived: completionCode !== undefined,
+        cleanupErrors,
+        error: exit.error,
+        elapsedWallMs,
+        limitMs,
+      }),
       limitMs,
-      elapsedWallMs: performance.now() - started,
+      elapsedWallMs,
       workerWallMs,
       exitCode: completionCode ?? exit.code,
       workerExitCode: exit.code,
@@ -154,7 +175,6 @@ export const runBenchmarkCase = async (input: BenchmarkCase) => {
       completionReceived: completionCode !== undefined,
       signal: exit.signal,
       error: exit.error,
-      cleanupErrors,
       acceptedTiming: false,
     };
     input.emit({ phase: "case-end", ...result });

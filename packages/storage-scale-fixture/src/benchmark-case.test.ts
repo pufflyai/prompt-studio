@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { closeSync, mkdtempSync, openSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runBenchmarkCase } from "./benchmark-case";
+import { finalizeBenchmarkCase, runBenchmarkCase } from "./benchmark-case";
 
 const run = async (mode: string, timeoutMs = 500) => {
   const root = mkdtempSync(join(tmpdir(), "bounded-benchmark-"));
@@ -101,4 +101,29 @@ test("an exit without completion and cleanup assurance cannot pass", async () =>
   expect(result.cleanupErrors).toContain(
     "Worker exited without completion handshake; detached-child cleanup is unverified",
   );
+});
+
+test("unobserved worker termination cannot pass after a completion message", () => {
+  const outcome = finalizeBenchmarkCase({
+    status: "completed",
+    completionReceived: true,
+    cleanupErrors: [],
+    error: "Owned worker exit not observed",
+    elapsedWallMs: 200,
+    limitMs: 500,
+  });
+  expect(outcome).toMatchObject({ status: "failed", complete: false, passed: false });
+  expect(outcome.cleanupErrors).toContain("Owned worker exit not observed");
+});
+
+test("cleanup that crosses the cap cannot produce an over-cap success", () => {
+  expect(
+    finalizeBenchmarkCase({
+      status: "completed",
+      completionReceived: true,
+      cleanupErrors: [],
+      elapsedWallMs: 501,
+      limitMs: 500,
+    }),
+  ).toMatchObject({ status: "timed-out", complete: false, passed: false });
 });
