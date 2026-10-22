@@ -3,8 +3,10 @@ import { ResizableSplitLayout } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { WorkbenchCore } from "../../core";
+import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchRegionTabs } from "../region/region-tabs";
+import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchAttachedSidePanel } from "../side-panel/side-panel";
@@ -60,33 +62,38 @@ interface WorkbenchAttachedSidePanelLayoutProps {
 
 export const WorkbenchAttachedSidePanelLayout = (props: WorkbenchAttachedSidePanelLayoutProps) => {
   const { workbench, attached, contentPanel, contentMinSizePx, header, onAttachedSlotChange, onCollapse } = props;
+  const position = useWorkbenchStore(workbench.layout.store, () => workbench.shell.getArrangement().side);
+  const policy = usePanelPolicy(workbench, "side");
   const persistedSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.side.size);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "side");
   const size = modeSettings?.size ?? workbench.layout.getRegionSize("side");
   const collapsible = modeSettings?.collapsible ?? workbench.layout.getRegionCollapsible("side");
 
   return (
-    <ResizableSplitLayout
-      h="full"
-      minH="0"
-      minW="0"
-      w="full"
-      resizableSide="right"
-      contentPanel={contentPanel}
-      resizablePanel={
-        <WorkbenchAttachedSidePanel workbench={workbench} contentSlotRef={onAttachedSlotChange} header={header} />
-      }
-      collapsed={!attached}
-      defaultSizePx={persistedSize ?? size?.defaultPx ?? ATTACHED_PANEL_DEFAULT_SIZE_PX}
-      minSizePx={size?.minPx ?? ATTACHED_PANEL_MIN_SIZE_PX}
-      maxSizePx={size?.maxPx}
-      collapsible={collapsible}
-      onSizeChange={(width) => workbench.layout.setRegionSize("side", width)}
-      contentMinSizePx={contentMinSizePx}
-      resizeLabel="Resize Side Panel"
-      onCollapsedChange={(collapsed) => {
-        if (attached && collapsed) onCollapse();
-      }}
-    />
+    <WorkbenchPanelDropFrame workbench={workbench} region="side">
+      <ResizableSplitLayout
+        h="full"
+        minH="0"
+        minW="0"
+        w="full"
+        resizableSide={position}
+        contentPanel={contentPanel}
+        resizablePanel={
+          <WorkbenchAttachedSidePanel workbench={workbench} contentSlotRef={onAttachedSlotChange} header={header} />
+        }
+        collapsed={!attached}
+        defaultSizePx={persistedSize ?? size?.defaultPx ?? ATTACHED_PANEL_DEFAULT_SIZE_PX}
+        minSizePx={size?.minPx ?? ATTACHED_PANEL_MIN_SIZE_PX}
+        maxSizePx={size?.maxPx}
+        resizable={policy.resizable}
+        collapsible={policy.canClose && collapsible}
+        onSizeChange={(width) => workbench.shell.setRegionSize("side", width)}
+        contentMinSizePx={contentMinSizePx}
+        resizeLabel="Resize Side Panel"
+        onCollapsedChange={(collapsed) => {
+          if (attached && collapsed) onCollapse();
+        }}
+      />
+    </WorkbenchPanelDropFrame>
   );
 };

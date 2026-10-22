@@ -1,10 +1,10 @@
-import type { GuestHost } from "@pstdio/sdk/extensions";
+import type { PlanClient } from "./use-plan";
 
-export const reportTimelineError = (host: Pick<GuestHost, "call">, error: unknown) =>
-  host
-    .call("notification.show", {
-      level: "error",
-      title: "Project Timeline",
+export const reportPlannerError = (client: Pick<PlanClient, "notify">, error: unknown) =>
+  client.notify
+    .toast({
+      type: "error",
+      title: "Project Planner",
       message: error instanceof Error ? error.message : String(error),
     })
     .catch(() => {

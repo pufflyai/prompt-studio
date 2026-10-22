@@ -12,6 +12,8 @@ export const subscribeProjectWorkspaceExtensionRefresh = (input: RefreshInput) =
   input.eventBus.subscribe((event) => {
     if (event.table !== "workspaces") return;
     const row = event.data as Record<string, unknown>;
+    // Synced history shows other devices' folders; extensions load only from this device's folder.
+    if (row.device) return;
     // Project setup creates its files before extension watchers can load them.
     if (
       event.op === "set" &&

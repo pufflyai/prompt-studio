@@ -4,8 +4,18 @@ import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { AlertMessage } from "@/components/primitives/alert";
 import { RichMessage } from "@/components/rich-text/rich-message/rich-message";
-import { parseChatLink } from "../links/chat-link";
+import { type ChatLinkCandidate, parseChatLink } from "../links/chat-link";
 import { ChatPanel } from "./chat-panel";
+
+const workspaceHref = (candidate: ChatLinkCandidate) =>
+  candidate.source === "missing.ts" || parseChatLink(candidate)?.kind === "external"
+    ? null
+    : `/projects/demo/workspace?document=${encodeURIComponent(candidate.source)}`;
+
+const confirmWorkspaceFile = async (candidate: ChatLinkCandidate) => {
+  const href = workspaceHref(candidate);
+  return href ? { href } : null;
+};
 
 const LinkConversation = (props: { streaming?: boolean }) => {
   const { streaming = false } = props;
@@ -40,10 +50,11 @@ const LinkConversation = (props: { streaming?: boolean }) => {
         },
       ]}
       linkHandler={{
-        resolveHref: (candidate) =>
-          candidate.source === "missing.ts" || parseChatLink(candidate)?.kind === "external"
-            ? null
-            : `/projects/demo/workspace?document=${encodeURIComponent(candidate.source)}`,
+        resolveHref: workspaceHref,
+        resolveResource: async (candidate) => {
+          const href = workspaceHref(candidate);
+          return href ? { href } : null;
+        },
         describe: (candidate) => `Workspace demo: ${candidate.source}`,
         open: (candidate) => setOpened(candidate.source),
       }}
@@ -107,7 +118,7 @@ export const FileLinks: Story = {
     await expect(source).toHaveFocus();
     await userEvent.keyboard("{Enter}");
     await expect(await canvas.findByText("Opened link")).toBeVisible();
-    await userEvent.click(canvas.getByRole("link", { name: "Missing file" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Missing file" }));
     await expect(await canvas.findByText("Workspace file not found")).toBeVisible();
   },
 };
@@ -169,14 +180,57 @@ export const ResourceBubbles: Story = {
     await expect(canvas.getByRole("link", { name: "Website" })).toHaveAttribute("href", "https://example.com");
   },
 };
+const existingFiles = new Set(["src/app.ts", "README.md"]);
+
+export const GuessedPaths: Story = {
+  render: () => (
+    <RichMessage
+      defaultState={
+        "Local `main` matches `origin/main`. See github.com, **Node.js**, the U.S. market and Node 18.x. " +
+        "Read `src/app.ts`, README.md and src/missing.ts, or {{link('src/app.ts')}}.\n\n" +
+        "| Ref | File |\n| --- | --- |\n| `origin/main` | `src/app.ts` |"
+      }
+      linkHandler={{
+        resolveHref: workspaceHref,
+        resolveResource: async (candidate) =>
+          existingFiles.has(candidate.source) ? { href: workspaceHref(candidate) } : null,
+        open: () => {},
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findAllByRole("link", { name: "src/app.ts", exact: true })).toHaveLength(2);
+    await expect(await canvas.findByRole("link", { name: "README.md", exact: true })).toBeVisible();
+    await expect(await canvas.findByRole("link", { name: "app.ts", exact: true })).toBeVisible();
+    const table = canvasElement.querySelector("table")!;
+    await expect(await within(table).findByRole("link", { name: "src/app.ts", exact: true })).toBeVisible();
+    await expect(within(table).queryByRole("link", { name: "origin/main", exact: true })).toBeNull();
+    for (const text of ["main", "origin/main", "github.com", "Node.js", "U.S", "18.x", "src/missing.ts"])
+      await expect(canvas.queryByRole("link", { name: text, exact: true })).toBeNull();
+    await expect(canvas.getAllByText("origin/main")[0]!.closest("code")).not.toBeNull();
+    await expect(canvas.getByText("Node.js").closest("strong")).not.toBeNull();
+
+    const message = canvasElement.querySelector('[data-rich-message="true"] [contenteditable]')!;
+    const selection = window.getSelection()!;
+    selection.selectAllChildren(message);
+    let html = "";
+    const readCopy = (event: ClipboardEvent) => {
+      html = event.clipboardData?.getData("text/html") ?? "";
+    };
+    window.addEventListener("copy", readCopy, { once: true });
+    document.execCommand("copy");
+    selection.removeAllRanges();
+    for (const text of ["origin/main", "<code>src/app.ts</code>", "README.md", "<strong>Node.js</strong>"])
+      await expect(html).toContain(text);
+    await expect(html).toContain("{{link('src/app.ts')}}");
+  },
+};
 export const StandaloneRichMessage: Story = {
   render: () => (
     <RichMessage
       defaultState="[Source](src/app.ts:2) and `src/app.ts`."
-      linkHandler={{
-        resolveHref: (candidate) => `/projects/demo/workspace?document=${encodeURIComponent(candidate.source)}`,
-        open: () => {},
-      }}
+      linkHandler={{ resolveHref: workspaceHref, resolveResource: confirmWorkspaceFile, open: () => {} }}
     />
   ),
 };
@@ -188,7 +242,8 @@ export const ParenthesizedPaths: Story = {
         <RichMessage
           defaultState="Read src/app/(dashboard)/page.ts and (src/app/[id]/page.ts)."
           linkHandler={{
-            resolveHref: (candidate) => `/projects/demo/workspace?document=${encodeURIComponent(candidate.source)}`,
+            resolveHref: workspaceHref,
+            resolveResource: confirmWorkspaceFile,
             open: (candidate) => setOpened(candidate.source),
           }}
         />

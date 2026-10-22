@@ -55,7 +55,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     },
   });
 
-  useTailReady({ itemCount: rows.length, onReady, scrollRef, totalSize });
+  useTailReady({ onReady, scrollRef });
 
   return (
     <Box px="xs">

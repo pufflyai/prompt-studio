@@ -3,7 +3,9 @@ import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
+import { createWorkbenchEditingSessionAdapter } from "./webview-editing-session";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
+import { createWebviewResourceActions } from "./webview-resource-actions";
 
 interface CreateWorkbenchWebviewHostAdaptersInput {
   workbench: WorkbenchCore;
@@ -18,7 +20,9 @@ interface CreateWorkbenchWebviewHostAdaptersInput {
 export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebviewHostAdaptersInput) => {
   const { workbench, placement, extensionId, projectId, hostEvents } = input;
   return {
+    resourceActions: createWebviewResourceActions(workbench, projectId, hostEvents),
     hostEvents,
+    editing: createWorkbenchEditingSessionAdapter(input),
     executeCommand: async (request, signal) => ({
       outcome: {
         ok: true,
@@ -45,13 +49,21 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
         workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId })),
     },
     notifications: {
-      show: (notice) =>
+      show: (notice) => {
+        if (notice.type === "error") {
+          workbench.notifications.captureActionError(
+            notice.title ?? "Extension action",
+            placement?.instanceId,
+          )(new Error(notice.message));
+          return;
+        }
         workbench.notifications.show({
           level: notice.type,
           metadata: notice.metadata,
           title: notice.title ?? notice.message,
           message: notice.title === undefined ? undefined : notice.message,
-        }),
+        });
+      },
     },
     preferences: createWebviewPreferencesAdapter(input),
     terminal: workbench.terminal,

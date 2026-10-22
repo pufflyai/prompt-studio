@@ -67,7 +67,11 @@ export const loadTreeData = async (
   onProgress?: (data: LoadedTreeData) => void,
 ): Promise<LoadedTreeData | null> => {
   if (!trees.getTreeRenderer(treeId)) return null;
-  let available: LoadedTreeData = { header: [], body: [], footer: [] };
+  let available: LoadedTreeData = {
+    header: [],
+    body: trees.getTreeRenderer(treeId)?.getStructure?.(ctx) ?? [],
+    footer: [],
+  };
   const loadSlot = async (slot: keyof LoadedTreeData, signal: AbortSignal) => {
     const context = {
       ...ctx,
@@ -80,7 +84,9 @@ export const loadTreeData = async (
     };
     const loaders = { header: trees.getHeader, body: trees.getBody, footer: trees.getFooter };
     const sections = await loaders[slot](treeId, context);
+    signal.throwIfAborted();
     available = { ...available, [slot]: sections };
+    onProgress?.(available);
     return sections;
   };
 

@@ -12,7 +12,7 @@ database:
       - any-glob-to-any-file:
           - packages/pstdio-db/**
           - packages/pstdio-storage/**
-          - infra/account-manager/**
+          - services/account-manager/**
 extension-runtime:
   - changed-files:
       - any-glob-to-any-file:
@@ -22,7 +22,7 @@ extension-runtime:
 security:
   - changed-files:
       - any-glob-to-any-file:
-          - infra/account-manager/**
+          - services/account-manager/**
           - packages/pstdio-api/src/features/runtime/runtime-auth.ts
           - packages/pstdio-api/src/features/extensions/connection-secret-store.ts
           - packages/pstdio-api/src/features/extensions/extension-webview-access.ts
@@ -45,3 +45,25 @@ release:
           - scripts/release/**
           - scripts/embed.json
           - .changeset/config.json
+# Core UI only: the dashboard chrome, the workbench, shared components and theme, and the design system.
+# Extension views are tracked by the `extensions` label. Test-only files do not count.
+dashboard-ui:
+  - changed-files:
+      - all-globs-to-any-file:
+          - "{packages/pstdio-dashboard,packages/pstdio-workbench,packages/ui}/src/**"
+          - "!**/*.test.*"
+          - "!**/*.fixture.*"
+          - "!**/*.fixtures.*"
+          - "!**/*test-fixture*"
+          - "!**/*test-support*"
+          - "!**/*test-helpers*"
+          - "!**/test-helpers/**"
+          - "!**/*test-utils*"
+          - "!**/test-utils/**"
+          - "!**/__fixtures__/**"
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/pstdio-dashboard/index.html
+          - packages/pstdio-dashboard/public/**
+          - packages/ui/public/font/**
+          - design/prompt-studio-design-system.pen

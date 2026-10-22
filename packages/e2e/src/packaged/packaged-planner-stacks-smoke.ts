@@ -178,6 +178,24 @@ export async function expectPackagedWorkspaceRecovery(input: { baseUrl: string; 
     enabled: true,
     prompt: "Recover the missing workspace.",
   });
+  // A cleaned worktree can leave the folder and user files behind without Git metadata.
+  const metadataPath = join(path, ".git");
+  await rename(metadataPath, `${metadataPath}.missing`);
+  try {
+    const next = await execute("next-tickets");
+    expect(next.tickets).toContainEqual(expect.objectContaining({ id: ready.id, action: "start" }));
+    expect(next.tickets).toContainEqual(
+      expect.objectContaining({
+        id: child.id,
+        action: "recover-workspace",
+        workspaceId: started.workspace.id,
+        recoveryHeadSha: updated.headSha,
+      }),
+    );
+    expect(await execute("auto-build.read")).toMatchObject({ enabled: true });
+  } finally {
+    await rename(`${metadataPath}.missing`, metadataPath);
+  }
   await rename(path, `${path}.missing`);
   try {
     const next = await execute("next-tickets");

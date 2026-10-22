@@ -129,7 +129,6 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     });
     await expectStatus("blocked");
     await execute("review", { requestId: human.id, response: { confirmed: true } });
-    expect((await execute("get-ticket", { id: ticket.id })).statusId).toBe("ready");
     await expectStatus("ready");
     expect(
       (await execute("list-attempts")).filter((row: { ticketId: string }) => row.ticketId === ticket.id),

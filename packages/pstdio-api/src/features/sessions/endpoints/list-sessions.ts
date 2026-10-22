@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { queryReadableSessions } from "../../../services/personal-history/queries";
 import type { AppRouteHandler } from "../../../types";
 import { projectQueryFields, projectQueryMessage, validProjectQuery } from "../../project-query";
 import type { SessionsRouteDeps } from "../deps";
@@ -46,7 +47,8 @@ export const listSessionsHandler = (deps: SessionsRouteDeps): AppRouteHandler<ty
   return async (c) => {
     const query = c.req.valid("query");
 
-    const page = await deps.sessionService.query(
+    const page = await queryReadableSessions(
+      deps,
       (query.projectId ?? query.project_id)!,
       {
         status: query.status ? [query.status] : undefined,

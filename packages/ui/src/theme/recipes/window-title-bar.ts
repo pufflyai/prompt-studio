@@ -2,7 +2,7 @@ import { defineSlotRecipe } from "@chakra-ui/react";
 
 export const windowTitleBarRecipe = defineSlotRecipe({
   className: "ps-window-title-bar",
-  slots: ["root", "content"],
+  slots: ["root", "content", "actions"],
   base: {
     root: {
       position: "relative",
@@ -13,6 +13,9 @@ export const windowTitleBarRecipe = defineSlotRecipe({
       color: "fg",
       userSelect: "none",
       WebkitAppRegion: "drag",
+      // Native drag regions consume the pointer events that dismiss open overlays.
+      "body:has([data-scope=menu][data-part=content][data-state=open], [data-scope=popover][data-part=content][data-state=open]) &":
+        { WebkitAppRegion: "no-drag" },
     },
     content: {
       display: "flex",
@@ -23,6 +26,14 @@ export const windowTitleBarRecipe = defineSlotRecipe({
       paddingInline: "compact",
       "& button, & a, & input, & [role=tab]": { WebkitAppRegion: "no-drag" },
     },
+    actions: {
+      display: "flex",
+      alignItems: "center",
+      gap: "xs",
+      marginInlineStart: "auto",
+      flexShrink: 0,
+      _empty: { display: "none" },
+    },
   },
   variants: {
     controls: {
@@ -32,7 +43,17 @@ export const windowTitleBarRecipe = defineSlotRecipe({
           "[data-window-full-screen] &": { paddingInlineStart: "compact" },
         },
       },
-      overlay: { content: { marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)" } },
+      overlay: {
+        content: { marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)" },
+        actions: {
+          _after: {
+            content: '""',
+            height: "icon-md",
+            borderInlineStartWidth: "1px",
+            borderColor: "border.subtle",
+          },
+        },
+      },
     },
   },
   defaultVariants: { controls: "overlay" },
@@ -42,7 +63,7 @@ export const windowTabsRecipe = defineSlotRecipe({
   className: "ps-window-tabs",
   slots: ["list", "tab", "trigger", "label", "close"],
   base: {
-    list: { display: "flex", alignItems: "center", gap: "2xs", minWidth: 0, overflowX: "auto", scrollbarWidth: "none" },
+    list: { display: "flex", alignItems: "center", gap: "2xs", minWidth: 0, height: "full" },
     tab: {
       position: "relative",
       display: "flex",
@@ -56,7 +77,7 @@ export const windowTabsRecipe = defineSlotRecipe({
       bg: "transparent",
       _selected: { bg: "bg.muted", color: "fg" },
       _hover: { bg: "bg.hover", color: "fg" },
-      _dragging: { bg: "bg.hover", color: "fg", zIndex: "docked" },
+      _dragging: { opacity: 0.5 },
       WebkitAppRegion: "no-drag",
     },
     trigger: {
@@ -64,6 +85,7 @@ export const windowTabsRecipe = defineSlotRecipe({
       alignItems: "center",
       gap: "window-tab-gap",
       minWidth: 0,
+      flex: "1 1 auto",
       height: "full",
       paddingInlineStart: "compact",
       paddingInlineEnd: "window-tab-gap",
@@ -73,11 +95,12 @@ export const windowTabsRecipe = defineSlotRecipe({
       focusVisibleRing: "inside",
       WebkitAppRegion: "no-drag",
       touchAction: "none",
+      "&[aria-pressed]": { cursor: "grab" },
       _icon: { width: "icon-xs", height: "icon-xs", flexShrink: 0 },
     },
     label: {
       minWidth: 0,
-      maxWidth: "window-tab-label-max",
+      maxWidth: "tab-label-max",
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap",

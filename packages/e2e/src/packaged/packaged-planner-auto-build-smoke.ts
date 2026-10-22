@@ -4,6 +4,10 @@ import { commandRunner, type PackagedPlanner } from "./packaged-planner-helpers"
 
 export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
   const execute = commandRunner(input);
+  const inactive = await execute("create-ticket", { content: "# Work with Auto Build off", status: "Todo" });
+  await execute("auto-build.check", {});
+  expect(await execute("get-ticket", { id: inactive.id })).toMatchObject({ statusId: inactive.statusId });
+  await execute("delete-ticket", { id: inactive.id });
   // Empty ready work exercises the shipped action without starting real agents.
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
   expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false, blockOnReview: true });
@@ -15,6 +19,7 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
     storageOutcome: { status: "saved-locally", operationId: expect.any(String) },
   });
   expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
+  await execute("auto-build.check", {});
   expect(await execute("next-tickets", {})).toMatchObject({ enabled: true, tickets: [], waiting: [] });
   // An idle project without actionable work must not start a supervisor on repeated background checks.
   for (let check = 0; check < 3; check++) expect(await execute("auto-build", {})).toEqual({ prompted: false });

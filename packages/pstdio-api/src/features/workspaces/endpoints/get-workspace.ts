@@ -36,7 +36,10 @@ export const getWorkspaceRoute = createRoute({
 export const getWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof getWorkspaceRoute> => {
   return async (c) => {
     const { projectId, project_id, shorthand } = c.req.valid("query");
-    const workspace = await deps.workspaceService.getByShorthand((projectId ?? project_id)!, shorthand);
+    const scope = (projectId ?? project_id)!;
+    const workspace =
+      (await deps.workspaceService.getByShorthand(scope, shorthand)) ??
+      (await deps.personalHistoryService.getWorkspaceByShorthand(scope, shorthand));
 
     if (!workspace) {
       return c.json({ error: `Workspace not found: ${shorthand}` }, 404);

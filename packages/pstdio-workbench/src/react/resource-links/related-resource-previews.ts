@@ -2,6 +2,7 @@ import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { NavigationTarget, RegisteredResourceKind, WorkbenchModuleContext } from "../../core";
 import { relatedResourcePageKey, relatedResourceStateKey } from "./related-resource-page-key";
 import { createRelatedResourcePreferences } from "./related-resource-preferences";
+import { resolveRelatedOpenings } from "./related-resource-resolution";
 import type { WorkbenchResourceLinksOptions } from "./resource-links-module";
 import { createResourcePreviewOpener } from "./resource-preview-opener";
 
@@ -10,6 +11,14 @@ const targetResource = (target: NavigationTarget): ResourceRef | undefined => {
   if (target.kind === "compound") return target.targets.map(targetResource).find(Boolean);
   return target.kind === "page" || target.kind === "panel" ? target.resource : undefined;
 };
+
+interface RelatedLookup {
+  resource: ResourceRef;
+  owner: RegisteredResourceKind;
+  controller: AbortController;
+  removed: Set<string>;
+  promise: Promise<void>;
+}
 
 export const registerRelatedResourcePreviews = (
   ctx: WorkbenchModuleContext,
@@ -21,14 +30,7 @@ export const registerRelatedResourcePreviews = (
   const opener = createResourcePreviewOpener(ctx);
   const canonicalize = (source: ResourceRef) =>
     options.canonicalize(source) ?? (source.projectId && source.extensionId ? source : undefined);
-  const pending = new Map<
-    string,
-    {
-      owner: RegisteredResourceKind;
-      controller: AbortController;
-      promise: Promise<void>;
-    }
-  >();
+  const pending = new Map<string, RelatedLookup>();
   const abortAll = () => {
     for (const { controller } of pending.values()) controller.abort();
   };
@@ -47,13 +49,10 @@ export const registerRelatedResourcePreviews = (
   let disposed = false;
   const preferences = createRelatedResourcePreferences(ctx, canonicalize);
   const enabled = () => ctx.preferences.getValue(openRelatedResourcesPreference) !== false;
-  const load = async (
-    resource: ResourceRef,
-    owner: RegisteredResourceKind,
-    controller: AbortController,
-    present: boolean,
-  ) => {
+  const load = async (request: RelatedLookup, present: boolean) => {
+    const { resource, owner, controller, removed } = request;
     const pageKey = relatedResourcePageKey(ctx);
+    const available = (target: ResourceRef) => !removed.has(resourceKey(target));
     const current = () =>
       !controller.signal.aborted &&
       enabled() &&
@@ -62,29 +61,31 @@ export const registerRelatedResourcePreviews = (
     try {
       const entries = await owner.relatedOpenings!(resource, controller.signal);
       if (!current()) return;
-      const openings = preferences.openings(
-        resource,
-        entries.filter(
-          (entry) =>
-            entry.autoOpen === true &&
-            entry.resource.projectId === resource.projectId &&
-            resourceKey(entry.resource) !== resourceKey(resource),
-        ),
+      const defaults = entries.filter(
+        (entry) =>
+          entry.autoOpen === true &&
+          entry.resource.projectId === resource.projectId &&
+          resourceKey(entry.resource) !== resourceKey(resource) &&
+          available(entry.resource),
       );
+      const openings = preferences.openings(resource, defaults);
       if (!present) return;
       if (!openings.length) return;
-      const resolved = await options.createService(resource).resolve(
-        openings.map((entry) => entry.resource),
-        controller.signal,
-      );
+      const resolved = await resolveRelatedOpenings({
+        defaults,
+        openings,
+        service: options.createService(resource),
+        signal: controller.signal,
+        available,
+        current,
+      });
       if (!current()) return;
-      const targets = new Map(resolved.map((entry) => [resourceKey(entry.resource), entry.target]));
       openingPreviews = true;
       try {
         preferences.run(() => {
-          for (const entry of openings) {
-            const target = targets.get(resourceKey(entry.resource));
-            if (target) opener.open(target, resource, entry, preferences.shouldReveal(resource, entry));
+          for (const { entry, target } of resolved) {
+            if (current() && available(entry.resource))
+              opener.open(target, resource, entry, preferences.shouldReveal(resource, entry));
           }
         });
       } finally {
@@ -109,12 +110,21 @@ export const registerRelatedResourcePreviews = (
     }
     existing?.controller.abort();
     preferences.enter(resource);
-    const controller = new AbortController();
-    const promise = load(resource, owner, controller, present).finally(() => {
-      if (pending.get(key)?.controller === controller) pending.delete(key);
-    });
-    pending.set(key, { owner, controller, promise });
-    return promise;
+    const completion = Promise.withResolvers<void>();
+    const request: RelatedLookup = {
+      resource,
+      owner,
+      controller: new AbortController(),
+      removed: new Set(),
+      promise: completion.promise,
+    };
+    pending.set(key, request);
+    void load(request, present)
+      .finally(() => {
+        if (pending.get(key) === request) pending.delete(key);
+      })
+      .then(completion.resolve, completion.reject);
+    return request.promise;
   };
   const primary = ctx.pageLocations.onDidNavigate((location) => {
     if (openingPreviews) return;
@@ -157,6 +167,17 @@ export const registerRelatedResourcePreviews = (
       if (ctx.resources.getKind(owner.kind, owner.extensionId) !== owner) controller.abort();
     }
   });
+  const removal = ctx.resources.onWillRemove((resource) => {
+    const key = resourceKey(resource);
+    for (const request of pending.values()) {
+      if (request.controller.signal.aborted) continue;
+      // The owner may not have returned the target identity yet. Track removals
+      // only for the pending request; later authoritative opens start fresh.
+      request.removed.add(key);
+      if (key === resourceKey(request.resource)) request.controller.abort();
+    }
+    return [];
+  });
   const preference = ctx.preferences.onDidChangeValue((name) => {
     if (name === openRelatedResourcesPreference && !enabled()) abortAll();
   });
@@ -190,6 +211,7 @@ export const registerRelatedResourcePreviews = (
       navigation.dispose();
       project();
       owners();
+      removal.dispose();
       preference.dispose();
       selection.dispose();
       selectionState();

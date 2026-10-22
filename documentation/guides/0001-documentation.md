@@ -9,7 +9,9 @@ Prompt Studio is a workbench where people and agents build and use tools through
 - [Run tests and validate changes](development/0002-testing.md)
 - [Build and smoke-test the relay](development/0006-relay.md)
 - [Develop private account authority](development/0007-account-manager.md)
+- [Device login development](development/0011-device-login.md)
 - [Test the relay with two dashboards](development/0008-two-dashboard-relay.md)
+- [Configure private service diagnostics](development/0010-service-diagnostics.md)
 - [Write an extension](extensions/0001-authoring.md)
 - [Look up SDK methods](../references/sdk/0003-api.md)
 - [Check lessons when stuck](../lessons-learned)
@@ -183,6 +185,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0003 — Storybook coverage](development/0003-storybook-coverage.md)
 - [0004 — Pull request area labels](development/0004-pull-request-labels.md)
 - [0005 — Extension conformance and regression coverage](development/0005-conformance.md)
+- [0012 — Portable relay and account manager deployment](development/0012-portable-cloud-deployment.md)
 
 ### Build extensions
 
@@ -228,7 +231,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0023 — Worktrees and Git operations](../references/architecture/0023-worktrees.md)
 - [0024 — Extension API version checks](../references/architecture/0024-extension-api-version-checks.md)
 - [0025 — Database upgrades](../references/architecture/0025-database-upgrades.md)
-- [0026 — Synchronization contracts](../references/architecture/0026-synchronization-contracts.md)
+- [0026 — Local CRDT storage](../references/architecture/0026-synchronization-contracts.md)
 
 ### CLI
 
@@ -305,8 +308,8 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0003 — PRD: Real-time Updates](../requirements/platform/0003-realtime-updates.md)
 - [0004 — PRD: Templates and skills](../requirements/platform/0004-templates-and-skills.md)
 - [0005 — PRD: Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
-- [0007 — PRD: Synchronization contracts v0.1](../requirements/platform/0007-synchronization-contracts.md)
 - [0013 — PRD: Reliable documentation and extension authoring](../requirements/platform/0013-documentation-and-skills-reliability.md)
+- [0014 — PRD: Local-first sync with a blind relay (proposed)](../requirements/platform/0014-local-first-sync.md)
 
 - Extension API plans: [0009 — PRD: Standardize extension storage](../requirements/platform/0009-standardize-storage-api.md), [0010 — PRD: Bound client storage and isolate sync failures](../requirements/platform/0010-bound-client-storage-and-isolate-sync-failures.md), [0011 — PRD: Simplify extension APIs](../requirements/platform/0011-simplify-extension-apis.md), [0012 — PRD: Align extension API shapes](../requirements/platform/0012-align-extension-api-shapes.md)
 

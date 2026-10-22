@@ -8,3 +8,7 @@ const fixture = await createReferenceFixture(
 );
 afterAll(() => fixture.close());
 registerConformance(() => fixture.scenario());
+
+// Covered checkpoint contracts use independent tables and the same isolated services.
+import "./coverage.integration";
+import "./document-session.integration";

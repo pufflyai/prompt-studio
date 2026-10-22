@@ -1,5 +1,6 @@
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
 import { readAttempt } from "../data/attempt-storage";
+import { autoBuildDispatches } from "../data/auto-build-dispatches";
 import { readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { resolveImplementationBase } from "../data/implementation-targets";
@@ -77,6 +78,7 @@ export const autoBuildDispatchCommand = defineCommand({
   },
   async run(ctx, { ticket, revision, ...input }) {
     return withWriteGuard(ctx, "attempt-launch", async () => {
+      const owner = await readAutoBuildSupervisor(ctx);
       const mode = await readAutoBuildMode(ctx);
       if (!mode.enabled || mode.revision !== revision)
         return { decision: "wait" as const, reason: "auto-build-stopped" };
@@ -102,6 +104,11 @@ export const autoBuildDispatchCommand = defineCommand({
       };
       const result = await dispatchNext(ctx, candidate, beforeDispatch, input);
       if (result.decision === "started") {
+        if (owner.sessionId)
+          await autoBuildDispatches(ctx, owner.sessionId).put(result.workspaceId, {
+            workspaceId: result.workspaceId,
+            dispatchedAt: new Date().toISOString(),
+          });
         // The supervisor already knows about work it dispatched.
         await withWriteGuard(
           ctx,

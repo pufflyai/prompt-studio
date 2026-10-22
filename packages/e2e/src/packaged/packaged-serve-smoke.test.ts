@@ -6,11 +6,15 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
+// Account checks include project sync status, native sign-in cancellation, and authenticated presence.
+import { registerAccountSmokeTests } from "./packaged-account-smoke";
 import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
 // Includes retained creation drafts, backdrop protection, and creation without row activation.
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
+// Chat checks retain replay chunks, shared open-tab membership, cached history, and panel animation and resize behavior.
+import { registerPackagedChatMotionSmokeTests } from "./packaged-chat-motion-smoke";
 // Localized parameter guidance is readable in compiled CLI help.
 import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
 // Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
@@ -18,21 +22,30 @@ import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-vie
 // OpenAPI publishes recursive command causes without expanding forever.
 // Canonical and deprecated streams preserve full rejections through the SDK and compiled CLI.
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
+// Shared source checks retain transitive edits and reloads across concurrent projects.
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 // Independent hosts also bind one workbench identity to their own environment and folder.
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
 // Core extension checks cover extension-owned draft storage, versioned template edits, and allocated file roots.
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
+// packaged-command-palette.spec.ts checks theme selection from the palette and persistence after reload.
+// packaged-main-fullscreen.spec.ts checks Main fullscreen, its minimized Side bubble, keyboard exit and reload state.
+// Desktop packaged-project-tabs.spec.ts checks the title-bar maximize control and focus after fullscreen exit.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
-// grouped ticket settings and icons, cleanup/merge settings, saved document links, and ticket/workspace navigation.
+// grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
+// Document sync checks the local, synced and needs-attention project states from the sync owners.
+import { registerDocumentSyncSmokeTests } from "./packaged-document-sync-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 // Includes linked dependency loading and missing dependency diagnostics.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
+// CRDT storage checks atomic saves, ignored revisions, local retry outcomes and durable restart.
+// Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
+// scripts/verify/storage-package-consumer.ts checks the packaged SDK's two-device merge and replacement report.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -49,18 +62,22 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Also checks native harness controls and their structured values in packaged command handlers.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
-// Shared record contracts remain covered through the compiled host. The separate relay
-// image checks authenticated HTTP, immutable asset ranges and finite native sockets.
-// Native relay coverage hydrates artifact mounts and attachment URLs, and restores foreign journal work after restart.
-import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
+// Navigation metadata preserves independent panel capabilities, including whole-panel movement through the compiled host.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
 // The browser suite checks typed host props, page updates, structured capability errors and saved settings.
+// packaged-editing-sessions.spec.ts checks shared local edits, coalesced writes and cancelled previews across opaque views.
 // Real React Query subscriptions cover matching events, reconnect deduplication and unmount cleanup.
 // Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
+// Private history stays readable offline and appears in the initial live-sync snapshot after restart.
+import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
-// Planner covers timeline state, dependency recovery, Git conflicts and grouped Auto Build save outcomes.
+// Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
+// Its browser smoke also checks immediate ticket property edits while persistence is held open.
+// Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
+// Review requests start conversations only when opened and reuse them on later visits.
+// Ticket document loads observe only the selected ticket's storage version.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
@@ -74,8 +91,13 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 // Includes resource path prefixes, owner resolver commands, and resolution through HTTP.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { registerResourcePageSmokeTests } from "./packaged-resource-pages-smoke";
+// A delayed owner resolution cannot resurrect a deleted target or save cleanup as a manual closure.
+import { registerResourceRemovalSmokeTests } from "./packaged-resource-removal-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { registerSessionLaunchSmokeTests } from "./packaged-session-launch-smoke";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
+// The session query smoke also checks open-tab resource retention in the compiled host.
+// The fixed 1,000-session / 1,000-ticket compiled navigation gate lives in ../perf/subnav-benchmark.ts.
 // Packaged browser coverage also checks shared Session action groups and lazy title search in the tab menu.
 // Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
 import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
@@ -84,8 +106,10 @@ import { registerStorageMigrationSmokeTests } from "./packaged-storage-migration
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
+// Guest pointer presses and clicks reach the host once, and dismiss tab menus across the sandbox boundary.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 // Its native Notes editor persists Select All heading changes across preserved blank lines and reload.
+// A context-menu deletion resolves its hidden note identifier without opening a parameter form.
 // packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
 // The paired session-menu browser check restores focus to its tab after Escape.
@@ -102,8 +126,12 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Dropping a session preview pins it and keeps the destination terminal preview open and leftmost.
 // Unpinning a created session replaces the tray preview and keeps it leftmost.
 // Adding Terminal in Side or Session in Bottom keeps the other empty panel open.
+// The packaged empty-panel browser flow also checks nearby tab targets, mirrored Navigation, panel handles and reload.
 
+// Two hosts check an interrupted first download, offline and back, and local edits that merge when sync restarts.
+import { registerTwoDeviceSyncSmokeTests } from "./packaged-two-device-sync-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
+import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";
 
 const BUILD_TIMEOUT = 180_000;
 
@@ -114,6 +142,7 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 registerSharedCodexSmokeTests();
+registerWorkspaceCleanupSmokeTests();
 registerCliHelpSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
@@ -124,7 +153,7 @@ registerCollectionViewOrderSmokeTests();
 registerConnectionStatusSmokeTests();
 registerAssetStorageSmokeTests();
 registerGroupedStorageSmokeTests();
-registerNativeRelaySmokeTests();
+registerAccountSmokeTests();
 registerNotificationStatusSmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.
@@ -146,7 +175,10 @@ test("includes extension development, smoke test, browser setup and update comma
   expect(updateResult.stdout).toContain("extensions update [name]");
 });
 
+// Includes host drive discovery and browsing through the packaged filesystem API.
 registerPackagedProjectSetupSmokeTests();
+registerPackagedChatMotionSmokeTests();
+registerSessionLaunchSmokeTests();
 
 test(
   "loads default extension dependencies, native actions and command-backed workspace choices",
@@ -224,7 +256,8 @@ test(
   PACKAGED_TEST_TIMEOUT,
 );
 
-// Browser smoke also covers mode panel restoration and generic page-preview cleanup.
+// Browser smoke also covers mode panel restoration, extension-mode session reload, and generic page-preview cleanup.
+// Showcase resource checks include resolving an unknown Artifact without a failed command.
 registerPackagedShowcaseSmokeTests();
 registerPackagedPlannerSmokeTests();
 
@@ -265,10 +298,12 @@ registerResourceLinksSmokeTests();
 
 registerCommandStreamSmokeTests();
 registerResourceChoicesSmokeTests();
+registerResourceRemovalSmokeTests();
 // Includes edit recovery after dispatch with draft, model, parameter, and file ownership checks.
 registerQueuedRequestSmokeTests();
 
 registerSessionQuerySmokeTests();
+// Migration smoke also checks stable import IDs, random UUIDv7 IDs, and core order positions.
 registerStorageMigrationSmokeTests();
 
 registerWorkspaceCapabilitiesSmokeTests();
@@ -276,3 +311,7 @@ registerWorkspaceCapabilitiesSmokeTests();
 registerPageParamsSmokeTests();
 
 registerResourcePageSmokeTests();
+
+registerDocumentSyncSmokeTests();
+registerPersonalHistorySmokeTests();
+registerTwoDeviceSyncSmokeTests();

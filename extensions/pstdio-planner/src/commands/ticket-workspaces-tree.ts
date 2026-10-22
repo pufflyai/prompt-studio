@@ -37,7 +37,7 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
     workspaceType,
     ...ticket,
   };
-  const resource = { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata };
+  const resource = { type: "workspace", extensionId: "pstdio", id: workspace.id, label, metadata: workspaceMetadata };
 
   return {
     id: `workspace-${workspace.id}`,

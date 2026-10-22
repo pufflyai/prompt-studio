@@ -6,6 +6,8 @@ Auto Build uses a supervisor to assign valid, unassigned tickets using your prom
 
 Open **Project Timeline** and click **Auto Build**. Describe how the supervisor should choose work, then adjust the ignore filters below the prompt and click the primary **Auto Build** button.
 
+Starting Auto Build immediately queues a check. The first check starts the supervisor as soon as it finds eligible work; the supervisor then queries its full scope before launching tickets. The queued startup status stays available while that check runs.
+
 For example: “Prioritize small independent tickets for the next release. Leave design decisions for me.”
 
 ![Auto Build form with a supervisor prompt and ignore filters.](../../../documentation/images/auto-build-confirmation.png)
@@ -25,6 +27,8 @@ The `auto-build.configure` command returns a `storageOutcome`. If another caller
 ## How the supervisor works
 
 Planner checks every three minutes and also checks when tickets change or a worker session finishes. When relevant work changes and valid work can run, Planner starts or resumes the supervisor session. A new session receives your prompt and the Auto Build instructions once. Later wakes are short messages asking it to query current work. An hourly reminder explains that progress has stalled. Worker failures, freed capacity, submitted revisions, and answered requests can change the available work. The supervisor's own dispatches are already known to it. Its completion event does not wake it again.
+
+The scheduled check exits before reading tickets or attempts when Auto Build is off. While it is on, the timer checks only attempts dispatched by the current supervisor and their tickets and worker sessions. It resumes a sleeping supervisor when that work changes or sends an hourly stalled-progress reminder. It skips active supervisors and does not scan the project for new work or update ticket statuses. Project and ticket events discover new work; session and ticket events update managed statuses, including when Auto Build is off. Dispatch history stays with its supervisor conversation, so a new conversation starts with no dispatched work.
 
 On its first turn for a new prompt, the supervisor saves the matching track, status, tag, or parent queries with `auto-build scope`. Multiple queries combine as alternatives. Wake checks, `pst tickets next`, and dispatch then use that same scope. An explicit `next` filter can narrow it further. Jobs outside the scope do not wake the supervisor. Prerequisites outside the scope still affect whether its jobs can run. Stopping and starting Auto Build creates a new mode revision and a fresh supervisor session. The new supervisor receives the current brief and saves a fresh scope. Editing the configuration while Auto Build is enabled keeps its current supervisor; the next wake asks it to read the updated configuration and save its scope. Once the scope is current, wakes do not repeat configuration setup or the initial instructions.
 

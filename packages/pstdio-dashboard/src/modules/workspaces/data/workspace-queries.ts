@@ -1,4 +1,3 @@
-import type { ListWorkspaceFilesInput } from "@pstdio/sdk/api";
 import type { Diff } from "@pstdio/ui/diff";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { getApiClient } from "@/lib/api";
@@ -11,9 +10,6 @@ export type WorkspaceDiffMode = "current" | "fork_point";
 
 export const workspaceDiffFilePath = (diff: Pick<WorkspaceDiffSummaryFile, "filePath" | "newPath" | "oldPath">) =>
   diff.newPath ?? diff.oldPath ?? diff.filePath;
-
-export const workspaceFilesQueryKey = (workspaceId: string, input: ListWorkspaceFilesInput) =>
-  ["workspace-files", workspaceId, "list", input] as const;
 
 export const workspaceDiffFilesQueryKey = (workspaceId: string, mode: WorkspaceDiffMode) =>
   ["workspace-diffs", workspaceId, "files", mode] as const;

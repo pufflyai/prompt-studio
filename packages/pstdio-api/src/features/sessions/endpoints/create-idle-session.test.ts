@@ -50,7 +50,7 @@ describe("creating a session before its first message", () => {
           body: JSON.stringify({ prompt: "First message" }),
         });
         expect(followup.status).toBe(200);
-        await waitForCompleted(isolated.app, session.id);
+        await waitForCompleted(isolated, session.id);
         expect(isolated.harness.start).toHaveBeenCalledTimes(1);
         expect(isolated.harness.start.mock.calls[0]?.[1]).toMatchObject({ prompt: "First message" });
         expect(isolated.harness.resume).not.toHaveBeenCalled();
@@ -61,7 +61,15 @@ describe("creating a session before its first message", () => {
   }
 
   test("does not queue empty creation when capacity is full, but queues its first message", async () => {
-    const isolated = await createIsolatedApp({ deferExit: true });
+    const activeStarted = Promise.withResolvers<void>();
+    const queuedStarted = Promise.withResolvers<void>();
+    const isolated = await createIsolatedApp({
+      deferExit: true,
+      onStart: (input) => {
+        if (input.prompt === "Work") activeStarted.resolve();
+        if (input.prompt === "First queued message") queuedStarted.resolve();
+      },
+    });
     try {
       const project = await createProject(isolated.app, "Full capacity");
       await isolated.deps.settingsService.update({ max_concurrent_sessions: 1 });
@@ -71,6 +79,7 @@ describe("creating a session before its first message", () => {
         body: JSON.stringify({ project_id: project.id, title: "Working", agent: FAKE_ID, prompt: "Work" }),
       });
       expect(active.status).toBe(201);
+      await activeStarted.promise;
       const response = await isolated.app.request("/v1/sessions", {
         method: "POST",
         headers,
@@ -90,14 +99,12 @@ describe("creating a session before its first message", () => {
       expect(followup.status).toBe(200);
       expect(await followup.json()).toMatchObject({ status: "queued", follow_up: { status: "queued" } });
       isolated.harness.completeAll();
-      for (let attempt = 0; attempt < 30 && isolated.harness.start.mock.calls.length < 2; attempt += 1) {
-        await Bun.sleep(20);
-      }
+      await queuedStarted.promise;
       expect(isolated.harness.start).toHaveBeenCalledTimes(2);
       expect(isolated.harness.start.mock.calls[1]?.[1]).toMatchObject({ prompt: "First queued message" });
       expect(isolated.harness.resume).not.toHaveBeenCalled();
       isolated.harness.completeAll();
-      await waitForCompleted(isolated.app, session.id);
+      await waitForCompleted(isolated, session.id);
     } finally {
       isolated.harness.completeAll();
       await isolated.close();
@@ -125,7 +132,7 @@ describe("creating a session before its first message", () => {
       });
       expect(response.status).toBe(201);
       const session = await response.json();
-      await waitForCompleted(isolated.app, session.id);
+      await waitForCompleted(isolated, session.id);
       expect(isolated.harness.start).toHaveBeenCalledTimes(1);
       expect(isolated.harness.start.mock.calls[0]?.[1]).toMatchObject({
         prompt: "",
@@ -184,7 +191,7 @@ for (const queued of [false, true]) {
         await isolated.deps.settingsService.update({ max_concurrent_sessions: null });
         await createSessionScheduler(isolated.deps).drainQueue();
       }
-      await waitForCompleted(isolated.app, session.id);
+      await waitForCompleted(isolated, session.id);
       expect(starts).toHaveLength(1);
       expect(starts[0]?.prompt).toBe("First switched message");
       expect(Object.keys(starts[0]?.params ?? {})).toEqual([]);

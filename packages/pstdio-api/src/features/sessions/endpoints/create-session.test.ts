@@ -242,17 +242,13 @@ describe("POST /v1/sessions", () => {
     expect(createRes.status).toBe(201);
     const created = await createRes.json();
 
-    let status = "in_progress";
-    for (let attempt = 0; attempt < 10; attempt += 1) {
-      const getRes = await app.request(`/v1/sessions/${created.id}`);
-      expect(getRes.status).toBe(200);
-      const body = await getRes.json();
-      status = body.status;
-      if (status === "failed") break;
-      await Bun.sleep(10);
-    }
-
-    expect(status).toBe("failed");
+    const stream = await openSessionStream(app, created.id);
+    const events = await stream.text();
+    expect(events).toContain("event: end");
+    expect(events).toContain('"status":"failed"');
+    const getRes = await app.request(`/v1/sessions/${created.id}`);
+    expect(getRes.status).toBe(200);
+    expect(await getRes.json()).toMatchObject({ status: "failed" });
   });
 });
 

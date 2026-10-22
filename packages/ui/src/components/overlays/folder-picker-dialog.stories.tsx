@@ -6,6 +6,7 @@ import { FolderPickerDialog } from "./folder-picker-dialog";
 const meta = {
   title: "Overlays/FolderPickerDialog",
   component: FolderPickerDialog,
+  tags: ["folder-picker"],
   parameters: {
     docs: {
       description: {

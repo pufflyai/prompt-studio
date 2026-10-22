@@ -7,8 +7,9 @@ import {
   applyOwnedWidgetLayoutReconciliation,
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
+import { clampPanelSizes } from "../../registries/layout/panel-size-policy";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
-import { applyModePanelAvailability, panelsForMode } from "../../registries/modes/mode-layout";
+import { applyModePanelPolicy } from "../../registries/modes/mode-layout";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
@@ -38,7 +39,11 @@ export interface ConnectWorkbenchPageRuntimeInput {
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
   saveModeLayout?(projectId: string | undefined, modeId: string, layout: WorkbenchLayout): void;
-  savePageMain?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>, layout: WorkbenchLayout): void;
+  savePageMain?(
+    state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+    layout: WorkbenchLayout,
+    beforePreviewRemoval?: WorkbenchLayout,
+  ): void;
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
@@ -131,11 +136,13 @@ const applyPageState = (
   const pageLayout = input.loadPageLayout?.(state);
   const restoresMode = isModeReturn(previous, state, modeChanged, modeLayout);
   if (source === "transition") {
+    const beforePreviewRemoval = input.layout.getLayout();
     if (modeChanged && previous.activeModeId)
       input.saveModeLayout?.(previous.projectId, previous.activeModeId, input.layout.getLayout());
     for (const preview of departingPagePreviews(state, previous, input.layout.getLayout()))
       input.layout.removeWidgetPlacement(preview.widgetId);
-    if (pageContextChanged(state, previous)) input.savePageMain?.(previous, input.layout.getLayout());
+    if (pageContextChanged(state, previous))
+      input.savePageMain?.(previous, input.layout.getLayout(), beforePreviewRemoval);
   }
   activateWorkbenchPageMode(input.modes, state.activeModeId, () => {
     // Scope listeners must apply the destination mode's panel policy to its saved layout.
@@ -159,7 +166,10 @@ const applyPageState = (
     };
     const layout = reconcilePageLayout(layoutInput, latest, restoresLayout);
     const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
-    input.layout.restoreLayout(mode ? applyModePanelAvailability(layout, panelsForMode(mode)) : layout);
+    const availableLayout = applyModePanelPolicy(layout, mode, (region) =>
+      input.layout.getRegionSettings(region, mode?.id),
+    );
+    input.layout.restoreLayout(clampPanelSizes(availableLayout, input.layout.getRegionSize));
     syncOwnedPanelMenus(input.layout);
     if (source === "transition") revealPagePlacements(input, layout, activation);
   });

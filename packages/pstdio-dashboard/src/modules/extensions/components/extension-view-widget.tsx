@@ -55,11 +55,13 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
   }
 
   const { extensionInstanceId, installName, projectId, view, webview, slotKind } = derived;
+  const status = input.panel.region === "status";
 
   return (
-    <Box position="relative" w="full" h="full" minH="0">
-      <Box position="absolute" inset="0">
+    <Box position="relative" w={status ? "max-content" : "full"} h="full" minH="0">
+      <Box position={status ? "relative" : "absolute"} inset={status ? undefined : "0"} h="full">
         <ExtensionWebviewFrame
+          sizing={status ? "content-width" : undefined}
           extensionId={view.extensionId}
           extensionInstanceId={extensionInstanceId}
           installName={installName}

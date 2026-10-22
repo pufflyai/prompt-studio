@@ -84,6 +84,7 @@ export { createControllerTerminalBridge, WorkbenchTerminalPanel } from "./termin
 export { useWorkbenchThemePreferences } from "./theme/use-workbench-theme-preferences";
 export { WorkbenchThemeProvider } from "./theme/workbench-theme-provider";
 export { WorkbenchThemeScope } from "./theme/workbench-theme-scope";
+export { FullscreenControls as WorkbenchFullscreenToggle } from "./workbench/fullscreen-controls";
 export type { WorkbenchOverlayWidgetConfig } from "./workbench/overlay-layer";
 export { WorkbenchOverlayLayer } from "./workbench/overlay-layer";
 export { Workbench } from "./workbench/workbench";
@@ -94,3 +95,4 @@ export {
   type WorkbenchModuleHostProps,
   type WorkbenchModuleHostRegistration,
 } from "./workbench/workbench-module-host";
+export { WorkbenchPanelToggles } from "./workbench/workbench-panel-toggles";

@@ -95,6 +95,7 @@ describe("ticket files tree workspace commands", () => {
             },
             resource: {
               type: "workspace",
+              extensionId: "pstdio",
               id: "ws-1",
               label: "WS-1",
               metadata: {

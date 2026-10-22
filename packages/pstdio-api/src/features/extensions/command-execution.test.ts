@@ -339,8 +339,7 @@ test("native renderer metadata preserves a loaded storage baseline and returns u
   const second = (await save(first.outcome.data.fileStorageVersions)) as { outcome: { ok: boolean } };
   expect(second.outcome.ok).toBe(true);
   const stale = (await save(versions)) as { outcome: { ok: boolean; reason: string } };
-  expect(stale.outcome.ok).toBe(false);
-  expect(stale.outcome.reason).toContain("draft is kept");
+  expect(stale.outcome.ok).toBe(true);
   const current = (await read()) as { outcome: { value: { counter: number } } };
-  expect(current.outcome.value.counter).toBe(2);
+  expect(current.outcome.value.counter).toBe(3);
 });

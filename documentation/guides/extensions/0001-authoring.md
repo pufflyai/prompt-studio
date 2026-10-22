@@ -498,3 +498,12 @@ When your Prompt Studio updates, run `pst extensions check`. If it reports `exte
 - React to commands and events with the [Automation cookbook](0003-automation.md).
 - Build a custom page with a webview. See [Webviews and storage](../../references/extensions/0005-webview-and-storage-api.md).
 - Look up every contribution in the [extension API reference](../../references/extensions/0001-api.md) and the [manifest rules](../../references/extensions/0002-manifest-and-installation.md).
+
+## Numbered resources
+
+For tools with numbers such as PS-12 or RP-4, declare a resource kind prefix and use
+core's resource allocation API. Store the resource UUID and read its current number
+from core. Extensions do not keep their own copy or repair numbers after offline
+merges. The [resource numbers reference](../../references/sdk/0002-resources.md#resource-numbers)
+describes allocation, current identities, aliases, and change events available on
+`main` for the release after 0.44.0. The Bookmarks example does not need numbers.

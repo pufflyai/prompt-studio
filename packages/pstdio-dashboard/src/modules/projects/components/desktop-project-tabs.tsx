@@ -1,7 +1,7 @@
 import { IconButton } from "@chakra-ui/react";
 import { Tooltip, WindowTabs, WindowTitleBar } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
-import { useWorkbenchStore } from "@pstdio/workbench/react";
+import { useWorkbenchStore, WorkbenchFullscreenToggle, WorkbenchPanelToggles } from "@pstdio/workbench/react";
 import { Folder, Plus } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -37,7 +37,15 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
     else void controller.select(workbench, id);
   };
   return (
-    <WindowTitleBar platform={platform}>
+    <WindowTitleBar
+      platform={platform}
+      actions={
+        <>
+          <WorkbenchPanelToggles workbench={workbench} />
+          <WorkbenchFullscreenToggle workbench={workbench} />
+        </>
+      }
+    >
       <WindowTabs
         tabs={tabs}
         selectedId={typeof selected === "string" ? selected : undefined}

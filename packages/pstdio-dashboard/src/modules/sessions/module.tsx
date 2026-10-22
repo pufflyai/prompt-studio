@@ -29,6 +29,7 @@ import { createDashboardSessions, findDashboardSession } from "./data/dashboard-
 import { subscribeSessionListData } from "./data/session-data-subscription";
 import { createSessionIndicator } from "./session-indicator";
 import { registerSessionResourceActions } from "./session-resource-actions";
+import { registerSessionResourceRetention } from "./session-resource-retention";
 import { registerSessionResourceSync } from "./session-resource-sync";
 import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./sessions-sidenav-tree";
 
@@ -164,6 +165,7 @@ const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
     owner: { kind: "page", id: dashboardViews.sessions.id, extensionId: "pstdio" },
     sourceExtensionId: "pstdio",
     declarationIndex: 0,
+    getStructure: () => buildSessionsLevelSections(),
     getSections: () => buildSessionsLevelSections(createDashboardSessions(getDashboardSelectedProjectId(ctx))),
   });
   registerDashboardNavigationContribution(ctx, {
@@ -224,6 +226,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       registerSidenavSessions(ctx);
       registerSessionResourceActions(ctx);
       const unsubscribeResourceSync = registerSessionResourceSync(ctx, input.sessionSelectionPersistence);
+      const unsubscribeRetention = registerSessionResourceRetention(ctx);
       if (ctx.commands.getCommand(dashboardCommandIds.createSession)) {
         ctx.keybindings.registerKeybinding({
           action: { kind: "command", commandId: dashboardCommandIds.createSession },
@@ -280,6 +283,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         dispose: () => {
           unsubscribeDashboardData();
           unsubscribeResourceSync();
+          unsubscribeRetention();
           unsubscribeSelection();
           unsubscribePage();
         },

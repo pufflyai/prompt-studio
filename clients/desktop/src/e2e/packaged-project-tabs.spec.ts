@@ -36,7 +36,15 @@ test(
       // workbench covers the lifecycle page. Chromium clicks bypass that hit test.
       await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
 
-      const secondary = app.page.getByRole("button", { name: "Show Secondary Panel" });
+      const titleBar = app.page.locator("[data-window-title-bar]");
+      const maximize = titleBar.getByRole("button", { name: "Enter Main fullscreen", exact: true });
+      await expect(maximize).toBeVisible();
+      await maximize.click();
+      await expect(titleBar).toBeHidden();
+      await app.page.getByRole("button", { name: "Exit Main fullscreen", exact: true }).click();
+      await expect(maximize).toBeFocused();
+
+      const secondary = app.page.getByRole("button", { name: "Show Bottom Panel", exact: true });
       if (await secondary.isVisible()) await secondary.click();
       await app.page
         .locator('[data-workbench-panel-header="secondary"]')
@@ -137,7 +145,13 @@ test("reports a failed tab write and recovers when the next tab change can be sa
     mkdirSync(blockedWrite);
 
     await openPackagedProject(app.page, first);
-    const error = app.page.getByText("Could not save project tabs", { exact: true });
+    const systemErrors = app.page.getByRole("button", {
+      name: "System errors: Could not save project tabs",
+      exact: true,
+    });
+    await expect(systemErrors).toBeVisible();
+    await systemErrors.click();
+    const error = app.page.getByLabel("System error list").getByText("Could not save project tabs", { exact: true });
     await expect(error).toBeVisible();
     const screenshot = testInfo.outputPath("desktop-project-tabs-save-error.png");
     await app.page.screenshot({ path: screenshot, animations: "disabled" });
@@ -146,6 +160,7 @@ test("reports a failed tab write and recovers when the next tab change can be sa
     rmSync(blockedWrite, { recursive: true });
     await openPackagedProject(app.page, second);
     await expect(error).not.toBeVisible();
+    await expect(systemErrors).not.toBeVisible();
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
       first.name,
       second.name,

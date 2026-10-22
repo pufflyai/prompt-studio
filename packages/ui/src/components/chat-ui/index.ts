@@ -38,5 +38,5 @@ export { SendButton } from "./components/send-button";
 export { useQuestionPromptState } from "./components/use-question-prompt-state";
 export { ChatWorkspaceHub } from "./components/workspace-hub";
 export type { ChatLinkCandidate, ChatLinkHandler, ChatLinkProps } from "./links/chat-link";
-export { parseChatLink } from "./links/chat-link";
+export { isGuessedChatLink, parseChatLink } from "./links/chat-link";
 export { createSerializedPromptState } from "./utils/editor-state";

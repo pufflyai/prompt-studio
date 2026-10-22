@@ -21,3 +21,12 @@ test("extension test storage stages immutable assets, retries identities, and re
     .catch((error: unknown) => error);
   expect(missing).toBeInstanceOf(Error);
 });
+
+test("record asset snapshots cannot mutate storage without a commit", async () => {
+  const storage = createMemoryStorage();
+  const asset = await storage.assets.stage({ operationId: "image", source: new Blob(["image"]) });
+  await storage.records.commit({ operationId: "save", edits: [{ recordId: "image", asset }] });
+  const record = await storage.records.read("image");
+  record.asset!.byteLength = 99;
+  expect((await storage.records.read("image")).asset).toEqual(asset);
+});

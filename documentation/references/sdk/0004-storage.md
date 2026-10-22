@@ -1,12 +1,14 @@
 # Grouped storage
 
-Save related records together, keep the revision a caller read, and retain competing work for explicit resolution.
+Save related records together and read the sync state of each save.
 
 ## Availability
 
 `ctx.storage.records`, `ctx.storage.assets`, `ctx.storage.migrate`, and `ctx.storage.readLegacy` are available in the published `@pstdio/sdk` 0.44.0 release and require host API 0.2.0. The [published package](https://registry.npmjs.org/@pstdio/sdk/-/sdk-0.44.0.tgz) includes their declarations. `@pstdio/sdk` 0.43.1 and the 0.43.1 app do not have them. In 0.43.1, `get`, `set`, `delete`, and `collection` are the supported storage methods and are not deprecated.
 
 An extension that uses these methods needs a Prompt Studio 0.44.0 app or later. Updating `@pstdio/sdk` alone gives you the types but not the host methods. See [App, SDK, and extension API versions](../extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
+
+The outcome `state` field, optional `expectedRevision`, and the deprecation of the conflict members are on `main`. They ship in the release after 0.44.0. On 0.44.0, read `status` and pass `expectedRevision` on every edit.
 
 ## Ownership and durability
 
@@ -27,23 +29,60 @@ an extension cannot manufacture an acceptance checkpoint.
 
 ## Methods
 
+### IDs, positions and migration identity
+
+These additive APIs are on `main` and ship in the release after 0.44.0.
+The [storage declarations](../../../packages/pstdio-api-contracts/src/extension-kernel/types/storage.ts)
+define their exact types.
+
+| Method | Result |
+| --- | --- |
+| `storage.ids.create(prefix?)` | A random UUIDv7. An optional prefix selects a lossless, case-sensitive 22-character Base62 body; omitting it returns a canonical UUID. |
+| `storage.positions.between(before?, after?)` | A unique position strictly between the supplied neighbours. Omit either end, or both for a first position. |
+| `storage.migrate(version, run)` | Runs `run(previousVersion, migration)` once for a scope version. Existing one-argument callbacks remain supported. |
+| `migration.id(key, prefix?)` | A UUIDv8 derived from the extension, workbench, scope, target migration version and stable source key. The optional prefix selects the same compact format. |
+
+`storage.ids.create("tk")` returns `tk_` followed by 22 Base62 characters, retaining
+all 128 UUID bits. Prefixes match `[a-z][a-z0-9]{0,15}`; an empty string is invalid.
+Without a prefix, both helpers keep canonical UUID output. Keep existing IDs
+unchanged. Compact IDs require exact, case-sensitive lookup and binary ordering;
+do not lowercase them or use locale sorting. The alphabet is
+`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`.
+
+Random IDs sort by encoded millisecond only within the same prefix when timestamps
+increase. There is no same-millisecond, clock-rollback or cross-device chronological
+guarantee. Migration IDs have no time order. The prefix affects only their encoding;
+keep it fixed for every device and retry of a migration. It does not establish
+resource ownership. Numbered resources use the same generator through
+`resources.allocate({ kind, idPrefix? })`; see [Resource identities](0002-resources.md#resource-identities).
+
+Compare positions with ordinary string comparison (`<`, `>`, or default string
+`sort()`), never `localeCompare`. The complete string includes device identity
+and a random suffix. Concurrent positions remain distinct and divisible without
+rebalancing. Store one position per stable item record so concurrent moves merge
+to one item. See [Create records and arrange items](../../guides/sdk/0003-storage.md#create-records-and-arrange-items).
+
+### Records
+
 The [public declarations](../../../packages/pstdio-api-contracts/src/extension-kernel/types/storage-records.ts)
 define the exact types exported by `@pstdio/sdk/extensions`.
 
 | Method | Result |
 | --- | --- |
 | `id(key)` | Complete opaque record address for a key in the selected storage scope. |
-| `read(recordId, branch?)` | Value, shared content, asset, deletion state, existence, and opaque revision. An optional `{ operationId }` reads retained branch work. |
+| `read(recordId)` | Value, shared content, asset, deletion state, existence, and opaque revision. |
 | `list()` | The owner's current saved records across scopes, excluding tombstones. |
-| `commit({ operationId, edits })` | Durable outcome for the entire group. Every edit supplies its caller-observed `expectedRevision`. |
-| `outcome(operationId)` | The current durable outcome, or `undefined` for an unknown operation. |
-| `conflicts()` | Unresolved conflict identities, revisions, reasons, record IDs, and alternative operation IDs. |
-| `inspect(conflictId)` | Current inputs, complete alternatives, ancestry, and the exact capture needed for resolution. |
-| `resolve(proposal)` | Outcome for a replacement of exactly the inspected capture. |
+| `commit({ operationId, edits })` | Durable outcome for the entire group. `expectedRevision` on an edit is optional. |
+| `outcome(operationId)` | The current outcome with its sync `state`, or `undefined` for an unknown operation. |
 
-Keep complete record addresses from reads and conflict inspections unchanged.
-Do not strip them to local keys. Keep revisions opaque. A revision belongs to one record and owner. Do not replace
-it with a later read when saving an earlier caller's work. A missing record has
+`conflicts()`, `inspect(conflictId)`, `resolve(proposal)` and the `branch` argument of
+`read` are deprecated. See [Deprecated conflict members](#deprecated-conflict-members).
+
+Keep complete record addresses from reads unchanged. Do not strip them to local keys.
+Keep revisions opaque. A revision belongs to one record and owner. An edit without
+`expectedRevision` applies to the record's current value on this device. An edit with
+one applies to the value the caller read. Do not replace an earlier caller's revision
+with a later read. A missing record has
 `exists: false`; deletion retains a tombstone with `exists: true` and
 `deleted: true`.
 
@@ -59,32 +98,61 @@ reference, and deletion state. A group contains at most one edit per record.
 
 | Edit field | Behavior |
 | --- | --- |
-| `replace` | Replace the whole JSON value. A competing replacement retains the whole alternative. |
-| `shared` | Ordered text/list/map operations based on the captured revision. |
-| `asset` | Select a complete immutable asset reference, or `null` to clear it. Competing versions retain alternatives. |
-| `deleted` | Save a tombstone or restore from an observed tombstone. Concurrent delete/edit work is retained. |
+| `replace` | Replace the whole JSON value. |
+| `shared` | Ordered text/list/map operations on the record's shared content. |
+| `asset` | Select a complete immutable asset reference, or `null` to clear it. |
+| `deleted` | Save a tombstone, or restore a deleted record. |
 
 Shared operations are `text.insert`, `text.delete`, `list.insert`, `list.delete`,
-`map.set`, and `map.delete`. Text and list positions refer to the observed content;
-later operations in one edit see earlier operations from that edit. Sequence edits
-merge, and independent map keys merge. Competing map-key changes retain the entire
-group. An established shared primitive does not silently change kind.
+`map.set`, and `map.delete`. Text and list positions refer to the content the edit
+applies to; later operations in one edit see earlier operations from that edit.
+Sequence edits merge, and independent map keys merge. An established shared
+primitive does not silently change kind.
 
-| Status | Meaning |
+Every outcome has the `operationId` and a sync `state`:
+
+| State | Meaning |
 | --- | --- |
-| `saved-locally` | The complete group is durable in a local-only workbench. |
-| `pending` | Work is durable and awaits relay acceptance or a dependency. |
-| `synchronized` | The relay durably accepted this operation at the returned checkpoint. |
-| `conflict` | The complete proposal is retained with a conflict ID and revision. |
+| `saved-locally` | The complete group is durable on this device. In a project that does not sync, this is final. |
+| `waiting-to-sync` | The group is durable on this device and waits to reach the relay. `reason` says why. |
+| `synced` | The relay stored the group. |
+| `offline` | The group is durable on this device, and the device cannot reach the relay. |
+| `needs-attention` | The group is kept on this device but not applied. It needs attention before it can apply or sync. |
 
-`synchronized` does not mean every client has downloaded the work or its bytes.
-Unrelated records continue while another group waits or conflicts. Required asset
-bytes must be complete before a group can publish any member. Use
+Call `outcome(operationId)` again to wait until a save has synced. `synced` does not
+mean every device has downloaded the work or its bytes. Required asset bytes must be
+complete before a group can sync any member. Use
 [`storage.assets`](../../guides/sdk/0002-assets.md) to stage and read those bytes.
 
-## Conflict resolution
+Today no save reports `offline`. Cloud projects report it once they sync through the
+relay.
 
-Use `inspect` when a person or command is ready to choose a complete branch. Pass
+## Deprecated conflict members
+
+Edits from several devices are moving to automatic merging, so there are no
+conflicts to inspect. These members are deprecated and are removed together in the next
+breaking release:
+
+| Deprecated | Replacement |
+| --- | --- |
+| `records.conflicts()` | None. `outcome(operationId)` reports a save that needs attention. |
+| `records.inspect(conflictId)` | None. |
+| `records.resolve(proposal)` | Save the chosen values with `commit`. |
+| `records.read(recordId, branch)` | `read(recordId)`. |
+| Outcome `status`, with `checkpoint`, `conflictId` and `conflictRevision` | Outcome `state`. |
+| `StorageConflict`, `StorageConflictInspection`, `StorageResolution` | None. |
+
+Until then they keep working. A stale `expectedRevision` still keeps the whole group as
+an alternative instead of applying it when the edit replaces a JSON value that changed,
+deletes or restores the record, changes an asset that changed, or sets a map key that
+changed. Its outcome has
+`status: "conflict"` and `state: "needs-attention"`. Stale text and list edits, and edits
+to other map keys, still merge. The old `status`
+values map to `state` like this: `saved-locally` to `saved-locally`, `pending` to
+`waiting-to-sync`, `synchronized` to `synced`, and `conflict` to `needs-attention`.
+
+Until removal, resolution works as before. Use `inspect` when a person or command is
+ready to choose a complete branch. Pass
 its `expectedConflicts`, `capturedOperationIds`, and `expectedInputs` back unchanged.
 The inspection includes valid pending local saves and their current conflict
 revisions, even when the relay first reported the conflict. A fresh choice uses
@@ -104,7 +172,7 @@ and returns `saved-locally`, never a relay acknowledgment.
 ## Deprecated structured storage
 
 `get`, `set`, `delete`, and collection replacement methods remain supported.
-Their replacements are `records.read` and guarded `records.commit` calls. These
+Their replacements are `records.read` and `records.commit` calls. These
 old calls now use the same durable owner. Existing KV and collection rows are
 imported and removed atomically on first access; there is no second writable copy.
 
@@ -123,9 +191,13 @@ separate contract.
 ## Test storage
 
 `createMemoryStorage({ kv?, collections? })` from `@pstdio/sdk/testing` uses the
-same record and conflict rules. Seeds are ready before the first read. Each
+same record rules. Seeds are ready before the first read. Each
 instance has an isolated owner. It is an in-memory test adapter and provides no
 relay acknowledgment. Real database tests cover durable process restart. In
 `@pstdio/sdk` 0.43.1, `createMemoryStorage()` takes no options and has no records.
+
+The optional `workbenchId`, `extensionId`, and `deviceId` settings let tests use the
+same logical owner on different devices. Without them, each store has a random
+workbench and device ID and uses `test-extension` as its extension ID.
 
 See the [save workflow](../../guides/sdk/0003-storage.md) for examples.

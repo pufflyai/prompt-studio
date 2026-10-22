@@ -16,14 +16,16 @@ The two systems decided independently whether a ticket needed a person. Answerin
 
 Planner owns every review request. The timeline renders and answers the same requests through the same commands as the CLI and the attempt workflows.
 
-- A request is immutable. It holds the title, instructions, a task or decision body, the actor who asked, and its context: workflow reason, workspace, attempt revision, and linked session.
-- Each request has at most one outcome: an answer or a cancellation. The outcome is stored in its own collection under the request ID with an atomic `createIfAbsent`, so competing writers cannot both win.
+- A request holds the title, instructions, a task or decision body, the actor who asked, and its context: workflow reason, workspace, attempt revision, and linked session. Its content and workflow context are immutable. The conversation link is filled only when the person chooses Open session.
+- Creating a request does not create or continue an agent session. Open session starts or resumes the request conversation on demand, then reopens that saved session on later visits. Answering a form does not require a conversation.
+- Each request has one current outcome: an answer or a cancellation. The first outcome is stored in its own collection under the request ID with an atomic `createIfAbsent`, so competing initial answers and cancellations cannot both win. A validated decision revision replaces its existing answer with `update`; it cannot create an outcome after deletion. Concurrent revisions use the last saved answer. Cancelled requests and completed task confirmations stay closed.
 - State is derived. A request without an outcome is open. Planner does not store a second state field or a second copy of the response.
 - Pending input for a ticket is "any open request, or any unreadable request record". Answers never hide another open request. A manual or stale flag never owns pending input.
 - Review Needed stays the user-visible flag and the signal automation extensions read. Planner derives it from current requests on every ticket read. It is a projection of request state, not a second lifecycle.
 - Attempt status updates and launch readiness check open or unreadable requests directly, including completed and transitive launch prerequisites.
 - `review --request-id <id> --response <JSON>` answers a request. `review-requests` read, list, cancel, and open complete the command set. `resolve-human-request` and the timeline's `timeline.action.*` commands are removed.
 - Saving a response records a decision. It does not merge, select an attempt, or finish a ticket.
+- Decision forms stay editable and restore their saved choices and text. Updating an answer keeps the request answered and does not undo actions taken using an earlier answer. The linked chat is available for changes to ongoing work.
 - New requests need a ticket that is not done. Answers and cancellations only need the ticket to exist, so a request stays closable after a merge marks its ticket done.
 - Settling the last open request clears Review Needed when no unreadable records remain. Generic tag writes derive the value rather than accepting a manual override.
 
@@ -37,7 +39,7 @@ Code-review attempts, review threads, and agent review gates stay separate. They
 
 ## Consequences
 
-The outcome insert is atomic, so a request can never get two outcomes. The extension storage API replaces a whole collection item when updating it. A separate flag synchronization would therefore risk overwriting a concurrent ticket edit.
+The first outcome insert is atomic, and decision revisions replace that same record, so a request has one current outcome. The extension storage API replaces a whole collection item when updating it. A separate flag synchronization would therefore risk overwriting a concurrent ticket edit.
 
 Planner limits the effect without a workaround:
 

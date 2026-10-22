@@ -1,11 +1,11 @@
-import type { ExtensionSessionQuery, ExtensionSessionsApi } from "@pstdio/sdk/extensions";
+import type { ExtensionSessionPage, ExtensionSessionQuery, ExtensionSessionsApi } from "@pstdio/sdk/extensions";
 
 // Planner selects the most recent entry with at(-1), so keep history oldest first across query pages.
 export const readSessionHistory = async (
   sessions: Pick<ExtensionSessionsApi, "query">,
   input: Omit<ExtensionSessionQuery, "cursor" | "limit"> = {},
 ) => {
-  const history: Awaited<ReturnType<ExtensionSessionsApi["query"]>>["items"] = [];
+  const history: ExtensionSessionPage["items"] = [];
   let cursor: string | undefined;
   do {
     const page = await sessions.query({

@@ -1,8 +1,9 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { type KeyboardEvent, type MouseEvent, type PointerEvent, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, type MouseEvent, type PointerEvent, useEffect, useRef } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
 import { usePlacementTab } from "../shared/use-placement-tab";
 import { useTabDrag } from "./tab-drag-context";
+import { useTabContextMenu } from "./use-tab-context-menu";
 
 export interface WorkbenchRegionTabProps {
   workbench: WorkbenchCore;
@@ -14,11 +15,10 @@ export interface WorkbenchRegionTabProps {
   sortable?: boolean;
   region?: WorkbenchPanelRegion;
 }
-export const useRegionTab = (props: WorkbenchRegionTabProps) => {
+export const useRegionTab = (props: WorkbenchRegionTabProps, triggerId: string) => {
   const { workbench, placement, disabled = false, sortable = false, region, nextWidgetId, previousWidgetId } = props;
   const snapshot = usePlacementTab(placement, workbench);
-  const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0, triggerId: "" });
+  const { menu, show, onContextMenu } = useTabContextMenu(triggerId, disabled);
   const hold = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const start = useRef({ x: 0, y: 0 });
   const suppressClick = useRef(false);
@@ -31,17 +31,6 @@ export const useRegionTab = (props: WorkbenchRegionTabProps) => {
   const context = useTabDrag();
   const clearHold = () => clearTimeout(hold.current);
   useEffect(() => () => clearTimeout(hold.current), []);
-  const show = (element: HTMLElement) => {
-    if (disabled) return;
-    const rect = element.getBoundingClientRect();
-    setAnchor({ x: rect.x, y: rect.y, width: rect.width, height: rect.height, triggerId: element.id });
-    setOpen(true);
-  };
-  const onContextMenu = (event: MouseEvent<HTMLElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    show(event.currentTarget);
-  };
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
       event.preventDefault();
@@ -79,9 +68,7 @@ export const useRegionTab = (props: WorkbenchRegionTabProps) => {
   };
   return {
     snapshot,
-    open,
-    setOpen,
-    anchor,
+    menu,
     drag,
     target,
     drop: context.drop?.widgetId === placement.widgetId ? context.drop : undefined,

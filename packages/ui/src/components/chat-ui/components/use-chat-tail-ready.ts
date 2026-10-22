@@ -14,21 +14,16 @@ const isTailLayoutStable = (current: TailLayoutSnapshot, previous: TailLayoutSna
   Math.abs(current.totalSize - previous.totalSize) <= TAIL_READY_PIXEL_EPSILON;
 
 // A tail that fits in the viewport has no scroll position to settle, so it can show at once.
-const tailFitsViewport = (scrollElement: HTMLElement | null, totalSize: number) =>
-  Boolean(scrollElement) && Math.max(scrollElement!.scrollHeight, totalSize) <= scrollElement!.clientHeight;
+const tailFitsViewport = (scrollElement: HTMLElement | null) =>
+  Boolean(scrollElement) && scrollElement!.scrollHeight <= scrollElement!.clientHeight;
 
-const readTailLayoutSnapshot = (scrollElement: HTMLElement | null, totalSize: number): TailLayoutSnapshot => ({
+const readTailLayoutSnapshot = (scrollElement: HTMLElement | null) => ({
   scrollTop: scrollElement?.scrollTop ?? 0,
-  totalSize,
+  totalSize: scrollElement?.scrollHeight ?? 0,
 });
 
-export const useTailReady = (input: {
-  itemCount: number;
-  onReady?: () => void;
-  scrollRef: { current: HTMLElement | null };
-  totalSize: number;
-}) => {
-  const { itemCount, onReady, scrollRef, totalSize } = input;
+export const useTailReady = (input: { onReady?: () => void; scrollRef: { current: HTMLElement | null } }) => {
+  const { onReady, scrollRef } = input;
   const onReadyRef = useRef(onReady);
 
   useEffect(() => {
@@ -36,12 +31,9 @@ export const useTailReady = (input: {
   }, [onReady]);
 
   // Runs before paint, so a conversation that fits is never hidden for the frames a long one waits.
+  // One mount owns one settling window. Stream updates must not restart its frame limit.
   useLayoutEffect(() => {
-    if (
-      itemCount === 0 ||
-      typeof requestAnimationFrame === "undefined" ||
-      tailFitsViewport(scrollRef.current, totalSize)
-    ) {
+    if (typeof requestAnimationFrame === "undefined" || tailFitsViewport(scrollRef.current)) {
       onReadyRef.current?.();
       return;
     }
@@ -54,7 +46,7 @@ export const useTailReady = (input: {
     const waitForStableTail = () => {
       checkedFrameCount += 1;
 
-      const nextSnapshot = readTailLayoutSnapshot(scrollRef.current, totalSize);
+      const nextSnapshot = readTailLayoutSnapshot(scrollRef.current);
       stableFrameCount =
         previousSnapshot && isTailLayoutStable(nextSnapshot, previousSnapshot) ? stableFrameCount + 1 : 0;
       previousSnapshot = nextSnapshot;
@@ -70,5 +62,5 @@ export const useTailReady = (input: {
     frameId = requestAnimationFrame(waitForStableTail);
 
     return () => cancelAnimationFrame(frameId);
-  }, [itemCount, scrollRef, totalSize]);
+  }, [scrollRef]);
 };

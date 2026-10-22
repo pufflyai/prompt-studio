@@ -1,35 +1,34 @@
+import { PstdioApiError } from "@pstdio/sdk/client";
 import { workbenchPages } from "@pstdio/sdk/extensions";
-import { type ChatLinkCandidate, type ChatLinkHandler, parseChatLink } from "@pstdio/ui/chat-ui";
+import { type ChatLinkCandidate, type ChatLinkHandler, isGuessedChatLink, parseChatLink } from "@pstdio/ui/chat-ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import { defaultPageResourceCodec, parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "pstdio-api-contracts";
+import { getApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { openProjectPageUrl } from "@/shared/workbench/open-project-page-url";
-import { workspaceFileQueryOptions } from "@/shared/workspaces/workspace-file-query";
+import { workspaceFileQueryOptions, workspaceFolderQueryOptions } from "@/shared/workspaces/workspace-file-query";
 import { workspaceFileResource } from "@/shared/workspaces/workspace-file-resource";
 import { workspaceLinkPath } from "@/shared/workspaces/workspace-link-path";
 import {
   createDashboardWorkspaceOptionResource,
-  createDashboardWorkspaceOptions,
+  type DashboardWorkspaceOption,
 } from "@/shared/workspaces/workspace-options";
 import { resolveResourcePath } from "./resource-path-resolution";
 
 interface SessionLinkHandlerInput {
   workbench: WorkbenchCore;
   projectId?: string;
-  workspaceId?: string | null;
+  workspace?: DashboardWorkspaceOption;
   origin: string;
   onError(message: string): void;
 }
 
 const sessionWorkspace = (input: SessionLinkHandlerInput) => {
-  if (!input.workspaceId) throw new Error("The conversation has no workspace.");
-  const workspace = createDashboardWorkspaceOptions(input.projectId).find(
-    (workspace) => workspace.id === input.workspaceId,
-  );
+  const { workspace } = input;
   if (!workspace) throw new Error("The conversation workspace is unavailable.");
   if (workspace.executionKind !== "local") throw new Error("Remote workspace files are unavailable.");
   if (!workspace.supportsFiles) throw new Error("This workspace does not support files.");
@@ -65,12 +64,30 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
       path,
       position: parsed.position,
       kinds: getCachedDashboardExtensionMetadata(input.projectId)?.resourceKinds ?? [],
+      documentKey: (page) =>
+        input.workbench.pages
+          .listPages()
+          .find((item) => item.ref.id === page.id && item.ref.extensionId === page.extensionId)?.document?.metadataKey,
       execute: async (command, params) => {
         const response = await executeExtensionCommand(input.projectId!, command, { params, source: "dashboard" });
         if (!response.outcome.ok) throw new Error("Could not resolve the resource path.");
         return response.outcome.value;
       },
     });
+  };
+  const hasWorkspaceFile = async (linkPath: string) => {
+    const workspace = sessionWorkspace(input);
+    const path = workspaceLinkPath(linkPath, workspace.workspacePath);
+    const folder = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+    const queries = getDashboardQueryClient();
+    const listing = await queries.fetchQuery(workspaceFolderQueryOptions(workspace.id, folder));
+    if (listing.entries.some((entry) => entry.type === "file" && entry.path === path)) return true;
+    if (!listing.truncated) return false;
+    // Listings stop at 500 entries, so ask a large folder for the file itself.
+    return queries.fetchQuery(workspaceFileQueryOptions(workspace.id, path)).then(
+      () => true,
+      (error) => error instanceof PstdioApiError && (error.status === 413 || error.status === 415),
+    );
   };
   const resolve = (candidate: ChatLinkCandidate) => {
     const parsed = parseChatLink(candidate, input.origin);
@@ -126,7 +143,11 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
                   })
                 : null,
           };
-        return null;
+        const parsed = parseChatLink(candidate, input.origin);
+        if (parsed?.kind === "file" && isGuessedChatLink(candidate) && !(await hasWorkspaceFile(parsed.path)))
+          return null;
+        const href = resolve(candidate)?.href;
+        return href ? { href } : null;
       } catch {
         return null;
       }
@@ -143,11 +164,23 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
         return null;
       }
     },
+    // Sites usually share one icon, so each site is asked once. A failed answer is remembered as no icon,
+    // because messages render often and would otherwise ask again each time.
+    async resolveIcon(href) {
+      return getDashboardQueryClient().fetchQuery({
+        queryKey: ["link-icons", new URL(href).origin],
+        queryFn: ({ signal }) =>
+          getApiClient()
+            .linkIcons.get(href, { signal })
+            .then(
+              (icon) => icon.data_url,
+              () => null,
+            ),
+        staleTime: Number.POSITIVE_INFINITY,
+      });
+    },
     describe(candidate) {
-      const workspace = createDashboardWorkspaceOptions(input.projectId).find(
-        (workspace) => workspace.id === input.workspaceId,
-      );
-      return `Open ${candidate.source}${workspace ? ` in workspace ${workspace.title}` : ""}`;
+      return `Open ${candidate.source}${input.workspace ? ` in workspace ${input.workspace.title}` : ""}`;
     },
     resolveHref(candidate) {
       try {

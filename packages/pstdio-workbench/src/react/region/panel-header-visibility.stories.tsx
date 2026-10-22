@@ -9,7 +9,17 @@ const createPanelWorkbench = (
 ) => {
   const page = { kind: "page", extensionId: "storybook", id: "panel-header" } as const;
   const workbench = createWorkbench({ startPage: page });
-  workbench.modes.registerMode({ id: "panel-header", label: "Panel header", activate: () => undefined });
+  workbench.modes.registerMode({
+    id: "panel-header",
+    label: "Panel header",
+    activate: () => undefined,
+    regionSettings: {
+      main: {
+        showHeader: Boolean(options.changes || options.collapsed || options.action),
+        alwaysShowTabs: Boolean(options.changes || options.collapsed),
+      },
+    },
+  });
   for (const [id, title] of [
     ["files", "Files"],
     ["changes", "Changes"],
@@ -118,4 +128,39 @@ export const HeaderActionWithoutTabs: Story = {
 export const HeaderActionForPanelResource: Story = {
   ...HeaderActionWithoutTabs,
   args: { workbench: createPanelWorkbench({ action: true, panelResource: true }) },
+};
+
+export const SinglePageHeader: Story = {
+  args: {
+    workbench: (() => {
+      const page = { kind: "page", extensionId: "storybook", id: "start" } as const;
+      const core = createWorkbench({ startPage: page });
+      core.modes.registerMode({
+        id: "start",
+        label: "Start",
+        activate: () => undefined,
+        regionSettings: { main: { showHeader: false } },
+      });
+      core.views.registerView({
+        id: "start",
+        title: "Start",
+        body: {
+          kind: "react",
+          render: () => <Text p="md">Start page content</Text>,
+        },
+      });
+      core.pages.registerPage({
+        id: page.id,
+        ref: page,
+        title: "Start",
+        path: "",
+        modeId: "start",
+        main: { kind: "view", view: { kind: "view", id: "start" }, cardinality: "one" },
+        slots: [],
+      });
+      core.pageLocations.switchProject("storybook-start-header");
+      core.pageLocations.navigate({ kind: "page", page });
+      return core;
+    })(),
+  },
 };

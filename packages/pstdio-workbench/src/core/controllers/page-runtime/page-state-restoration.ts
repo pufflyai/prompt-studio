@@ -97,17 +97,14 @@ export const createPageStateRestorer =
       context: WorkbenchPagePersistenceScopeInput,
       page: WorkbenchPageContribution,
     ) => WorkbenchLayout | undefined = (context) => loadWorkbenchLocationLayout(input, context),
+    hasPageMain?: (context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution) => boolean,
   ) =>
   (page: WorkbenchPageContribution, location: PageLocation, projectId: string) => {
-    const layout = loadLayout(
-      {
-        modeId: page.modeId,
-        pageId: page.id,
-        projectId,
-        resource: location.resource,
-      },
-      page,
-    );
+    const context = { modeId: page.modeId, pageId: page.id, projectId, resource: location.resource };
+    const layout = loadLayout(context, page);
+    // Shared geometry contains an empty Main region even when this page has no
+    // saved override. Only an actual Main snapshot can persist a closed tab.
+    if (hasPageMain && !hasPageMain(context, page)) return undefined;
     const saved = input.pageLocationPersistence?.load(projectId)?.location;
     const restoresSavedLocation = workbenchPageLocationsEqual(saved, location, defaultPageResourceCodec, [page]);
     if (

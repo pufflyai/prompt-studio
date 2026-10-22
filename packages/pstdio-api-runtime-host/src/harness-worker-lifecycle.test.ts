@@ -2,6 +2,49 @@ import { expect, test } from "bun:test";
 import type { HarnessContext, HarnessProvider } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createHarnessRegistry } from "./harness-registry";
+import { createHarnessSessionResources } from "./harness-session-resources";
+
+test("native resources from failed command discovery remain tracked for idle cleanup", async () => {
+  let now = 0;
+  let expire: (() => void) | undefined;
+  const resources = createHarnessSessionResources({
+    now: () => now,
+    schedule: (run) => {
+      expire = run;
+      return () => {
+        expire = undefined;
+      };
+    },
+  });
+  const released: string[] = [];
+  const registry = createHarnessRegistry(
+    [
+      record({
+        getCommandState: () => {
+          throw new Error("native state unavailable");
+        },
+        prepareOperation: () => ({ execution: "control", invoke: async () => ({ kind: "completed" }) }),
+        releaseSession: (_ctx, input) => {
+          released.push(input.sessionId);
+          return true;
+        },
+      }),
+    ],
+    () => context("project"),
+    resources,
+  );
+  try {
+    await expect(
+      registry.list()[0].prepareOperation({ sessionId: "session" }, { kind: "command", text: "/goal" }),
+    ).rejects.toThrow("native state unavailable");
+    now = 30 * 60_000;
+    expire?.();
+    for (let index = 0; index < 20; index++) await Promise.resolve();
+    expect(released).toEqual(["session"]);
+  } finally {
+    await registry.dispose();
+  }
+});
 
 const context = (projectId?: string) => ({ projectId, extensionId: "test.worker", name: "worker" }) as HarnessContext;
 
@@ -20,6 +63,93 @@ const record = (provider: Partial<HarnessProvider>): RuntimeHarnessRecord => ({
     resume: () => ({ done: Promise.resolve({ status: "completed" }), stop: () => {} }),
     ...provider,
   },
+});
+
+test("provider retirement prevents resource ownership after pending context acquisition", async () => {
+  let now = 0;
+  let expire: (() => void) | undefined;
+  const released: string[] = [];
+  const resources = createHarnessSessionResources({
+    now: () => now,
+    schedule: (run) => {
+      expire = run;
+      return () => {
+        expire = undefined;
+      };
+    },
+  });
+  const registry = createHarnessRegistry(
+    [
+      record({
+        getCommandState: () => ({ commands: [], modes: [], slashCommands: false }),
+        releaseSession: () => {
+          released.push("session");
+          return true;
+        },
+      }),
+    ],
+    () => context("project"),
+    resources,
+  );
+  const handle = registry.list()[0];
+  await handle.capabilities();
+  const reading = handle.getCommandState({ sessionId: "session" });
+  await Promise.resolve();
+  const closing = registry.dispose();
+  await expect(reading).rejects.toThrow("disposed");
+  await closing;
+  now = 30 * 60_000;
+  expire?.();
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+  expect(released).toEqual([]);
+});
+
+test("a command waiting for idle cleanup cannot invoke a disposed provider", async () => {
+  let now = 0;
+  let expire: (() => void) | undefined;
+  let finishRelease = () => {};
+  let invocations = 0;
+  const resources = createHarnessSessionResources({
+    now: () => now,
+    schedule: (run) => {
+      expire = run;
+      return () => {
+        expire = undefined;
+      };
+    },
+  });
+  const registry = createHarnessRegistry(
+    [
+      record({
+        prepareOperation: () => ({
+          execution: "control",
+          invoke: async () => {
+            invocations++;
+            return { kind: "completed" };
+          },
+        }),
+        releaseSession: () =>
+          new Promise<boolean>((resolve) => {
+            finishRelease = () => resolve(true);
+          }),
+      }),
+    ],
+    () => context("project"),
+    resources,
+  );
+  const prepared = await registry
+    .list()[0]
+    .prepareOperation({ sessionId: "session" }, { kind: "command", text: "/goal" });
+  now = 30 * 60_000;
+  expire?.();
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+  const invoking = prepared.invoke({ events: { push: () => {}, getMessages: () => [] } });
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+  const closing = registry.dispose();
+  finishRelease();
+  await expect(invoking).rejects.toThrow("disposed");
+  await closing;
+  expect(invocations).toBe(0);
 });
 
 test("completed turns keep workers until the registry releases their project contexts", async () => {

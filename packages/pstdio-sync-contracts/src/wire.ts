@@ -71,7 +71,7 @@ export type Change = z.infer<typeof changeSchema>;
 export type MutationBody = z.infer<typeof mutationBodySchema>;
 export type Mutation = z.infer<typeof mutationSchema>;
 
-function checkGroup(
+export function checkGroup(
   value: Pick<MutationBody, "operationId" | "parents" | "changes" | "resolution">,
   ctx: z.RefinementCtx,
 ) {

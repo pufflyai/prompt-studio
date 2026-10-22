@@ -39,6 +39,7 @@ export const subscribeSessionStreamRoute = createRoute({
       content: {
         "application/json": {
           schema: z.union([
+            z.object({ subscription_id: z.string().min(1), retain_session_id: z.string().min(1) }).strict(),
             z.object({ subscription_id: z.string().min(1), session_id: z.string().min(1) }).strict(),
             z
               .object({
@@ -65,7 +66,7 @@ export const subscribeSessionStreamRoute = createRoute({
     },
     404: {
       description: "Session stream not found.",
-      content: { "application/json": { schema: notFoundResponseSchema } },
+      content: { "application/json": { schema: notFoundResponseSchema.extend({ code: z.string().optional() }) } },
     },
   },
 });
@@ -77,11 +78,31 @@ export const subscribeSessionStreamHandler = (
   return async (c) => {
     const { connectionId } = c.req.valid("param");
     const input = c.req.valid("json");
+    if ("retain_session_id" in input) {
+      const session = await deps.sessionService.get(input.retain_session_id);
+      if (!session)
+        return c.json({ error: `Session not found: ${input.retain_session_id}`, code: "SESSION_NOT_FOUND" }, 404);
+      const started = connections.subscribe(connectionId, input.subscription_id, async (sink) => {
+        const release = deps.harnessRegistry.retainSession(input.retain_session_id);
+        try {
+          await new Promise<void>((resolve) => {
+            if (sink.aborted) resolve();
+            else sink.onAbort(resolve);
+          });
+        } finally {
+          release();
+        }
+      });
+      if (!started)
+        return c.json({ error: `Session stream not found: ${connectionId}`, code: "SESSION_STREAM_NOT_FOUND" }, 404);
+      return c.body(null, 204);
+    }
     if ("command" in input) {
       const prepared = await prepareCommandSubscription(deps, input.command);
       if ("error" in prepared) return c.json({ error: prepared.error, code: prepared.code }, prepared.status);
       const started = connections.subscribe(connectionId, input.subscription_id, prepared.run);
-      if (!started) return c.json({ error: `Session stream not found: ${connectionId}` }, 404);
+      if (!started)
+        return c.json({ error: `Session stream not found: ${connectionId}`, code: "SESSION_STREAM_NOT_FOUND" }, 404);
       return c.body(null, 204);
     }
     const { subscription_id, session_id } = input;
@@ -91,7 +112,8 @@ export const subscribeSessionStreamHandler = (
         await sink.write("error", { message: err instanceof Error ? err.message : String(err) });
       }),
     );
-    if (!started) return c.json({ error: `Session stream not found: ${connectionId}` }, 404);
+    if (!started)
+      return c.json({ error: `Session stream not found: ${connectionId}`, code: "SESSION_STREAM_NOT_FOUND" }, 404);
     return c.body(null, 204);
   };
 };

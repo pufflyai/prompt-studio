@@ -7,6 +7,7 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 // Covers composer drafts, rendered chat and idle sessions through the packaged host.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
+import { expectPackagedDriveDiscovery } from "./packaged-filesystem-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -58,6 +59,7 @@ export const registerPackagedProjectSetupSmokeTests = () => {
         });
         expect(projectsRes.status).toBe(200);
         expect(await projectsRes.json()).toEqual([]);
+        await expectPackagedDriveDiscovery(started.baseUrl, runtimeAuthorization(started.descriptor));
         const renameRes = await fetch(`${started.baseUrl}/v1/sessions/missing/title`, {
           method: "PATCH",
           headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
@@ -72,7 +74,7 @@ export const registerPackagedProjectSetupSmokeTests = () => {
         rmSync(tempRoot, { recursive: true, force: true });
       }
     },
-    PACKAGED_TEST_TIMEOUT,
+    Math.max(PACKAGED_TEST_TIMEOUT, 45_000),
   );
 
   test(

@@ -31,7 +31,7 @@ const attemptStates: AttemptState[] = [
 export const requestHumanCommand = defineCommand({
   id: "request-human",
   title: "Request human input",
-  cli: { description: "Ask a person for a task confirmation or a decision and set Review Needed." },
+  cli: { description: "Ask a person for a task confirmation or a decision and mark the ticket as needing attention." },
   mutating: true,
   params: {
     ticket: params.text({ required: true }),
@@ -60,7 +60,7 @@ export const requestHumanCommand = defineCommand({
 export const reviewCommand = defineCommand({
   id: "review",
   title: "Answer a review request",
-  cli: { description: "Save a person's answer to a human review request. Code reviews use run-review." },
+  cli: { description: "Save an answer or revise a saved decision. Code reviews use run-review." },
   mutating: true,
   params: {
     requestId: params.text({ required: true }),
@@ -110,7 +110,8 @@ export const cancelReviewRequestCommand = defineCommand({
 export const openReviewRequestCommand = defineCommand({
   id: "review-requests.open",
   title: "Open a review request chat",
-  cli: { description: "Open the chat linked to a request. Opening it records no answer." },
+  cli: { description: "Start or reopen a request conversation. Opening it records no answer." },
+  mutating: true,
   params: { requestId: params.text({ required: true }) },
   async run(ctx, { requestId }) {
     return openReviewRequestSession(ctx, requestId);

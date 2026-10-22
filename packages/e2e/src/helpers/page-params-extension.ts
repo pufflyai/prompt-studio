@@ -46,12 +46,12 @@ export const writePageParamsExtension = (root: string) => {
       draw();
       const stop = propsStore.subscribe(draw);
       const read = async () => { mount.querySelector('#saved').textContent = await host.call('preferences.get', { name: 'lastRange' }) ?? 'unset'; };
-      read().catch(error);
+      const initialRead = read().catch(error);
       mount.querySelector('#update').onclick = () => host.call('page.params.update', { params: { range: 'now-24h' } }).catch(error);
       mount.querySelector('#navigate').onclick = () => host.call('navigation.open', { target: { kind: 'page', page: { kind: 'page', id: 'board', extensionId: 'test.page-params' }, params: { range: 'now-7d' } } }).catch(error);
       mount.querySelector('#details').onclick = () => host.call('navigation.open', { target: { kind: 'page', page: { kind: 'page', id: 'details', extensionId: 'test.page-params' }, params: { range: 'now-7d' }, parent: { kind: 'page', page: { kind: 'page', id: 'board', extensionId: 'test.page-params' }, params: propsStore.get().pageLocation.params } } }).catch(error);
       mount.querySelector('#invalid').onclick = () => host.call('page.params.update', { params: { refresh: 'bad' } }).catch(error);
-      mount.querySelector('#save').onclick = async () => { try { await host.call('preferences.set', { name: 'lastRange', value: propsStore.get().pageParams.range }); await read(); } catch(e) { error(e); } };
+      mount.querySelector('#save').onclick = async () => { try { await initialRead; await host.call('preferences.set', { name: 'lastRange', value: propsStore.get().pageParams.range }); await read(); } catch(e) { error(e); } };
       mount.querySelector('#read').onclick = () => read().catch(error);
       return stop;
     } };

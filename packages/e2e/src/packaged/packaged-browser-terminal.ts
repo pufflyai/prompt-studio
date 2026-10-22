@@ -5,7 +5,7 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   const iframe = page.locator('iframe[title="Lab"]');
   await expect(iframe.contentFrame().getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
   const connection = page.waitForEvent("websocket", (socket) => new URL(socket.url()).pathname === "/v1/terminal");
-  const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+  const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
   await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
   const choice = page.getByRole("menuitem", { name: "Terminal", exact: true });

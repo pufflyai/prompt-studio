@@ -2,6 +2,8 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { fileNameFromPath, requireTicketDraftFiles, ticketFilesDir, ticketFilesPattern } from "../data/draft-storage";
 import { findTicket } from "../data/resolve";
 import { validateTicketFileName } from "../data/ticket-file-name";
+import { readTicketImageCheckout } from "../data/ticket-image-checkout";
+import { ticketImagePaths } from "../data/ticket-image-paths";
 
 // `pst tickets files`: compare a ticket's stored files against the local
 // `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/files/` directory so the user can see what is and
@@ -16,7 +18,8 @@ export const listTicketFilesCommand = defineCommand({
     const ticket = await findTicket(ctx.storage, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
-    const stored = new Set((ticket.files ?? []).map((file) => validateTicketFileName(file.name)));
+    const images = ticketImagePaths(ticket, await readTicketImageCheckout(projectFiles, ticket.shorthand));
+    const stored = new Set([...(ticket.files ?? []), ...images].map((file) => validateTicketFileName(file.name)));
     const local = new Set(
       (await projectFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) =>
         validateTicketFileName(fileNameFromPath(ticket.shorthand, entry.path)),

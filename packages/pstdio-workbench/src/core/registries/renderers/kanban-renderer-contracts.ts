@@ -1,4 +1,5 @@
 import type { KanbanRendererAttributeDisplay, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
+import type { NavigationTarget } from "../navigation/navigation-registry";
 
 /**
  * Core-owned contracts for kanban renderer contributions. @pstdio/ui's
@@ -69,6 +70,7 @@ export interface AttributesSource<TNode = unknown> {
 export interface KanbanRendererRow {
   id: string;
   title: string;
+  target?: NavigationTarget;
   /**
    * Optional navigation handle. When set, the renderer's default click handler
    * routes through the contribution's onRowActivate (which typically opens the

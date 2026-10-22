@@ -1,8 +1,37 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, mock, spyOn, test } from "bun:test";
 import { Box } from "@chakra-ui/react";
 import { DiffBubble } from "@pstdio/ui/diff";
 import { createWorkbench, type ResourceRef, resourceContextMenuPath } from "../../../core";
 import { resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
+
+test("offscreen resource rows defer menu resolution until requested", () => {
+  const workbench = createWorkbench();
+  workbench.commands.registerCommand({ id: "note.rename", label: "Rename" }, { execute() {} });
+  workbench.layout.registerMenuItem(resourceContextMenuPath("note"), { commandId: "note.rename" });
+  const shortcuts = spyOn(workbench.keybindings, "listCommandKeybindings");
+  try {
+    const section = toTreeListSection(
+      {
+        id: "notes",
+        nodes: Array.from({ length: 1_000 }, (_, index) => ({
+          id: String(index),
+          label: `Note ${index}`,
+          resource: { type: "note", id: String(index) },
+          menuPath: resourceContextMenuPath("note"),
+        })),
+      },
+      {},
+      { workbench },
+    );
+    expect(shortcuts).not.toHaveBeenCalled();
+    const items = section.nodes[0]?.contextMenuItems;
+    expect(items?.map((item) => item.label)).toEqual(["Rename"]);
+    expect(section.nodes[0]?.menuItems).toBe(items);
+    expect(shortcuts).toHaveBeenCalledTimes(1);
+  } finally {
+    shortcuts.mockRestore();
+  }
+});
 
 test("a navigation-specific menu supplements the resource's registered actions", () => {
   const workbench = createWorkbench();

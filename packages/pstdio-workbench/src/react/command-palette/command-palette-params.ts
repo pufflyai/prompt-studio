@@ -1,4 +1,7 @@
-import { resourceKey } from "@pstdio/sdk/extensions";
+import { resourceContextValue } from "../../core/registries/commands/command-resource-params";
+
+export { resolveCommandResourceParams } from "../../core/registries/commands/command-resource-params";
+
 import type { FileUploadValue } from "@pstdio/ui/param-editor";
 import type { Command, CommandParamDescriptor, CommandParamSchema, WorkbenchCommandExecutionContext } from "../../core";
 export interface CommandFilesParamValue {
@@ -50,32 +53,6 @@ const stringifyEditableValue = (value: unknown) => {
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value);
 };
-const toIdentifierPrefix = (value: string) =>
-  value
-    .replace(/[^a-zA-Z0-9]+([a-zA-Z0-9])/g, (_match, char: string) => char.toUpperCase())
-    .replace(/^[A-Z]/, (char) => char.toLowerCase());
-const metadataString = (metadata: Record<string, unknown> | undefined, key: string) => {
-  const value = metadata?.[key];
-  if (typeof value === "string") return value;
-  if (typeof value === "number") return String(value);
-  return undefined;
-};
-const resourceContextValue = (entry: CommandParamEntry, context: WorkbenchCommandExecutionContext | undefined) => {
-  const resource = context?.resource;
-  if (!resource) return undefined;
-  const metadataValue = metadataString(resource.metadata, entry.key);
-  if (metadataValue !== undefined) return metadataValue;
-  if (entry.key === `${toIdentifierPrefix(resource.type)}Id`) return resource.id ?? resourceKey(resource);
-  if (entry.type === "resource" && (!entry.resourceType || entry.resourceType === resource.type)) {
-    return {
-      type: resource.type,
-      id: resource.id ?? resourceKey(resource),
-      ...(resource.label ? { label: resource.label } : {}),
-      ...(resource.metadata ? { metadata: resource.metadata } : {}),
-    };
-  }
-  return undefined;
-};
 const dedupeOptions = (options: CommandParamDescriptor["options"]) => {
   if (!Array.isArray(options)) return options;
   const seen = new Set<string>();
@@ -96,21 +73,6 @@ const commandParamEntries = (params: CommandParamSchema | undefined): CommandPar
   }));
 export const listCommandParamEntries = (params: CommandParamSchema | undefined) =>
   commandParamEntries(params).filter((entry) => entry.resolvedFrom !== "resource");
-export const resolveCommandResourceParams = (
-  params: CommandParamSchema | undefined,
-  baseArgs?: unknown,
-  context?: WorkbenchCommandExecutionContext,
-) => {
-  const base = isRecord(baseArgs) ? baseArgs : {};
-  return Object.fromEntries(
-    commandParamEntries(params)
-      .filter((entry) => entry.resolvedFrom === "resource")
-      .map((entry) => [
-        entry.key,
-        Object.hasOwn(base, entry.key) ? base[entry.key] : resourceContextValue(entry, context),
-      ]),
-  );
-};
 const renameLabelDefault = (
   key: string,
   base: Record<string, unknown>,

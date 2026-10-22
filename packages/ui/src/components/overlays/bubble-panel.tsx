@@ -23,6 +23,8 @@ export interface BubblePanelProps {
   isOpen?: boolean;
   title?: string;
   menu?: ReactNode;
+  /** Replace the complete header, including its controls. */
+  header?: ReactNode;
   onClose?: () => void;
   closeLabel?: string;
   onPopOut?: (() => void) | null;
@@ -41,6 +43,7 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
     isOpen = false,
     title,
     menu,
+    header,
     onClose,
     closeLabel,
     onPopOut,
@@ -83,38 +86,42 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
         aria-hidden={!isOpen}
       >
         <Flex direction="column" h="full">
-          <Header variant="main" gap="sm" flexShrink={0}>
-            <HStack gap="1" minW="0">
-              {menu}
-            </HStack>
-            <Spacer />
-            <HStack gap="1">
-              {onPopOut ? (
-                <Tooltip content={popOutLabel}>
-                  <IconButton
-                    size={PANEL_HEADER_CONTROL_SIZE}
-                    variant="ghost"
-                    aria-label={popOutLabel}
-                    onClick={onPopOut}
-                  >
-                    <SquareArrowOutUpRight size={16} />
-                  </IconButton>
-                </Tooltip>
-              ) : null}
-              {onClose ? (
-                <Tooltip content={closeLabel}>
-                  <IconButton
-                    size={PANEL_HEADER_CONTROL_SIZE}
-                    variant="ghost"
-                    aria-label={closeLabel}
-                    onClick={onClose}
-                  >
-                    <Minus size={16} />
-                  </IconButton>
-                </Tooltip>
-              ) : null}
-            </HStack>
-          </Header>
+          {header !== undefined ? (
+            header
+          ) : (
+            <Header variant="main" gap="sm" flexShrink={0}>
+              <HStack gap="1" minW="0">
+                {menu}
+              </HStack>
+              <Spacer />
+              <HStack gap="1">
+                {onPopOut ? (
+                  <Tooltip content={popOutLabel}>
+                    <IconButton
+                      size={PANEL_HEADER_CONTROL_SIZE}
+                      variant="ghost"
+                      aria-label={popOutLabel}
+                      onClick={onPopOut}
+                    >
+                      <SquareArrowOutUpRight size={16} />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+                {onClose ? (
+                  <Tooltip content={closeLabel}>
+                    <IconButton
+                      size={PANEL_HEADER_CONTROL_SIZE}
+                      variant="ghost"
+                      aria-label={closeLabel}
+                      onClick={onClose}
+                    >
+                      <Minus size={16} />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+              </HStack>
+            </Header>
+          )}
           <Box flex="1" minH={0} display="flex" flexDirection="column" gap="sm">
             {children}
           </Box>

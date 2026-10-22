@@ -26,6 +26,10 @@ The list shows each harness, its full ID, and whether its command is installed.
 
 A session is one conversation with an agent. In the dashboard, choose **New conversation** on the project's Start page. Pick a harness and a model, type your request, and send it.
 
+If no enabled harness is available, a single **No agent available** alert replaces the message field and its controls. The workspace container and header stay visible. Choose **Browse extensions** in the alert to open the project's Extensions settings. An enabled harness extension that is unavailable shows the warning indicator in its list row and detail page. Open that indicator to read the reason supplied by the extension. The composer returns after the next successful availability check. Your draft text and attachments stay saved while it is hidden.
+
+In an existing session, pending questions and confirmations stay available beside the warning. Answers you have already entered stay in the form when availability changes.
+
 ![New session panel beside the Start page, with a draft request to build a reading-list extension, a Project folder selector, and model controls.](../../images/new-conversation.png)
 
 The conversation opens in a side panel so you can keep a tool visible while talking to the agent. The image shows a draft request before sending it. It asks for a small tool and describes what the person should be able to do with it.

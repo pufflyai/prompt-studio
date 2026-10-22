@@ -24,9 +24,9 @@ import {
   ARCHIVED_CONFLICTS,
   type Execute,
   plannerCommands,
-  plannerSource,
   seedTrackProject,
 } from "./packaged-planner-runtime-fixture";
+import { preparePlannerSource } from "./packaged-planner-source";
 import {
   type RuntimeDescriptor,
   runtimeAuthorization,
@@ -34,6 +34,7 @@ import {
   startPackagedServe,
   stopProcess,
 } from "./packaged-serve-helpers";
+import { expectImmediateTicketProperty } from "./packaged-ticket-properties";
 
 test.afterEach(stopPendingTestProcesses);
 test.afterAll(stopPendingTestProcesses);
@@ -65,8 +66,8 @@ const createProject = async (host: Host, name: string) => {
   return { execute, folder, id };
 };
 
-const installPlanner = (host: Host, cwd: string) =>
-  runPackagedAsync(["extensions", "add", plannerSource, "--name", "pstdio-planner"], cwd, {
+const installPlanner = (host: Host, cwd: string, source: string) =>
+  runPackagedAsync(["extensions", "add", source, "--name", "pstdio-planner"], cwd, {
     HOME: host.home,
     PSTDIO_HOME: host.home,
   });
@@ -153,16 +154,26 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
   const home = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-packaged-planner-runtime-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
+  const runtimeOutput: string[] = [];
   try {
     const started = await startPackagedServe(home, { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" });
     child = started.child;
+    child.stderr?.on("data", (chunk) => {
+      runtimeOutput.push(String(chunk));
+      if (runtimeOutput.length > 100) runtimeOutput.shift();
+    });
     const host = { baseUrl: started.baseUrl, descriptor: started.descriptor, home };
     phase("runtime ready");
     const conflicting = await createProject(host, "conflicting-track");
     const valid = await createProject(host, "valid-track");
 
     phase("install start");
-    await installPlanner(host, conflicting.folder);
+    // Planner uses SDK and UI APIs that may not be on npm yet, so install it with the workspace builds.
+    await installPlanner(
+      host,
+      conflicting.folder,
+      await preparePlannerSource(join(home, "fixtures", "current-planner")),
+    );
     await enablePlanner(host, valid.id);
     phase("install complete; seed start");
     const [conflictData] = await Promise.all([
@@ -180,6 +191,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
     });
     await signInBrowser(page, started.descriptor);
+    await expectImmediateTicketProperty(page, valid.execute, host.baseUrl, valid.id);
     let timeline = await openTimeline(page, host, valid.id);
     await expect(timeline.getByText("Product", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible();
@@ -299,6 +311,10 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     expect(await reloadPlanner(host, valid.id)).toMatchObject({ status: "loaded", lastError: null });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
     phase("checks complete");
+  } catch (error) {
+    console.error(`Planner runtime: exit=${child?.exitCode}, signal=${child?.signalCode}`);
+    console.error(runtimeOutput.join("").slice(-12000));
+    throw error;
   } finally {
     phase("cleanup start");
     await browser?.close();

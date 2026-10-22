@@ -7,7 +7,7 @@ import { RequestsPanel } from "./requests-panel";
 
 const person = { type: "human" as const, id: "person", displayName: "Human" };
 const agent = { type: "agent" as const, id: "agent", displayName: "Agent" };
-const context = { reason: null, workspaceId: null, attemptRevision: null, sessionId: "chat", relatedSessionId: null };
+const context = { reason: null, workspaceId: null, attemptRevision: null, sessionId: null, relatedSessionId: null };
 
 const task: ReviewRequestView = {
   id: "task",
@@ -60,6 +60,54 @@ const decision: ReviewRequestView = {
   },
 };
 
+// The shape the create-proposal skill asks for: decisions, assumptions, and risks as readable options.
+const proposalReview: ReviewRequestView = {
+  ...task,
+  id: "proposal-review",
+  title: "Review the note tags proposal",
+  instructions: [
+    "- **D1.** The sidebar can filter by one tag or by several tags at once.",
+    "- **C1.** A note can have several tags, and tag names ignore case and surrounding spaces.",
+    "- **R1.** Tag edits change a note's modified time, which can reorder recent notes.",
+  ].join("\n"),
+  request: {
+    kind: "decision",
+    questions: [
+      {
+        id: "d1-filter",
+        label: "D1. How many tags can the sidebar filter by?",
+        required: true,
+        input: {
+          kind: "single-choice",
+          options: [
+            { id: "one", label: "One tag at a time (recommended)" },
+            { id: "many", label: "Several tags at once" },
+          ],
+        },
+      },
+      {
+        id: "confirm",
+        label: "Tick each assumption you accept",
+        required: false,
+        input: {
+          kind: "multiple-choice",
+          options: [{ id: "c1", label: "C1. A note can have several tags, and names ignore case and spaces" }],
+        },
+      },
+      {
+        id: "risks",
+        label: "Tick each risk you accept",
+        required: false,
+        input: {
+          kind: "multiple-choice",
+          options: [{ id: "r1", label: "R1. Tag edits can reorder recent notes" }],
+        },
+      },
+      { id: "notes", label: "Corrections or other answers", required: false, input: { kind: "text" } },
+    ],
+  },
+};
+
 const handoff: ReviewRequestView = {
   ...task,
   id: "handoff",
@@ -86,6 +134,18 @@ const cancelled: ReviewRequestView = {
   outcomeText: "Cancelled: The release scope changed.",
 };
 
+const answeredDecision: ReviewRequestView = {
+  ...decision,
+  state: "answered",
+  outcome: {
+    kind: "answered",
+    at: "2026-10-10T10:00:00.000Z",
+    by: person,
+    response: { answers: { scope: "preview", platforms: ["mac"], limits: "Internal project first." } },
+  },
+  outcomeText: "Release scope: Preview\nPlatforms: macOS\nLimits: Internal project first.",
+};
+
 const row: PlanRow = {
   id: "ticket",
   shorthand: "PS-32",
@@ -109,7 +169,7 @@ const row: PlanRow = {
 };
 
 const meta: Meta<typeof RequestsPanel> = {
-  title: "Extensions/Planner/Timeline requests",
+  title: "Extensions/Planner/Needs attention",
   component: RequestsPanel,
   decorators: [
     (Story) => (
@@ -126,6 +186,16 @@ type Story = StoryObj<typeof RequestsPanel>;
 export const NoRequests: Story = { args: { row } };
 export const Task: Story = { args: { row: { ...row, requests: [task] } } };
 export const Decision: Story = { args: { row: { ...row, requests: [decision] } } };
+export const EditableAnswer: Story = { args: { row: { ...row, requests: [answeredDecision] } } };
+export const UpdateError: Story = {
+  args: {
+    row: { ...row, requests: [answeredDecision] },
+    onAnswer: async () => {
+      throw new Error("Unable to save. Try again.");
+    },
+  },
+};
+export const ProposalReview: Story = { args: { row: { ...row, requests: [proposalReview] } } };
 export const AttemptHandoff: Story = { args: { row: { ...row, requests: [handoff] } } };
 export const OpenSiblingAfterAnswer: Story = { args: { row: { ...row, requests: [answered, handoff] } } };
 export const Cancelled: Story = {

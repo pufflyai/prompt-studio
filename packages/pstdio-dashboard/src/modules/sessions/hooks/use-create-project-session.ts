@@ -1,7 +1,7 @@
+import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import { useMutation } from "@tanstack/react-query";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { getApiClient } from "@/lib/api";
-import type { HarnessParamValues } from "../components/harness-param-values";
 
 interface CreateProjectSessionInput {
   projectId: string;

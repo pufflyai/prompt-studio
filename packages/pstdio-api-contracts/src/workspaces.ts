@@ -48,6 +48,7 @@ export const workspaceProviderErrorSchema = z.object({
 });
 
 export const extensionWorkspaceFields = {
+  device: z.object({ ownerId: z.string(), id: z.string(), name: z.string() }).optional(),
   projectId: z.string(),
   isDefault: z.boolean(),
   shorthand: z.string(),
@@ -67,6 +68,7 @@ const workspaceAnchorSchema = extensionResourceRefSchema.extend({
 });
 
 export const workspaceSchema = z.object({
+  device: z.object({ ownerId: z.string(), id: z.string(), name: z.string() }).optional(),
   id: z.string(),
   project_id: z.string(),
   name: z.string(),

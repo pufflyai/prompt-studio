@@ -44,6 +44,8 @@ The package loader uses temporary import contexts to obtain fresh module identit
 
 Bun retains imported module identities for the process lifetime. The source cache therefore imports each source version once across project readers. Repeated commands on unchanged sources must not create a new module identity each time.
 
+Source fingerprint checks share one import scanner per JavaScript or TypeScript loader. Each source path retains only its latest content digest and parsed import list, without retaining source bytes. Every check still reads the current bytes, resolves local imports again, and hashes the current graph and dependency manifests. Same-size edits, newly added modules, and changes in import resolution therefore remain visible without depending on watcher delivery or file timestamps.
+
 Backend development uses Docker isolation and never `bun --watch`. The historical reload limitation is recorded in [ADR 0005](../../adrs/0005-no-watch-backend-dev-server.md); temporary dependency resolution is recorded in [ADR 0017](../../adrs/0017-temporary-local-dependency-install-context.md).
 
 ## Harness caching

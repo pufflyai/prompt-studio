@@ -23,10 +23,11 @@ export const readAutoBuildCommand = defineCommand({
     const latest = runs
       .filter(({ commandId }) => commandId === `${ctx.extensionId}.command.auto-build`)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    const running = latest?.status === "queued" || latest?.status === "running";
     const ticketSessions = sessions.filter(({ id }) => id !== state.sessionId);
     let stuck =
       mode.enabled && ticketSessions.length > 0 && ticketSessions.every(({ status }) => status === "awaiting_input");
-    if (mode.enabled && capacity.running === 0 && !isLiveSession(supervisor)) {
+    if (mode.enabled && !running && capacity.running === 0 && !isLiveSession(supervisor)) {
       const { candidates, blockedTickets } = await readAutoBuildCandidates(ctx, mode);
       stuck ||= candidates.length === 0 && blockedTickets.length > 0;
     }
@@ -36,7 +37,7 @@ export const readAutoBuildCommand = defineCommand({
       sessions: ticketSessions,
       capacity,
       stuck,
-      running: latest?.status === "queued" || latest?.status === "running",
+      running,
       error: latest?.error?.message,
     };
   },

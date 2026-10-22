@@ -135,9 +135,7 @@ services:
   authority:
     build:
       context: ../..
-      dockerfile: infra/relay/Dockerfile
-      target: fixture
-    command: ["bun", "manager.js"]
+      dockerfile: infra/account-manager/Dockerfile
     environment:
       <<: *internal-hosts
       DATABASE_URL: postgres://manager_owner:manager_owner_fixture_only@postgres:5432/manager_owner

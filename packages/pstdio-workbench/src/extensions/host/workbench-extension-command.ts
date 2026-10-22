@@ -5,6 +5,7 @@ import type {
   WorkbenchModuleContext,
   WorkbenchPanelRegion,
 } from "../../core";
+import { resolveCommandResourceParams } from "../../core/registries/commands/command-resource-params";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import { runResourceMutation } from "./workbench-resource-mutation";
@@ -47,6 +48,7 @@ export const executeWorkbenchExtensionCommandResponse = async (
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
   const resource = input.resource;
+  const reportNavigationError = context.workbench.notifications.captureActionError("Open command result");
   const response = await context.executeCommand(
     commandId,
     {
@@ -66,11 +68,7 @@ export const executeWorkbenchExtensionCommandResponse = async (
       try {
         await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { region: input.region }));
       } catch (error) {
-        context.workbench.notifications.show({
-          level: "warning",
-          title: "Command completed, but navigation failed",
-          message: error instanceof Error ? error.message : String(error),
-        });
+        reportNavigationError(error);
       }
     }
   }
@@ -81,10 +79,11 @@ export const executeWorkbenchExtensionCommand = async (
   commandId: string,
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
-  const persist = async () =>
-    unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, input));
   const command = context.metadata?.commands.find((candidate) => candidate.id === commandId);
-  return command
-    ? runResourceMutation(context, command, input.params, { resource: input.resource }, persist)
-    : persist();
+  const params = command
+    ? { ...resolveCommandResourceParams(command.params, input.params, { resource: input.resource }), ...input.params }
+    : input.params;
+  const persist = async () =>
+    unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, { ...input, params }));
+  return command ? runResourceMutation(context, command, params, { resource: input.resource }, persist) : persist();
 };

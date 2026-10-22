@@ -1,4 +1,4 @@
-import { Box, Button, Center, Flex, Spinner, Text } from "@chakra-ui/react";
+import { Box, Button, Center, Flex, Text } from "@chakra-ui/react";
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RegisteredFileRendererContribution, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
@@ -145,7 +145,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const resourceRef = useRef(resource);
   const pageParamsRef = useRef(pageParams);
   const placementRef = useRef(props.placement);
-  useEffect(() => {
+  useLayoutEffect(() => {
     contributionRef.current = contribution;
     resourceRef.current = resource;
     pageParamsRef.current = pageParams;
@@ -156,7 +156,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const ownerKey = fileRendererOwnerKey(props.placement, contributionId, loadKey);
   const instanceId = props.placement?.instanceId ?? contributionId;
   // Re-binding a singleton widget to another resource changes `resource` and reloads.
-  useEffect(() => {
+  useLayoutEffect(() => {
     let cancelled = false;
     let removed = false;
     const boundResource = resourceRef.current;
@@ -257,22 +257,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     controllerRef.current?.handleChange(value);
   };
   const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
-  const scrollResetKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
-  useLayoutEffect(() => {
-    if (!scrollResetKey || sectionNavigation) return;
-    const node = rendererRef.current;
-    if (!node) return;
-    requestAnimationFrame(() => {
-      let current = node.parentElement;
-      while (current) {
-        const overflowY = getComputedStyle(current).overflowY;
-        if (["auto", "scroll", "overlay"].includes(overflowY) && current.scrollHeight > current.clientHeight) {
-          current.scrollTop = 0;
-        }
-        current = current.parentElement;
-      }
-    });
-  }, [scrollResetKey, sectionNavigation]);
   const loadError = error?.loadKey === loadKey ? error.message : undefined;
   if (loadError && !currentLoaded) {
     return (
@@ -284,17 +268,10 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       </Center>
     );
   }
-  if (!currentLoaded) {
-    return (
-      <Center h="full" minH="0" bg="bg">
-        <Spinner size="sm" />
-      </Center>
-    );
-  }
   // The key must carry the document identity, not just the contribution: two
   // documents from the same renderer both start at revision 1, so keying on the
   // contribution alone reuses the editor and keeps showing the previous file.
-  const editorKey = `${currentLoaded.loadKey}:${currentLoaded.editorRevision}`;
+  const editorKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
   let errorNotice: ReactNode = null;
   if (editState.removed) {
     errorNotice = (
@@ -309,7 +286,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   }
   return (
     <Flex direction="column" h="full" minH="0" bg="bg">
-      <FileRendererHeader file={currentLoaded} />
+      {currentLoaded && <FileRendererHeader file={currentLoaded} />}
       <Box flex="1" minH="0">
         <FileRendererContentView
           content={currentLoaded}

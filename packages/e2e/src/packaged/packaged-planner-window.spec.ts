@@ -6,7 +6,8 @@ import { type Browser, chromium, expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { buildBinary, runPackaged } from "./packaged-helpers";
-import { plannerCommands, plannerSource } from "./packaged-planner-runtime-fixture";
+import { plannerCommands } from "./packaged-planner-runtime-fixture";
+import { preparePlannerSource } from "./packaged-planner-source";
 import { expectPlannerWindow } from "./packaged-planner-window-smoke";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -32,6 +33,8 @@ test("Planner keeps long dependency chains usable with a bounded card window", a
     });
     expect(response.status).toBe(201);
     const project = await response.json();
+    // Planner uses SDK and UI APIs that may not be on npm yet, so install it with the workspace builds.
+    const plannerSource = await preparePlannerSource(join(home, "fixtures", "current-planner"));
     runPackaged(`extensions add ${plannerSource} --name pstdio-planner`, folder, {
       HOME: home,
       PSTDIO_HOME: home,
