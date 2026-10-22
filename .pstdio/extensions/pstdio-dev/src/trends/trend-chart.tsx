@@ -1,4 +1,4 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Flex, Text } from "@chakra-ui/react";
 import { psTheme } from "@pstdio/ui";
 import { areaY, defineChart, dot, lineY, ruleY } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
@@ -22,6 +22,14 @@ interface TrendChartProps {
 export const TrendChart = (props: TrendChartProps) => {
   const { metric, versions, height, compact = false, onFocusPoint } = props;
   const points = metric.points.filter((point): point is TrendPoint => point !== null);
+  if (!points.length)
+    return (
+      <Flex h={`${height}px`} align="center" justify="center">
+        <Text textStyle="label/S/regular" color="fg.muted">
+          Not measured on this platform
+        </Text>
+      </Flex>
+    );
   const budget = metric.budget === undefined ? [] : [metric.budget];
   const definition = defineChart({
     marks: [

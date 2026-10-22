@@ -73,7 +73,11 @@ export const buildTrends = (results: CachedResult[], platform: string) => {
         : [],
     )
     .sort((a, b) => compareVersions(a.version, b.version));
-  const metrics = [...collectKeys(releases.map((release) => release.file))].map(([key, info]): TrendMetric => {
+  // Metrics measured only on other platforms stay listed, so the page can say they are not measured here.
+  // This platform's files come last, so their budgets win.
+  const elsewhere = results.filter((result) => result.source.kind === "release" && result.file.platform !== platform);
+  const files = [...elsewhere.map((result) => result.file), ...releases.map((release) => release.file)];
+  const metrics = [...collectKeys(files)].map(([key, info]): TrendMetric => {
     let previous: number[] | undefined;
     const points = releases.map((release) => {
       const values = release.file.metrics.find((metric) => keyOf(metric) === key)?.values;

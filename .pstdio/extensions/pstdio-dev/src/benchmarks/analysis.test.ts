@@ -49,6 +49,14 @@ describe("trends across releases", () => {
     expect(coldStart.points[2]?.change?.verdict).toBe("regressed");
   });
 
+  test("lists a metric measured only on another platform without points", () => {
+    const relay = release("0.46.0", 5400, "linux-x64");
+    relay.file.metrics[0] = { ...relay.file.metrics[0], metric: "relay/stored", label: "Storage bound" };
+    const trends = buildTrends([relay, release("0.46.0", 9000, "win32-x64")], "win32-x64");
+    const stored = trends.metrics.find((metric) => metric.label === "Storage bound");
+    expect(stored?.points).toEqual([null]);
+  });
+
   test("leaves a gap where a release did not measure a metric", () => {
     const missing = release("0.46.0", 5400);
     missing.file.metrics = [];
