@@ -22,6 +22,7 @@ const meta = {
           { label: "High", value: "high", icon: "level-high" },
           { label: "Extra high", value: "xhigh", icon: "level-xhigh" },
           { label: "Max", value: "max", icon: "flame" },
+          { label: "Ultra", value: "ultra", icon: "flame" },
         ],
       },
     },
@@ -102,7 +103,7 @@ export const ChangeEffortWithKeyboard: Story = {
     await userEvent.keyboard("{ArrowDown}");
     await waitFor(() => expect(page.getByRole("menu")).toHaveFocus());
     await userEvent.keyboard("{End}{Enter}");
-    await expect(canvas.getByRole("button", { name: "Reasoning effort: Max" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Reasoning effort: Ultra" })).toBeVisible();
   },
 };
 export const Disabled: Story = { args: { disabled: true } };
