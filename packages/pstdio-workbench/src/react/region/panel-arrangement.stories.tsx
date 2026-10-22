@@ -1,10 +1,11 @@
-import { Box, Input, Text } from "@chakra-ui/react";
+import { Box, Button, Input, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { ReactNode } from "react";
-import { expect } from "storybook/test";
+import { type ReactNode, StrictMode, useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench, type WorkbenchPanelRegion } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { createWorkbenchTerminalModule } from "../terminal/terminal-module";
+import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 
 export const createArrangementWorkbench = (
   crowded = false,
@@ -247,4 +248,59 @@ export const FixedLastSideTab: Story = { args: { workbench: createLastTabWorkben
 export const FixedLastBottomTab: Story = { args: { workbench: createLastTabWorkbench("secondary", false) } };
 export const BottomTabs: Story = {
   args: { workbench: createArrangementWorkbench(false, undefined, undefined, false, "secondary") },
+};
+
+const SessionSwitchWorkbench = (props: { workbench: ReturnType<typeof createArrangementWorkbench> }) => {
+  const { workbench } = props;
+  const [open, setOpen] = useState(true);
+  return (
+    <WorkbenchThemeProvider>
+      <Button onClick={() => setOpen(false)}>Close example workbench</Button>
+      {open ? <WorkbenchStory workbench={workbench} /> : <Text>Workbench closed</Text>}
+    </WorkbenchThemeProvider>
+  );
+};
+
+export const SessionSwitchKeepsMainView: Story = {
+  args: {
+    workbench: createArrangementWorkbench(
+      false,
+      <Box asChild h="full" w="full">
+        <iframe title="Retained Timeline" srcDoc='<input aria-label="Unsaved Timeline draft">' />
+      </Box>,
+    ),
+  },
+  render: (args) => (
+    <StrictMode>
+      <SessionSwitchWorkbench workbench={args.workbench} />
+    </StrictMode>
+  ),
+  play: async ({ canvasElement, args }) => {
+    await waitFor(() =>
+      expect(
+        canvasElement
+          .querySelector<HTMLIFrameElement>('iframe[title="Retained Timeline"]')
+          ?.contentDocument?.querySelector("input"),
+      ).toBeTruthy(),
+    );
+    const iframe = canvasElement.querySelector<HTMLIFrameElement>('iframe[title="Retained Timeline"]')!;
+    const document = iframe.contentDocument!;
+    const input = document.querySelector("input")!;
+    const host = iframe.closest("[data-workbench-instance]")!.parentElement!;
+    await userEvent.type(input, "Keep this unsaved draft");
+    for (const id of ["first-preview", "second-preview", "first-preview"]) {
+      await args.workbench.navigation.openTarget({
+        kind: "panel",
+        panel: { kind: "placement", extensionId: "storybook", id: "sessions" },
+        resource: { type: "session", id, label: id },
+        open: "preview",
+      });
+      await waitFor(() => expect(within(canvasElement).getAllByText(id, { exact: true })[0]).toBeVisible());
+      await expect(iframe.contentDocument).toBe(document);
+      await expect(input.value).toBe("Keep this unsaved draft");
+    }
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "Close example workbench" }));
+    await waitFor(() => expect(host.isConnected).toBe(false));
+    await expect(host.hasChildNodes()).toBe(false);
+  },
 };
