@@ -21,6 +21,7 @@ export const trackRecordProjection = async (
   address: DocumentAddress,
   document: Y.Doc,
   initialize: boolean,
+  sourceRevision: number,
 ) => {
   const owner = { workbench_id: address.workbench_id, extension_id: address.extension_id };
   const ownerWhere = (
@@ -63,6 +64,8 @@ export const trackRecordProjection = async (
     },
     stop: () => document.off("afterTransaction", changed),
     async persist(revision: number) {
+      if (projection && projection.revision !== sourceRevision && !rebuild)
+        throw new Error("Storage projection is out of date; install or upgrade its indexes");
       if (!projection && !initialize && !rebuild) return;
       if (rebuild) {
         await tx
