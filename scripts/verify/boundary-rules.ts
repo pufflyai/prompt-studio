@@ -90,6 +90,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "harness-claude-code",
     "harness-codex",
     "harness-open-code",
+    "harness-pi",
     "local-example",
     "pstdio-artifacts",
     "pstdio-base-themes",

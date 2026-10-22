@@ -88,9 +88,12 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
     ),
     license: changedFiles.some((file) => ["bun.lock", "package.json"].includes(basename(file))),
     harnessCli: changedCode.some((file) =>
-      ["extensions/harness-codex", "extensions/harness-claude-code", "extensions/harness-open-code"].some((dir) =>
-        isInside(file, dir),
-      ),
+      [
+        "extensions/harness-codex",
+        "extensions/harness-claude-code",
+        "extensions/harness-open-code",
+        "extensions/harness-pi",
+      ].some((dir) => isInside(file, dir)),
     ),
   };
 }

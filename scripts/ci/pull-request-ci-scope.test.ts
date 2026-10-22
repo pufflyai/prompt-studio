@@ -18,6 +18,7 @@ const packageDirs = [
   "extensions/harness-codex",
   "extensions/harness-open-code",
   "extensions/harness-claude-code",
+  "extensions/harness-pi",
   "services/relay",
   "services/account-manager",
   "scripts",
@@ -153,7 +154,7 @@ test("published extension contracts and harness implementations select compatibi
   ]) {
     expect(select([file]).publishedExtensions, file).toBe(true);
   }
-  for (const harness of ["harness-codex", "harness-open-code", "harness-claude-code"]) {
+  for (const harness of ["harness-codex", "harness-open-code", "harness-claude-code", "harness-pi"]) {
     expect(select([`extensions/${harness}/src/detection.ts`]).harnessCli).toBe(true);
   }
   expect(select(["packages/pstdio-dashboard/src/main.tsx"]).publishedExtensions).toBe(false);

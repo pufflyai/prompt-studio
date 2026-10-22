@@ -41,6 +41,19 @@
       "default": true
     },
     {
+      "installName": "harness-pi",
+      "displayName": "Pi",
+      "description": "Contributes the optional Pi coding agent harness.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/harness-pi",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pstdio",
+      "default": false
+    },
+    {
       "installName": "pstdio-base-themes",
       "displayName": "Prompt Studio Base Themes",
       "description": "Color themes and the Seti file icon theme.",

@@ -19,8 +19,8 @@ permissions:
 
 jobs:
   installed_cli:
-    name: ${{ matrix.harness.extension }} (${{ matrix.version }})
-    runs-on: ubuntu-latest
+    name: ${{ matrix.harness.extension }} (${{ matrix.version }}${{ matrix.harness.os && ', Windows' || '' }})
+    runs-on: ${{ matrix.harness.os || 'ubuntu-latest' }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
@@ -33,6 +33,11 @@ jobs:
             package: "@anthropic-ai/claude-code"
           - extension: harness-open-code
             package: opencode-ai
+          - extension: harness-pi
+            package: "@mariozechner/pi-coding-agent"
+          - extension: harness-pi
+            package: "@mariozechner/pi-coding-agent"
+            os: windows-latest
     steps:
       - uses: actions/checkout@v5
         with:
@@ -56,6 +61,7 @@ jobs:
         run: bun run build -- --scope @pstdio/sdk --include-dependencies
 
       - name: Install the agent CLI
+        shell: bash
         env:
           EXTENSION: ${{ matrix.harness.extension }}
           PACKAGE: ${{ matrix.harness.package }}
