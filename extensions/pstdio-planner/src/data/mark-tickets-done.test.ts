@@ -67,8 +67,6 @@ test("merge destination follows explicit IDs after every status is renamed", asy
     color: "green",
     sortOrder: 20,
     canCreate: false,
-    canDragIn: true,
-    canDragOut: true,
     isDefault: false,
     columnActions: [],
   });
