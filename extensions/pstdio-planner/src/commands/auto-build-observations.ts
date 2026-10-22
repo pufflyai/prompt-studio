@@ -7,7 +7,7 @@ import type { StoredTicket } from "../data/types";
 import { isUnexpectedExit } from "./auto-build-resume";
 import { isLiveSession } from "./auto-build-sessions";
 import { WorkspaceUnavailableError, workspaceHead } from "./change-requests";
-import { pullRequestRepairReason, readPullRequestEvidence } from "./pull-request-evidence";
+import { pullRequestRepairKey, pullRequestRepairReason, readPullRequestEvidence } from "./pull-request-evidence";
 
 export interface WorkCandidate {
   id: string;
@@ -90,7 +90,7 @@ const observeSubmittedWork = async (
       "Follow the task's delivery requirements. No extra review is required.",
       pr,
     );
-  const evidenceKey = `repair:${attempt.workspaceId}:${head}:${JSON.stringify(pr)}`;
+  const evidenceKey = pullRequestRepairKey(attempt.workspaceId, head, pr);
   if (events.some((event) => event.metadata.evidenceKey === evidenceKey))
     return observation(
       attempt,

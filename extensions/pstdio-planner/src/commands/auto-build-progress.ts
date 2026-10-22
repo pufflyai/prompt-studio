@@ -6,6 +6,8 @@ import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
 import { withWriteGuard } from "../data/write-guard";
 import { supervisorWakePrompt } from "./auto-build-prompts";
+import { hasPendingPullRequestRepair } from "./auto-build-pull-request-progress";
+import { isUnexpectedExit } from "./auto-build-resume";
 import { isLiveSession } from "./auto-build-sessions";
 
 const timestamp = (value: string | null | undefined) => (value ? Date.parse(value) : 0);
@@ -43,9 +45,17 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
             timestamp(attempt.updatedAt),
             timestamp(worker?.updatedAt),
           );
+          const pendingRepair =
+            worker &&
+            !isLiveSession(worker) &&
+            worker.status !== "failed" &&
+            !isUnexpectedExit(worker) &&
+            worker.last_exit?.cause !== "user_stop"
+              ? await hasPendingPullRequestRepair(ctx, ticket, attempt)
+              : false;
           return {
             updatedAt: Math.max(updatedAt, timestamp(dispatchedAt)),
-            changed: updatedAt > Math.max(lastPromptAt, timestamp(dispatchedAt)),
+            changed: pendingRepair || updatedAt > Math.max(lastPromptAt, timestamp(dispatchedAt)),
             active: isLiveSession(worker),
           };
         }),

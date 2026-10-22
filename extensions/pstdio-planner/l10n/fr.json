@@ -64,5 +64,7 @@
   "timeline.autoBuild.noReadyTickets": "Aucun ticket n’est prêt à démarrer. Auto Build reprendra lorsque du travail sera disponible.",
   "timeline.autoBuild.existingWork": "Le travail existe déjà. Ouvrez le ticket pour le consulter.",
   "timeline.autoBuild.assignedWork": "Un agent travaille déjà sur ce ticket.",
-  "timeline.autoBuild.waitingWork": "En attente des prérequis ou de la capacité d’un agent."
+  "timeline.autoBuild.waitingWork": "En attente des prérequis ou de la capacité d’un agent.",
+  "settings.workflow.statuses.title": "Sélection des statuts du workflow",
+  "settings.workflow.statuses.description": "Choisissez les statuts du workflow dans l’onglet Paramètres de cette extension. Les libellés ne définissent pas le comportement."
 }

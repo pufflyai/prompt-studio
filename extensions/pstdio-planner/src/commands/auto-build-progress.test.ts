@@ -8,6 +8,8 @@ import { withWriteGuard } from "../data/write-guard";
 import { checkAutoBuildCommand } from "../hooks/auto-build";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
+import { pullRequestRepairKey } from "./pull-request-evidence";
+import { repairAttempt } from "./repair-attempt";
 import { sessionRecord } from "./session-record.fixture";
 
 const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
@@ -225,4 +227,81 @@ test("a supervisor startup failure pauses Auto Build after the run state changes
   };
   await expect(checkAutoBuildCommand.run(ctx, {})).rejects.toThrow("Agent startup failed");
   expect(await ctx.storage.get("auto-build")).toMatchObject({ enabled: false });
+});
+
+test.each([
+  { change: "failed check", status: "completed", wakes: true },
+  { change: "merge conflict", status: "completed", wakes: true },
+  { change: "failed check", status: "failed", wakes: false },
+  { change: "failed check", status: "disconnected", wakes: false },
+])("a later PR $change only wakes repairable $status owners", async ({ change, status, wakes }) => {
+  const { ctx, task, dispatched, collection, supervisor, worker, followups } = await monitorFixture();
+  worker.status = status;
+  const attempt = (await collection<AttemptRecord>("planner-attempts").get(dispatched.workspaceId))!;
+  await putAttempt(ctx.storage, {
+    ...attempt,
+    revisions: [
+      {
+        revision: 1,
+        baseSha: "main-sha",
+        headSha: "submitted-head",
+        changeRequestReportId: "report",
+        submittedAt: ago(5),
+        submittedBy: { type: "agent", id: "owner", displayName: "Owner" },
+        reviews: [],
+      },
+    ],
+  });
+  await ticketsCollection(ctx.storage).put(task.id, {
+    ...task,
+    reviewLinks: [
+      {
+        id: "pr",
+        provider: "github",
+        kind: "pull_request",
+        url: "https://github.com/example/project/pull/1",
+        externalId: "1",
+        title: null,
+        createdAt: ago(5),
+        updatedAt: ago(5),
+      },
+    ],
+  });
+  const process = ctx.process.run;
+  let changed = false;
+  const evidence = () => ({
+    headRefOid: "submitted-head",
+    state: "OPEN",
+    mergeable: changed && change === "merge conflict" ? "CONFLICTING" : "MERGEABLE",
+    statusCheckRollup: [{ conclusion: changed && change === "failed check" ? "FAILURE" : "" }],
+  });
+  ctx.process.run = async (input) =>
+    input.command[0] === "gh" ? { exitCode: 0, stdout: JSON.stringify(evidence()), stderr: "" } : process(input);
+  supervisor.lastRequestStarted = new Date(Date.now() + 1000).toISOString();
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual([]);
+  changed = true;
+  await checkAutoBuildCommand.run(ctx, {});
+  if (!wakes) {
+    expect(followups).toEqual([]);
+    await checkAutoBuildCommand.run(ctx, {});
+    expect(followups).toEqual([]);
+    return;
+  }
+  expect(followups).toEqual(["supervisor"]);
+  const guardedCollection = ctx.storage.collection;
+  const guardedQuery = ctx.sessions.query;
+  ctx.storage.collection = collection;
+  ctx.sessions.query = async () => ({ items: [], nextCursor: null });
+  await repairAttempt(ctx, {
+    workspaceId: dispatched.workspaceId,
+    expectedHeadSha: "submitted-head",
+    reason: "Repair current PR evidence",
+    evidenceKey: pullRequestRepairKey(dispatched.workspaceId, "submitted-head", evidence()),
+  });
+  ctx.storage.collection = guardedCollection;
+  ctx.sessions.query = guardedQuery;
+  supervisor.status = "completed";
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual(["supervisor", dispatched.sessionId]);
 });

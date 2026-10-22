@@ -3,6 +3,7 @@ import type { CommandSource } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt, readAttempt } from "../data/attempt-storage";
 import { putTicket, ticketsCollection } from "../data/collections";
+import { hasPendingImplementationInput } from "../data/implementation-input";
 import {
   hasPendingInput,
   listTicketReviewRequests,
@@ -461,4 +462,13 @@ describe("attempt handoffs", () => {
 
     expect((await ticketsCollection(storage).get("ps-1"))?.statusId).toBe("in-review");
   });
+});
+
+test("persisted merge-only requests do not block implementation", async () => {
+  const { storage, context } = await setup();
+  await requestHumanCommand.run(context(), { ...task, request: { kind: "task" }, affectedAction: "merge" } as const);
+  const requests = await listTicketReviewRequests(storage, "ps-1");
+  expect(requests.requests[0]!.context.affectedAction).toBe("merge");
+  expect(hasPendingImplementationInput(requests)).toBe(false);
+  expect(hasPendingImplementationInput(requests, true)).toBe(true);
 });

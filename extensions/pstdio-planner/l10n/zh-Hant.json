@@ -58,5 +58,7 @@
   "timeline.autoBuild.noReadyTickets": "沒有可開始的工單。有可用工作時，Auto Build 將繼續。",
   "timeline.autoBuild.existingWork": "已有工作。請開啟工單查看。",
   "timeline.autoBuild.assignedWork": "已有代理正在處理此工單。",
-  "timeline.autoBuild.waitingWork": "正在等待前置條件完成或代理有空閒容量。"
+  "timeline.autoBuild.waitingWork": "正在等待前置條件完成或代理有空閒容量。",
+  "settings.workflow.statuses.title": "工作流程狀態選擇",
+  "settings.workflow.statuses.description": "在此擴充功能的設定分頁中選擇工作流程狀態。顯示名稱不決定行為。"
 }

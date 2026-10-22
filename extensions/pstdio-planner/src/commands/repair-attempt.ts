@@ -60,7 +60,7 @@ export const repairAttempt = async (
       prompt: `${input.reason}\n\nContinue in workspace ${attempt.workspaceShorthand}. Read current workflow status IDs and update ticket progress. Follow the task's validation, adversarial review, PR and CI rules. Save a report and submit the exact new HEAD with submit-revision. A queued follow-up does not transfer ownership. Do not merge without authority.`,
     });
     await appendAttemptEvent(ctx.storage, {
-      id: input.evidenceKey?.startsWith("unfinished:") ? input.evidenceKey : undefined,
+      id: input.evidenceKey,
       workspaceId: attempt.workspaceId,
       revision: attempt.revisions.at(-1)?.revision ?? null,
       type: "implementation_resumed",

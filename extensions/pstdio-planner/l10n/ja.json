@@ -58,5 +58,7 @@
   "timeline.autoBuild.noReadyTickets": "開始できるチケットがありません。作業が可能になると Auto Build が再開します。",
   "timeline.autoBuild.existingWork": "既存の作業があります。チケットを開いて確認してください。",
   "timeline.autoBuild.assignedWork": "エージェントがこのチケットを処理しています。",
-  "timeline.autoBuild.waitingWork": "前提条件の完了またはエージェントの空きを待っています。"
+  "timeline.autoBuild.waitingWork": "前提条件の完了またはエージェントの空きを待っています。",
+  "settings.workflow.statuses.title": "ワークフローのステータス選択",
+  "settings.workflow.statuses.description": "この拡張機能の設定タブでワークフローのステータスを選択します。表示名によって動作は変わりません。"
 }

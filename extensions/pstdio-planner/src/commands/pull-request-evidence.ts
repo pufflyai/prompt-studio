@@ -62,3 +62,9 @@ export const pullRequestRepairReason = (
   );
   return failed ? "CI failed on the submitted PR head. Fix the cause and satisfy the task's latest-head checks." : "";
 };
+
+export const pullRequestRepairKey = (
+  workspaceId: string,
+  head: string,
+  evidence: Awaited<ReturnType<typeof readPullRequestEvidence>>,
+) => `repair:${workspaceId}:${head}:${JSON.stringify(evidence)}`;
