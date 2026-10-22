@@ -3,7 +3,7 @@ import type { ViewFilterGroup, ViewSort } from "./collection-view";
 import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
 import type { Struct } from "./json";
-import type { NavigationTargetPage } from "./navigation-target";
+import type { NavigationTarget, NavigationTargetPage } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
 import type { RendererContributionBase, RendererEventReference } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
@@ -35,6 +35,8 @@ export interface CollectionBadgeItem {
   icon?: string;
   color?: string;
   tooltip?: string;
+  action?: NavigationTarget;
+  /** @deprecated Use action, which also supports panels and commands. */
   target?: NavigationTargetPage;
   resource?: ResourceRef;
 }
