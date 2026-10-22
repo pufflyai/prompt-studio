@@ -42,6 +42,14 @@ enumerating every record. The document directories own inserts, deletes and
 explicit restores. Projection rows and ownership mappings are removed with their
 document or workbench and cleared with an owner purge.
 
+Deleted record generations retain their names and causal history, while ordinary
+Yjs deletes reclaim live values in their named descendants. An explicit restore
+uses a new root derived from its operation ID, so an edit from before deletion
+cannot change that restored generation. Late updates to retired roots are
+reclaimed on receipt. See [retired record generations](../../adrs/0091-retire-deleted-record-generations.md).
+Legacy names may themselves contain list values; those names remain required
+causal metadata and must be counted separately from reclaimed live payload.
+
 ## Scheduled automations
 
 The core `pstdio.automations` owner uses the same encrypted document transport as

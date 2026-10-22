@@ -2,6 +2,7 @@ import { canonicalJson, type Json, type SharedEdit } from "pstdio-sync-contracts
 import type * as Y from "yjs";
 import type { DocumentAuthor } from "./document-author";
 import { normalizeDocumentJson } from "./document-json";
+import { trackDocumentPayload } from "./document-payload";
 import { readValue, valueReference, writeValue } from "./document-values";
 import type { GroupCommit } from "./types";
 
@@ -42,17 +43,26 @@ const applyShared = (
   }
 };
 
-export const applyDocumentEdit = (document: Y.Doc, edit: GroupCommit["edits"][number], author?: DocumentAuthor) => {
+export const applyDocumentEdit = (
+  document: Y.Doc,
+  edit: GroupCommit["edits"][number],
+  operationId: string,
+  author?: DocumentAuthor,
+) => {
   const records = document.getMap<string>("records");
   if (edit.deleted) {
+    const name = records.get(edit.recordId) ?? JSON.stringify(["record", edit.recordId]);
     records.delete(edit.recordId);
     document.getMap("deleted").set(edit.recordId, true);
+    trackDocumentPayload(document).retire(name);
     return;
   }
   let name = records.get(edit.recordId);
   if (!name) {
     if (document.getMap("deleted").has(edit.recordId) && edit.deleted !== false) return;
-    name = JSON.stringify(["record", edit.recordId]);
+    name = document.getMap("deleted").has(edit.recordId)
+      ? JSON.stringify(["record", edit.recordId, "restore", operationId])
+      : JSON.stringify(["record", edit.recordId]);
     records.set(edit.recordId, name);
     document.getMap("deleted").delete(edit.recordId);
   }

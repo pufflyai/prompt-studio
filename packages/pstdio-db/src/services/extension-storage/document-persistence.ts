@@ -5,6 +5,7 @@ import {
   resourceNumbersDocumentId,
   resourceNumbersOwnerId,
   type StorageOwner,
+  trackDocumentPayload,
 } from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
@@ -164,6 +165,7 @@ export const runDocumentTransaction = async <T>(
   const updates: Uint8Array[] = [];
   const capture = (update: Uint8Array) => updates.push(update);
   document.on("update", capture);
+  const payload = address.document_id === "records" ? trackDocumentPayload(document) : undefined;
   try {
     const value = await action({
       document,
@@ -171,7 +173,12 @@ export const runDocumentTransaction = async <T>(
       migrationHistory: migration?.histories.get(key),
       operation: operations.operation,
       remember: operations.remember,
-      rebuildProjection: projection?.rebuild ?? identities?.rebuild,
+      rebuildProjection: projection
+        ? async () => {
+            payload?.upgrade();
+            await projection.rebuild();
+          }
+        : identities?.rebuild,
     });
     identities?.prepare();
     await operations.persist();

@@ -10,6 +10,21 @@ A release upgrades a database written by any Prompt Studio release published in 
 - A database older than the window upgrades in two steps: first install a release from inside the window and start it once, then install the current release.
 - The window is in days, not in minor versions, because Prompt Studio publishes several minor releases a week. For example, `pstdio@0.34.0` to `pstdio@0.40.0` shipped between 2026-09-25 and 2026-10-02.
 
+## Current record projections
+
+Installing storage indexes upgrades an existing owner into durable current rows.
+Backfill and its ready revision commit atomically with the document transaction.
+A failed backfill preserves the authoritative document and local operation IDs;
+the next installation retries it. Normal reads use the projection directly and
+never replay the owner to repair a missing or stale projection.
+
+The host compares the projection revision with the source document revision.
+An older local writer that cannot maintain current rows therefore causes an
+explicit out-of-date error, rather than silently returning stale data or marking
+it current on a later write. Reinstalling the declared indexes repairs that owner.
+The backfill also retires legacy deleted roots without replacing their CRDT
+identities or removing offline merge history. No schema reset is involved.
+
 ## Legacy migration code
 
 Code that only repairs databases older than a given release may be deleted once that release falls out of the window. Delete it in the next breaking release after the removal date, together with the other removals (see [API versioning](../extensions/0014-api-versioning.md) for how breaking releases are grouped).

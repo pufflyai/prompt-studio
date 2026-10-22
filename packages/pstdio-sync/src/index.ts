@@ -1,5 +1,6 @@
 export { captureCheckpoint } from "./checkpoint-capture";
 export { type DocumentHistory, documentHistory } from "./document-history";
+export { trackDocumentPayload } from "./document-payload";
 export { documentRecordTypes, type RecordType, readDocumentRecord } from "./document-record";
 export { type DocumentSnapshot, findDocumentReplacements, snapshotDocumentRecords } from "./document-replacements";
 export { createDocumentStorage } from "./document-storage";

@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Reject stale storage projections after older-host writes and rebuild them atomically.
+Rebuild stale storage projections atomically and reclaim deleted record payload without losing late offline edits.

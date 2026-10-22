@@ -90,7 +90,7 @@ export const createDocumentStorage = (input: { owner: StorageOwner; store: Docum
             validateDocumentGroup(doc, group);
             const author = migrationAuthor(doc, state.migrationSeed, state.migrationHistory);
             doc.transact(() => {
-              for (const edit of group.edits) applyDocumentEdit(doc, edit, author);
+              for (const edit of group.edits) applyDocumentEdit(doc, edit, group.operationId, author);
             });
           }
           state.remember(group.operationId, identity);

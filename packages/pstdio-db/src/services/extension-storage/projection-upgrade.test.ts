@@ -94,3 +94,48 @@ test("an older writer cannot silently serve a stale projection and reinstall rep
       .where(eq(storage_record_projections.workbench_id, owner.workbenchId)),
   ).toHaveLength(1);
 });
+
+test("durable projections preserve deletion and explicit restore after late offline edits and reopen", async () => {
+  const f = await createExtensionStorageFixture();
+  cleanup.push(f.close);
+  const firstOwner = { workbenchId: f.projectAId, extensionId: "ext.example" };
+  const secondOwner = { workbenchId: f.projectBId, extensionId: "ext.example" };
+  const first = createDocumentStorageDBService(f.db).open({ owner: firstOwner });
+  const second = createDocumentStorageDBService(f.db).open({ owner: secondOwner });
+  const indexes = [{ name: "notes", fields: { title: { path: ["title"], type: "string" as const } } }];
+  await first.records.defineIndexes(indexes);
+  await second.records.defineIndexes(indexes);
+  await first.records.commit({
+    operationId: "seed",
+    edits: [{ recordId: "note", replace: { title: "Before", body: "old body\n".repeat(1000) } }],
+  });
+  await second.applyUpdate(await first.exportUpdate());
+  await second.records.commit({
+    operationId: "offline",
+    edits: [{ recordId: "note", replace: { title: "Late", body: "late body\n".repeat(1000) } }],
+  });
+  const late = await second.exportUpdate();
+  await first.records.commit({ operationId: "delete", edits: [{ recordId: "note", deleted: true }] });
+  await first.applyUpdate(late);
+  expect((await first.records.query({ index: "notes" })).records).toHaveLength(0);
+  expect((await first.records.readMany(["note"]))[0]).toMatchObject({ deleted: true, value: null });
+  const restore: StorageGroup = {
+    operationId: "restore",
+    edits: [{ recordId: "note", deleted: false, replace: { title: "Restored", nested: { current: true } } }],
+  };
+  await first.records.commit(restore);
+  await second.applyUpdate(await first.exportUpdate());
+  await first.applyUpdate(late);
+  for (const owner of [firstOwner, secondOwner]) {
+    const phases: string[] = [];
+    const reopened = createDocumentStorageDBService(f.db, undefined, (event) => phases.push(event.phase)).open({
+      owner,
+    });
+    expect((await reopened.records.read("note")).value).toEqual(restore.edits[0].replace!);
+    expect((await reopened.records.query({ index: "notes" })).records[0].fields.title).toBe("Restored");
+    expect(phases).not.toContain("document-loaded");
+  }
+  const beforeRetry = await first.exportUpdate();
+  await first.records.commit(restore);
+  expect(await first.exportUpdate()).toEqual(beforeRetry);
+});

@@ -1,6 +1,7 @@
 import type { StorageRecordQueries } from "pstdio-sync-contracts";
 import type * as Y from "yjs";
 import type { DocumentHistory } from "./document-history";
+import { trackDocumentPayload } from "./document-payload";
 import type { StorageObserver, StorageOwner } from "./types";
 
 export interface DocumentState {
@@ -22,6 +23,7 @@ export const hasDocumentUserData = (document: Y.Doc) =>
   document.getMap("records").size > 0 || document.getMap("deleted").size > 0 || document.getText("content").length > 0;
 
 export const memoryDocumentState = (document: Y.Doc) => {
+  trackDocumentPayload(document);
   const operations = new Map<string, string>();
   return {
     document,
