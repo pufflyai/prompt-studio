@@ -87,3 +87,34 @@ test("batch resolution reads a shared ancestor once and stops at cycles", async 
   expect(resolved.map(({ resource }) => resource.id)).toEqual([child.id, parent.id, child.id]);
   expect(observed.reads).toEqual([`tickets/${child.id}`, `tickets/${parent.id}`]);
 });
+
+test("batch resolution reads a missing ancestor once across different branch depths", async () => {
+  const storage = createMemoryStorage();
+  for (const [id, parentId] of [
+    ["a", "missing"],
+    ["b", "c"],
+    ["c", "missing"],
+  ]) {
+    await ticketsCollection(storage).put(id, {
+      id,
+      shorthand: `T-${id}`,
+      title: id,
+      content: "Body stays available when opened",
+      statusId: null,
+      archived: id === "a",
+      sortOrder: 0,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      parentId,
+    });
+  }
+  const observed = observeStorageReads(storage);
+  const resources = ["a", "b", "a", "missing"].map((id) => ({ type: "ticket", id }));
+  const resolved = await resolveTicketResourcesCommand.run(
+    ...makeCommandArgs({ storage: observed.storage, params: { resources } }),
+  );
+
+  expect(resolved.map(({ resource }) => resource.id)).toEqual(["a", "b", "a"]);
+  expect(resolved[0].resource.metadata?.archived).toBe(true);
+  expect(observed.reads).toEqual(["tickets/a", "tickets/b", "tickets/missing", "tickets/c"]);
+});
