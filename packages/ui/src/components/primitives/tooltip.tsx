@@ -12,7 +12,7 @@ export interface TooltipProps extends ChakraTooltip.RootProps {
   overflowRef?: React.RefObject<HTMLElement | null>;
 }
 
-export const tooltipOpenDelay = 680;
+export const tooltipOpenDelay = 380;
 
 const TooltipHoverReset = (props: { disabled: boolean }) => {
   const { disabled } = props;

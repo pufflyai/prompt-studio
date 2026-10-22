@@ -4,4 +4,4 @@
 "@pstdio/workbench": patch
 ---
 
-Delay first-hover tooltips to 680 ms, show harness setting labels, and reveal tab titles only when truncated.
+Use a 380 ms first-hover tooltip delay, show harness setting labels, and reveal tab titles only when truncated.

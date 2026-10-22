@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Tooltips wait 680 ms on the first hover. Pass overflowRef for a label tooltip that is useful only when its text is clipped. The tooltip updates when the label or its available width changes. Keyboard focus uses the shared tooltip behavior.",
+          "Tooltips wait 380 ms on the first hover. Pass overflowRef for a label tooltip that is useful only when its text is clipped. The tooltip updates when the label or its available width changes. Keyboard focus uses the shared tooltip behavior.",
       },
     },
   },
