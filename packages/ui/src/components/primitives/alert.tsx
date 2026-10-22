@@ -1,6 +1,8 @@
-import { ButtonPropsProvider, Alert as ChakraAlert, HStack, IconButton } from "@chakra-ui/react";
+import { Box, ButtonPropsProvider, Alert as ChakraAlert, HStack, IconButton } from "@chakra-ui/react";
 import { X } from "lucide-react";
 import * as React from "react";
+import { CopyButton } from "./copy-button";
+import { ScrollArea } from "./scroll-area";
 
 export interface AlertProps extends Omit<ChakraAlert.RootProps, "title"> {
   startElement?: React.ReactNode;
@@ -15,24 +17,39 @@ export interface AlertProps extends Omit<ChakraAlert.RootProps, "title"> {
 
 export const AlertMessage = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
   const { title, children, icon, startElement, endElement, onClose, closeLabel = "Dismiss", ...rest } = props;
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const copyable = rest.status === "error";
   return (
     <ChakraAlert.Root ref={ref} {...rest}>
       {startElement || <ChakraAlert.Indicator>{icon}</ChakraAlert.Indicator>}
       <ButtonPropsProvider value={{ variant: "ghost", size: "2xs" }}>
         <ChakraAlert.Content>
-          <HStack gap="2xs" alignItems="flex-start" minW="0">
-            <ChakraAlert.Title flex="1" minW="0">
-              {title}
-            </ChakraAlert.Title>
+          <Box position="relative" minW="0" minH="0" flex="1">
+            <ScrollArea contentRef={contentRef} viewportProps={{ overscrollBehavior: "contain" }}>
+              <Box paddingEnd={onClose ? "xl" : undefined}>
+                <ChakraAlert.Title>{title}</ChakraAlert.Title>
+                {children ? <ChakraAlert.Description>{children}</ChakraAlert.Description> : null}
+              </Box>
+            </ScrollArea>
             {onClose ? (
-              <IconButton aria-label={closeLabel} flexShrink="0" onClick={onClose}>
+              <IconButton aria-label={closeLabel} position="absolute" top="0" right="xs" onClick={onClose}>
                 <X />
               </IconButton>
             ) : null}
-          </HStack>
-          {children ? <ChakraAlert.Description>{children}</ChakraAlert.Description> : null}
-          {endElement ? (
-            <HStack gap="2xs" pt="xs" justifyContent="flex-end" alignItems="flex-end" flexWrap="wrap" minW="0">
+          </Box>
+          {endElement || copyable ? (
+            <HStack
+              gap="2xs"
+              pt="xs"
+              justifyContent="flex-end"
+              alignItems="flex-end"
+              flexWrap="wrap"
+              minW="0"
+              flexShrink="0"
+            >
+              {copyable ? (
+                <CopyButton size="2xs" label="Copy error message" text={() => contentRef.current?.innerText ?? ""} />
+              ) : null}
               {endElement}
             </HStack>
           ) : null}
