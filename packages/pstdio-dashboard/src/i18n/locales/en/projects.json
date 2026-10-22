@@ -189,6 +189,7 @@
     "browse": "Browse",
     "existing": "Use a folder that already has it",
     "existingHint": "For a checkout you made yourself. Prompt Studio checks that it is the same repository.",
+    "existingHintNoRemote": "Choose the folder that holds this project's files.",
     "notNow": "Not now",
     "cloneAndContinue": "Clone and continue",
     "chooseFolder": "Choose folder"

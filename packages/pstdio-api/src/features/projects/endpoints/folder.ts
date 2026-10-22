@@ -7,7 +7,7 @@ import { workspaceResponseSchema } from "../../workspaces/dto";
 import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import { rootProviderId } from "../../workspaces/workspace-provider-service";
 import type { ProjectsRouteDeps } from "../deps";
-import { cloneGitRemote, readGitRemote } from "../git-remote";
+import { cloneGitRemote, readGitRemote, sameRepository } from "../git-remote";
 import { initializeProjectWorkspace, resolveInitialWorkspace, withFolderCreation } from "../project-folder";
 
 const error = { content: { "application/json": { schema: z.object({ error: z.string() }) } } };
@@ -61,7 +61,8 @@ const message = (cause: unknown) => (cause instanceof Error ? cause.message : St
 // Puts the project's repository in the folder, or explains why the folder cannot hold it.
 const prepareFolder = async (gitRemote: string | undefined, path: string, clone: boolean) => {
   if (!clone) {
-    if (gitRemote && (await readGitRemote(path)) !== gitRemote)
+    const local = gitRemote ? await readGitRemote(path) : undefined;
+    if (gitRemote && !(local && sameRepository(local, gitRemote)))
       return { status: 409, error: `This folder does not hold the project's repository ${gitRemote}.` } as const;
     return null;
   }
@@ -82,23 +83,26 @@ export const chooseProjectFolderHandler =
     const path = expandHomePath(c.req.valid("json").path);
     if (!(await deps.projectService.get(id))) return c.json({ error: "Project not found." }, 404);
     if (!isAbsolute(path)) return c.json({ error: "Choose an absolute folder path." }, 400);
-    return withFolderCreation(path, async () => {
-      const home = await deps.workspaceService.getDefault(id);
-      if (home?.root_path || home?.provider_ref_json || home?.provider_operation_id)
-        return c.json({ error: "This project already has a folder on this device." }, 409);
-      const refused = await prepareFolder((await deps.projectInfoService.read(id)).gitRemote, path, clone);
-      if (refused) return c.json({ error: refused.error }, refused.status);
-      let initial: Awaited<ReturnType<typeof resolveInitialWorkspace>>;
-      try {
-        initial = await resolveInitialWorkspace({
-          initial_workspace: { provider_id: rootProviderId, params: { path } },
-        });
-      } catch (cause) {
-        return c.json({ error: message(cause) }, 400);
-      }
-      if (await deps.workspaceService.findByPath(initial.path!))
-        return c.json({ error: "This folder already belongs to another workspace." }, 409);
-      const workspace = await initializeProjectWorkspace(deps, id, initial.initial);
-      return c.json({ ...workspace, ...toExtensionWorkspace(workspace) }, 201);
-    });
+    // One folder choice per project at a time, and one project per folder.
+    return withFolderCreation(`project-folder:${id}`, () =>
+      withFolderCreation(path, async () => {
+        const home = await deps.workspaceService.getDefault(id);
+        if (home?.root_path || home?.provider_ref_json || home?.provider_operation_id)
+          return c.json({ error: "This project already has a folder on this device." }, 409);
+        const refused = await prepareFolder((await deps.projectInfoService.read(id)).gitRemote, path, clone);
+        if (refused) return c.json({ error: refused.error }, refused.status);
+        let initial: Awaited<ReturnType<typeof resolveInitialWorkspace>>;
+        try {
+          initial = await resolveInitialWorkspace({
+            initial_workspace: { provider_id: rootProviderId, params: { path } },
+          });
+        } catch (cause) {
+          return c.json({ error: message(cause) }, 400);
+        }
+        if (await deps.workspaceService.findByPath(initial.path!))
+          return c.json({ error: "This folder already belongs to another workspace." }, 409);
+        const workspace = await initializeProjectWorkspace(deps, id, initial.initial);
+        return c.json({ ...workspace, ...toExtensionWorkspace(workspace) }, 201);
+      }),
+    );
   };

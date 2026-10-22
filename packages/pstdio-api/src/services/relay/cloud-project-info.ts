@@ -1,4 +1,10 @@
-import { coreOwnerId, createMemoryDocumentStore, projectInfoDocumentId, readProjectInfo } from "pstdio-sync";
+import {
+  coreOwnerId,
+  createMemoryDocumentStore,
+  projectInfoDocumentId,
+  projectInfoState,
+  readProjectInfo,
+} from "pstdio-sync";
 import { createDocumentRelay, createDocumentSync, createRelayAccess, fetchSyncSpaces } from "pstdio-sync/relay";
 import type { RelayWorkbench } from "./runtime";
 
@@ -29,7 +35,10 @@ export const readCloudProjectInfo = async (config: RelayWorkbench, signal: Abort
   });
   try {
     await sync.synchronize();
-    return await store.transaction(owner, async ({ document }) => readProjectInfo(document));
+    return await store.transaction(owner, async ({ document }) => ({
+      info: readProjectInfo(document),
+      state: projectInfoState(document),
+    }));
   } finally {
     sync.close();
   }

@@ -10,6 +10,7 @@ export { initialRecordRevision, scopeRecordStorage, storageRecordId } from "./na
 export {
   type ProjectInfo,
   projectInfoDocumentId,
+  projectInfoState,
   readProjectInfo,
   writeProjectInfo,
 } from "./project-info";

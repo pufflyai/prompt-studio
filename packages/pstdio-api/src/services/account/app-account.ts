@@ -30,7 +30,7 @@ export const createAppAccount = (
         close: async () => {
           stopEvents();
           syncEvents.close();
-          accountService.close();
+          await accountService.close();
           await app.close();
         },
       },
@@ -51,7 +51,7 @@ export const createAppAccount = (
               for (const project of await projects.list()) void syncEvents.changed(project.id);
             },
             relay.status,
-            (connection) => recoverCloudProject(app.deps, connection),
+            (connection, signal) => recoverCloudProject(app.deps, connection, signal),
           );
         },
       },

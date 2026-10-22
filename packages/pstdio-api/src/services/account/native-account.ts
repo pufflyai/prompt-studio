@@ -64,7 +64,9 @@ export const createNativeAccount = (input: {
     login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
   // Creates a cloud project that does not exist on this device yet. Until the relay runtime starts, nothing can.
-  let recover: (connection: RelayWorkbench) => Promise<void> = async () => {};
+  let recover: (connection: RelayWorkbench, signal: AbortSignal) => Promise<void> = async () => {};
+  const shutdown = new AbortController();
+  let recovering: Promise<void> | undefined;
   // Until the relay runtime starts, no sync owner has downloaded anything in this run.
   let projectStatus = async (_projectId: string): Promise<ProjectSyncStatus> => ({
     state: "first-download-incomplete",
@@ -102,23 +104,37 @@ export const createNativeAccount = (input: {
   const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
   const projectPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}`;
 
-  // Syncs every cloud project of the account. A project missing here is created from its synced info first;
-  // one that cannot be recovered yet is tried again on the next refresh.
-  const publish = async (login: DeviceLogin | null) => {
-    void presence.update(login);
-    const local: string[] = [];
-    // One at a time: the first recovered project on a fresh device installs the default extensions.
-    for (const id of login ? (projectsFor(login) ?? []) : []) {
-      if (!(await input.projects.get(id)))
-        await recover(connectionFor(login!, id)).catch((error: unknown) =>
+  // Recovery can wait on the relay and on extension installs, so it never holds up the projects already here.
+  // One at a time: the first recovered project on a fresh device installs the default extensions.
+  const recoverMissing = (login: DeviceLogin, ids: string[]) => {
+    if (recovering) return;
+    recovering = (async () => {
+      let created = false;
+      for (const id of ids) {
+        if (shutdown.signal.aborted) return;
+        await recover(connectionFor(login, id), shutdown.signal).catch((error: unknown) =>
           apiLogger.warn(
             { event: "account.cloud_project.recovery_failed", projectId: id, error },
             "Recovery will retry",
           ),
         );
-      if (await input.projects.get(id)) local.push(id);
-    }
+        if (await input.projects.get(id)) created = true;
+      }
+      if (created && !shutdown.signal.aborted) void refresh();
+    })().finally(() => {
+      recovering = undefined;
+    });
+  };
+  // Syncs every cloud project of the account that exists here, then recovers the missing ones.
+  // One that cannot be recovered yet is tried again on the next refresh.
+  const publish = async (login: DeviceLogin | null) => {
+    void presence.update(login);
+    const local: string[] = [];
+    const missing: string[] = [];
+    for (const id of login ? (projectsFor(login) ?? []) : [])
+      ((await input.projects.get(id)) ? local : missing).push(id);
     await update(login ? local.map((id) => connectionFor(login, id)) : []);
+    if (login && missing.length) recoverMissing(login, missing);
   };
   const load = async () => {
     clearTimeout(retry);
@@ -233,7 +249,7 @@ export const createNativeAccount = (input: {
     },
     async status() {
       const login = await readLogin();
-      if (!login) return { login: null, cloudProjects: [], cloudProjectsLoaded: true };
+      if (!login) return { login: null, cloudProjects: [] as string[], cloudProjectsLoaded: true };
       const { token: _, ...device } = login;
       const projects = projectsFor(login);
       return { login: device, cloudProjects: projects ?? [], cloudProjectsLoaded: !!projects };
@@ -272,14 +288,15 @@ export const createNativeAccount = (input: {
       await refresh();
       return { ok: true };
     },
-    close() {
+    async close() {
       closed = true;
+      shutdown.abort();
       presence.close();
       clearTimeout(retry);
       update = async () => {};
-      recover = async () => {};
       for (const login of logins.values()) login.close();
       logins.clear();
+      await recovering;
     },
   };
 };

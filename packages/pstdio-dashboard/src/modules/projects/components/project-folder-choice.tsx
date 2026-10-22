@@ -66,7 +66,7 @@ export const ProjectFolderChoice = (props: ProjectFolderChoiceProps) => {
             <Stack layerStyle="optionCard" gap="2xs">
               <Radio value="existing">{t("folder.existing")}</Radio>
               <Text textStyle="label/S/regular" color="fg.subtle">
-                {t("folder.existingHint")}
+                {gitRemote ? t("folder.existingHint") : t("folder.existingHintNoRemote")}
               </Text>
             </Stack>
           </Stack>

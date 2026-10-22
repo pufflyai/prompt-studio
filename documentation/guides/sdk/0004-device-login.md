@@ -23,7 +23,7 @@ pst projects cloud PROJECT_ID
 
 The project keeps its ID, folder and local data. Every device of your account syncs it, together with its name and the `origin` git remote of its folder. A device notices a new cloud project when it starts, logs in, creates or binds the project, or checks the account again, which it does every minute.
 
-To stop syncing a project, run `pst projects local PROJECT_ID`. Every device keeps its local copy.
+To stop syncing a project, run `pst projects local PROJECT_ID`. Every device keeps its local copy. A project that syncs cannot be deleted on one device, because every device of the account gets every cloud project back. Make it local first, then delete it.
 
 ## Get your cloud projects on a new computer
 

@@ -1,4 +1,4 @@
-import type * as Y from "yjs";
+import * as Y from "yjs";
 
 /** Core's synced description of a cloud project. A new device reads it before the project exists there. */
 export const projectInfoDocumentId = "project-info";
@@ -26,3 +26,6 @@ export const writeProjectInfo = (document: Y.Doc, next: ProjectInfo) => {
     }
   });
 };
+
+/** The whole document as one update, so a device can keep the history it downloaded, not only the values. */
+export const projectInfoState = (document: Y.Doc) => Y.encodeStateAsUpdate(document);

@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import type { ProjectSyncState, StorageRecord } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { coreOwnerId, createSyncSpace, projectInfoDocumentId } from "pstdio-sync";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
@@ -92,16 +91,6 @@ const writeRepository = async (path: string) => {
   git(path, "-c", "user.name=Test", "-c", "user.email=test@example.test", "commit", "-qm", "first");
 };
 
-// The peer serves every project with one fixed key, so the test can name the encrypted project info document.
-const projectInfoDocument = async (projectId: string) => {
-  const space = await createSyncSpace({
-    projectId,
-    spaceOwner: null,
-    keys: [{ generation: 1, secret: "A".repeat(43) }],
-  });
-  return space.documentId(JSON.stringify([coreOwnerId, projectInfoDocumentId]));
-};
-
 const write = (device: Awaited<ReturnType<typeof startDevice>>, projectId: string, field: string, value: string) =>
   device.command<Record<string, StorageRecord>>(projectId, "read").then((records) =>
     device.command(projectId, "commit", {
@@ -134,9 +123,10 @@ export const registerTwoDeviceSyncSmokeTests = () =>
         await first.client.account.syncProject(project.id);
         await first.reach(project.id, "synced");
 
-        // The new device can read the project info but none of the project's data yet.
-        const info = await projectInfoDocument(project.id);
-        peer.failReads((documentId) => documentId !== info);
+        // A new device reads the project's info before anything else. Let it read that one document and none
+        // of the project's data yet.
+        let info: string | undefined;
+        peer.failReads((documentId) => (info ??= documentId) !== documentId);
         await signIn(second, peer.origin);
         await waitFor(async () => (await second.client.projects.query()).items.some((item) => item.id === project.id));
         expect((await second.client.projects.get(project.id)).name).toBe("Shared notes");

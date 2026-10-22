@@ -43,6 +43,7 @@ export const startCoreDocumentSync = (input: {
     }
   };
   let syncs: ReturnType<typeof createDocumentSync>[] = [];
+  const checkedFolders = new Set<string>();
   let attempt: AbortSignal | undefined;
   let generation: number | undefined;
   // Each reconnect replaces the document syncs. The first download stays done.
@@ -93,7 +94,7 @@ export const startCoreDocumentSync = (input: {
       for (const sync of syncs) await sync.synchronize();
       if (!(await Promise.all(syncs.map((sync) => sync.status()))).every((status) => status.downloaded)) return;
       firstDownloaded = true;
-      await reconcileProjectInfo(deps, config.workbenchId);
+      await reconcileProjectInfo(deps, config.workbenchId, checkedFolders);
     },
     onError: () =>
       apiLogger.warn(

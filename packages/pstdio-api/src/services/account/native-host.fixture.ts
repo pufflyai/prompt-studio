@@ -39,7 +39,7 @@ export const createAccountHostFixture = async (root: string) => {
     synced: () => synced,
     deps: { environmentService, extensionStorageService },
     close: async () => {
-      account.close();
+      await account.close();
       await database.close();
     },
   };
