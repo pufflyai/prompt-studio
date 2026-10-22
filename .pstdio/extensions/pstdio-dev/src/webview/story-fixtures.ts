@@ -115,7 +115,8 @@ const samples = (median: number, noise: number, seed: number) => {
   return Array.from({ length: 10 }, () => median * (1 + noise * 2 * random()));
 };
 
-const seedOf = (text: string) => [...text].reduce((sum, character) => (sum * 31 + character.charCodeAt(0)) % 100_000, 7);
+const seedOf = (text: string) =>
+  [...text].reduce((sum, character) => (sum * 31 + character.charCodeAt(0)) % 100_000, 7);
 
 const resultFile = (sha: string, index: number, effect = (_: SeriesDefinition) => 1): BenchmarkResultFile => ({
   format: 1,

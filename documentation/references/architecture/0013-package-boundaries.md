@@ -39,6 +39,11 @@ layer-map change.
    dependency. That edge is confined to test fixtures; local database runtime code
    does not open PostgreSQL relay storage.
 
+   The private `pstdio-benchmarks` package writes benchmark measurements in the shared
+   result format and runs benchmark suites. It has no workspace dependencies. Packages
+   with benchmarks declare it as a development dependency; only benchmark and
+   performance test files import it.
+
 2. **Public authoring SDK**
    `@pstdio/sdk` exposes extension and client authoring APIs. Runtime or host
    contracts shared with the API live below it in `pstdio-api-contracts`, not in
