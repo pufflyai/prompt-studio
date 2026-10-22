@@ -44,6 +44,18 @@ export const verifyPackagedCollectionBreadcrumb = async (
     dispatchEvent(new PopStateEvent("popstate"));
   }, sessions.href);
   await expect(breadcrumbs).toContainText("Sessions");
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  const modeReturn = sidenav.getByRole("button", { name: "Project", exact: true });
+  await expect(modeReturn).toBeVisible();
+  expect(await modeReturn.evaluate((button) => button.closest('[draggable="true"]'))).toBeNull();
+  const search = await sidenav.getByRole("option", { name: "Search", exact: true }).boundingBox();
+  const back = await modeReturn.boundingBox();
+  expect(back!.y).toBeGreaterThanOrEqual(search!.y + search!.height);
+  await modeReturn.click();
+  await expect(page).toHaveURL(libraryUrl);
+  await expect(modeReturn).toHaveCount(0);
+  await page.goBack();
+  await expect(modeReturn).toBeVisible();
   await page.goBack();
   await expect(tab("secondary")).toBeVisible();
   await expect(tab("main")).toHaveCount(0);

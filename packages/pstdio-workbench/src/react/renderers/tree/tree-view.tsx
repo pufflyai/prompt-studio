@@ -19,6 +19,7 @@ import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import { RendererReadNotice } from "../renderer-read-notice";
 import type { TreeActionParamsRequest } from "./tree-actions";
 import { findNodeInSections, toTreeListSection } from "./tree-list-adapter";
+import { TreeModeReturn } from "./tree-mode-return";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { pinnedOnlyNodeIds } from "./tree-pinned-only";
 import { TreeViewBody } from "./tree-view-body";
@@ -255,6 +256,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             />
           </Flex>
         ) : null}
+        {isSidenav ? <TreeModeReturn workbench={workbench} /> : null}
         <TreeViewSearch
           visible={Boolean(treeRenderer.searchable)}
           placeholder={treeRenderer.searchPlaceholder}
