@@ -39,6 +39,13 @@ describe("benchmark statistics", () => {
     ).toBe("improved");
   });
 
+  test("an idle zero stays comparable instead of dividing by zero", () => {
+    expect(compareSamples([0, 0, 0], [0, 0, 0])).toEqual({ change: 0, low: 0, high: 0, verdict: "unchanged" });
+    const fromZero = compareSamples([0, 0, 0, 0], [0.4, 0.5, 0.6, 0.5]);
+    expect(fromZero.verdict).toBe("regressed");
+    expect(fromZero.change).toBe(Number.POSITIVE_INFINITY);
+  });
+
   test("a change inside the noise is unchanged", () => {
     const result = compareSamples(base, [101, 99, 100, 102, 98, 100, 103, 97, 100, 101]);
     expect(result.verdict).toBe("unchanged");

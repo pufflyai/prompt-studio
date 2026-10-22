@@ -14,9 +14,10 @@ export interface BenchmarkMeasurement {
 export const RESULTS_FILE_ENV = "BENCHMARK_RESULTS";
 
 // Benchmarks also run on their own. Measurements are kept only when the runner names a results file.
+// A missing measurement (NaN) is left out, so it never reads as zero.
 export const recordMeasurement = (measurement: BenchmarkMeasurement) => {
   const file = process.env[RESULTS_FILE_ENV];
-  if (!file) return;
+  if (!file || !Number.isFinite(measurement.value)) return;
   appendFileSync(file, `${JSON.stringify(measurement)}\n`);
 };
 

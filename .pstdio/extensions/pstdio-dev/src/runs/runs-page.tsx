@@ -3,7 +3,7 @@ import { useCommandQuery } from "@pstdio/sdk/extensions/react";
 import { AlertMessage } from "@pstdio/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { DEFAULT_PLATFORM, SUITES } from "../benchmarks/platforms";
+import { DEFAULT_PLATFORM, DEFAULT_SUITES } from "../benchmarks/platforms";
 import { useBenchmarks, useBenchmarksRefresh, useOpenLink } from "../webview/client";
 import { PageFrame } from "../webview/page-frame";
 import { SyncStatus } from "../webview/sync-status";
@@ -26,8 +26,7 @@ export const RunsPage = () => {
   const sync = useSyncOnOpen();
   const [request, setRequest] = useState<RunRequest>({
     commits: [],
-    // The relay suite needs Docker and minutes of setup, so it is opt-in.
-    suites: SUITES.filter((suite) => suite.id !== "relay").map((suite) => suite.id),
+    suites: DEFAULT_SUITES,
     platforms: [DEFAULT_PLATFORM],
     samples: 10,
   });
@@ -39,7 +38,7 @@ export const RunsPage = () => {
   });
   const start = useMutation({
     mutationFn: () => client.commands["benchmarks.start-run"](request),
-    onSuccess: () => setRequest({ ...request, commits: [] }),
+    onSuccess: () => setRequest((current) => ({ ...current, commits: [] })),
   });
   const cancel = useMutation({
     mutationFn: (runId: string) => client.commands["benchmarks.cancel-run"]({ runId }),

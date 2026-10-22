@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import type { BenchmarkResultFile } from "./result-file";
-import { readResults, readRuns, syncAll } from "./store";
+import { readResults, readRuns, syncAll, writeRuns } from "./store";
 
 const result = (sha: string, suite = "storage"): BenchmarkResultFile => ({
   format: 1,
@@ -131,5 +131,29 @@ describe("benchmark result cache", () => {
     await syncAll(ctx);
     expect(downloads()).toBe(2);
     expect(gh.calls.filter((args) => args[1] === "repos/{owner}/{repo}/releases/assets/1")).toHaveLength(1);
+  });
+
+  test("a run that cannot sync does not stop the others", async () => {
+    const { ctx } = setup();
+    // Run 6 has dropped out of GitHub's recent list and its artifacts can no longer be listed.
+    await writeRuns(ctx, [
+      {
+        id: "6",
+        title: "Benchmarks old",
+        status: "succeeded",
+        url: "https://github.com/runs/6",
+        createdAt: "2026-10-20T09:00:00Z",
+        updatedAt: "2026-10-20T10:00:00Z",
+        synced: false,
+      },
+    ]);
+    await expect(syncAll(ctx)).rejects.toThrow("Run 6");
+    const runs = await readRuns(ctx);
+    expect(runs.map((run) => [run.id, run.synced])).toEqual([
+      ["8", false],
+      ["7", true],
+      ["6", false],
+    ]);
+    expect((await readResults(ctx)).some((entry) => entry.file.commit.sha === "head")).toBe(true);
   });
 });

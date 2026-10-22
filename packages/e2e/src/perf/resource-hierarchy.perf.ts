@@ -3,7 +3,7 @@ import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planne
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import { uiOrigin } from "../ui-server";
 import {
-  expectWithinBudget,
+  budgetMisses,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -74,5 +74,5 @@ test("derives ticket ancestry within the interaction budget", async ({ page, req
 
   expect(samples).toHaveLength(10);
   await reportPageMemory(page, "resource-hierarchy");
-  expectWithinBudget("resource-hierarchy", "derive-breadcrumbs", samples, 150);
+  expect(budgetMisses("resource-hierarchy", "derive-breadcrumbs", samples, 150)).toEqual([]);
 });

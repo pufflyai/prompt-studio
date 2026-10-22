@@ -1,7 +1,7 @@
 import { Flex, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { DEFAULT_PLATFORM, SUITES } from "../benchmarks/platforms";
+import { DEFAULT_PLATFORM, DEFAULT_SUITES } from "../benchmarks/platforms";
 import { storyRuns } from "../webview/story-fixtures";
 import { RunForm, type RunRequest } from "./run-form";
 import { RunList } from "./run-list";
@@ -13,7 +13,7 @@ interface RunsStoryProps {
 const RunsStory = (props: RunsStoryProps) => {
   const [request, setRequest] = useState<RunRequest>({
     commits: ["pstdio@0.45.0", "main"],
-    suites: SUITES.filter((suite) => suite.id !== "relay").map((suite) => suite.id),
+    suites: DEFAULT_SUITES,
     platforms: [DEFAULT_PLATFORM],
     samples: 10,
   });

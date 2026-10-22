@@ -2,8 +2,8 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import {
   afterTwoFrames,
+  budgetMisses,
   collectRepeatSamples,
-  expectWithinBudget,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -104,12 +104,13 @@ test("closes and reopens the live Side Panel within budget", async ({ page, requ
   const results = collectRepeatSamples(testInfo, "side-panel", [{ close: close.duration, reopen: reopen.duration }]);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach);
-  for (const action of ["close", "reopen"] as const) {
-    expectWithinBudget(
+  const misses = (["close", "reopen"] as const).flatMap((action) =>
+    budgetMisses(
       "side-panel",
       action,
       results.map((result) => result[action]),
       150,
-    );
-  }
+    ),
+  );
+  expect(misses).toEqual([]);
 });

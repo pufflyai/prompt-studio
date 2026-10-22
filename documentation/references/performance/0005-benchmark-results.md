@@ -75,9 +75,9 @@ Each job uploads `<sha>-<platform>.json` files as the `benchmark-results-<platfo
 }
 ```
 
-Files keep raw samples, so readers compute their own statistics. A failed sample keeps the measurements it recorded; the job still fails so the run shows it.
+`values` holds one value per sample, in run order. A benchmark that measures something several times in one sample contributes that sample's median, because samples, not single measurements, are the independent units. Readers compute their own statistics from these values. A failed sample keeps the measurements it recorded; the job still fails so the run shows it. A measurement that is not a finite number is left out.
 
-Stable and patch releases run every suite on every release platform. After the release publishes, `benchmark_assets` merges each platform's suite files and attaches them as `benchmarks-<platform>.json`. Benchmarks never block a release.
+After a stable or patch release publishes, the release workflow starts a separate Benchmarks run with `release_tag` set. It runs every suite on every release platform, merges each platform's suite files, and attaches them to the release as `benchmarks-<platform>.json`. Benchmarks never hold or fail a release.
 
 ## Performance pages
 
@@ -87,4 +87,4 @@ The pages read only from `.pstdio/extension-storage/pstdio-dev/benchmarks/`. Ope
 - **Compare** shows base and head medians with intervals, and the change with its interval. When a run measured both commits, its results win over separate runs.
 - **Runs** starts and cancels workflow runs and shows their progress.
 
-Medians use percentile bootstrap intervals with 2,000 resamples. A change counts as an improvement or a regression only when the 95% interval of the change in medians excludes zero.
+Medians use percentile bootstrap intervals with 2,000 resamples. A change counts as an improvement or a regression only when the 95% interval of the change in medians excludes zero. A metric whose base median is zero, such as idle CPU, reads as "up from 0" when it rises.

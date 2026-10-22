@@ -36,16 +36,21 @@ export const summarize = (values: number[]) => {
   return { median: median(values), ...interval(medians), samples: values.length };
 };
 
+// Relative change, where anything above an idle zero counts as an unbounded increase.
+const relativeChange = (base: number, head: number) => {
+  if (base === 0) return head === 0 ? 0 : Number.POSITIVE_INFINITY;
+  return head / base - 1;
+};
+
 // Every tracked metric is better when lower: time, CPU share, and memory.
 export const compareSamples = (base: number[], head: number[]) => {
   const random = seeded(2);
-  const changes = Array.from(
-    { length: RESAMPLES },
-    () => median(resample(head, random)) / median(resample(base, random)) - 1,
+  const changes = Array.from({ length: RESAMPLES }, () =>
+    relativeChange(median(resample(base, random)), median(resample(head, random))),
   );
   const { low, high } = interval(changes);
   let verdict: Verdict = "unchanged";
   if (high < 0) verdict = "improved";
   if (low > 0) verdict = "regressed";
-  return { change: median(head) / median(base) - 1, low, high, verdict };
+  return { change: relativeChange(median(base), median(head)), low, high, verdict };
 };

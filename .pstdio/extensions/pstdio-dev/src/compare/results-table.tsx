@@ -23,10 +23,9 @@ interface ResultsTableProps {
 
 // One scale shared by every row's change plot, wide enough for the largest interval.
 const changeScale = (rows: CompareRow[]) => {
-  const largest = Math.max(
-    0.1,
-    ...rows.flatMap((row) => (row.change ? [Math.abs(row.change.low), Math.abs(row.change.high)] : [])),
-  );
+  // An increase from zero has no finite size; its dot pins to the plot's edge instead.
+  const bounds = rows.flatMap((row) => (row.change ? [Math.abs(row.change.low), Math.abs(row.change.high)] : []));
+  const largest = Math.max(0.1, ...bounds.filter(Number.isFinite));
   return [0.1, 0.2, 0.3, 0.5, 1].find((limit) => largest <= limit) ?? largest;
 };
 

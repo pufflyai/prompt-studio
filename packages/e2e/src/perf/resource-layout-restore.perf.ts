@@ -7,7 +7,7 @@ import { openWorkspace } from "../ui/helpers/workspace-files";
 import { createGitRepo } from "../ui/helpers/workspace-session-attempt";
 import { uiOrigin } from "../ui-server";
 import {
-  expectWithinBudget,
+  budgetMisses,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -76,7 +76,7 @@ test("restores a resource layout within the interaction budget", async ({ page, 
     expect(samples).toHaveLength(10);
     // Measured up to 254 ms on 2026-10-10; the approved budget sits about 20% above that.
     await reportPageMemory(page, "resource-layout-restore");
-    expectWithinBudget("resource-layout-restore", "restore-resource-layout", samples, 325);
+    expect(budgetMisses("resource-layout-restore", "restore-resource-layout", samples, 325)).toEqual([]);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

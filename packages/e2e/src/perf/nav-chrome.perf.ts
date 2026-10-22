@@ -4,8 +4,8 @@ import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-fo
 import { uiOrigin } from "../ui-server";
 import {
   afterTwoFrames,
+  budgetMisses,
   collectRepeatSamples,
-  expectWithinBudget,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -66,5 +66,5 @@ test("settles the persistent Nav Chrome after navigating back within budget", as
   const results = collectRepeatSamples(testInfo, "nav-chrome", [result.duration]);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach);
-  expectWithinBudget("nav-chrome", "navigate-back", results, 150);
+  expect(budgetMisses("nav-chrome", "navigate-back", results, 150)).toEqual([]);
 });

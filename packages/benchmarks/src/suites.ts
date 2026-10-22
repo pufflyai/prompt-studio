@@ -35,7 +35,10 @@ const arch = (context: SuiteContext) => context.platform.split("-")[1];
 const display = (context: SuiteContext, command: string[]) =>
   isLinux(context) ? ["xvfb-run", "-a", ...command] : command;
 const desktopOut = (context: SuiteContext) => `clients/desktop/out/prompt-studio-${context.platform}`;
-const packagedBinary = (context: SuiteContext) => ({ E2E_PACKAGED_BINARY_PATH: `${context.root}/dist/pstdio` });
+const binaryName = (context: SuiteContext) => (context.platform.startsWith("win32-") ? "pstdio.exe" : "pstdio");
+const packagedBinary = (context: SuiteContext) => ({
+  E2E_PACKAGED_BINARY_PATH: `${context.root}/dist/${binaryName(context)}`,
+});
 
 // Chromium refuses to start on Linux unless its sandbox helper is owned by root and setuid.
 const linuxSandbox = (path: string): SuiteStep[] => [

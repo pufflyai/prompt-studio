@@ -133,6 +133,7 @@ export const CompareView = (props: CompareViewProps) => {
 interface RunActionProps {
   label: string;
   pending: boolean;
+  disabled?: boolean;
   startedRunId?: string;
   error?: string;
   onRun: () => void;
@@ -141,7 +142,7 @@ interface RunActionProps {
 
 // Feedback stays beside the button: the run that started, or why it could not start.
 export const RunAction = (props: RunActionProps) => {
-  const { label, pending, startedRunId, error, onRun, onOpenRuns } = props;
+  const { label, pending, disabled = false, startedRunId, error, onRun, onOpenRuns } = props;
   return (
     <HStack gap="sm">
       {error ? (
@@ -154,7 +155,7 @@ export const RunAction = (props: RunActionProps) => {
           Run {startedRunId} started · View
         </Button>
       ) : null}
-      <Button size="sm" onClick={onRun} loading={pending}>
+      <Button size="sm" onClick={onRun} loading={pending} disabled={disabled}>
         {label}
       </Button>
     </HStack>

@@ -24,4 +24,7 @@ export const SUITES = [
   { id: "relay", label: "Relay storage", minutes: 3 },
 ] as const;
 
+// The relay suite needs Docker and minutes of setup, so runs leave it out unless chosen.
+export const DEFAULT_SUITES = SUITES.filter((suite) => suite.id !== "relay").map((suite) => suite.id);
+
 export const SAMPLE_COUNTS = [3, 5, 10, 20] as const;

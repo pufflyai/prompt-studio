@@ -102,7 +102,9 @@ export const TrendsView = (props: TrendsViewProps) => {
         <VersionSnapshot metrics={metrics} index={index} />
       ) : (
         <>
-          {selectedMetric ? <SelectedMetric metric={selectedMetric} versions={versions} /> : null}
+          {selectedMetric ? (
+            <SelectedMetric key={metricId(selectedMetric)} metric={selectedMetric} versions={versions} />
+          ) : null}
           {groupBySuite(metrics).map((group) => (
             <Stack key={group.suite} gap="sm">
               <HStack gap="sm" align="baseline">

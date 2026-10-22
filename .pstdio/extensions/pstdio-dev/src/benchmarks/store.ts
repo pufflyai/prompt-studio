@@ -147,16 +147,29 @@ export const mergeRun = (previous: RunRecord | undefined, run: WorkflowRun): Run
   synced: previous?.synced ?? false,
 });
 
+const syncRun = async (ctx: StoreContext, run: RunRecord, listed: boolean) => {
+  // GitHub lists only recent runs; an older run still open is asked for directly.
+  if (!listed && !finished(run.status)) Object.assign(run, await runProgress(ctx, run.id));
+  if (run.synced || !finished(run.status)) return;
+  await cacheRunArtifacts(ctx, run.id);
+  run.synced = true;
+};
+
 export const syncRuns = async (ctx: StoreContext) => {
   const previous = new Map((await readRuns(ctx)).map((run) => [run.id, run]));
-  for (const run of await listRuns(ctx)) previous.set(run.id, mergeRun(previous.get(run.id), run));
+  const listed = await listRuns(ctx);
+  for (const run of listed) previous.set(run.id, mergeRun(previous.get(run.id), run));
+  const listedIds = new Set(listed.map((run) => run.id));
   const runs = [...previous.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const failures: string[] = [];
   for (const run of runs) {
-    if (run.synced || !finished(run.status)) continue;
-    await cacheRunArtifacts(ctx, run.id);
-    run.synced = true;
+    // One run that cannot sync must not stop the others; it retries on the next sync.
+    await syncRun(ctx, run, listedIds.has(run.id)).catch((error: unknown) =>
+      failures.push(`Run ${run.id}: ${error instanceof Error ? error.message : String(error)}`),
+    );
   }
   await writeRuns(ctx, runs);
+  if (failures.length) throw new Error(failures.join("\n"));
 };
 
 export const syncAll = async (ctx: StoreContext) => {

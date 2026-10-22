@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import {
+  budgetMisses,
   collectRepeatSamples,
-  expectWithinBudget,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -55,5 +55,5 @@ test("opens one Panel tab within the interaction budget", async ({ page, request
   const results = collectRepeatSamples(testInfo, "panel-tabs", [result.duration]);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach);
-  expectWithinBudget("panel-tabs", "open-panel", results, 150);
+  expect(budgetMisses("panel-tabs", "open-panel", results, 150)).toEqual([]);
 });

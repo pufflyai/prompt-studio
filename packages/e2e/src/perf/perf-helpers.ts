@@ -26,9 +26,9 @@ const words = (name: string) => name.replaceAll("-", " ");
 const metricLabel = (metric: string, interaction: string) =>
   `${words(metric).replace(/^./, (first) => first.toUpperCase())}, ${words(interaction)}`;
 
-// A few samples cannot support a percentile, so reports list every sample and the gate checks
-// the slowest one.
-export const expectWithinBudget = (metric: string, interaction: string, samples: number[], budget: number) => {
+// A few samples cannot support a percentile, so reports list every sample and the gate checks the
+// slowest one. It returns misses instead of asserting, so a test records all its series before it fails.
+export const budgetMisses = (metric: string, interaction: string, samples: number[], budget: number) => {
   const summary = summarizeSamples(samples);
   console.info(JSON.stringify({ metric, interaction, ...summary }));
   for (const value of samples) {
@@ -40,7 +40,7 @@ export const expectWithinBudget = (metric: string, interaction: string, samples:
       budget,
     });
   }
-  expect(summary.max).toBeLessThanOrEqual(budget);
+  return summary.max <= budget ? [] : [`${metric} ${interaction}: slowest ${summary.max} ms exceeds ${budget} ms`];
 };
 
 // Garbage collection first, so the figure is the heap the page keeps after its interactions.

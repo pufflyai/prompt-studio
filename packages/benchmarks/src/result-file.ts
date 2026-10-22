@@ -35,13 +35,27 @@ export interface SuiteSample {
   lines: string;
 }
 
-// Raw samples are kept, so readers can compute their own statistics without running benchmarks again.
+const median = (values: number[]) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+};
+
+// A sample is one run of a suite on one commit. Statistics resample whole samples, so a metric
+// measured several times within one sample contributes that sample's median, keeping one value per
+// sample in run order.
 export const mergeSamples = (samples: SuiteSample[]) => {
   const metrics = new Map<string, BenchmarkMetricResult>();
   for (const sample of samples) {
+    const measured = new Map<string, { measurement: BenchmarkMeasurement; values: number[] }>();
     for (const line of sample.lines.split("\n")) {
       if (!line.trim()) continue;
       const measurement = JSON.parse(line) as BenchmarkMeasurement;
+      const entry = measured.get(measurement.metric) ?? { measurement, values: [] };
+      entry.values.push(measurement.value);
+      measured.set(measurement.metric, entry);
+    }
+    for (const { measurement, values } of measured.values()) {
       const key = `${sample.suite}/${measurement.metric}`;
       const metric = metrics.get(key) ?? {
         suite: sample.suite,
@@ -51,7 +65,7 @@ export const mergeSamples = (samples: SuiteSample[]) => {
         ...(measurement.budget === undefined ? {} : { budget: measurement.budget }),
         values: [],
       };
-      metric.values.push(measurement.value);
+      metric.values.push(median(values));
       metrics.set(key, metric);
     }
   }

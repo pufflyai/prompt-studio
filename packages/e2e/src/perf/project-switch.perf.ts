@@ -5,7 +5,7 @@ import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-fo
 import { createGitRepo } from "../ui/helpers/workspace-session-attempt";
 import { uiOrigin } from "../ui-server";
 import {
-  expectWithinBudget,
+  budgetMisses,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -185,8 +185,10 @@ test("switches projects once and within budget", async ({ page, request }) => {
     expect(samples.filter((sample) => requestCount(sample, "ui") !== 1)).toEqual([]);
     expect(samples.filter((sample) => requestCount(sample, "appearance") !== 1)).toEqual([]);
     await reportPageMemory(page, "project-switch");
-    expectWithinBudget("project-switch", "a-to-b", aToB, 575);
-    expectWithinBudget("project-switch", "b-to-a", bToA, 575);
+    expect([
+      ...budgetMisses("project-switch", "a-to-b", aToB, 575),
+      ...budgetMisses("project-switch", "b-to-a", bToA, 575),
+    ]).toEqual([]);
   } finally {
     rmSync(projectA.repoRoot, { recursive: true, force: true });
     rmSync(projectB.repoRoot, { recursive: true, force: true });

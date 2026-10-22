@@ -35,7 +35,11 @@ export const TrendsPage = () => {
       versionIndex={versionIndex ?? versions.length - 1}
       selected={selected}
       status={<SyncStatus sync={sync} />}
-      onPlatformChange={setPlatform}
+      onPlatformChange={(next) => {
+        // Another platform can have fewer releases, so the stepper returns to its newest one.
+        setPlatform(next);
+        setVersionIndex(undefined);
+      }}
       onModeChange={setMode}
       onVersionChange={setVersionIndex}
       onSelect={setSelected}

@@ -2,7 +2,7 @@ import { useCommandQuery } from "@pstdio/sdk/extensions/react";
 import { AlertMessage } from "@pstdio/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { DEFAULT_PLATFORM } from "../benchmarks/platforms";
+import { DEFAULT_PLATFORM, DEFAULT_SUITES } from "../benchmarks/platforms";
 import { useBenchmarks, useBenchmarksRefresh, useOpenPage } from "../webview/client";
 import { SyncStatus } from "../webview/sync-status";
 import { useSyncOnOpen } from "../webview/use-sync";
@@ -38,8 +38,8 @@ export const ComparePage = () => {
     command: () => client.commands["benchmarks.compare"]({ base: base ?? "", head: head ?? "", platform }),
   });
   const run = useMutation({
-    mutationFn: () =>
-      client.commands["benchmarks.start-run"]({ commits: [base ?? "", head ?? ""], platforms: [platform] }),
+    mutationFn: (commits: string[]) =>
+      client.commands["benchmarks.start-run"]({ commits, suites: DEFAULT_SUITES, platforms: [platform] }),
   });
   const error = commits.error ?? comparison.error;
   if (error)
@@ -65,7 +65,10 @@ export const ComparePage = () => {
           pending={run.isPending}
           startedRunId={run.data?.runId}
           error={run.error?.message}
-          onRun={() => run.mutate()}
+          disabled={!base || !head}
+          onRun={() => {
+            if (base && head) run.mutate([base, head]);
+          }}
           onOpenRuns={() => openPage("runs")}
         />
       }

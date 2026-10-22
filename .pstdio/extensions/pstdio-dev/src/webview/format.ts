@@ -20,7 +20,10 @@ export const formatValue = (value: number, unit: BenchmarkUnit) => {
 export const formatRange = (low: number, high: number, unit: BenchmarkUnit) =>
   `${formatValue(low, unit)} – ${formatValue(high, unit)}`;
 
-export const formatPercent = (share: number) => `${share >= 0 ? "+" : "−"}${Math.abs(share * 100).toFixed(1)}%`;
+export const formatPercent = (share: number) => {
+  if (!Number.isFinite(share)) return "up from 0";
+  return `${share >= 0 ? "+" : "−"}${Math.abs(share * 100).toFixed(1)}%`;
+};
 
 export const formatChangeRange = (change: Change) => `${formatPercent(change.low)} to ${formatPercent(change.high)}`;
 
@@ -46,6 +49,7 @@ export const verdictColor: Record<Verdict, string> = {
 export const verdictText = (change: Change, unit: BenchmarkUnit) => {
   const word = verdictWord(change.verdict, unit);
   if (change.verdict === "unchanged") return `${verdictArrow.unchanged} ${word}`;
+  if (!Number.isFinite(change.change)) return `${verdictArrow[change.verdict]} ${word}, up from 0`;
   return `${verdictArrow[change.verdict]} ${Math.abs(change.change * 100).toFixed(1)}% ${word}`;
 };
 

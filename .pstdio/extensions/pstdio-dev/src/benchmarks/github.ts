@@ -33,8 +33,11 @@ export const GH_MISSING_MESSAGE =
   "GitHub CLI is not available or not signed in. Install gh and run `gh auth login` in this project.";
 
 const gh = async (ctx: Context, args: string[]) => {
-  const result = await ctx.process.run({ command: ["gh", ...args] }).catch(() => undefined);
-  if (!result) throw new Error(GH_MISSING_MESSAGE);
+  const result = await ctx.process.run({ command: ["gh", ...args] }).catch((error: unknown) => {
+    // Only a missing executable means gh is not installed; other failures keep their own message.
+    if (/ENOENT|not found/i.test(String(error))) throw new Error(GH_MISSING_MESSAGE);
+    throw error;
+  });
   if (result.exitCode !== 0) {
     if (/auth login|not logged/i.test(result.stderr)) throw new Error(GH_MISSING_MESSAGE);
     throw new Error(result.stderr.trim() || `gh ${args[0]} failed with exit code ${result.exitCode}.`);

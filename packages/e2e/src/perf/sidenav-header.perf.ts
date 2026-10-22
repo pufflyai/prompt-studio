@@ -2,8 +2,8 @@ import { expect, type Page, test } from "@playwright/test";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import {
   afterTwoFrames,
+  budgetMisses,
   collectRepeatSamples,
-  expectWithinBudget,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -72,12 +72,13 @@ test("navigates global collections within the interaction budget", async ({ page
   const results = collectRepeatSamples(testInfo, "sidenav-header", samples);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach * collections.length);
-  for (const collection of collections) {
-    expectWithinBudget(
+  const misses = collections.flatMap((collection) =>
+    budgetMisses(
       "sidenav-header",
       collection,
       results.filter((result) => result.collection === collection).map((result) => result.duration),
       150,
-    );
-  }
+    ),
+  );
+  expect(misses).toEqual([]);
 });

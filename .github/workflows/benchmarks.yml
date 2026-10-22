@@ -1,5 +1,5 @@
 name: Benchmarks
-run-name: Benchmarks ${{ inputs.commits || github.event.pull_request.head.sha }} on ${{ inputs.platforms || 'linux-x64' }}
+run-name: Benchmarks ${{ inputs.release_tag || inputs.commits || github.event.pull_request.head.sha }} on ${{ inputs.platforms || 'linux-x64' }}
 
 # Every run measures the given commits on the same runner, alternating them sample by sample.
 # The Performance pages in the pstdio-dev extension start these runs and read their artifacts.
@@ -18,20 +18,9 @@ on:
       samples:
         description: Samples per commit and suite.
         default: "10"
-  workflow_call:
-    inputs:
-      commits:
-        type: string
-        required: true
-      suites:
-        type: string
+      release_tag:
+        description: Release to attach the results to. The release workflow sets it after publishing.
         default: ""
-      platforms:
-        type: string
-        default: linux-x64
-      samples:
-        type: string
-        default: "10"
   # Proves the runner still works when it changes, with a short measurement of the fastest suites.
   pull_request:
     paths:
@@ -69,14 +58,22 @@ jobs:
         run: |
           set -euo pipefail
           checkouts='[]'
-          for ref in ${COMMITS//,/ }; do
+          IFS=',' read -ra refs <<< "$COMMITS"
+          for ref in "${refs[@]}"; do
+            [ -n "$ref" ] || continue
             git fetch --quiet origin "$ref" 2>/dev/null || true
             sha=$(git rev-parse --verify "$ref^{commit}" 2>/dev/null || git rev-parse --verify "origin/$ref^{commit}")
-            checkouts=$(jq -c --arg sha "$sha" --arg ref "$ref" '. + [{sha: $sha, ref: $ref}]' <<< "$checkouts")
+            # Two names for one commit would record every sample twice.
+            checkouts=$(jq -c --arg sha "$sha" --arg ref "$ref" 'if any(.sha == $sha) then . else . + [{sha: $sha, ref: $ref}] end' <<< "$checkouts")
           done
+          if [ "$(jq length <<< "$checkouts")" = 0 ]; then
+            echo "No commits to measure" >&2
+            exit 1
+          fi
           RUNNERS='{"linux-x64":"ubuntu-latest","darwin-arm64":"macos-15","darwin-x64":"macos-15-intel","win32-x64":"windows-2025"}'
           include='[]'
-          for platform in ${PLATFORMS//,/ }; do
+          IFS=',' read -ra platforms <<< "$PLATFORMS"
+          for platform in "${platforms[@]}"; do
             os=$(jq -r --arg platform "$platform" '.[$platform] // empty' <<< "$RUNNERS")
             if [ -z "$os" ]; then
               echo "Unknown platform $platform" >&2
@@ -125,37 +122,31 @@ jobs:
         if: runner.os == 'Windows'
         uses: ./.github/actions/setup-windows-desktop-tests
 
-      # Each commit gets its own checkout and dependencies, so it runs the code and benchmarks it shipped with.
-      - name: Check out the measured commits
-        id: checkouts
-        env:
-          CHECKOUTS: ${{ needs.plan.outputs.checkouts }}
-        run: |
-          set -euo pipefail
-          args=()
-          while read -r sha ref; do
-            dir="$RUNNER_TEMP/checkouts/$sha"
-            if [ ! -d "$dir" ]; then
-              git worktree add --detach "$dir" "$sha"
-              (cd "$dir" && node scripts/ci/install-native-dependencies.ts)
-            fi
-            args+=("--checkout" "$dir=$sha=$ref")
-          done < <(jq -r '.[] | "\(.sha) \(.ref)"' <<< "$CHECKOUTS")
-          echo "args=${args[*]}" >> "$GITHUB_OUTPUT"
-
       - name: Install browser system dependencies
         if: runner.os == 'Linux'
         run: npx --yes playwright install-deps chromium
 
+      # Each commit gets its own checkout and dependencies, so it runs the code and benchmarks it shipped with.
+      # Paths use forward slashes, because Git Bash drops the backslashes of Windows paths.
       - name: Run benchmarks
         env:
+          CHECKOUTS: ${{ needs.plan.outputs.checkouts }}
           SUITE: ${{ matrix.suite }}
           SAMPLES: ${{ needs.plan.outputs.samples }}
         run: |
           set -euo pipefail
-          bun packages/benchmarks/src/cli.ts run ${{ steps.checkouts.outputs.args }} \
+          temp="$RUNNER_TEMP"
+          if command -v cygpath > /dev/null; then temp=$(cygpath -m "$RUNNER_TEMP"); fi
+          args=()
+          while IFS=$'\t' read -r sha ref; do
+            dir="$temp/checkouts/$sha"
+            git worktree add --detach "$dir" "$sha"
+            (cd "$dir" && node scripts/ci/install-native-dependencies.ts)
+            args+=("--checkout" "$dir=$sha=$ref")
+          done < <(jq -r '.[] | [.sha, .ref] | @tsv' <<< "$CHECKOUTS")
+          bun packages/benchmarks/src/cli.ts run "${args[@]}" \
             --suites "$SUITE" --samples "$SAMPLES" \
-            --cache "$RUNNER_TEMP/benchmark-cache" --out "$RUNNER_TEMP/benchmark-results"
+            --cache "$temp/benchmark-cache" --out "$temp/benchmark-results"
 
       # Failed samples keep the measurements they recorded, so the results upload either way.
       - name: Upload results
@@ -165,3 +156,32 @@ jobs:
           name: benchmark-results-${{ matrix.platform }}-${{ matrix.suite }}
           path: ${{ runner.temp }}/benchmark-results/*.json
           if-no-files-found: error
+
+  # The release workflow starts this run after it publishes, so benchmarks never hold a release.
+  release_assets:
+    needs: benchmark
+    if: ${{ !cancelled() && inputs.release_tag != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.release_tag }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: benchmark-results-*
+          path: benchmark-results
+      - name: Attach benchmark results to the release
+        run: |
+          set -euo pipefail
+          mkdir -p benchmark-assets
+          # Each suite ran as its own job, so the files of one platform merge into one asset.
+          for platform in $(jq -r .platform benchmark-results/*/*.json | sort -u); do
+            jq -s --arg platform "$platform" \
+              'map(select(.platform == $platform)) | .[0] + {suites: (map(.suites[]) | unique_by(.id)), metrics: map(.metrics[])}' \
+              benchmark-results/*/*.json > "benchmark-assets/benchmarks-$platform.json"
+          done
+          gh release upload "$TAG" benchmark-assets/* --clobber

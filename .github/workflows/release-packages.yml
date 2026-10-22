@@ -408,45 +408,27 @@ jobs:
             gh release edit "$TAG" --draft=false
           fi
 
-  # Stable and patch releases measure every benchmark suite for the Performance pages.
-  # Benchmarks never block a release; their results attach after it publishes.
+  # Stable and patch releases measure every benchmark suite for the Performance pages. The run is
+  # separate and starts after publishing, so benchmarks never hold or fail a release.
   benchmarks:
-    needs: plan
-    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel != 'nightly' }}
-    permissions:
-      contents: read
-    uses: ./.github/workflows/benchmarks.yml
-    with:
-      commits: ${{ needs.plan.outputs.commit }}
-      platforms: ${{ join(fromJSON(needs.plan.outputs.targets), ',') }}
-
-  benchmark_assets:
-    needs: [plan, publish, benchmarks]
-    if: ${{ !cancelled() && needs.publish.result == 'success' && needs.benchmarks.result != 'skipped' }}
+    needs: [plan, publish]
+    if: ${{ !cancelled() && needs.publish.result == 'success' && needs.plan.outputs.channel != 'nightly' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     permissions:
-      contents: write
+      actions: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
       TAG: ${{ needs.plan.outputs.tag }}
+      COMMIT: ${{ needs.plan.outputs.commit }}
+      TARGETS: ${{ needs.plan.outputs.targets }}
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: benchmark-results-*
-          path: benchmark-results
-      - name: Attach benchmark results to the release
+      - name: Start the release benchmarks
         run: |
           set -euo pipefail
-          mkdir -p benchmark-assets
-          # Each suite ran as its own job, so the files of one platform merge into one asset.
-          for platform in $(jq -r .platform benchmark-results/*/*.json | sort -u); do
-            jq -s --arg platform "$platform" \
-              'map(select(.platform == $platform)) | .[0] + {suites: (map(.suites[]) | unique_by(.id)), metrics: map(.metrics[])}' \
-              benchmark-results/*/*.json > "benchmark-assets/benchmarks-$platform.json"
-          done
-          gh release upload "$TAG" benchmark-assets/* --clobber
+          gh workflow run benchmarks.yml --ref "$TAG" \
+            -f commits="$COMMIT" -f platforms="$(jq -r 'join(",")' <<< "$TARGETS")" -f release_tag="$TAG"
 
   # Runs only after a nightly published with every asset.
   nightly_prune:

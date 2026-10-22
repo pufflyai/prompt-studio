@@ -16,6 +16,14 @@ describe("merging samples", () => {
     ]);
   });
 
+  test("keeps one value per sample: the median of that sample's measurements", () => {
+    const metrics = mergeSamples([
+      { suite: "subnav", lines: [line("open", 10), line("open", 30), line("open", 12)].join("\n") },
+      { suite: "subnav", lines: [line("open", 20), line("open", 22)].join("\n") },
+    ]);
+    expect(metrics[0].values).toEqual([12, 21]);
+  });
+
   test("keeps metrics with the same name in different suites apart", () => {
     const metrics = mergeSamples([
       { suite: "storage", lines: line("peak-memory", 1) },
