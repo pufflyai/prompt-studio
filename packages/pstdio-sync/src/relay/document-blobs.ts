@@ -2,12 +2,7 @@ import type { Asset } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { openBlob, sealBlob } from "../encryption";
 import type { AssetStore } from "../types";
-import {
-  type BlobReference,
-  type DocumentBlob,
-  documentBlobManifest,
-  validateDocumentBlobManifest,
-} from "./document-blob-manifest";
+import { type BlobReference, type DocumentBlob, documentBlobManifest } from "./document-blob-manifest";
 import { DocumentBlobMissing, type DocumentSyncInput } from "./document-sync-types";
 
 const blobMap = (document: Y.Doc) => document.getMap<BlobReference>("sync-blobs");
@@ -39,8 +34,6 @@ const encryptedBytes = async (input: DocumentSyncInput, reference: BlobReference
     await save(assets, reference.encrypted, await blobs.get(reference.blobId));
   return read(assets, reference.encrypted);
 };
-
-export const validateDocumentBlobs = (document: Y.Doc) => validateDocumentBlobManifest(documentBlobManifest(document));
 
 export const prepareDocumentBlobManifest = async (input: DocumentSyncInput, manifest: DocumentBlob[]) => {
   const prepared = new Map<string, { previous?: string; reference: BlobReference }>();

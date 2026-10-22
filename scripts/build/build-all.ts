@@ -9,6 +9,7 @@ import { buildPackageArtifacts } from "./package-artifacts";
 process.chdir(join(import.meta.dirname, "..", ".."));
 
 const CLI_ENTRY = "./packages/pstdio/src/index.ts";
+const SYNC_WORKER_ENTRY = "./packages/pstdio/src/sync-worker.ts";
 const EMBED_MANIFEST = "./packages/pstdio/src/_embed-manifest.generated.ts";
 
 // 1. Build all packages
@@ -54,7 +55,7 @@ for (const { target, pkg, bin } of buildTargets) {
 
   const outfile = join(outDir, bin);
   console.log(`\nCompiling for ${target}...`);
-  await $`bun build ${CLI_ENTRY} ./packages/pstdio/src/sync-worker.ts --root ./packages/pstdio/src --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} --outfile ${outfile}`;
+  await $`bun build ${CLI_ENTRY} ${SYNC_WORKER_ENTRY} --root ./packages/pstdio/src --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} --outfile ${outfile}`;
   console.log(`  → ${relative(".", outfile)}`);
 }
 

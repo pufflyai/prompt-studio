@@ -1,6 +1,7 @@
 FROM oven/bun:1.4.2 AS build
 WORKDIR /build
 COPY package.json bun.lock bunfig.toml ./
+COPY patches patches
 COPY services/telemetry/package.json ./services/telemetry/package.json
 COPY services/account-manager/package.json ./services/account-manager/package.json
 COPY packages/pstdio-sync-contracts/package.json ./packages/pstdio-sync-contracts/package.json

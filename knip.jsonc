@@ -54,6 +54,8 @@
       "entry": [
         "package.json",
         "src/index.ts",
+        // The CLI compiles its worker as a separate entrypoint.
+        "src/sync-worker.ts",
         "src/**/index.ts",
         // The shared workbench target contracts are imported outside this workspace.
         "src/extension-kernel/workbench-targets.ts",
