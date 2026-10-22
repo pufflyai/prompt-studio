@@ -71,7 +71,7 @@ Extensions declare metadata and handlers; the host owns installation, project en
 
 ## App-wide settings
 
-On `main` (extension API 0.2.1, after 0.44.0), a settings panel can target
+On `main` (planned extension API 0.3.0, after 0.45.0), a settings panel can target
 `workbenchSlots.globalSettings`. The host registers it with global scope in every
 project where the extension is enabled. Use `workbenchSlots.projectSettings` for
 project settings and `workbenchSlots.extensionSettings` for the owner's extension
