@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
 import { createProjectExtensionLifecycle } from "./project-extension-lifecycle";
 
 const installedSource = {
@@ -28,10 +29,16 @@ const extensionInstance = (enabled: boolean) => ({
 });
 
 const createDeps = (input: { skills?: unknown[] } = {}) => {
+  const store = createMemoryDocumentStore();
   const setProjectExtensionEnabled = mock(async (_instanceId: string, enabled: boolean) => extensionInstance(enabled));
   const provisionProjectWorkspaces = mock(async () => {});
   return {
     deps: {
+      extensionStorageService: {
+        documents: { open: () => store },
+        open: async ({ owner }: { owner: { workbenchId: string; extensionId: string } }) =>
+          createDocumentStorage({ owner, store }),
+      },
       eventBus: { emit: mock(() => {}) },
       extensionAutomationPreferencesService: { set: mock(async (row: unknown) => row) },
       extensionConnectionService: { removeExtension: mock(async () => {}) },
