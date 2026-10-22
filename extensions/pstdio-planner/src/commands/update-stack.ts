@@ -20,13 +20,14 @@ export async function readStackRepair(
   const latest = attempt.revisions.at(-1);
   const session = await ctx.sessions.get(attempt.implementationSessionId);
   if (isLiveSession(session)) return null;
+  if (session?.last_exit?.cause === "user_stop") return null;
   const workspace = await ctx.workspaces.get(attempt.workspaceId);
   if (!workspace?.root_path || workspace.id !== attempt.workspaceId)
     throw new WorkspaceUnavailableError(`Workspace ${attempt.workspaceShorthand} is no longer available.`);
   const head = await workspaceHead(ctx, attempt.workspaceId);
   if (!session) return null;
   // A user stop stays stopped. The resume path owns the single recovery of a lost run.
-  if (session.last_exit?.cause === "user_stop" || isUnexpectedExit(session)) return null;
+  if (isUnexpectedExit(session)) return null;
   if (
     !(await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(({ id }) => id === session.id)
   )
@@ -50,6 +51,11 @@ export async function readStackRepair(
     eventId,
     workspaceId: attempt.workspaceId,
     sessionId: attempt.implementationSessionId,
+    expectedRun: {
+      status: session.status!,
+      startedAt: session.last_request_started ?? null,
+      endedAt: session.last_request_ended ?? null,
+    },
     headSha: head,
     base,
     needsIntegration,

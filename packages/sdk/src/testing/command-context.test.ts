@@ -12,6 +12,16 @@ test("each context allocates with its own resource prefixes", async () => {
   expect((await second.resources.allocate({ kind: "ticket" })).shorthand).toBe("PS-2");
 });
 
+test("resource allocation opts into compact IDs without consuming numbers for invalid prefixes", async () => {
+  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {}, resourcePrefixes: { ticket: "PS" } });
+  await expect(ctx.resources.allocate({ kind: "ticket", idPrefix: "INVALID" })).rejects.toThrow("ID prefix");
+  const first = await ctx.resources.allocate({ kind: "ticket", idPrefix: "tk" });
+  expect(first).toMatchObject({ id: expect.stringMatching(/^tk_[0-9A-Za-z]{22}$/), shorthand: "PS-1" });
+  const second = await ctx.resources.allocate({ kind: "ticket" });
+  expect(second.shorthand).toBe("PS-2");
+  expect(second.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+
 test("contexts sharing storage query cross-owner links and committed removals", async () => {
   const storage = createMemoryStorage();
   const notes = makeCommandContext({ storage, params: {}, overrides: { extensionId: "example.notes" } });
@@ -73,4 +83,31 @@ test("workspace and session anchor writes use the shared resource links", async 
   await ctx.sessions.addAnchors("session-1", [ticket]);
   const links = await ctx.resources.listAnchors({ resource: ticket, direction: "incoming" });
   expect(links.items.map(({ source }) => source.id).sort()).toEqual(["session-1", "workspace-1"]);
+});
+
+test("contexts read core identities allocated by an earlier context", async () => {
+  const storage = createMemoryStorage();
+  const first = makeCommandContext({ storage, params: {}, resourcePrefixes: { ticket: "PS" } });
+  const allocated = await first.resources.allocate({ kind: "ticket" });
+  const second = makeCommandContext({ storage, params: {}, resourcePrefixes: { ticket: "PS" } });
+  const identity = { ...allocated, kind: "ticket", aliases: [] };
+  expect(await second.resources.identity({ kind: "ticket", id: allocated.id })).toEqual(identity);
+  expect(await second.resources.findByShorthand({ kind: "ticket", shorthand: allocated.shorthand })).toEqual([
+    identity,
+  ]);
+  expect(await second.resources.identity({ kind: "report", id: allocated.id })).toBeNull();
+  expect(await second.resources.findByShorthand({ kind: "ticket", shorthand: "PS-999" })).toEqual([]);
+});
+
+test("resource identity lookup stays within its project and extension", async () => {
+  const storage = createMemoryStorage();
+  const first = makeCommandContext({ storage, params: {}, resourcePrefixes: { ticket: "PS" } });
+  const allocated = await first.resources.allocate({ kind: "ticket" });
+  for (const other of [
+    makeCommandContext({ storage, params: {}, projectId: "other" }),
+    makeCommandContext({ storage, params: {}, overrides: { extensionId: "other.extension" } }),
+  ]) {
+    expect(await other.resources.identity({ kind: "ticket", id: allocated.id })).toBeNull();
+    expect(await other.resources.findByShorthand({ kind: "ticket", shorthand: allocated.shorthand })).toEqual([]);
+  }
 });

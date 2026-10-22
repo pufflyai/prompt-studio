@@ -85,6 +85,8 @@ const expectCoreSkills = async (baseUrl: string, projectId: string, headers: Rec
   );
 };
 
+const reviewNeededOption = { id: "default-human-requested-true", color: "gray", icon: "message-circle-warning" };
+
 export const registerCoreDefaultExtensionSmokeTests = () => {
   describe("packaged pstdio — core default extensions", () => {
     test(
@@ -246,9 +248,7 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
                   }),
                   expect.objectContaining({
                     id: "default-human-requested",
-                    options: [
-                      expect.objectContaining({ id: "default-human-requested-true", color: "gray", icon: "bell" }),
-                    ],
+                    options: [expect.objectContaining(reviewNeededOption)],
                   }),
                 ]),
               },

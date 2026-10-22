@@ -1,5 +1,5 @@
 import { PstdioConnectionError } from "@pstdio/sdk/client";
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import type { Disposable, RendererReadBinding, WorkbenchCore } from "../../core";
 import { createRendererMutationBinding } from "./renderer-mutations";
 import { useWorkbenchConnection } from "./workbench-connection-provider";
@@ -20,6 +20,7 @@ interface RendererReadOptions<T> {
 
 interface ReadState<T> {
   queryKey: string;
+  request?: symbol;
   value?: T;
   loading: boolean;
   error?: Error;
@@ -46,21 +47,16 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     const owner = mutationBinding.current.bind(ownerKey, queryKey);
     mutations.current = owner;
     const handlers = {
-      onProgress: (value: T) => {
-        // Background refreshes keep the complete snapshot until its replacement is ready.
-        setState((previous) => {
-          if (previous.queryKey === queryKey && previous.value !== undefined && !previous.loading) return previous;
-          return { queryKey, value, loading: true };
-        });
-      },
-      onValue: (value: T) => {
-        setState({ queryKey, value: owner.value() ?? value, loading: false });
+      onValue: (value: T, request: symbol) => {
+        // Loaded contents may render many rows. Navigation structure and input keep priority.
+        startTransition(() => setState({ queryKey, request, value: owner.value() ?? value, loading: false }));
       },
       onError: (error: unknown) => {
         const connectionLost = error instanceof PstdioConnectionError;
         const readError = error instanceof Error ? error : new Error(String(error));
         setState((previous) => ({
           queryKey,
+          request: previous.queryKey === queryKey ? previous.request : undefined,
           value: previous.queryKey === queryKey ? previous.value : undefined,
           loading: false,
           // Retain a loaded snapshot after a dropped response. An initial failure
@@ -74,14 +70,25 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
       if (owner.pending()) return Promise.resolve();
       const current = callbacks.current;
       const revision = owner.revision();
+      const request = Symbol();
       return binding.request(
         {
           ...handlers,
           // A changed read scope cancels older work without clearing the mounted view's snapshot.
           queryKey: JSON.stringify([queryKey, current.refreshKey]),
           load: current.load,
+          onProgress: (value: T) => {
+            // A replacement keeps even a partial snapshot. Progress within its original read still grows.
+            startTransition(() =>
+              setState((previous) => {
+                if (previous.queryKey === queryKey && previous.value !== undefined && previous.request !== request)
+                  return previous;
+                return { queryKey, request, value, loading: true };
+              }),
+            );
+          },
           onValue: (value: T) => {
-            if (owner.accept(value, revision)) handlers.onValue(value);
+            if (owner.accept(value, revision)) handlers.onValue(value, request);
           },
         },
         reason,

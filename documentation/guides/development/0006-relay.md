@@ -2,6 +2,22 @@
 
 The private `pstdio-relay` workspace under `services/relay/` owns transactional PostgreSQL storage and verified S3 assets for shared extension groups. It serves authenticated HTTP and finite native WebSocket subscriptions. The native runtime adapter and two-dashboard launcher are described in [the local relay guide](0008-two-dashboard-relay.md). Public browser onboarding, live provider validation and deployment remain separate work.
 
+## Blind sync store
+
+The relay also serves the blind sync protocol from [PRD 0014](../../requirements/platform/0014-local-first-sync.md) under `/sync/`. It stores encrypted updates, latest states and blobs per document and cannot read them. The [blind relay reference](../../references/architecture/0029-blind-relay.md) describes the protocol, cleanup and limits. The grouped storage described below keeps working until clients move to the new protocol; PS-824 removes it.
+
+`createSyncOwners` in `src/transport/owners.ts` builds the document store, the live connection hub and the rate limit. The runtime reads operator limits with `readRelayLimits(env)` and runs cleanup every hour. Schema changes start in `src/storage/document-schema.ts` and use the same `db:generate` command.
+
+Run the real PostgreSQL and object storage checks:
+
+```sh
+bun run --cwd services/relay test:sync
+```
+
+They cover duplicate updates, rejected stale latest states, blobs kept for the grace period, a storage dump with no plaintext from a seeded project, the storage bound across ten compaction cycles, protocol version errors, access to private project data, live forwarding and rate limits.
+
+The full 10,000-update storage check is a manual benchmark: `bun run --cwd services/relay bench:storage-bound`. See [relay storage bound](../../references/performance/0003-relay-storage-bound.md).
+
 ## Build and check
 
 Use Bun 1.4.2 and Docker with the Compose plugin. From the repository root:
@@ -169,7 +185,7 @@ Do not prune other projects' Docker resources to repair a failed run. Check Dock
 Build from the repository root:
 
 ```sh
-docker build -f services/relay/Dockerfile -t pstdio-relay:local .
+docker build -f infra/relay/Dockerfile -t pstdio-relay:local .
 ```
 
 The final runtime target contains Bun, the built service/storage library and generated relay migrations. It runs as the unprivileged bun user, without a source checkout or runtime install. Operator tooling must apply migrations before use. A logged-in native host initializes enabled extension scopes through the authenticated transport. The default build remains this production target; test-only authority code, private keys and fixture initialization exist only in separate smoke stages.
@@ -184,6 +200,10 @@ The smoke generates HTTPS trust inside each run's owned volumes, so cached image
 
 ## Infrastructure boundary
 
-Future Terraform configuration belongs under `infra/relay/terraform/`, next to the relay's Compose files and separate from the service code in `services/relay/`. This scaffold defines no resources, backend, remote state, provider credentials, or deployment workflow. Terraform state, local variable files, and working data are ignored by Git; the Terraform directory and relay environment files are excluded from Docker build contexts. Never commit application secrets or generated runtime data.
+The portable Compose deployment is described in the
+[deployment guide](0012-portable-cloud-deployment.md). Deployment files live under
+`infra/`, separate from the service source. The DigitalOcean module lives in
+`infra/terraform/`; Prompt Studio's own environments and secrets live in a separate
+repository.
 
 CI runs the relay's ordinary package checks through Lerna and an isolated Docker smoke job when the relay or shared tooling changes. See [package boundaries](../../references/architecture/0013-package-boundaries.md) for dependency rules. The relay stays private and is excluded from Changesets publication. Shared model changes also require the packaged CLI checks because local storage and the SDK test adapter bundle that model.

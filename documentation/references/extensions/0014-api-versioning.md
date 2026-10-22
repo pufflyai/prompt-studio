@@ -218,7 +218,16 @@ API 0.2 moves `ctx.extensionFiles` from `.pstdio/ext/<publisher>.<name>/` to `.p
 
 ## Independent panel permissions in API 0.2.1
 
-`ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Published extension header and tab behavior stays compatible until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
+API 0.2.1 also adds optional `HarnessProvider.releaseSession(ctx, { sessionId })` for host-managed idle-resource cleanup. The host retains open tabs, active work, and sessions used within 30 minutes. Return `true` after releasing idle resources and `false` while native work or delivery remains uncertain. Preserve history and recreate resources on the next call. Existing providers keep working. Publish the SDK and host before separately released harnesses adopt it.
+
+`ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `movable`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Published extension header and tab behavior stays compatible until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
+
+## Local editing sessions in API 0.2.1
+
+The additive `editing.session` capability and `client.editing.open` share local document edits
+across isolated webviews before persistence completes. The host scopes sessions to their project
+and extension. See [local editing sessions](0005-webview-and-storage-api.md#local-editing-sessions).
+This is on `main` and ships after 0.44.0. Existing public APIs remain available.
 
 ## Storage conflict members deprecated in API 0.2.1
 
@@ -230,3 +239,27 @@ Edits from several devices are moving to automatic merging. The storage API stop
 - `storage.assets` no longer documents retained versions or unresolved alternatives.
 
 The next breaking release removes the deprecated members together. See [Deprecated conflict members](../sdk/0004-storage.md#deprecated-conflict-members).
+
+## Storage IDs and positions in API 0.2.1
+
+`storage.ids.create()`, `storage.positions.between()`, and the second migration
+callback argument, `migration.id(key)`, are additive. Existing migration callbacks
+keep working. The test storage options add optional `workbenchId`, `extensionId`,
+and `deviceId` values for simulating the same owner on two devices. These additions
+ship in the release after 0.44.0. See the
+[storage guide](../../guides/sdk/0003-storage.md#create-records-and-arrange-items).
+
+These ID helpers also accept an optional lowercase prefix. A supplied prefix selects
+a lossless 22-character Base62 UUID body; omitting it keeps canonical UUID text.
+`resources.allocate({ kind, idPrefix? })` uses the same generator and preserves its
+existing UUID output when `idPrefix` is omitted. Compact IDs are case-sensitive;
+extension adoption must keep ID lookup exact and shorthand lookup separate. These
+options do not rewrite existing IDs or change existing shorthand declarations.
+
+## Personal device references in API 0.2.1
+
+Workspace/session read results and resource references may include `device: { ownerId, id, name }`. A synced record is readable on its owner's other devices. Execution stays on its source device. Shared personal references contain only owner and device details; another user cannot open the underlying record. This additive field ships in the release after 0.44.0.
+
+## Cloud account and sync status in API 0.2.1
+
+`ctx.account`, the `account.read` and `account.manage` webview capabilities, `client.account` on the typed webview client, and the `accountEvents.projectSyncChanged` host event are additive. They ship in the release after 0.44.0. The `/client` account methods add `cancelLogin` and `projectSyncStatus`. `AccountDevice` adds `online`, `AccountStatus` adds `cloudProjectsLoaded`, and `DeviceLogin` adds an optional `email`. `makeCommandContext` from `@pstdio/sdk/testing` provides a signed-out account whose projects are `local`. Publish the SDK and host before separately released extensions use these additions. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).

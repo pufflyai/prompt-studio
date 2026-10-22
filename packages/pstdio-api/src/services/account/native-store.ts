@@ -1,15 +1,16 @@
-import { relayOrigin } from "pstdio-sync/relay";
+import { serviceAddress } from "pstdio-sync/relay";
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { readPrivateFile, serializeNativeWrite, writePrivateFile } from "./private-file";
 
 // The device credential stays in this private native file. Host API responses never include it.
 export const deviceLoginSchema = z.strictObject({
-  managerOrigin: z.string().transform(relayOrigin),
-  relayOrigin: z.string().transform(relayOrigin),
+  managerOrigin: z.string().transform(serviceAddress),
+  relayOrigin: z.string().transform(serviceAddress),
   accountId: identitySchema,
   deviceId: identitySchema,
   token: z.string().min(1),
+  email: z.string().optional(),
 });
 const fileSchema = z.strictObject({ login: deviceLoginSchema.nullable() });
 export type DeviceLogin = z.infer<typeof deviceLoginSchema>;

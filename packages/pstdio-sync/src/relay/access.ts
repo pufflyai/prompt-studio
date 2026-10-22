@@ -1,4 +1,4 @@
-import { relayOrigin } from "./http";
+import { serviceAddress, serviceUrl } from "./http";
 
 export const createRelayAccess = (input: {
   managerOrigin: string;
@@ -8,11 +8,11 @@ export const createRelayAccess = (input: {
   /** Called when the manager rejects the renewal credential. */
   denied?: () => void;
 }) => {
-  const origin = relayOrigin(input.managerOrigin);
+  const address = serviceAddress(input.managerOrigin);
   let access: { token: string; expiresAt: string } | undefined;
   let renewing: Promise<{ token: string; expiresAt: string }> | undefined;
   const renew = async () => {
-    const response = await fetch(new URL("/v1/environment-access", origin), {
+    const response = await fetch(serviceUrl(address, "/v1/environment-access"), {
       method: "POST",
       signal: input.signal,
       headers: { authorization: `Bearer ${input.renewalGrant}`, "content-type": "application/json" },

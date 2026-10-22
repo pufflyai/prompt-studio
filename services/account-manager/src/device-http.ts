@@ -15,6 +15,21 @@ const ok = async (action: Promise<unknown>) => {
   return json({ ok: true });
 };
 
+const workbenchRoute = async (devices: Authentication["devices"], request: Request, path: string) => {
+  const { method } = request;
+  const keys = /^\/v1\/workbenches\/([^/]+)\/keys$/.exec(path);
+  if (keys && method === "GET") {
+    const found = await devices.keys(bearer(request), decodeURIComponent(keys[1]));
+    return found ? json(found) : json({ error: "Unknown workbench" }, 404);
+  }
+  const workbench = /^\/v1\/workbenches\/([^/]+?)(\/remove)?$/.exec(path);
+  if (workbench && method === "POST") {
+    const id = decodeURIComponent(workbench[1]);
+    return ok(workbench[2] ? devices.removeWorkbench(bearer(request), id) : devices.addWorkbench(bearer(request), id));
+  }
+  return null;
+};
+
 const route = async (auth: Authentication, origin: string, request: Request, path: string) => {
   const { method } = request;
   if (path === "/v1/device-login" && method === "POST") {
@@ -23,6 +38,7 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
     return json(await auth.loginDevice(request.headers, await request.json()), 201);
   }
   const devices = auth.devices;
+  if (path === "/v1/devices/presence" && method === "POST") return ok(devices.heartbeat(bearer(request)));
   if (path === "/v1/devices" && method === "GET") return json(await devices.devices(bearer(request)));
   if (path === "/v1/workbenches" && method === "GET") return json(await devices.workbenches(bearer(request)));
   const device = /^\/v1\/devices\/([^/]+)\/(rename|remove)$/.exec(path);
@@ -33,12 +49,7 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
     if (!(await devices.rename(bearer(request), id, name))) return json({ error: "Unknown device" }, 404);
     return json({ ok: true });
   }
-  const workbench = /^\/v1\/workbenches\/([^/]+?)(\/remove)?$/.exec(path);
-  if (workbench && method === "POST") {
-    const id = decodeURIComponent(workbench[1]);
-    return ok(workbench[2] ? devices.removeWorkbench(bearer(request), id) : devices.addWorkbench(bearer(request), id));
-  }
-  return null;
+  return path.startsWith("/v1/workbenches/") ? workbenchRoute(devices, request, path) : null;
 };
 
 export const deviceHttp = async (auth: Authentication, origin: string, request: Request) => {

@@ -1,11 +1,12 @@
 import { Box } from "@chakra-ui/react";
-import { createContext, type ReactNode, useContext, useLayoutEffect, useState } from "react";
+import { createContext, type ReactNode, type Ref, useContext, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
 import { workbenchPanelRegions } from "../../core";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { movePanelHost } from "./move-panel-host";
+import { RegionScrollArea } from "./region-scroll-area";
 import { isPlacementEligibleForRegion } from "./region-tabs-visibility-hooks";
 import { useRetainedViewPlacements } from "./use-retained-view-placements";
 import { WorkbenchWidgetHost } from "./widget-host";
@@ -23,6 +24,31 @@ export const usePanelViewSlot = (region: WorkbenchPanelRegion | undefined) => {
     return () => registry?.register(region, null);
   }, [registry, region, node]);
   return { enabled: Boolean(registry && region), ref: setNode };
+};
+
+interface WorkbenchPanelViewSlotProps {
+  slotRef: Ref<HTMLDivElement>;
+  hidden: boolean;
+  placeholder: ReactNode;
+}
+
+export const WorkbenchPanelViewSlot = (props: WorkbenchPanelViewSlotProps) => {
+  const { slotRef, hidden, placeholder } = props;
+  return (
+    <>
+      {placeholder ? <RegionScrollArea hidden={hidden}>{placeholder}</RegionScrollArea> : null}
+      {/* Keep the slot connected when chrome or a placeholder hides retained views. */}
+      <Box
+        ref={slotRef}
+        display={hidden || placeholder ? "none" : "flex"}
+        flexDirection="column"
+        flex="1"
+        minH="0"
+        w="full"
+        minW="0"
+      />
+    </>
+  );
 };
 
 const PanelViewPortal = (props: {
@@ -53,7 +79,7 @@ const PanelViewPortal = (props: {
       data-workbench-instance={placement.widgetId}
       display={active ? "flex" : "none"}
       inert={!active}
-      flex="1 0 auto"
+      flex="1"
       minW="0"
       minH="0"
       w="full"
@@ -65,7 +91,10 @@ const PanelViewPortal = (props: {
         if (region) workbench.focus.setActiveRegion(region);
       }}
     >
-      <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} />
+      {/* The retained view owns its viewport, so another tab cannot reset its scroll position. */}
+      <RegionScrollArea>
+        <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} />
+      </RegionScrollArea>
     </Box>,
     host,
   );
@@ -95,7 +124,7 @@ export const WorkbenchPanelViewHosts = (props: { workbench: WorkbenchCore; child
     const selected = eligible.find((p) => p.widgetId === state.activeWidgetId) ?? eligible[0];
     return eligible.filter((p) => p.widgetId === selected?.widgetId || p.mountStrategy === "keep-mounted");
   });
-  const retained = useRetainedViewPlacements(workbench, current);
+  const retained = useRetainedViewPlacements(workbench, current, workbench.host.getOpenPlacementIds());
   return (
     <PanelViewContext value={registry}>
       {children}

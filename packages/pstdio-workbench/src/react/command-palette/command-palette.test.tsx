@@ -5,6 +5,109 @@ import { createWorkbenchCommandPaletteEntries, createWorkbenchResourcePaletteEnt
 import { createWorkbenchThemePreferencePaletteEntries, getThemePaletteEntryIndex } from "./theme-palette";
 
 describe("createWorkbenchCommandPaletteEntries", () => {
+  test.each([
+    ["workbench.action.changeTheme", "theme", ""],
+    ["workbench.action.showCommands", "main", "> "],
+  ] as const)("keeps the palette opened by %s", async (commandId, view, initialQuery) => {
+    const workbench = createWorkbench();
+    workbench.commandPalette.open({ initialQuery: ">Change Theme" });
+    const entry = createWorkbenchCommandPaletteEntries({
+      workbench,
+      onClose: () => workbench.commandPalette.close(),
+    }).find((entry) => entry.commandId === commandId);
+
+    expect(entry).toBeDefined();
+    entry?.onActivate();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(workbench.commandPalette.isOpen()).toBe(true);
+    expect(workbench.commandPalette.getView()).toBe(view);
+    expect(workbench.commandPalette.getInitialQuery()).toBe(initialQuery);
+  });
+
+  test("closes the palette after a command succeeds without opening another picker", async () => {
+    const workbench = createWorkbench();
+    workbench.commandPalette.open();
+    const entry = createWorkbenchCommandPaletteEntries({
+      workbench,
+      onClose: () => workbench.commandPalette.close(),
+    }).find((entry) => entry.commandId === "workbench.toggleSideBar");
+
+    entry?.onActivate();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(workbench.shell.getRegionState("sidenav").open).toBe(false);
+    expect(workbench.commandPalette.isOpen()).toBe(false);
+  });
+
+  test("closes the original palette after a command confirmation succeeds", async () => {
+    const workbench = createWorkbench();
+    let confirmed = false;
+    workbench.commands.registerCommand(
+      { id: "sessions.archive", label: "Archive session" },
+      {
+        execute: async () => {
+          confirmed = await workbench.commandPalette.requestConfirmation("Archive session");
+        },
+      },
+    );
+    workbench.commandPalette.open();
+    const entry = createWorkbenchCommandPaletteEntries({
+      workbench,
+      onClose: () => workbench.commandPalette.close(),
+    }).find((entry) => entry.commandId === "sessions.archive");
+
+    entry?.onActivate();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const confirmation = workbench.commandPalette.store.getState().confirmation;
+    expect(confirmation).not.toBeNull();
+    confirmation?.resolve(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(confirmed).toBe(true);
+    expect(workbench.commandPalette.isOpen()).toBe(false);
+  });
+
+  test("keeps a repeated request for the same command view open", async () => {
+    const workbench = createWorkbench();
+    workbench.commandPalette.open({ initialQuery: "> " });
+    const entry = createWorkbenchCommandPaletteEntries({
+      workbench,
+      onClose: () => workbench.commandPalette.close(),
+    }).find((entry) => entry.commandId === "workbench.action.showCommands");
+
+    entry?.onActivate();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(workbench.commandPalette.isOpen()).toBe(true);
+    expect(workbench.commandPalette.getInitialQuery()).toBe("> ");
+  });
+
+  test("keeps a failed command open with its inline error", async () => {
+    const workbench = createWorkbench();
+    workbench.commands.registerCommand(
+      { id: "files.open", label: "Open file" },
+      {
+        execute: () => {
+          throw new Error("File unavailable");
+        },
+      },
+    );
+    workbench.commandPalette.open();
+    const entry = createWorkbenchCommandPaletteEntries({
+      workbench,
+      onClose: () => workbench.commandPalette.close(),
+    }).find((entry) => entry.commandId === "files.open");
+
+    entry?.onActivate();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(workbench.commandPalette.isOpen()).toBe(true);
+    expect(workbench.notifications.listNotifications()).toMatchObject([
+      { inlineTarget: "command-palette", message: "File unavailable" },
+    ]);
+  });
+
   test("keeps command palette groups contiguous and orders actions inside each group", () => {
     const workbench = createWorkbench();
     workbench.commands.registerCommand(

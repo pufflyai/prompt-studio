@@ -2,7 +2,19 @@
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
     "production": ["default", "!{projectRoot}/**/*.{test,spec}.{ts,tsx,js,jsx}", "!{projectRoot}/**/__tests__/**"],
-    "sharedGlobals": []
+    "sharedGlobals": [
+      "{workspaceRoot}/package.json",
+      "{workspaceRoot}/bun.lock",
+      "{workspaceRoot}/bunfig.toml",
+      "{workspaceRoot}/.npmrc",
+      "{workspaceRoot}/tsconfig.base.json",
+      "{workspaceRoot}/nx.json",
+      "{workspaceRoot}/scripts/build/**/*",
+      "{workspaceRoot}/scripts/release/stage-package.ts",
+      { "runtime": "bun --version" },
+      { "runtime": "node --version" },
+      { "runtime": "node -p \"process.platform + '-' + process.arch\"" }
+    ]
   },
   "targetDefaults": {
     "build": {
@@ -11,8 +23,9 @@
       "inputs": [
         "default",
         "^default",
-        "{workspaceRoot}/scripts/build/mark-dts-modules.ts",
-        "{workspaceRoot}/scripts/release/stage-package.ts"
+        { "env": "NODE_ENV" },
+        { "env": "PSTDIO_API_URL" },
+        { "env": "PSTDIO_TERMINAL_WEBSOCKET_URL" }
       ],
       "outputs": ["{projectRoot}/dist", "{projectRoot}/.publish"]
     },

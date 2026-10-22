@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
 import { GraphCard } from "./graph-card";
@@ -74,6 +75,46 @@ export const AllProperties: Story = {
       displayProperties={["id", "status", "type", "workspace", "needsAttention", "reviewRequests"]}
     />
   ),
+};
+const request: ReviewRequestView = {
+  id: "review",
+  ticketId: row.id,
+  title: "Review the proposal",
+  instructions: "Confirm the scenarios.",
+  request: { kind: "task" },
+  requestedAt: "2026-10-15T09:00:00.000Z",
+  requestedBy: { type: "agent", id: "agent", displayName: "Agent" },
+  context: { reason: null, workspaceId: null, attemptRevision: null, sessionId: "session", relatedSessionId: null },
+  state: "open",
+  outcome: null,
+  outcomeText: null,
+};
+export const MultipleRequests: Story = {
+  args: {
+    row: { ...row, requests: [request, { ...request, id: "second" }], state: "await-input" },
+    onOpenRequests: () => {},
+  },
+};
+export const AllRequestsResolved: Story = {
+  args: {
+    row: {
+      ...row,
+      requests: [
+        {
+          ...request,
+          state: "answered",
+          outcomeText: "Completion confirmed",
+          outcome: {
+            kind: "answered",
+            at: "2026-10-15T09:10:00.000Z",
+            by: { type: "human", id: "person", displayName: "Person" },
+            response: { confirmed: true },
+          },
+        },
+      ],
+    },
+    onOpenRequests: () => {},
+  },
 };
 export const FullTitle: Story = {
   args: {

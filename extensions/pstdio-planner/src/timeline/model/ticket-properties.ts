@@ -1,4 +1,5 @@
 import { type KanbanRendererAttributeDescriptor, l10n } from "@pstdio/sdk/extensions";
+import { REVIEW_REQUEST_ITEMS_ATTRIBUTE, reviewRequestBadgeItems } from "../../data/review-request-summary";
 import type { Deadline, Plan } from "../contracts";
 
 export function timelineTicketAttributes(deadlines: readonly Deadline[]) {
@@ -56,6 +57,7 @@ export function timelineTicketAttributes(deadlines: readonly Deadline[]) {
       },
       filterable: true,
       displayable: true,
+      display: { kind: "badge-list", itemsAttributeId: REVIEW_REQUEST_ITEMS_ATTRIBUTE },
     },
     {
       id: "reviewRequests",
@@ -108,6 +110,10 @@ export function timelineTicketProperties(plan: Plan) {
                 row.requestErrors.length > 0 || row.requests.some(({ state }) => state === "open")
                   ? "requested"
                   : reviewRequestAnswer(row),
+              [REVIEW_REQUEST_ITEMS_ATTRIBUTE]: reviewRequestBadgeItems(
+                { requests: row.requests, errors: row.requestErrors },
+                row.target.resource!,
+              ),
             },
           ] as const,
       );

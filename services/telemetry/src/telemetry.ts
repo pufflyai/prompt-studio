@@ -10,6 +10,8 @@ const failures = {
   sync_submit_failed: "service_operation_failed",
   sync_recover_failed: "service_operation_failed",
   sync_subscription_failed: "service_operation_failed",
+  sync_document_failed: "service_operation_failed",
+  sync_cleanup_failed: "service_operation_failed",
   asset_operation_failed: "service_operation_failed",
 } as const;
 export type ServiceFailure = keyof typeof failures;

@@ -83,6 +83,8 @@ export const createRelaySubscription = async (
   }
   return {
     close,
+    // Change hints flow one way. A client message ends the subscription.
+    message: () => close(1008),
     open(connection: Pick<ServerWebSocket, "send" | "close">) {
       socket = connection;
       if (stopped) {
@@ -94,4 +96,3 @@ export const createRelaySubscription = async (
     },
   };
 };
-export type RelaySubscription = Awaited<ReturnType<typeof createRelaySubscription>>;

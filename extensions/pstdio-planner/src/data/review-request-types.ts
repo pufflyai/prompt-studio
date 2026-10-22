@@ -29,7 +29,7 @@ export type ReviewRequestBody = { kind: "task" } | { kind: "decision"; questions
 
 export type ReviewResponse = { confirmed: true } | { answers: Record<string, string | string[]> };
 
-// Requests are immutable. A correction cancels the request and creates another one.
+// Request content is immutable. The session link is filled when the person opens a conversation.
 export interface ReviewRequest {
   id: string;
   ticketId: string;
@@ -43,7 +43,7 @@ export interface ReviewRequest {
     reason: HumanRequestReason | null;
     workspaceId: string | null;
     attemptRevision: number | null;
-    sessionId: string;
+    sessionId: string | null;
     relatedSessionId: string | null;
   };
 }

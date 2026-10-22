@@ -167,6 +167,7 @@ describe("createCommandEnvironment host primitives", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
+        personalHistoryService: { workspaces: async () => [] },
         workspaceService: {
           setInitializing: async () => null,
           list: async (projectId: string) => [
@@ -328,6 +329,11 @@ describe("createCommandEnvironment session scopes", () => {
     };
     const sessions = createSessionsApi(
       {
+        personalHistoryService: {
+          getSession: async () => null,
+          getWorkspace: async () => null,
+          getWorkspaceByShorthand: async () => null,
+        },
         sessionService: {
           get: async () => foreignSession,
           list: async () => [],
@@ -746,7 +752,6 @@ describe("createCommandEnvironment storage files", () => {
     expect(attachments.urlFor(ticketFile.id)).toBe(ticketFile.url);
     await attachments.delete(ticketFile.id);
     expect(await attachments.list()).toEqual([]);
-    expect((await f.storage.readState()).pending).toHaveLength(3);
   });
 });
 

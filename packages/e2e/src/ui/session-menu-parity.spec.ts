@@ -24,6 +24,11 @@ test("Session menus share resource actions and switch through the full history",
   await prepareResourceActionsDashboard(page, project.id);
   await page.goto(`/projects/${project.id}/sessions`);
   const nav = page.locator('[data-workbench-region="sidenav"]');
+  await expect(nav.getByRole("option", { name: "History 64", exact: true })).toBeVisible();
+  // The oldest sessions are outside the virtualized viewport until it is scrolled.
+  await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
+    for (const element of elements) element.scrollTop = element.scrollHeight;
+  });
   await nav.getByRole("option", { name: "Keep open", exact: true }).click();
   const route = page.url();
   await nav.getByRole("option", { name: "Inspect this session", exact: true }).click({ button: "right" });

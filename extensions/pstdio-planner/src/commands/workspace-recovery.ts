@@ -138,5 +138,7 @@ export async function recoverySessionInput(
     throw new Error("The recovery attempt changed before launch.");
   if (isLiveSession(owner))
     throw new Error("The previous implementation session is running. Continue its existing owner.");
+  if (owner?.last_exit?.cause === "user_stop")
+    throw new Error("The previous implementation session was stopped. Keep its work paused.");
   return owner ? { originalSessionId: owner.id } : {};
 }

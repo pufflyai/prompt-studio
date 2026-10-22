@@ -1,5 +1,6 @@
 import { isAbsolute } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
+import type { RegisterInstalledSourceInput } from "./extension-service";
 
 /** The parts of a registration that name the record it belongs to. */
 type RegistrationIdentity = { extensionId: string; sourcePath: string };
@@ -83,3 +84,21 @@ export const findInstalledSourceForRegistration = async (
 
 export const refreshPathForRegistration = (existingPath: string, input: RegistrationIdentity) =>
   existingPath === input.sourcePath ? input.sourcePath : undefined;
+
+export const registrationValues = (
+  input: RegisterInstalledSourceInput,
+  existing: Awaited<ReturnType<typeof findInstalledSourceForRegistration>>,
+) => ({
+  display_name: input.displayName,
+  extension_id: input.extensionId,
+  manifest_json: input.manifest,
+  source_hash: input.sourceHash ?? existing?.source_hash ?? null,
+  source_kind: input.sourceKind ?? existing?.source_kind ?? "local_path",
+  source_path: input.sourcePath,
+  // `null` means the new source has no git ref, so an older ref must not survive a reinstall.
+  source_ref: input.sourceRef === undefined ? (existing?.source_ref ?? null) : input.sourceRef,
+  status: "loaded" as const,
+  version: input.version ?? null,
+  last_loaded_at: new Date().toISOString(),
+  last_error_json: null,
+});

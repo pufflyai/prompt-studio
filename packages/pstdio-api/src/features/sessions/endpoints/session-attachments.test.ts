@@ -40,7 +40,7 @@ describe("session attachments", () => {
       });
       expect(createRes.status).toBe(201);
       const created = (await createRes.json()) as { id: string };
-      await waitForCompleted(isolated.app, created.id);
+      await waitForCompleted(isolated, created.id);
 
       const startInput = isolated.harness.start.mock.calls[0]?.[1] as HarnessStartInput;
       expect(startInput.attachments).toHaveLength(1);
@@ -123,7 +123,7 @@ describe("session attachments", () => {
       });
       expect(createRes.status).toBe(201);
       const created = (await createRes.json()) as { id: string };
-      await waitForCompleted(isolated.app, created.id);
+      await waitForCompleted(isolated, created.id);
 
       const conversationRes = await isolated.app.request(`/v1/sessions/${created.id}/conversation`);
       expect(conversationRes.status).toBe(200);

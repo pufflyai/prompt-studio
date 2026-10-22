@@ -1,6 +1,7 @@
 import { basename, dirname } from "node:path";
 import { ExtensionNameConflictError, ProjectNotFoundError } from "../../services/extension-service";
 import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-unavailable-error";
+import { ExtensionNotInCatalogError } from "./extension-catalog";
 import { checkExtensionSource, hashExtensionSource } from "./extension-runtime";
 import {
   ExtensionAlreadyInstalledError,
@@ -28,6 +29,8 @@ const existingSource = async (targetPath: string) => {
 export const extensionInstallFailure = async (error: unknown) => {
   if (error instanceof InvalidExtensionFolderError) return { body: { error: error.message }, status: 400 as const };
   if (error instanceof ProjectNotFoundError) return { body: { error: error.message }, status: 404 as const };
+  if (error instanceof ExtensionNotInCatalogError)
+    return { body: { error: error.message, code: "extension_not_in_catalog" }, status: 404 as const };
   if (error instanceof ExtensionAlreadyInstalledError)
     return {
       body: {

@@ -306,3 +306,19 @@ describe("POST /v1/projects/:projectId/extensions/install", () => {
     expect(escaping.status).toBe(400);
   });
 });
+
+describe("POST /v1/projects/:projectId/extensions/install with a catalog source", () => {
+  test("reports a missing catalog entry instead of a missing project", async () => {
+    const project = await createProject("Unknown catalog entry");
+    const response = await handle.app.request(`/v1/projects/${project.id}/extensions/install`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source: { kind: "catalog", name: "not-in-catalog" } }),
+    });
+
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body.code).toBe("extension_not_in_catalog");
+    expect(body.error).toContain("not-in-catalog");
+  });
+});

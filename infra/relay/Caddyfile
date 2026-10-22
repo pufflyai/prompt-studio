@@ -1,0 +1,7 @@
+{$RELAY_DOMAIN} {
+  reverse_proxy relay:8080
+}
+
+{$MANAGER_DOMAIN} {
+  reverse_proxy manager:8443
+}

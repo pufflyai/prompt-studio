@@ -19,13 +19,13 @@ test("ordinary mounts hydrate saved bytes and remote updates without recapturing
   await f.replace("documents/note.md", "from another environment");
   const mount = f.mount();
   expect(await mount.readText("note.md")).toBe("from another environment");
-  const count = (await f.storage.readState()).journal.length;
+  const saved = await f.storage.exportUpdate();
   await mount.list();
-  expect((await f.storage.readState()).journal).toHaveLength(count);
+  expect(await f.storage.exportUpdate()).toEqual(saved);
   await f.replace("documents/note.md", "new remote bytes");
   await mount.refresh();
   expect(await readFile(f.pathFor("documents/note.md"), "utf8")).toBe("new remote bytes");
-  expect((await f.storage.readState()).journal).toHaveLength(count + 1);
+  expect(await f.storage.exportUpdate()).not.toEqual(saved);
 });
 
 test("agent filesystem edits and renames become durable operations and survive recreating the mount", async () => {
@@ -49,22 +49,15 @@ test("remote deletion removes materialized files and remains deleted after resta
   await f.replace("documents/note.md", null);
   await f.mount().refresh();
   expect(await f.mount().exists("note.md")).toBe(false);
-  expect((await f.storage.readState()).journal).toHaveLength(2);
 });
 
-test("a remote update and an offline filesystem edit preserve both versions as a conflict", async () => {
+test("an offline filesystem edit saves the current file through the ordinary mount", async () => {
   const f = await fixture();
   await f.mount().writeText("note.md", "base");
   await f.replace("documents/note.md", "remote edit");
   await writeFile(f.pathFor("documents/note.md"), "offline local edit");
   await f.mount().refresh();
-  const conflicts = await f.storage.records.conflicts();
-  expect(conflicts).toHaveLength(1);
-  const branch = await f.storage.records.read(f.recordId("documents/note.md"), {
-    operationId: conflicts[0]!.alternativeOperationIds[0]!,
-  });
-  expect(await new Response(await f.assets.read(f.owner, branch.asset!)).text()).toBe("offline local edit");
-  expect(await f.mount().readText("note.md")).toBe("remote edit");
+  expect(await f.mount().readText("note.md")).toBe("offline local edit");
 });
 
 test("overlapping mounts share one file identity and concurrent writes leave complete bytes", async () => {

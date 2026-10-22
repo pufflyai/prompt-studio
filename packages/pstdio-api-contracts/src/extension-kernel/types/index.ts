@@ -1,3 +1,4 @@
+export type * from "./account";
 export type * from "./assets";
 export type * from "./automation";
 export type * from "./collection-view";
@@ -25,10 +26,12 @@ export type * from "./resources";
 export type * from "./saved-views";
 export type * from "./slots";
 export type * from "./status-bar";
+export type * from "./storage";
 export type * from "./storage-records";
 export type * from "./tree-renderer";
 export type * from "./view-toolbar-action";
 export type * from "./views";
 export * from "./webview-capabilities";
+export type * from "./webview-editing";
 export type * from "./webview-host-props";
 export type * from "./workspaces";

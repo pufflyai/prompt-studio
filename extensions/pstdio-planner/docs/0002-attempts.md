@@ -126,7 +126,7 @@ Extensions and agents drive attempts through Planner's commands. Each ID below i
 | `workflow-statuses.read` | Reads the completed, blocked, active, and merge-destination status IDs.         |
 | `reconcile-attempt`     | Recovers an attempt whose session disconnected.                                  |
 | `select-attempt`        | Chooses which attempt of a ticket later tickets build on. Not for automations.   |
-| `request-human`         | Asks a person for a task confirmation or a decision and sets Review Needed.      |
+| `request-human`         | Asks a person for a task confirmation or a decision and sets Needs attention.      |
 | `review`                | Answers a review request. Only a person or an agent can do this.                 |
 | `workspace-activity`    | Returns a workspace's sessions and whether any of them is still running.         |
 

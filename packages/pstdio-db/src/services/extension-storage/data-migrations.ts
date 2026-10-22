@@ -1,47 +1,31 @@
-import { and, eq } from "drizzle-orm";
 import { createDataMigrationRunner } from "pstdio-api-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { extension_data_versions } from "../../db/schemas.pg";
+import { dataMigrationContext } from "./data-migration-context";
+import type { createDocumentStorageDBService } from "./document-storage";
 import type { KvScope } from "./extension-storage";
+import { getExtensionStorageOwner } from "./storage-owner";
 
-export const createStorageMigrations = (db: DbClient) => {
+export const createStorageMigrations = (db: DbClient, documents: ReturnType<typeof createDocumentStorageDBService>) => {
   const pending = new Map<string, Promise<void>>();
   return (scope: KvScope, version: number, run: (previousVersion: number) => Promise<void>) => {
     const key = JSON.stringify([scope.extension_instance_id, scope.scope_type, scope.scope_id]);
     const migrate = async () => {
+      const owner = await getExtensionStorageOwner(db, scope.extension_instance_id);
+      if (!owner) throw new Error("Storage owner not found");
+      const storage = documents.open({ owner });
+      const dataScope = JSON.stringify([scope.scope_type, scope.scope_id]);
       await createDataMigrationRunner({
-        readVersion: async () => {
-          const [stored] = await db
-            .select()
-            .from(extension_data_versions)
-            .where(
-              and(
-                eq(extension_data_versions.extension_instance_id, scope.extension_instance_id),
-                eq(extension_data_versions.scope_type, scope.scope_type),
-                eq(extension_data_versions.scope_id, scope.scope_id),
-              ),
-            );
-          return stored?.version ?? 0;
-        },
-        writeVersion: async (next) => {
-          await db
-            .insert(extension_data_versions)
-            .values({
-              extension_instance_id: scope.extension_instance_id,
-              scope_type: scope.scope_type,
-              scope_id: scope.scope_id,
-              version: next,
-            })
-            .onConflictDoUpdate({
-              target: [
-                extension_data_versions.extension_instance_id,
-                extension_data_versions.scope_type,
-                extension_data_versions.scope_id,
-              ],
-              set: { version: next },
-            });
-        },
-      })(version, run);
+        readVersion: () => storage.dataVersion(dataScope),
+        writeVersion: (next) => storage.setDataVersion(dataScope, next),
+      })(version, (previous) =>
+        dataMigrationContext.run(
+          {
+            key: JSON.stringify([owner.extensionId, scope.scope_type, scope.scope_id, version]),
+            histories: new Map(),
+          },
+          () => run(previous),
+        ),
+      );
     };
     const result = (pending.get(key) ?? Promise.resolve()).catch(() => {}).then(migrate);
     pending.set(key, result);

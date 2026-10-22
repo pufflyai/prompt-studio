@@ -268,6 +268,7 @@ describe("attempt workflow commands", () => {
     expect(ticket?.statusId).toBe("in-progress");
     expect(ticket?.tagIds).toEqual([]);
     expect(fixture.addedAnchors).toEqual([]);
+    expect(fixture.followups).toEqual([]);
     await expect(runReviewCommand.run(...fixture.context({ workspaceId: "workspace-1" }))).rejects.toThrow(
       "already running or completed",
     );

@@ -150,7 +150,7 @@ export const createSharedArtifactMount = (
           within(node.path, target),
         );
         if (!entries.length) throw missing(path);
-        const outcome = await storage.records.commit({
+        await storage.records.commit({
           operationId: crypto.randomUUID(),
           edits: entries.map(({ record }) => ({
             recordId: record.recordId,
@@ -159,7 +159,7 @@ export const createSharedArtifactMount = (
             asset: null,
           })),
         });
-        if (outcome.status !== "conflict") await withoutStorageObservation(reconcile);
+        await withoutStorageObservation(reconcile);
       }),
   };
   return { ...api, refresh: () => run(async () => {}) };

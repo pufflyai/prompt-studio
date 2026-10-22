@@ -10,6 +10,7 @@ import {
 } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { ticketRequestsTarget } from "../../data/ticket-page-target";
 import { stepReview } from "../model/review";
 import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
@@ -17,7 +18,7 @@ import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
 import { PlanLoading } from "./plan-loading";
 import { useViewSections } from "./plan-state";
-import { reportTimelineError } from "./timeline-notice";
+import { reportPlannerError } from "./timeline-notice";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
 import { createTimelineStorage } from "./timeline-storage";
 import { timelineViewsSource } from "./timeline-views";
@@ -47,7 +48,7 @@ export function PlanRoot(props: PlanRootProps) {
   useEffect(() => {
     let active = true;
     const reportError = (reason: unknown) => {
-      if (active) void reportTimelineError(host, reason);
+      if (active) void reportPlannerError(client, reason);
     };
     void createTimelineStorage(host, reportError)
       .then((next) => {
@@ -57,7 +58,7 @@ export function PlanRoot(props: PlanRootProps) {
     return () => {
       active = false;
     };
-  }, [host]);
+  }, [client, host]);
   if (!plan || !storage) return <PlanLoading t={t} />;
   const viewsSource = timelineViewsSource(client, plan.savedViews);
   return (
@@ -110,6 +111,9 @@ function PlanContent(props: PlanContentProps) {
               attributes: queryData.attributes,
               displayProperties,
               rows: new Map(queryData.rows.map((row) => [row.id, row])),
+            }}
+            onOpenRequests={(row) => {
+              void host.call("navigation.open", { target: ticketRequestsTarget(row.target.resource!) });
             }}
           />
         </Box>

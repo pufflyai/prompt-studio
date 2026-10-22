@@ -66,7 +66,10 @@ export const createSessionsApi = (
     get: async (id) =>
       read(async () => {
         const session = await getProjectSession(id);
-        if (!session) return null;
+        if (!session) {
+          const remote = await deps.personalHistoryService.getSession(id, input.projectId);
+          return remote ? toExtensionSession(remote, remote.workspace_id) : null;
+        }
         const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
         const lastExit = await readSessionExit(deps.activityEventsService, { ...session, project_id: input.projectId });
         return {

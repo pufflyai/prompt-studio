@@ -53,10 +53,10 @@ const editorScrollTop = async (page: import("@playwright/test").Page) => {
   });
 };
 
-const scrollEditorToBottom = async (page: import("@playwright/test").Page) => {
+const scrollEditor = async (page: import("@playwright/test").Page, fraction: number) => {
   const editor = page.locator('[role="textbox"]:visible').first();
   await expect(editor).toBeVisible();
-  await editor.evaluate((element) => {
+  await editor.evaluate((element, fraction) => {
     const ancestors: HTMLElement[] = [];
     let current: HTMLElement | null = element;
     while (current) {
@@ -69,8 +69,8 @@ const scrollEditorToBottom = async (page: import("@playwright/test").Page) => {
     });
     const scrollOwner = scrollableAncestors.at(-1);
     if (!scrollOwner) throw new Error("Scroll viewport not found");
-    scrollOwner.scrollTop = scrollOwner.scrollHeight;
-  });
+    scrollOwner.scrollTop = (scrollOwner.scrollHeight - scrollOwner.clientHeight) * fraction;
+  }, fraction);
 };
 
 test("restores markdown scroll when returning to a retained ticket or file", async ({ page, request }) => {
@@ -97,7 +97,8 @@ test("restores markdown scroll when returning to a retained ticket or file", asy
   await card.click();
 
   await expect(page.locator('[role="textbox"]:visible').first()).toContainText("ticket-scroll-reset line 001");
-  await scrollEditorToBottom(page);
+  // Different offsets prove each retained document owns its scroll position.
+  await scrollEditor(page, 0.5);
   await expect.poll(() => editorScrollTop(page)).toBeGreaterThan(0);
   const ticketScroll = await editorScrollTop(page);
 
@@ -107,9 +108,10 @@ test("restores markdown scroll when returning to a retained ticket or file", asy
   await expect(fileRow).toHaveAttribute("aria-selected", "true");
   await expect(page.locator('[role="textbox"]:visible').first()).toContainText("file-scroll-reset line 001");
   await expect.poll(() => editorScrollTop(page)).toBe(0);
-  await scrollEditorToBottom(page);
+  await scrollEditor(page, 1);
   await expect.poll(() => editorScrollTop(page)).toBeGreaterThan(0);
   const fileScroll = await editorScrollTop(page);
+  expect(fileScroll).toBeGreaterThan(ticketScroll);
 
   const ticketRow = page.getByRole("option", {
     name: new RegExp(ticket.shorthand),

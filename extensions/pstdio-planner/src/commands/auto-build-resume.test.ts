@@ -141,6 +141,44 @@ test("an explicit user stop stays stopped", async () => {
   expect(followups).toEqual([]);
 });
 
+test.each(["missing metadata", "deleted folder"])("an explicit user stop stays stopped with %s", async (missing) => {
+  const { ctx, task, started, followups } = await stoppedAttempt("cancelled");
+  const get = ctx.sessions.get;
+  ctx.sessions.get = async (id) =>
+    ({ ...(await get(id)), last_exit: { cause: "user_stop", startedAt: null, endedAt: null } }) as never;
+  if (missing === "missing metadata") ctx.workspaces.get = async () => null;
+  else {
+    const run = ctx.process.run;
+    ctx.process.run = async (input) =>
+      input.command.includes(`/workspace/${started.workspace.id}`)
+        ? { exitCode: 128, stdout: "", stderr: "Workspace folder missing" }
+        : run(input);
+  }
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);
+  expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).toMatchObject({
+    decision: "wait",
+  });
+  expect(followups).toEqual([]);
+});
+
+test.each([
+  "blocked status",
+  "blocked reason",
+])("unfinished work waits for its %s without answered input", async (blocker) => {
+  const { ctx, storage, task, followups } = await stoppedAttempt("completed");
+  await putTicket(storage, {
+    ...task,
+    ...(blocker === "blocked status"
+      ? { statusId: "blocked" }
+      : { blockedReason: "Wait until the customer supplies access." }),
+  });
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);
+  expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).toMatchObject({
+    decision: "wait",
+  });
+  expect(followups).toEqual([]);
+});
+
 test("a stopped turn is resumed once while a later stopped turn can resume again", async () => {
   const { ctx, task, started } = await stoppedAttempt("cancelled");
   await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" });

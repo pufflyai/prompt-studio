@@ -104,6 +104,8 @@ export interface TreeSectionEmptyState {
 
 export interface TreeViewSection {
   id: string;
+  /** This section's structure is known, but its contents have not arrived yet. */
+  loading?: boolean;
   /** Host-owned customization boundary. Extension callbacks cannot set it. */
   moveScope?: string;
   label?: string;
@@ -140,6 +142,8 @@ export interface TreeRendererContribution {
   defaultExpandedNodeIds?: string[];
   /** Identify the navigation data scope when it differs from the current page resource. */
   getReadKey?(ctx: TreeQueryContext): string;
+  /** Synchronous layout available before the first content read. */
+  getStructure?(ctx: TreeQueryContext): TreeViewSection[];
   getBody(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getHeader?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getFooter?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];

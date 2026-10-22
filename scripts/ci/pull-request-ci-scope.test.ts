@@ -1,12 +1,16 @@
 import { describe, expect, test } from "bun:test";
+import { allBrowserChecks } from "./browser-checks";
 import { resolveCiScope } from "./pull-request-ci-scope";
 
 const packageDirs = [
   "clients/landing-page",
+  "clients/desktop",
   "packages/ui",
+  "packages/sdk",
   "packages/pstdio",
   "packages/pstdio-api",
   "packages/pstdio-dashboard",
+  "packages/pstdio-workbench",
   "packages/pstdio-db",
   "packages/pstdio-logging",
   "packages/e2e",
@@ -14,207 +18,165 @@ const packageDirs = [
   "extensions/harness-codex",
   "extensions/harness-open-code",
   "extensions/harness-claude-code",
-  "design/motion",
+  "services/relay",
+  "services/account-manager",
   "scripts",
 ];
+const select = (
+  changedFiles: string[],
+  affectedPackages: string[] = [],
+  event = "pull_request",
+  labels: string[] = [],
+) => resolveCiScope({ event, labels, changedFiles, packageDirs, affectedPackages });
 
-const pullRequest = (changedFiles: string[], labels: string[] = [], affectedPackages: string[] = []) =>
-  resolveCiScope({ event: "pull_request", labels, changedFiles, packageDirs, affectedPackages });
-
-const full = {
-  stage: "full",
-  dockerBuild: true,
-  relaySmoke: true,
-  lernaFilter: "",
-  license: true,
-  publishedExtensions: true,
-  harnessCli: true,
-  databaseTests: true,
-};
-
-const everyLinuxCheck = { ...full, stage: "pull_request" };
-
-const scoped = {
-  stage: "pull_request",
-  dockerBuild: false,
-  relaySmoke: false,
-  lernaFilter: "--since HEAD~1",
-  license: false,
-  publishedExtensions: false,
-  harnessCli: false,
-  databaseTests: false,
-};
-
-describe("CI stage", () => {
-  test("a push to main runs the full stage", () => {
-    expect(
-      resolveCiScope({ event: "push", labels: [], changedFiles: ["README.md"], packageDirs, affectedPackages: [] }),
-    ).toEqual(full);
-  });
-
-  test("a manual run runs the full stage", () => {
-    expect(
-      resolveCiScope({ event: "workflow_dispatch", labels: [], changedFiles: [], packageDirs, affectedPackages: [] }),
-    ).toEqual(full);
-  });
-
-  test("the merge queue runs only its build and static check stage", () => {
-    const scope = resolveCiScope({
-      event: "merge_group",
-      labels: [],
-      changedFiles: ["packages/pstdio-api/src/app.ts", "bun.lock"],
-      packageDirs,
-      affectedPackages: ["pstdio-api"],
+describe("shared PR and queue selection", () => {
+  for (const files of [
+    ["packages/sdk/src/index.ts"],
+    ["packages/pstdio-api/src/app.ts"],
+    ["clients/landing-page/src/index.astro"],
+    ["bun.lock"],
+    ["README.md"],
+  ]) {
+    test(`queue coverage equals PR coverage for ${files[0]}`, () => {
+      expect(select(files, ["pstdio-api", "e2e"], "merge_group")).toEqual({
+        ...select(files, ["pstdio-api", "e2e"]),
+        stage: "merge_queue",
+      });
     });
+  }
+  for (const event of ["pull_request", "merge_group"]) {
+    test(`ci:full preserves all checks on ${event}`, () => {
+      expect(select(["README.md"], [], event, ["ci:full"])).toEqual(select([], [], "push"));
+    });
+  }
+  test("pushes and manual runs retain the full stage", () => {
+    expect(select([], [], "push").stage).toBe("full");
+    expect(select([], [], "workflow_dispatch").stage).toBe("full");
+  });
+});
 
-    expect(scope).toEqual({
-      stage: "merge_queue",
+test("package checks explicitly name all affected consumers", () => {
+  const scope = select(["packages/sdk/src/index.ts"], ["@pstdio/sdk", "pstdio-api", "pstdio-dashboard"]);
+  expect(scope.lernaFilter).toBe("--scope @pstdio/sdk --scope pstdio-api --scope pstdio-dashboard");
+  expect(scope.packageChecks).toBe(true);
+  expect(scope.databaseTests).toBe(true);
+  expect(scope.browserSmoke).toBe(true);
+});
+
+test("browser-test-only changes select browser checks without an empty unit-test scope", () => {
+  for (const event of ["pull_request", "merge_group"]) {
+    const scope = select(["packages/e2e/src/ui/main-fullscreen.spec.ts"], ["e2e"], event);
+    expect(scope.packageChecks).toBe(false);
+    expect(scope.browserSmoke).toBe(true);
+    expect(scope.browserChecks.length).toBeGreaterThan(0);
+  }
+});
+
+test("documentation outside packages selects only static checks", () => {
+  const scope = select([
+    "README.md",
+    "documentation/guides/development/0002-testing.md",
+    "design/website.pen",
+    "LICENSE",
+  ]);
+  expect(scope.packageChecks).toBe(false);
+  expect(scope.browserSmoke).toBe(false);
+  expect(scope.browserChecks).toEqual([]);
+  expect(scope.nativeChecks).toEqual([]);
+  expect(scope.dockerBuild).toBe(false);
+});
+
+test("package prose keeps package checks without adding runtime checks", () => {
+  const scope = select(["extensions/harness-codex/README.md"], ["harness-codex"]);
+  expect(scope.packageChecks).toBe(true);
+  expect(scope.publishedExtensions).toBe(false);
+  expect(scope.harnessCli).toBe(false);
+  expect(scope.browserChecks).toEqual([]);
+  expect(scope.nativeChecks).toEqual([]);
+});
+
+test("shared tooling and unknown root inputs select every scoped check", () => {
+  for (const file of [
+    "bun.lock",
+    ".github/workflows/test-and-build.yml",
+    "tsconfig.base.json",
+    "scripts/test-setup.ts",
+    ".npmrc",
+  ]) {
+    const scope = select([file]);
+    expect(scope, file).toMatchObject({
+      packageChecks: true,
       dockerBuild: true,
       relaySmoke: true,
-      lernaFilter: "",
-      license: false,
-      publishedExtensions: false,
-      harnessCli: false,
-      databaseTests: false,
+      databaseTests: true,
+      license: true,
+      publishedExtensions: true,
+      harnessCli: true,
+      browserSmoke: true,
     });
-  });
-
-  test("the ci:full label runs the full stage on a pull request", () => {
-    expect(pullRequest(["packages/ui/src/index.ts"], ["ci:full"])).toEqual(full);
-  });
-
-  test("other labels keep the scoped pull request stage", () => {
-    expect(pullRequest(["clients/landing-page/src/pages/index.astro"], ["release", "breaking-change"])).toEqual(scoped);
-  });
+    expect(scope.browserChecks, file).toEqual(allBrowserChecks);
+    expect(scope.nativeChecks, file).toEqual(["filesystem", "process", "desktop"]);
+    expect(scope.stage).toBe("pull_request");
+  }
 });
 
-describe("pull request CI scope", () => {
-  test("a package change tests changed packages and skips unrelated jobs", () => {
-    expect(pullRequest(["clients/landing-page/src/pages/index.astro"])).toEqual(scoped);
-  });
-
-  test("a manifest change runs the license check", () => {
-    expect(pullRequest(["packages/ui/package.json"]).license).toBe(true);
-  });
-
-  test("container and dependency inputs build Docker images before entering the merge queue", () => {
-    for (const file of [
-      ".dockerignore",
-      "bunfig.toml",
-      "bun.lock",
-      "package.json",
-      "packages/ui/package.json",
-      "extensions/pstdio-planner/bun.lock",
-      "clients/landing-page/Dockerfile",
-      "packages/pstdio-api/Dockerfile",
-    ]) {
-      expect(pullRequest([file]).dockerBuild, file).toBe(true);
-    }
-  });
-
-  test("documentation outside packages runs no extra jobs", () => {
-    const scope = pullRequest([
-      "README.md",
-      "documentation/guides/development/0002-testing.md",
-      "design/website.pen",
-      "LICENSE",
-    ]);
-
-    expect(scope).toEqual(scoped);
-  });
-
-  test("any other change outside packages runs every Linux check on every package", () => {
-    expect(pullRequest(["bun.lock"])).toEqual(everyLinuxCheck);
-    expect(pullRequest([".github/workflows/test-and-build.yml"])).toEqual(everyLinuxCheck);
-    expect(pullRequest(["tsconfig.base.json"])).toEqual(everyLinuxCheck);
-  });
-
-  test("a repository tooling change runs every Linux check on every package", () => {
-    expect(pullRequest(["scripts/test-setup.ts"])).toEqual(everyLinuxCheck);
-  });
+test("Docker and dependency inputs select container and license checks", () => {
+  for (const file of [
+    ".dockerignore",
+    "bunfig.toml",
+    "bun.lock",
+    "package.json",
+    "packages/ui/package.json",
+    "clients/landing-page/Dockerfile",
+  ]) {
+    expect(select([file]).dockerBuild, file).toBe(true);
+  }
+  expect(select(["packages/ui/package.json"]).license).toBe(true);
+  expect(select(["clients/landing-page/src/index.astro"]).dockerBuild).toBe(false);
 });
 
-test("API and database tests run in their own shards when a change affects those packages", () => {
-  expect(pullRequest(["packages/pstdio-db/src/db/schema.ts"], [], ["pstdio-db", "pstdio-api"]).databaseTests).toBe(
-    true,
-  );
-  expect(pullRequest(["packages/pstdio-api/src/app.ts"], [], ["pstdio-api"]).databaseTests).toBe(true);
-  expect(pullRequest(["packages/pstdio-dashboard/src/main.tsx"], [], ["pstdio-dashboard"]).databaseTests).toBe(false);
+test("API, database and relay consumers select isolated storage checks", () => {
+  expect(select(["packages/pstdio-api/src/app.ts"], ["pstdio-api"]).databaseTests).toBe(true);
+  for (const name of ["pstdio-db", "pstdio-relay", "pstdio-account-manager"]) {
+    expect(select([`services/${name}/src/index.ts`], [name]).relaySmoke).toBe(true);
+  }
+  expect(select(["infra/relay/compose.test.yaml"]).relaySmoke).toBe(true);
+  expect(select(["packages/ui/src/index.ts"], ["@pstdio/ui"]).databaseTests).toBe(false);
 });
 
-test("published extensions are checked for extension and public contract changes", () => {
+test("published extension contracts and harness implementations select compatibility checks", () => {
   for (const file of [
     "extensions/pstdio-planner/extension.ts",
     "packages/sdk/src/index.ts",
     "packages/ui/src/index.ts",
     "packages/pstdio-api-contracts/src/index.ts",
   ]) {
-    expect(pullRequest([file]).publishedExtensions).toBe(true);
+    expect(select([file]).publishedExtensions, file).toBe(true);
   }
-  expect(pullRequest(["packages/pstdio-dashboard/src/main.tsx"]).publishedExtensions).toBe(false);
+  for (const harness of ["harness-codex", "harness-open-code", "harness-claude-code"]) {
+    expect(select([`extensions/${harness}/src/detection.ts`]).harnessCli).toBe(true);
+  }
+  expect(select(["packages/pstdio-dashboard/src/main.tsx"]).publishedExtensions).toBe(false);
 });
 
-test("extension docs and skill prose run the extension's own checks, not the published or installed CLI checks", () => {
+test("Windows checks follow native process, storage and desktop inputs", () => {
+  expect(select(["extensions/harness-codex/src/spawn.ts"]).nativeChecks).toEqual(["process"]);
+  expect(select(["packages/pstdio-db/src/index.ts"]).nativeChecks).toEqual(["filesystem"]);
+  expect(select(["clients/desktop/src/cli/windows-path.ts"]).nativeChecks).toEqual(["desktop"]);
+  expect(select(["packages/sdk/src/index.ts"]).nativeChecks).toEqual(["filesystem", "process"]);
+  expect(select(["clients/landing-page/src/index.astro"]).nativeChecks).toEqual([]);
+});
+
+test("backend and shared browser dependencies select smoke and feature regressions", () => {
   for (const file of [
-    "extensions/harness-codex/README.md",
-    "extensions/pstdio-planner/docs/0001-cli.md",
-    "extensions/pstdio-skills/skills/create-pstdio-extension/references/scope.md",
+    "packages/pstdio-dashboard/src/main.tsx",
+    "packages/pstdio-workbench/src/core/panels.ts",
+    "packages/ui/src/index.ts",
+    "packages/sdk/src/index.ts",
+    "packages/pstdio-api/src/app.ts",
   ]) {
-    expect(pullRequest([file]), file).toEqual(scoped);
+    expect(select([file], ["e2e"]), file).toMatchObject({ browserSmoke: true });
+    expect(select([file], ["e2e"]).browserChecks.length, file).toBeGreaterThan(0);
   }
-  expect(
-    pullRequest(["extensions/pstdio-skills/skills/create-pstdio-extension/references/examples/pigeon.ts"]),
-  ).toHaveProperty("publishedExtensions", true);
-});
-
-test("installed CLI checks run for harness changes", () => {
-  expect(pullRequest(["extensions/harness-codex/src/detection.ts"]).harnessCli).toBe(true);
-  expect(pullRequest(["extensions/harness-claude-code/src/spawn.ts"]).harnessCli).toBe(true);
-  expect(pullRequest(["extensions/harness-open-code/src/detection.ts"]).harnessCli).toBe(true);
-  expect(pullRequest(["extensions/pstdio-planner/extension.ts"]).harnessCli).toBe(false);
-});
-
-test("relay changes select the isolated container check", () => {
-  const scope = resolveCiScope({
-    event: "pull_request",
-    labels: [],
-    changedFiles: ["services/relay/src/server.ts"],
-    packageDirs: [...packageDirs, "services/relay"],
-    affectedPackages: ["pstdio-relay"],
-  });
-  expect(scope.lernaFilter).toBe("--since HEAD~1");
-  expect(scope).toHaveProperty("relaySmoke", true);
-  expect(pullRequest(["packages/ui/src/index.ts"])).toHaveProperty("relaySmoke", false);
-  expect(pullRequest(["bun.lock"])).toHaveProperty("relaySmoke", true);
-});
-
-test("relay deployment setup changes select the isolated container check", () => {
-  for (const file of ["infra/relay/compose.test.yaml", "infra/relay/compose.local.yaml"]) {
-    const scope = resolveCiScope({
-      event: "pull_request",
-      labels: [],
-      changedFiles: [file],
-      packageDirs: [...packageDirs, "services/relay"],
-      affectedPackages: [],
-    });
-    expect(scope, file).toHaveProperty("relaySmoke", true);
-  }
-});
-
-test("private account manager changes select the isolated infrastructure check", () => {
-  const scope = resolveCiScope({
-    event: "pull_request",
-    labels: [],
-    changedFiles: ["services/account-manager/src/authority.ts"],
-    packageDirs: [...packageDirs, "services/account-manager"],
-    affectedPackages: ["pstdio-account-manager"],
-  });
-  expect(scope.lernaFilter).toBe("--since HEAD~1");
-  expect(scope.relaySmoke).toBe(true);
-});
-
-test("local storage changes select production relay conformance", () => {
-  expect(
-    pullRequest(["packages/pstdio-db/src/services/extension-storage/grouped-storage.ts"], [], ["pstdio-db"]),
-  ).toHaveProperty("relaySmoke", true);
+  expect(select(["clients/landing-page/src/index.astro"]).browserSmoke).toBe(false);
 });

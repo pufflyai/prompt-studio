@@ -15,6 +15,7 @@ export async function resumeStackRepair(
   await beforeDispatch(repair.base.headSha);
   await ctx.sessions.followup({
     sessionId: attempt.implementationSessionId,
+    expectedRun: repair.expectedRun,
     prompt: [
       `Update the existing dependency stack for ${attempt.ticketShorthand} in this same workspace. Read the current implement-ticket skill, ticket, attempt history, and outstanding findings. Done status and confirmed answers do not prove dependency integration. Combining dependency revisions does not approve work or merge the target branch.`,
       `Run pst pstdio-planner update-stack --workspace-id ${attempt.workspaceId} --implementation-session-id ${attempt.implementationSessionId} --expected-head-sha ${repair.headSha}. Reconcile Git conflicts yourself, preserving the required behavior from both sides and this ticket's changes. Commit the resolution and retry. Do not request human review for code conflicts; ask only when features, concepts, requirements, plans, or architecture conflict and the instructions cannot decide the intended behavior.`,

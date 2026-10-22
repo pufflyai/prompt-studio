@@ -12,7 +12,9 @@ import type {
 import { getCommandValue } from "./command-outcome";
 import type { SettingsMap } from "./define-extension";
 import type { GuestHost } from "./define-extension-view";
+import { createWebviewAccountClient, type WebviewAccountClient } from "./webview-account-client";
 import { type ArtifactMountKey, artifactMountId } from "./webview-capabilities";
+import { createWebviewEditingClient, type WebviewEditingClient } from "./webview-editing";
 import { createWebviewEventsClient, type WebviewEventsClient } from "./webview-events";
 import { createWebviewFilesClient, type WebviewFilesClient } from "./webview-files-client";
 import { createWebviewPageClient, type WebviewPageClient } from "./webview-page-client";
@@ -58,6 +60,7 @@ export type WebviewArtifactsClient = {
 };
 
 export type WebviewClient<TCommands, TSettings = undefined> = {
+  editing: WebviewEditingClient;
   files: WebviewFilesClient;
   page: WebviewPageClient;
   navigation: { open(target: NavigationTarget): Promise<void> };
@@ -79,6 +82,7 @@ export type WebviewClient<TCommands, TSettings = undefined> = {
   streams: WebviewStreamsClient<TCommands>;
   events: WebviewEventsClient;
   settings: WebviewSettingsClient<ClientSettingsMap<TSettings>>;
+  account: WebviewAccountClient;
 };
 
 export interface WebviewClientOptions {
@@ -182,6 +186,7 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
   };
   return {
     ...hostClient,
+    editing: createWebviewEditingClient(host),
     files: createWebviewFilesClient(host),
     page: createWebviewPageClient(host),
     artifacts,
@@ -189,5 +194,6 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     streams,
     events,
     settings,
+    account: createWebviewAccountClient(host),
   } as WebviewClient<TCommands, TSettings>;
 };

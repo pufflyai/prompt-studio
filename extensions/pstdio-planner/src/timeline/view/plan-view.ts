@@ -26,6 +26,7 @@ export interface PlanViewProps {
   today: string;
   onContext: (context: BackgroundContext) => void;
   onSelect: (id: string) => void;
+  onOpenRequests?: (row: PlanRow) => void;
   onDragStart: (id: string) => void;
   onDragTarget: (target: DropTarget) => void;
   onDrop: () => void;

@@ -7,6 +7,7 @@ import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { nextTicketsCommand } from "./next-tickets";
 import { runAttemptCommand } from "./run-attempt";
 import { sessionQuery } from "./session-query.fixture";
+import { recoverySessionInput } from "./workspace-recovery";
 
 async function lostWorkspace(source = "revision") {
   const f = await fixture();
@@ -71,6 +72,28 @@ async function lostWorkspace(source = "revision") {
   };
   return { ...f, ticket, old, previous, created };
 }
+
+test("workspace recovery preserves a user stop after its final eligibility check", async () => {
+  const f = await lostWorkspace();
+  await expect(
+    recoverySessionInput(
+      f.ctx,
+      {
+        previous: (await readAttempt(f.storage, f.old.workspace.id))!,
+        headSha: "submitted-head",
+        detail: "Missing workspace",
+      },
+      async () => {
+        f.ctx.sessions.get = async () => ({
+          ...f.old.session,
+          status: "cancelled",
+          last_exit: { cause: "user_stop", startedAt: null, endedAt: "2026-10-22T10:00:00.000Z" },
+        });
+      },
+    ),
+  ).rejects.toThrow("stopped");
+  expect(f.created).toHaveLength(0);
+});
 
 test.each([
   "branch",

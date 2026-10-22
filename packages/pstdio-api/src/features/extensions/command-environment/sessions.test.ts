@@ -111,7 +111,7 @@ test("extensions can create and open a session before sending its first message"
     expect(resumedHooks).toBe(0);
     expect(await isolated.deps.workspaceSessionService.getWorkspaceBySessionId(session.id)).not.toBeNull();
     await api.followup({ sessionId: session.id, prompt: "Hello from extension" });
-    await waitForCompleted(isolated.app, session.id);
+    await waitForCompleted(isolated, session.id);
     expect(isolated.harness.start).toHaveBeenCalledTimes(1);
     expect(isolated.harness.start.mock.calls[0]?.[1]).toMatchObject({ prompt: "Hello from extension" });
     expect(isolated.harness.resume).not.toHaveBeenCalled();

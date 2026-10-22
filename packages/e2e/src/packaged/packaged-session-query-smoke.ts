@@ -7,6 +7,7 @@ import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION, type ExtensionSessionPage } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { assertPackagedSessionRetention } from "./packaged-session-retention-smoke";
 
 export const registerSessionQuerySmokeTests = () => {
   test("packaged session APIs expose usage, execution exits, and guarded follow-ups", async () => {
@@ -96,6 +97,7 @@ export const registerSessionQuerySmokeTests = () => {
         nextCursor: null,
       });
       const client = createClient({ baseUrl: runtime.baseUrl, token: runtime.descriptor.token });
+      await assertPackagedSessionRetention(runtime.baseUrl, runtime.descriptor, session.id);
       const filter = {
         agent: "test.session-query.harness.worker",
         status: ["completed"] as const,

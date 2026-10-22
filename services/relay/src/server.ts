@@ -3,7 +3,7 @@ import { createRelayRuntime } from "./runtime";
 import { readConfig, startRelay } from "./service";
 
 const telemetry = createServiceTelemetry(process.env, "relay");
-const runtime = createRelayRuntime(process.env);
+const runtime = createRelayRuntime(process.env, telemetry.report);
 const server = startRelay(readConfig(process.env), runtime, telemetry.report);
 
 async function shutdown() {

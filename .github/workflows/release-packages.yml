@@ -145,6 +145,14 @@ jobs:
       ref: ${{ needs.plan.outputs.commit }}
       versions: '["minimum", "latest"]'
 
+  containers:
+    needs: plan
+    if: needs.plan.outputs.release == 'true'
+    uses: ./.github/workflows/service-containers.yml
+    with:
+      ref: ${{ needs.plan.outputs.commit }}
+      version: ${{ needs.plan.outputs.version }}
+
   desktop:
     needs: plan
     if: needs.plan.outputs.release == 'true'
@@ -182,10 +190,11 @@ jobs:
   # so re-running this job completes a release that stopped halfway. The GitHub release is
   # published last: a published release means npm and every desktop asset shipped.
   publish:
-    needs: [plan, packaged_toolchain, harness_cli_support, desktop, windows_update]
+    needs: [plan, packaged_toolchain, harness_cli_support, containers, desktop, windows_update]
     if: >-
       ${{ !cancelled() && needs.plan.outputs.release == 'true' &&
       needs.packaged_toolchain.result == 'success' && needs.harness_cli_support.result == 'success' &&
+      needs.containers.result == 'success' &&
       needs.desktop.result == 'success' &&
       (needs.windows_update.result == 'success' || (needs.plan.outputs.channel == 'nightly' && needs.windows_update.result == 'skipped')) }}
     runs-on: ubuntu-latest
@@ -193,6 +202,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      packages: write
     env:
       NPM_CONFIG_PROVENANCE: true
       PSTDIO_EXTENSION_RELEASE_REF: ${{ needs.plan.outputs.extension_ref }}
@@ -274,6 +284,45 @@ jobs:
       # Publishes only versions npm does not have yet. Only the pstdio tag is pushed, by plan.
       - name: Publish npm packages
         run: bunx changeset publish --tag "$DIST_TAG" --no-git-tag
+
+      - name: Download verified service images
+        uses: actions/download-artifact@v4
+        with:
+          pattern: service-container-*
+          path: service-images
+          merge-multiple: true
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish verified service images
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          set -euo pipefail
+          for service in relay account-manager; do
+            docker load --input "service-images/$service.tar"
+            docker push "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION"
+          done
+
+      # Self-hosters pull these images without logging in. GitHub creates a new package as
+      # private and has no API to change that, so an organization owner makes it public once.
+      - name: Check that anyone can pull the service images
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker logout ghcr.io
+          for service in relay account-manager; do
+            if ! docker manifest inspect "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION" > /dev/null; then
+              echo "::error::ghcr.io/$GITHUB_REPOSITORY/$service is private. In its package settings, choose Danger Zone > Change visibility > Public, then re-run this job."
+              exit 1
+            fi
+          done
 
       - name: Create the draft GitHub release with CLI assets
         uses: ./.github/actions/create-pstdio-release

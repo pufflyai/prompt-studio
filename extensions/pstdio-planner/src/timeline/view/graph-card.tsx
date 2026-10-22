@@ -25,6 +25,7 @@ interface GraphCardProps {
   dropBefore: boolean;
   interaction?: TicketCardInteraction;
   onSelect: (id: string) => void;
+  onOpenRequests?: (row: PlanRow) => void;
   onDragStart: (id: string) => void;
   onDragOver: () => void;
   onDrop: () => void;
@@ -48,7 +49,12 @@ export function GraphCard(props: GraphCardProps) {
     : statusBadges;
   const slots = source
     ? fields
-        .filter(({ id, displayable }) => displayable && interaction?.displayProperties.includes(id))
+        .filter(
+          ({ id, displayable }) =>
+            displayable &&
+            !["needsAttention", "reviewRequests"].includes(id) &&
+            interaction?.displayProperties.includes(id),
+        )
         .map((field) =>
           renderBadgeListDisplay(field, getAttributeValue(source, field), source, undefined, (id) => {
             const items = source.attributes[field.display!.itemsAttributeId] as TicketWorkspaceBadgeItem[];
@@ -111,7 +117,13 @@ export function GraphCard(props: GraphCardProps) {
           customSlots={[
             ...slots,
             properties.includes("needsAttention") ? <NeedsAttentionIcon key="attention" row={row} /> : null,
-            properties.includes("reviewRequests") ? <ReviewStatusIcon key="review" row={row} /> : null,
+            properties.includes("reviewRequests") ? (
+              <ReviewStatusIcon
+                key="review"
+                row={row}
+                onOpen={actions.onOpenRequests ? () => actions.onOpenRequests?.(row) : undefined}
+              />
+            ) : null,
             row.gate ? <GateMark key="gate" /> : null,
           ]}
           onClick={activate}

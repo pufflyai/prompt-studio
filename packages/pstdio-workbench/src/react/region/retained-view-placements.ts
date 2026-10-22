@@ -4,10 +4,16 @@ export const retainViewPlacements = (
   previous: WorkbenchWidgetPlacement[],
   current: WorkbenchWidgetPlacement[],
   registeredViews: ReadonlySet<string>,
+  openPlacements?: ReadonlySet<string>,
 ) => {
   const retained = new Map(
     previous
-      .filter((placement) => placement.viewId && registeredViews.has(placement.viewId))
+      .filter(
+        (placement) =>
+          placement.viewId &&
+          registeredViews.has(placement.viewId) &&
+          (!openPlacements || openPlacements.has(placement.widgetId)),
+      )
       .map((placement) => [placement.widgetId, placement]),
   );
   for (const placement of current) {
