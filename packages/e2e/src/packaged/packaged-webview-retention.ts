@@ -20,6 +20,9 @@ export const verifyPackagedWebviewDisposal = async (
   headers: Record<string, string>,
 ) => {
   await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.workbench-fixture/lab`);
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Lab");
+  const tab = page.getByRole("tab", { name: "Lab", exact: true });
+  if (await tab.isVisible()) await tab.click();
   const iframe = page.locator('iframe[title="Lab"]');
   await expect(iframe.contentFrame().getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
   const frame = await (await iframe.elementHandle())!.contentFrame();
