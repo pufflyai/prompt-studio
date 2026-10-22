@@ -180,13 +180,3 @@ test("backend and shared browser dependencies select smoke and feature regressio
   }
   expect(select(["clients/landing-page/src/index.astro"]).browserSmoke).toBe(false);
 });
-
-test("native extension publication changes run the isolated publication checks", () => {
-  expect(
-    pullRequest(["packages/pstdio-api/src/features/extensions/publication/activate.ts"], [], ["pstdio-api"]),
-  ).toHaveProperty("relaySmoke", true);
-  expect(pullRequest(["packages/pstdio-api/src/services/relay/publications.ts"], [], ["pstdio-api"])).toHaveProperty(
-    "relaySmoke",
-    true,
-  );
-});

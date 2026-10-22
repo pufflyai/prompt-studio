@@ -7,7 +7,7 @@ export const publishedRevisionOf = (reference: string | null) =>
   reference?.startsWith("pstdio-published:") ? reference.slice("pstdio-published:".length) : null;
 
 export const publishedSourceBaseline = async (
-  deps: ExtensionsRouteDeps,
+  deps: Pick<ExtensionsRouteDeps, "extensionStorageService" | "assetTransferService">,
   projectId: string,
   reference: string | null,
   incoming: Asset,
@@ -16,16 +16,8 @@ export const publishedSourceBaseline = async (
   if (!revision) return null;
   let asset: Asset | undefined = incoming.sha256 === revision ? incoming : undefined;
   if (!asset) {
-    const state = await (await openPublishedCatalog(deps, projectId)).readState();
-    asset = [
-      ...Object.values(state.accepted?.records ?? {}).flatMap((record) => (record.asset ? [record.asset] : [])),
-      ...Object.values(state.accepted?.receipts ?? {}).flatMap((receipt) =>
-        receipt.mutation.changes.flatMap((change) => (change.asset?.next ? [change.asset.next] : [])),
-      ),
-      ...state.journal.flatMap((entry) =>
-        entry.mutation.changes.flatMap((change) => (change.asset?.next ? [change.asset.next] : [])),
-      ),
-    ].find((candidate) => candidate.sha256 === revision);
+    const record = await (await openPublishedCatalog(deps, projectId)).records.read(`package:${revision}`);
+    asset = record.asset ?? undefined;
   }
   if (!asset) return null;
   return new Response(await deps.assetTransferService.read(publishedOwner(projectId), asset)).blob();

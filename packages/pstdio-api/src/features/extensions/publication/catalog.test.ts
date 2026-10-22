@@ -54,6 +54,14 @@ test("publication is explicit, captures package bytes, and checks the observed c
     }[];
     expect(published[0].value.revision).toBe(published[0].asset.sha256);
     expect((await publish()).status).toBe(409);
+    const toggle = await app.app.request(`/v1/projects/${project.id}/extensions/${enabled.instance.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled: false }),
+    });
+    expect(toggle.status).toBe(200);
+    const disabled = (await (await app.app.request(path)).json()) as { value: { enabled: boolean } }[];
+    expect(disabled[0]!.value.enabled).toBe(false);
   } finally {
     await app.close();
     await rm(root, { recursive: true, force: true });

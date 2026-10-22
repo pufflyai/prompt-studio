@@ -1,67 +1,81 @@
-import { createRelayAdapter, createRelayConnection } from "pstdio-sync/relay";
+import { createDocumentRelayConnection } from "pstdio-sync/relay";
+import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
-import { activatePublication } from "../../features/extensions/publication/activate";
+import { activatePublishedSet } from "../../features/extensions/publication/activate";
 import { openPublishedCatalog, publicationSchema, publishedOwner } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
+import { createExtensionDocumentSync } from "./documents";
 import type { RelayWorkbench } from "./runtime";
 
-export const startPublishedExtensions = async (input: {
+/** The extension set syncs before any extension is installed on a new device. */
+export const startPublishedExtensions = (input: {
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
   access: () => Promise<{ token: string; expiresAt: string }>;
+  statusChanged?: () => void;
 }) => {
-  const { config, deps, signal } = input;
+  const { config, deps } = input;
   const owner = publishedOwner(config.workbenchId);
-  const catalog = await openPublishedCatalog(deps, config.workbenchId, signal);
-  const adapterFor = (signal: AbortSignal) =>
-    createRelayAdapter({
-      origin: config.relayOrigin,
-      scope: { ...owner, accountId: config.accountId },
-      token: async () => (await input.access()).token,
-      signal,
-    });
-  const adapter = adapterFor(signal);
-  const connection = createRelayConnection({
+  const controller = new AbortController();
+  const signal = AbortSignal.any([input.signal, controller.signal]);
+  const access = async () => {
+    signal.throwIfAborted();
+    const cancelled = Promise.withResolvers<never>();
+    const abort = () => cancelled.reject(signal.reason);
+    signal.addEventListener("abort", abort, { once: true });
+    try {
+      return await Promise.race([input.access(), cancelled.promise]);
+    } finally {
+      signal.removeEventListener("abort", abort);
+    }
+  };
+  const documents = createExtensionDocumentSync({ config, owner, deps, access });
+  let activationFailed = false;
+  const connection = createDocumentRelayConnection({
     origin: config.relayOrigin,
-    scope: adapter.scope,
+    projectId: config.workbenchId,
+    access,
     signal,
-    access: async () => {
-      const issued = await input.access();
-      await adapter.initialize("published-extensions-v1");
-      return issued;
-    },
     synchronize: async (attemptSignal) => {
-      await catalog.synchronize(adapterFor(attemptSignal));
-      // Pending publications and retained alternatives are never executable.
-      const accepted = (await catalog.readState()).accepted;
-      const failures: unknown[] = [];
-      for (const record of Object.values(accepted?.records ?? {})) {
-        if (record.deleted) continue;
-        try {
-          const publication = publicationSchema.parse(record.value);
-          if (publication.extensionId !== record.recordId || !record.asset)
-            throw new Error("Invalid published extension catalog");
-          await activatePublication(deps, config.workbenchId, publication, record.asset, attemptSignal);
-        } catch (error) {
-          failures.push(error);
-          apiLogger.warn(
-            {
-              event: "relay.publication.activation_failed",
-              workbenchId: config.workbenchId,
-              extensionId: record.recordId,
-            },
-            "Published extension could not activate",
-          );
-        }
+      await documents.synchronize(attemptSignal);
+      const catalog = await openPublishedCatalog(deps, config.workbenchId, attemptSignal);
+      try {
+        const entries = (await catalog.list())
+          .filter((record) => !record.deleted && !record.recordId.startsWith("package:"))
+          .map((record) => {
+            const publication = publicationSchema.parse(record.value);
+            if (publication.extensionId !== record.recordId || !record.asset) throw new Error("Invalid extension set");
+            return { publication, asset: record.asset };
+          });
+        await activatePublishedSet(deps, config.workbenchId, entries, attemptSignal, false, async () => {
+          const current = (await catalog.list()).map((record) => ({ publication: record.value, asset: record.asset }));
+          if (canonicalJson(current) !== canonicalJson(entries))
+            throw new Error("Extension set changed during activation; retry");
+        });
+        activationFailed = false;
+      } catch (error) {
+        activationFailed = true;
+        throw error;
+      } finally {
+        input.statusChanged?.();
       }
-      if (failures.length) throw new AggregateError(failures, "Published extension activation will retry");
     },
+    onStatusChange: input.statusChanged,
     onError: () =>
       apiLogger.warn(
         { event: "relay.publication.failed", workbenchId: config.workbenchId },
-        "Published extension catch-up will retry",
+        "Extension set sync will retry",
       ),
   });
-  return { ...connection, owner };
+  return {
+    owner,
+    wake: connection.wake,
+    done: connection.done.finally(documents.close),
+    status: async () => {
+      const status = await documents.status();
+      return { ...status, ...connection.status(), needsAttention: status.needsAttention || activationFailed };
+    },
+    close: () => controller.abort(),
+  };
 };

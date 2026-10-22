@@ -312,64 +312,63 @@ Installing never writes extensions or agent skills into the CLI machine's home. 
 
 Uploads omit `node_modules` and include confined source links as file content. `--skip-install` skips host dependency installation and can reuse matching dependencies already installed on the host. For a local API, CLI sources inside the host's local project use the project-folder input, preserving existing host dependencies and sibling packages. Uploads cannot reuse dependencies that exist only on another machine. `pst extensions test --project-path <context>` preserves dependency context in its private host.
 
-## Publish a workbench revision
+## Extension versions in cloud projects
 
-Installing, reloading, and editing an extension remain local. In a workbench enrolled
-with `PSTDIO_RELAY_CONFIG_FILE`, explicitly publish the installed source:
+A cloud project's extension set is normal project data. Its extension IDs, selected
+package revisions and enabled state sync in one encrypted CRDT document. Package
+metadata and bytes live in immutable records addressed by their SHA-256. The platform
+uploads each package as an encrypted blob before sending a document update that uses
+it. The relay cannot read extension names, versions or code.
+
+Installing, editing and reloading a source stay local. Explicitly publish a portable
+source when other devices should use it:
 
 ```sh
-pst extensions publication list --project-id <workbench-id>
-pst extensions publication publish <install-name> --project-id <workbench-id>
+pst extensions publication list --project-id <project-id>
+pst extensions publication publish <install-name> --project-id <project-id>
 ```
 
-The result first reports `saved-locally`. The platform uploads immutable package bytes
-and submits the catalog change. `list` shows the desired value, relay-accepted value,
-and retained conflicts. `--expected-revision` can require the exact opaque catalog
-revision a person or agent inspected. Competing publications preserve the first
-accepted revision and the complete alternative. They never silently replace it.
+The result first reports `saved-locally`. Offline edits merge when the device
+reconnects. Concurrent publications choose the same package on every device. Package
+metadata stays attached to its bytes; an enable edit can merge with a publication.
+`--expected-revision` checks the catalog value that the caller inspected.
 
-Newly connected environments discover the published set without extension-specific
-relay settings. They verify SHA-256 and byte length, install runtime dependencies from
-the shipped `bun.lock`, validate the extension and its webviews, then switch the local
-instance in one transaction. A failed download, dependency install, validation, or build
-keeps the previous usable revision. Interrupted byte downloads resume on reconnect.
+A new device discovers the set even before it has installed an extension. It downloads
+and verifies all selected packages, installs frozen runtime dependencies, and validates
+sources, resource prefixes and webviews before switching the whole set in one database
+transaction. Workspace setup runs afterward through the normal workspace setup queue;
+its failures belong to the workspace setup status. A failed transfer or activation keeps the previous usable set. Interrupted
+encrypted downloads resume from their durable byte offset.
 
 Packages include portable source and assets. They omit dependency directories, checkout
-metadata, `.pstdio`, `.env` files, and standard npm/Yarn/netrc credential files. Source
-links are rejected. Runtime dependencies need a frozen `bun.lock`; local workspace links
-are not a portable publication. Publish a package whose dependencies can be installed
-independently. Machine paths, processes, credentials, and development overrides remain local.
+metadata, `.pstdio`, environment files and standard package-manager credentials. Source
+links are rejected. Runtime dependencies require a frozen `bun.lock`. Publish packages
+whose dependencies can be installed independently; machine paths and credentials stay
+local.
 
-A local source or edits to an activated revision remain an override. Publication does
-not replace those files. To explicitly use the accepted revision on this environment:
+Repo-local sources and unpublished edits are private overrides. Catch-up preserves
+their code. Their record and artifact edits still sync, but their data migration
+callbacks do not run. Only the selected, unmodified synced package can run data
+migrations. An older package can read shared data but cannot change it until updated.
+This also applies to file uploads and artifact writes. Local projects keep normal
+migration behavior. See [data migrations](0018-data-migrations.md).
 
-```sh
-pst extensions publication adopt <extension-id> --project-id <workbench-id>
-pst extensions publication rollback <extension-id> --revision <package-sha256> --project-id <workbench-id>
-```
-
-Adoption changes the instance's source. The previous directory remains available.
-Rollback publishes a new catalog change selecting bytes from retained accepted history.
-It preserves the extension instance, storage owner, settings, and migration identity.
-It does not undo data migrations or promise that an older extension can read newer data.
-Extension authors must maintain data compatibility and use the normal
-[data migration API](0018-data-migrations.md). No user data is removed during activation.
-
-Personal enable choices stay local for extensions without hooks, middleware, or schedules.
-Published automation extensions use one accepted workbench-wide enable switch:
+To replace a private override with the selected package, or select a retained package:
 
 ```sh
-pst extensions publication disable <extension-id> --project-id <workbench-id>
-pst extensions publication enable <extension-id> --project-id <workbench-id>
+pst extensions publication adopt <extension-id> --project-id <project-id>
+pst extensions publication rollback <extension-id> --revision <package-sha256> --project-id <project-id>
+pst extensions publication disable <extension-id> --project-id <project-id>
+pst extensions publication enable <extension-id> --project-id <project-id>
 ```
 
-The personal extension and schedule toggle endpoints reject changes to published
-automation extensions. Their author-declared schedule defaults apply inside the shared
-switch. Existing local schedule preferences remain stored but do not override it.
-This switch does not choose or move an automation's execution environment.
+Adoption preserves the instance, storage owner and settings. The previous source folder
+stays available. Rollback changes the selected code; it does not undo data migrations.
+All published extensions share their enabled state. Automation scheduling still follows
+its device assignment; publication does not move execution to another device.
 
-Agents and clients use the same host API: `GET` and `POST
-/v1/projects/{projectId}/extension-publications`. The POST body has `kind: "publish"`
-with `instanceId` and `expectedRevision`, `kind: "adopt"` with `extensionId`,
-`kind: "rollback"` with `extensionId`, package `revision`, and `expectedRevision`, or
-`kind: "enabled"` with `extensionId`, `enabled`, and `expectedRevision`.
+Agents and clients use the same API: `GET` and `POST
+/v1/projects/{projectId}/extension-publications`. POST accepts `kind: "publish"` with
+`instanceId` and `expectedRevision`; `kind: "adopt"` with `extensionId`;
+`kind: "rollback"` with `extensionId`, package `revision` and `expectedRevision`;
+or `kind: "enabled"` with `extensionId`, `enabled` and `expectedRevision`.

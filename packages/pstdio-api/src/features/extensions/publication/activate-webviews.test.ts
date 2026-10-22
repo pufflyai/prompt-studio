@@ -30,7 +30,7 @@ test("published webview activation emits the completed build state and retains t
       await activatePublication(
         app.deps,
         project.id,
-        { extensionId: "test.webview", revision: asset.sha256, automation: false, enabled: true },
+        { extensionId: "test.webview", revision: asset.sha256, version: "0.0.0", automation: false, enabled: true },
         asset,
       );
       const current = (await app.deps.extensionService.listProjectExtensionInstances(project.id))[0]!.installedSource;

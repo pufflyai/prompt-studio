@@ -14,7 +14,7 @@ export const builder = (yargs: Argv) =>
     })
     .positional("name", { type: "string", describe: "Installed extension name or published extension ID" })
     .option("project-id", { type: "string", describe: "Workbench project ID" })
-    .option("revision", { type: "string", describe: "Previously accepted package SHA-256 for rollback" })
+    .option("revision", { type: "string", describe: "Previously published package SHA-256 for rollback" })
     .option("expected-revision", {
       type: "string",
       describe: "Observed catalog revision; defaults to the revision just read",
@@ -55,7 +55,7 @@ export const handler = async (argv: Arguments<Args>) => {
       body = { kind: "adopt", extensionId };
       break;
     case "rollback":
-      if (!argv.revision) throw new Error("Choose a previously accepted package with --revision.");
+      if (!argv.revision) throw new Error("Choose a previously published package with --revision.");
       body = { kind: "rollback", extensionId, revision: argv.revision, expectedRevision };
       break;
     case "enable":

@@ -1,77 +1,106 @@
 import type { createExtensionInstancesDBService, createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { hashExtensionSource, type LoadedExtension } from "../features/extensions/extension-runtime";
 
-export const activatePublishedExtension = async (input: {
-  sources: ReturnType<typeof createInstalledExtensionSourcesDBService>;
-  instances: ReturnType<typeof createExtensionInstancesDBService>;
+interface Activation {
   projectId: string;
   instanceId?: string;
-  enabled?: boolean;
+  enabled: boolean;
   beforeActivate: () => Promise<void>;
-  path: string;
-  revision: string;
-  loaded: LoadedExtension;
+  source:
+    | { kind: "prepared"; path: string; revision: string; loaded: LoadedExtension }
+    | { kind: "existing"; id: string };
+}
+interface ActivationDeps {
+  sources: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+  instances: ReturnType<typeof createExtensionInstancesDBService>;
   refresh: (path?: string) => Promise<void>;
   emit: (source: unknown) => void;
   emitRemoved: (source: unknown) => void;
   emitInstance: (instance: unknown) => void;
-}) => {
-  const previousInstance = input.instanceId ? await input.instances.get(input.instanceId) : null;
-  const previousSource = previousInstance ? await input.sources.get(previousInstance.installed_extension_id) : null;
-  const values = {
-    display_name: input.loaded.metadata.displayName,
-    extension_id: input.loaded.metadata.id,
-    manifest_json: input.loaded.manifest,
-    source_hash: hashExtensionSource(input.path),
-    loaded_revision: input.revision,
-    source_kind: "registry" as const,
-    source_path: input.path,
-    source_ref: `pstdio-published:${input.revision}`,
-    status: "loaded" as const,
-    version: input.loaded.metadata.version,
-    last_loaded_at: new Date().toISOString(),
-    last_error_json: null,
-  };
-  // Validate and build an isolated source before a single transaction switches
-  // this project's instance. Other projects may still use the local source.
-  const updated = await input.sources.register({ ...values, install_name: input.loaded.metadata.name });
-  if (!updated) throw new Error("Published extension registration failed");
-  let current = updated;
+}
+
+type RegisteredActivation = {
+  input: Activation;
+  registered: NonNullable<Awaited<ReturnType<ActivationDeps["sources"]["get"]>>>;
+  previousInstance: Awaited<ReturnType<ActivationDeps["instances"]["get"]>> | null;
+  previousSource: Awaited<ReturnType<ActivationDeps["sources"]["get"]>> | null;
+};
+const registerActivation = async (deps: ActivationDeps, input: Activation) => {
+  const previousInstance = input.instanceId ? await deps.instances.get(input.instanceId) : null;
+  const previousSource = previousInstance ? await deps.sources.get(previousInstance.installed_extension_id) : null;
+  const source = input.source;
+  const registered =
+    source.kind === "existing"
+      ? await deps.sources.get(source.id)
+      : await deps.sources.register({
+          display_name: source.loaded.metadata.displayName,
+          extension_id: source.loaded.metadata.id,
+          manifest_json: source.loaded.manifest,
+          source_hash: hashExtensionSource(source.path),
+          loaded_revision: source.revision,
+          source_kind: "registry",
+          source_path: source.path,
+          source_ref: `pstdio-published:${source.revision}`,
+          status: "loaded",
+          version: source.loaded.metadata.version,
+          last_loaded_at: new Date().toISOString(),
+          last_error_json: null,
+          install_name: source.loaded.metadata.name,
+        });
+  if (!registered) throw new Error("Published source disappeared");
+
+  return { input, registered, previousInstance, previousSource };
+};
+const refreshActivation = async (deps: ActivationDeps, { input, registered }: RegisteredActivation) => {
+  if (input.source.kind === "existing") return;
+  await deps.refresh(input.source.path);
+  const current = await deps.sources.get(registered.id);
+  if (!current || current.status === "error") throw new Error("Published extension activation failed");
+  Object.assign(registered, current);
+};
+
+/** Prepare every source before one database transaction changes the project's running set. */
+export const activatePublishedExtensions = async (deps: ActivationDeps, inputs: Activation[]) => {
+  const prepared: RegisteredActivation[] = [];
   try {
-    await input.refresh(input.path);
-    const refreshed = await input.sources.get(updated.id);
-    if (!refreshed) throw new Error("Published extension registration disappeared");
-    current = refreshed;
-    if (current.status === "error") throw new Error("Published extension activation failed");
+    for (const input of inputs) {
+      const entry = await registerActivation(deps, input);
+      prepared.push(entry);
+      await refreshActivation(deps, entry);
+    }
+    for (const { input } of prepared) await input.beforeActivate();
+    const activated = await deps.instances.activateProjectSources(
+      prepared.map(({ input, registered, previousInstance }) => ({
+        projectId: input.projectId,
+        extensionId: registered.extension_id,
+        instanceId: input.instanceId,
+        expectedSourceId: previousInstance?.installed_extension_id,
+        installedSourceId: registered.id,
+        enabled: input.enabled,
+      })),
+    );
+    for (const [index, entry] of prepared.entries()) {
+      deps.emit(entry.registered);
+      for (const instance of activated[index]!.changed) deps.emitInstance(instance);
+      if (
+        entry.previousSource?.id !== entry.registered.id &&
+        entry.previousSource?.source_ref?.startsWith("pstdio-published:") &&
+        !(await deps.instances.list({ installed_extension_id: entry.previousSource.id })).length
+      ) {
+        await deps.sources.remove(entry.previousSource.id);
+        deps.emitRemoved(entry.previousSource);
+      }
+    }
+    return activated.map((result, index) => ({
+      installedSource: prepared[index]!.registered,
+      instance: result.instance,
+    }));
   } catch (error) {
-    await input.sources.remove(updated.id);
-    await input.refresh().catch(() => {});
+    // A source referenced by an instance has crossed the activation boundary and must stay usable.
+    for (const { registered } of prepared)
+      if (!(await deps.instances.list({ installed_extension_id: registered.id })).length)
+        await deps.sources.remove(registered.id);
+    await deps.refresh().catch(() => {});
     throw error;
   }
-  let activated: Awaited<ReturnType<typeof input.instances.activateProjectSource>>;
-  try {
-    await input.beforeActivate();
-    activated = await input.instances.activateProjectSource({
-      projectId: input.projectId,
-      extensionId: values.extension_id,
-      instanceId: input.instanceId,
-      expectedSourceId: previousInstance?.installed_extension_id,
-      installedSourceId: updated.id,
-      enabled: input.enabled,
-    });
-  } catch (error) {
-    await input.sources.remove(updated.id);
-    throw error;
-  }
-  input.emit(current);
-  for (const instance of activated.changed) input.emitInstance(instance);
-  if (
-    previousInstance &&
-    previousSource?.source_ref?.startsWith("pstdio-published:") &&
-    !(await input.instances.list({ installed_extension_id: previousInstance.installed_extension_id })).length
-  ) {
-    await input.sources.remove(previousInstance.installed_extension_id);
-    input.emitRemoved(previousSource);
-  }
-  return { installedSource: current, instance: activated.instance };
 };

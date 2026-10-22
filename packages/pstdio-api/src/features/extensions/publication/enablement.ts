@@ -11,7 +11,7 @@ export class SharedExtensionEnablementError extends Error {
 
 export const sharedAutomationIds = async (deps: ExtensionsRouteDeps, projectId: string) => {
   const catalog = await openPublishedCatalog(deps, projectId);
-  const records = Object.values((await catalog.readState()).accepted?.records ?? {});
+  const records = (await catalog.list()).filter((record) => !record.recordId.startsWith("package:"));
   return new Set(
     records
       .filter((record) => !record.deleted)

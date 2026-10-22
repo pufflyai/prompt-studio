@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { extension_instances, installed_extension_sources } from "../../db/schemas.pg";
+import { type ActivationInput, activateProjectSources as activateProjectSourcesImpl } from "./activate-project-sources";
 
 type InstanceRow = typeof extension_instances.$inferSelect;
 type InstanceInsert = typeof extension_instances.$inferInsert;
@@ -111,75 +112,9 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
       .returning();
   };
 
-  const activateProjectSource = async (input: {
-    projectId: string;
-    extensionId: string;
-    instanceId?: string;
-    installedSourceId: string;
-    expectedSourceId?: string;
-    enabled?: boolean;
-  }) =>
-    db.transaction(async (tx) => {
-      let instance: InstanceRow;
-      if (input.instanceId) {
-        const [updated] = await tx
-          .update(extension_instances)
-          .set({
-            installed_extension_id: input.installedSourceId,
-            ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
-            updated_at: nowTimestamp(),
-          })
-          .where(
-            and(
-              eq(extension_instances.id, input.instanceId),
-              eq(extension_instances.scope_type, "project"),
-              eq(extension_instances.scope_id, input.projectId),
-              input.expectedSourceId
-                ? eq(extension_instances.installed_extension_id, input.expectedSourceId)
-                : undefined,
-            ),
-          )
-          .returning();
-        if (!updated) throw new Error("Project extension instance not found");
-        instance = updated;
-      } else {
-        const timestamp = nowTimestamp();
-        const [created] = await tx
-          .insert(extension_instances)
-          .values({
-            id: crypto.randomUUID(),
-            installed_extension_id: input.installedSourceId,
-            scope_type: "project",
-            scope_id: input.projectId,
-            enabled: input.enabled ?? true,
-            created_at: timestamp,
-            updated_at: timestamp,
-          })
-          .returning();
-        instance = created!;
-      }
-      const sources = tx
-        .select({ id: installed_extension_sources.id })
-        .from(installed_extension_sources)
-        .where(eq(installed_extension_sources.extension_id, input.extensionId));
-      const changed = instance.enabled
-        ? await tx
-            .update(extension_instances)
-            .set({
-              enabled: sql`case when ${extension_instances.id} = ${instance.id} then true else false end`,
-              updated_at: nowTimestamp(),
-            })
-            .where(
-              and(
-                eq(extension_instances.scope_type, "project"),
-                eq(extension_instances.scope_id, input.projectId),
-                inArray(extension_instances.installed_extension_id, sources),
-              ),
-            )
-            .returning()
-        : [instance];
-      return { instance: changed.find((row) => row.id === instance.id)!, changed };
-    });
+  const activateProjectSources = (inputs: ActivationInput[]) => activateProjectSourcesImpl(db, inputs);
+
+  const activateProjectSource = async (input: ActivationInput) => (await activateProjectSources([input]))[0]!;
 
   const remove = async (id: string) => {
     const [deleted] = await db.delete(extension_instances).where(eq(extension_instances.id, id)).returning();
@@ -194,6 +129,7 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
     update,
     claimProjectExtensionProvider,
     activateProjectSource,
+    activateProjectSources,
     remove,
   };
 };

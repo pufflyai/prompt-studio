@@ -1,10 +1,12 @@
 import { createRelayAccess } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
+import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { startRelayExtension } from "./extension-owner";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
+import { createPublicationConnections } from "./publication-connections";
 import { startResourceNumberSync } from "./resource-numbers";
 
 export type RelayWorkbench = {
@@ -29,6 +31,12 @@ export const startRelayRuntime = async (input: {
   const { deps } = input;
   const resourceConnections = new Map<string, ReturnType<typeof startResourceNumberSync>>();
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
+  const publications = createPublicationConnections({
+    deps,
+    signal: controller.signal,
+    access: (id) => access.get(id)!,
+    statusChanged: (id) => statusChanged(id),
+  });
   const personal = new Map<string, ReturnType<typeof startRelayPersonalHistory>>();
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
@@ -49,6 +57,7 @@ export const startRelayRuntime = async (input: {
   };
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
+    publications.ensure(config);
     if (!personal.has(workbenchId))
       personal.set(
         workbenchId,
@@ -133,6 +142,11 @@ export const startRelayRuntime = async (input: {
   };
   const stopStorage = deps.extensionStorageService.watch((owner) => {
     if (!workbenches.has(owner.workbenchId)) return;
+    if (owner.extensionId === publishedExtensionsId) {
+      publications.get(owner.workbenchId)?.wake();
+      statusChanged(owner.workbenchId);
+      return;
+    }
     notify(owner.workbenchId);
     statusChanged(owner.workbenchId);
     const connection = connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]));
@@ -152,6 +166,7 @@ export const startRelayRuntime = async (input: {
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
         resourceConnections.get(workbenchId),
+        publications.get(workbenchId),
         ...snapshot.enabledSources.map(({ installedSource }) =>
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
         ),
@@ -176,6 +191,7 @@ export const startRelayRuntime = async (input: {
           .map(([id]) => id),
       );
       for (const id of changed) {
+        await publications.remove(id);
         const previous = personal.get(id);
         previous?.close();
         if (previous) await previous.done;
@@ -204,10 +220,12 @@ export const startRelayRuntime = async (input: {
       stopEvents();
       clearTimeout(retry);
       controller.abort();
+      publications.close();
       for (const connection of resourceConnections.values()) connection.close();
       for (const connection of connections.values()) connection.close();
       for (const connection of personal.values()) connection.close();
       await running;
+      await publications.done();
       await Promise.all([...resourceConnections.values()].map((connection) => connection.done));
       await Promise.all([...connections.values()].map((connection) => connection.done));
       await Promise.all([...personal.values()].map((connection) => connection.done));

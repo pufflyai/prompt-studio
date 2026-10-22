@@ -1,22 +1,28 @@
-import { type Publication, publicationSchema, publishedExtensionsId } from "pstdio-sync-contracts";
+import { type Publication, publicationSchema, publishedExtensionsId } from "./types";
 
-export { type Publication, publicationSchema, publishedExtensionsId } from "pstdio-sync-contracts";
+export { type Publication, publicationSchema, publishedExtensionsId } from "./types";
 
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRecordAssets } from "../command-environment/record-assets";
 import type { ExtensionsRouteDeps } from "../deps";
+import { createPublicationCatalog } from "./catalog-store";
 import { packExtension } from "./package";
 import { preparePublishedExtension } from "./prepare";
 
 export const publishedOwner = (workbenchId: string) => ({ workbenchId, extensionId: publishedExtensionsId });
-export const openPublishedCatalog = async (deps: ExtensionsRouteDeps, workbenchId: string, signal?: AbortSignal) => {
+export const openPublishedCatalog = async (
+  deps: Pick<ExtensionsRouteDeps, "extensionStorageService" | "assetTransferService">,
+  workbenchId: string,
+  signal?: AbortSignal,
+) => {
   const owner = publishedOwner(workbenchId);
-  return deps.extensionStorageService.open({
+  const storage = await deps.extensionStorageService.open({
     owner,
     assets: createRecordAssets(deps.assetTransferService, owner, signal),
   });
+  return { ...storage, ...createPublicationCatalog(storage) };
 };
 
 export const publishExtension = async (
@@ -28,7 +34,7 @@ export const publishExtension = async (
   const { installedSource } = source;
   if (installedSource.extension_id === publishedExtensionsId) throw new Error("Reserved platform extension identity");
   const catalog = await openPublishedCatalog(deps, input.projectId);
-  const record = await catalog.records.read(installedSource.extension_id);
+  const record = await catalog.read(installedSource.extension_id);
   if (record.revision !== input.expectedRevision)
     throw new Error("Published extension changed; read its revision again");
   const bytes = await packExtension(installedSource.source_path);
@@ -47,11 +53,9 @@ export const publishExtension = async (
   const value: Publication = {
     extensionId: installedSource.extension_id,
     revision: asset.sha256,
+    version: prepared.loaded.metadata.version,
     automation,
     enabled: previous.success ? previous.data.enabled : source.instance.enabled,
   };
-  return catalog.records.commit({
-    operationId: crypto.randomUUID(),
-    edits: [{ recordId: value.extensionId, expectedRevision: input.expectedRevision, replace: value, asset }],
-  });
+  return catalog.select(value, asset, input.expectedRevision);
 };

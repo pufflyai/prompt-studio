@@ -12,6 +12,8 @@ import type { ExtensionsRouteDeps } from "./deps";
 import { extensionChangesWorkspaceProvisioning } from "./extension-skill-cleanup";
 import { toExtensionEnableInput } from "./install-extension-source";
 import { toProjectExtensionInstance } from "./project-extension-instance";
+import { openPublishedCatalog } from "./publication/catalog";
+import { changePublishedCatalog } from "./publication/change-catalog";
 import { SharedExtensionEnablementError, sharedAutomationIds } from "./publication/enablement";
 
 type LifecycleDeps = ExtensionsRouteDeps & {
@@ -64,8 +66,14 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
   const setEnabled = async (projectId: string, instanceId: string, enabled: boolean) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return null;
-    if ((await sharedAutomationIds(deps, projectId)).has(existing.installedSource.extension_id))
-      throw new SharedExtensionEnablementError();
+    const publication = await (await openPublishedCatalog(deps, projectId)).read(existing.installedSource.extension_id);
+    if (publication.value)
+      await changePublishedCatalog(deps, projectId, {
+        kind: "enabled",
+        extensionId: existing.installedSource.extension_id,
+        enabled,
+        expectedRevision: publication.revision,
+      });
     const requiresProvisioning = await changesWorkspaceProvisioning(existing.installedSource);
 
     const updated = await deps.extensionService.setProjectExtensionEnabled(instanceId, enabled);
@@ -124,6 +132,13 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
         `Extension still owns ${providerWorkspaces.length} provider-backed workspace(s). Delete them before uninstalling.`,
       );
     }
+    const catalog = await openPublishedCatalog(deps, input.projectId);
+    const publication = await catalog.read(existing.installedSource.extension_id);
+    if (publication.value)
+      await catalog.records.commit({
+        operationId: crypto.randomUUID(),
+        edits: [{ recordId: existing.installedSource.extension_id, deleted: true }],
+      });
     const result = await deps.extensionService.uninstallProjectExtension(input);
     if (!result) return null;
     if (input.deleteUserData) {

@@ -4,14 +4,14 @@ import type {
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
-import { publishedExtensionsId } from "pstdio-sync-contracts";
 import type {
   checkExtensionSource,
   hashExtensionSource,
   LoadedExtensionSnapshot,
 } from "../features/extensions/extension-runtime";
+import { publishedExtensionsId } from "../features/extensions/publication/types";
 import type { EventBus } from "../features/sync/event-bus";
-import { activatePublishedExtension } from "./activate-published-extension";
+import { activatePublishedExtensions } from "./activate-published-extension";
 import {
   type PruneProjectExtensionInstancesInput,
   pruneProjectExtensionInstances as pruneProjectExtensionInstancesImpl,
@@ -314,21 +314,18 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   return {
-    activatePublishedExtension: (
-      input: Omit<
-        Parameters<typeof activatePublishedExtension>[0],
-        "sources" | "instances" | "refresh" | "emit" | "emitRemoved" | "emitInstance"
-      >,
-    ) =>
-      activatePublishedExtension({
-        ...input,
-        sources: deps.installedExtensionSourcesService,
-        instances: deps.extensionInstancesService,
-        emitRemoved: (row) => deps.eventBus?.emit("installed_extension_sources", "delete", row),
-        emitInstance: emitExtensionInstance,
-        refresh: notifyInstalledSourcesChanged,
-        emit: emitInstalledSource,
-      }),
+    activatePublishedExtensions: (inputs: Parameters<typeof activatePublishedExtensions>[1]) =>
+      activatePublishedExtensions(
+        {
+          sources: deps.installedExtensionSourcesService,
+          instances: deps.extensionInstancesService,
+          emitRemoved: (row) => deps.eventBus?.emit("installed_extension_sources", "delete", row),
+          emitInstance: emitExtensionInstance,
+          refresh: notifyInstalledSourcesChanged,
+          emit: emitInstalledSource,
+        },
+        inputs,
+      ),
     enableInstalledSourceForProject,
     getInstalledSource,
     getInstalledSourceById: deps.installedExtensionSourcesService.get,

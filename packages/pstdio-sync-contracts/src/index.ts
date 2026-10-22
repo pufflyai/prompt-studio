@@ -12,4 +12,3 @@ export * from "./state";
 export * from "./transport";
 export { relayInitializeSchema } from "./transport";
 export * from "./wire";
-export * from "./extension-publications";

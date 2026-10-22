@@ -36,7 +36,7 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
       extensionAutomationPreferencesService: { set: mock(async (row: unknown) => row) },
       extensionConnectionService: { removeExtension: mock(async () => {}) },
       extensionStorageService: {
-        open: async () => ({ readState: async () => ({ accepted: null }) }),
+        open: async () => ({ records: { list: async () => [], read: async () => ({ value: null }) } }),
       },
       extensionRuntimeCatalog: {
         get: mock(async () => ({ runtime: { schedules: [] as Array<Record<string, unknown>> } })),

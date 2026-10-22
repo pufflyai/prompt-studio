@@ -26,27 +26,25 @@ const stage = async (projectId: string, source: string) => {
     await packExtension(source),
   );
   const catalog = await openPublishedCatalog(app.deps, projectId);
-  const record = await catalog.records.read("test.unrelated");
-  await catalog.records.commit({
-    operationId: crypto.randomUUID(),
-    edits: [
-      {
-        recordId: "test.unrelated",
-        expectedRevision: record.revision,
-        asset,
-        replace: { extensionId: "test.unrelated", revision: asset.sha256, automation: false, enabled: true },
-      },
-    ],
-  });
+  await catalog.select(
+    { extensionId: "test.unrelated", revision: asset.sha256, version: "0.0.0", automation: false, enabled: true },
+    asset,
+  );
   return {
     asset,
-    publication: { extensionId: "test.unrelated", revision: asset.sha256, automation: false, enabled: true },
+    publication: {
+      extensionId: "test.unrelated",
+      revision: asset.sha256,
+      version: "0.0.0",
+      automation: false,
+      enabled: true,
+    },
   };
 };
 const installed = async (projectId: string) =>
   (await app.deps.extensionService.listProjectExtensionInstances(projectId))[0];
 
-test("verified revisions retain instance data and personal enable choices; failed activation keeps the usable package", async () => {
+test("verified revisions retain instance data and share enable choices; failed activation keeps the usable package", async () => {
   const project = await app.deps.projectService.create({ name: "Receiver" });
   const source = createTestExtensionSource({
     root,
@@ -82,7 +80,7 @@ test("verified revisions retain instance data and personal enable choices; faile
   await activatePublication(app.deps, project.id, next.publication, next.asset);
   const updated = await installed(project.id);
   expect(updated.instance.id).toBe(previous.instance.id);
-  expect(updated.instance.enabled).toBe(false);
+  expect(updated.instance.enabled).toBe(true);
   expect(updated.installedSource.loaded_revision).toBe(next.asset.sha256);
   expect((await app.deps.extensionStorageService.getKv(scope, "saved"))?.value_json).toEqual({ keep: true });
   await activatePublication(app.deps, project.id, first.publication, first.asset);
@@ -154,33 +152,6 @@ test("concurrent catch-up installs one instance for an extension", async () => {
   expect(await app.deps.extensionService.listProjectExtensionInstances(project.id)).toHaveLength(1);
 });
 
-test("a personal enable choice made while preparing a revision is retained", async () => {
-  const project = await app.deps.projectService.create({ name: "Concurrent choice" });
-  const source = createTestExtensionSource({
-    root,
-    installName: "choice",
-    name: "unrelated",
-    displayName: "Unrelated",
-  });
-  const first = await stage(project.id, source);
-  await activatePublication(app.deps, project.id, first.publication, first.asset);
-  const previous = await installed(project.id);
-  const server = Bun.serve({ port: 0, hostname: "127.0.0.1", fetch: app.app.fetch });
-  try {
-    const url = `${server.url.origin}/v1/projects/${project.id}/extensions/${previous.instance.id}`;
-    await writeFile(
-      join(source, "extension.ts"),
-      `await fetch(${JSON.stringify(url)}, {method: "PATCH", headers: {"content-type":"application/json"}, body:'{"enabled":false}'}); export default {};`,
-    );
-    const next = await stage(project.id, source);
-    await activatePublication(app.deps, project.id, next.publication, next.asset);
-    expect((await installed(project.id)).instance.enabled).toBe(false);
-    expect((await installed(project.id)).installedSource.source_ref).toBe(`pstdio-published:${next.asset.sha256}`);
-  } finally {
-    await server.stop(true);
-  }
-});
-
 test("editing the active source during preparation preserves the new local override", async () => {
   const project = await app.deps.projectService.create({ name: "Concurrent edit" });
   const source = createTestExtensionSource({ root, installName: "edit", name: "unrelated", displayName: "Unrelated" });
@@ -193,6 +164,9 @@ test("editing the active source during preparation preserves the new local overr
     `await Bun.write(${JSON.stringify(draft)}, "private draft"); export default {};`,
   );
   const next = await stage(project.id, source);
+  await expect(activatePublication(app.deps, project.id, next.publication, next.asset)).rejects.toThrow(
+    "Local override changed",
+  );
   expect(await activatePublication(app.deps, project.id, next.publication, next.asset)).toBe("local-override");
   expect((await installed(project.id)).installedSource.source_path).toBe(previous.installedSource.source_path);
   expect(await readFile(draft, "utf8")).toBe("private draft");
@@ -245,4 +219,70 @@ test("catch-up restores an evicted published cache without replacing the instanc
   expect(await readFile(join(repaired.installedSource.source_path, "extension.ts"), "utf8")).toBe(
     "export default {};\n",
   );
+});
+
+test("a failed member of a new set leaves every previous source active", async () => {
+  const project = await app.deps.projectService.create({ name: "Atomic set" });
+  const firstPath = createTestExtensionSource({
+    root,
+    installName: "atomic-first",
+    name: "unrelated",
+    displayName: "First",
+  });
+  const secondPath = createTestExtensionSource({
+    root,
+    installName: "atomic-second",
+    name: "second",
+    displayName: "Second",
+  });
+  const first = await stage(project.id, firstPath);
+  await activatePublication(app.deps, project.id, first.publication, first.asset);
+  const previous = await installed(project.id);
+  await writeFile(join(firstPath, "new.txt"), "new revision");
+  const next = await stage(project.id, firstPath);
+  await writeFile(join(secondPath, "extension.ts"), 'throw new Error("broken member"); export default {};');
+  const badAsset = await app.deps.assetTransferService.stage(
+    publishedOwner(project.id),
+    crypto.randomUUID(),
+    await packExtension(secondPath),
+  );
+  const { activatePublishedSet } = await import("./activate");
+  await expect(
+    activatePublishedSet(app.deps, project.id, [
+      { publication: next.publication, asset: next.asset },
+      { publication: { ...next.publication, extensionId: "test.second", revision: badAsset.sha256 }, asset: badAsset },
+    ]),
+  ).rejects.toThrow();
+  expect((await installed(project.id)).installedSource.id).toBe(previous.installedSource.id);
+  expect(await app.deps.extensionService.listProjectExtensionInstances(project.id)).toHaveLength(1);
+});
+
+test("a complete set rejects conflicting resource prefixes before switching any source", async () => {
+  const project = await app.deps.projectService.create({ name: "Set prefixes" });
+  const entries = [];
+  for (const name of ["prefix-first", "prefix-second"]) {
+    const source = createTestExtensionSource({ root, installName: name, name, displayName: name });
+    await writeFile(
+      join(source, "extension.ts"),
+      'export default { resourceKinds: [{ id: "item", ref: { kind: "resource-kind", id: "item" }, prefix: "XX" }] };',
+    );
+    const asset = await app.deps.assetTransferService.stage(
+      publishedOwner(project.id),
+      crypto.randomUUID(),
+      await packExtension(source),
+    );
+    entries.push({
+      publication: {
+        extensionId: `test.${name}`,
+        revision: asset.sha256,
+        version: "0.0.0",
+        automation: false,
+        enabled: true,
+      },
+      asset,
+    });
+  }
+  const { activatePublishedSet } = await import("./activate");
+  await expect(activatePublishedSet(app.deps, project.id, entries)).rejects.toThrow("prefix");
+  expect(await app.deps.extensionService.listProjectExtensionInstances(project.id)).toHaveLength(0);
 });

@@ -50,15 +50,16 @@ export const publicationRoutes = (deps: ExtensionsRouteDeps) => {
     const { projectId } = c.req.valid("param");
     if (!(await deps.projectService.get(projectId))) return c.json({ error: "Project not found" }, 404);
     const catalog = await openPublishedCatalog(deps, projectId);
-    const ids = new Set((await catalog.records.list()).map((record) => record.recordId));
+    const ids = new Set(
+      (await catalog.list())
+        .filter((record) => !record.recordId.startsWith("package:"))
+        .map((record) => record.recordId),
+    );
     for (const { installedSource } of await deps.extensionService.listProjectExtensionInstances(projectId))
       ids.add(installedSource.extension_id);
-    const accepted = (await catalog.readState()).accepted;
-    const conflicts = await catalog.records.conflicts();
     const records = await Promise.all(
       [...ids].sort().map(async (id) => {
-        const record = await catalog.records.read(id);
-        const saved = accepted?.records[id];
+        const record = await catalog.read(id);
         return {
           recordId: id,
           revision: record.revision,
@@ -66,8 +67,6 @@ export const publicationRoutes = (deps: ExtensionsRouteDeps) => {
           deleted: record.deleted,
           value: record.deleted || record.value === null ? null : publicationSchema.parse(record.value),
           asset: record.asset,
-          accepted: saved && !saved.deleted ? publicationSchema.parse(saved.value) : null,
-          conflicts: conflicts.filter((conflict) => conflict.recordIds.includes(id)),
         };
       }),
     );

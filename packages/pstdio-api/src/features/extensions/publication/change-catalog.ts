@@ -1,6 +1,7 @@
 import type { ExtensionsRouteDeps } from "../deps";
-import { activatePublication } from "./activate";
+import { activatePublishedSet } from "./activate";
 import { openPublishedCatalog, publicationSchema } from "./catalog";
+import { packageMetadataSchema } from "./types";
 
 type CatalogChange =
   | { kind: "enabled"; extensionId: string; expectedRevision: string; enabled: boolean }
@@ -8,29 +9,31 @@ type CatalogChange =
 
 export const changePublishedCatalog = async (deps: ExtensionsRouteDeps, projectId: string, input: CatalogChange) => {
   const catalog = await openPublishedCatalog(deps, projectId);
-  const record = await catalog.records.read(input.extensionId);
+  const record = await catalog.read(input.extensionId);
   const current = publicationSchema.parse(record.value);
   if (!record.asset) throw new Error("Published package is unavailable");
   if (input.expectedRevision !== record.revision)
     throw new Error("Published extension changed; read its revision again");
   let value = { ...current };
-  let asset = record.asset;
   if (input.kind === "enabled") {
-    if (!current.automation) throw new Error("Personal extension enable choices remain local");
     value.enabled = input.enabled;
   } else {
-    const receipts = Object.values((await catalog.readState()).accepted?.receipts ?? {});
-    const previous = receipts
-      .filter((receipt) => receipt.status === "accepted")
-      .flatMap((receipt) => receipt.mutation.changes)
-      .find((change) => change.recordId === input.extensionId && change.asset?.next?.sha256 === input.revision);
-    if (!previous?.asset?.next || !previous.value) throw new Error("Accepted package revision not found");
-    value = { ...publicationSchema.parse(previous.value.next), enabled: current.enabled };
-    asset = previous.asset.next;
+    const previous = await catalog.records.read(`package:${input.revision}`);
+    if (!previous.asset || previous.deleted || !previous.value) throw new Error("Package revision not found");
+    const metadata = packageMetadataSchema.parse(previous.value);
+    if (metadata.extensionId !== input.extensionId || previous.asset.sha256 !== input.revision)
+      throw new Error("Package belongs to another extension");
+    value = { ...metadata, revision: input.revision, enabled: current.enabled };
   }
   return catalog.records.commit({
     operationId: crypto.randomUUID(),
-    edits: [{ recordId: input.extensionId, expectedRevision: record.revision, replace: value, asset }],
+    edits: [
+      {
+        recordId: input.extensionId,
+        expectedRevision: record.revision,
+        replace: { revision: value.revision, enabled: value.enabled },
+      },
+    ],
   });
 };
 
@@ -41,16 +44,12 @@ export const adoptPublishedExtension = async (
   signal: AbortSignal,
 ) => {
   const catalog = await openPublishedCatalog(deps, projectId);
-  const accepted = (await catalog.readState()).accepted?.records[extensionId];
-  if (!accepted?.asset || accepted.deleted) throw new Error("Publication is not accepted by the relay yet");
-  return {
-    status: await activatePublication(
-      deps,
-      projectId,
-      publicationSchema.parse(accepted.value),
-      accepted.asset,
-      signal,
-      true,
-    ),
-  };
+  const accepted = await catalog.read(extensionId);
+  if (!accepted?.asset || accepted.deleted) throw new Error("Published package is unavailable");
+  const entries = (await catalog.list()).map((record) => ({
+    publication: publicationSchema.parse(record.value),
+    asset: record.asset!,
+  }));
+  const statuses = await activatePublishedSet(deps, projectId, entries, signal, extensionId);
+  return { status: statuses[entries.findIndex((entry) => entry.publication.extensionId === extensionId)] };
 };

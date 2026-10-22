@@ -19,6 +19,17 @@ import {
 } from "./project-extension-runtime-sources";
 import { createProjectRuntimeActivation } from "./project-runtime-activation";
 
+const assertResourcePrefixes = (
+  loaded: Awaited<ReturnType<ReturnType<typeof createExtensionSourceCache>["collect"]>>,
+) => {
+  const runtime = normalizeExtensionSources(loaded.map((record) => record.source));
+  const errors = runtime.diagnostics.filter(
+    (diagnostic) => diagnostic.code.startsWith("extension_resource_prefix_") && diagnostic.severity === "error",
+  );
+  if (errors.length)
+    throw Object.assign(new Error(errors.map((error) => error.message).join("\n")), { diagnostics: errors });
+};
+
 type ProjectState = {
   /** Bumped on every invalidation; a load may publish only if it still matches. */
   revision: number;
@@ -229,6 +240,12 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
   // Runs before an enable is persisted, so the candidate is described by its manifest
   // and source path rather than by a row.
+  const validateResourcePrefixSet = async (candidates: CandidateExtensionSource[]) => {
+    const loaded = (await Promise.all(candidates.map((candidate) => sources.load(candidate)))).filter(
+      (record) => record !== null,
+    );
+    assertResourcePrefixes(loaded);
+  };
   const validateResourcePrefixes = async (projectId: string, installedSource: CandidateExtensionSource) => {
     const enabled = (await deps.extensionService.listEnabledSourcesForProject(projectId)).filter(
       (record) => record.installedSource.extension_id !== installedSource.extension_id,
@@ -236,12 +253,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     const loaded = await sources.collect(enabled);
     const candidate = await sources.load(installedSource);
     if (candidate) loaded.push(candidate);
-    const runtime = normalizeExtensionSources(loaded.map((record) => record.source));
-    const errors = runtime.diagnostics.filter(
-      (diagnostic) => diagnostic.code.startsWith("extension_resource_prefix_") && diagnostic.severity === "error",
-    );
-    if (errors.length)
-      throw Object.assign(new Error(errors.map((error) => error.message).join("\n")), { diagnostics: errors });
+    assertResourcePrefixes(loaded);
   };
 
   const markDirty = (state: ProjectState, reason: RuntimeInvalidationReason) => {
@@ -295,6 +307,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     ...createProjectRuntimeActivation(get),
     invalidate,
     validateResourcePrefixes,
+    validateResourcePrefixSet,
     subscribeInvalidation: (listener: (input: RuntimeInvalidationInput) => void) => {
       invalidationListeners.add(listener);
       return () => {
