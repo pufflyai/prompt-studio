@@ -2,8 +2,8 @@
 
 PS-903 freezes the PS-902 release workloads before storage optimization. Run this
 explicit diagnostic to collect a failing baseline. It is not a required CI check
-and does not change product storage, existing performance budgets or execution
-allowances. PS-909 owns the later release gate. A performance failure is useful
+and does not change product storage or performance budgets. The user authorized
+the lower external case execution cap below. PS-909 owns the later release gate. A performance failure is useful
 baseline evidence; missing or unproved coverage remains a failure.
 
 ## Fixed workloads
@@ -102,6 +102,7 @@ Build the native binary before timing, then select it to prevent another build:
 
 ```sh
 bun run --cwd scripts build:host
+bun run --cwd packages/e2e perf:storage-scale:build
 export E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
 bun packages/e2e/src/perf/storage-scale.ts --help
 bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /path/evidence/rich --emit-fixture --timing-owner /path/owner.json
@@ -115,21 +116,85 @@ complete stored fixture and closes its runtime before measurement. Do not refres
 or change a fixture during accepted runs. Commit the exact harness before timing.
 
 For the isolated Linux runtime, first build the native host so the embedded asset
-manifest exists. Then run the test-only setup through the repository's required
-Docker harness:
+manifest exists. Cross-compile the Linux binary as a separate build, outside any
+benchmark case. Then run bounded setup through the required Docker harness:
 
 ```sh
-bun packages/e2e/src/perf/storage-scale-container-setup.ts ps903-small /path/owner.json
+bun build packages/pstdio/src/index.ts --compile --target=bun-linux-arm64 --asset-naming '[dir]/[name].[ext]' --external playwright-core --external 'chromium-bidi/*' --outfile /absolute/path/pstdio-linux
+bun packages/e2e/src/perf/storage-scale-container-setup.ts ps903-small /path/owner.json /absolute/path/pstdio-linux
 ```
 
-This cross-compiles a separate Linux binary and calls `bun run dev:isolated` with
-a compiled-runtime command override. It writes a container configuration under
+Use `bun-linux-x64` on x64 hosts. Setup does not build a binary. Its externally
+supervised 60-second preparation case calls `bun run dev:isolated` with a
+compiled-runtime command override. It writes a container configuration under
 `__test-tmp__/storage-scale/ps903-small/`. It does not replace the native binary.
+The explicit Linux binary is bind-mounted read-only at
+`/opt/pstdio-scale/pstdio-linux`; its host path may be outside the workspace.
 Seed the full fixture with its printed home and `--container-config` path. Create
 a separate stack/home for the rich workload. Stop each stack with the printed
 `bun run dev:isolated -- --name <name> --down` command after saving evidence.
-The stack's `connection.json` and runtime descriptor contain credentials; do not
+Owned containers are stopped at the end of setup; the next preparation/sample
+restarts the configured service. Expiry also stops containers with that exact
+Compose project label. The stack's `connection.json` and runtime descriptor contain credentials; do not
 attach them to a report.
+
+## Hard case execution cap
+
+User requirement added 2026-10-22. PS-904 through PS-909 inherit this cap through
+PS-902's architecture contract. It lowers an execution allowance; it does not
+replace the less-than-1,000-ms product acceptance budget. Keep all tighter limits.
+
+An idle supervisor starts one absolute deadline before spawning each case worker.
+It does no Yjs or database work. Progress never resets the deadline. The effective
+allowance is the lesser of 60,000 ms and any tighter caller allowance. There is
+no CLI switch to raise it. In-case startup, imports, calibration, warmup, fixture
+copying/construction, sync setup, measured operations, verification, restoration
+and worker cleanup all consume that same allowance.
+
+| Case boundary | Included work |
+| --- | --- |
+| One application scenario/sample | One profile/background/temperature/operation/sample ID, including its runtime/browser starts, sync fixture, SDK and UI probes, kill/reopen proof and reset. A shard still requires all ten cold and ten warm samples. |
+| One sync layer invocation | Full one-owner seed and optional churn, encode, offline correctness and all ten repetitions of every phase. It has one cap for the whole invocation, not ten fresh deadlines. |
+| One database seed/churn/sample process | Database open/close and every operation in that phase. A cold sample's copy of the closed seed is inside its cap. Ten independent cold cases are still required. |
+| One explicit preparation command | Full `--emit-fixture`, `--seed`, `--refresh-source`, `--verify-fixture` or container setup invocation. Partial setup is invalid; it does not qualify a smaller fixture for measurement. |
+
+Separate binary and fixture extension builds run before these cases under their existing build limits.
+Run `perf:storage-scale:build` again after changing the fixture consumer; seed and
+refresh commands require that output and never invoke the bundler. Preparation and startup remain separate
+phase records and do not enter navigation/edit latency timers; keeping them out
+of the foreground timer does not exempt them from the case cap. A setup timeout
+must be repaired or reported as missing coverage, never hidden by restarting it.
+
+At expiry the supervisor freezes its owned POSIX process group, finds descendants
+(including separate Chromium groups), and sends SIGKILL. Windows uses `taskkill
+/T /F`. Owned Docker services are stopped with a zero-second grace period. A
+completion IPC handshake keeps a normally finishing worker alive until its tree
+can be inspected and terminated; an unexpected exit cannot pass. SIGINT/SIGTERM
+to the supervisor also terminate its active case. SIGKILL of the supervisor itself
+cannot run cleanup; reconcile its processes and timing lease before another run.
+
+Tree inspection, Docker control calls and reaping each have independent
+one-second administrative limits. OS scheduling and termination delivery may
+produce a short overrun in `elapsedWallMs`; this is not permission for more
+benchmark work or a successful over-cap run. The final cap check includes this
+cleanup, so a completed worker whose cleanup crosses the cap is also timed out.
+Failed cleanup is reported explicitly and stops the suite. Never start another
+case until owned-process cleanup is established.
+
+Parent-owned stdout/stderr files retain completed phases and any partial final
+line. `case-end` records the cap, worker PID, completion handshake, exit/signal,
+cleanup errors and wall time. An expired case has `status: timed-out`,
+`complete: false`, `passed: false` and `acceptedTiming: false`. Its wall time is
+not an operation `durationMs` and never becomes a 60-second successful sample.
+Application aggregation admits samples only from a completed case. Its raw
+per-case output remains available even if a sample was printed before timeout.
+The fixture is invalidated and remaining samples stay missing. No retry,
+reduced fixture/sample count, prewarming or disabled sync can turn this into a pass.
+
+Earlier PS-903 runs that exceed this whole-case cap are historical uncapped
+diagnostic observations, not acceptance of the corrected runner. Keep their
+original metadata and exclusions. Short injected-deadline watchdog tests prove
+control behavior; they are not full-workload performance samples.
 
 ## Measurement shards
 

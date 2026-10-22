@@ -1,14 +1,11 @@
-import { execFileSync, spawnSync } from "node:child_process";
-import { appendFileSync, closeSync, cpSync, mkdirSync, openSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync } from "node:fs";
 import { arch, cpus, freemem, platform, release, totalmem } from "node:os";
 import { join, resolve } from "node:path";
-import { contract, type Profile, type Workload } from "storage-scale-fixture";
-import { buildBinary } from "../packaged/packaged-helpers";
-import { writeFixture } from "./storage-scale-artifacts";
-import { applyContainerProfile, configuredContainer } from "./storage-scale-container";
-import { refreshScaleSources, seedScaleRuntime } from "./storage-scale-runtime";
+import { contract, type Profile, runBenchmarkCase, type Workload } from "storage-scale-fixture";
+import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
+import { configuredContainer } from "./storage-scale-container";
 import { sampleScaleRuntime } from "./storage-scale-samples";
-import { verifyScaleFixture } from "./storage-scale-verify";
 import { enterMeasurementWindow } from "./storage-scale-window";
 
 const option = (flag: string, fallback?: string) => {
@@ -18,7 +15,7 @@ const option = (flag: string, fallback?: string) => {
   return process.argv[at + 1];
 };
 
-const runLayer = (kind: Workload, root: string, layer: string) => {
+const runLayer = async (kind: Workload, root: string, layer: string, emit: (data: object) => void) => {
   if (!["sync", "database"].includes(layer)) throw new Error("Unknown layer");
   const count = Number(option("--rows"));
   if (!contract.scaling[kind].includes(count)) throw new Error("Choose a frozen scaling workload");
@@ -29,28 +26,69 @@ const runLayer = (kind: Workload, root: string, layer: string) => {
       : "packages/pstdio-db/src/services/extension-storage/document-scale.bench.ts";
   const phases =
     layer === "sync"
-      ? [""]
+      ? ["owner"]
       : ["seed", ...(process.argv.includes("--churn") ? ["churn"] : []), ...Array(10).fill("sample")];
   for (const phase of phases) {
     const args = [script, kind, String(count)];
     const snapshot = join(root, "database-work");
     const sampleRoot = join(root, "database-sample");
     if (layer === "database") {
-      if (phase === "sample") {
-        rmSync(sampleRoot, { recursive: true, force: true });
-        cpSync(snapshot, sampleRoot, { recursive: true });
-      }
       args.push(phase === "sample" ? sampleRoot : snapshot, phase);
+      if (phase === "sample") args.push(snapshot);
     } else if (process.argv.includes("--churn")) args.push("churn");
     const stdout = openSync(join(root, `${layer}.jsonl`), "a");
     const stderr = openSync(join(root, `${layer}.stderr.log`), "a");
     try {
-      const run = spawnSync("bun", args, { cwd: repo, stdio: ["ignore", stdout, stderr] });
-      if (run.status !== 0) throw new Error(`Layer worker exited ${run.status}; inspect ${layer}.stderr.log`);
+      const run = await runBenchmarkCase({
+        name: `${layer}-${kind}-${count}-${phase}`,
+        command: process.execPath,
+        args,
+        cwd: repo,
+        stdout,
+        stderr,
+        emit,
+      });
+      if (!run.complete) throw new Error(`Layer case ${run.status}; partial output retained in ${layer}.jsonl`);
     } finally {
       closeSync(stdout);
       closeSync(stderr);
     }
+  }
+};
+
+const runPreparation = async (
+  preparation: string,
+  root: string,
+  home: string | undefined,
+  kind: Workload,
+  emit: (data: object) => void,
+) => {
+  const stdout = openSync(join(root, "preparation.jsonl"), "a");
+  const stderr = openSync(join(root, "preparation.stderr.log"), "a");
+  try {
+    const run = await runBenchmarkCase({
+      name: preparation,
+      command: process.execPath,
+      args: [
+        join(import.meta.dirname, "storage-scale-prepare.ts"),
+        preparation,
+        join(root, "fixture"),
+        home ? resolve(home) : "",
+        kind,
+        String(process.argv.includes("--churn")),
+      ],
+      stdout,
+      stderr,
+      containerFilters: home
+        ? [configuredContainer(home)?.containerId].filter((id) => id !== undefined).map((id) => `id=${id}`)
+        : [],
+      emit,
+    });
+    if (!run.complete)
+      throw new Error(`Preparation ${run.status}; partial fixture is invalid and retained for diagnosis`);
+  } finally {
+    closeSync(stdout);
+    closeSync(stderr);
   }
 };
 
@@ -65,7 +103,8 @@ export const runScaleDiagnostic = async () => {
   --fixture rich|small --output <directory> --layer sync|database --rows 1000|10000|100000
   Every heavy command also requires --timing-owner <acknowledged-window-owner.json>.
 
-Full fixtures, samples and the 1,000 ms ceiling are fixed. Nonzero exit records a diagnostic failure.
+Full fixtures, samples and the 1,000 ms ceiling are fixed. Each case has an external 60-second cap,
+including worker startup/setup/cleanup. Build separately; preparation is also capped. Timeout is incomplete failure.
 Layer measurements are not user-visible acceptance. Runtime quota profiles require isolated runtime control;
 unsupported controls and missing phase evidence remain explicit coverage failures. See performance reference 0005.`);
     return;
@@ -91,48 +130,35 @@ unsupported controls and missing phase evidence remain explicit coverage failure
       totalMemory: totalmem(),
       freeMemory: freemem(),
       bun: Bun.version,
-      commit: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+      commit: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", timeout: 1_000 }).trim(),
       powerMode: "unrecorded",
       physicalLowerSpecEvidence: "unavailable",
       limits: process.resourceUsage(),
       contract,
     });
-    if (process.argv.includes("--emit-fixture")) {
-      const fixture = await writeFixture(join(root, "fixture"), kind);
-      emit({ phase: "fixture", ...fixture, scenarios: undefined });
-      return;
-    }
     const layer = option("--layer");
     if (layer) {
-      runLayer(kind, root, layer);
+      await runLayer(kind, root, layer, emit);
       emit({ phase: "coverage", layer, passed: false, failures: ["layer-measurement-is-not-full-acceptance"] });
       process.exitCode = 1;
       return;
     }
     const home = option("--home");
-    if (!home) throw new Error("Pass a disposable --home");
+    if (!home && !process.argv.includes("--emit-fixture")) throw new Error("Pass a disposable --home");
     const containerConfig = option("--container-config");
     if (containerConfig) process.env.PSTDIO_SCALE_CONTAINER_CONFIG = resolve(containerConfig);
-    buildBinary();
-    if (process.argv.includes("--seed")) {
-      await writeFixture(join(root, "fixture"), kind);
-      emit({ phase: "seed", ...(await seedScaleRuntime(resolve(home), kind, process.argv.includes("--churn"))) });
-      await refreshScaleSources(resolve(home), kind);
-      emit({ phase: "stored-fixture", ...(await verifyScaleFixture(resolve(home), kind)) });
+    const preparation = ["--emit-fixture", "--seed", "--refresh-source", "--verify-fixture"].find((flag) =>
+      process.argv.includes(flag),
+    );
+    if (preparation) {
+      await runPreparation(preparation, root, home, kind, emit);
       return;
     }
-    if (process.argv.includes("--refresh-source")) {
-      await refreshScaleSources(resolve(home), kind);
-      return;
-    }
-    if (process.argv.includes("--verify-fixture")) {
-      emit({ phase: "stored-fixture", ...(await verifyScaleFixture(resolve(home), kind)) });
-      return;
-    }
+    if (!home) throw new Error("Pass a disposable --home");
+    if (!existsSync(PACKAGED_BINARY_PATH)) throw new Error("Build the compiled binary separately before benchmarking");
     const profile = option("--profile", "native") as Profile;
     if (!(profile in contract.profiles)) throw new Error("Unknown CPU profile");
     const container = configuredContainer(home);
-    if (container) emit({ phase: "runtime-control", profile, ...applyContainerProfile(container, profile) });
     if (contract.profiles[profile].runtimeCpus !== null && !container) {
       emit({
         phase: "coverage",
