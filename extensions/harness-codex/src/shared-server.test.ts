@@ -142,6 +142,37 @@ test("shared process loss disconnects every active owner and reconciles without 
   await recovered.done;
 });
 
+test("a turn rejected by a stale Codex login restarts the shared server for the next turn", async () => {
+  const { runtime, children, calls, holdNext } = setup();
+  const a = input("a", "p");
+  const held = holdNext("turn/start");
+  const pending = runtime.run(a);
+  await held.requested;
+  // The rejection can arrive before the turn/start reply.
+  children[0].emit({
+    method: "turn/completed",
+    params: {
+      threadId: "thread-1",
+      turn: {
+        id: "turn-1",
+        status: "failed",
+        error: { message: "Please sign in again.", codexErrorInfo: "unauthorized" },
+      },
+    },
+  });
+  held.reply();
+  const first = await pending;
+  expect(await first.done).toEqual({ status: "failed" });
+  expect(JSON.stringify(a.events.getMessages())).toContain("Please sign in again.");
+  const resumed = await runtime.run({ ...a, agentSessionId: first.agentSessionId });
+  expect(children).toHaveLength(2);
+  expect(calls.filter((c) => c.method === "thread/resume").map((c) => c.params.threadId)).toEqual([
+    first.agentSessionId,
+  ]);
+  await resumed.stop();
+  await resumed.done;
+});
+
 test("aborting a delayed goal update keeps other owners connected", async () => {
   const { runtime, children, holdNext, calls } = setup();
   const a = input("a", "p");
