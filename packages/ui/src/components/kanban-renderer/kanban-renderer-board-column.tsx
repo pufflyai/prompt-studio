@@ -137,8 +137,6 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
                 selectedItemId={selectedItemId}
                 collapsed={Boolean(group && collapsed[group.key])}
                 dropTarget={dropKey === entry.key}
-                canDragIn={column.canDragIn}
-                canDragOut={column.canDragOut}
                 onFocus={() => setFocusedKey(entry.key)}
                 onKeyboard={handleKeyboard}
                 onToggle={() => {

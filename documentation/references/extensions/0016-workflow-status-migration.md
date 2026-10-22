@@ -42,7 +42,7 @@ return { rows, attributes, boardColumnConfigs };
 ```
 
 Return options in the intended column order. Use `boardColumnConfigs`, keyed by
-the same IDs, for column colors, create actions, drag rules, and column actions.
+the same IDs, for column colors, create actions, and column actions.
 Keep the existing attribute ID and row values so saved views continue to group
 and filter on the same values. Renames change labels, not IDs. Deleted options
 follow normal saved-view cleanup; filters on remaining IDs are retained.

@@ -17,8 +17,6 @@ interface BoardEntryProps {
   selectedItemId: string | null;
   collapsed: boolean;
   dropTarget: boolean;
-  canDragIn: boolean;
-  canDragOut: boolean;
   onToggle: () => void;
   onFocus: () => void;
   onKeyboard: (event: KeyboardEvent<HTMLDivElement>, index: number) => void;
@@ -42,8 +40,6 @@ export const BoardEntry = (props: BoardEntryProps) => {
     selectedItemId,
     collapsed,
     dropTarget,
-    canDragIn,
-    canDragOut,
     onToggle,
     onFocus,
     onKeyboard,
@@ -77,8 +73,8 @@ export const BoardEntry = (props: BoardEntryProps) => {
             event.currentTarget.click();
           }
         }}
-        onDragOver={canDragIn ? onDragOver : undefined}
-        onDrop={canDragIn ? onDrop : undefined}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
       >
         <Icon
           as={ChevronRight}
@@ -111,15 +107,15 @@ export const BoardEntry = (props: BoardEntryProps) => {
             cardProps.onClick?.();
           }
         }}
-        onDragOver={canDragIn ? onDragOver : undefined}
-        onDrop={canDragIn ? onDrop : undefined}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
       >
         <KanbanRendererCard
           {...cardProps}
           isSelected={item.id === selectedItemId}
-          draggable={canDragOut}
-          onDragStart={canDragOut ? onDragStart(item.id) : undefined}
-          onDragEnd={canDragOut ? onDragEnd : undefined}
+          draggable
+          onDragStart={onDragStart(item.id)}
+          onDragEnd={onDragEnd}
         />
       </Box>
     </ResourceContextMenu>
