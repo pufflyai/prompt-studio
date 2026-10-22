@@ -16,7 +16,10 @@ describe("benchmark writer", () => {
     process.env[RESULTS_FILE_ENV] = file;
     recordMeasurement({ metric: "cold-start", label: "Cold start", unit: "ms", value: 5400, budget: 8000 });
     recordMeasurement({ metric: "main-cpu", label: "Main CPU", unit: "percent", value: Number.NaN });
-    const lines = readFileSync(file, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    const lines = readFileSync(file, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
     expect(lines).toEqual([{ metric: "cold-start", label: "Cold start", unit: "ms", value: 5400, budget: 8000 }]);
   });
 });
