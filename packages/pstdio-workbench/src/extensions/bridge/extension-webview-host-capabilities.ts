@@ -1,4 +1,4 @@
-import { CommandOutcomeError } from "@pstdio/sdk/extensions";
+import { CommandOutcomeError, getCommandValue } from "@pstdio/sdk/extensions";
 import { validatedCommandOutcomeSchema } from "pstdio-api-contracts";
 import type {
   MaybePromise,
@@ -60,6 +60,16 @@ const commandStreaming = (adapters: ExtensionWebviewHostAdapters) => {
     streamHandler(hostEvents)(request, { stream: streamCommand, publish: adapters.commandCompleted });
 };
 
+const editingSession = (adapters: ExtensionWebviewHostAdapters) => {
+  const { editing, executeCommand } = adapters;
+  if (!editing || !executeCommand) return;
+  return (request: WebviewHostCapabilityParams["editing.session"]) =>
+    editing.request(request, async (input) => {
+      const response = commandResponse.parse(await executeCommand(input));
+      return getCommandValue(response.outcome);
+    });
+};
+
 export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebviewHostAdapters) => {
   const {
     hostEvents,
@@ -82,6 +92,7 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
     "resources.actions": capability("resources.actions", adapters.resourceActions),
     "commands.execute": capability("commands.execute", commandExecution(adapters)),
     "commands.stream": capability("commands.stream", commandStreaming(adapters)),
+    "editing.session": capability("editing.session", editingSession(adapters)),
     "navigation.open": capability(
       "navigation.open",
       navigation && ((request) => after(navigation.open(request.target), () => undefined)),

@@ -36,7 +36,7 @@ import { WorkbenchSidePanelBoundary } from "./workbench-side-panel-boundary";
 import { WorkbenchSidePanelRegionHeader, WorkbenchSidePanelRegionPortal } from "./workbench-side-panel-layout";
 
 interface WorkbenchProps {
-  /** The host renders WorkbenchPanelToggles outside the navigation header. */
+  /** The host renders WorkbenchPanelToggles and WorkbenchFullscreenToggle outside the navigation header. */
   panelControlsPlacement?: "nav" | "host";
   workbench: WorkbenchCore;
   /** Host chrome above all workbench regions, inside the current theme. */

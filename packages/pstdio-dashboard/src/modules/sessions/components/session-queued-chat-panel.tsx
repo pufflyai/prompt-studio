@@ -122,7 +122,7 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
       }
       onAttachFiles={projectId ? (values) => void files.uploadFiles(values) : undefined}
       onAttachText={projectId ? (text) => void files.uploadText(text) : undefined}
-      inputDisabled={files.uploading}
+      inputDisabled={files.uploading || panel.inputDisabled}
     />
   );
 };

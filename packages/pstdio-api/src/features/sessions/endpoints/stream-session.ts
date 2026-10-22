@@ -3,6 +3,7 @@ import type { SessionsRouteDeps } from "../deps";
 import { getSessionHistory, SessionNotFoundError } from "../session-history";
 import type { ActiveSession } from "../session-store";
 import type { SessionEventSink } from "../session-stream-connections";
+import { streamPersonalSession } from "./stream-personal-session";
 import { createStreamQueuePublisher, type StreamQueuePublisher } from "./stream-session-queue";
 
 const snapshot = (messages: SessionMessage[], sink: SessionEventSink) =>
@@ -134,6 +135,7 @@ const streamRuns = async (id: string, deps: SessionsRouteDeps, sink: SessionEven
 
 export const streamSession = async (id: string, deps: SessionsRouteDeps, sink: SessionEventSink) => {
   await sink.write("ready", { sessionId: id });
+  if (await streamPersonalSession(id, deps, sink)) return;
   // One publisher per subscription keeps the queue live between runs too.
   const queue = createStreamQueuePublisher(id, deps, sink);
   try {

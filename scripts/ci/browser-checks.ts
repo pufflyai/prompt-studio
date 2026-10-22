@@ -1,5 +1,10 @@
 const browserFamilies = {
-  sessions: ["session-menu-parity.spec.ts", "session-chat-state.spec.ts", "session-panel-restore.spec.ts"],
+  sessions: [
+    "session-menu-parity.spec.ts",
+    "session-chat-state.spec.ts",
+    "session-panel-restore.spec.ts",
+    "session-stream-connection.spec.ts",
+  ],
   editors: ["ticket-scroll-reset.spec.ts", "ticket-editor-save-lifecycle.spec.ts"],
   extensions: [
     "marketplace-extension-lifecycle.spec.ts",

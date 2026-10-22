@@ -2,6 +2,7 @@ import { extensionResourceRefSchema, jsonObjectSchema, pageParamValueSchema } fr
 import type { WebviewHostCapability, WebviewHostCapabilityParams } from "pstdio-api-contracts/extension-kernel";
 import { isNavigationTarget, type NavigationTarget } from "pstdio-api-contracts/extension-kernel";
 import { z } from "zod";
+import { webviewEditingSessionParamsSchema } from "./webview-editing-params";
 import { webviewNotificationActionParamsSchema } from "./webview-notification-params";
 
 export class WebviewHostCapabilityError extends Error {
@@ -60,6 +61,7 @@ const schemas = {
     z.object({ operation: z.literal("execute"), resource: extensionResourceRefSchema, key: identifier }),
   ]),
   "commands.execute": command,
+  "editing.session": webviewEditingSessionParamsSchema,
   "commands.stream": z.discriminatedUnion("operation", [
     command.extend({ ...streamId, operation: z.literal("start") }),
     z.object({ ...streamId, operation: z.literal("cancel") }),
