@@ -1,8 +1,8 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { readAttempt } from "../data/attempt-storage";
 import { autoBuildDispatches, autoBuildPullRequestNotifications } from "../data/auto-build-dispatches";
-import { type AutoBuildMode, pauseAutoBuildMode } from "../data/auto-build-mode";
-import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
+import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
+import { acknowledgeAutoBuildWake, readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
 import { withWriteGuard } from "../data/write-guard";
 import { supervisorWakePrompt } from "./auto-build-prompts";
@@ -13,7 +13,7 @@ import { isLiveSession } from "./auto-build-sessions";
 const timestamp = (value: string | null | undefined) => (value ? Date.parse(value) : 0);
 
 export async function checkAutoBuildProgress(ctx: CommandContext) {
-  const mode = await ctx.storage.get<AutoBuildMode>("auto-build");
+  const mode = await readAutoBuildMode(ctx);
   if (!mode?.enabled || !mode.prompt) return;
   return withWriteGuard(
     ctx,
@@ -69,8 +69,9 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
       );
       const progressAt = Math.max(lastPromptAt, ...progress.map((work) => work?.updatedAt ?? 0));
       const stalled = progress.some((work) => work?.active) && Date.now() - progressAt >= 60 * 60 * 1000;
-      if (!stalled && session.status !== "failed" && !progress.some((work) => work?.changed)) return;
-      const current = await ctx.storage.get<AutoBuildMode>("auto-build");
+      const pendingWake = supervisor.pendingWakeRevision === mode.revision;
+      if (!pendingWake && !stalled && session.status !== "failed" && !progress.some((work) => work?.changed)) return;
+      const current = await readAutoBuildMode(ctx);
       if (!current?.enabled || current.revision !== mode.revision) return;
       try {
         await ctx.sessions.followup({
@@ -79,6 +80,7 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
           prompt: supervisorWakePrompt({ stalled, refreshScope: supervisor.scope?.revision !== mode.revision }),
         });
         await acknowledgePullRequestNotifications(ctx, session.id, progress);
+        await acknowledgeAutoBuildWake(ctx, supervisor);
       } catch (error) {
         const latest = await ctx.sessions.get(session.id);
         if (

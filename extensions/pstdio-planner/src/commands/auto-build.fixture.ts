@@ -68,7 +68,7 @@ export async function fixture(limit = 2) {
           async () => [],
         ),
         create: async () => ({ ...createSessionResource(), id: `session-${sequence}` }),
-        get: async () => createSessionResource(),
+        get: async (id: string) => (id === "fixture-supervisor" ? null : createSessionResource()),
       } as never,
     },
   });
@@ -81,6 +81,7 @@ export async function fixture(limit = 2) {
     },
     prompt: "Implement relevant tickets.",
   });
+  await storage.set("auto-build-supervisor", { sessionId: "fixture-supervisor" });
   const ticket = (title: string, dependsOn: string[] = []) =>
     createTicketCommand.run(ctx, { title, statusId: "ready", dependsOn });
   return { ctx, storage, ticket };

@@ -130,6 +130,7 @@ test("Auto Build assigns recovery to the existing implementation owner without a
       prompt: "Finish Child",
       blockOnReview: false,
     });
+    await f.storage.set("auto-build-supervisor", { sessionId: "supervisor" });
     const result = await autoBuildDispatchCommand.run(f.ctx, { ticket: "Child", revision: mode.revision });
     expect(result).toMatchObject({ decision: "started", sessionId: "owner", workspaceId: "child" });
     expect(calls).toEqual(["owner"]);

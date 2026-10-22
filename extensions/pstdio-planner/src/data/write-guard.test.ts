@@ -68,3 +68,24 @@ test("failed or interrupted writes release ownership and preserve the original e
   ).rejects.toBe(error);
   expect(await withWriteGuard(ctx, "plan", async () => "recovered")).toBe("recovered");
 });
+
+test("queued writes wait for active ownership records before taking the guard", async () => {
+  const { withQueuedWriteGuard } = await import("./write-guard");
+  const ctx = context();
+  const finish = Promise.withResolvers<void>();
+  const entered = Promise.withResolvers<void>();
+  const order: string[] = [];
+  const first = withWriteGuard(ctx, "attempt-launch", async () => {
+    entered.resolve();
+    await finish.promise;
+    order.push("saved");
+  });
+  await entered.promise;
+  const second = withQueuedWriteGuard(ctx, "attempt-launch", async () => {
+    order.push("stopped");
+  });
+  expect(order).toEqual([]);
+  finish.resolve();
+  await Promise.all([first, second]);
+  expect(order).toEqual(["saved", "stopped"]);
+});

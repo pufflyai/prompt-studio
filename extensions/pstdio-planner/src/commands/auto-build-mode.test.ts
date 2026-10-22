@@ -96,8 +96,10 @@ test("an idle start reports tickets that already have work instead of a pending 
       },
     ],
   });
-  ctx.sessions.get = async () =>
-    sessionRecord({ id: started.variant.implementationSessionId, title: "Implementation", status: "completed" });
+  ctx.sessions.get = async (id) =>
+    id === "fixture-supervisor"
+      ? null
+      : sessionRecord({ id: started.variant.implementationSessionId, title: "Implementation", status: "completed" });
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({
     enabled: true,
     running: false,
@@ -213,7 +215,7 @@ test("starting saves the mode and supervisor reset together before notifying obs
           recordId: storage.records.id("auto-build"),
           replace: expect.objectContaining({
             revision: mode.revision,
-            enabled: true,
+            state: "running",
             prompt: "Start a fresh run",
             eligible: mode.eligible,
           }),
@@ -222,9 +224,10 @@ test("starting saves the mode and supervisor reset together before notifying obs
       ],
     },
   ]);
+  const { enabled: _enabled, ...stored } = mode;
   expect(observed).toEqual([
-    { mode, supervisor: {} },
-    { mode, supervisor: {} },
+    { mode: JSON.parse(JSON.stringify(stored)), supervisor: {} },
+    { mode: JSON.parse(JSON.stringify(stored)), supervisor: {} },
   ]);
 });
 

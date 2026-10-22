@@ -76,12 +76,17 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     expect(prompts.length).toBeGreaterThan(1);
     for (const prompt of prompts.slice(1)) expect(prompt.length).toBeLessThan(prompts[0].length / 4);
     expect(prompts.at(-1)).not.toContain("auto-build scope");
+    await execute("auto-build.pause");
+    await execute("auto-build.resume");
+    await execute("auto-build.check");
+    const afterResume = await completedSupervisor(resumed.last_request_started);
+    expect(afterResume.id).toBe(session.id);
     const updated = await execute("auto-build.configure", {
       enabled: true,
       prompt: "Choose changed work.",
       requireMergedDependencies: false,
     });
-    expect((await completedSupervisor(resumed.last_request_started)).id).toBe(session.id);
+    expect((await completedSupervisor(afterResume.last_request_started)).id).toBe(session.id);
     const changed = await request(`/sessions/${session.id}/conversation`);
     const last = changed.messages.filter((message: { role: string }) => message.role === "user").at(-1);
     const text = last.parts

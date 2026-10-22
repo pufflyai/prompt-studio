@@ -48,7 +48,7 @@
   "requests.page.title": "Attention requise",
   "commands.autoBuild.configure": "Configurer la construction automatique",
   "timeline.autoBuild.start": "Construire automatiquement",
-  "timeline.autoBuild.stop": "Arrêter la construction automatique",
+  "timeline.autoBuild.stop": "Arrêter Auto Build",
   "timeline.autoBuild.cancel": "Annuler",
   "timeline.autoBuild.description": "Un superviseur utilise votre consigne pour attribuer les tickets valides et non attribués lorsque la capacité le permet. Il attend entre les vérifications et reprend lorsque davantage de travail peut démarrer.",
   "timeline.autoBuild.documentation": "Documentation Auto Build",
@@ -66,5 +66,12 @@
   "timeline.autoBuild.assignedWork": "Un agent travaille déjà sur ce ticket.",
   "timeline.autoBuild.waitingWork": "En attente des prérequis ou de la capacité d’un agent.",
   "settings.workflow.statuses.title": "Sélection des statuts du workflow",
-  "settings.workflow.statuses.description": "Choisissez les statuts du workflow dans l’onglet Paramètres de cette extension. Les libellés ne définissent pas le comportement."
+  "settings.workflow.statuses.description": "Choisissez les statuts du workflow dans l’onglet Paramètres de cette extension. Les libellés ne définissent pas le comportement.",
+  "commands.autoBuild.pause": "Mettre Auto Build en pause",
+  "commands.autoBuild.resume": "Reprendre Auto Build",
+  "timeline.autoBuild.pause": "Pause",
+  "timeline.autoBuild.paused": "En pause",
+  "timeline.autoBuild.resume": "Reprendre",
+  "timeline.autoBuild.requests": "Attention requise",
+  "timeline.autoBuild.openRequest": "Ouvrir la demande"
 }

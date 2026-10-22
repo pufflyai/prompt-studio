@@ -1,4 +1,5 @@
 import { type GuestHost, workbenchPanels } from "@pstdio/sdk/extensions";
+import { ticketRequestsTarget } from "../../data/ticket-page-target";
 import { AutoBuildButton } from "./auto-build-button";
 import type { timelineQueryData } from "./timeline-query";
 import { useAutoBuild } from "./use-auto-build";
@@ -18,6 +19,16 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
   return (
     <AutoBuildButton
       enabled={autoBuild.mode?.enabled ?? false}
+      paused={autoBuild.mode?.state === "paused"}
+      reviewRequests={autoBuild.mode?.reviewRequests}
+      requestErrors={autoBuild.mode?.requestErrors}
+      onOpenRequest={(request) =>
+        void host.call("navigation.open", {
+          target: ticketRequestsTarget({ type: "ticket", id: request.ticketId, extensionId: "pstdio.pstdio-planner" }),
+        })
+      }
+      onPause={() => autoBuild.transition("pause")}
+      onResume={() => autoBuild.transition("resume")}
       completed={autoBuild.mode?.completed}
       matchingTicketCount={autoBuild.mode?.matchingTicketCount}
       readyTicketCount={autoBuild.mode?.readyTicketCount}
@@ -28,7 +39,7 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
       running={autoBuild.mode?.capacity.running ?? 0}
       capacity={autoBuild.mode?.capacity.limit ?? 0}
       stuck={autoBuild.mode?.stuck}
-      error={autoBuild.mode?.configurationError ?? autoBuild.mode?.error ?? autoBuild.error}
+      error={autoBuild.mode?.configurationError ?? autoBuild.mode?.error}
       onOpenSession={(session) =>
         void host.call("navigation.open", {
           target: {
@@ -39,6 +50,7 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
           },
         })
       }
+      actionError={autoBuild.error}
       disabled={!autoBuild.mode || autoBuild.saving}
       configuration={
         autoBuild.mode
@@ -56,7 +68,6 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
             }
           : undefined
       }
-      onTurnOff={() => autoBuild.configure(false)}
       t={t}
     />
   );

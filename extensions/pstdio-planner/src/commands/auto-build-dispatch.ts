@@ -104,6 +104,7 @@ export const autoBuildDispatchCommand = defineCommand({
           decision: "wait" as const,
           reason: capacity.running >= capacity.limit ? "capacity-full" : "ticket-not-ready",
         };
+      if (!owner.sessionId) return { decision: "wait" as const, reason: "supervisor-not-ready" };
       const beforeDispatch = async (baseHeadSha?: string) => {
         const current = await readAutoBuildMode(ctx);
         if (!current.enabled || current.revision !== revision) {
@@ -118,12 +119,11 @@ export const autoBuildDispatchCommand = defineCommand({
         if (next.snapshot !== snapshot) throw new Error("Work changed before dispatch. Read tickets next again.");
       };
       const result = await dispatchNext(ctx, candidate, beforeDispatch, input);
-      if (result.decision === "started") {
-        if (owner.sessionId)
-          await autoBuildDispatches(ctx, owner.sessionId).put(result.workspaceId, {
-            workspaceId: result.workspaceId,
-            dispatchedAt: new Date().toISOString(),
-          });
+      if (["started", "resumed", "queued"].includes(result.decision) && "workspaceId" in result && result.workspaceId) {
+        await autoBuildDispatches(ctx, owner.sessionId).put(result.workspaceId, {
+          workspaceId: result.workspaceId,
+          dispatchedAt: new Date().toISOString(),
+        });
         // The supervisor already knows about work it dispatched.
         await withWriteGuard(
           ctx,

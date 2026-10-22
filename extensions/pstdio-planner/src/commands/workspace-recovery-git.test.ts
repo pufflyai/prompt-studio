@@ -82,6 +82,7 @@ test.each([
       }),
     );
     expect(next.tickets).toContainEqual(expect.objectContaining({ id: ready.id, action: "start" }));
+    await f.storage.delete("auto-build-supervisor");
     expect(await autoBuildCommand.run(f.ctx, {})).toMatchObject({ prompted: true });
     expect((await readAutoBuildMode(f.ctx)).enabled).toBe(true);
     expect(await readAttempt(f.storage, old.workspace.id)).toEqual(previous);

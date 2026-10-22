@@ -53,6 +53,18 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
     waitingTickets: [],
   });
   await expectScopedAutoBuild(execute);
+  const beforePause = await execute("auto-build.read", {});
+  expect(await execute("auto-build.pause", {})).toMatchObject({
+    state: "paused",
+    enabled: false,
+    revision: beforePause.revision,
+  });
+  expect(await execute("auto-build", {})).toEqual({ prompted: false });
+  const resumed = await execute("auto-build.resume", {});
+  expect(resumed).toMatchObject({ state: "running", enabled: true, prompt: beforePause.prompt });
+  expect(resumed.revision).not.toBe(beforePause.revision);
+  expect(await execute("next-tickets", {})).toMatchObject({ tickets: [], waiting: [] });
+  await execute("auto-build.pause", {});
   expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
     enabled: false,
   });

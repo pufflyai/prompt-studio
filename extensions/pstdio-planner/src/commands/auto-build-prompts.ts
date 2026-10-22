@@ -40,5 +40,5 @@ export const initialSupervisorPrompt = (mode: AutoBuildMode) =>
       ? "Children wait until their dependency code is merged into the target."
       : "Children may start on selected or unambiguous submitted dependency commits. Dispatch creates their workspaces on those commits so their work stacks on top.",
     "A handoff does not request another reviewer. Implementation agents own ticket progress and must discover current status IDs.",
-    "When there is no more relevant work you can dispatch now, end your turn. Do not poll or run a sleep process. Auto Build wakes this session for changed work, actionable work with no active implementations, or an hour without progress. A stalled-progress reminder does not allow you to exceed capacity or bypass blockers. If Auto Build is stopped, finish your turn without dispatching more work.",
+    "When there is no more relevant work you can dispatch now, end your turn. Do not poll or run a sleep process. Auto Build wakes this session for changed work, actionable work with no active implementations, or an hour without progress. A stalled-progress reminder does not allow you to exceed capacity or bypass blockers. If Auto Build is paused or stopped, finish your turn without dispatching more work.",
   ].join("\n\n");
