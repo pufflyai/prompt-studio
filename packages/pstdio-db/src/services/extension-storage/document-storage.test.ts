@@ -348,7 +348,7 @@ test("sync discovers text documents through the encrypted records document", asy
   expect(await second.service.openTextDocument({ owner: second.owner, fileId: "note.md" }).read()).toBe("offline text");
 });
 
-test("folds and exports use persisted binary updates without encoding the owner", async () => {
+test("folds and exports do not encode the owner on the foreground thread", async () => {
   const { spyOn } = await import("bun:test");
   const Y = await import("yjs");
   const f = await fixture();

@@ -77,6 +77,7 @@ export const prepareDocument = async (
   try {
     for (const update of updates) Y.applyUpdate(document, update);
     trackDocumentBinary(document, updates);
+    if (input.address.document_id === "records") trackDocumentPayload(document);
     input.diagnostics?.({
       phase: "document-loaded",
       owner: input.owner,
