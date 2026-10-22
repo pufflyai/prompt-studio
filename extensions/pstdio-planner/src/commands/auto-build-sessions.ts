@@ -1,7 +1,7 @@
-import type { CommandContext } from "@pstdio/sdk/extensions";
+import type { CommandContext, ExtensionSessionSummary } from "@pstdio/sdk/extensions";
 import { readSessionHistory } from "../data/session-history";
 
-type Session = Awaited<ReturnType<CommandContext["sessions"]["query"]>>["items"][number];
+type Session = ExtensionSessionSummary;
 export const isLiveSession = (session: { status?: string } | null) =>
   session !== null && ["queued", "in_progress", "awaiting_input"].includes(session.status ?? "");
 

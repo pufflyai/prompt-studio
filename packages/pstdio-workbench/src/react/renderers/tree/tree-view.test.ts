@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchSelectionResourceMetadata, type ResourceRef } from "../../../core";
-import { canVirtualizeTreeSections, resolveTreeListActiveNodeId, resolveTreeListSelection } from "./tree-list-adapter";
+import { resolveTreeListActiveNodeId, resolveTreeListSelection } from "./tree-list-adapter";
 
 const ticketsResource = {
   type: "dashboard-view",
@@ -143,30 +143,5 @@ describe("resolveTreeListSelection", () => {
         selectedNodeId: "src/old.ts",
       }),
     ).toBe("src/index.ts");
-  });
-});
-describe("canVirtualizeTreeSections", () => {
-  test("allows flat tree sections", () => {
-    expect(
-      canVirtualizeTreeSections([
-        { id: "today", nodes: [{ id: "session-1", label: "Session 1" }] },
-        { id: "yesterday", nodes: [{ id: "session-2", label: "Session 2" }] },
-      ]),
-    ).toBe(true);
-  });
-  test("rejects sections with nested nodes", () => {
-    expect(
-      canVirtualizeTreeSections([
-        {
-          id: "workspace",
-          nodes: [{ id: "folder", label: "Folder", children: [{ id: "file", label: "File" }] }],
-        },
-      ]),
-    ).toBe(false);
-  });
-  test("rejects expandable container nodes", () => {
-    expect(
-      canVirtualizeTreeSections([{ id: "workspace", nodes: [{ id: "folder", label: "Folder", isContainer: true }] }]),
-    ).toBe(false);
   });
 });

@@ -1,3 +1,5 @@
+export type { ProjectSyncState, ProjectSyncStatus } from "pstdio-api-contracts";
+export type { AccountClient, AccountDevice, AccountStatus, DeviceLogin } from "./account";
 export type { AgentClient } from "./agents";
 export type { AssetClientOwner, AssetsClient, AssetUploadInput } from "./assets";
 export type { AutomationClient } from "./automation";
@@ -5,7 +7,8 @@ export type { BoardViewsClient } from "./board-views";
 export { createClient, type PstdioClient } from "./client";
 export type { CommandStreamClientEvent } from "./extension-stream";
 export type { ExtensionClient } from "./extensions";
-export type { DirectoryEntry, FilesystemClient } from "./filesystem";
+export type { DirectoryEntry, FilesystemClient, FilesystemDrive } from "./filesystem";
+export type { LinkIconsClient } from "./link-icons";
 export type { NotificationsClient } from "./notifications";
 export type { ProjectClient } from "./projects";
 export {

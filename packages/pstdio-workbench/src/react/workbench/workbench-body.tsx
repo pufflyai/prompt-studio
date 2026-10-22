@@ -1,9 +1,11 @@
 import { Box, Grid } from "@chakra-ui/react";
-import { Header, PANEL_HEADER_CONTROL_SIZE, ResizableSplitLayout } from "@pstdio/ui";
+import { PANEL_HEADER_CONTROL_SIZE, ResizableSplitLayout } from "@pstdio/ui";
 import { headerTrailingMenuPath, type WorkbenchCore, type WorkbenchRegionSize } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
+import { PanelHeader } from "../region/panel-header";
 import { WorkbenchRegion } from "../region/region";
 import {
   useWorkbenchPanelHeaderVisible,
@@ -11,6 +13,7 @@ import {
   WorkbenchRegionTabs,
 } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
+import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -45,14 +48,14 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   const { workbench, hasMainHeader } = props;
   const hasMainContentTabs = useWorkbenchRegionTabsVisible(workbench, "main");
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "main");
-  const settings = useWorkbenchModeRegionSettings(workbench, "main");
-
-  const visible = (settings?.showHeader !== false || hasMainContentTabs) && (hasMainHeader || hasPanelHeader);
 
   return (
-    <Header
+    <PanelHeader
+      workbench={workbench}
+      region="main"
+      hasTabs={hasMainContentTabs}
+      hasContent={hasMainHeader || hasPanelHeader}
       data-workbench-panel-header="main"
-      display={visible ? "flex" : "none"}
       variant="main"
       bg={workbenchBackgrounds.main}
       position="relative"
@@ -74,12 +77,15 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
       />
       <WorkbenchPanelMenuOpeners workbench={workbench} panel="main" />
       <WorkbenchHeaderBorder workbench={workbench} region="main-header" />
-    </Header>
+    </PanelHeader>
   );
 };
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
+  const position = useWorkbenchStore(workbench.layout.store, () => workbench.shell.getArrangement().secondary);
+  const policy = usePanelPolicy(workbench, "secondary");
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
   const panels = useWorkbenchMainPanels(workbench);
@@ -129,7 +135,9 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       layerStyle="panel"
       position="relative"
     >
-      <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
+      <Box display={fullscreen ? "none" : "contents"}>
+        <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
+      </Box>
       <WorkbenchTabDropTarget region="main" />
       <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
         {mainPanelWithMenus}
@@ -138,22 +146,25 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   );
 
   return (
-    <ResizableSplitLayout
-      as="main"
-      minH="0"
-      minW="0"
-      resizableSide="bottom"
-      contentPanel={mainContent}
-      resizablePanel={<WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />}
-      collapsed={!secondaryPanel.has || secondaryPanel.collapsed}
-      collapsible={secondaryPanel.collapsible}
-      defaultSizePx={secondaryPanelSize.defaultPx}
-      minSizePx={secondaryPanelSize.minPx}
-      maxSizePx={secondaryPanelSize.maxPx}
-      contentMinSizePx={SECONDARY_PANEL_CONTENT_MIN_SIZE_PX}
-      resizeLabel="Resize Secondary Panel"
-      onSizeChange={(height) => workbench.layout.setRegionSize("secondary", height)}
-      onCollapsedChange={secondaryPanel.onCollapsedChange}
-    />
+    <WorkbenchPanelDropFrame workbench={workbench} region="secondary">
+      <ResizableSplitLayout
+        as="main"
+        minH="0"
+        minW="0"
+        resizableSide={position}
+        contentPanel={mainContent}
+        resizablePanel={<WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />}
+        collapsed={fullscreen || !secondaryPanel.has || secondaryPanel.collapsed}
+        resizable={policy.resizable}
+        collapsible={policy.canClose && secondaryPanel.collapsible}
+        defaultSizePx={secondaryPanelSize.defaultPx}
+        minSizePx={secondaryPanelSize.minPx}
+        maxSizePx={secondaryPanelSize.maxPx}
+        contentMinSizePx={SECONDARY_PANEL_CONTENT_MIN_SIZE_PX}
+        resizeLabel="Resize Secondary Panel"
+        onSizeChange={(height) => workbench.shell.setRegionSize("secondary", height)}
+        onCollapsedChange={secondaryPanel.onCollapsedChange}
+      />
+    </WorkbenchPanelDropFrame>
   );
 };

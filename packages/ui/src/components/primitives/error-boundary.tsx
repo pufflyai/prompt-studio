@@ -1,4 +1,4 @@
-import { AbsoluteCenter, Button, Stack, Text } from "@chakra-ui/react";
+import { AbsoluteCenter, Button, Text } from "@chakra-ui/react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { AlertMessage } from "@/components/primitives/alert";
@@ -62,17 +62,9 @@ export const ErrorFallback = (props: ErrorFallbackProps) => {
         <AlertMessage
           status="error"
           title={<Text textStyle="paragraph/M/medium">{label ?? "Something went wrong"}</Text>}
+          endElement={onReset ? <Button onClick={onReset}>Try again</Button> : undefined}
         >
-          <Stack gap="sm">
-            <Text textStyle="paragraph/S/regular">
-              {error.message || "An unexpected error occurred while rendering this section."}
-            </Text>
-            {onReset ? (
-              <Button size="sm" variant="primary" onClick={onReset}>
-                Try again
-              </Button>
-            ) : null}
-          </Stack>
+          {error.message || "An unexpected error occurred while rendering this section."}
         </AlertMessage>
       </AbsoluteCenter>
     </ContentPlaceholder>

@@ -2,6 +2,8 @@ export type RunReason = "live" | "catchup";
 
 export type Job = {
   key: string;
+  label?: string;
+  description?: string;
   cron: string;
   timeoutMs: number;
   meta?: Record<string, unknown>;
@@ -39,7 +41,7 @@ export type SchedulerInput = {
 };
 
 export type Scheduler = {
-  activity: () => Array<{ id: string; label: string }>;
+  activity: () => Array<{ id: string; label: string; description?: string }>;
   refresh: () => Promise<void>;
   dispose: () => Promise<void>;
 };

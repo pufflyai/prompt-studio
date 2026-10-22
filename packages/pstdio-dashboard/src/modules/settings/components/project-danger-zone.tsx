@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { getApiClient } from "@/lib/api";
+import { useActionError } from "@/shared/components/use-action-error";
 
 interface ProjectDangerZoneProps {
   projectId?: string;
@@ -13,6 +14,7 @@ interface ProjectDangerZoneProps {
 
 export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
   const { projectId, projectName, onDeleted } = props;
+  const { showError, errorNotice, clearError } = useActionError();
   const deleteProject = useMutation({
     mutationFn: async (input: { projectId: string }) => {
       await getApiClient().projects.delete(input.projectId);
@@ -23,6 +25,7 @@ export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
 
   const handleOpenDelete = () => {
     if (!projectId) return;
+    clearError();
     setDeleteOpen(true);
   };
 
@@ -46,8 +49,7 @@ export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
       onDeleted?.();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to delete project.";
-      toaster.create({
-        type: "error",
+      showError({
         title: "Delete project failed",
         description: message,
       });
@@ -96,7 +98,9 @@ export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
         headline="Delete project?"
         notificationText="This removes the project and all related data."
         buttonText="Delete project"
-      />
+      >
+        {errorNotice}
+      </DeleteConfirmationModal>
     </>
   );
 };

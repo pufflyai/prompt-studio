@@ -1,47 +1,29 @@
-// Use atomic owner claims to prevent overlapping Planner writes across callers.
+// One database-owner process runs Planner commands and hooks. Ownership must die with that runtime.
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 
-export interface WriteClaim {
-  key: string;
-  token: string;
-  startedAt: string;
-}
+type WriteGuardContext = Pick<ExtensionContextBase, "projectId" | "extensionId">;
+
+// Runtime reloads import new source snapshots while old handlers may still be running.
+const registryKey = Symbol.for("pstdio.pstdio-planner.write-guards");
+const runtime = globalThis as typeof globalThis & { [registryKey]?: Set<string> };
+runtime[registryKey] ??= new Set<string>();
+const active = runtime[registryKey];
 
 export async function withWriteGuard<T>(
-  ctx: Pick<ExtensionContextBase, "storage">,
+  ctx: WriteGuardContext,
   key: string,
   write: () => Promise<T>,
   onBusy?: () => T,
 ) {
-  const claims = ctx.storage.collection<WriteClaim>("timeline.write-claims");
-  const claim = { key, token: crypto.randomUUID(), startedAt: new Date().toISOString() };
-  if (!(await claims.createIfAbsent(key, claim))) {
+  const owner = JSON.stringify([ctx.projectId, ctx.extensionId, key]);
+  if (active.has(owner)) {
     if (onBusy) return onBusy();
-    throw new Error(
-      "Another Planner write is running. Retry when it finishes. After a writer crash, inspect write-claim read and follow README recovery instructions.",
-    );
+    throw new Error("Another Planner write is running. Retry when it finishes.");
   }
-
-  let outcome: { value: T } | { error: unknown };
+  active.add(owner);
   try {
-    outcome = { value: await write() };
-  } catch (error) {
-    outcome = { error };
+    return await write();
+  } finally {
+    active.delete(owner);
   }
-
-  try {
-    await claims.deleteIfValue(key, claim);
-  } catch (reason) {
-    if ("error" in outcome) {
-      throw outcome.error;
-    }
-    throw new Error(
-      `Write claim release failed: ${String(reason)}. Inspect write-claim read and follow README recovery instructions.`,
-    );
-  }
-
-  if ("error" in outcome) {
-    throw outcome.error;
-  }
-  return outcome.value;
 }

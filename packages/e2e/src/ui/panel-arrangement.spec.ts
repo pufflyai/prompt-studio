@@ -18,7 +18,7 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   const main = page.getByRole("region", { name: "Main", exact: true });
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader).not.toBeVisible();
-  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
   const secondary = page.locator('[data-workbench-panel-header="secondary"]');
   await secondary.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
@@ -38,7 +38,9 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
   await page.mouse.down();
   await page.mouse.move(start.x + start.width / 2 + 10, start.y + start.height / 2, { steps: 3 });
-  await page.mouse.move(target.x + target.width / 2, target.y + 4, { steps: 12 });
+  // The top edge moves a sole Bottom tab and its panel to the opposite edge.
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 });
+  await expect(page.locator('[data-workbench-tab-drop="main"][data-drop-active]')).toBeVisible();
   await page.mouse.up();
   await expect(mainHeader.getByRole("tab")).toHaveCount(2);
   const moved = mainHeader.locator(`[data-workbench-tab="${instanceId}"]`).getByRole("tab");

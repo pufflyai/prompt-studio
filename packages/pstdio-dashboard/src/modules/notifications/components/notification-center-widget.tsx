@@ -1,4 +1,4 @@
-import { Text } from "@chakra-ui/react";
+import { Stack, Text } from "@chakra-ui/react";
 import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { NotificationCenter, type NotificationCenterAction, type NotificationCenterItem } from "@pstdio/ui";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
@@ -10,6 +10,7 @@ import { getApiClient } from "@/lib/api";
 import { getCollectionsVersion, getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { useActionError } from "@/shared/components/use-action-error";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
@@ -72,14 +73,6 @@ const markRead = async (notification: Notification) => {
   await getApiClient().notifications.markRead(notification.projectId, notification.id);
 };
 
-const showError = (input: WorkbenchPanelRenderInput, title: string, error: unknown) => {
-  input.workbench.notifications.show({
-    level: "error",
-    title,
-    message: error instanceof Error ? error.message : "Notification action failed.",
-  });
-};
-
 export const surfaceNotificationCommandResponse = (
   input: Pick<WorkbenchPanelRenderInput, "workbench">,
   response: CommandExecutionResult,
@@ -87,6 +80,9 @@ export const surfaceNotificationCommandResponse = (
   owner = getRuntimeCollections(),
 ) => {
   for (const commandNotification of collectExtensionCommandNotifications(response)) {
+    if (commandNotification.level === "error") {
+      throw new Error(commandNotification.message ?? commandNotification.title);
+    }
     input.workbench.notifications.show({
       level: commandNotification.level,
       title: commandNotification.title,
@@ -95,11 +91,14 @@ export const surfaceNotificationCommandResponse = (
     });
   }
   publishExtensionCommandEvent(response, { projectId }, owner);
+  if (!response.outcome.ok)
+    throw new Error(response.outcome.error?.message ?? response.outcome.reason ?? "Notification action failed.");
 };
 
 export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) => {
   const owner = getRuntimeCollections();
   const { input } = props;
+  const { showError, errorNotice, clearError } = useActionError();
   useSyncExternalStore(subscribeCollections, getCollectionsVersion, getCollectionsVersion);
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
     const value = state.values[dashboardSelectedProjectIdContextKey];
@@ -111,6 +110,7 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
   const close = () => input.workbench.layout.closePanel(input.instance.instanceId);
 
   const runAction = async (notification: Notification, action: NotificationAction | undefined) => {
+    clearError();
     try {
       await markRead(notification);
       if (!action) {
@@ -139,7 +139,10 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
 
       close();
     } catch (error) {
-      showError(input, "Notification action failed", error);
+      showError({
+        title: "Notification action failed",
+        description: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 
@@ -155,12 +158,16 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
   };
 
   const dismissNotification = async (item: NotificationCenterItem) => {
+    clearError();
     const notification = notificationByItem(notifications, item);
     if (!notification) return;
     try {
       await getApiClient().notifications.dismiss(notification.projectId, notification.id);
     } catch (error) {
-      showError(input, "Notification update failed", error);
+      showError({
+        title: "Notification update failed",
+        description: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 
@@ -173,9 +180,12 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
       onEscape={close}
       onRunAction={handleRunAction}
       footerStart={
-        <Text textStyle="label/XS" color="fg.muted">
-          {items.length === 1 ? "1 pending notification" : `${items.length} pending notifications`}
-        </Text>
+        <Stack gap="xs">
+          {errorNotice}
+          <Text textStyle="label/XS" color="fg.muted">
+            {items.length === 1 ? "1 pending notification" : `${items.length} pending notifications`}
+          </Text>
+        </Stack>
       }
       emptyLabel="No pending notifications."
       key={dashboardWidgetIds.notificationsModal}

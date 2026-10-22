@@ -1,10 +1,15 @@
 export type * from "./authoring";
+export * from "./checkpoint";
+export * from "./checkpoint-peer";
 export * from "./compatibility";
-export * from "./extension-publications";
+export { devicePresenceIntervalMs, devicePresenceLeaseMs } from "./device-presence";
 export * from "./fingerprint";
 export * from "./identity";
+export * from "./protocol";
 export * from "./replay";
+export * from "./retention";
 export * from "./state";
 export * from "./transport";
 export { relayInitializeSchema } from "./transport";
 export * from "./wire";
+export * from "./extension-publications";

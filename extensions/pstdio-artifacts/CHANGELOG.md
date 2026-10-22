@@ -1,5 +1,24 @@
 # pstdio-artifacts
 
+## 0.45.0
+
+_2026-10-22_
+
+### Patch Changes
+
+- d16f2d1: Open artifact snapshot paths from chat in the artifact viewer, with the artifact name on the link.
+- 94321b6: Declare Note and Artifact actions once for consistent resource menus.
+- 94321b6: Resolve missing and deleted artifacts without reporting command errors.
+
+## 0.44.0
+
+_2026-10-18_
+
+### Patch Changes
+
+- d3a0941: Keep extension configuration, drafts, prototypes, tickets, reports, and backups in extension-storage.
+- 191998c: Link the publish-artifact skill to the public Artifacts and extension storage docs.
+
 ## 0.43.1
 
 _2026-10-13_

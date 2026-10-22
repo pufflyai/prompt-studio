@@ -45,6 +45,7 @@ The tree `body` inside `ctx.views.registerView(...)` supplies the tree data:
 
 - `body.kind: "tree"` asks the built-in tree renderer to draw this View.
 - `defaultExpandedSectionIds` lists the section ids that start expanded.
+- Optional `getStructure` returns synchronous body sections before content reads begin. Set `loading: true` on pending sections. The host commits the layout before starting content reads; the final body replaces these sections. Extensions use the serializable `body.structure` declaration instead.
 - `getHeader`, `getBody`, and `getFooter` each return a list of section groups. Header and footer sections stay
   pinned. Body sections use the available scrolling area. A tree may return more than one group in any of the three
   slots.

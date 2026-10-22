@@ -60,15 +60,16 @@
     "packages/*",
     "extensions/*",
     "infra/local/extensions/*",
-    "infra/relay",
-    "infra/account-manager",
+    "services/relay",
+    "services/account-manager",
     ".pstdio/extensions/font-editor",
     ".pstdio/extensions/pstdio-dev",
     "scripts",
     ".pstdio/extensions/motion-lab",
     ".pstdio/extensions/social-radar",
     ".pstdio/extensions/shader-lab",
-    ".pstdio/extensions/shape-art"
+    ".pstdio/extensions/shape-art",
+    "services/telemetry"
   ],
   "devDependencies": {
     "@biomejs/biome": "2.4.10",

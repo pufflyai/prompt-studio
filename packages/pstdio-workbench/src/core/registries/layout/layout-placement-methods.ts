@@ -11,6 +11,7 @@ import { planTrayTabs } from "./tray-tabs";
 
 export const createLayoutPlacementMethods = (input: {
   getLayout(): WorkbenchLayout;
+  validateOpen?: import("./layout-model-types").CreateLayoutModelInput["validateWidgetOpen"];
   requireWidget(id: string): RegisteredWidgetContribution;
   setLayout(layout: WorkbenchLayout): void;
   persistLayout(): void;
@@ -26,6 +27,7 @@ export const createLayoutPlacementMethods = (input: {
       const index = region.widgets.findIndex((placement) => placement.widgetId === widgetId);
       if (index < 0) continue;
       const widget = input.requireWidget(region.widgets[index].contributionId);
+      input.validateOpen?.(region.id, region.widgets[index], update);
       const nextPlacement = buildUpdatedPlacement(region.widgets[index], widget, update);
       const plan = planTrayTabs(
         region.widgets.map((current, currentIndex) => (currentIndex === index ? nextPlacement : current)),

@@ -52,6 +52,26 @@ const identity = resourceKey(document);
 not affect identity. URI conversion belongs to host routing and persistence.
 See the [composition cookbook](../../guides/extensions/0002-workbench-cookbook.md) for page and panel targets.
 
+## Resource identities
+
+`ctx.resources.allocate({ kind })` assigns a new UUID and the next human shorthand
+for a declared resource kind, such as `PS-123`. The extension stores its data under
+the returned ID. Keep that ID attached to its shorthand; do not replace it with a
+second generated ID.
+
+On `main`, `resources.allocate({ kind, idPrefix: "tk" })` selects `tk_` plus a
+22-character Base62 body. This additive option ships in the release after 0.44.0.
+It uses the same UUIDv7 generator and compact encoding as `storage.ids.create("tk")`.
+Omitting `idPrefix` preserves canonical UUID output. Invalid ID prefixes fail before
+allocating a shorthand number. The resource kind's declared uppercase shorthand
+prefix and this lowercase ID prefix are separate: `idPrefix` never changes `PS-123`.
+
+Treat IDs as exact, case-sensitive strings and retain owner fields in references.
+An ID prefix is a readable label, not a globally registered resource type. Existing
+UUIDs are not rewritten, and existing core extension callers keep UUID output until
+their separate adoption change. See [IDs and migration identity](0004-storage.md#ids-positions-and-migration-identity)
+for prefix rules and ordering limits.
+
 ## Related resources
 
 The shared workbench **Related resources** action lists incoming and outgoing links
@@ -80,7 +100,7 @@ another client or through the CLI.
 
 ## Resource file paths
 
-Resource kind `paths` are on `main` and ship in the release after 0.43.x. `@pstdio/sdk` 0.43.1 does not declare them.
+Resource kind `paths` ship in `@pstdio/sdk` 0.44.0.
 
 Declare `paths` on a resource kind to open its files in the owner's UI. Each entry
 contains a workspace-relative `prefix` and a `resolve` command reference. Matching
@@ -105,3 +125,24 @@ Read-only rich messages detect ordinary file paths in prose and show them as res
 bubbles. Agents can share paths without knowing any special link syntax. Owner
 resolution supplies the label, icon, and navigation URL. Ordinary web links keep
 their normal appearance. Editable messages retain their original Markdown source.
+
+## Resource numbers
+
+On `main` (the release after 0.44.0), core owns numbers for resource kinds that declare a prefix.
+Call `ctx.resources.allocate({ kind })` to get an ID and an initial shorthand, including offline.
+Store the ID with the extension's data. Read the current shorthand with
+`ctx.resources.identity({ kind, id })`; it returns `{ id, kind, shorthand, aliases }`, or
+`null` for an unknown resource. Do not store a separate copy of the number.
+
+After devices merge, the resource whose ID sorts first keeps a duplicated number.
+Core assigns the others the next free number and retains earlier numbers as aliases.
+`ctx.resources.findByShorthand({ kind, shorthand })` returns all matching identities,
+with current matches before alias matches. A shared alias can return several resources;
+show those choices so the person can select the right one. Both methods are scoped to
+the calling extension and project.
+
+`resourceEvents.renumbered` from `@pstdio/sdk/extensions` is the host event
+`resource.renumbered`. It carries `{ resource, previousShorthand, shorthand }` after the
+number is saved locally. Use it to refresh displayed numbers and generated references.
+The host handles collision repair and alias storage; extensions need no sync code.
+Workspace numbers (`WS-`) are separate and do not use this API.

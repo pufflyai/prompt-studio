@@ -2,7 +2,7 @@ import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-ty
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import type { WorkbenchCore } from "../../workbench-core-types";
-import { pageLayoutContext } from "./page-main-tabs";
+import { pageContextChanged, pageLayoutContext } from "./page-main-tabs";
 import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 
 export const createPageLayoutCacheHandlers = (cache: ReturnType<typeof createWorkbenchLayoutCache>) => ({
@@ -11,8 +11,30 @@ export const createPageLayoutCacheHandlers = (cache: ReturnType<typeof createWor
   savePageMain: (
     state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
     layout: Parameters<typeof cache.savePageMain>[1],
-  ) => cache.savePageMain(pageLayoutContext(state), layout, state.pages[state.activePageId ?? ""]),
+    beforePreviewRemoval?: Parameters<typeof cache.savePageMain>[1],
+  ) =>
+    cache.savePageMain(pageLayoutContext(state), layout, state.pages[state.activePageId ?? ""], beforePreviewRemoval),
 });
+
+const caches = new WeakMap<WorkbenchCore, ReturnType<typeof createWorkbenchLayoutCache>>();
+
+/** Query the same owners that restoration uses, without publishing navigation. */
+export const getWorkbenchPanelLayout = (
+  core: WorkbenchCore,
+  modeId = core.modes.getActiveModeId(),
+  proposed?: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+) => {
+  const cache = caches.get(core);
+  const current = core.pages.store.getState();
+  const defaults = core.layout.store.getInitialState().layout;
+  const layout =
+    modeId && modeId !== core.modes.getActiveModeId()
+      ? (cache?.readMode(current.projectId, modeId) ?? defaults)
+      : core.layout.getLayout();
+  if (!proposed || !pageContextChanged(proposed, current)) return layout;
+  const pageLayout = cache?.loadPageLayout(pageLayoutContext(proposed), proposed.pages[proposed.activePageId ?? ""]);
+  return { ...layout, regions: { ...layout.regions, main: pageLayout?.regions.main ?? defaults.regions.main } };
+};
 
 export const createShellLayoutContext = (resolve: () => WorkbenchCore) => ({
   getContext() {
@@ -28,6 +50,7 @@ export const createShellLayoutContext = (resolve: () => WorkbenchCore) => ({
 });
 
 export const connectModeLayoutCache = (core: WorkbenchCore, cache: ReturnType<typeof createWorkbenchLayoutCache>) => {
+  caches.set(core, cache);
   const save = () => {
     const state = core.pages.store.getState();
     if (state.activeModeId) cache.saveMode(state.projectId, state.activeModeId, core.layout.getLayout());

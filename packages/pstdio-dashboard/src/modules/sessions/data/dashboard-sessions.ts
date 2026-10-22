@@ -1,12 +1,13 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { ResourceRef, WorkbenchPanelInstance } from "@pstdio/workbench";
-import type { HarnessParams } from "pstdio-api-contracts";
-import { getCollection, getIndexedRows, type SyncedRow } from "@/lib/sync/collections";
+import type { HarnessParams, Session } from "pstdio-api-contracts";
+import { getCollection, getIndexedRows, getRuntimeCollections, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardSessionResource } from "@/shared/app/resources";
 import { type DashboardRows, isDashboardProjectRow, isVisibleDashboardRow } from "@/shared/sync/dashboard-rows";
 import { type DashboardResourceAnchor, listResourceAnchors } from "@/shared/sync/resource-anchors";
 import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
 export interface DashboardSession {
+  device?: Session["device"];
   id: string;
   title: string;
   status: string;
@@ -22,6 +23,7 @@ export interface DashboardSession {
   resource: ResourceRef;
 }
 export interface DashboardSessionView {
+  device?: Session["device"];
   status?: string;
   lastRequestStarted: string | null;
   id: string;
@@ -49,6 +51,7 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
   const anchors = [...listResourceAnchors(session), ...(workspace ? listResourceAnchors(workspace) : [])];
   const parent = anchors[0];
   return {
+    device: session.device as Session["device"],
     id: session.id,
     title,
     status: (session.status as string) ?? "unknown",
@@ -88,8 +91,23 @@ export const buildDashboardSessionsFromRows = (
     .map((session) => createSession(session, workspaceBySessionId.get(session.id)))
     .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt) || a.id.localeCompare(b.id));
 };
-export const createDashboardSessions = (projectId?: string) =>
-  buildDashboardSessionsFromRows(
+const sessionSnapshots = new WeakMap<
+  ReturnType<typeof getRuntimeCollections>,
+  { version: string; projects: Map<string | undefined, DashboardSession[]> }
+>();
+export const createDashboardSessions = (projectId?: string) => {
+  const owner = getRuntimeCollections();
+  const version = (["sessions", "workspaces", "workspace_sessions"] as const)
+    .map((table) => owner.getCollectionVersion(table))
+    .join(":");
+  let cached = sessionSnapshots.get(owner);
+  if (cached?.version !== version) {
+    cached = { version, projects: new Map() };
+    sessionSnapshots.set(owner, cached);
+  }
+  const previous = cached.projects.get(projectId);
+  if (previous) return previous;
+  const sessions = buildDashboardSessionsFromRows(
     {
       sessions: [...getCollection("sessions").values()],
       workspaces: [...getCollection("workspaces").values()],
@@ -97,10 +115,13 @@ export const createDashboardSessions = (projectId?: string) =>
     },
     { projectId },
   );
-export const findDashboardSession = (sessionId: string | undefined) => {
+  cached.projects.set(projectId, sessions);
+  return sessions;
+};
+export const findDashboardSession = (sessionId: string | undefined, projectId?: string) => {
   if (!sessionId) return undefined;
   const session = getCollection("sessions").get(sessionId);
-  if (!session || !isVisibleDashboardRow(session)) return undefined;
+  if (!session || !isVisibleDashboardRow(session) || !isDashboardProjectRow(session, projectId)) return undefined;
   const workspaces = getIndexedRows("workspace_sessions", "session_id", sessionId).flatMap((link) => {
     const workspace = getCollection("workspaces").get(String(link.workspace_id));
     return workspace && isVisibleDashboardRow(workspace) ? [workspace] : [];
@@ -149,6 +170,7 @@ export const resolveDashboardSessionView = (sessionId: string | undefined): Dash
   const workspace = session.workspaceId ? getCollection("workspaces").get(session.workspaceId) : undefined;
   const summary = session.workspaceId ? getDashboardWorkspaceDiffSummary(session.workspaceId) : undefined;
   return {
+    device: session.device,
     id: session.id,
     draftKey: session.id,
     sessionId: session.id,

@@ -3,13 +3,31 @@ import { sessionEvents } from "@pstdio/sdk/extensions";
 import { fixture } from "../commands/auto-build.fixture";
 import { requestHumanCommand, reviewCommand } from "../commands/review-requests";
 import { runAttemptCommand } from "../commands/run-attempt";
+import { saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
 import {
   attemptStatusProjectOpenedHook,
   attemptStatusSessionHooks,
   attemptStatusTicketsChangedHook,
 } from "./attempt-status";
-import { checkAutoBuildCommand } from "./auto-build";
+
+test.each(
+  attemptStatusSessionHooks.map((hook) => [hook.event.id, hook] as const),
+)("supervisor lifecycle %s does not scan ticket attempts", async (_id, hook) => {
+  const { ctx } = await fixture();
+  await saveAutoBuildSupervisor(ctx, { sessionId: "supervisor" });
+  ctx.storage.collection = () => {
+    throw new Error("Supervisor lifecycle must not read ticket collections");
+  };
+  await hook.run(
+    { ...ctx, eventId: hook.event.id, deliveryId: "supervisor" },
+    {
+      sessionId: "supervisor",
+      projectId: ctx.projectId,
+      sessionStatus: "completed",
+    },
+  );
+});
 
 test("session completion updates an unfinished ticket even with Auto Build off", async () => {
   const { ctx, ticket } = await fixture();
@@ -56,19 +74,6 @@ test("removed tickets do not prevent other managed statuses from refreshing", as
   ctx.sessions.get = async (id) => ({ id, status: "completed" }) as never;
   const hook = attemptStatusProjectOpenedHook;
   await hook.run({ ...ctx, eventId: hook.event.id, deliveryId: "opened" }, { projectId: ctx.projectId });
-  expect((await ticketsCollection(ctx.storage).get(task.id))?.statusId).toBe("ready");
-});
-
-test("background checks repair stale status with Auto Build off", async () => {
-  const { ctx, ticket } = await fixture();
-  const task = await ticket("Stopped work");
-  await runAttemptCommand.run(ctx, { ticket: task.id });
-  await ctx.storage.set("auto-build", { enabled: false });
-  ctx.sessions.get = async (id) => ({ id, status: "completed" }) as never;
-  ctx.automation.enqueue = async () => {
-    throw new Error("Must not wake supervisor");
-  };
-  await checkAutoBuildCommand.run(ctx, {});
   expect((await ticketsCollection(ctx.storage).get(task.id))?.statusId).toBe("ready");
 });
 

@@ -79,7 +79,7 @@ describe("session start failure cleanup", () => {
       await expect(isolated.deps.sessionService.transitionStatus(holder.id, "completed")).resolves.toMatchObject({
         status: "completed",
       });
-      await waitForSessionStatus(isolated.app, queued.id, "in_progress");
+      await waitForSessionStatus(isolated, queued.id, "in_progress");
     } finally {
       isolated.harness.completeAll();
       await isolated.close();

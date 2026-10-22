@@ -1,17 +1,31 @@
-import { relayEventSchema, relayPath, type Scope } from "pstdio-sync-contracts";
-import { relayOrigin } from "./http";
+import {
+  liveServerMessageSchema,
+  relayEventSchema,
+  relayPath,
+  type Scope,
+  syncPath,
+  syncProtocolHeader,
+  syncProtocolVersion,
+} from "pstdio-sync-contracts";
+import { serviceAddress, serviceUrl } from "./http";
 
 const NativeWebSocket = globalThis.WebSocket as { new (url: string | URL, options?: Bun.WebSocketOptions): WebSocket };
 
-export const createRelayConnection = (input: {
+interface RelaySocketInput {
   origin: string;
-  scope: Scope;
+  path: string;
+  headers?: Record<string, string>;
+  message: (body: unknown) => "ready" | "changed" | null;
   access: () => Promise<{ token: string; expiresAt: string }>;
   synchronize: (signal: AbortSignal) => Promise<unknown>;
   signal: AbortSignal;
   onError?: () => void;
-}) => {
-  const origin = relayOrigin(input.origin);
+  /** Runs when the connection opens or closes, or a synchronization run ends. */
+  onStatusChange?: () => void;
+}
+
+const createRelaySocket = (input: RelaySocketInput) => {
+  const address = serviceAddress(input.origin);
   let socket: WebSocket | undefined;
   let dirty = false;
   let running: Promise<void> | undefined;
@@ -20,8 +34,9 @@ export const createRelayConnection = (input: {
   let retryDone: (() => void) | undefined;
   let connected = false;
   let attempt: AbortController | undefined;
+  let attemptSignal: AbortSignal;
   const drain = async () => {
-    const signal = AbortSignal.any([input.signal, attempt!.signal]);
+    const signal = attemptSignal;
     try {
       while (dirty && connected && !signal.aborted) {
         dirty = false;
@@ -32,7 +47,13 @@ export const createRelayConnection = (input: {
       socket?.close();
     } finally {
       running = undefined;
+      input.onStatusChange?.();
     }
+  };
+  const setConnected = (next: boolean) => {
+    const changed = connected !== next;
+    connected = next;
+    if (changed) input.onStatusChange?.();
   };
   const wake = () => {
     dirty = true;
@@ -50,14 +71,15 @@ export const createRelayConnection = (input: {
     let failures = 0;
     while (!input.signal.aborted) {
       attempt = new AbortController();
+      attemptSignal = AbortSignal.any([input.signal, attempt.signal]);
       try {
         const access = await input.access();
         if (input.signal.aborted) break;
-        const url = new URL(relayPath(input.scope, "changes"), origin);
+        const url = serviceUrl(address, input.path);
         url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
         const closed = Promise.withResolvers<void>();
         const connection = new NativeWebSocket(url, {
-          headers: { authorization: `Bearer ${access.token}` },
+          headers: { ...input.headers, authorization: `Bearer ${access.token}` },
         });
         socket = connection;
         const endAccess = () => {
@@ -78,16 +100,18 @@ export const createRelayConnection = (input: {
             connection.close();
             return;
           }
-          const parsed = relayEventSchema.safeParse(body);
-          if (!parsed.success) {
+          let message: ReturnType<typeof input.message>;
+          try {
+            message = input.message(body);
+          } catch {
             connection.close();
             return;
           }
-          if (parsed.data.type === "ready") {
-            connected = true;
+          if (message === "ready") {
+            setConnected(true);
             failures = 0;
           }
-          wake();
+          if (message) wake();
         });
         connection.addEventListener("error", () => {
           connection.close();
@@ -99,7 +123,7 @@ export const createRelayConnection = (input: {
         input.onError?.();
       }
       clearTimeout(expiry);
-      connected = false;
+      setConnected(false);
       attempt.abort();
       await running;
       if (input.signal.aborted) break;
@@ -111,5 +135,38 @@ export const createRelayConnection = (input: {
     }
     input.signal.removeEventListener("abort", abort);
   })();
-  return { wake, done };
+  return {
+    wake,
+    done,
+    status: () => ({ connected, busy: dirty || !!running }),
+  };
 };
+
+export const createRelayConnection = (
+  input: Omit<RelaySocketInput, "path" | "message" | "headers"> & { scope: Scope },
+) =>
+  createRelaySocket({
+    ...input,
+    path: relayPath(input.scope, "changes"),
+    message: (body) => {
+      const event = relayEventSchema.parse(body);
+      return event.type === "ready" ? "ready" : "changed";
+    },
+  });
+
+export const createDocumentRelayConnection = (
+  input: Omit<RelaySocketInput, "path" | "message" | "headers"> & { projectId: string },
+) =>
+  createRelaySocket({
+    ...input,
+    path: syncPath({ kind: "live", projectId: input.projectId }),
+    headers: { [syncProtocolHeader]: String(syncProtocolVersion) },
+    message: (body) => {
+      const event = liveServerMessageSchema.parse(body);
+      if (event.type === "ready") {
+        if (event.protocolVersion !== syncProtocolVersion) throw new Error("Unsupported sync protocol");
+        return "ready";
+      }
+      return event.type === "changed" ? "changed" : null;
+    },
+  });

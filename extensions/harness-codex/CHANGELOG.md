@@ -1,5 +1,23 @@
 # harness-codex
 
+## 0.45.0
+
+_2026-10-22_
+
+### Patch Changes
+
+- 10e6f68: Resume Codex sessions after signing in to Codex again, without restarting Prompt Studio.
+
+## 0.44.0
+
+_2026-10-18_
+
+### Patch Changes
+
+- d3a0941: Keep extension configuration, drafts, prototypes, tickets, reports, and backups in extension-storage.
+- ce4ce40: Unblock session cancellation and shutdown when a follow-up steers an active Codex goal turn.
+- b60f2e9: Share one Codex app-server across compatible sessions while preserving thread attribution, controls, and scope cleanup.
+
 ## 0.43.1
 
 _2026-10-13_

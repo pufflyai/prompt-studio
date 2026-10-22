@@ -1,5 +1,51 @@
 # pstdio-planner
 
+## 0.45.0
+
+_2026-10-22_
+
+### Minor Changes
+
+- 7f07c31: Open the latest linked session as an unpinned Side tab when a ticket opens.
+- 51d5449: Shorten ticket planning, preserve screenshots, and answer or revise review requests in Needs attention with linked counts and file breadcrumbs.
+
+### Patch Changes
+
+- eb272ba: Run Planner storage cleanups once so opening large boards does not repeat writes.
+- c649ff3: Save Planner drops once and update only changed ticket positions.
+- 037e267: Start review conversations only when the person chooses Open session.
+- 6e8b719: Open ticket draft and saved document paths in Planner through resource-owned handlers.
+- e98ea94: Fix filtered milestone forecasts and review counts, recover interrupted Planner writes automatically, and reduce Auto Build startup checks.
+- 1f3d64e: Let Planner and Reports migrate their own legacy templates with public storage helpers, and remove the template migration from core.
+- 2b4c5ae: Exit inactive Auto Build checks early and limit scheduled wakes to the current supervisor's dispatched work.
+- c2807ac: Load tickets by ID without waiting for editor modules or reloading hidden boards.
+- 2f7efac: Bound concurrent workspace deletion and session writes, and fetch only the session summaries needed by Planner badges to reduce bulk archive CPU spikes.
+
+## 0.44.0
+
+_2026-10-18_
+
+### Minor Changes
+
+- 8fe8702: Query current work, verify Done dependency commits and combine independent stacks, let implementation owners reconcile Git conflicts and repair existing workspaces before resuming, derive dependency waiting without stale text blockers, keep Tickets and Project Timeline views independent, reflect stopped workers and pending input in managed ticket statuses, show complexity-weighted milestone ETA, navigate the timeline with map-style pan and pinch gestures, and align supervisor wake checks and dispatch with the requested work scope while using short follow-ups and keeping unchanged active work asleep until progress stalls for an hour.
+
+### Patch Changes
+
+- eb26d78: Keep the timeline at the bottom while newly mounted ticket cards settle to their measured heights.
+- 62858a9: Move Planner sessions, workflow settings, board declarations, and the shared filter to the published replacement APIs.
+- d3a0941: Keep extension configuration, drafts, prototypes, tickets, reports, and backups in extension-storage.
+- 452aeb8: Package Planner's shared filter with its declared runtime dependencies.
+- 28e81d6: Start a fresh Auto Build supervisor after stopping.
+- fd40e73: Rename Planner to Project Planner and group ticket status and tag settings with a status icon.
+- 77fa5d8: Write ticket and PR titles that say what gets better for people instead of naming the code change.
+- d5acfdd: Refresh Planner's bundled filter control with the list row tooltip fix.
+- ea4a560: Regenerate the shared filter control after resource menu updates.
+- 191998c: Link Planner skills to the public docs and record waiting on other tickets with depends_on.
+- 5fc8f1d: Keep saved Auto Build failures in the status popover instead of repeating them in the timeline and restart form.
+- 9dc2c52: Return seeded ticket tags in their configured order when the project already has tags.
+- 9354c6a: Repair dependency readiness and workspace recovery, reduce Timeline startup work, and keep its controls visible with a skeleton while loading.
+- d175262: Deprecate Auto Build candidates and attempt state flags in favor of current Planner guards.
+
 ## 0.43.1
 
 _2026-10-13_

@@ -1,6 +1,7 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context, Next } from "hono";
 import { redactSensitiveText } from "pstdio-logging";
+import { createAccountRoutes } from "./features/account/routes";
 import { createAgentRoutes } from "./features/agents/routes";
 import { createAssetRoutes } from "./features/assets/routes";
 import { bearerTokenFrom, MAX_INPUT_BYTES } from "./features/automation/automation-policy";
@@ -10,6 +11,7 @@ import { createExtensionWebviewAssetRoutes } from "./features/extensions/extensi
 import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
+import { createLinkIconRoutes } from "./features/link-icons/routes";
 import { createNotificationsRoutes } from "./features/notifications/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createResourceAnchorRoutes } from "./features/resource-anchors/routes";
@@ -179,6 +181,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/v1", createProjectRoutes(deps));
   app.route("/v1", createAssetRoutes(deps));
   app.route("/v1", createEnvironmentRoutes(deps));
+  app.route("/v1", createAccountRoutes(deps.accountService));
   app.route("/v1", createResourceAnchorRoutes(deps));
   app.route("/v1", createAutomationRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
@@ -189,6 +192,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/v1", createBoardViewsRoutes(deps));
   app.route("/v1", createSessionRoutes(deps));
   app.route("/v1", createSettingsRoutes(deps));
+  app.route("/v1", createLinkIconRoutes());
   app.route("/v1", createWorkspaceRoutes(deps));
   app.route("/v1", createSyncRoutes(deps));
   app.route("/v1", createTerminalRoutes(deps, { allowedOrigins: terminalOrigins }));

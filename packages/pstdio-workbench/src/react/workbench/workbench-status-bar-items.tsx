@@ -68,7 +68,7 @@ const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
       data-sortable={sortable || undefined}
       data-dragging={activeId === id || undefined}
       layerStyle="statusBarItem"
-      alignItems="center"
+      alignItems="stretch"
       display={order < 0 ? "none" : "flex"}
       inert={order < 0}
       order={order}

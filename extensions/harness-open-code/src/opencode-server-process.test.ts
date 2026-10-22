@@ -44,15 +44,23 @@ test("aborting server startup waits for the unpublished child to exit", async ()
   const starting = startOpencodeServer({ host: "127.0.0.1", port: 4096, signal: abort.signal }, [
     process.execPath,
     "-e",
-    `await Bun.write(${JSON.stringify(pidPath)}, String(process.pid)); setInterval(() => {}, 1000);`,
+    `
+      const fs = require("node:fs");
+      const pidPath = ${JSON.stringify(pidPath)};
+      fs.writeFileSync(pidPath + ".tmp", String(process.pid));
+      fs.renameSync(pidPath + ".tmp", pidPath);
+      setInterval(() => {}, 1000);
+    `,
   ]);
   const result = starting.catch((error: unknown) => error);
   try {
     for (let attempt = 0; attempt < 100 && !existsSync(pidPath); attempt++) await Bun.sleep(10);
     expect(existsSync(pidPath)).toBe(true);
+    const pid = Number(readFileSync(pidPath, "utf8"));
+    expect(pid).toBeGreaterThan(0);
     abort.abort();
     expect(await result).toBeInstanceOf(Error);
-    expect(() => process.kill(Number(readFileSync(pidPath, "utf8")), 0)).toThrow();
+    expect(() => process.kill(pid, 0)).toThrow();
   } finally {
     abort.abort();
     await result;

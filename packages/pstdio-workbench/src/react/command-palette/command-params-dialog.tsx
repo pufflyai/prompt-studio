@@ -39,6 +39,7 @@ interface CommandParamsDialogProps {
     context?: WorkbenchCommandExecutionContext;
     onArgsChange: (args: unknown) => void;
   }) => Promise<unknown>;
+  /** @deprecated Failed submissions stay open and display their error in the dialog. */
   onRunError?: (label: string, error: unknown) => void;
   onClose: () => void;
   onRun: (input: {
@@ -65,7 +66,7 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
 };
 
 const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandParamsRequest }) => {
-  const { request, renderParamField, prepareArgs, executeOptionCommand, onClose, onRun, onRunError } = props;
+  const { request, renderParamField, prepareArgs, executeOptionCommand, onClose, onRun } = props;
   const [values, setValues] = useState<Record<string, CommandParamValue>>(() =>
     buildCommandParamInitialValues(
       request.record.command.params,
@@ -135,11 +136,6 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
         context: request.context,
         label: request.label,
       };
-      if (request.record.command.resourceMutation) {
-        onClose();
-        void onRun(submission).catch((caught) => onRunError?.(request.label, caught));
-        return;
-      }
       await onRun(submission);
       onClose();
     } catch (caught) {

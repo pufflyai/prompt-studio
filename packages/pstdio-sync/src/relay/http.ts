@@ -9,12 +9,12 @@ export interface RelayHttpInput {
   signal: AbortSignal;
 }
 
-export const relayOrigin = (input: string) => {
+// A service may run under a path of a shared address, such as https://base.prompt.studio/relay.
+export const serviceAddress = (input: string) => {
   const url = new URL(input);
   if (
     url.username ||
     url.password ||
-    url.pathname !== "/" ||
     url.search ||
     url.hash ||
     !(
@@ -22,9 +22,13 @@ export const relayOrigin = (input: string) => {
       (url.protocol === "http:" && ["127.0.0.1", "[::1]", "localhost"].includes(url.hostname))
     )
   )
-    throw new Error("Invalid relay origin");
-  return url.origin;
+    throw new Error("Invalid service address");
+  return url.href.replace(/\/+$/, "");
 };
+
+// Service routes are absolute paths; resolve them under the address path, not at its origin.
+export const serviceUrl = (address: string, path: string) =>
+  new URL(path.replace(/^\/+/, ""), `${serviceAddress(address)}/`);
 
 const waitForToken = async (token: () => Promise<string>, signal: AbortSignal) => {
   signal.throwIfAborted();
@@ -40,13 +44,13 @@ const waitForToken = async (token: () => Promise<string>, signal: AbortSignal) =
 };
 
 export const createRelayAdapter = (input: RelayHttpInput) => {
-  const origin = relayOrigin(input.origin);
+  const address = serviceAddress(input.origin);
   const request = async (operation: RelayOperation, init: RequestInit = {}) => {
     const signal = init.signal ? AbortSignal.any([input.signal, init.signal]) : input.signal;
     signal.throwIfAborted();
     const headers = new Headers(init.headers);
     headers.set("authorization", `Bearer ${await waitForToken(input.token, signal)}`);
-    const response = await fetch(new URL(relayPath(input.scope, operation), origin), {
+    const response = await fetch(serviceUrl(address, relayPath(input.scope, operation)), {
       ...init,
       headers,
       signal,

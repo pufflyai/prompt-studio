@@ -79,7 +79,13 @@ export interface PlanSection {
 
 export type PlanTag = StoredTag;
 
+export interface PlanPace {
+  msPerComplexity: number;
+  startedAt: string;
+}
+
 export interface Plan {
+  pace: PlanPace | null;
   statuses: StoredStatus[];
   today: string;
   sections: PlanSection[];

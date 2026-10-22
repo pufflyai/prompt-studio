@@ -1,5 +1,5 @@
 import { Spinner } from "@chakra-ui/react";
-import { type PlacementIdentity, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
+import { type PlacementIdentity, workbenchPages } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
   WorkbenchModuleContext,
@@ -19,8 +19,8 @@ import {
   createDashboardWorkspaceOptions,
 } from "@/shared/workspaces/workspace-options";
 import { openDashboardSessionPanel, openSessionBubbleWidgets, selectSidenavSessionNode } from "./session-bubble";
+import { registerSessionPanelPlacements } from "./session-panel-placements";
 import { registerSessionPicker } from "./session-picker";
-import { createSessionTabPresentation } from "./session-tab-presentation";
 
 const SessionWidget = lazy(() =>
   import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionWidget })),
@@ -79,37 +79,6 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: Dash
     },
     { priority: 30 },
   );
-  ctx.modePlacements.registerPlacement({
-    id: "dashboard.session-bubble.project",
-    ref: workbenchPanels.projectSession,
-    modeId: "project",
-    item: {
-      kind: "binding",
-      binding: {
-        kinds: [
-          {
-            kind: "resource-kind",
-            id: "session",
-          },
-          {
-            kind: "resource-kind",
-            id: "session-draft",
-          },
-        ],
-        view: {
-          kind: "view",
-          id: dashboardWidgetIds.sessionBubble,
-        },
-        cardinality: "many",
-        add: {
-          kind: "command",
-          target: { command: { kind: "command", extensionId: "pstdio", id: dashboardCommandIds.createSession } },
-        },
-      },
-    },
-    region: "side",
-    tab: createSessionTabPresentation(ctx),
-  });
 };
 const openNewSessionDraft = (
   ctx: WorkbenchModuleContext,
@@ -233,5 +202,6 @@ export const createSessionBubbleModule = (input: CreateSessionBubbleModuleInput 
       registerSessionBubbleWidgets(ctx, input.sessionDraftPersistence);
       registerSessionBubbleCommands(ctx);
       registerSessionPicker(ctx);
+      return registerSessionPanelPlacements(ctx);
     },
   }) satisfies WorkbenchModuleContribution;

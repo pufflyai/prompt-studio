@@ -13,6 +13,7 @@ export type RuntimeOwnerType = "desktop" | "persistent";
 export type RuntimeActivityItem = {
   id: string;
   label: string;
+  description?: string;
 };
 
 export type RuntimeActivitySummary = {

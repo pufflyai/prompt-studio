@@ -85,6 +85,8 @@ export type KanbanRendererResourceRef = ResourceRef;
 export interface KanbanRendererRow {
   id: string;
   title: string;
+  /** Navigate using query data immediately, without running an activation callback. */
+  target?: NavigationTargetPage;
   resource?: KanbanRendererResourceRef;
   attributes: Record<string, unknown>;
 }

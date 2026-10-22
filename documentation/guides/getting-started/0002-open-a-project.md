@@ -57,6 +57,10 @@ The workbench is the shared window where you use your tools and talk to agents. 
 - **Browse extensions** opens the extension settings so you can add tools.
 - **Settings** at the bottom of the sidebar holds runtime options, project options, and extension settings.
 
+If none of the project's enabled harness extensions is available, Start shows **No agent available**. You can still use Prompt Studio from your own harness, but sessions within Prompt Studio are unavailable until a harness is available. Choose **Browse extensions** to inspect the project's extensions and their failure reasons.
+
+**Checking agent availability…** means the check is still running. **Could not check agent availability** means the check failed; it does not mean no agent is installed. Choose **Check again** to retry. If project setup failed, finish that setup with **Retry setup** first.
+
 The example project has Notes and Planner enabled, so its sidebar includes **Notes** and **Tickets**. Those are extension tools. Your sidebar depends on the extensions you turn on.
 
 Next, [add tools](0003-add-tools.md).

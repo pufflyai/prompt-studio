@@ -45,6 +45,7 @@ const setup = async () => {
   await putTicket(storage, ticket("ps-1"));
   const created: Array<{ id: string; title: string; prompt?: string; anchors?: unknown[] }> = [];
   const opened: unknown[] = [];
+  const followups: unknown[] = [];
   const context = (source: CommandSource = "cli", extra: Record<string, unknown> = {}) =>
     makeCommandContext({
       storage,
@@ -54,20 +55,25 @@ const setup = async () => {
         invocationId: `${source}-actor`,
         navigation: { open: (target: unknown) => opened.push(target) },
         sessions: {
-          get: async (id: string) => created.find((session) => session.id === id) ?? null,
+          get: async (id: string) => {
+            const session = created.find((session) => session.id === id);
+            return session ? { ...session, anchors_json: session.anchors } : null;
+          },
           create: async (input: { title: string; prompt?: string; anchors?: unknown[] }) => {
             const session = { ...input, id: `session-${created.length + 1}` };
             created.push(session);
             return { type: "session", status: "in_progress", ...session };
           },
           addAnchors: async () => {},
-          followup: async () => {},
+          followup: async (input: unknown) => {
+            followups.push(input);
+          },
         } as never,
         ...extra,
       },
     });
   const flagged = async () => (await findTicket(storage, "ps-1"))?.tagIds?.includes(FLAG);
-  return { storage, created, opened, context, flagged };
+  return { storage, created, opened, followups, context, flagged };
 };
 
 const task = {
@@ -113,7 +119,7 @@ const decision = {
 };
 
 describe("review requests", () => {
-  test("a fresh project creates, answers, and reloads a task with its session and flag", async () => {
+  test("a fresh project creates and answers a task without starting a session", async () => {
     const { storage, created, context, flagged } = await setup();
 
     const request = await requestHumanCommand.run(context(), task as never);
@@ -121,12 +127,9 @@ describe("review requests", () => {
     expect(request).toMatchObject({
       state: "open",
       requestedBy: { type: "agent" },
-      context: { sessionId: "session-1" },
+      context: { sessionId: null },
     });
-    expect(created[0]?.prompt).toContain(`pst pstdio-planner review --request-id ${request.id}`);
-    expect(created[0]?.anchors).toContainEqual(
-      expect.objectContaining({ type: "planner-human-request", id: request.id, extensionId: "pstdio-planner" }),
-    );
+    expect(created).toHaveLength(0);
     expect(await flagged()).toBe(true);
 
     await reviewCommand.run(context("dashboard"), { requestId: request.id, response: { confirmed: true } });
@@ -140,6 +143,7 @@ describe("review requests", () => {
       outcomeText: "Completion confirmed",
     });
     expect(await flagged()).toBe(false);
+    expect(created).toHaveLength(0);
   });
 
   test("decisions validate every question kind before saving the answer", async () => {
@@ -161,7 +165,7 @@ describe("review requests", () => {
     );
   });
 
-  test("Review Needed stays until the last open request is answered or cancelled", async () => {
+  test("the attention flag stays until the last open request is answered or cancelled", async () => {
     const { context, flagged } = await setup();
     const first = await requestHumanCommand.run(context(), task as never);
     const second = await requestHumanCommand.run(context(), decision as never);
@@ -174,6 +178,48 @@ describe("review requests", () => {
     await cancelReviewRequestCommand.run(context(), { requestId: second.id, reason: "The scope changed." });
     expect(await flagged()).toBe(false);
     expect((await listReviewRequestsCommand.run(context(), { ticket: "PS-1" })).requests).toHaveLength(2);
+  });
+
+  test("a saved decision can be revised without hiding other pending input", async () => {
+    const { context, flagged } = await setup();
+    const request = await requestHumanCommand.run(context(), decision as never);
+    const answer = (answers: Record<string, string | string[]>) =>
+      reviewCommand.run(context("dashboard"), { requestId: request.id, response: { answers } });
+    await answer({ scope: "preview", platforms: ["mac"], limits: "Internal only" });
+    expect(await flagged()).toBe(false);
+    const pending = await requestHumanCommand.run(context(), task as never);
+
+    await expect(answer({ scope: "beta", limits: "None" })).rejects.toThrow("Invalid choice");
+    expect((await readReviewRequestCommand.run(context(), { requestId: request.id })).outcome).toMatchObject({
+      response: { answers: { scope: "preview", platforms: ["mac"], limits: "Internal only" } },
+    });
+    await answer({ scope: "full", platforms: ["win"], limits: "Public release" });
+
+    const reloaded = await readReviewRequestCommand.run(context(), { requestId: request.id });
+    expect(reloaded).toMatchObject({
+      state: "answered",
+      outcome: {
+        by: { type: "human" },
+        response: { answers: { scope: "full", platforms: ["win"], limits: "Public release" } },
+      },
+      outcomeText: "Release scope: Full release\nPlatforms: Windows\nLimits: Public release",
+    });
+    expect(await flagged()).toBe(true);
+    expect(
+      (await listReviewRequestsCommand.run(context(), { ticket: "PS-1", openOnly: true })).requests.map(({ id }) => id),
+    ).toEqual([pending.id]);
+  });
+
+  test("cancelled decisions cannot be answered", async () => {
+    const { context } = await setup();
+    const request = await requestHumanCommand.run(context(), decision as never);
+    await cancelReviewRequestCommand.run(context(), { requestId: request.id, reason: "Withdrawn" });
+    await expect(
+      reviewCommand.run(context(), {
+        requestId: request.id,
+        response: { answers: { scope: "full", limits: "None" } },
+      }),
+    ).rejects.toThrow("already cancelled");
   });
 
   test("schedules, automations, and events cannot answer or cancel a request", async () => {
@@ -207,18 +253,75 @@ describe("review requests", () => {
       reviewCommand.run(context(), { requestId: request.id, response: { confirmed: true } }),
     ).rejects.toThrow(`Request ${request.id} is already ${current.state}.`);
   });
+});
 
-  test("opening the linked chat records no response", async () => {
-    const { context, opened } = await setup();
+describe("review request conversations", () => {
+  test("opening a request starts its conversation once and records no response", async () => {
+    const { context, opened, created } = await setup();
     const request = await requestHumanCommand.run(context(), task as never);
 
     expect(await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id })).toMatchObject({
       id: "session-1",
     });
-    expect(opened).toHaveLength(1);
+    expect(created).toHaveLength(1);
+    expect(created[0]?.prompt).toContain(`pst pstdio-planner review --request-id ${request.id}`);
+    expect(created[0]?.anchors).toContainEqual(
+      expect.objectContaining({ type: "planner-human-request", id: request.id, extensionId: "pstdio-planner" }),
+    );
+    await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id });
+    expect(created).toHaveLength(1);
+    expect(opened).toHaveLength(2);
     expect((await readReviewRequestCommand.run(context(), { requestId: request.id })).state).toBe("open");
   });
 
+  test("a related ticket session stays idle until the person opens the request", async () => {
+    const { context, created, followups } = await setup();
+    created.push({ id: "origin", title: "Planning", anchors: [{ type: "ticket", id: "ps-1" }] });
+    const request = await requestHumanCommand.run(context(), { ...task, sessionId: "origin" } as never);
+
+    expect(created).toHaveLength(1);
+    expect(followups).toEqual([]);
+    expect(request.context).toMatchObject({ sessionId: null, relatedSessionId: "origin" });
+
+    await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id });
+    await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id });
+
+    expect(created).toHaveLength(1);
+    expect(followups).toEqual([expect.objectContaining({ sessionId: "origin" })]);
+    expect((await readReviewRequestCommand.run(context(), { requestId: request.id })).context.sessionId).toBe("origin");
+  });
+
+  test("overlapping opens share one conversation", async () => {
+    const { context, created } = await setup();
+    const request = await requestHumanCommand.run(context(), task as never);
+    const sessions = await Promise.all([
+      openReviewRequestCommand.run(context("dashboard"), { requestId: request.id }),
+      openReviewRequestCommand.run(context("dashboard"), { requestId: request.id }),
+    ]);
+
+    expect(created).toHaveLength(1);
+    expect(sessions[0]?.id).toBe(sessions[1]?.id);
+  });
+
+  test("opening a saved decision preserves its answer", async () => {
+    const { context, created } = await setup();
+    const request = await requestHumanCommand.run(context(), decision as never);
+    const answered = await reviewCommand.run(context("dashboard"), {
+      requestId: request.id,
+      response: { answers: { scope: "preview", limits: "Internal release" } },
+    });
+    expect(created).toHaveLength(0);
+
+    await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id });
+
+    const reopened = await readReviewRequestCommand.run(context(), { requestId: request.id });
+    expect(reopened.outcome).toEqual(answered.outcome);
+    expect(reopened.state).toBe("answered");
+    expect(created).toHaveLength(1);
+  });
+});
+
+describe("review request ownership", () => {
   test("a request opened before the ticket was done can still be settled", async () => {
     const { storage, context, flagged } = await setup();
     const request = await requestHumanCommand.run(context(), task as never);
@@ -331,12 +434,12 @@ describe("attempt handoffs", () => {
     const second = await requestHumanCommand.run(context("automation"), handoff as never);
 
     expect(second.id).toBe(first.id);
-    expect(created).toHaveLength(1);
+    expect(created).toHaveLength(0);
     expect(first.context).toEqual({
       reason: "approved-revision",
       workspaceId: "workspace-1",
       attemptRevision: 1,
-      sessionId: "session-1",
+      sessionId: null,
       relatedSessionId: "unrelated-session",
     });
     expect(await flagged()).toBe(true);

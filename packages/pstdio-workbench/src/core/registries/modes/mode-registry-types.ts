@@ -30,6 +30,8 @@ export interface WorkbenchModeContribution {
   label?: string;
   defaultTheme?: string;
   floatingPanels?: "visible" | "hidden";
+  /** Published extension headers retain their existing implicit tab visibility. */
+  panelHeaders?: "legacy";
   chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", string | false>>;
   panels?: readonly WorkbenchPanelRegion[];
   /** Region-level layout policy while this mode is active. */

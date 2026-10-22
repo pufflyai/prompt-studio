@@ -1,5 +1,69 @@
 # @pstdio/ui
 
+## 0.45.0
+
+_2026-10-22_
+
+### Minor Changes
+
+- 107c9e0: Add Windows drive selection to the folder picker and expose runtime drive discovery through the SDK.
+- 9286f4a: Share harness controls and native resource actions with webviews and preserve popover keyboard focus.
+- e7f8c90: Enforce independent mode panel permissions and share accessible panel controls across hosts.
+
+### Patch Changes
+
+- d15c674: Render sortable subnavigation lists by visible rows, show declared structure before loading contents, defer row menus and editor mounting, and return session launches before agent startup finishes while preserving requests for recovery.
+- d10df43: Paths guessed from chat prose or inline code become links only when the host's `resolveResource` confirms them, and copied messages keep bubble text.
+- 9cea817: Align project tab drop indicators, drag bounds, and label sizing with shared tabs, and keep the add button beside them.
+- 09a3062: Dismiss open menus and popovers when clicking the desktop title bar.
+- f70dd3f: Keep the bubble launcher ready for keyboard focus when its panel closes.
+- 217a38b: Keep toast close buttons and actions clickable over the desktop title bar in macOS fullscreen.
+- c2807ac: Show a reload action when the Markdown editor cannot download.
+- db3783d: Show harness availability on Start and in sessions, surface harness issues through extension health indicators, preserve pending answers and confirmations, and keep outline action borders consistent.
+- 63d2424: Update ticket properties immediately while changes save in the background.
+- aad171f: Show streamed conversations when opening them while content keeps arriving.
+- bf68de5: Keep system errors in a scrollable status-bar widget with a count tag, keep action failures local, and align compact ghost alert controls with semantic interaction colors.
+- 07028df: Keep desktop and browser panel controls together at the right edge and separate Windows and Ubuntu window controls.
+- 9a6b0d2: Open large Planner boards faster after a restart, show loading placeholders until views and field labels are ready, and keep visible navigation mounted during refreshes.
+- d63201a: Show correct panel cursors and mirror Navigation controls with their placement.
+- d63201a: Show filled panel insertion targets while preserving layout space.
+- b838ba9: Render multiline parameter text at full width with its label above.
+- 77fb351: Show web links in chat messages as bubbles with the site's icon when the host provides `resolveIcon`.
+
+## 0.44.0
+
+_2026-10-18_
+
+### Minor Changes
+
+- e0d2a76: Add resource-owned related tabs with mode-scoped panels, remembered closures, temporary automatic reveal, pin-on-drop retention, and qualified activity-ordered session queries
+- bcb38f8: Add linked count badges and restore document breadcrumb ancestry through owner resource resolution.
+- 6e404ed: Export the chat question form controls and state hook from `@pstdio/ui/chat-ui` so other views can ask questions with the same tabs and choices.
+- ea4a560: Share resource actions across navigation, tabs, and breadcrumbs and add a searchable session picker with live status indicators.
+- 452aeb8: Allow reordering saved views in Kanban boards and data tables with drag and keyboard controls.
+- 7572b09: Repair extension logging, lifecycle events, webview context, test helpers, and notification snoozing; remove APIs deprecated in 0.43.1 with replacements listed in the extension API 0.2.0 migration guide.
+
+### Patch Changes
+
+- 8b1511f: Fix long user message collapsing with a taller borderless preview, a smooth fade above the solid footer, and shared scrolling for expanded messages.
+- 56e1228: Keep typed folder paths when directory loading finishes.
+- 25b1747: Keep Monaco code and diff editors in sync with the app color mode.
+- cfcd7b9: Align menu labels and selection checkmarks while preserving hover and keyboard focus.
+- 49f752b: Keep table rows still while statistics load so clicks open the intended resource.
+- a86ca88: Bound chat responses within long turns, keep user context sticky during scrolling, and avoid redundant rich message updates.
+- fb0c413: Show full tab titles on hover and keyboard focus.
+- a08ac05: Fix ticket column scroll height, align scrollbars with the column edge, and retain card content while dragging.
+- 3157d46: Let resource owners open claimed file paths and show resource bubbles in rich messages.
+- e419d9d: Add virtual board rendering, complete move callbacks, and schema-only view refresh.
+- d5acfdd: Keep the right-click menu on list rows that also show a tooltip.
+- fc1a846: Remove resting borders from tabs and chat composers while preserving the input focus highlight, align main and side chat insets, and match the workspace shell to the selected tab background without a header gap.
+- 45580fe: Preserve paragraph heading formatting across saved and synchronized notes.
+- 1ec80dd: Keep startup waiting with progress and a 20-second notice, wait for cleanup on Quit, and hide project search below eight projects.
+- 0325001: Add shared session rename, archive, and guarded deletion actions with synced navigation and public SDK support.
+- 0a2adf3: Keep data table controls pinned while rows scroll and apply the selected theme to host terminals.
+- 4b3c6cb: Place native extension controls in their Settings tab, save rapid edits in order, preserve status colors, and validate resource links against the enabled extension owner.
+- c02abd6: Keep Escape available to cancel project tab drags while tooltips are visible.
+
 ## 0.43.1
 
 _2026-10-13_

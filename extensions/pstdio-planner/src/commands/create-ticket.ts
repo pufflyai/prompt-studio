@@ -5,6 +5,7 @@ import { resolveDependencyIds, resolveStatusId, resolveTagOptionIds, resolveTick
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
+import { withTicketOrder } from "../data/ticket-order";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
@@ -50,7 +51,6 @@ export const createTicketCommand = defineCommand({
     dependsOn: params.list(),
   },
   async run(ctx, commandParams) {
-    const existing = await ticketsCollection(ctx.storage).list();
     // Resolve before anything is written, so an unknown shorthand leaves no
     // half-created ticket and burns no shorthand.
     const dependsOn = commandParams.dependsOn ? await resolveDependencyIds(ctx.storage, commandParams.dependsOn) : [];
@@ -65,7 +65,6 @@ export const createTicketCommand = defineCommand({
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
     const { id, shorthand } = await allocateTicketIdentity(ctx);
-    const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
 
     const attributeStatusId = typeof attributes.status === "string" ? attributes.status : undefined;
 
@@ -78,23 +77,28 @@ export const createTicketCommand = defineCommand({
         ? await resolveTicketId(ctx.storage, commandParams.parent)
         : (commandParams.parentId ?? null);
 
-    const ticket = await putTicket(ctx.storage, {
-      id,
-      shorthand,
-      title: ticketTitle(commandParams),
-      content: commandParams.content ?? "",
-      statusId,
-      tagIds,
-      attachments: commandParams.attachments ?? [],
-      parentId,
-      dependsOn,
-      blockedReason: null,
-      userPrompt: null,
-      draft: false,
-      archived: false,
-      sortOrder,
-      createdAt: now,
-      updatedAt: now,
+    const { existing, ticket } = await withTicketOrder(ctx, async () => {
+      const existing = await ticketsCollection(ctx.storage).list();
+      const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
+      const ticket = await putTicket(ctx.storage, {
+        id,
+        shorthand,
+        title: ticketTitle(commandParams),
+        content: commandParams.content ?? "",
+        statusId,
+        tagIds,
+        attachments: commandParams.attachments ?? [],
+        parentId,
+        dependsOn,
+        blockedReason: null,
+        userPrompt: null,
+        draft: false,
+        archived: false,
+        sortOrder,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return { existing, ticket };
     });
     await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
     return {

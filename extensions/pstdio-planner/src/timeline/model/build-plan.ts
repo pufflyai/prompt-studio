@@ -4,10 +4,11 @@ import type { AttemptRecord } from "../../data/attempt-types";
 import { withIndependentBlockers } from "../../data/dependency-blockers";
 import { hasPendingInput } from "../../data/review-request-storage";
 import type { TicketReviewRequests } from "../../data/review-request-types";
-import type { Deadline, PlanFlag, PlanLink, PlanRow, PlanTag, StoredPlan } from "../contracts";
+import type { Deadline, PlanFlag, PlanLink, PlanTag, StoredPlan } from "../contracts";
 import { dependencyIds, type PlannerStatus, type PlannerTicket, ticketTarget } from "../planner";
 import { daysBetween } from "./days";
-import { milestoneEta } from "./milestone-eta";
+import { projectPace } from "./milestone-eta";
+import { summarizeSection } from "./section-summary";
 import { ticketState } from "./state";
 import { workflowName } from "./workflow";
 
@@ -183,27 +184,6 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
   };
 }
 
-const atRisk = (row: PlanRow) =>
-  !row.done &&
-  row.flags.some(
-    (flag) => flag === "human-needed" || flag === "blocked" || flag === "waiting" || flag === "out-of-order",
-  );
-
-function toSection(deadline: Deadline | undefined, rows: PlanRow[], today: string) {
-  return {
-    deadline: deadline ? { ...deadline, daysLeft: daysBetween(today, deadline.date) } : null,
-    rows,
-    counts: {
-      total: rows.length,
-      done: rows.filter((row) => row.done).length,
-      humanNeeded: rows.filter((row) => row.flags.includes("human-needed")).length,
-      blocked: rows.filter((row) => row.flags.includes("blocked")).length,
-      // Risk is measured against a deadline, so unscheduled work has none.
-      atRisk: deadline ? rows.filter(atRisk).length : 0,
-    },
-  };
-}
-
 export function buildPlan(input: PlanInput) {
   const groups = executionOrder(input.plan);
   const index = indexInput({ ...input, tickets: withIndependentBlockers(input.tickets) }, groups);
@@ -212,15 +192,19 @@ export function buildPlan(input: PlanInput) {
       const ticket = index.tickets.get(id);
       return ticket ? [toRow(ticket, deadline, index)] : [];
     });
-    const eta = deadline
-      ? milestoneEta(rows, input.tags, input.attempts ?? [], input.now ?? Date.parse(`${input.today}T00:00:00Z`))
-      : null;
-    return { ...toSection(deadline, rows, input.today), eta };
+    return { deadline: deadline ? { ...deadline, daysLeft: daysBetween(input.today, deadline.date) } : null, rows };
   });
+  const pace = projectPace(
+    sections.flatMap(({ rows }) => rows),
+    input.tags,
+    input.attempts ?? [],
+    input.now ?? Date.parse(`${input.today}T00:00:00Z`),
+  );
   return {
+    pace,
     statuses: input.statuses,
     today: input.today,
-    sections,
+    sections: sections.map((section) => summarizeSection(section, input.tags, pace)),
     tags: input.tags,
     trackProperty: input.track,
   };

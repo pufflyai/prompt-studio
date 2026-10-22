@@ -1,20 +1,21 @@
 import { expect, test } from "bun:test";
 import { fixture } from "./auto-build.fixture";
-import { requestHumanCommand } from "./review-requests";
+import { openReviewRequestCommand, readReviewRequestCommand, requestHumanCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
+import { sessionRecord } from "./session-record.fixture";
 
 async function ownedWork() {
   const f = await fixture();
   const ticket = await f.ticket("Repair the stack");
   const attempt = await runAttemptCommand.run(f.ctx, { ticket: ticket.id });
   const followups: string[] = [];
-  f.ctx.sessions.get = async (id) => ({
-    type: "session",
-    id,
-    title: "Owner",
-    status: "completed",
-    anchors_json: [{ type: "planner-attempt", id: attempt.workspace.id }],
-  });
+  f.ctx.sessions.get = async (id) =>
+    sessionRecord({
+      id,
+      title: "Owner",
+      status: "completed",
+      anchors_json: [{ type: "planner-attempt", id: attempt.workspace.id }],
+    });
   f.ctx.sessions.create = async () => {
     throw new Error("Do not replace the owning session.");
   };
@@ -33,10 +34,15 @@ async function ownedWork() {
   return { ...f, input, followups };
 }
 
-test("a phase-free human handoff reuses the workspace owner", async () => {
+test("a phase-free human handoff resumes the workspace owner only when opened", async () => {
   const f = await ownedWork();
   const request = await requestHumanCommand.run(f.ctx, f.input);
-  expect(request.context.sessionId).toBe(f.input.sessionId);
+  expect(request.context.sessionId).toBeNull();
+  expect(f.followups).toEqual([]);
+
+  await openReviewRequestCommand.run(f.ctx, { requestId: request.id });
+  const opened = await readReviewRequestCommand.run(f.ctx, { requestId: request.id });
+  expect(opened.context.sessionId).toBe(f.input.sessionId);
   expect(f.followups).toEqual([f.input.sessionId]);
 });
 

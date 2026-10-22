@@ -10,6 +10,7 @@ import { getOwnedPlacementPreparation } from "../../registries/placements/owned-
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
+import { requirePanelOpen } from "../shell/panel-open-policy";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
 
@@ -102,6 +103,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   });
 
   for (const target of targets) {
+    const beforeOpen = proposed;
     if (target.kind === "page") {
       if (!proposed.projectId) throw new Error("Cannot navigate before a project is active");
       const resolved = locations.resolve(target);
@@ -153,6 +155,16 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
       }
     } else {
       throw new Error("Compound navigation accepts only page and panel targets");
+    }
+    if (target.kind === "panel") {
+      for (const placement of proposed.reconciliation.activate)
+        requirePanelOpen(core, target.region ?? placement.region, {
+          modeId: proposed.activeModeId,
+          identity: placement.identity,
+          resource: target.resource,
+          requestedRegion: target.region,
+          proposed: beforeOpen,
+        });
     }
     recordPanelOpenings(target, proposed.reconciliation.activate, activate, destinations);
   }

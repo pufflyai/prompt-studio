@@ -180,31 +180,32 @@ describe("verifyBoundaries", () => {
 test("a relay outside packages is discovered and obeys package boundaries", () => {
   const dependencies = {
     "pstdio-account-manager": "workspace:*",
+    "pstdio-service-telemetry": "workspace:*",
     "pstdio-sync": "workspace:*",
     "pstdio-sync-contracts": "workspace:*",
   };
   const root = createWorkspace({
-    "package.json": { private: true, workspaces: ["packages/*", "clients/*", "infra/relay"] },
-    "infra/relay/package.json": { name: "pstdio-relay", private: true, dependencies },
+    "package.json": { private: true, workspaces: ["packages/*", "clients/*", "services/relay"] },
+    "services/relay/package.json": { name: "pstdio-relay", private: true, dependencies },
   });
-  expect(verifyBoundaries(root).filter((error) => error.startsWith("infra/relay"))).toEqual([]);
+  expect(verifyBoundaries(root).filter((error) => error.startsWith("services/relay"))).toEqual([]);
 
   write(root, "clients/desktop/package.json", { name: "@pstdio/desktop" });
-  write(root, "infra/relay/src/server.ts", 'import "@pstdio/sdk";\nimport "@pstdio/desktop";\n');
+  write(root, "services/relay/src/server.ts", 'import "@pstdio/sdk";\nimport "@pstdio/desktop";\n');
   const errors = verifyBoundaries(root);
   expect(errors).toContainEqual(
-    expect.stringContaining('infra/relay/src/server.ts: imports undeclared workspace package "@pstdio/sdk"'),
+    expect.stringContaining('services/relay/src/server.ts: imports undeclared workspace package "@pstdio/sdk"'),
   );
   expect(errors).toContainEqual(
-    expect.stringContaining('infra/relay/src/server.ts: imports from clients/* ("@pstdio/desktop")'),
+    expect.stringContaining('services/relay/src/server.ts: imports from clients/* ("@pstdio/desktop")'),
   );
 
-  write(root, "infra/relay/package.json", {
+  write(root, "services/relay/package.json", {
     name: "pstdio-relay",
     private: true,
     dependencies: { ...dependencies, "@pstdio/sdk": "workspace:*" },
   });
   expect(verifyBoundaries(root)).toContainEqual(
-    expect.stringContaining('infra/relay: declares workspace dependency "@pstdio/sdk" not allowed by the layer map'),
+    expect.stringContaining('services/relay: declares workspace dependency "@pstdio/sdk" not allowed by the layer map'),
   );
 });

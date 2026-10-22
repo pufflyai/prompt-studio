@@ -116,7 +116,7 @@ test("keeps note titles independent of the body and renames them through the con
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByRole("textbox")).toHaveValue(note.title);
     await dialog.getByRole("textbox").fill("Renamed title");
-    await dialog.getByRole("button", { name: "Rename", exact: true }).click();
+    await dialog.getByRole("button", { name: "Run", exact: true }).click();
     const renamed = sidebar.getByRole("option", { name: "Renamed title", exact: true });
     await expect(renamed).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: "Renamed title", exact: true })).toHaveAttribute(

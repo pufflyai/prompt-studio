@@ -40,6 +40,7 @@ test("draft discovery uses the current provider when a refresh finishes during m
   ]);
   let current = original;
   const registry = {
+    retainSession: (id: string) => current.retainSession(id),
     get: (...args: Parameters<typeof current.get>) => current.get(...args),
     list: (...args: Parameters<typeof current.list>) => current.list(...args),
     invalidate: () => {},

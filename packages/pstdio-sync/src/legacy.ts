@@ -1,7 +1,8 @@
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
+import { createDocumentStorage } from "./document-storage";
+import type { DocumentStore } from "./document-types";
 import { legacyNamespaceStorage } from "./namespaces";
-import { createRecordStorage } from "./storage";
-import type { GroupedStore, StorageOwner } from "./types";
+import type { StorageOwner } from "./types";
 
 interface LegacyCollectionValue {
   value: Json;
@@ -12,16 +13,12 @@ interface LegacyCollectionValue {
 const legacyJson = (value: Json) => JSON.parse(JSON.stringify(value)) as Json;
 
 /** Deprecated replacements deliberately observe the latest value inside the owner transaction. */
-export const createLegacyRecordStorage = (input: {
-  store: GroupedStore;
-  owner: StorageOwner;
-  environmentId: string;
-}) => {
+export const createLegacyRecordStorage = (input: { store: DocumentStore; owner: StorageOwner }) => {
   const within = <T>(namespace: string[], action: (records: ReturnType<typeof legacyNamespaceStorage>) => Promise<T>) =>
     input.store.transaction(input.owner, (state) =>
       action(
         legacyNamespaceStorage(
-          createRecordStorage({
+          createDocumentStorage({
             ...input,
             store: { transaction: async (_owner, run) => run(state), observer: input.store.observer },
           }).records,
@@ -31,6 +28,7 @@ export const createLegacyRecordStorage = (input: {
     );
 
   const namespaceApi = (namespace: string[]) => {
+    const current = legacyNamespaceStorage(createDocumentStorage(input).records, namespace);
     const read = (records: ReturnType<typeof legacyNamespaceStorage>, id: string) => records.read(id);
     const replace = async (
       records: ReturnType<typeof legacyNamespaceStorage>,
@@ -53,11 +51,10 @@ export const createLegacyRecordStorage = (input: {
     };
     return {
       get: (id: string) =>
-        within(namespace, async (records) => {
-          const record = await read(records, id);
+        current.read(id).then((record) => {
           return record.exists && !record.deleted ? record.value : undefined;
         }),
-      list: () => within(namespace, (records) => records.list()),
+      list: () => current.list(),
       set: (id: string, value: Json) => within(namespace, (records) => replace(records, id, value)),
       createIfAbsent: (id: string, value: Json) =>
         within(namespace, async (records) => {

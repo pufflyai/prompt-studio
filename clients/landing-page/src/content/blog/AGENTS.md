@@ -53,8 +53,7 @@ Publish a release post as soon as its GitHub release is published. Do these step
 - Show a visible cursor in every recording. Move it to the target before clicking, pause briefly so readers can see the target, and show click feedback. Keep the cursor visible during drag-and-drop and leave time to read the result.
 - Use examples that match each tool's purpose. Project Search finds content within the project; do not present it as online research.
 - Keep unrelated floating panels and chat bubble buttons out of recordings. Use normal workbench controls to close or reposition them before recording.
-- Keep shareable source recordings beside the GIFs in `documentation/images/`, with descriptive names prefixed by the post slug. Keep temporary browser state, tokens, logs, and capture scripts outside published assets.
-- Do not add "Light video" or "Dark video" links, or other links to the source recordings, to blog posts. Keep recordings as source assets; readers use the embedded GIF for their active theme.
+- Commit only the exported GIFs, in `documentation/images/` with descriptive names prefixed by the post slug. Do not commit source videos such as MP4 or WebM files; they only add repository size. Keep temporary browser state, tokens, logs, capture frames, and capture scripts outside the repository.
 - Export matching `-light.gif` and `-dark.gif` files. Show only the active theme's version using the site's themed-media support. Give each workflow useful alt text and a short caption.
 - Label the capture build when it differs from the release. State when sample extensions or data change what users see. Do not imply an existing control is new without a release source.
 - Never include credentials, personal paths, or private conversations. Screenshots explain static controls; GIFs explain movement.

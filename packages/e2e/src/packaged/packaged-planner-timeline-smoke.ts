@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { commandRunner } from "./packaged-planner-helpers";
+import { expectPackagedPlannerMoves } from "./packaged-planner-moves-smoke";
 import { expectIndependentPlannerViews } from "./packaged-planner-views-smoke";
 
 export async function expectPackagedPlannerTimeline(input: {
@@ -88,6 +89,7 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(tickets).toContainEqual(expect.objectContaining({ id: result.ticket.id }));
   await expectSharedMilestoneProperties(execute, result.ticket.id, deadline.id);
   await expectReviewRequests(execute, deadline.id);
+  await expectPackagedPlannerMoves(input);
 }
 
 async function expectSharedMilestoneProperties(execute: Execute, ticketId: string, deadlineId: string) {
@@ -174,22 +176,54 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
   });
   await execute("set-ticket-tags", { rowId: ticket.id, tagIds: [] });
   expect((await execute("get-ticket", { id: ticket.id })).tagIds).toContain(reviewNeeded);
-  expect(handoff).toMatchObject({ state: "open", context: { sessionId: expect.any(String) } });
+  for (const request of [handoff, task, decision]) {
+    expect(request).toMatchObject({ state: "open", context: { sessionId: null } });
+  }
 
   await execute("review", { requestId: task.id, response: { confirmed: true } });
   await execute("review", { requestId: decision.id, response: { answers: { platforms: ["mac", "win"] } } });
+  await execute("review", { requestId: decision.id, response: { answers: { platforms: ["win"] } } });
+  expect(await execute("review-requests.read", { requestId: decision.id })).toMatchObject({
+    state: "answered",
+    context: { sessionId: null },
+    outcome: { response: { answers: { platforms: ["win"] } } },
+  });
+  const conversation = await execute("review-requests.open", { requestId: decision.id });
+  expect(conversation).toMatchObject({ type: "session", id: expect.any(String) });
+  expect(await execute("review-requests.open", { requestId: decision.id })).toEqual(conversation);
+  expect(await execute("review-requests.read", { requestId: decision.id })).toMatchObject({
+    state: "answered",
+    context: { sessionId: conversation.id },
+    outcome: { response: { answers: { platforms: ["win"] } } },
+  });
   const mixed = await execute("timeline.plan.read", {});
   const row = mixed.sections
     .flatMap((section: { rows: Array<{ id: string }> }) => section.rows)
     .find((entry: { id: string }) => entry.id === ticket.id);
   expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["human-needed"]) });
+  expect(
+    mixed.ticketRows.find((entry: { id: string }) => entry.id === ticket.id).attributes.reviewRequestItems,
+  ).toMatchObject([
+    { label: "1", icon: "message-circle-warning", color: "orange", target: { page: { id: "ticket-requests" } } },
+  ]);
+  const tree = await execute("ticket-files.tree.body", {
+    renderer: { rendererId: "pstdio.pstdio-planner.view.ticket-files", resource: { type: "ticket", id: ticket.id } },
+  });
+  expect(tree[0].nodes.find((node: { id: string }) => node.id === "review-requests")).toMatchObject({
+    icon: "message-circle-warning",
+    badge: { label: "1", color: "orange" },
+  });
   expect(await execute("review-requests.list", { ticket: ticket.id, openOnly: true })).toMatchObject({
     requests: [{ id: handoff.id }],
   });
 
   await execute("review-requests.cancel", { requestId: handoff.id, reason: "Superseded by a new revision." });
   const settled = await execute("review-requests.read", { requestId: decision.id });
-  expect(settled).toMatchObject({ state: "answered", outcomeText: "Platforms: macOS, Windows" });
+  expect(settled).toMatchObject({ state: "answered", outcomeText: "Platforms: Windows" });
   const [stored] = (await execute("read-tickets", {})).filter((entry: { id: string }) => entry.id === ticket.id);
   expect(stored.tagIds ?? []).not.toContain(reviewNeeded);
+  const resolved = await execute("timeline.plan.read", {});
+  expect(
+    resolved.ticketRows.find((entry: { id: string }) => entry.id === ticket.id).attributes.reviewRequestItems,
+  ).toMatchObject([{ label: "3", color: "green" }]);
 }

@@ -82,8 +82,9 @@ test("saved ticket document links survive copy, reload, history and rename", asy
     mkdirSync(join(root, ".pstdio", "extension-storage", "pstdio-planner", "tickets", ticket.shorthand), {
       recursive: true,
     });
+    // ticket.md opens the saved ticket. This separate draft stays a workspace file.
     writeFileSync(
-      join(root, ".pstdio", "extension-storage", "pstdio-planner", "tickets", ticket.shorthand, "ticket.md"),
+      join(root, ".pstdio", "extension-storage", "pstdio-planner", "tickets", ticket.shorthand, "draft.md"),
       "Exact unsaved draft bytes",
     );
     const [workspace] = await (await request.get(`${apiBase}/v1/workspaces?project_id=${project.id}`)).json();
@@ -94,7 +95,7 @@ test("saved ticket document links survive copy, reload, history and rename", asy
           workspace_id: workspace.id,
           title: "Draft and saved links",
           agent: "pstdio.workbench-fixture.harness.fake",
-          prompt: `[Draft](.pstdio/extension-storage/pstdio-planner/tickets/${ticket.shorthand}/ticket.md) and [Saved](${bodyLink.href})`,
+          prompt: `[Draft](.pstdio/extension-storage/pstdio-planner/tickets/${ticket.shorthand}/draft.md) and [Saved](${bodyLink.href})`,
         },
       })
     ).json();

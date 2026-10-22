@@ -163,6 +163,40 @@ describe("createFakeHarness", () => {
     expect(messages[2]?.parts.at(-1)).toMatchObject({ type: "tool", tool: "bash", status: "completed" });
   });
 
+  test("holds the first two replay responses until their observer releases them", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-replay-observer-"));
+    const harness = createFakeHarness({ turns: 2, chunksPerTurn: 3, chunkDelayMs: 1 });
+    const { patches, sink } = recordingSink();
+    const second = Promise.withResolvers<void>();
+    const session = await harness.start(ctx, {
+      prompt: "Replay __fake_long_stream__ __fake_hold__",
+      sessionId: "held-replay",
+      cwd: root,
+      events: {
+        ...sink,
+        push: (patch) => {
+          sink.push(patch);
+          if (patch.op === "add" && patch.path === "/messages/2") second.resolve();
+        },
+      },
+    });
+    try {
+      await Bun.sleep(20);
+      expect(patches).toHaveLength(2);
+      writeFileSync(join(root, ".fake-hold-release-1"), "release");
+      await second.promise;
+      await Bun.sleep(20);
+      expect(patches).toHaveLength(5);
+      writeFileSync(join(root, ".fake-hold-release-2"), "release");
+      expect(await session.done).toEqual({ status: "completed" });
+      expect(patches).toHaveLength(7);
+      expect(sink.getMessages().at(-1)?.parts.at(-1)).toMatchObject({ type: "tool", tool: "bash" });
+    } finally {
+      session.stop?.();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("emits a question tool part for the question trigger prompt", async () => {
     const harness = createFakeHarness();
 

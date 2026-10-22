@@ -1,16 +1,18 @@
-import { relayOrigin } from "./http";
+import { serviceAddress, serviceUrl } from "./http";
 
 export const createRelayAccess = (input: {
   managerOrigin: string;
   renewalGrant: string;
   workbenchId: string;
   signal: AbortSignal;
+  /** Called when the manager rejects the renewal credential. */
+  denied?: () => void;
 }) => {
-  const origin = relayOrigin(input.managerOrigin);
+  const address = serviceAddress(input.managerOrigin);
   let access: { token: string; expiresAt: string } | undefined;
   let renewing: Promise<{ token: string; expiresAt: string }> | undefined;
   const renew = async () => {
-    const response = await fetch(new URL("/v1/environment-access", origin), {
+    const response = await fetch(serviceUrl(address, "/v1/environment-access"), {
       method: "POST",
       signal: input.signal,
       headers: { authorization: `Bearer ${input.renewalGrant}`, "content-type": "application/json" },
@@ -18,6 +20,7 @@ export const createRelayAccess = (input: {
     });
     if (!response.ok) {
       await response.body?.cancel();
+      if (response.status === 401) input.denied?.();
       throw new Error("Environment renewal unavailable");
     }
     const body = (await response.json()) as { token?: unknown; expiresAt?: unknown };

@@ -21,6 +21,7 @@ export interface ChatPanelComposerProps {
   /** Attachment controls shown only while editing a message draft. */
   attachmentActions?: ReactNode;
   composerHeader?: ReactNode;
+  composerFallback?: ReactNode;
   attachedResources?: string[];
   attachmentList?: ReactNode;
   chatInputAutoFocus: boolean;
@@ -56,6 +57,7 @@ export interface ChatPanelComposerProps {
 export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   const {
     composerHeader,
+    composerFallback,
     chatInputQuestionPrompt,
     composerDecision,
     hasWorkspaceHub,
@@ -74,36 +76,41 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   const composerStyles = useSlotRecipe({ recipe: chatComposerRecipe })({ workspace: hasWorkspaceHub });
   const hasQueuedFollowUps = queuedFollowUps.length > 0;
 
-  const editing = queuedComposer.isEditing && !chatInputQuestionPrompt && !composerDecision;
+  const hasPendingResponse = Boolean(chatInputQuestionPrompt || composerDecision);
+  const editing = queuedComposer.isEditing && !hasPendingResponse;
   const editor = <QueuedComposerInput {...props} editing={editing} hasQueuedFollowUps={hasQueuedFollowUps} />;
   return (
     <Stack p="xs" gap="0">
       <Box className="ps-chat-composer__workspace" css={composerStyles.workspace}>
         {workspaceHub}
         {composerHeader}
-        <QueuedFollowUpList
-          items={queuedFollowUps}
-          editor={editing ? editor : undefined}
-          retainedEditor={editing && queuedComposer.createNew ? editor : undefined}
-          retainedEditorPosition={queuedComposer.editingItem?.position}
-          dirtyItemIds={[...queuedComposer.dirtyItemIds, ...unsavedQueueItemIds]}
-          steeringUnavailableReason={queueSteeringUnavailableReason}
-          onSteer={onQueuedFollowUpSteer}
-          onCombine={onQueuedFollowUpCombine}
-          editingItemId={queuedComposer.editingItemId}
-          onEdit={onQueuedFollowUpUpdate ? queuedComposer.edit : undefined}
-          onRemove={onQueuedFollowUpRemove}
-          onMove={onQueuedFollowUpMove}
-        />
-        {editing ? (
-          <Box css={styles.draft} asChild>
-            <button type="button" onClick={queuedComposer.selectDraft} aria-label="Edit saved draft">
-              {queuedComposer.draftValue || "Saved draft · select to edit"}
-            </button>
-          </Box>
-        ) : (
-          editor
+        {composerFallback}
+        {!composerFallback && (
+          <>
+            <QueuedFollowUpList
+              items={queuedFollowUps}
+              editor={editing ? editor : undefined}
+              retainedEditor={editing && queuedComposer.createNew ? editor : undefined}
+              retainedEditorPosition={queuedComposer.editingItem?.position}
+              dirtyItemIds={[...queuedComposer.dirtyItemIds, ...unsavedQueueItemIds]}
+              steeringUnavailableReason={queueSteeringUnavailableReason}
+              onSteer={onQueuedFollowUpSteer}
+              onCombine={onQueuedFollowUpCombine}
+              editingItemId={queuedComposer.editingItemId}
+              onEdit={onQueuedFollowUpUpdate ? queuedComposer.edit : undefined}
+              onRemove={onQueuedFollowUpRemove}
+              onMove={onQueuedFollowUpMove}
+            />
+            {editing && (
+              <Box css={styles.draft} asChild>
+                <button type="button" onClick={queuedComposer.selectDraft} aria-label="Edit saved draft">
+                  {queuedComposer.draftValue || "Saved draft · select to edit"}
+                </button>
+              </Box>
+            )}
+          </>
         )}
+        {!editing && (!composerFallback || hasPendingResponse) && editor}
       </Box>
     </Stack>
   );

@@ -25,6 +25,12 @@ export type LayoutScope = string;
 export interface LayoutPersistenceAdapter {
   getLayout(scope?: LayoutScope): WorkbenchLayout | undefined;
   setLayout(layout: WorkbenchLayout, scope?: LayoutScope): void;
+  /** Remove a saved scope and cancel its pending writes. */
+  removeLayout?(scope?: LayoutScope): void;
+  /** All saved layouts, including pending writes and inactive scopes. */
+  listLayouts?(): { scope?: string; layout: WorkbenchLayout }[];
+  /** Changes made by this adapter, including transforms and evictions. */
+  onDidChangeLayout?(listener: (scope: string | undefined, layout: WorkbenchLayout | undefined) => void): () => void;
   listScopes?(projectId: string): LayoutScope[];
   transformLayouts?(
     projectId: string,
@@ -40,8 +46,15 @@ export interface LayoutPersistenceAdapter {
 export interface CreateLayoutModelInput {
   defaultRegionVisibility?: Partial<Record<WorkbenchRegion, boolean>>;
   persistence?: LayoutPersistenceAdapter;
+  normalizeLayout?(layout: WorkbenchLayout): WorkbenchLayout;
+  validateRegionChange?(region: WorkbenchRegion, action: "open" | "close" | "resize"): void;
+  validateWidgetOpen?(
+    region: WorkbenchRegion,
+    existing: WorkbenchWidgetPlacement | undefined,
+    target: OpenWidgetInput,
+  ): void;
   /** Region policy for the active context; the layout asks on every query. */
-  getRegionSettings?(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
+  getRegionSettings?(regionId: WorkbenchRegion, modeId?: string): WorkbenchRegionSettings | undefined;
 }
 
 export interface LayoutModel {
@@ -55,7 +68,7 @@ export interface LayoutModel {
   getWidget(id: string): RegisteredWidgetContribution | undefined;
   getPanel(id: string): WorkbenchPanelContribution | undefined;
   getRegionSize(regionId: WorkbenchRegion): WorkbenchRegionSize | undefined;
-  getRegionSettings(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
+  getRegionSettings(regionId: WorkbenchRegion, modeId?: string): WorkbenchRegionSettings | undefined;
   getRegionCollapsible(regionId: WorkbenchRegion): boolean;
   getRegionHeaderBorderBottom(regionId: WorkbenchRegion): boolean;
   setRegionVisible(regionId: WorkbenchRegion, visible: boolean): void;

@@ -31,6 +31,7 @@ test("draft discovery tolerates replacement after the final provider lookup", as
       return handle;
     },
     list: (...args: Parameters<typeof original.list>) => current.list(...args),
+    retainSession: (id: string) => current.retainSession(id),
     invalidate() {},
     dispose: async () => {
       await original.dispose();

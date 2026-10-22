@@ -1,8 +1,8 @@
 import { Box, Button, HStack, Input, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
 import type { AutomationTokenRecord } from "@pstdio/sdk/api";
-import { toaster } from "@pstdio/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useActionError } from "@/shared/components/use-action-error";
 import { useAutomationTokens, useIssueAutomationToken, useRevokeAutomationToken } from "../data/use-automation-tokens";
 
 interface MachineTokensPanelViewProps {
@@ -147,6 +147,7 @@ export const MachineTokensPanelView = (props: MachineTokensPanelViewProps) => {
 
 export const MachineTokensPanel = (props: { projectId?: string }) => {
   const { projectId } = props;
+  const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
   const tokens = useAutomationTokens(projectId ?? "");
   const issue = useIssueAutomationToken(projectId ?? "");
@@ -159,6 +160,7 @@ export const MachineTokensPanel = (props: { projectId?: string }) => {
   if (!projectId) return null;
 
   const handleIssue = () => {
+    clearError();
     issue.mutate(
       {
         name,
@@ -175,8 +177,7 @@ export const MachineTokensPanel = (props: { projectId?: string }) => {
           setScopes("");
         },
         onError: (error) =>
-          toaster.create({
-            type: "error",
+          showError({
             title: t("projectSettings.machineTokens.issueFailed"),
             description: error.message,
           }),
@@ -185,23 +186,29 @@ export const MachineTokensPanel = (props: { projectId?: string }) => {
   };
 
   return (
-    <MachineTokensPanelView
-      tokens={tokens.data?.tokens.filter((token) => !token.revokedAt) ?? []}
-      issuedToken={issuedToken}
-      name={name}
-      scopes={scopes}
-      expiresInDays={expiresInDays}
-      loading={tokens.isLoading}
-      issuing={issue.isPending}
-      revokingTokenId={revoke.isPending ? revoke.variables : undefined}
-      onNameChange={setName}
-      onScopesChange={setScopes}
-      onExpiresInDaysChange={setExpiresInDays}
-      onIssue={handleIssue}
-      onRevoke={(tokenId) => revoke.mutate(tokenId)}
-      onCopy={() => {
-        if (issuedToken) void navigator.clipboard.writeText(issuedToken);
-      }}
-    />
+    <>
+      {errorNotice}
+      <MachineTokensPanelView
+        tokens={tokens.data?.tokens.filter((token) => !token.revokedAt) ?? []}
+        issuedToken={issuedToken}
+        name={name}
+        scopes={scopes}
+        expiresInDays={expiresInDays}
+        loading={tokens.isLoading}
+        issuing={issue.isPending}
+        revokingTokenId={revoke.isPending ? revoke.variables : undefined}
+        onNameChange={setName}
+        onScopesChange={setScopes}
+        onExpiresInDaysChange={setExpiresInDays}
+        onIssue={handleIssue}
+        onRevoke={(tokenId) => {
+          clearError();
+          revoke.mutate(tokenId, { onError: (error) => showError({ title: error.message }) });
+        }}
+        onCopy={() => {
+          if (issuedToken) void navigator.clipboard.writeText(issuedToken);
+        }}
+      />
+    </>
   );
 };

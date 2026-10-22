@@ -4,6 +4,7 @@ import type {
   CommandOutcome,
   CommandSource,
   EventDeliveryResult,
+  ExtensionAccountApi,
   ExtensionActivityApi,
   ExtensionArtifactApi,
   ExtensionAutomationApi,
@@ -80,6 +81,8 @@ export interface CommandRunnerEnvironment {
   process: ExtensionProcessApi;
   net: ExtensionNetApi;
   connections?: ExtensionConnectionsApi;
+  /** Cloud account owner; absent when the host has no native account. */
+  account?: ExtensionAccountApi;
   /** Host PTY supervisor; absent when the host does not support terminals. */
   terminal?: ExtensionTerminalApi;
   settings: ExtensionSettingsApi;

@@ -1,6 +1,7 @@
 import { Box, type BoxProps } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useRef } from "react";
 import type { WorkbenchCore, WorkbenchFocusRegionId } from "../../core";
+import { WorkbenchActionErrors } from "../notifications/action-errors";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
 interface WorkbenchFocusRegionProps extends BoxProps {
@@ -31,6 +32,7 @@ export const WorkbenchFocusRegion = (props: WorkbenchFocusRegionProps) => {
       }}
       {...boxProps}
     >
+      <WorkbenchActionErrors workbench={workbench} target={`region:${region}`} />
       {children}
     </Box>
   );

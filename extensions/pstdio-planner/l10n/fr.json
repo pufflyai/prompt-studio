@@ -1,4 +1,5 @@
 {
+  "requests.navigation.label": "Attention requise",
   "timeline.page.title": "Chronologie du projet",
   "timeline.view.title": "Chronologie du projet",
   "commands.autoBuild.title": "Construire automatiquement",
@@ -43,12 +44,13 @@
   "settings.tickets.deleteLinkedWorkspaces.description": "Lorsqu’un ticket est archivé ou supprimé, supprime ses espaces de travail dès qu’aucun ticket actif ne les utilise. Cela supprime l’arbre de travail, sa branche et les modifications non validées.",
   "settings.tickets.markDoneOnMerge.title": "Marquer comme terminé après fusion",
   "settings.tickets.markDoneOnMerge.description": "Déplace un ticket vers Terminé lorsque la branche de son espace de travail ou une demande de fusion liée est fusionnée.",
-  "requests.view.title": "Demandes de révision",
-  "requests.page.title": "Demandes de révision",
+  "requests.view.title": "Attention requise",
+  "requests.page.title": "Attention requise",
   "commands.autoBuild.configure": "Configurer la construction automatique",
   "timeline.autoBuild.start": "Construire automatiquement",
   "timeline.autoBuild.stop": "Arrêter la construction automatique",
   "timeline.autoBuild.cancel": "Annuler",
   "timeline.autoBuild.description": "Un superviseur utilise votre consigne pour attribuer les tickets valides et non attribués lorsque la capacité le permet. Il attend entre les vérifications et reprend lorsque davantage de travail peut démarrer.",
-  "timeline.autoBuild.documentation": "Documentation Auto Build"
+  "timeline.autoBuild.documentation": "Documentation Auto Build",
+  "commands.ticketRelatedOpenings.title": "Sélectionner les ressources liées au ticket"
 }

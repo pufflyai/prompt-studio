@@ -1,5 +1,4 @@
 import {
-  defineArtifactMount,
   defineExtension,
   defineKeybinding,
   defineNavigationItem,
@@ -10,6 +9,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { commands } from "./src/commands";
 import { libraryTarget } from "./src/contracts";
+import { sites } from "./src/mounts";
 import { artifact, detail, library, openView, view } from "./src/pages";
 import { artifactResources } from "./src/resources";
 
@@ -17,7 +17,7 @@ export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   commands: Object.values(commands),
-  artifactMounts: [defineArtifactMount({ id: "sites", path: "sites", label: l10n("mounts.sites", "Published HTML") })],
+  artifactMounts: [sites],
   resourceKinds: [artifact],
   commandPaletteResources: [artifactResources],
   views: [view, openView],

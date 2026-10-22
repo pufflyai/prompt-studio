@@ -1,4 +1,5 @@
-import { createMenuItemGroups, createMenuItems, withLeadingSeparator } from "../../menus/command-menu-items";
+import { createMenuItemGroups, createMenuItems } from "../../menus/command-menu-items";
+import { withLeadingSeparator } from "../../menus/menu-entries";
 export const createTreeMenuItems = createMenuItems;
 
 import { HStack, Text } from "@chakra-ui/react";
@@ -120,6 +121,7 @@ const isTreeActionEnabled = (
 
 const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
   const { actions = [], context, onCommandError, onRequestParams, workbench } = input;
+  if (actions.length === 0) return [];
   const contextValues = commandContextValues(workbench, context);
   const shortcuts = new Map(workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListActionMenuItem[] = [];
@@ -188,6 +190,7 @@ export const createTreeContextMenuItems = (input: CreateTreeContextMenuItemsInpu
 
 export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
   const { actions = [], context, onCommandError, onRequestParams, workbench } = input;
+  if (actions.length === 0) return [];
   const contextValues = commandContextValues(workbench, context);
   const shortcuts = new Map(workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListAction[] = [];

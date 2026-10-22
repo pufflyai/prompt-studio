@@ -16,6 +16,7 @@ import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { readProjectSetupError } from "@/shared/workspaces/dashboard-workspaces";
 import { StartAboutPanel } from "./start-about-panel";
 import { type StartAction, StartActionList } from "./start-action-list";
+import { StartHarnessAvailability } from "./start-harness-availability";
 import { StartRecentList } from "./start-recent-list";
 import { StartSetupStatus } from "./start-setup-status";
 
@@ -39,6 +40,11 @@ export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const recentResources = readRecentProjectResources(projectId, dashboardDataVersion);
   const setupError = readProjectSetupError(projectId, dashboardDataVersion);
 
+  const reviewExtensions = () =>
+    void input.workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, {
+      panelId: dashboardExtensionsSettingsPanelId,
+    });
+
   const actions: StartAction[] = [
     {
       id: "new-conversation",
@@ -56,10 +62,7 @@ export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
       id: "browse-extensions",
       label: "Browse extensions",
       icon: "blocks",
-      run: () =>
-        void input.workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, {
-          panelId: dashboardExtensionsSettingsPanelId,
-        }),
+      run: reviewExtensions,
     },
   ];
 
@@ -78,6 +81,9 @@ export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
         </Stack>
         {projectId && setupError && <StartSetupStatus key={projectId} projectId={projectId} error={setupError} />}
         <StartAboutPanel />
+        {projectId && !setupError && (
+          <StartHarnessAvailability key={projectId} projectId={projectId} onReviewExtensions={reviewExtensions} />
+        )}
         <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
           <Box flex="1" minW="0" w="full">
             <StartActionList actions={actions} />

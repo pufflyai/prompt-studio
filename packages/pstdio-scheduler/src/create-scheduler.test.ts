@@ -108,7 +108,15 @@ describe("createScheduler live firing", () => {
     const scheduler = createScheduler({
       cron: cron.factory,
       now: () => new Date("2026-04-20T09:00:00.000Z"),
-      listJobs: async () => [{ key: "project/heartbeat", cron: "* * * * *", timeoutMs: 1_000 }],
+      listJobs: async () => [
+        {
+          key: "project/heartbeat",
+          label: "Check merged pull requests",
+          description: "Prompt Studio",
+          cron: "* * * * *",
+          timeoutMs: 1_000,
+        },
+      ],
       runJob: async () => blocker.promise,
     });
     schedulers.push(scheduler);
@@ -117,7 +125,9 @@ describe("createScheduler live firing", () => {
     void cron.fireAll();
     await waitFor(() => scheduler.activity().length === 1);
 
-    expect(scheduler.activity()).toEqual([{ id: expect.any(String), label: "project/heartbeat" }]);
+    expect(scheduler.activity()).toEqual([
+      { id: expect.any(String), label: "Check merged pull requests", description: "Prompt Studio" },
+    ]);
 
     blocker.resolve();
     await waitFor(() => scheduler.activity().length === 0);

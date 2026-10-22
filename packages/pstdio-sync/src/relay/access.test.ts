@@ -27,3 +27,27 @@ test("a manager outage leaves cached access usable through its original expiry",
     await server.stop(true);
   }
 });
+
+test("a rejected device credential reports denial; an unavailable manager does not", async () => {
+  let status = 401;
+  const manager = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response(null, { status }) });
+  let denials = 0;
+  const access = createRelayAccess({
+    managerOrigin: manager.url.origin,
+    renewalGrant: "removed-device",
+    workbenchId: "workbench",
+    signal: new AbortController().signal,
+    denied: () => {
+      denials += 1;
+    },
+  });
+  try {
+    await expect(access()).rejects.toThrow("Environment renewal unavailable");
+    expect(denials).toBe(1);
+    status = 503;
+    await expect(access()).rejects.toThrow("Environment renewal unavailable");
+    expect(denials).toBe(1);
+  } finally {
+    await manager.stop(true);
+  }
+});

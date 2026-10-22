@@ -50,4 +50,14 @@ export const verifyPackagedNoteHeadings = async (
   for (const paragraph of paragraphs) {
     await expect(editor.getByRole("heading", { level: 2, name: paragraph, exact: true })).toBeVisible();
   }
+  const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
+    name: "Heading formatting",
+    exact: true,
+  });
+  await row.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(row).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Heading formatting", exact: true })).toHaveCount(0);
+  await expect.poll(() => execute("pstdio.pstdio-notes.command.notes.resolve", { noteId: note.id })).toBeNull();
 };

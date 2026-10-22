@@ -29,6 +29,7 @@ The sidebar keeps your notes within reach while the open tab shows the note's bo
 - Right-click a note or its tab to rename or delete it.
 - Drag a note to the upper or lower half of another note to place it before or after that note. The placement line shows the destination. Notes can move only within the Notes subtree, and the order is saved.
 - Find notes by title or content from Search. Selecting a result opens its note tab.
+- When an agent mentions a note's `content.md` path in a conversation, the link shows the note's title and opens the note in Notes instead of the raw file.
 - Every note has its own ID, so two people can create notes with the same title at the same time.
 
 For a first check, create a note, type a heading and a short list, then close its tab. Select the note again from the sidebar to see the saved text. You can keep the note open beside an agent conversation while you describe the tool you want to build.

@@ -46,16 +46,8 @@ const resolveWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource:
 // listen to synced rows, so the action only needs to fire the write.
 export const deleteWorkspaceResource = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
-  try {
-    await deleteDashboardWorkspace(resource.id);
-    ctx.notifications.show({ level: "success", title: `Deleted workspace ${workspaceLabel(resource)}` });
-  } catch (error) {
-    ctx.notifications.show({
-      level: "error",
-      title: "Failed to delete workspace",
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
+  await deleteDashboardWorkspace(resource.id);
+  ctx.notifications.show({ level: "success", title: `Deleted workspace ${workspaceLabel(resource)}` });
 };
 export const openRenameWorkspaceResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;

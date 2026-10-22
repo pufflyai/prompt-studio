@@ -56,7 +56,10 @@ afterEach(() => {
 });
 
 describe("session scheduler startup recovery", () => {
-  test("recovers direct dispatched start attachments before transcript persistence", async () => {
+  test.each([
+    false,
+    true,
+  ])("recovers a dispatched start before transcript persistence (attachments=%s)", async (withAttachments) => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-direct-attachment-recovery-test-"));
     const databasePath = join(tempRoot, "db");
     const storageRoot = join(tempRoot, "storage");
@@ -97,8 +100,9 @@ describe("session scheduler startup recovery", () => {
           project_id: project.id,
           title: "Recovered direct attachment",
           prompt: "recover direct prompt",
+          model: "kept-model",
           agent: FAKE_ID,
-          attachments: [{ file_id: attachment.file_id }],
+          ...(withAttachments ? { attachments: [{ file_id: attachment.file_id }] } : {}),
         }),
       });
       expect(createRes.status).toBe(201);
@@ -119,7 +123,10 @@ describe("session scheduler startup recovery", () => {
       expect(startSession).toHaveBeenCalledTimes(1);
       const [ctx, input] = startSession.mock.calls[0] ?? [];
       expect(ctx?.projectId).toBe(projectId);
-      expect((input as HarnessStartInput | undefined)?.attachments?.[0]?.fileId).toBe(attachmentId);
+      expect(input?.prompt).toBe("recover direct prompt");
+      expect((input as HarnessStartInput | undefined)?.model).toBe("kept-model");
+      if (withAttachments)
+        expect((input as HarnessStartInput | undefined)?.attachments?.[0]?.fileId).toBe(attachmentId);
     } finally {
       await recoveredApp.close();
       rmSync(tempRoot, { recursive: true, force: true });

@@ -9,6 +9,7 @@ export { DeleteConfirmationModal } from "./delete-confirmation-modal";
 export { handleDialogAcceptShortcut } from "./dialog-accept-shortcut";
 export type { FolderPickerEntry, FolderPickerProps } from "./folder-picker-dialog";
 export { FolderPicker, FolderPickerDialog } from "./folder-picker-dialog";
+export type { FolderPickerDrive } from "./folder-picker-drive-menu";
 export type { ResourceActionMenuProps, ResourceContextAction } from "./resource-context-menu";
 export { ResourceActionMenu, ResourceContextMenu } from "./resource-context-menu";
 export { ResourceMenuItems } from "./resource-menu-items";

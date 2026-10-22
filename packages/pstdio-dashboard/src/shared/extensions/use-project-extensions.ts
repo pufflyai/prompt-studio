@@ -1,7 +1,5 @@
-import { toaster } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { type CollectionChange, getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import {
   addLocalExtensionFolder,
   type DroppedExtensionFolder,
@@ -28,23 +26,6 @@ import {
   projectExtensionsQueryKey,
 } from "./project-extension-cache";
 import { surfaceWebviewCommandOutcome } from "./webview-command-outcome";
-
-const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
-
-// Extension installs/enables sync over the live collections, so refresh the
-// project extension queries whenever those tables change.
-export const useProjectExtensionSync = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-
-  useEffect(
-    () =>
-      subscribeCollections((change) => {
-        if (!change || !extensionSyncTables.has(change.table)) return;
-        void invalidateExtensionQueries(queryClient, projectId);
-      }),
-    [projectId, queryClient],
-  );
-};
 
 export const useProjectExtensionMetadata = (projectId: string | undefined) => {
   return useQuery({
@@ -203,7 +184,10 @@ export const useUninstallProjectExtension = (projectId: string | undefined) => {
   });
 };
 
-export const useExecuteExtensionCommand = (projectId: string | undefined) => {
+export const useExecuteExtensionCommand = (
+  projectId: string | undefined,
+  showNotice: Parameters<typeof surfaceWebviewCommandOutcome>[1],
+) => {
   const owner = getRuntimeCollections();
   const queryClient = useQueryClient();
 
@@ -223,7 +207,7 @@ export const useExecuteExtensionCommand = (projectId: string | undefined) => {
       return response;
     },
     onSuccess: async (response) => {
-      surfaceWebviewCommandOutcome(response, (notification) => toaster.create(notification));
+      surfaceWebviewCommandOutcome(response, showNotice);
       await queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) });
     },
   });

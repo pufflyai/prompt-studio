@@ -12,6 +12,7 @@ import {
   workbenchCommandPaletteMenuPath,
 } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
+import { WorkbenchActionErrors } from "../notifications/action-errors";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -84,9 +85,14 @@ const executePaletteCommand = async (input: {
   args: unknown;
   context?: WorkbenchCommandExecutionContext;
   label: string;
+  onClose: () => void;
 }) => {
-  const { args, commandId, context, label, workbench } = input;
-  await runUserAction(workbench, label, () => workbench.commands.executeCommand(commandId, args, context));
+  const { args, commandId, context, label, workbench, onClose } = input;
+  const closePalette = workbench.commandPalette.captureClose(onClose);
+  await runUserAction(workbench, label, () => workbench.commands.executeCommand(commandId, args, context), {
+    inlineTarget: "command-palette",
+    onSuccess: closePalette,
+  });
 };
 
 const createEntry = (input: {
@@ -127,12 +133,12 @@ const createEntry = (input: {
     ),
     onActivate: () => {
       const context = commandExecutionContext(workbench);
-      onClose();
       if (hasCommandParameters(record.command.params) && onRequestParams) {
+        onClose();
         onRequestParams({ record, action, label, args, context });
         return;
       }
-      void executePaletteCommand({ workbench, commandId: record.command.id, args, context, label });
+      void executePaletteCommand({ workbench, commandId: record.command.id, args, context, label, onClose });
     },
   };
 };
@@ -197,6 +203,7 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   } = props;
   const { chosenThemePreference, themePreferences, setThemePreference, previewThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
+  const requestId = useWorkbenchStore(workbench.commandPalette.store, (state) => state.requestId);
   useWorkbenchStore(workbench.keybindings.store, (state) => state.keybindings);
   useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
@@ -254,9 +261,10 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   const activeViewMode = getPaletteViewMode(view);
   const activeViewModes = getPaletteViewModes(view);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new presentation resets provider queries even when its initial text is unchanged.
   useEffect(() => {
     if (open) setLiveQuery(initialQuery);
-  }, [initialQuery, open]);
+  }, [initialQuery, open, requestId]);
 
   useEffect(() => {
     if (!open || !isThemeView) previewThemePreference(null);
@@ -272,10 +280,11 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
           initialActiveIndex={initialActiveIndex}
           mode={activeViewMode}
           modes={activeViewModes}
-          resetKey={`${view}:${initialQuery}`}
+          resetKey={`${requestId}:${view}:${initialQuery}`}
           inputIcon={({ mode }) => getPaletteInputIcon({ view, mode })}
           placeholder={({ mode }) => getPalettePlaceholder({ view, mode })}
           emptyLabel="No results found."
+          footerStart={<WorkbenchActionErrors workbench={workbench} target="command-palette" />}
           onActiveEntryChange={(entry) => {
             if (!open || !isThemeView) return;
             const themeEntry = entry as WorkbenchThemePaletteEntry | null;

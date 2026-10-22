@@ -11,6 +11,7 @@ import {
 } from "@pstdio/workbench";
 import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 import i18n from "@/i18n";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { type CollectionChange, getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -28,6 +29,7 @@ import {
   clearDashboardExtensionsReadyProject,
   setDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
+import { invalidateExtensionQueries } from "@/shared/extensions/project-extension-cache";
 import {
   clearCachedDashboardExtensionMetadata,
   dashboardEditableTemplatesContextKey,
@@ -243,6 +245,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       const unsubscribeSync = subscribeCollections((change) => {
         if (!change) return;
         if (extensionSyncTables.has(change.table)) {
+          void invalidateExtensionQueries(getDashboardQueryClient(owner), projectId);
           refreshProject();
           return;
         }

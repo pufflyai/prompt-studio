@@ -1,6 +1,6 @@
 {
   "name": "pstdio",
-  "version": "0.43.1",
+  "version": "0.45.0",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -18,6 +18,11 @@
     "url": "https://github.com/pufflyai/prompt-studio"
   },
   "nx": {
+    "targets": {
+      "build": {
+        "cache": false
+      }
+    },
     "implicitDependencies": [
       "@pstdio/ui"
     ]
@@ -43,12 +48,12 @@
     "yargs": "^18.0.0"
   },
   "optionalDependencies": {
-    "@pstdio/cli-darwin-arm64": "0.43.1",
-    "@pstdio/cli-darwin-x64": "0.43.1",
-    "@pstdio/cli-linux-x64": "0.43.1",
-    "@pstdio/cli-linux-arm64": "0.43.1",
-    "@pstdio/cli-win-x64": "0.43.1",
-    "@pstdio/cli-win-arm64": "0.43.1"
+    "@pstdio/cli-darwin-arm64": "0.45.0",
+    "@pstdio/cli-darwin-x64": "0.45.0",
+    "@pstdio/cli-linux-x64": "0.45.0",
+    "@pstdio/cli-linux-arm64": "0.45.0",
+    "@pstdio/cli-win-x64": "0.45.0",
+    "@pstdio/cli-win-arm64": "0.45.0"
   },
   "devDependencies": {
     "@pstdio/sdk": "workspace:*",
