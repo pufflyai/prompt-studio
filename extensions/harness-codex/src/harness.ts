@@ -56,8 +56,8 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
         description: "Fast mode uses more of your Codex allowance.",
         defaultValue: "default",
         options: [
-          { label: "Standard", value: "default" },
-          { label: "Fast", value: "fast" },
+          { label: "Standard", value: "default", icon: "Snail" },
+          { label: "Fast", value: "fast", icon: "Zap" },
         ],
       }),
       collaboration_mode: {

@@ -37,6 +37,21 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const EffortLevels: Story = {};
+export const Speed: Story = {
+  args: {
+    schema: {
+      service_tier: {
+        type: "select",
+        label: "Speed",
+        defaultValue: "default",
+        options: [
+          { label: "Standard", value: "default", icon: "Snail" },
+          { label: "Fast", value: "fast", icon: "Zap" },
+        ],
+      },
+    },
+  },
+};
 export const RememberedEffort: Story = {
   args: { overrides: { effort: "high" } },
 };
