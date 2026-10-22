@@ -6,11 +6,20 @@ import { AutoBuildButton } from "./auto-build-button";
 import { PlanHeader } from "./plan-header";
 import { timelineInitialState } from "./timeline-query";
 
-function HeaderStory(props: { filtered?: boolean; running?: boolean }) {
-  const { filtered, running } = props;
+function HeaderStory(props: { filtered?: boolean; running?: boolean; obsoleteProperties?: boolean }) {
+  const { filtered, running, obsoleteProperties } = props;
   const [search, setSearch] = useState("");
   const [views, setViews] = useState<CollectionViewsSource<KanbanRendererSettings>["views"]>([
-    { id: "all", title: "All", ...timelineInitialState, builtIn: true },
+    {
+      id: "all",
+      title: "All",
+      ...timelineInitialState,
+      settings: {
+        ...timelineInitialState.settings,
+        displayProperties: obsoleteProperties ? ["status", "reviewRequests", "deleted-tag"] : ["status"],
+      },
+      builtIn: true,
+    },
     {
       id: "active",
       title: "In progress",
@@ -56,9 +65,10 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean }) {
               ],
             },
             filterable: true,
+            displayable: true,
           },
         ],
-        storageKey: `timeline-header-story:${filtered ? "filtered" : "all"}`,
+        storageKey: `timeline-header-story:${filtered ? "filtered" : "all"}:${obsoleteProperties ? "obsolete" : "current"}`,
       }}
       viewsSource={source}
       search={search}
@@ -88,3 +98,5 @@ type Story = StoryObj<typeof HeaderStory>;
 export const SavedViews: Story = {};
 export const FilteredView: Story = { args: { filtered: true } };
 export const AutoBuildRunning: Story = { args: { running: true } };
+
+export const RetiredDisplayProperties: Story = { args: { obsoleteProperties: true } };

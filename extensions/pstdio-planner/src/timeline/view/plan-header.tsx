@@ -1,10 +1,15 @@
-import { CollectionViewBar, type CollectionViewsSource, useCollectionViews } from "@pstdio/ui/collection-view";
+import {
+  CollectionViewBar,
+  type CollectionViewsSource,
+  useCollectionViewStore,
+  useCollectionViews,
+} from "@pstdio/ui/collection-view";
 import {
   buildFilterCategories,
   getAttributeStringValues,
   type KanbanRendererSettings,
 } from "@pstdio/ui/kanban-renderer";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { TimelineDisplayMenu } from "./timeline-display-menu";
 import { timelineInitialState, type timelineQueryData } from "./timeline-query";
 
@@ -19,6 +24,13 @@ interface PlanHeaderProps {
 
 export function PlanHeader(props: PlanHeaderProps) {
   const { data, viewsSource, search, onSearchChange, resultLabel, actions } = props;
+  const { settings, setSettings } = useCollectionViewStore(data.storageKey, timelineInitialState, (state) => state);
+  // Reconcile the restored draft before the shared controls activate a fallback or refreshed view.
+  useEffect(() => {
+    const displayable = new Set(data.attributes.filter((attribute) => attribute.displayable).map(({ id }) => id));
+    const displayProperties = settings.displayProperties.filter((id) => displayable.has(id));
+    if (displayProperties.length !== settings.displayProperties.length) setSettings({ displayProperties });
+  }, [data.attributes, settings.displayProperties, setSettings]);
   const { views } = useCollectionViews({
     storageKey: data.storageKey,
     fields: data.attributes,
