@@ -30,8 +30,9 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
       const dispatches = await autoBuildDispatches(ctx, session.id).list();
       const progress = await Promise.all(
         dispatches.map(async ({ workspaceId, dispatchedAt }) => {
+          // Only workspace recovery retires an attempt, and it dispatches the replacement for the same ticket.
           const attempt = await readAttempt(ctx.storage, workspaceId);
-          if (!attempt || attempt.state === "abandoned") return;
+          if (!attempt) return;
           const [ticket, worker] = await Promise.all([
             ticketsCollection(ctx.storage).get(attempt.ticketId),
             ctx.sessions.get(attempt.implementationSessionId),

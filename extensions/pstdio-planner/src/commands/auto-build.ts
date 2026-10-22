@@ -60,6 +60,7 @@ async function wakeSupervisor(ctx: CommandContext) {
         title: "Auto Build supervisor",
         workspaceId: home?.id,
         prompt: initialSupervisorPrompt(mode),
+        harness: mode.supervisorModel,
       });
       supervisorId = created.id;
     }

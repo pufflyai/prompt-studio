@@ -1,10 +1,12 @@
 import { expect, test } from "bun:test";
 import { DEFAULT_STATUSES, DEFAULT_TAGS } from "../../data/seed";
+import { emptyWorkflowStatuses } from "../../data/workflow-statuses";
 import { buildPlan } from "./build-plan";
 import { filterSections } from "./filter";
 import { reviewQueue } from "./review";
 
 const plan = buildPlan({
+  workflow: { ...emptyWorkflowStatuses(), completedStatusIds: ["done"] },
   today: "2026-10-13",
   now: Date.parse("2026-10-13T12:00:00Z"),
   statuses: DEFAULT_STATUSES,

@@ -1,6 +1,5 @@
 import type { AttemptRecord } from "../data/attempt-types";
 import type { PlanRow } from "../timeline/contracts";
-import { workflowName } from "../timeline/model/workflow";
 import type { WaitingTicket } from "./next-ticket-types";
 
 interface NextTicketWaitInput {
@@ -8,6 +7,8 @@ interface NextTicketWaitInput {
   assigned: boolean;
   attempts: AttemptRecord[];
   resumable: boolean;
+  answeredInput: boolean;
+  blockedStatusIds: string[];
   capacity: { running: number; limit: number };
 }
 
@@ -17,20 +18,18 @@ export function nextTicketWait(row: PlanRow, input: NextTicketWaitInput) {
     dependencyIds,
     ...(detail ? { detail } : {}),
   });
-  if (input.pending.length || row.flags.includes("human-needed"))
+  if (input.pending.length)
     return wait(
       "human-input-needed",
       input.pending.map(({ shorthand }) => shorthand),
     );
   if (row.gate) return wait("review-gate");
-  if (row.blockedReason || workflowName(row.status?.name) === "blocked") return wait("blocked", [], row.blockedReason);
+  // An agent marks its own ticket blocked while it waits; answered input lets the same owner resume.
+  if (!input.answeredInput && (row.blockedReason || input.blockedStatusIds.includes(row.status?.id ?? "")))
+    return wait("blocked", [], row.blockedReason);
   if (input.assigned) return wait("assigned");
   if (input.attempts.length && !input.resumable)
-    return wait(
-      "existing-attempt",
-      [],
-      input.attempts.map(({ workspaceShorthand, state }) => `${workspaceShorthand}: ${state}`).join(", "),
-    );
+    return wait("existing-attempt", [], input.attempts.map(({ workspaceShorthand }) => workspaceShorthand).join(", "));
   if (input.capacity.running >= input.capacity.limit) return wait("capacity-full");
   return null;
 }

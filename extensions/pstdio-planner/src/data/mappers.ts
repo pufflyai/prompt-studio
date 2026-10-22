@@ -9,8 +9,6 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { l10n, workbenchPages } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
-import { HUMAN_REQUESTED_OPTION_ID } from "./review-request-storage";
-import { REVIEW_REQUEST_ICON } from "./review-request-summary";
 import { ticketPageTarget } from "./ticket-page-target";
 import {
   resolveTicketHierarchy,
@@ -236,12 +234,12 @@ const tagToAttribute = (tag: StoredTag): KanbanRendererAttributeDescriptor => ({
       value: option.id,
       label: option.name,
       color: option.color,
-      icon: option.id === HUMAN_REQUESTED_OPTION_ID ? REVIEW_REQUEST_ICON : option.icon,
+      icon: option.icon,
     })),
   },
   filterable: true,
   displayable: true,
-  editable: !tag.options.some((option) => option.id === HUMAN_REQUESTED_OPTION_ID),
+  editable: true,
   groupable: isSingleSelectTicketTag(tag),
 });
 

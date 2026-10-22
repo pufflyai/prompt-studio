@@ -79,6 +79,11 @@ function PlanContent(props: PlanContentProps) {
   const [search, setSearch] = useState("");
   const queryData = timelineQueryData(plan, t);
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
+  const displayProperties = useCollectionViewStore(
+    queryData.storageKey,
+    timelineInitialState,
+    (state) => state.settings.displayProperties,
+  );
   const filtered = filterRowsByView(queryData.rows, filter, queryData.attributes);
   const matching = searchRows(filtered, search, (row) => [row.title, String(row.attributes.id)]);
   const tracks = visibleTracks(plan, filter, queryData.attributes);
@@ -100,6 +105,13 @@ function PlanContent(props: PlanContentProps) {
           <PlanGraph
             {...viewProps}
             today={plan.today}
+            cardInteraction={{
+              host,
+              client,
+              attributes: queryData.attributes,
+              displayProperties,
+              rows: new Map(queryData.rows.map((row) => [row.id, row])),
+            }}
             onOpenRequests={(row) => {
               void host.call("navigation.open", { target: ticketRequestsTarget(row.target.resource!) });
             }}

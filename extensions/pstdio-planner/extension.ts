@@ -19,7 +19,6 @@ import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
-import { attemptStatusHooks } from "./src/hooks/attempt-status";
 import { autoBuildHooks, autoBuildSchedule } from "./src/hooks/auto-build";
 import { dependencyBlockerHooks } from "./src/hooks/dependency-blockers";
 import { gitMergedHook } from "./src/hooks/git-merged";
@@ -44,6 +43,13 @@ const templateCommandRefs = {
 export default defineExtension({
   settings: {
     properties: {
+      "workflow.statuses": {
+        type: "object",
+        scope: "project",
+        default: { completedStatusIds: [], blockedStatusIds: [], activeStatusIds: [], mergeTargetStatusId: null },
+        title: "Workflow status selections",
+        description: "Choose workflow statuses in this extension's Settings tab. Labels do not define behavior.",
+      },
       "tickets.deleteLinkedWorkspaces": {
         type: "boolean",
         scope: "project",
@@ -61,7 +67,7 @@ export default defineExtension({
         title: l10n("settings.tickets.markDoneOnMerge.title", "Mark done on merge"),
         description: l10n(
           "settings.tickets.markDoneOnMerge.description",
-          "Move a ticket to Done when its workspace branch or linked pull request is merged.",
+          "Move a ticket to the selected status after merge when its workspace branch or linked pull request is merged.",
         ),
       },
 
@@ -151,7 +157,6 @@ export default defineExtension({
 
   schedules: [mergedPullRequestsSchedule, autoBuildSchedule],
   hooks: [
-    ...attemptStatusHooks,
     ...dependencyBlockerHooks,
     ...autoBuildHooks,
     gitMergedHook,

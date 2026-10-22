@@ -5,7 +5,6 @@ import { autoBuildDispatches } from "../data/auto-build-dispatches";
 import { saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
 import { withWriteGuard } from "../data/write-guard";
-import { attemptStatusSessionHooks } from "../hooks/attempt-status";
 import { checkAutoBuildCommand } from "../hooks/auto-build";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
@@ -102,26 +101,6 @@ test("scheduled wakes read only the current supervisor's dispatched work and nev
   const { ctx, task, fetched, followups } = await monitorFixture();
   await checkAutoBuildCommand.run(ctx, {});
   expect(fetched).toEqual([task.id]);
-  expect(followups).toEqual(["supervisor"]);
-});
-
-test("scheduled supervisor lifecycle hooks do not read project collections", async () => {
-  const { ctx, followups } = await monitorFixture();
-  const followup = ctx.sessions.followup;
-  ctx.sessions.followup = async (input) => {
-    await followup(input);
-    for (const hook of attemptStatusSessionHooks) {
-      await hook.run(
-        { ...ctx, eventId: hook.event.id, deliveryId: "scheduled" },
-        {
-          sessionId: "supervisor",
-          projectId: ctx.projectId,
-          sessionStatus: "completed",
-        },
-      );
-    }
-  };
-  await checkAutoBuildCommand.run(ctx, {});
   expect(followups).toEqual(["supervisor"]);
 });
 

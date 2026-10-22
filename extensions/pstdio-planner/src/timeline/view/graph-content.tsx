@@ -89,6 +89,7 @@ function GraphTickets(input: Props) {
           <GraphCard
             key={row.id}
             row={row}
+            interaction={props.cardInteraction}
             x={position.x}
             y={position.y}
             relation={relations.get(row.id)}

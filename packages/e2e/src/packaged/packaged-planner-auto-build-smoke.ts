@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 import { expectPackagedDependencyBlockers } from "./packaged-planner-blockers-smoke";
-import { commandRunner, type PackagedPlanner } from "./packaged-planner-helpers";
+import { commandRunner, configurePlannerWorkflow, type PackagedPlanner } from "./packaged-planner-helpers";
 
 export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
   const execute = commandRunner(input);
@@ -10,13 +10,33 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
   await execute("delete-ticket", { id: inactive.id });
   // Empty ready work exercises the shipped action without starting real agents.
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
-  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false, blockOnReview: true });
-  expect(
-    await execute("auto-build.configure", { enabled: true, prompt: "Choose valid tasks.", blockOnReview: false }),
-  ).toMatchObject({
-    enabled: true,
-    blockOnReview: false,
+  expect(await execute("auto-build.read", {})).toMatchObject({
+    enabled: false,
+    completed: false,
+    eligible: { conjunction: "and", rules: [] },
   });
+  const supervisorModel = { harnessId: "pstdio.harness-codex.harness.codex", model: "smoke-model" };
+  expect(await execute("auto-build.configure", { enabled: false, supervisorModel })).toMatchObject({
+    enabled: false,
+    supervisorModel,
+  });
+  expect(await execute("auto-build.read", {})).toMatchObject({ supervisorModel });
+  await execute("auto-build.configure", { enabled: false, supervisorModel: { harnessId: supervisorModel.harnessId } });
+  const { selections, statusId } = await configurePlannerWorkflow(execute);
+  expect(await execute("workflow-statuses.read", {})).toMatchObject({ selections, missingStatusIds: [] });
+  expect((await execute("implementation-policy", {})).workflow.selections).toEqual(selections);
+  const eligible = {
+    conjunction: "and",
+    rules: [{ attributeId: "status", condition: "is-any-of", value: [statusId("Todo")] }],
+  };
+  expect(
+    await execute("auto-build.configure", {
+      enabled: true,
+      prompt: "Choose valid tasks.",
+      eligible,
+      requireMergedDependencies: false,
+    }),
+  ).toMatchObject({ enabled: true, eligible, requireMergedDependencies: false });
   expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
   await execute("auto-build.check", {});
   expect(await execute("next-tickets", {})).toMatchObject({ enabled: true, tickets: [], waiting: [] });
@@ -25,9 +45,12 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
   expect(await execute("auto-build.read", {})).toMatchObject({
     enabled: true,
     prompt: "Choose valid tasks.",
-    blockOnReview: false,
     stuck: false,
+    completed: false,
     supervisor: null,
+    matchingTicketCount: 0,
+    readyTicketCount: 0,
+    waitingTickets: [],
   });
   await expectScopedAutoBuild(execute);
   expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({

@@ -2,12 +2,28 @@ import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readNextTickets } from "./next-tickets";
 
-export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBuildMode) {
-  const { tickets, waiting, capacity, snapshot } = await readNextTickets(ctx, mode);
+export async function readAutoBuildCandidates(
+  ctx: CommandContext,
+  mode: AutoBuildMode,
+  input: { limit?: number } = {},
+) {
+  const { tickets, waiting, capacity, snapshot, completed, matchingTicketCount, observations, configurationError } =
+    await readNextTickets(ctx, mode, input);
   const blockedTickets = waiting
     .filter(({ reason }) => reason !== "assigned" && reason !== "existing-attempt" && reason !== "capacity-full")
     .map(({ ticket }) => ticket);
-  return { candidates: tickets.filter(({ action }) => action !== "update-stack"), capacity, snapshot, blockedTickets };
+  return {
+    candidates: tickets.filter(({ action }) => action !== "update-stack"),
+    readyTicketCount: tickets.length,
+    capacity,
+    snapshot,
+    blockedTickets,
+    waitingTickets: waiting,
+    completed,
+    matchingTicketCount,
+    observations,
+    configurationError,
+  };
 }
 
 /** @deprecated Use next-tickets (`pst tickets next`) for scoped work and waiting reasons. */

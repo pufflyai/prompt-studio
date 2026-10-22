@@ -8,7 +8,7 @@ import { deadlineOrNone, loadPlan, writeStoredPlan } from "../timeline/commands/
 import { moveTicket } from "../timeline/model/edit-plan";
 
 export const moveTicketOnBoard = async (
-  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId" | "settings">,
   input: KanbanRendererMove,
 ) =>
   withWriteGuard(ctx, "ticket-order", async () => {
