@@ -36,7 +36,7 @@ const saveRows = async (storage: ExtensionStorageApi, input: Input) => {
   if (input.planner) {
     // Use the same public collection as Planner. No database or owner impersonation.
     const tickets = storage.collection("tickets");
-    if (input.action === "seed" && ((input.rows ?? []).some((row) => row.history > 0) || input.deleted?.length)) {
+    if (input.action === "commit" || (input.rows ?? []).some((row) => row.history > 0) || input.deleted?.length) {
       // Discover opaque addresses through the public API and keep them unchanged. Creation
       // uses the collection API; later fixture edits can use ordinary grouped commits.
       const addresses = new Map(

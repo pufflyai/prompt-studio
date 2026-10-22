@@ -20,6 +20,7 @@
     "report": "playwright show-report",
     "perf:planner-board-cold-open": "bun src/perf/planner-board-cold-open.ts",
     "perf:storage-scale": "bun src/perf/storage-scale.ts",
+    "perf:storage-scale:build": "bun build src/perf/storage-scale-extension.ts --target bun --external @pstdio/sdk/extensions --outfile dist/storage-scale/scale.js",
     "perf:timing-window": "bun src/perf/storage-timing-window.ts"
   },
   "devDependencies": {
