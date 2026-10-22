@@ -36,6 +36,8 @@ import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type QueryRow = { record_id: string; revision: string; fields: Record<string, Json>; sort_values: Json[] };
 type Current = typeof current.$inferSelect;
+const orderDefinitions = (definitions: StorageRecordIndex[]) =>
+  definitions.sort((left, right) => compareQueryValues(left.name, right.name));
 const missingRecord = async (recordId: string) => ({
   recordId,
   exists: false,
@@ -95,13 +97,17 @@ export const createRecordQueries = (
   const api: StorageRecordQueries = {
     defineIndexes: async (definitions) => {
       validateIndexes(definitions);
-      const desired = structuredClone(definitions).sort((a, b) => (a.name < b.name ? -1 : Number(a.name > b.name)));
-      const previous = await db.select().from(indexes).where(ownerWhere(indexes)).orderBy(indexes.name);
+      const desired = orderDefinitions(structuredClone(definitions));
+      const previous = await db.select().from(indexes).where(ownerWhere(indexes));
+      const installed = orderDefinitions(
+        decodeProjectionValue(
+          previous.map((row) => row.definition) as unknown as Json,
+        ) as unknown as StorageRecordIndex[],
+      );
       const [ready] = await db.select().from(projections).where(ownerWhere(projections));
       if (
         ready &&
-        (await fingerprint(decodeProjectionValue(previous.map((row) => row.definition) as unknown as Json))) ===
-          (await fingerprint(desired as unknown as Json))
+        (await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json))
       )
         return;
       await rebuild();

@@ -19,7 +19,7 @@ const stringBytesSql = (value: SQL, folded = false) => {
   const normalized = folded ? sql`lower(${text})` : text;
   // decode is immutable for expression indexes; protect literal backslashes.
   const bytes = sql`decode(replace(${normalized}, ${sqlLiteral("\\")}, ${sqlLiteral("\\\\")}), 'escape')`;
-  return sql`(CASE WHEN ${value} ? ${sqlLiteral(projectionStringTag)}
+  return sql`(CASE WHEN jsonb_typeof(${value}) = 'object' AND ${value} ? ${sqlLiteral(projectionStringTag)}
     THEN decode(${value} ->> ${sqlLiteral(tag)}, 'hex')
     ELSE ${bytes} END)`;
 };

@@ -99,6 +99,24 @@ test("upgraded owners without declared indexes receive the batch-read projection
   expect((await reopened.readMany(["note"]))[0].value).toBe("existing");
 });
 
+test("reinstalling unchanged Unicode index names does not rebuild the projection", async () => {
+  const f = await fixture();
+  const phases: string[] = [];
+  const records = createDocumentStorageDBService(f.db, undefined, (event) => phases.push(event.phase)).open({
+    owner: f.owner,
+  }).records;
+  const indexes: StorageRecordIndex[] = ["😀", "\uE000"].map((name) => ({
+    name,
+    fields: { title: { path: ["title"], type: "string" } },
+  }));
+  await records.defineIndexes(indexes);
+  await records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: { title: "Saved" } }] });
+  phases.length = 0;
+  await records.defineIndexes(indexes);
+  expect(phases).not.toContain("records-projected");
+  expect((await records.query({ index: "😀" })).records[0].fields.title).toBe("Saved");
+});
+
 test("deleting a project removes its physical query indexes", async () => {
   const f = await fixture();
   await f.records.defineIndexes([{ name: "notes", fields: { title: { path: ["title"], type: "string" } } }]);
@@ -200,7 +218,7 @@ test("projection preserves strings and object keys outside PostgreSQL text", asy
 test("Unicode predicates, wrapped arrays and reserved object keys match memory", async () => {
   const f = await fixture();
   const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;
-  const values = ["ÉİẞΣ", "😀", "\ud800", "a\u0000b", "slash\\123", "ascii", "\uE000"];
+  const values = ["ÉİẞΣ", "😀", "\ud800", "a\u0000b", "slash\\123", "ascii", "\uE000", "\u0001s"];
   const outputs = [];
   for (const records of [f.records, memory]) {
     await records.defineIndexes([
@@ -223,7 +241,7 @@ test("Unicode predicates, wrapped arrays and reserved object keys match memory",
       })),
     });
     const filters = [];
-    for (const value of ["i\u0307", "ς", "\ud83d", "\ude00", "\u0000B", "\\123", ""]) {
+    for (const value of ["i\u0307", "ς", "\ud83d", "\ude00", "\u0000B", "\\123", "\u0001s", ""]) {
       const page = await records.query({ index: "text", where: { field: "body", op: "contains", value } });
       filters.push(page.records.map((row) => row.recordId));
     }
