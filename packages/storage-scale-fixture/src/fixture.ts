@@ -12,6 +12,7 @@ export const workload = (kind: Workload) => ({
   edits: 3,
   pageSize: 100,
   churn: kind === "rich" ? 10_000 : 100_000,
+  seedBatchRows: kind === "rich" ? 100 : 1_000,
 });
 export type WorkloadSpec = ReturnType<typeof workload>;
 
@@ -79,9 +80,8 @@ export const compareRows = (a: Pick<FixtureRow, "rank" | "id">, b: Pick<FixtureR
 
 export const pageRows = (spec: WorkloadSpec, owner: number, selection: Selection, page: number) => {
   const count = owners(spec)[owner].rows;
-  const rows = Array.from({ length: count }, (_, index) => createRow(spec.kind, owner, index, spec.edits));
-  return rows
+  const rows = Array.from({ length: count }, (_, ordinal) => ({ ordinal }))
     .filter((row) => matches(row, selection, count))
-    .sort(compareRows)
-    .slice(page * 100, (page + 1) * 100);
+    .map(({ ordinal }) => createRow(spec.kind, owner, ordinal, spec.edits));
+  return rows.sort(compareRows).slice(page * 100, (page + 1) * 100);
 };

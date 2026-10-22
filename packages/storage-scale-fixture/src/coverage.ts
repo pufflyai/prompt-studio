@@ -22,7 +22,7 @@ export const coverage = (kind: Workload, samples: ScenarioResult[]) => {
   return {
     passed: missing.length === 0 && duplicate.length === 0 && failed.length === 0,
     required: required.length,
-    measured: samples.length,
+    reported: samples.length,
     missing,
     duplicate,
     failed,

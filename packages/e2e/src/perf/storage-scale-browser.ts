@@ -1,5 +1,5 @@
-import { chromium } from "@playwright/test";
 import { contract, type Profile, pageRows, workload } from "storage-scale-fixture";
+import { openScaleBrowser } from "./storage-scale-browser-session";
 import type { ScaleRuntime } from "./storage-scale-runtime";
 
 interface Fixture {
@@ -13,70 +13,73 @@ export const measureScaleNavigation = async (
   fixture: Fixture,
   profile: Profile,
   mode: "board" | "list",
+  temperature: string,
 ) => {
-  const browser = await chromium.launch({ headless: true });
+  // Expected data is generated before any application navigation or sample timer.
+  const owner = fixture.kind === "small" ? 0 : 9;
+  const expected = pageRows(workload(fixture.kind), owner, "focus", 0);
+  const { browser, page, replies, diagnostics } = await openScaleBrowser(profile);
   try {
-    const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send("Emulation.setCPUThrottlingRate", { rate: contract.profiles[profile].rendererRate });
-    await cdp.send("Performance.enable");
-    const targets = await (await browser.newBrowserCDPSession()).send("Target.getTargets");
-    const responses: { path: string; bytes: number }[] = [];
-    const pending: Promise<void>[] = [];
-    page.on("response", (response) => {
-      if (response.url().includes("/v1/"))
-        pending.push(
-          response
-            .body()
-            .then((body) => {
-              responses.push({ path: new URL(response.url()).pathname, bytes: body.byteLength });
-            })
-            .catch(() => {}),
-        );
-    });
-    await page.addInitScript(() => {
-      if (window.top === window) localStorage.setItem("onboarding-complete", "true");
-    });
     const login = await runtime.request<{ url: string }>("/runtime/browser-login", "POST");
     const url = new URL(login.url);
-    url.pathname = `/projects/${fixture.projectId}/extensions/pstdio.pstdio-planner/tickets`;
+    url.host = new URL(runtime.baseUrl).host;
+    const queryPath = owner === 9 ? ".view.tickets.kanban.query" : `.view.records-${mode}.kanban.query`;
+    url.pathname =
+      owner === 9
+        ? `/projects/${fixture.projectId}/extensions/pstdio.pstdio-planner/tickets`
+        : `/projects/${fixture.projectId}/extensions/scale.scale-owner-0/records-${mode}`;
     if (page.url() !== "about:blank") throw new Error("Cold sample preloaded a page");
+    if (temperature === "warm") {
+      await page.goto(url.href, { waitUntil: "commit" });
+      await page.getByText(expected[0].title, { exact: true }).first().waitFor();
+      replies.length = 0;
+    }
     const start = performance.now();
-    await page.goto(url.href, { waitUntil: "commit" });
+    if (temperature === "cold") await page.goto(url.href, { waitUntil: "commit" });
+    else await page.reload({ waitUntil: "commit" });
     // Virtualized rows need not all mount. This baseline deliberately refuses to infer that
     // all requested rows are ready from a first card. Missing page support remains a failure.
-    await page.locator('[data-testid="renderer-card"], [data-testid="row-status-icon"]').first().waitFor();
+    await page.getByText(expected[0].title, { exact: true }).first().waitFor();
     const firstVisibleMs = performance.now() - start;
-    const expected = pageRows(workload(fixture.kind), 9, "focus", 0);
+    await page
+      .getByRole("button", { name: /Filter/ })
+      .first()
+      .waitFor();
+    const dataReadyMs = performance.now() - start;
+    const details = await diagnostics();
+    const query = replies.findLast((reply) => reply.path.includes(queryPath));
+    const selected = owner === 9 ? query?.rows.filter((row) => row.attributes?.status === "ready") : query?.rows;
+    const dataCorrect =
+      JSON.stringify(selected?.map(({ id, title }) => ({ id, title }))) ===
+      JSON.stringify(expected.map(({ id, title }) => ({ id, title })));
     const body = await page.locator("body").innerText();
     const labelsCorrect = !/Unavailable field|\bdefault-ready\b|\bdefault-backlog\b/.test(body);
     const renderedTitles = expected.filter((row) => body.includes(row.title)).map((row) => row.id);
     const controls = await page.getByRole("button", { name: /Filter/ }).count();
-    const metrics = await cdp.send("Performance.getMetrics");
     const screenshot = await page.screenshot({ fullPage: false });
-    await Promise.all(pending);
     return {
       mode,
-      browser: browser.version(),
+      owner,
+      ...details,
       startupMs: runtime.startupMs,
       firstVisibleMs,
+      dataReadyMs,
+      dataCorrect,
+      returnedRows: query?.rows.length ?? null,
       allRowsReadyMs: null,
       requested: expected.map((row) => row.id),
       renderedTitles,
       labelsCorrect,
       controls,
-      responses,
-      metrics: metrics.metrics,
       screenshot,
-      renderer: {
-        rate: contract.profiles[profile].rendererRate,
-        appliedBeforeNavigation: true,
-        targets: targets.targetInfos.map(({ type, url }) => ({ type, url })),
-        workerIframeCoverage: "unverified",
-        calibration: null,
-      },
       passed: false,
-      failures: ["bounded-page-readiness-unproved", "runtime-hydration-uninstrumented"],
+      failures: [
+        ...(!dataCorrect ? ["incorrect-requested-data"] : []),
+        ...(dataReadyMs >= contract.ceilingMs ? ["latency"] : []),
+        ...(query && query.rows.length > 100 ? ["hidden-full-load"] : []),
+        "virtualized-row-readiness-unproved",
+        "runtime-hydration-uninstrumented",
+      ],
     };
   } finally {
     await browser.close();

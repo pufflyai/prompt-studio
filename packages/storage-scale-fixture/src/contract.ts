@@ -22,6 +22,7 @@ export type Background = (typeof contract.backgrounds)[number];
 
 export const scenarios = (kind: Workload) => {
   const operations: string[] = [...contract.views, ...contract.edits];
+  operations.push("all-owner-edit-burst");
   if (kind === "rich") operations.push("multiline");
   return Object.keys(contract.profiles).flatMap((profile) =>
     contract.backgrounds.flatMap((background) =>

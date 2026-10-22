@@ -1,12 +1,15 @@
 import { strict as assert } from "node:assert";
-import { createRow, measure, seedOwner, type Workload } from "storage-scale-fixture";
+import { assertMeasurementWindow, createRow, measure, seedOwner, type Workload } from "storage-scale-fixture";
 import * as Y from "yjs";
+import { verifyScaleOfflineMerges } from "../document-scale-offline";
 import { createDocumentStorage } from "../document-storage";
 import { memoryDocumentState } from "../document-types";
 import { cloneDocument, missingUpdate } from "./document-merge";
 
 // An explicit diagnostic, never discovered by bun test. Run in a disposable worker per owner.
 export const benchmarkSyncOwner = async (kind: Workload, count: number, churn: boolean) => {
+  const lease = assertMeasurementWindow();
+  console.log(JSON.stringify({ phase: "timing-window", lease }));
   const owner = { workbenchId: "scale", extensionId: "scale.owner" };
   const document = new Y.Doc();
   const state = memoryDocumentState(document);
@@ -60,6 +63,8 @@ export const benchmarkSyncOwner = async (kind: Workload, count: number, churn: b
     });
     const encoded = await measure(async () => Y.encodeStateAsUpdate(document));
     emit("encode-owner", { ...encoded, value: undefined, encodedBytes: encoded.value.byteLength });
+    const offline = await measure(() => verifyScaleOfflineMerges(encoded.value, kind));
+    emit("offline-merge-correctness", offline);
     for (let sample = 0; sample < 10; sample++) {
       const hydration = await measure(async () => {
         const cold = new Y.Doc();
@@ -80,7 +85,7 @@ export const benchmarkSyncOwner = async (kind: Workload, count: number, churn: b
         value: undefined,
         sample,
         cloneCount: 1,
-        encodedBytes: encoded.value.byteLength,
+        encodedBytes: sample === 0 ? encoded.value.byteLength : null,
       });
       const remote = clone.value;
       try {
@@ -129,6 +134,7 @@ export const benchmarkSyncOwner = async (kind: Workload, count: number, churn: b
   } finally {
     document.destroy();
   }
+  assertMeasurementWindow();
 };
 
 if (import.meta.main) {

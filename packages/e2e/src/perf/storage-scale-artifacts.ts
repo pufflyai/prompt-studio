@@ -37,7 +37,17 @@ export const writeFixture = async (root: string, kind: Workload) => {
     spec,
     contract,
     owners: ownerStats,
-    history: { createsPerResource: 1, editsPerResource: 3, rounds: [0, 1, 2, 3], atomicRows: 100 },
+    exportedShape: "generator-input",
+    plannerTransform:
+      "storage-scale-extension.ts plannerValue adds Planner fields; measure actual stored shape with scale action=stats",
+    history: {
+      createsPerResource: 1,
+      editsPerResource: 3,
+      rounds: [0, 1, 2, 3],
+      seedBatchRows: spec.seedBatchRows,
+      plannerCreationRowsPerCommit: 1,
+      timedAtomicRows: 100,
+    },
     churn: {
       separate: true,
       perOwner: owners(spec).map((owner) => owner.rows),

@@ -14,7 +14,12 @@ test("fixture consumer commits through the public API and reports all materializ
     rows: Array.from({ length: 1_000 }, (_, index) => createRow("small", 0, index, 3)),
   });
   const page = await run({ action: "page", count: 1_000, selection: "pages", page: 1 });
-  expect(page).toMatchObject({ capability: "legacy-list-scan", materialized: 1_000, scanned: 1_000 });
+  expect(page).toMatchObject({
+    capability: "legacy-list-scan",
+    materialized: 1_000,
+    scanned: null,
+    consumerScanned: 1_000,
+  });
   expect((page as { rows: unknown[] }).rows).toHaveLength(100);
   await run({ action: "commit", operationId: "delete", deleted: [createRow("small", 0, 37, 3).id] });
   const after = await run({ action: "page", count: 1_000 });

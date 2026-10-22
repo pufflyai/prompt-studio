@@ -1,18 +1,48 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
 import { owners, seedOwner, type Workload, workload } from "storage-scale-fixture";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import { preparePlannerSource } from "../packaged/packaged-planner-source";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "../packaged/packaged-serve-helpers";
+import { configuredContainer, startContainerRuntime } from "./storage-scale-container";
 
-export const startScaleRuntime = async (home: string) => {
+export interface ScaleFixture {
+  projectId: string;
+  kind: Workload;
+  churn: boolean;
+}
+
+export const startScaleRuntime = async (home: string, environment: Record<string, string> = {}) => {
   const before = performance.now();
-  const runtime = await startPackagedServe(home, { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" });
-  const startupMs = performance.now() - before;
+  const container = configuredContainer(home);
+  if (container && Object.keys(environment).length)
+    throw new Error(
+      "Container sync requires a reachable TLS relay and certificate mount; this driver does not claim that coverage",
+    );
+  const runtime = container
+    ? await startContainerRuntime(container)
+    : await (async () => {
+        const native = await startPackagedServe(home, { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1", ...environment });
+        return {
+          ...native,
+          controlEvidence: { cgroup: null },
+          controlPreparationMs: 0,
+          stop: () => stopProcess(native.child),
+          crash: async () => {
+            if (native.child.exitCode !== null || native.child.signalCode !== null) return;
+            const exited = new Promise<void>((resolve) => native.child.once("exit", () => resolve()));
+            native.child.kill("SIGKILL");
+            await exited;
+          },
+        };
+      })();
+  const startupMs = performance.now() - before - runtime.controlPreparationMs;
   const headers = { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" };
+  const client = createClient({ baseUrl: runtime.baseUrl, token: runtime.descriptor.token });
   const request = async <T>(path: string, method = "GET", data?: unknown) => {
     const response = await fetch(`${runtime.baseUrl}${path}`, {
       method,
@@ -25,15 +55,14 @@ export const startScaleRuntime = async (home: string) => {
   };
   const execute = async <T>(projectId: string, extensionId: string, command: string, params: unknown) => {
     const before = performance.now();
-    const reply = await request<{ outcome: { status: string; value: T } }>(
-      `/v1/projects/${projectId}/extensions/commands/${extensionId}.command.${command}/execute`,
-      "POST",
-      { params },
-    );
+    const reply = await client.extensions.execute(`${extensionId}.command.${command}`, {
+      projectId,
+      params: params as Record<string, unknown>,
+    });
     if (reply.outcome.status !== "success") throw new Error(JSON.stringify(reply));
-    return { value: reply.outcome.value, sdkRequestMs: performance.now() - before };
+    return { value: reply.outcome.value as T, sdkRequestMs: performance.now() - before };
   };
-  return { ...runtime, startupMs, request, execute, stop: () => stopProcess(runtime.child) };
+  return { ...runtime, client, startupMs, request, execute };
 };
 export type ScaleRuntime = Awaited<ReturnType<typeof startScaleRuntime>>;
 
@@ -51,17 +80,44 @@ const install = (runtime: ScaleRuntime, home: string, source: string, name: stri
   });
 };
 
+export const refreshScaleSources = async (home: string, kind: Workload) => {
+  const runtime = await startScaleRuntime(home);
+  try {
+    const built = await Bun.build({
+      entrypoints: [join(import.meta.dirname, "storage-scale-extension.ts")],
+      target: "bun",
+      external: ["@pstdio/sdk/extensions"],
+    });
+    if (!built.success) throw new AggregateError(built.logs, "Building scale sources failed");
+    const command = await built.outputs[0].text();
+    const planner = join(home, "sources", "planner-source");
+    writeFileSync(join(planner, "scale.ts"), command);
+    install(runtime, home, planner, "pstdio-planner");
+    for (const owner of owners(workload(kind)).filter((owner) => owner.index !== 9)) {
+      const source = join(home, "sources", `scale-owner-${owner.index}`);
+      writeFileSync(join(source, "scale.ts"), command);
+      writeFileSync(
+        join(source, "extension.ts"),
+        `import { defineExtension } from "@pstdio/sdk/extensions";\nimport { fixtureCommands, createScaleViews } from "./scale";\nconst ui = createScaleViews(${JSON.stringify(kind)}, ${owner.index}, ${owner.rows});\nexport default defineExtension({ ...ui, commands: [...fixtureCommands, ...ui.commands] });\n`,
+      );
+      install(runtime, home, source, `scale-owner-${owner.index}`);
+    }
+  } finally {
+    await runtime.stop();
+  }
+};
+
 export const seedScaleRuntime = async (home: string, kind: Workload, churn: boolean) => {
   mkdirSync(home, { recursive: true });
   const runtime = await startScaleRuntime(home);
   try {
     const folder = join(home, "project");
     mkdirSync(folder, { recursive: true });
-    const project = await runtime.request<{ id: string }>(
-      "/v1/projects",
-      "POST",
-      folderProjectInput({ name: "Scale" }, folder),
-    );
+    const projects = await runtime.request<{ id: string }[]>("/v1/projects");
+    if (projects.length > 1) throw new Error("Expected a disposable fixture with one project");
+    const project =
+      projects[0] ??
+      (await runtime.request<{ id: string }>("/v1/projects", "POST", folderProjectInput({ name: "Scale" }, folder)));
     const planner = await preparePlannerSource(join(home, "sources"));
     const result = await Bun.build({
       entrypoints: [join(import.meta.dirname, "storage-scale-extension.ts")],

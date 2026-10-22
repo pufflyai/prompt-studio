@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { sql } from "drizzle-orm";
-import { createRow, measure, seedOwner, type Workload } from "storage-scale-fixture";
+import { assertMeasurementWindow, createRow, measure, seedOwner, type Workload } from "storage-scale-fixture";
 import { createDb } from "../../db/connection.pglite";
 import { projects } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
@@ -12,6 +12,8 @@ const address = { workbenchId: projectId, extensionId: "scale.owner" };
 
 // This owns a disposable database, never the running application's data directory.
 export const benchmarkDatabase = async (kind: Workload, count: number, root: string, phase: string) => {
+  const lease = assertMeasurementWindow();
+  console.log(JSON.stringify({ phase: "timing-window", lease }));
   mkdirSync(root, { recursive: true });
   const opened = await measure(() => createDb({ path: join(root, "database") }));
   const { db, close } = opened.value;
@@ -87,14 +89,24 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
       materialized: count,
       payloadBytes: Buffer.byteLength(JSON.stringify(list.value)),
     });
+    const atomicRows = Array.from({ length: 100 }, (_, index) => ({
+      ...createRow(kind, 0, index, 3),
+      title: `Atomic ${operationId} ${index}`,
+    }));
     const atomic = await measure(() =>
       target.commit({
         operationId: `atomic-${crypto.randomUUID()}`,
-        rows: Array.from({ length: 100 }, (_, index) => createRow(kind, 0, index, 3)),
+        rows: atomicRows,
         deleted: [],
       }),
     );
-    emit("atomic-100", { ...atomic, budgetMs: null });
+    emit("atomic-100", { ...atomic, rows: 100, rowsPerSecond: 100_000 / atomic.durationMs, budgetMs: null });
+    for (const value of atomicRows) assert.deepEqual((await storage.records.read(value.id)).value, value);
+    await target.commit({
+      operationId: `reset-atomic-${operationId}`,
+      rows: Array.from({ length: 100 }, (_, index) => createRow(kind, 0, index, 3)),
+      deleted: [],
+    });
     // Cross the actual persisted folding boundary and retain every individual duration.
     const before = await db.execute(sql`select revision, folded_revision from storage_documents`);
     for (let sample = 0; sample < 129; sample++) {
@@ -124,9 +136,11 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
       renderMs: null,
       warning: "Layer benchmark is not view or SDK acceptance",
     });
+    await target.commit({ operationId: `restore-${operationId}`, rows: [row], deleted: [] });
   } finally {
     await close();
   }
+  assertMeasurementWindow();
 };
 
 if (import.meta.main) {
