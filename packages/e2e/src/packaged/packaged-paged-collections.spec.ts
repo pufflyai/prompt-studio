@@ -13,7 +13,8 @@ import { exercisePagedCollections } from "./paged-collections-browser";
 test.beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
-test("public paged views render bounded rows and preserve page navigation", async (_fixtures, testInfo) => {
+test("public paged views render bounded rows and preserve page navigation", async () => {
+  const testInfo = test.info();
   const root = mkdtempSync(join(tmpdir(), "paged-collections-browser-"));
   let child: ChildProcess | undefined;
   let browser: Browser | undefined;
