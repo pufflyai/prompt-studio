@@ -53,8 +53,17 @@ dashboard-ui:
           - "{packages/pstdio-dashboard,packages/pstdio-workbench,packages/ui}/src/**"
           - "!**/*.test.*"
           - "!**/*.fixture.*"
-          - "!**/*.test-fixture.*"
+          - "!**/*.fixtures.*"
+          - "!**/*test-fixture*"
+          - "!**/*test-support*"
           - "!**/*test-helpers*"
+          - "!**/test-helpers/**"
+          - "!**/*test-utils*"
+          - "!**/test-utils/**"
+          - "!**/__fixtures__/**"
   - changed-files:
       - any-glob-to-any-file:
+          - packages/pstdio-dashboard/index.html
+          - packages/pstdio-dashboard/public/**
+          - packages/ui/public/font/**
           - design/prompt-studio-design-system.pen

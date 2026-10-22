@@ -13,7 +13,7 @@ The `PR area labels` workflow marks changes that need focused review. Labels des
 | `release` | CI permissions, packaging, publishing, and label policy |
 | `dashboard-ui` | What people see: compare with the Pencil design and [DESIGN.md](../../../design/DESIGN.md) |
 
-`.github/labeler.yml` is the executable mapping source. Whole-package rules include tests and documentation. `dashboard-ui` is the exception: it covers the sources of the dashboard, the workbench and `@pstdio/ui`, plus the design system file, but not test files, fixtures or test helpers. Stories and locale strings count. Several labels can match one file. The security paths identify known boundaries and do not detect every security change.
+`.github/labeler.yml` is the executable mapping source. Whole-package rules include tests and documentation. `dashboard-ui` is the exception: it covers the sources of the dashboard, the workbench and `@pstdio/ui`, the dashboard's `index.html` and `public/` assets, the icon font and the design system file, but not test files or test fixtures, support, utilities and helpers. Stories, story fixtures and locale strings count. Several labels can match one file. The security paths identify known boundaries and do not detect every security change.
 
 Reviewers own two separate labels: `breaking-change` for incompatible behavior or contracts, and `needs-migration` for required data transitions. Explain the affected consumers or migration in the PR description. These labels are never managed by the workflow.
 
