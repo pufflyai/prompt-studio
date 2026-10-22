@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
@@ -15,6 +15,12 @@ export interface ScaleFixture {
   kind: Workload;
   churn: boolean;
 }
+
+const fixtureCommand = () => {
+  const path = join(import.meta.dirname, "../../dist/storage-scale/scale.js");
+  if (!existsSync(path)) throw new Error("Run bun run --cwd packages/e2e perf:storage-scale:build before preparation");
+  return readFileSync(path, "utf8");
+};
 
 interface ScaleBackend {
   descriptor: Awaited<ReturnType<typeof startPackagedServe>>["descriptor"];
@@ -100,15 +106,9 @@ const install = (runtime: ScaleRuntime, home: string, source: string, name: stri
 };
 
 export const refreshScaleSources = async (home: string, kind: Workload) => {
+  const command = fixtureCommand();
   const runtime = await startScaleRuntime(home);
   try {
-    const built = await Bun.build({
-      entrypoints: [join(import.meta.dirname, "storage-scale-extension.ts")],
-      target: "bun",
-      external: ["@pstdio/sdk/extensions"],
-    });
-    if (!built.success) throw new AggregateError(built.logs, "Building scale sources failed");
-    const command = await built.outputs[0].text();
     const planner = join(home, "sources", "planner-source");
     writeFileSync(join(planner, "scale.ts"), command);
     install(runtime, home, planner, "pstdio-planner");
@@ -127,6 +127,7 @@ export const refreshScaleSources = async (home: string, kind: Workload) => {
 };
 
 export const seedScaleRuntime = async (home: string, kind: Workload, churn: boolean) => {
+  const command = fixtureCommand();
   mkdirSync(home, { recursive: true });
   const runtime = await startScaleRuntime(home);
   try {
@@ -138,15 +139,6 @@ export const seedScaleRuntime = async (home: string, kind: Workload, churn: bool
       projects[0] ??
       (await runtime.request<{ id: string }>("/v1/projects", "POST", folderProjectInput({ name: "Scale" }, folder)));
     const planner = await preparePlannerSource(join(home, "sources"));
-    const result = await Bun.build({
-      entrypoints: [join(import.meta.dirname, "storage-scale-extension.ts")],
-      target: "bun",
-      external: ["@pstdio/sdk/extensions"],
-      outdir: join(home, "command"),
-      naming: "scale.ts",
-    });
-    if (!result.success) throw new AggregateError(result.logs, "Building scale fixture failed");
-    const command = readFileSync(join(home, "command", "scale.ts"), "utf8");
     writeFileSync(join(planner, "scale.ts"), command);
     const entry = join(planner, "extension.ts");
     writeFileSync(
