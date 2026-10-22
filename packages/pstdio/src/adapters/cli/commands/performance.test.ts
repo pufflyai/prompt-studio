@@ -59,3 +59,17 @@ describe("performance command", () => {
     expect(log).not.toHaveBeenCalled();
   });
 });
+
+test("prints the shared version-two capture without stripping its history", async () => {
+  const path = endpointPath();
+  const snapshot = {
+    version: 2,
+    host: "desktop",
+    processes: [],
+    capture: { version: 2, id: "capture", samples: [{ sequence: 1, backend: { state: "timeout", durationMs: null } }] },
+  };
+  await serve(path, `${JSON.stringify(snapshot)}\n`);
+  const log = mock();
+  await createHandler({ log, resolveEndpoint: () => path })();
+  expect(JSON.parse(log.mock.calls[0]?.[0])).toEqual(snapshot);
+});

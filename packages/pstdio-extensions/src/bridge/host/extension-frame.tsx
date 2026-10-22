@@ -20,7 +20,7 @@ import { extensionIframeAllow } from "./iframe-permissions";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
 
 export interface ExtensionFrameProps {
-  sizing?: "content-width";
+  sizing?: "content-width" | "content-height";
   view: ExtensionViewDescriptor;
   props: Partial<WebviewHostProps> & Record<string, unknown>;
   theme: ThemePreference;
@@ -93,6 +93,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   // owns the new browsing context.
   const [frameEpoch, setFrameEpoch] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
 
   propsRef.current = createWebviewHostProps(extensionProps);
   themeRef.current = theme;
@@ -163,6 +164,9 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
             clientY: bounds.top + event.clientY * (bounds.height / iframe.clientHeight),
           }),
         );
+      },
+      contentHeightChanged: (height: number) => {
+        if (sizing === "content-height" && Number.isFinite(height) && height >= 0) setContentHeight(height);
       },
       contentWidthChanged: (width: number) => {
         if (sizing === "content-width" && Number.isFinite(width) && width >= 0) setContentWidth(width);
@@ -278,7 +282,13 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   }, []);
 
   return (
-    <div style={{ ...frameShellStyle, width: sizing === "content-width" ? contentWidth : "100%" }}>
+    <div
+      style={{
+        ...frameShellStyle,
+        width: sizing === "content-width" ? contentWidth : "100%",
+        height: sizing === "content-height" ? contentHeight : "100%",
+      }}
+    >
       <iframe
         // A new runtime or module needs its own browsing context and bridge handshake.
         key={`${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`}

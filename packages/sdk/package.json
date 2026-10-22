@@ -10,7 +10,8 @@
     "directory": ".publish"
   },
   "files": [
-    "dist"
+    "dist",
+    "examples"
   ],
   "type": "module",
   "exports": {

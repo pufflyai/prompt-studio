@@ -29,7 +29,12 @@ const ScrollableSettingsContent = (props: { children: ReactNode }) => (
     </Box>
   </ScrollArea>
 );
-const SettingsViewContent = (props: { input: WorkbenchPanelRenderInput; panelId: string; viewId: string }) => {
+const SettingsViewContent = (props: {
+  input: WorkbenchPanelRenderInput;
+  panelId: string;
+  viewId: string;
+  embedded?: boolean;
+}) => {
   const { input, panelId, viewId } = props;
   const renderer = useWorkbenchStore(getWorkbenchRenderers(input.workbench).store, (state) => state.renderers[viewId]);
   useWorkbenchStore(getWorkbenchRenderers(input.workbench).store, (state) => state.refreshKeys[viewId] ?? 0);
@@ -40,11 +45,8 @@ const SettingsViewContent = (props: { input: WorkbenchPanelRenderInput; panelId:
       </Centered>
     );
   }
-  return (
-    <ScrollableSettingsContent>
-      {renderer.render({ ...input, instance: { ...input.instance, panelId, viewId } }) as ReactNode}
-    </ScrollableSettingsContent>
-  );
+  const content = renderer.render({ ...input, instance: { ...input.instance, panelId, viewId } }) as ReactNode;
+  return props.embedded ? content : <ScrollableSettingsContent>{content}</ScrollableSettingsContent>;
 };
 // Resolve async collection data before rendering its registered View. The View
 // can read the current item from settings by the stable panel and item ids.
@@ -101,7 +103,24 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
       </Centered>
     );
   }
-  if (panel.kind === "view") return <SettingsViewContent input={input} panelId={panel.id} viewId={panel.viewId} />;
+  if (panel.kind === "view") {
+    const children = settings
+      .listPanels()
+      .filter((child) => child.parentPanelId === panel.id && input.workbench.context.matches(child.when));
+    if (children.length === 0) return <SettingsViewContent input={input} panelId={panel.id} viewId={panel.viewId} />;
+    return (
+      <ScrollableSettingsContent>
+        <Stack gap="md">
+          <SettingsViewContent embedded input={input} panelId={panel.id} viewId={panel.viewId} />
+          {children.map((child) =>
+            child.kind === "view" ? (
+              <SettingsViewContent embedded key={child.id} input={input} panelId={child.id} viewId={child.viewId} />
+            ) : null,
+          )}
+        </Stack>
+      </ScrollableSettingsContent>
+    );
+  }
   if (panel.kind === "collection") {
     if (!itemId)
       return (

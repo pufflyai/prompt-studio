@@ -24,8 +24,8 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
   return (
     <Box
       position="relative"
-      width={props.sizing ? "max-content" : "full"}
-      height="full"
+      width={props.sizing === "content-width" ? "max-content" : "full"}
+      height={props.sizing === "content-height" ? "auto" : "full"}
       minH="0"
       display="flex"
       flexDirection="column"

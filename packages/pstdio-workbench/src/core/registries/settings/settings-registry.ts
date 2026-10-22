@@ -33,6 +33,8 @@ export interface SettingsPanelBase {
   description?: string;
   /** Section id this panel belongs to. */
   section?: string;
+  /** Render this view inside an existing settings panel instead of a navigation entry. */
+  parentPanelId?: string;
   icon?: string;
   /** Lower sorts first; ties fall back to contribution priority then registration order. */
   order?: number;

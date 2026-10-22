@@ -59,3 +59,15 @@ describe("session-store", () => {
     expect(store.get("s1")).not.toBe(first);
   });
 });
+
+test("diagnostics read live session and conversation owner sizes without exposing messages", async () => {
+  const store = createSessionStore();
+  const entry = store.create("diagnostics", inertSessionChannelHooks);
+  const conversation = await entry.conversationReady;
+  conversation.push({ op: "add", path: "/messages/0", value: { id: "private", role: "assistant", parts: [] } });
+  const reading = await store.diagnostics();
+  expect(reading).toMatchObject({ activeSessions: 1, retainedMessages: 1, subscribers: 0, queuedEvents: 0 });
+  expect(JSON.stringify(reading)).not.toContain("private");
+  store.remove("diagnostics");
+  expect(await store.diagnostics()).toMatchObject({ activeSessions: 0, retainedMessages: 0 });
+});

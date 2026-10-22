@@ -22,6 +22,7 @@ import type {
   WebviewPreferencesGetParams,
   WebviewPreferencesSetParams,
 } from "pstdio-api-contracts/extension-kernel";
+import type { PerformanceDiagnosticsAdapter } from "pstdio-api-contracts/performance-diagnostics";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import type { WorkbenchTerminalController } from "../../core";
 
@@ -57,6 +58,7 @@ export interface ExtensionWebviewFilesAdapter {
 }
 
 export interface ExtensionWebviewHostAdapters {
+  performance?: PerformanceDiagnosticsAdapter;
   harnesses?: {
     read(input: { harnessId?: string; model?: string }): MaybePromise<WebviewHostCapabilityResults["harnesses.read"]>;
   };

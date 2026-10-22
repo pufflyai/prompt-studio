@@ -36,6 +36,38 @@ test.afterEach(async () => {
   roots.length = 0;
 });
 
+const desktopPublicMethods = [
+  "cancelQuit",
+  "checkForUpdates",
+  "confirmQuit",
+  "copyDiagnostics",
+  "getAppInfo",
+  "getPerformanceMonitoring",
+  "getPerformanceRecordings",
+  "getPerformanceSnapshot",
+  "getProjectTabs",
+  "getStartupAppearance",
+  "getStartupState",
+  "getUpdateChannel",
+  "getWorkbenchState",
+  "onCommand",
+  "onStartupAppearance",
+  "onStartupState",
+  "openLogs",
+  "quitApp",
+  "releasePerformanceCapture",
+  "reportRendererState",
+  "reportSlowFrames",
+  "retainPerformanceCapture",
+  "retryRuntime",
+  "revealInFinder",
+  "setPerformanceMonitoring",
+  "setProjectTabs",
+  "setStartupAppearance",
+  "setUpdateChannel",
+  "setWorkbenchItem",
+];
+
 test("loads the existing runtime in a sandboxed window and detaches on quit", async () => {
   const token = "desktop-e2e-secret";
   const eventResponses = new Set<ServerResponse>();
@@ -156,34 +188,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     });
     expect(
       await window.evaluate(() => Object.keys((globalThis as unknown as Window).promptStudioDesktop).sort()),
-    ).toEqual([
-      "cancelQuit",
-      "checkForUpdates",
-      "confirmQuit",
-      "copyDiagnostics",
-      "getAppInfo",
-      "getPerformanceMonitoring",
-      "getPerformanceSnapshot",
-      "getProjectTabs",
-      "getStartupAppearance",
-      "getStartupState",
-      "getUpdateChannel",
-      "getWorkbenchState",
-      "onCommand",
-      "onStartupAppearance",
-      "onStartupState",
-      "openLogs",
-      "quitApp",
-      "reportRendererState",
-      "reportSlowFrames",
-      "retryRuntime",
-      "revealInFinder",
-      "setPerformanceMonitoring",
-      "setProjectTabs",
-      "setStartupAppearance",
-      "setUpdateChannel",
-      "setWorkbenchItem",
-    ]);
+    ).toEqual(desktopPublicMethods);
     expect(
       await electronApp.evaluate(({ BrowserWindow }) =>
         BrowserWindow.getAllWindows()[0]?.webContents.session.isPersistent(),

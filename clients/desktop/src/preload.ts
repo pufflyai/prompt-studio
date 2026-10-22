@@ -84,7 +84,10 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
   getPerformanceMonitoring: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getPerformanceMonitoring),
   setPerformanceMonitoring: (enabled: boolean) =>
     ipcRenderer.invoke(DESKTOP_CHANNELS.setPerformanceMonitoring, enabled),
+  retainPerformanceCapture: (id: string) => ipcRenderer.invoke(DESKTOP_CHANNELS.retainPerformanceCapture, id),
+  releasePerformanceCapture: (id: string) => ipcRenderer.invoke(DESKTOP_CHANNELS.releasePerformanceCapture, id),
   getPerformanceSnapshot: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getPerformanceSnapshot),
+  getPerformanceRecordings: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getPerformanceRecordings),
   reportSlowFrames: (report: unknown) => ipcRenderer.invoke(DESKTOP_CHANNELS.reportSlowFrames, report),
   reportRendererState: (report: unknown) => ipcRenderer.invoke(DESKTOP_CHANNELS.reportRendererState, report),
 });

@@ -56,12 +56,20 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
 
   const { extensionInstanceId, installName, projectId, view, webview, slotKind } = derived;
   const status = input.panel.region === "status";
+  const embeddedSettings = Boolean(input.workbench.settings.getPanel(input.instance.panelId)?.parentPanelId);
+  let sizing: "content-width" | "content-height" | undefined;
+  if (status) sizing = "content-width";
+  if (embeddedSettings) sizing = "content-height";
 
   return (
-    <Box position="relative" w={status ? "max-content" : "full"} h="full" minH="0">
-      <Box position={status ? "relative" : "absolute"} inset={status ? undefined : "0"} h="full">
+    <Box position="relative" w={status ? "max-content" : "full"} h={embeddedSettings ? "auto" : "full"} minH="0">
+      <Box
+        position={status || embeddedSettings ? "relative" : "absolute"}
+        inset={status || embeddedSettings ? undefined : "0"}
+        h={embeddedSettings ? "auto" : "full"}
+      >
         <ExtensionWebviewFrame
-          sizing={status ? "content-width" : undefined}
+          sizing={sizing}
           extensionId={view.extensionId}
           extensionInstanceId={extensionInstanceId}
           installName={installName}

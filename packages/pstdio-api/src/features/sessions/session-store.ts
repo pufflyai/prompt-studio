@@ -1,10 +1,4 @@
-import type {
-  ApprovalRequest,
-  EventStore,
-  HarnessSession,
-  QuestionService,
-  SessionMessage,
-} from "pstdio-api-contracts";
+import type { ApprovalRequest, HarnessSession, QuestionService, SessionMessage } from "pstdio-api-contracts";
 import { createApprovalService, createEventStore, createQuestionService } from "pstdio-api-runtime-host";
 import { createSessionConversation, type SessionConversation } from "./session-conversation";
 
@@ -16,7 +10,7 @@ export type SessionChannelHooks = {
 };
 
 export type ActiveSession = {
-  eventStore: EventStore & { close(): void };
+  eventStore: ReturnType<typeof createEventStore>;
   approvalService: ReturnType<typeof createApprovalService>;
   questionService: QuestionService;
   session: HarnessSession | null;
@@ -122,6 +116,21 @@ export const createSessionStore = () => {
   };
 
   return {
+    diagnostics: async () => {
+      let retainedMessages = 0;
+      let subscribers = 0;
+      let queuedEvents = 0;
+      let queuedBytes = 0;
+      for (const entry of sessions.values()) {
+        const conversation = await entry.conversationReady.catch(() => null);
+        retainedMessages += conversation?.messageCount ?? 0;
+        const events = entry.eventStore.diagnostics();
+        subscribers += events.subscribers;
+        queuedEvents += events.queuedEvents;
+        queuedBytes += events.queuedBytes;
+      }
+      return { activeSessions: sessions.size, retainedMessages, subscribers, queuedEvents, queuedBytes };
+    },
     create,
     get,
     setSession,

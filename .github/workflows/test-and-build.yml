@@ -349,7 +349,7 @@ jobs:
 
       - name: Test Windows desktop platform integrations
         if: matrix.lane == 'native'
-        run: bun test --timeout 15000 clients/desktop/src/cli clients/desktop/src/performance/performance-endpoint.test.ts
+        run: bun test --timeout 15000 clients/desktop/src/cli clients/desktop/src/performance
 
       - name: Check formatting
         if: matrix.lane == 'lint'
@@ -372,7 +372,7 @@ jobs:
         if: matrix.lane == 'native'
         env:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe
-        run: bun test packages/e2e/src/packaged/harness-npm-detection.test.ts --timeout 30000
+        run: bun test packages/e2e/src/packaged/harness-npm-detection.test.ts packages/e2e/src/packaged/performance-observer.test.ts --timeout 30000
 
       - name: Lint monorepo
         if: matrix.lane == 'lint'
@@ -595,7 +595,7 @@ jobs:
         run: bun --conditions=source test --timeout 15000 packages/pstdio-api/src/features/extensions/process-command.test.ts packages/pstdio-api/src/features/extensions/process-command.windows.test.ts packages/pstdio-api/src/features/extensions/process-discovery.test.ts packages/pstdio-extensions/src/runtime/process-environment.test.ts packages/pstdio-api-runtime-host/src/harness-registry.test.ts
       - name: Test Windows desktop platform integrations
         if: contains(fromJSON(needs.scope.outputs.native_checks), 'desktop')
-        run: bun test --timeout 15000 clients/desktop/src/cli clients/desktop/src/performance/performance-endpoint.test.ts
+        run: bun test --timeout 15000 clients/desktop/src/cli clients/desktop/src/performance
 
   e2e:
     needs: [scope, storybooks]
