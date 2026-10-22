@@ -3,6 +3,7 @@ import { CodexRequestRejectedError } from "./app-server-rpc";
 import type { createAppServerTransport } from "./app-server-transport";
 import { createAsyncQuestionReplies } from "./async-question-replies";
 import { createCodexThread } from "./codex-thread";
+import { releaseIdleThread } from "./idle-thread";
 import { liveGoalUpdate } from "./live-goal-update";
 import { nativeThreadMessages } from "./native-history";
 import { operationSession } from "./operation-session";
@@ -25,6 +26,21 @@ const acknowledgedModel = (
   next: string | undefined,
   command: NativeOperation | undefined,
 ) => (command ? current : (next ?? current));
+const prepareNativeRun = async (
+  rpc: ReturnType<typeof createAppServerTransport>,
+  operation: ReturnType<typeof createAppServerOperation>,
+  id: string,
+  runInput: StartSpawnInput,
+  command?: NativeOperation,
+) => {
+  if (command) {
+    if (runInput.params?.service_tier)
+      await rpc.request("thread/settings/update", { threadId: id, serviceTier: runInput.params.service_tier });
+    return;
+  }
+  const state = (await rpc.request("thread/goal/get", { threadId: id })) as { goal?: { status: string } | null };
+  operation.setGoal(state.goal?.status === "active");
+};
 const prepareQuestionRun = (
   input: StartSpawnInput & Partial<ResumeSpawnInput>,
   questions: ReturnType<typeof createAsyncQuestionReplies>,
@@ -83,20 +99,6 @@ export const createCodexWorker = (
     if (id) return session(id);
     throw error;
   };
-  const prepareNativeRun = async (
-    operation: ReturnType<typeof createAppServerOperation>,
-    id: string,
-    runInput: StartSpawnInput,
-    command?: NativeOperation,
-  ) => {
-    if (command) {
-      if (runInput.params?.service_tier)
-        await rpc.request("thread/settings/update", { threadId: id, serviceTier: runInput.params.service_tier });
-      return;
-    }
-    const state = (await rpc.request("thread/goal/get", { threadId: id })) as { goal?: { status: string } | null };
-    operation.setGoal(state.goal?.status === "active");
-  };
   const execute = async (runInput: StartSpawnInput & Partial<ResumeSpawnInput>, command?: NativeOperation) => {
     if (active) throw new Error("Codex already has an active operation.");
     await Promise.allSettled([...pending]);
@@ -133,13 +135,13 @@ export const createCodexWorker = (
         runInput.signal?.removeEventListener("abort", abort);
       },
     });
-    const session = (id: string) => operationSession(id, operation, asyncQuestions, rpc);
+    const session = (id: string) => operationSession(id, operation, asyncQuestions, rpc, track, thread.markUncertain);
     active = operation;
     runInput.signal?.addEventListener("abort", abort, { once: true });
     try {
       runInput.signal?.throwIfAborted();
       const id = await load(runInput);
-      await prepareNativeRun(operation, id, runInput, command);
+      await prepareNativeRun(rpc, operation, id, runInput, command);
       runInput.signal?.throwIfAborted();
       if (closed) throw new Error("Codex owner disposed.");
       operation.startDelivery();
@@ -222,6 +224,27 @@ export const createCodexWorker = (
         thread: { turns: Turn[] };
       };
       return nativeThreadMessages(result.thread.turns);
+    },
+    releaseIdle: async () => {
+      if (closed) return true;
+      // The host serializes this release with later startup and controls.
+      // Unsubscribe only after checking native work; never stop or pause it here.
+      return releaseIdleThread(
+        rpc,
+        thread,
+        () => !active && !pending.size,
+        async () => {
+          closed = true;
+          try {
+            await rpc.release(owner);
+            disposal.abort();
+            return true;
+          } catch (error) {
+            closed = rpc.isClosed();
+            throw error;
+          }
+        },
+      );
     },
     dispose: async () => {
       closed = true;

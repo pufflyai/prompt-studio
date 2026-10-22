@@ -142,6 +142,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
         input.cwd,
       ),
     recoverMessages: (_ctx, input) => recoverNativeHistory(input),
+    releaseSession: (ctx, input) => deps.runtime.releaseSession(ctx.projectId, input.sessionId),
     dispose: (ctx) => deps.runtime.disposeScope(ctx.projectId),
   };
 };

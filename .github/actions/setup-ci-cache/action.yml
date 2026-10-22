@@ -17,7 +17,6 @@ runs:
       with:
         path: ${{ steps.bun_cache.outputs.path }}
         key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock', 'package.json') }}
-        restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
     - name: Install dependencies
       shell: bash
       run: bun install --frozen-lockfile
