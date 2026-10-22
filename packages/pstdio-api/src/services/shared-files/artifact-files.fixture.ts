@@ -49,7 +49,7 @@ export const artifactFilesFixture = async () => {
       mountPath,
       mountPaths: input.mountPaths,
     });
-  const pathFor = (path: string) => join(repoRoot, ".pstdio/extension-storage/example-documents", path);
+  const pathFor = (path: string) => join(repoRoot, ".pstdio/extension-storage/example.documents", path);
   const recordId = (path: string) => storageRecordId(["artifact-file"], path);
   const replace = async (path: string, value: string | null) => {
     const tree = createFileTree(input.mountPaths);
