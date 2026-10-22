@@ -98,6 +98,8 @@ export const workbenchPanelDefinitions = {
 } as const;
 
 export const workbenchSlots = {
+  /** App-wide settings available from every project. */
+  globalSettings: hostRef("settings-panel", "global.settings"),
   projectSettings: hostRef("settings-panel", "project.settings"),
   /** Custom controls shown in the owner's extension detail Settings tab. */
   extensionSettings: hostRef("settings-panel", "extension.settings"),

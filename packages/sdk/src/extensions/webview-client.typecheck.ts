@@ -33,6 +33,7 @@ const commands = {
 
 const settings = {
   properties: {
+    "device.capacity": { type: "number", scope: "device", default: 2 },
     "counter.enabled": {
       type: "boolean",
       scope: "project",
@@ -72,6 +73,11 @@ client.commands["ticket-status.create"]();
 // Settings are typed by the settings contribution.
 const enabled: Promise<boolean | undefined> = client.settings.get("counter.enabled");
 void enabled;
+const capacity: Promise<number | undefined> = client.settings.get("device.capacity");
+void capacity;
+client.settings.set("device.capacity", 3);
+// @ts-expect-error device settings retain their declared value type
+client.settings.set("device.capacity", "three");
 
 const all: Promise<{ "counter.enabled"?: boolean; "counter.step"?: number }> = client.settings.all();
 void all;

@@ -19,6 +19,8 @@ const extensionCatalogEntrySchema = z.object({
   origin: gitOriginSchema,
   publisher: z.string().min(1).optional(),
   default: z.boolean(),
+  /** Host policy: keep this installed user extension enabled in every project. */
+  alwaysEnabled: z.boolean().optional(),
 });
 
 const extensionCatalogSchema = z.object({

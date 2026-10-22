@@ -252,3 +252,12 @@ options do not rewrite existing IDs or change existing shorthand declarations.
 ## Cloud account and sync status in API 0.2.1
 
 `ctx.account`, the `account.read` and `account.manage` webview capabilities, `client.account` on the typed webview client, and the `accountEvents.projectSyncChanged` host event are additive. They ship in the release after 0.44.0. The `/client` account methods add `cancelLogin` and `projectSyncStatus`. `AccountDevice` adds `online`, `AccountStatus` adds `cloudProjectsLoaded`, and `DeviceLogin` adds an optional `email`. `makeCommandContext` from `@pstdio/sdk/testing` provides a signed-out account whose projects are `local`. Publish the SDK and host before separately released extensions use these additions. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).
+
+## App-wide and device settings in API 0.2.1
+
+`workbenchSlots.globalSettings` and the `"device"` extension setting scope are
+additive. They ship after 0.44.0 within the existing 0.2.1 release step. Existing
+project/global settings, extension detail panels, and published custom global
+slots keep working. Device settings use `ctx.settings` and the existing typed
+webview settings capabilities. Publish the SDK and host before extensions adopt
+them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).

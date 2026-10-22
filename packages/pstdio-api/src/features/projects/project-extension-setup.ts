@@ -1,6 +1,7 @@
 import type { ExtensionSetupWarning } from "pstdio-api-contracts";
 import { apiLogger } from "../../lib/logger";
 import { traceSetupPhase } from "../../lib/setup-phase";
+import { AlwaysEnabledExtensionError } from "../extensions/always-on-extensions";
 import {
   installDefaultExtensions,
   registerInstalledExtensionSources,
@@ -11,8 +12,13 @@ import type { ProjectsRouteDeps } from "./deps";
 const enableSyncedProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string, existingIds: Set<string>) => {
   const extensions = await deps.extensionService.listProjectExtensionInstances(projectId);
   for (const { instance } of extensions) {
-    if (!instance.enabled && !existingIds.has(instance.id))
+    if (instance.enabled || existingIds.has(instance.id)) continue;
+    try {
       await deps.extensionService.setProjectExtensionEnabled(instance.id, true);
+    } catch (error) {
+      // Discovery has already enabled the required provider. Leave alternate copies off.
+      if (!(error instanceof AlwaysEnabledExtensionError)) throw error;
+    }
   }
 };
 
