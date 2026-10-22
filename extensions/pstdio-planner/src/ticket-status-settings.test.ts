@@ -86,7 +86,7 @@ describe("ticket status settings", () => {
     expect(events).toEqual([plannerTicketsChanged, plannerSchemaChanged]);
   });
 
-  test("preserves the drag rules the editor cannot reach", async () => {
+  test("renames a status without losing column actions", async () => {
     const storage = createMemoryStorage();
     const current = await readStatusSettings.run(context(storage), {});
     const done = current.statuses.find((status) => status.id === "done")!;
@@ -97,8 +97,6 @@ describe("ticket status settings", () => {
 
     expect(await statusesCollection(storage).get("done")).toMatchObject({
       name: "Complete",
-      canDragIn: true,
-      canDragOut: true,
       columnActions: ["archive_all"],
     });
   });

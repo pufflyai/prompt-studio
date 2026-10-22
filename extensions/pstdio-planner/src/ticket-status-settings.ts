@@ -48,9 +48,6 @@ const toStoredStatus = (status: TicketStatusDraft, stored: StoredStatus | undefi
     sortOrder: status.sortOrder,
     isDefault: status.isDefault ?? false,
     canCreate: commands.includes(CREATE_COMMAND),
-    // Drag rules have no editor yet; transitions replace them, so keep what is stored.
-    canDragIn: stored?.canDragIn ?? true,
-    canDragOut: stored?.canDragOut ?? true,
     columnActions: commands.filter((command) => command !== CREATE_COMMAND),
   };
 };
