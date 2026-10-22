@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AssetReference, ResourceIdentity, StorageRecord, StorageSaveOutcome } from "@pstdio/sdk/extensions";
@@ -32,7 +32,11 @@ export const registerGroupedStorageSmokeTests = () => {
           engines: { pstdio: `^${EXTENSION_API_VERSION}` },
         }),
       );
-      const env = { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "shared-notes" }]) };
+      const diagnosticsPath = join(root, "storage-events.jsonl");
+      const env = {
+        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "shared-notes" }]),
+        PSTDIO_STORAGE_DIAGNOSTICS_PATH: diagnosticsPath,
+      };
       let host = await startPackagedServe(root, env);
       const post = (path: string, body: unknown) =>
         fetch(`${host.baseUrl}/v1${path}`, {
@@ -75,6 +79,27 @@ export const registerGroupedStorageSmokeTests = () => {
           expect(selected.count.count).toBe(3);
         };
         await expectSelected();
+        const expectPhaseCapture = () => {
+          const events = readFileSync(diagnosticsPath, "utf8")
+            .trim()
+            .split("\n")
+            .map((line) => JSON.parse(line))
+            .filter((event) => event.processId === host.child.pid);
+          expect(events[0]).toMatchObject({ capture: "storage", phase: "capture-start", sequence: 1 });
+          expect(events.every((event, index) => event.sequence === index + 1)).toBe(true);
+          const selected = events.filter(
+            (event) =>
+              event.owner?.workbenchId === project.id &&
+              event.owner?.extensionId === "example.shared-notes" &&
+              event.documentId === "records",
+          );
+          expect(
+            selected.some((event) => event.phase === "records-queried" && Number.isInteger(event.sourceRevision)),
+          ).toBe(true);
+          expect(selected.every((event) => typeof event.monotonicMs === "number")).toBe(true);
+          expect(events.some((event) => "value" in event || "state" in event || "update" in event)).toBe(false);
+        };
+        expectPhaseCapture();
         const allocated = await command<{ id: string; shorthand: string }>(project.id, "allocate");
         const identity: ResourceIdentity = { ...allocated, kind: "note", aliases: [] };
         expect(await command(project.id, "identity", { id: allocated.id })).toEqual(identity);
@@ -144,6 +169,7 @@ export const registerGroupedStorageSmokeTests = () => {
         await stopProcess(host.child);
         host = await startPackagedServe(root, env);
         await expectSelected();
+        expectPhaseCapture();
         expect((await command<StorageSaveOutcome>(project.id, "outcome", { operationId: "second-caller" })).state).toBe(
           "saved-locally",
         );

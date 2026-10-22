@@ -47,6 +47,7 @@ import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smo
 // CRDT storage checks atomic saves, ignored revisions, binary checkpoint workers, local retries and durable restart.
 // Declared indexes, filtered cursor pages, selected fields, aggregates and batch reads survive restart.
 // Accepted Unicode normalization and NUL preservation agree before and after restart.
+// Opt-in storage phase capture reports process ordering and query source revisions after restart.
 // packaged-storage-upgrade.test.ts upgrades a checksummed released 0.45 host's nested saves,
 // assets, local operation retries and deleted records into durable selected rows, then restores and restarts.
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
