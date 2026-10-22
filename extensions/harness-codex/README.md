@@ -41,9 +41,13 @@ pst sessions create --prompt "Review this repository" \
 
 If the `codex` command is missing, Codex shows as unavailable in the model menu.
 
-## Models and reasoning effort
+## Models, speed and reasoning effort
 
 Prompt Studio asks Codex for its list of models, so the menu shows what your Codex account can use.
+
+The **Speed** option offers Standard and Fast. Fast uses the native Codex service tier, like `/fast` in the Codex CLI, and uses more of your Codex allowance. Availability depends on your model and account. See [Codex speed](https://learn.chatgpt.com/docs/agent-configuration/speed).
+
+Choose a speed before sending a prompt. It applies to that turn and later turns in the session; choosing Standard switches Fast off. It also applies when starting or resuming a goal and when compacting a conversation. Prompt Studio resolves an omitted selection to Standard. Programmatic callers can set the harness parameter `service_tier` to `fast` or `default` (Standard). Direct harness callers that omit this parameter keep the native Codex setting.
 
 The **Reasoning effort** option sets how much Codex thinks before it answers: Minimal, Low, Medium, High, or XHigh. The default is Medium. Each model can offer fewer levels or its own default, and models without the option hide it.
 

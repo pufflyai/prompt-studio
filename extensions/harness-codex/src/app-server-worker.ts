@@ -83,12 +83,17 @@ export const createCodexWorker = (
     if (id) return session(id);
     throw error;
   };
-  const nativeGoal = async (
+  const prepareNativeRun = async (
     operation: ReturnType<typeof createAppServerOperation>,
     id: string,
+    runInput: StartSpawnInput,
     command?: NativeOperation,
   ) => {
-    if (command) return;
+    if (command) {
+      if (runInput.params?.service_tier)
+        await rpc.request("thread/settings/update", { threadId: id, serviceTier: runInput.params.service_tier });
+      return;
+    }
     const state = (await rpc.request("thread/goal/get", { threadId: id })) as { goal?: { status: string } | null };
     operation.setGoal(state.goal?.status === "active");
   };
@@ -134,7 +139,7 @@ export const createCodexWorker = (
     try {
       runInput.signal?.throwIfAborted();
       const id = await load(runInput);
-      await nativeGoal(operation, id, command);
+      await prepareNativeRun(operation, id, runInput, command);
       runInput.signal?.throwIfAborted();
       if (closed) throw new Error("Codex owner disposed.");
       operation.startDelivery();

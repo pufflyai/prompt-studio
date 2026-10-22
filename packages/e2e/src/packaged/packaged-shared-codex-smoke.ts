@@ -12,7 +12,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 interface NativeCall {
   pid: number;
   method: string;
-  params: { config?: Record<string, unknown>; threadId?: string };
+  params: { config?: Record<string, unknown>; threadId?: string; serviceTier?: string };
 }
 export const registerSharedCodexSmokeTests = () => {
   test.each([false, true])(
@@ -74,6 +74,7 @@ export const registerSharedCodexSmokeTests = () => {
               title: name,
               prompt: name,
               agent: "pstdio.harness-codex.harness.codex",
+              params: { service_tier: name === "first" ? "fast" : "default" },
             }),
           );
         }
@@ -93,6 +94,12 @@ export const registerSharedCodexSmokeTests = () => {
         const starts = calls().filter((call) => call.method === "thread/start");
         expect(starts).toHaveLength(2);
         expect(new Set(starts.map((call) => call.pid)).size).toBe(1);
+        expect(starts.map((call) => call.params.serviceTier)).toEqual(["fast", "default"]);
+        expect(
+          calls()
+            .filter((call) => call.method === "turn/start")
+            .map((call) => call.params.serviceTier),
+        ).toEqual(["fast", "default"]);
         for (const session of sessions)
           expect(await listSessions(session.project_id, "in_progress")).toMatchObject([
             { id: session.id, title: expect.any(String), status: "in_progress", project_id: session.project_id },

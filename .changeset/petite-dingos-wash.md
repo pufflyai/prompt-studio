@@ -2,4 +2,4 @@
 "harness-codex": patch
 ---
 
-Allow queued corrections to steer active Codex work while preserving delivery identity and attachments.
+Allow native Fast speed selection and live Codex steering while preserving delivery identity and attachments.

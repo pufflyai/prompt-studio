@@ -46,6 +46,31 @@ describe.if(enabled)("installed Codex CLI", () => {
     expect((await discoverCodexModels()).length).toBeGreaterThan(0);
   });
 
+  test("retains Fast speed and accepts an explicit switch to Standard", async () => {
+    const input = {
+      prompt: "",
+      events: events(),
+      cwd: codexHome,
+      env: { ...env, PSTDIO_SESSION_ID: "speed" },
+      params: { service_tier: "fast" },
+    };
+    const worker = runtime.worker(input);
+    const threadId = await worker.load(input);
+    // Empty threads have no rollout to resume; a paused goal persists one without a model turn.
+    await worker.request("thread/goal/set", { threadId, objective: "Check speed", status: "paused" });
+    const fast = (await worker.request("thread/resume", { threadId })) as { serviceTier: string };
+    expect(["fast", "priority"]).toContain(fast.serviceTier);
+    await worker.request("thread/unsubscribe", { threadId });
+    expect(await worker.request("thread/resume", { threadId, serviceTier: "default" })).toMatchObject({
+      serviceTier: "default",
+    });
+    await worker.request("thread/settings/update", { threadId, serviceTier: "fast" });
+    const warm = (await worker.request("thread/resume", { threadId })) as { serviceTier: string };
+    expect(["fast", "priority"]).toContain(warm.serviceTier);
+    await worker.request("thread/settings/update", { threadId, serviceTier: "default" });
+    expect(await worker.request("thread/resume", { threadId })).toMatchObject({ serviceTier: "default" });
+  });
+
   test("starts a thread and controls its goal through the app server", async () => {
     const input = {
       prompt: "",
