@@ -10,13 +10,14 @@ import type {
   DataTableRendererSelectionAction,
   WorkbenchPanelInstance,
 } from "../../../core";
+import { rendererQueryKey } from "../renderer-query-key";
 export const resolveDataTableRendererQueryKey = (
   contribution: Pick<DataTableRendererContribution, "id" | "contextKeys">,
   resource: WorkbenchPanelInstance["resource"],
   modeId: string | undefined,
   contextValues: Record<string, unknown>,
 ) =>
-  JSON.stringify([
+  rendererQueryKey([
     contribution.id,
     resourceKey(resource),
     modeId,
@@ -32,21 +33,25 @@ export const resolveDataTableRendererColumns = (
   const firstRow = result.rows[0];
   return firstRow ? Object.keys(firstRow.values).map((id): DataTableRendererColumn => ({ id })) : [];
 };
-export const buildDataTableRendererData = (
-  rows: DataTableRendererRow[],
-  columns: DataTableRendererColumn[],
-  rowByData = new WeakMap<Record<string, unknown>, DataTableRendererRow>(),
-) => {
+const rendererRow = Symbol("renderer row");
+type RowByData = Pick<WeakMap<RowData, DataTableRendererRow>, "get">;
+const rowByData: RowByData = {
+  get: (data) => (data as RowData & { [rendererRow]?: DataTableRendererRow })[rendererRow],
+};
+
+export const buildDataTableRendererData = (rows: DataTableRendererRow[], columns: DataTableRendererColumn[]) => {
   const data = rows.map((row) => {
     const values = Object.fromEntries(columns.map((column) => [column.id, row.values[column.id]]));
-    rowByData.set(values, row);
+    // The adapter row owns its identity even when selection outlives the displayed page.
+    // Metadata stays out of columns, spread copies, and serialized values.
+    Object.defineProperty(values, rendererRow, { value: row });
     return values;
   });
   return { data, rowByData };
 };
 export const resolveDataTableRendererSelectionActions = (
   actions: DataTableRendererSelectionAction[],
-  rowByData: WeakMap<RowData, DataTableRendererRow>,
+  rowByData: RowByData,
 ): DataTableSelectionAction[] =>
   actions.map((action) => ({
     label: action.label,
@@ -62,7 +67,7 @@ export const resolveDataTableRendererSelectionActions = (
   }));
 export const resolveDataTableRendererResourceActions = (
   data: RowData,
-  rowByData: WeakMap<RowData, DataTableRendererRow>,
+  rowByData: RowByData,
   resolveResourceActions: (resource: NonNullable<DataTableRendererRow["resource"]>) => ResourceContextAction[],
 ) => {
   const resource = rowByData.get(data)?.resource;
@@ -83,5 +88,5 @@ export const resolveDataTableRendererStorageKey = (
   const identity = resourceKey(placement.resource) ?? placement.resource?.id ?? "unscoped";
   const scope = contribution.contextKeys?.map((key) => contextValues[key] ?? null);
   const key = `pstdio:workbench:dataTableRenderer:${contribution.id}:${placement.instanceId}:${identity}`;
-  return scope?.length ? `${key}:${JSON.stringify(scope)}` : key;
+  return scope?.length ? `${key}:${rendererQueryKey(scope)}` : key;
 };

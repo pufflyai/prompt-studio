@@ -9,7 +9,8 @@ import {
   type RowData,
   useDataTableViewStore,
 } from "@pstdio/ui/data-table";
-import { type ReactNode, useRef, useSyncExternalStore } from "react";
+import { type ReactNode, useSyncExternalStore } from "react";
+import { useShallow } from "zustand/react/shallow";
 import type {
   DataTableRendererQueryResult,
   RegisteredDataTableRendererContribution,
@@ -23,6 +24,7 @@ import type { CommandParamFieldRenderer } from "../../command-palette/command-pa
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { tablePageFields } from "../renderer-page-fields";
+import { rendererQueryKey } from "../renderer-query-key";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { usePageParams } from "../use-page-params";
 import { useRendererPages } from "../use-renderer-pages";
@@ -82,7 +84,11 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const { workbench, contribution, placement } = props;
   const pageParams = usePageParams(workbench, placement);
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
-  const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
+  const contextValues = useWorkbenchStore(
+    workbench.context.store,
+    useShallow((state) => Object.fromEntries((contribution.contextKeys ?? []).map((key) => [key, state.values[key]]))),
+  );
+  const modeId = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const storageKey = resolveDataTableRendererStorageKey(contribution, placement, contextValues);
   const provider = contribution.viewsProvider;
   const viewsSource = useSyncExternalStore(
@@ -95,7 +101,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const settings = useDataTableViewStore(storageKey, (state) => state.settings, contribution);
   const paged = contribution.queryMode === "paged";
   const pages = useRendererPages<DataTableRendererQueryResult["rows"][number]>({
-    identity: JSON.stringify([storageKey, filter, sorts, settings, pageParams]),
+    identity: rendererQueryKey([storageKey, filter, sorts, settings, pageParams]),
     scope: JSON.stringify([storageKey, settings.grouping]),
     fields: tablePageFields(contribution.columns ?? [], settings),
     initialPageSize: contribution.initialPageSize,
@@ -103,20 +109,15 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
-    queryKey: resolveDataTableRendererQueryKey(
-      contribution,
-      placement.resource,
-      workbench.modes.getActiveModeId(),
-      contextValues,
-    ),
+    queryKey: resolveDataTableRendererQueryKey(contribution, placement.resource, modeId, contextValues),
     // Paged providers also receive display fields and search before selecting a bounded page.
-    refreshKey: JSON.stringify([filter, sorts, pageParams, ...(paged ? [settings, pages.request, pages.key] : [])]),
+    refreshKey: rendererQueryKey([filter, sorts, pageParams, ...(paged ? [settings, pages.request, pages.key] : [])]),
     load: async (signal) => {
       const result = await contribution.executeQuery(
         {
           pageParams,
           resource: placement.resource,
-          modeId: workbench.modes.getActiveModeId(),
+          modeId,
           filter,
           sorts,
           settings,
@@ -145,13 +146,17 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     },
   });
   const result = read.value ?? initialResult;
-  const retry = () => {
-    if (!paged || !pages.reset()) void read.retry();
-  };
+  const notice = read.error ? (
+    <RendererReadNotice
+      error={read.error}
+      retry={() => {
+        if (!paged || !pages.reset()) void read.retry();
+      }}
+    />
+  ) : null;
   const loading = read.loading && !read.value;
   const columns = resolveDataTableRendererColumns(result, contribution.columns);
-  const rowByData = useRef(new WeakMap<Record<string, unknown>, DataTableRendererQueryResult["rows"][number]>());
-  const model = buildDataTableRendererData(result.rows, columns, rowByData.current);
+  const model = buildDataTableRendererData(result.rows, columns);
   const labels = Object.fromEntries(
     columns.filter((column) => column.label).map((column) => [column.id, column.label!]),
   );
@@ -202,7 +207,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       </DataTableViewFrame>
     );
   }
-  if (!read.value && read.error) return <RendererReadNotice error={read.error} retry={retry} />;
+  if (!read.value && notice) return notice;
   if (provider && !viewsSource)
     return (
       <DataTableViewFrame>
@@ -212,7 +217,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
 
   return (
     <DataTableViewFrame>
-      {read.error ? <RendererReadNotice error={read.error} retry={retry} /> : null}
+      {notice}
       <DataTable
         page={pages.controls(result.page, read.loading, paged, read.value?.position)}
         itemLabel={

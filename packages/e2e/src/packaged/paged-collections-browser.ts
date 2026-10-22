@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { exerciseGroupedPageSelection } from "./paged-collection-group-selection";
 import { observeCollectionReadiness } from "./paged-collection-readiness";
 
 interface PageEvidence {
@@ -37,6 +38,7 @@ export const exercisePagedCollections = async (
     const pending = nextResult(owner, "table");
     const readiness = await observeCollectionReadiness(page, "table", owner);
     await page.getByRole("option", { name: `paged-owner-${owner} table`, exact: true }).click();
+    const elapsedMs = await readiness();
     const response = await pending;
     const text = await response.text();
     const result = JSON.parse(text).outcome.value;
@@ -47,7 +49,6 @@ export const exercisePagedCollections = async (
     expect(text).not.toContain("OFF_PAGE_BODY");
     await expect(page.getByRole("cell", { name: new RegExp(`^paged-owner-${owner} row `) })).toHaveCount(100);
     await expect(page.getByRole("cell", { name: `paged-owner-${owner} row 0000`, exact: true })).toBeVisible();
-    const elapsedMs = await readiness();
     evidence.push({ view: `owner-${owner}-table`, elapsedMs, rows: 100, responseBytes: text.length });
   }
   await page.getByRole("option", { name: "paged-owner-0 table", exact: true }).click();
@@ -91,6 +92,7 @@ export const exercisePagedCollections = async (
   const boardResult = nextResult(0, "board");
   const readiness = await observeCollectionReadiness(page, "board", 0);
   await page.getByRole("option", { name: "paged-owner-0 board", exact: true }).click();
+  const elapsedMs = await readiness();
   const response = await boardResult;
   const board = await response.json();
   expect(board.outcome.value.rows).toHaveLength(100);
@@ -99,7 +101,6 @@ export const exercisePagedCollections = async (
     { field: "status", value: "todo", count: 125 },
   ]);
   await expect(page.getByText("paged-owner-0 row 0001", { exact: true })).toBeVisible();
-  const elapsedMs = await readiness();
   evidence.push({ view: "owner-0-board", elapsedMs, rows: 100, responseBytes: JSON.stringify(board).length });
   const renderer = page.getByTestId("kanban-renderer");
   await expect(renderer.getByText("125", { exact: true })).toHaveCount(2);
@@ -130,6 +131,7 @@ export const exercisePagedCollections = async (
   } finally {
     await moveFirstRow(0);
   }
+  await exerciseGroupedPageSelection(page);
   for (const body of await Promise.all(commandBodies)) expect(body).not.toContain("OFF_PAGE_BODY");
   for (const sample of evidence) expect(sample.elapsedMs, `${sample.view}: open and use 100 rows`).toBeLessThan(1000);
   return evidence;

@@ -22,6 +22,7 @@ import { reportUserActionError, runUserAction } from "../../../core/shared/run-u
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { kanbanPageFields } from "../renderer-page-fields";
+import { rendererQueryKey } from "../renderer-query-key";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { usePageParams } from "../use-page-params";
 import { useRendererPages } from "../use-renderer-pages";
@@ -114,7 +115,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const filter = useKanbanRendererStore(storageKey, (state) => state.filter, initialState);
   const sorts = useKanbanRendererStore(storageKey, (state) => state.sorts, initialState);
   const pages = useRendererPages<KanbanRendererRow>({
-    identity: JSON.stringify([storageKey, settings, filter, sorts, pageParams]),
+    identity: rendererQueryKey([storageKey, settings, filter, sorts, pageParams]),
     scope: storageKey,
     fields: kanbanPageFields(attributes, settings),
     append: true,
@@ -126,7 +127,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     ownerKey: rendererReadKey(placement),
     queryKey: JSON.stringify([contribution.id, storageKey]),
     // Paged providers apply search before selecting rows; legacy providers keep local search.
-    refreshKey: JSON.stringify([settings, filter, sorts, pageParams, ...(paged ? [pages.request, pages.key] : [])]),
+    refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.request, pages.key] : [])]),
 
     load: async (signal) => {
       const state = { settings, filter, sorts, pageParams };
