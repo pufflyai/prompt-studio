@@ -22,7 +22,11 @@ export type StoragePredicate =
   | { all: StoragePredicate[] }
   | { any: StoragePredicate[] }
   | { not: StoragePredicate }
-  | { field: string; op: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "equalsIgnoreCase"; value: Json }
+  | {
+      field: string;
+      op: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "equalsIgnoreCase" | "textContains";
+      value: Json;
+    }
   | { field: string; op: "in" | "notIn"; value: Json[] }
   | { field: string; op: "empty" | "notEmpty" | "exists" | "missing" };
 

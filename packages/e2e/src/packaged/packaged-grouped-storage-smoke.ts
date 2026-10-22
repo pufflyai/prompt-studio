@@ -63,6 +63,7 @@ export const registerGroupedStorageSmokeTests = () => {
             next: { records: { fields: { rank: number } }[]; cursor: string | null };
             rows: StorageRecord[];
             count: { count: number };
+            scalarText: { records: { fields: { rank: number } }[] };
           }>(project.id, "query-records");
           expect(selected.page.records.map((row) => row.fields.rank)).toEqual([1, 2]);
           expect(selected.next.records.map((row) => row.fields.rank)).toEqual([3]);
@@ -72,6 +73,7 @@ export const registerGroupedStorageSmokeTests = () => {
             { state: "ready", rank: 2, body: "full\u0000value" },
           ]);
           expect(selected.count.count).toBe(3);
+          expect(selected.scalarText.records.map((row) => row.fields)).toEqual([{ rank: 2 }]);
         };
         await expectSelected();
         const allocated = await command<{ id: string; shorthand: string }>(project.id, "allocate");

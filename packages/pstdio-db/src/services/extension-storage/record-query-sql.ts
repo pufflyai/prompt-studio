@@ -1,6 +1,7 @@
 import { type SQL, sql } from "drizzle-orm";
 import { queryField } from "pstdio-sync";
 import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
+import { recordNumberTextSql } from "./record-number-text";
 import {
   encodeProjectionValue,
   projectionBytesTag,
@@ -122,6 +123,11 @@ const fieldPredicateSql = (index: StorageRecordIndex, predicate: Extract<Storage
       return predicate.value.length
         ? sql`${comparable} NOT IN (${sql.join(predicate.value.map(json), sql`, `)})`
         : sql`true`;
+    case "textContains": {
+      const value =
+        queryField(index, predicate.field).type === "number" ? sql`to_jsonb(${recordNumberTextSql(field)})` : field;
+      return sql`position(decode(${projectionSubstringBytes(String(predicate.value).toLowerCase())}, 'hex') in ${stringBytesSql(value, true)}) > 0`;
+    }
     case "contains": {
       if (queryField(index, predicate.field).type === "array") return sql`${field} @> ${json([predicate.value])}`;
       return sql`position(decode(${projectionSubstringBytes(String(predicate.value).toLowerCase())}, 'hex') in ${stringBytesSql(field, true)}) > 0`;

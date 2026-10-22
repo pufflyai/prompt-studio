@@ -134,6 +134,15 @@ array. Equality and grouping combine missing with null; existence predicates
 distinguish them. Values with a different declared type are treated as missing.
 Ordering predicates reject arrays. `contains` rejects number and boolean fields.
 
+`textContains` searches the JavaScript `String(value)` form of a declared string,
+finite number, or boolean field, using locale-independent lowercase and a literal
+string needle. It does not match missing, null, or incorrectly typed values.
+Numeric text preserves JavaScript's decimal and exponent spelling, including
+`1e-7` and `1e+21`; it does not use a database locale or cast through another
+floating-point representation. This is scalar text, not a cell formatter: date
+labels, custom display labels, and diff summaries need their provider's matching
+rules. `contains` keeps its existing string and string-array behavior.
+
 `fields` selects declared field names. Each result has `recordId`, the record's
 content `revision`, and a `fields` object; it does not include the complete body,
 asset or shared content. Unset selected fields are null. Omit `fields` to select
