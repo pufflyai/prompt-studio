@@ -1,5 +1,5 @@
 {
-  "id": "95694859-00ad-4331-a3c9-c2c9cc506058",
+  "id": "e778dca0-3088-4a61-9b17-e3c09b7553ca",
   "prevId": "8824a311-e450-4fc0-9d28-8eb3326f98ce",
   "version": "7",
   "dialect": "postgresql",
@@ -3745,6 +3745,174 @@
         "storage_documents_workbench_id_extension_id_document_id_pk": {
           "name": "storage_documents_workbench_id_extension_id_document_id_pk",
           "columns": ["workbench_id", "extension_id", "document_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_record_actor_clocks": {
+      "name": "storage_record_actor_clocks",
+      "schema": "",
+      "columns": {
+        "workbench_id": {
+          "name": "workbench_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client": {
+          "name": "client",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "clock": {
+          "name": "clock",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "storage_record_actor_clocks_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk": {
+          "name": "storage_record_actor_clocks_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk",
+          "tableFrom": "storage_record_actor_clocks",
+          "tableTo": "storage_record_projections",
+          "columnsFrom": ["workbench_id", "extension_id"],
+          "columnsTo": ["workbench_id", "extension_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storage_record_actor_clocks_workbench_id_extension_id_client_pk": {
+          "name": "storage_record_actor_clocks_workbench_id_extension_id_client_pk",
+          "columns": ["workbench_id", "extension_id", "client"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_record_fragments": {
+      "name": "storage_record_fragments",
+      "schema": "",
+      "columns": {
+        "workbench_id": {
+          "name": "workbench_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "record_id": {
+          "name": "record_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "storage_record_fragments_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk": {
+          "name": "storage_record_fragments_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk",
+          "tableFrom": "storage_record_fragments",
+          "tableTo": "storage_record_projections",
+          "columnsFrom": ["workbench_id", "extension_id"],
+          "columnsTo": ["workbench_id", "extension_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storage_record_fragments_workbench_id_extension_id_record_id_pk": {
+          "name": "storage_record_fragments_workbench_id_extension_id_record_id_pk",
+          "columns": ["workbench_id", "extension_id", "record_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_record_ownership": {
+      "name": "storage_record_ownership",
+      "schema": "",
+      "columns": {
+        "workbench_id": {
+          "name": "workbench_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client": {
+          "name": "client",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_clock": {
+          "name": "start_clock",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_clock": {
+          "name": "end_clock",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "record_id": {
+          "name": "record_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "storage_record_ownership_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk": {
+          "name": "storage_record_ownership_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk",
+          "tableFrom": "storage_record_ownership",
+          "tableTo": "storage_record_projections",
+          "columnsFrom": ["workbench_id", "extension_id"],
+          "columnsTo": ["workbench_id", "extension_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storage_record_ownership_pk": {
+          "name": "storage_record_ownership_pk",
+          "columns": ["workbench_id", "extension_id", "client", "start_clock"]
         }
       },
       "uniqueConstraints": {},

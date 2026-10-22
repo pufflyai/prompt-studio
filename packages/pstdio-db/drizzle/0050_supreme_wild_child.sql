@@ -1,3 +1,29 @@
+CREATE TABLE "storage_record_actor_clocks" (
+	"workbench_id" text NOT NULL,
+	"extension_id" text NOT NULL,
+	"client" bigint NOT NULL,
+	"clock" bigint NOT NULL,
+	CONSTRAINT "storage_record_actor_clocks_workbench_id_extension_id_client_pk" PRIMARY KEY("workbench_id","extension_id","client")
+);
+--> statement-breakpoint
+CREATE TABLE "storage_record_fragments" (
+	"workbench_id" text NOT NULL,
+	"extension_id" text NOT NULL,
+	"record_id" text NOT NULL,
+	"state" "bytea" NOT NULL,
+	CONSTRAINT "storage_record_fragments_workbench_id_extension_id_record_id_pk" PRIMARY KEY("workbench_id","extension_id","record_id")
+);
+--> statement-breakpoint
+CREATE TABLE "storage_record_ownership" (
+	"workbench_id" text NOT NULL,
+	"extension_id" text NOT NULL,
+	"client" bigint NOT NULL,
+	"start_clock" bigint NOT NULL,
+	"end_clock" bigint NOT NULL,
+	"record_id" text NOT NULL,
+	CONSTRAINT "storage_record_ownership_pk" PRIMARY KEY("workbench_id","extension_id","client","start_clock")
+);
+--> statement-breakpoint
 CREATE TABLE "storage_current_records" (
 	"workbench_id" text NOT NULL,
 	"extension_id" text NOT NULL,
@@ -60,6 +86,9 @@ CREATE TABLE "storage_resource_projections" (
 	CONSTRAINT "storage_resource_projections_workbench_id_pk" PRIMARY KEY("workbench_id")
 );
 --> statement-breakpoint
+ALTER TABLE "storage_record_actor_clocks" ADD CONSTRAINT "storage_record_actor_clocks_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk" FOREIGN KEY ("workbench_id","extension_id") REFERENCES "public"."storage_record_projections"("workbench_id","extension_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "storage_record_fragments" ADD CONSTRAINT "storage_record_fragments_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk" FOREIGN KEY ("workbench_id","extension_id") REFERENCES "public"."storage_record_projections"("workbench_id","extension_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "storage_record_ownership" ADD CONSTRAINT "storage_record_ownership_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk" FOREIGN KEY ("workbench_id","extension_id") REFERENCES "public"."storage_record_projections"("workbench_id","extension_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_current_records" ADD CONSTRAINT "storage_current_records_workbench_id_projects_id_fk" FOREIGN KEY ("workbench_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_current_records" ADD CONSTRAINT "storage_current_records_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk" FOREIGN KEY ("workbench_id","extension_id") REFERENCES "public"."storage_record_projections"("workbench_id","extension_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_record_indexes" ADD CONSTRAINT "storage_record_indexes_workbench_id_projects_id_fk" FOREIGN KEY ("workbench_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
