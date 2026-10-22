@@ -12,6 +12,7 @@ import {
   type StoragePredicate,
   type StorageRecordIndex,
   type ViewFilterGroup,
+  type ViewFilterRule,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 
@@ -33,30 +34,43 @@ const indexes: StorageRecordIndex[] = ["rank", "title", "status"].flatMap((field
     })),
   ),
 );
+const textPredicate = (rule: ViewFilterRule): StoragePredicate[] => {
+  if (typeof rule.value !== "string" || !rule.value) return [];
+  const match: StoragePredicate = {
+    field: rule.attributeId,
+    op: rule.condition.includes("contain") ? "contains" : "equalsIgnoreCase",
+    value: rule.value,
+  };
+  return [rule.condition === "is-not" || rule.condition === "does-not-contain" ? { not: match } : match];
+};
 const predicate = (filter: ViewFilterGroup): StoragePredicate => {
   const group = (value: Pick<ViewFilterGroup, "conjunction" | "rules">): StoragePredicate => {
-    const rules = value.rules.map((rule): StoragePredicate => {
+    const rules = value.rules.flatMap((rule): StoragePredicate[] => {
       const field = rule.attributeId;
+      const text = fields[field]?.type === "string";
+      if (text && ["is", "is-not", "contains", "does-not-contain"].includes(rule.condition)) {
+        return textPredicate(rule);
+      }
       switch (rule.condition) {
         case "is":
-          return { field, op: "eq", value: rule.value ?? null };
+          return [{ field, op: "eq", value: rule.value ?? null }];
         case "is-not":
-          return { field, op: "ne", value: rule.value ?? null };
+          return [{ field, op: "ne", value: rule.value ?? null }];
         case "contains":
-          return { field, op: "contains", value: rule.value ?? "" };
+          return [{ field, op: "contains", value: rule.value ?? "" }];
         case "gt":
         case "gte":
         case "lt":
         case "lte":
-          return { field, op: rule.condition, value: rule.value ?? null };
+          return [{ field, op: rule.condition, value: rule.value ?? null }];
         case "is-any-of":
-          return { field, op: "in", value: Array.isArray(rule.value) ? rule.value : [] };
+          return [{ field, op: "in", value: Array.isArray(rule.value) ? rule.value : [] }];
         case "is-none-of":
-          return { field, op: "notIn", value: Array.isArray(rule.value) ? rule.value : [] };
+          return [{ field, op: "notIn", value: Array.isArray(rule.value) ? rule.value : [] }];
         case "is-empty":
-          return { field, op: "empty" };
+          return [{ field, op: "empty" }];
         case "is-not-empty":
-          return { field, op: "notEmpty" };
+          return [{ field, op: "notEmpty" }];
         default:
           throw new Error(`Unsupported fixture condition: ${rule.condition}`);
       }

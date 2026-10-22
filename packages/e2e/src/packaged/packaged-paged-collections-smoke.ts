@@ -84,6 +84,27 @@ export const registerPagedCollectionSmokeTests = () => {
           });
           expect(grouped.page.filteredTotal).toBe(125);
           expect(grouped.rows.every((row: { values: { status: string } }) => row.values.status === "todo")).toBe(true);
+          if (owner === 0) {
+            const exact = await command(table.body.queryHandlerId, {
+              ...input,
+              filter: {
+                conjunction: "and",
+                rules: [{ attributeId: "title", condition: "is", value: "PAGED-OWNER-0 ROW 0000" }],
+              },
+            });
+            expect(exact.rows).toHaveLength(1);
+            expect(exact.page.filteredTotal).toBe(1);
+            const excluded = await command(table.body.queryHandlerId, {
+              ...input,
+              filter: {
+                conjunction: "and",
+                rules: [{ attributeId: "title", condition: "does-not-contain", value: "ROW 00" }],
+              },
+            });
+            expect(excluded.rows).toHaveLength(100);
+            expect(excluded.page.filteredTotal).toBe(150);
+            expect(excluded.rows[0].values.title).toBe("paged-owner-0 row 0100");
+          }
         }
       } finally {
         await stopProcess(host.child);
