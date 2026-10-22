@@ -123,9 +123,9 @@ describe("checkExtensions", () => {
     expect(report).toContain("id:        pstdio.extension-lab");
     expect(report).toContain("name:      extension-lab");
     expect(report).toContain("version:   0.1.0");
-    expect(report).toContain("CLI: pstdio extension-lab say-hello");
-    expect(report).toContain("CLI: pstdio extension-lab counter-bump");
-    expect(report).toContain("tickets -> .pstdio/extension-storage/extension-lab/tickets");
+    expect(report).toContain("CLI: pstdio pstdio.extension-lab say-hello");
+    expect(report).toContain("CLI: pstdio pstdio.extension-lab counter-bump");
+    expect(report).toContain("tickets -> .pstdio/extension-storage/pstdio.extension-lab/tickets");
   });
   test("flags invalid default exports", async () => {
     const home = createTempHome();
