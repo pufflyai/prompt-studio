@@ -1,5 +1,5 @@
 import { Box, Button, Heading, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, ScrollArea, SimpleCard, SimpleCardBody, WindowTitleBar } from "@pstdio/ui";
+import { AlertMessage, SimpleCard, SimpleCardBody, WindowTitleBar } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { DesktopStartingState } from "./desktop-starting-state";
@@ -55,11 +55,9 @@ const RecoveryState = (props: {
           <Heading textStyle="heading/M" flexShrink="0">
             Prompt Studio needs attention
           </Heading>
-          <ScrollArea minHeight="0" contentProps={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>
-            <AlertMessage status="error" title={state.error.code}>
-              {state.error.message}
-            </AlertMessage>
-          </ScrollArea>
+          <AlertMessage status="error" title={state.error.code}>
+            {state.error.message}
+          </AlertMessage>
           <HStack gap="xs" flexWrap="wrap" flexShrink="0">
             {availableActions.has("retry") && <Button onClick={actions.retryRuntime}>Retry</Button>}
             {availableActions.has("open_logs") && (
