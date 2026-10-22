@@ -193449,7 +193449,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "No items: no indicator. Orange: items needing attention. Green: resolved total. Each indicator opens the ticket Needs attention page.",
+          "content": "No items: no indicator. Orange: items needing attention. Green: resolved total. Needs attention is visible by default. Card and timeline indicators open the selected ticket’s forms on the right while keeping Tickets or Timeline open. The ticket sidebar still opens its full Needs attention page.",
           "fontFamily": "$font-label",
           "fontSize": 12,
           "fontWeight": "normal"

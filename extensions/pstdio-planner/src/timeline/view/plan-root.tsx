@@ -10,7 +10,7 @@ import {
 } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { ticketRequestsTarget } from "../../data/ticket-page-target";
+import { attentionPanelTarget } from "../../attention-panel";
 import { stepReview } from "../model/review";
 import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
@@ -101,7 +101,8 @@ function PlanContent(props: PlanContentProps) {
             {...viewProps}
             today={plan.today}
             onOpenRequests={(row) => {
-              void host.call("navigation.open", { target: ticketRequestsTarget(row.target.resource!) });
+              setSelectedId(undefined);
+              void host.call("navigation.open", { target: attentionPanelTarget(row.target.resource!, "timeline") });
             }}
           />
         </Box>

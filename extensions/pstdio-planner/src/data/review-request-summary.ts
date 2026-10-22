@@ -1,6 +1,5 @@
-import type { CollectionBadgeItem, ResourceRef } from "@pstdio/sdk/extensions";
+import type { CollectionBadgeItem, NavigationTarget } from "@pstdio/sdk/extensions";
 import type { ReviewRequestView } from "./review-request-types";
-import { ticketRequestsTarget } from "./ticket-page-target";
 
 export const REVIEW_REQUEST_ICON = "message-circle-warning";
 export const REVIEW_REQUEST_ITEMS_ATTRIBUTE = "reviewRequestItems";
@@ -24,7 +23,7 @@ export const reviewRequestSummary = (group: ReviewRequestStates) => {
   };
 };
 
-export const reviewRequestBadgeItems = (group: ReviewRequestStates, resource: ResourceRef): CollectionBadgeItem[] => {
+export const reviewRequestBadgeItems = (group: ReviewRequestStates, action: NavigationTarget) => {
   const summary = reviewRequestSummary(group);
   return summary
     ? [
@@ -34,8 +33,8 @@ export const reviewRequestBadgeItems = (group: ReviewRequestStates, resource: Re
           icon: REVIEW_REQUEST_ICON,
           color: summary.color,
           tooltip: summary.tooltip,
-          target: ticketRequestsTarget(resource),
-        },
+          action,
+        } satisfies CollectionBadgeItem,
       ]
     : [];
 };

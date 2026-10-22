@@ -4,6 +4,7 @@ import type {
   KanbanRendererQueryResult,
   ViewFilterGroup,
 } from "@pstdio/sdk/extensions";
+import { attentionPanelTarget } from "../attention-panel";
 import { readStoredPlan } from "../timeline/commands/plan-store";
 import { buildPlan } from "../timeline/model/build-plan";
 import { resolvePlan } from "../timeline/model/resolve-plan";
@@ -100,7 +101,7 @@ export const runTicketsQuery = async ({
         }),
         [REVIEW_REQUEST_ITEMS_ATTRIBUTE]: reviewRequestBadgeItems(
           requests.get(ticket.id) ?? { requests: [], errors: [] },
-          row.resource,
+          attentionPanelTarget(row.resource),
         ),
       },
     };

@@ -13,6 +13,7 @@ import {
   workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
+import { attentionPanel, attentionPanelTarget } from "./attention-panel";
 import { archiveTicketColumnAction } from "./commands/archive-ticket";
 import { attachTicketFileCommand } from "./commands/attach-ticket-file";
 import { createTicketCommand } from "./commands/create-ticket";
@@ -28,12 +29,7 @@ import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STAT
 import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
 import { REVIEW_REQUEST_ICON } from "./data/review-request-summary";
 import { ticketBoard, timelineBoard } from "./data/ticket-board";
-import {
-  ticketDocumentPage,
-  ticketPageTarget,
-  ticketRequestsPage,
-  ticketRequestsTarget,
-} from "./data/ticket-page-target";
+import { ticketDocumentPage, ticketPageTarget, ticketRequestsPage } from "./data/ticket-page-target";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
@@ -65,7 +61,7 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
       view: tickets,
       cardinality: "one",
     },
-    slots: [],
+    slots: [attentionPanel],
   });
   const ticketDetailPage = definePage({
     id: ticketDocumentPage.id,
@@ -139,7 +135,7 @@ export const createPlannerUi = (baseUrl: string) => {
       onRowActivate: async (ctx, { row }) => {
         if (!row.resource) return;
         const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, row.resource.id));
-        ctx.navigation.open(pending ? ticketRequestsTarget(row.resource) : ticketPageTarget(row.resource));
+        ctx.navigation.open(pending ? attentionPanelTarget(row.resource) : ticketPageTarget(row.resource));
       },
       onAttributeChange: setTicketAttribute,
       onMove: moveTicketOnBoard,

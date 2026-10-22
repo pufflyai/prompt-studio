@@ -281,7 +281,6 @@ describe("pstdio planner workspace contributions", () => {
         view: tickets.ref,
         cardinality: "one",
       },
-      slots: [],
     });
     expect(extension.pages?.find((page) => page.id === "ticket")).toMatchObject({
       path: "ticket",
