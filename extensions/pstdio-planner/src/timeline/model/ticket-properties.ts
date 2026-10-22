@@ -1,4 +1,5 @@
 import { type KanbanRendererAttributeDescriptor, l10n } from "@pstdio/sdk/extensions";
+import { attentionPanelTarget } from "../../attention-panel";
 import { REVIEW_REQUEST_ITEMS_ATTRIBUTE, reviewRequestBadgeItems } from "../../data/review-request-summary";
 import type { Deadline, Plan } from "../contracts";
 
@@ -112,7 +113,7 @@ export function timelineTicketProperties(plan: Plan) {
                   : reviewRequestAnswer(row),
               [REVIEW_REQUEST_ITEMS_ATTRIBUTE]: reviewRequestBadgeItems(
                 { requests: row.requests, errors: row.requestErrors },
-                row.target.resource!,
+                attentionPanelTarget(row.target.resource!, "timeline"),
               ),
             },
           ] as const,
