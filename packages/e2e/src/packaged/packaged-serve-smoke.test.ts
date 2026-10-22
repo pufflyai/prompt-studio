@@ -114,6 +114,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // A context-menu deletion resolves its hidden note identifier without opening a parameter form.
 // packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
+// Group dragging keeps panel dropzones hidden.
 // The paired session-menu browser check restores focus to its tab after Escape.
 // Its floating launcher hides while open, returns on close, and reopens with the keyboard.
 // It also opens a workspace's related session through the default-on preview policy and checks that it is unpinned.
