@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
-// Account checks include project sync status, native sign-in cancellation, and authenticated presence.
+// Account checks include project sync status, native sign-in cancellation, early access and authenticated presence.
 import { registerAccountSmokeTests } from "./packaged-account-smoke";
 import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
 // Includes retained creation drafts, backdrop protection, and creation without row activation.
@@ -85,6 +85,7 @@ import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
 // Composer coverage preserves route-group file paths and keeps web references natively clickable in packaged messages.
 // Queue drag targets follow live-input support and retain padded delete actions.
+// Extension commands stop active work and cancel remaining queued follow-ups through the public SDK.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";

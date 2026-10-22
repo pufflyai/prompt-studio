@@ -82,6 +82,17 @@ export const registerQueuedRequestSmokeTests = () => {
       ).toBe("rejected");
 
       logQueuedPhase("API queue", "verified single delivery and retained active run");
+      const stopped = await request(
+        `/projects/${fixture!.projectId}/extensions/commands/test.queue-smoke.command.stop/execute`,
+        "POST",
+        { params: { sessionId: session.id } },
+      );
+      expect(stopped).toMatchObject({
+        outcome: {
+          ok: true,
+          value: { session: { status: "cancelled", lastExit: { cause: "user_stop" } }, queue: { requests: [] } },
+        },
+      });
     });
 
     for (const acceptsLiveInput of [true, false]) {

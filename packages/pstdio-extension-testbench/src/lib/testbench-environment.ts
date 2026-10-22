@@ -133,6 +133,7 @@ export const createBenchEnvironment = (
         };
       },
       followup: async () => {},
+      stop: async () => {},
       getQueuedFollowUps: queuedRequestsRequireHost,
       updateQueuedFollowUp: queuedRequestsRequireHost,
       combineQueuedFollowUps: queuedRequestsRequireHost,

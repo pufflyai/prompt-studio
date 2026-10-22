@@ -62,6 +62,7 @@ export const stubEnvironment = (
       get: async () => null,
       create: async () => createSessionResource(),
       followup: async () => {},
+      stop: async () => {},
       getQueuedFollowUps: queuedRequestsRequireHost,
       updateQueuedFollowUp: queuedRequestsRequireHost,
       combineQueuedFollowUps: queuedRequestsRequireHost,

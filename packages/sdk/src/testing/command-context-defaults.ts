@@ -101,6 +101,7 @@ export const createCommandContextDefaults = (input: {
       get: async () => null,
       create: unavailable,
       followup: unavailable,
+      stop: unavailable,
       addAnchors: async (id, anchors) => {
         await resources.addAnchors(coreResource("session", id), anchors);
       },
@@ -116,7 +117,7 @@ export const createCommandContextDefaults = (input: {
     automation: { enqueue: unavailable, get: async () => undefined, list: async () => [], cancel: unavailable },
     // A signed-out device: every project is local until a test overrides the account.
     account: {
-      status: async () => ({ login: null, cloudProjects: [], cloudProjectsLoaded: true }),
+      status: async () => ({ login: null, cloudProjects: [], cloudProjectsLoaded: true, features: null }),
       login: unavailable,
       loginStatus: unavailable,
       cancelLogin: unavailable,
