@@ -18,13 +18,23 @@ test("cache readiness is always complete when another process observes it", asyn
     { stdout: "ignore", stderr: "inherit" },
   );
   try {
+    const expectReady = (index: number) => {
+      expect(JSON.parse(readFileSync(join(directory, `ready-${index}`), "utf8"))).toEqual(server);
+    };
+    // Race the writer for this window without making disk throughput part of the contract.
     const deadline = Date.now() + 2000;
-    for (let index = 0; index < 1000; index++) {
+    let index = 0;
+    while (index < 1000 && Date.now() < deadline) {
       const ready = join(directory, `ready-${index}`);
-      while (!existsSync(ready) && Date.now() < deadline) {}
-      expect(JSON.parse(readFileSync(ready, "utf8"))).toEqual(server);
+      if (!existsSync(ready)) {
+        await Bun.sleep(1);
+        continue;
+      }
+      expectReady(index);
+      index++;
     }
     expect(await publisher.exited).toBe(0);
+    for (; index < 1000; index++) expectReady(index);
   } finally {
     publisher.kill();
     await publisher.exited;
