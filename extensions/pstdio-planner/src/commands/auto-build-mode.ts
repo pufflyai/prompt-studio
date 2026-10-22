@@ -1,7 +1,7 @@
 import { type CommandContext, defineCommand, l10n, params, type ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { readAutoBuildFilter } from "../data/auto-build-filter";
 import { readAutoBuildMode, saveAutoBuildMode } from "../data/auto-build-mode";
-import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
+import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withWriteGuard } from "../data/write-guard";
 import { enqueueAutoBuild } from "../hooks/auto-build";
 import { readPlanCommand } from "../timeline/commands/read-plan";
@@ -86,17 +86,22 @@ export const configureAutoBuildCommand = defineCommand({
         if (enabled && !nextPrompt) throw new Error("Enter a prompt for the Auto Build supervisor.");
         const nextEligible = eligible ?? current.eligible;
         await validateEligibility(ctx, enabled, nextEligible);
-        if (enabled && !current.enabled) await saveAutoBuildSupervisor(ctx, {});
-        return saveAutoBuildMode(ctx, {
-          ...current,
-          revision: crypto.randomUUID(),
-          enabled,
-          prompt: nextPrompt,
-          eligible: nextEligible,
-          supervisorModel: supervisorModel ?? current.supervisorModel,
-          blockOnReview: blockOnReview ?? current.blockOnReview,
-          requireMergedDependencies: requireMergedDependencies ?? current.requireMergedDependencies,
-        });
+        return saveAutoBuildMode(
+          ctx,
+          {
+            ...current,
+            revision: crypto.randomUUID(),
+            enabled,
+            prompt: nextPrompt,
+            eligible: nextEligible,
+            supervisorModel: supervisorModel ?? current.supervisorModel,
+            blockOnReview: blockOnReview ?? current.blockOnReview,
+            requireMergedDependencies: requireMergedDependencies ?? current.requireMergedDependencies,
+          },
+          enabled && !current.enabled
+            ? [{ recordId: ctx.storage.records.id("auto-build-supervisor"), replace: {} }]
+            : [],
+        );
       });
     // A previous wake must finish saving its session before a new run clears ownership.
     // Stop stays available while a wake is starting a session.

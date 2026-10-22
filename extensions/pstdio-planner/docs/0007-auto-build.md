@@ -22,6 +22,10 @@ The selected timeline view, search, and display filters only affect what you see
 
 **Require merged dependencies** is off by default. While it is off, dependent tickets can start on the selected or only submitted revision of each prerequisite, without a review verdict. Planner combines their submitted commits without merging into the delivery target, and the implementing agent stacks its changes on top. If that combination conflicts, the owner reconciles the code in its assigned workspace before continuing. Turn it on to wait until prerequisite code, including verified squash merges, is in the selected target. Missing revisions, running replacement work, and ambiguous attempts still prevent a launch. Code conflicts do not create human review requests. Ask for human input only when features, concepts, requirements, plans, or architecture conflict and the existing instructions cannot resolve them.
 
+## Saving settings
+
+Starting a new run saves the settings and clears the old supervisor state in one storage change. Planner sends the settings-change event and queues the next check after that save succeeds. Editing settings during a run keeps its supervisor state.
+
 ## How the supervisor works
 
 Planner checks every three minutes and also checks when tickets change or a worker session finishes. When relevant work changes and valid work can run, Planner starts or resumes the supervisor session. A new session receives your prompt and the Auto Build instructions once. Later wakes are short messages asking it to query current work. An hourly reminder explains that progress has stalled. Worker failures, freed capacity, submitted revisions, and answered requests can change the available work. The supervisor's own dispatches are already known to it. Its completion event does not wake it again.

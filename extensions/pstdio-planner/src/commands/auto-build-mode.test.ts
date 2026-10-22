@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
+import type { StorageGroup } from "@pstdio/sdk/extensions";
 import { putAttempt } from "../data/attempt-storage";
+import { type AutoBuildMode, autoBuildChanged } from "../data/auto-build-mode";
 import { putTicket } from "../data/collections";
 import { fixture } from "./auto-build.fixture";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
@@ -174,4 +176,82 @@ test("completed ticket work clears an old supervisor automation error", async ()
   await scope(ctx);
   await putTicket(storage, { ...selected, statusId: "done" });
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: true, error: undefined });
+});
+
+test("starting saves the mode and supervisor reset together before notifying observers", async () => {
+  const { ctx, storage } = await fixture();
+  await configureAutoBuildCommand.run(ctx, { enabled: false });
+  await storage.set("auto-build-supervisor", { sessionId: "previous-supervisor" });
+  const groups: StorageGroup[] = [];
+  const commit = storage.records.commit;
+  storage.records.commit = async (group) => {
+    groups.push(group);
+    return commit(group);
+  };
+  const observed: unknown[] = [];
+  const observe = async () => {
+    observed.push({
+      mode: await storage.get("auto-build"),
+      supervisor: await storage.get("auto-build-supervisor"),
+    });
+  };
+  const emit = ctx.events.emit;
+  ctx.events.emit = async (event, payload) => {
+    if (event === autoBuildChanged) await observe();
+    return emit(event, payload);
+  };
+  ctx.automation.enqueue = async () => {
+    await observe();
+    return {} as never;
+  };
+  const mode = await configureAutoBuildCommand.run(ctx, { enabled: true, prompt: "Start a fresh run" });
+  expect(groups).toEqual([
+    {
+      operationId: expect.any(String),
+      edits: [
+        {
+          recordId: storage.records.id("auto-build"),
+          replace: expect.objectContaining({
+            revision: mode.revision,
+            enabled: true,
+            prompt: "Start a fresh run",
+            eligible: mode.eligible,
+          }),
+        },
+        { recordId: storage.records.id("auto-build-supervisor"), replace: {} },
+      ],
+    },
+  ]);
+  expect(observed).toEqual([
+    { mode, supervisor: {} },
+    { mode, supervisor: {} },
+  ]);
+});
+
+test("a failed start save preserves the old mode and supervisor without sending effects", async () => {
+  const { ctx, storage } = await fixture();
+  await configureAutoBuildCommand.run(ctx, { enabled: false });
+  const previous = await storage.get<AutoBuildMode>("auto-build");
+  await storage.set("auto-build-supervisor", { sessionId: "previous-supervisor" });
+  storage.records.commit = async () => {
+    throw new Error("Storage unavailable");
+  };
+  const effects: unknown[] = [];
+  const emit = ctx.events.emit;
+  ctx.events.emit = async (...args) => {
+    effects.push(args);
+    return emit(...args);
+  };
+  ctx.automation.enqueue = async (...args) => {
+    effects.push(args);
+    return {} as never;
+  };
+  await expect(configureAutoBuildCommand.run(ctx, { enabled: true, prompt: "New run" })).rejects.toThrow(
+    "Storage unavailable",
+  );
+  expect(await storage.get<AutoBuildMode>("auto-build")).toEqual(previous);
+  expect(await storage.get<{ sessionId: string }>("auto-build-supervisor")).toEqual({
+    sessionId: "previous-supervisor",
+  });
+  expect(effects).toEqual([]);
 });
