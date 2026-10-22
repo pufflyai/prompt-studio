@@ -101,6 +101,7 @@ export const createCommandContextDefaults = (input: {
       get: async () => null,
       create: unavailable,
       followup: unavailable,
+      stop: unavailable,
       addAnchors: async (id, anchors) => {
         await resources.addAnchors(coreResource("session", id), anchors);
       },

@@ -467,6 +467,8 @@ The dashboard previews the change in navigation, tabs, and breadcrumbs while the
 
 ## Sessions
 
+Use `await ctx.sessions.stop(sessionId)` to cancel a session in the current project and its queued follow-ups. This is available on `main` in extension API 0.2.2 and ships after 0.45.0. It supports queued, running, and awaiting-input sessions. The host waits for the harness's stop acknowledgement when the harness supports it. Harness failures and a change of execution owner reject the call; a caller must not report a successful stop in that case. Read the session again before deciding what to do next. Missing sessions and sessions from another project are rejected. Calling stop on a terminal session also records explicit stop intent and cancels its queued follow-ups. An uncertain live-input delivery remains recorded for host recovery.
+
 Use `ctx.sessions.query(input?)` to read sessions in the current project. It returns `{ items, nextCursor }`. Each item includes `agent` (harness ID), `last_selected_model`, `workspace_id`, status, archive state, anchors, creation and update times, latest-run start and end times, and `usage`.
 
 Filters can be combined:

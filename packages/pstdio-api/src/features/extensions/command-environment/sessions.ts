@@ -44,6 +44,11 @@ export const createSessionsApi = (
   };
 
   return {
+    stop: async (id) => {
+      input.signal?.throwIfAborted();
+      await read(() => requireProjectSession(id));
+      if (!(await deps.sessionService.cancel(id))) throw new Error("Session execution changed before stopping.");
+    },
     getQueuedFollowUps: async (id) => {
       await read(() => requireProjectSession(id));
       return read(() => pendingQueuedRequests(deps, id));

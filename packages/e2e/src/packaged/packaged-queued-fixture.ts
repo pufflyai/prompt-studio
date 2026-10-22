@@ -44,7 +44,12 @@ export const createPackagedQueueFixture = async () => {
       const queuedHarness={...harness,id:"queued-worker",ref:{kind:"harness",id:"queued-worker"},
         start(...args){const {steer,...handle}=harness.start(...args);return handle;}
       };
-      export default {harnesses:[harness,queuedHarness]};
+      export default {harnesses:[harness,queuedHarness],commands:[{
+        id:"stop",ref:{kind:"command",id:"stop"},title:"Stop session",params:{sessionId:{type:"string",required:true}},
+        async run(ctx,input){await ctx.sessions.stop(input.sessionId);return {
+          session:await ctx.sessions.get(input.sessionId),queue:await ctx.sessions.getQueuedFollowUps(input.sessionId)
+        };}
+      }]};
     `,
     );
 

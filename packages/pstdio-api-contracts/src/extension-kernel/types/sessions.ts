@@ -172,6 +172,9 @@ export interface ExtensionSessionsApi {
     expectedRun?: SessionRunSnapshot;
   }): Promise<void>;
 
+  /** Cancel a project session and its queued follow-ups. Waits for harness stop acknowledgement when supported. */
+  stop(sessionId: string): Promise<void>;
+
   /** @deprecated Use resources.addAnchors with a session reference. */
   addAnchors(sessionId: string, anchors: ResourceAnchor[]): Promise<void>;
   /** @deprecated Use resources.removeAnchors with a session reference. */
