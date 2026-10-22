@@ -11,6 +11,7 @@ export type PerformanceSnapshot = {
     pid: number;
     role: string;
     cpuPercent: number;
+    memoryKiB: { workingSet: number };
     extensionFrames: Array<{ installedExtensionId: string }>;
   }>;
   frames: unknown[];

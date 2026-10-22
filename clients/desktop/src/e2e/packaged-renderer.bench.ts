@@ -1,4 +1,5 @@
 import { expect } from "@playwright/test";
+import { recordMeasurement } from "pstdio-benchmarks/writer";
 import type { BenchmarkMetric } from "../testing/benchmark-budget";
 import { test } from "../testing/packaged-fixture";
 import { recordBenchmark } from "./benchmark-record";
@@ -42,6 +43,16 @@ for (const monitoring of [false, true]) {
           body: JSON.stringify(snapshot?.processes, null, 2),
         });
         const main = snapshot?.processes.find((process) => process.role === "main");
+        const workingSetKiB = (snapshot?.processes ?? []).reduce(
+          (sum, process) => sum + process.memoryKiB.workingSet,
+          0,
+        );
+        recordMeasurement({
+          metric: "idle-workbench/app-memory",
+          label: "Idle workbench, memory of all app processes",
+          unit: "bytes",
+          value: workingSetKiB * 1024,
+        });
         metrics.push({
           name: "main-process-cpu",
           unit: "percent",

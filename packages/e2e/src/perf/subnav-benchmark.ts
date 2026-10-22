@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { cpus, totalmem } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium, expect } from "@playwright/test";
+import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { PROVISIONED_CHROMIUM } from "../packaged/packaged-chromium";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import { signInBrowser } from "../packaged/packaged-serve-helpers";
@@ -147,6 +148,18 @@ try {
       };
     }),
   );
+  for (const sample of samples) {
+    const name = `${sample.destination}-${sample.visit}`;
+    const place = `${sample.destination === "ticket" ? "a ticket" : "sessions"}, ${sample.visit} visit`;
+    const record = (part: keyof typeof SUBNAV_BUDGETS, what: string, value: number | undefined) => {
+      if (value === undefined) return;
+      const budget = SUBNAV_BUDGETS[part];
+      recordMeasurement({ metric: `${name}/${part}`, label: `Open ${place}, ${what}`, unit: "ms", value, budget });
+    };
+    record("structureMs", "sections", sample.structureMs);
+    record("dataMs", "data", sample.dataMs);
+    record("editorMs", "editor", sample.editorMs);
+  }
   const report = {
     label,
     measuredAt: new Date().toISOString(),

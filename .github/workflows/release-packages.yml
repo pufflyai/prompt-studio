@@ -408,6 +408,43 @@ jobs:
             gh release edit "$TAG" --draft=false
           fi
 
+  # Stable and patch releases measure every benchmark suite for the Performance pages.
+  # Benchmarks never block a release; their results attach after it publishes.
+  benchmarks:
+    needs: plan
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel != 'nightly' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/benchmarks.yml
+    with:
+      commits: ${{ needs.plan.outputs.commit }}
+      platforms: ${{ join(fromJSON(needs.plan.outputs.targets), ',') }}
+
+  benchmark_assets:
+    needs: [plan, publish, benchmarks]
+    if: ${{ !cancelled() && needs.publish.result == 'success' && needs.benchmarks.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ needs.plan.outputs.tag }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: benchmark-results-*
+          path: benchmark-results
+      - name: Attach benchmark results to the release
+        run: |
+          set -euo pipefail
+          mkdir -p benchmark-assets
+          for file in benchmark-results/*/*.json; do
+            cp "$file" "benchmark-assets/benchmarks-$(jq -r .platform "$file").json"
+          done
+          gh release upload "$TAG" benchmark-assets/* --clobber
+
   # Runs only after a nightly published with every asset.
   nightly_prune:
     needs: [plan, publish]

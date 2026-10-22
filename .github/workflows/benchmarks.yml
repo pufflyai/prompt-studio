@@ -1,0 +1,158 @@
+name: Benchmarks
+run-name: Benchmarks ${{ inputs.commits || github.event.pull_request.head.sha }} on ${{ inputs.platforms || 'linux-x64' }}
+
+# Every run measures the given commits on the same runner, alternating them sample by sample.
+# The Performance pages in the pstdio-dev extension start these runs and read their artifacts.
+on:
+  workflow_dispatch:
+    inputs:
+      commits:
+        description: Commits, branches, or tags separated by commas. The first one is the base.
+        required: true
+      suites:
+        description: Suite ids separated by commas. Empty runs every suite.
+        default: ""
+      platforms:
+        description: Platforms separated by commas (linux-x64, darwin-arm64, darwin-x64, win32-x64).
+        default: linux-x64
+      samples:
+        description: Samples per commit and suite.
+        default: "10"
+  workflow_call:
+    inputs:
+      commits:
+        type: string
+        required: true
+      suites:
+        type: string
+        default: ""
+      platforms:
+        type: string
+        default: linux-x64
+      samples:
+        type: string
+        default: "10"
+  # Proves the runner still works when it changes, with a short measurement of the fastest suites.
+  pull_request:
+    paths:
+      - packages/benchmarks/**
+      - .github/workflows/benchmarks.yml
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      include: ${{ steps.plan.outputs.include }}
+      checkouts: ${{ steps.plan.outputs.checkouts }}
+      suites: ${{ steps.plan.outputs.suites }}
+      samples: ${{ steps.plan.outputs.samples }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Resolve commits and platforms
+        id: plan
+        env:
+          # A pull request measures only its head: its base may predate the result format.
+          COMMITS: ${{ inputs.commits || github.event.pull_request.head.sha }}
+          PLATFORMS: ${{ inputs.platforms || 'linux-x64' }}
+          SUITES: ${{ github.event_name == 'pull_request' && 'storage,runtime' || inputs.suites }}
+          SAMPLES: ${{ github.event_name == 'pull_request' && '2' || inputs.samples }}
+        run: |
+          set -euo pipefail
+          checkouts='[]'
+          for ref in ${COMMITS//,/ }; do
+            git fetch --quiet origin "$ref" 2>/dev/null || true
+            sha=$(git rev-parse --verify "$ref^{commit}" 2>/dev/null || git rev-parse --verify "origin/$ref^{commit}")
+            checkouts=$(jq -c --arg sha "$sha" --arg ref "$ref" '. + [{sha: $sha, ref: $ref}]' <<< "$checkouts")
+          done
+          RUNNERS='{"linux-x64":"ubuntu-latest","darwin-arm64":"macos-15","darwin-x64":"macos-15-intel","win32-x64":"windows-2025"}'
+          include=$(jq -cn --argjson runners "$RUNNERS" --arg platforms "$PLATFORMS" \
+            '$platforms | split(",") | map(select(length > 0) | {platform: ., os: $runners[.]})')
+          if jq -e 'any(.os == null)' <<< "$include" > /dev/null; then
+            echo "Unknown platform in $PLATFORMS" >&2
+            exit 1
+          fi
+          {
+            echo "checkouts=$checkouts"
+            echo "include=$include"
+            echo "suites=$SUITES"
+            echo "samples=${SAMPLES:-10}"
+          } >> "$GITHUB_OUTPUT"
+
+  benchmark:
+    name: ${{ matrix.platform }}
+    needs: plan
+    runs-on: ${{ matrix.os }}
+    # Proposed allowance for ten samples of every suite on two commits; see PS-920 before raising it.
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.include) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Set up Windows desktop tests
+        if: runner.os == 'Windows'
+        uses: ./.github/actions/setup-windows-desktop-tests
+
+      # Each commit gets its own checkout and dependencies, so it runs the code and benchmarks it shipped with.
+      - name: Check out the measured commits
+        id: checkouts
+        env:
+          CHECKOUTS: ${{ needs.plan.outputs.checkouts }}
+        run: |
+          set -euo pipefail
+          args=()
+          while read -r sha ref; do
+            dir="$RUNNER_TEMP/checkouts/$sha"
+            if [ ! -d "$dir" ]; then
+              git worktree add --detach "$dir" "$sha"
+              (cd "$dir" && node scripts/ci/install-native-dependencies.ts)
+            fi
+            args+=("--checkout" "$dir=$sha=$ref")
+          done < <(jq -r '.[] | "\(.sha) \(.ref)"' <<< "$CHECKOUTS")
+          echo "args=${args[*]}" >> "$GITHUB_OUTPUT"
+
+      - name: Install browser system dependencies
+        if: runner.os == 'Linux'
+        run: npx --yes playwright install-deps chromium
+
+      - name: Run benchmarks
+        env:
+          SUITES: ${{ needs.plan.outputs.suites }}
+          SAMPLES: ${{ needs.plan.outputs.samples }}
+        run: |
+          set -euo pipefail
+          bun packages/benchmarks/src/cli.ts run ${{ steps.checkouts.outputs.args }} \
+            ${SUITES:+--suites "$SUITES"} --samples "$SAMPLES" \
+            --cache "$RUNNER_TEMP/benchmark-cache" --out "$RUNNER_TEMP/benchmark-results"
+
+      # Failed samples keep the measurements they recorded, so the results upload either way.
+      - name: Upload results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ matrix.platform }}
+          path: ${{ runner.temp }}/benchmark-results/*.json
+          if-no-files-found: error
