@@ -27,3 +27,23 @@ test("Auto Build exposes pending requests in its work scope above its session ac
   await reviewCommand.run(ctx, { requestId: pending.id, response: { confirmed: true } });
   expect((await readAutoBuildCommand.run(ctx, {})).reviewRequests).toEqual([]);
 });
+
+test("supervisor-linked input stays visible after an unstarted ticket leaves eligibility", async () => {
+  const { supervisorFixture } = await import("./auto-build-supervisor.fixture");
+  const { autoBuildCommand } = await import("./auto-build");
+  const { readAutoBuildSupervisor } = await import("../data/auto-build-supervisor");
+  const { putTicket } = await import("../data/collections");
+  const { ctx, ticket, storage } = await supervisorFixture();
+  const task = await ticket("Choose a tool");
+  await autoBuildCommand.run(ctx, {});
+  const owner = (await readAutoBuildSupervisor(ctx)).sessionId!;
+  const request = await requestHumanCommand.run(ctx, {
+    ticket: task.id,
+    title: "Choose scope",
+    instructions: "Pick a tool",
+    request: { kind: "task" },
+    sessionId: owner,
+  });
+  await putTicket(storage, { ...task, statusId: "blocked", blockedReason: "Waiting for input" });
+  expect((await readAutoBuildCommand.run(ctx, {})).reviewRequests.map((request) => request.id)).toContain(request.id);
+});

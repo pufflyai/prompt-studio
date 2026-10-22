@@ -115,10 +115,27 @@ test("stop includes supervisor-linked request chats before the first dispatch", 
   expect(sessions.get(chat.id)?.status).toBe("cancelled");
 });
 
-test("deleted historical owners do not prevent stopping the remaining run", async () => {
-  const { ctx, owner, sessions, stopped } = await fixture();
+test("a removed supervisor keeps its worker ledger available for Stop", async () => {
+  const { ctx, owner, sessions, stopped, started, storage } = await fixture();
   sessions.delete(owner.sessionId!);
+  const { saveAutoBuildMode } = await import("../data/auto-build-mode");
+  await saveAutoBuildMode(ctx, { ...(await readAutoBuildMode(ctx)), state: "running", enabled: true });
+  await expect(autoBuildCommand.run(ctx, {})).rejects.toThrow("supervisor was removed");
+  expect(await storage.get("auto-build-supervisor")).toMatchObject({ sessionId: owner.sessionId });
   await stopAutoBuildCommand.run(ctx, {});
   expect(stopped).not.toContain(owner.sessionId!);
+  expect(stopped).toContain(started.session.id);
   expect(await readAutoBuildMode(ctx)).toMatchObject({ state: "stopped" });
+});
+
+test("dispatch waits for a recorded run owner so Stop cannot lose its workers", async () => {
+  const { ctx, storage, ticket, sessions } = await supervisorFixture();
+  const task = await ticket("Build the tool");
+  await storage.delete("auto-build-supervisor");
+  const { autoBuildDispatchCommand } = await import("./auto-build-dispatch");
+  expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).toMatchObject({
+    decision: "wait",
+    reason: "supervisor-not-ready",
+  });
+  expect(sessions.size).toBe(0);
 });

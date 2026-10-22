@@ -96,8 +96,10 @@ test("an idle start reports tickets that already have work instead of a pending 
       },
     ],
   });
-  ctx.sessions.get = async () =>
-    sessionRecord({ id: started.variant.implementationSessionId, title: "Implementation", status: "completed" });
+  ctx.sessions.get = async (id) =>
+    id === "fixture-supervisor"
+      ? null
+      : sessionRecord({ id: started.variant.implementationSessionId, title: "Implementation", status: "completed" });
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({
     enabled: true,
     running: false,

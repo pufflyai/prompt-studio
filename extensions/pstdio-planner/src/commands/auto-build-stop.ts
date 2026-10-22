@@ -2,6 +2,7 @@ import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions
 import { attemptEventsCollection, readAttempt } from "../data/attempt-storage";
 import { autoBuildDispatches } from "../data/auto-build-dispatches";
 import { readAutoBuildMode, saveAutoBuildMode } from "../data/auto-build-mode";
+import { linkedAutoBuildRequests } from "../data/auto-build-ownership";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { waitForReviewRequestSession } from "../data/review-request-session";
 import { reviewRequestsCollection } from "../data/review-request-storage";
@@ -42,17 +43,12 @@ async function stopLinkedSessions(ctx: CommandContext, supervisorId: string | un
   let found = true;
   while (found) {
     found = false;
-    for (const request of await reviewRequestsCollection(ctx.storage).list()) {
-      const context = request.context;
-      if (
-        visited.has(request.id) ||
-        !(
-          workspaces.has(context.workspaceId ?? "") ||
-          linked.has(context.relatedSessionId ?? "") ||
-          linked.has(context.sessionId ?? "")
-        )
-      )
-        continue;
+    const requests = linkedAutoBuildRequests(await reviewRequestsCollection(ctx.storage).list(), {
+      workspaceIds: workspaces,
+      sessionIds: linked,
+    });
+    for (const request of requests) {
+      if (visited.has(request.id)) continue;
       visited.add(request.id);
       found = true;
       await waitForReviewRequestSession(ctx, request.id);
