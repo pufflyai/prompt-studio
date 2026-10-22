@@ -58,6 +58,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-api",
     "pstdio-logging",
     "pstdio-paths",
+    "pstdio-sync",
     "pstdio-wt",
   ],
   "@pstdio/ui": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-file-types"],

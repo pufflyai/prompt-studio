@@ -1,9 +1,11 @@
 import * as Y from "yjs";
+import { trackDocumentBinary } from "./document-binary";
 import { documentHistory } from "./document-history";
 import { type DocumentState, type DocumentStore, memoryDocumentState } from "./document-types";
 
 export const createMemoryDocumentStore = () => {
   const document = new Y.Doc();
+  trackDocumentBinary(document, new Uint8Array([0, 0]));
   const state: DocumentState = memoryDocumentState(document);
   let previous = Promise.resolve();
   let previousMigration = Promise.resolve();

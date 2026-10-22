@@ -44,7 +44,7 @@ import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-dia
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
-// CRDT storage checks atomic saves, ignored revisions, local retry outcomes and durable restart.
+// CRDT storage checks atomic saves, ignored revisions, binary checkpoint workers, local retries and durable restart.
 // Declared indexes, filtered cursor pages, selected fields, aggregates and batch reads survive restart.
 // Accepted Unicode normalization and NUL preservation agree before and after restart.
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.

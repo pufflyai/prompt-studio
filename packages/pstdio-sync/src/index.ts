@@ -1,4 +1,14 @@
+export { runBinaryTask } from "./binary-background";
+export { startBinaryWorker } from "./binary-worker-runtime";
 export { captureCheckpoint } from "./checkpoint-capture";
+export {
+  acceptDocumentCheckpoint,
+  applyDocumentBinaryUpdate,
+  documentRevision,
+  exportDocumentBinary,
+  snapshotDocumentBinary,
+  trackDocumentBinary,
+} from "./document-binary";
 export { type DocumentHistory, documentHistory } from "./document-history";
 export { trackDocumentPayload } from "./document-payload";
 export { documentRecordTypes, type RecordType, readDocumentRecord } from "./document-record";

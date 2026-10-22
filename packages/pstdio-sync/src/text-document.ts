@@ -1,5 +1,6 @@
-import * as Y from "yjs";
-import type { DocumentStore } from "./document-types";
+import { runBinaryTask } from "./binary-background";
+import { exportDocumentBinary } from "./document-binary";
+import { applyDocumentUpdate, type DocumentStore } from "./document-types";
 import { writeText } from "./document-values";
 import type { StorageOwner } from "./types";
 
@@ -12,10 +13,17 @@ export const createTextDocumentStorage = (input: { owner: StorageOwner; store: D
       store.transaction(owner, async ({ document }) => {
         document.transact(() => writeText(document.getText("content"), value));
       }),
-    exportUpdate: () => store.transaction(owner, async ({ document }) => Y.encodeStateAsUpdate(document)),
+    exportUpdate: async () => {
+      if (store.snapshot) {
+        return (
+          await runBinaryTask(async () => ({ kind: "checkpoint", updates: (await store.snapshot!(owner)).updates }))
+        ).state;
+      }
+      return store.transaction(owner, async ({ document }) => exportDocumentBinary(document).slice());
+    },
     applyUpdate: (update: Uint8Array) =>
-      store.transaction(owner, async ({ document }) => {
-        Y.applyUpdate(document, update);
+      store.transaction(owner, async (state) => {
+        applyDocumentUpdate(state, update);
       }),
   };
 };

@@ -29,6 +29,13 @@ types incrementally. Cleanup visits changed retired generations, not every owner
 or live record. Upgrade may scan existing names once and retire legacy deleted
 roots while rebuilding the projection atomically.
 
+Durable checkpoint folds compact in the existing background worker. The worker
+applies saved updates to a Yjs document and encodes its garbage-collected state,
+including pending structs and delete sets. A binary merge alone cannot reclaim
+deleted content. Foreground export keeps using saved bytes; it does not hydrate
+the owner to compact it. The existing checkpoint revision guard preserves newer
+updates and prevents a delayed fold from restoring purged data.
+
 ## Older writers
 
 Existing offline updates keep their original identities and names. A legacy

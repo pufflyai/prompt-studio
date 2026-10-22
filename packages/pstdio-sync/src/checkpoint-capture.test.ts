@@ -13,7 +13,7 @@ const storage = (document: Y.Doc) =>
 
 test("save-handler writes publish together as one document update", async () => {
   const document = new Y.Doc();
-  const captured = await captureCheckpoint(document, owner, async (store) => {
+  const captured = await captureCheckpoint([Y.encodeStateAsUpdate(document)], owner, async (store) => {
     const { records } = createDocumentStorage({ owner, store });
     for (const value of ["first", "transformed"])
       await records.commit({
@@ -37,7 +37,7 @@ test("save-handler writes publish together as one document update", async () => 
 test("a failed save handler discards all its staged writes", async () => {
   const document = new Y.Doc();
   await expect(
-    captureCheckpoint(document, owner, async (store) => {
+    captureCheckpoint([Y.encodeStateAsUpdate(document)], owner, async (store) => {
       await createDocumentStorage({ owner, store }).records.commit({
         operationId: "write",
         edits: [{ recordId: "projection", replace: "hidden" }],

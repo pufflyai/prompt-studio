@@ -1,10 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import {
+  applyDocumentBinaryUpdate,
   type DocumentState,
   documentHistory,
   resourceNumbersDocumentId,
   resourceNumbersOwnerId,
   type StorageOwner,
+  trackDocumentBinary,
   trackDocumentPayload,
 } from "pstdio-sync";
 import * as Y from "yjs";
@@ -23,28 +25,21 @@ export interface DocumentAddress {
   extension_id: string;
   document_id: string;
 }
-const documentWhere = (address: DocumentAddress) =>
+export const documentWhere = (address: DocumentAddress) =>
   and(
     eq(storage_documents.workbench_id, address.workbench_id),
     eq(storage_documents.extension_id, address.extension_id),
     eq(storage_documents.document_id, address.document_id),
   );
-const updatesWhere = (address: DocumentAddress) =>
+export const updatesWhere = (address: DocumentAddress) =>
   and(
     eq(storage_document_updates.workbench_id, address.workbench_id),
     eq(storage_document_updates.extension_id, address.extension_id),
     eq(storage_document_updates.document_id, address.document_id),
   );
-const foldEvery = 128;
+export const foldEvery = 128;
 
-const loadDocument = async (
-  tx: Transaction,
-  address: DocumentAddress,
-  owner: StorageOwner,
-  environmentId: string,
-  cached?: LoadedDocument,
-  diagnostics?: StorageDiagnostics,
-) => {
+const readDocument = async (tx: Transaction, address: DocumentAddress, owner: StorageOwner, environmentId: string) => {
   const inserted = await tx
     .insert(storage_documents)
     .values({ ...address, state: new Uint8Array([0, 0]) })
@@ -55,7 +50,6 @@ const loadDocument = async (
     .from(storage_documents)
     .where(documentWhere(address))
     .for("update");
-  if (cached?.revision === row.revision) return { row, document: cached.document };
   const [saved] = await tx
     .select({ state: storage_documents.state })
     .from(storage_documents)
@@ -64,21 +58,38 @@ const loadDocument = async (
     saved.state = await importOwnerDocument(tx, owner, environmentId);
     await tx.update(storage_documents).set({ state: saved.state }).where(documentWhere(address));
   }
-  const document = new Y.Doc();
-  Y.applyUpdate(document, saved.state);
   const updates = await tx
     .select()
     .from(storage_document_updates)
     .where(updatesWhere(address))
     .orderBy(storage_document_updates.revision);
-  for (const update of updates) Y.applyUpdate(document, update.update);
-  diagnostics?.({
-    phase: "document-loaded",
-    owner,
-    bytes: saved.state.length + updates.reduce((sum, update) => sum + update.update.length, 0),
-  });
-  return { row, document, initialize: inserted.length > 0 };
+  return { row, updates: [saved.state, ...updates.map(({ update }) => update)] };
 };
+
+export const prepareDocument = async (
+  db: DbClient,
+  input: { address: DocumentAddress; owner: StorageOwner; environmentId: string; diagnostics?: StorageDiagnostics },
+) => {
+  const { row, updates } = await db.transaction((tx) =>
+    readDocument(tx, input.address, input.owner, input.environmentId),
+  );
+  const document = new Y.Doc();
+  try {
+    for (const update of updates) Y.applyUpdate(document, update);
+    trackDocumentBinary(document, updates);
+    input.diagnostics?.({
+      phase: "document-loaded",
+      owner: input.owner,
+      bytes: updates.reduce((sum, update) => sum + update.length, 0),
+    });
+    return { revision: row.revision, document };
+  } catch (error) {
+    document.destroy();
+    throw error;
+  }
+};
+
+export class DocumentPreparationChanged extends Error {}
 
 const localOperations = (tx: Transaction, address: DocumentAddress) => {
   const pending = new Map<string, string>();
@@ -115,18 +126,12 @@ const appendUpdates = async (
   tx: Transaction,
   address: DocumentAddress,
   row: Pick<typeof storage_documents.$inferSelect, "revision" | "folded_revision">,
-  document: Y.Doc,
   updates: Uint8Array[],
 ) => {
   if (!updates.length) return row.revision;
   const revision = row.revision + 1;
   await tx.insert(storage_document_updates).values({ ...address, revision, update: Y.mergeUpdates(updates) });
-  const fold = revision - row.folded_revision >= foldEvery;
-  await tx
-    .update(storage_documents)
-    .set({ revision, ...(fold && { state: Y.encodeStateAsUpdate(document), folded_revision: revision }) })
-    .where(documentWhere(address));
-  if (fold) await tx.delete(storage_document_updates).where(updatesWhere(address));
+  await tx.update(storage_documents).set({ revision }).where(documentWhere(address));
   return revision;
 };
 
@@ -135,28 +140,26 @@ export const runDocumentTransaction = async <T>(
   input: {
     address: DocumentAddress;
     owner: StorageOwner;
-    environmentId: string;
-    cached?: LoadedDocument;
     diagnostics?: StorageDiagnostics;
+    prepared: LoadedDocument;
   },
   action: (state: DocumentState) => Promise<T>,
 ) => {
   const { address } = input;
-  const { document, row, initialize } = await loadDocument(
-    tx,
-    address,
-    input.owner,
-    input.environmentId,
-    input.cached,
-    input.diagnostics,
-  );
+  const [row] = await tx
+    .select({ revision: storage_documents.revision, folded_revision: storage_documents.folded_revision })
+    .from(storage_documents)
+    .where(documentWhere(address))
+    .for("update");
+  if (!row || row.revision !== input.prepared.revision) throw new DocumentPreparationChanged();
+  const { document } = input.prepared;
   const projection =
     address.document_id === "records"
-      ? await trackRecordProjection(tx, address, document, !!initialize, row.revision)
+      ? await trackRecordProjection(tx, address, document, row.revision === 0, row.revision)
       : undefined;
   const identities =
     address.document_id === resourceNumbersDocumentId && address.extension_id === resourceNumbersOwnerId
-      ? await trackResourceIdentityProjection(tx, address, document, !!initialize)
+      ? await trackResourceIdentityProjection(tx, address, document, row.revision === 0)
       : undefined;
   const operations = localOperations(tx, address);
   const key = JSON.stringify(address);
@@ -169,6 +172,12 @@ export const runDocumentTransaction = async <T>(
   try {
     const value = await action({
       document,
+      revision: row.revision,
+      applyUpdate: (update) => {
+        // An accepted update can be buffered by Yjs without emitting an update event.
+        updates.push(update);
+        applyDocumentBinaryUpdate(document, update);
+      },
       migrationSeed: migration?.key,
       migrationHistory: migration?.histories.get(key),
       operation: operations.operation,
@@ -182,15 +191,12 @@ export const runDocumentTransaction = async <T>(
     });
     identities?.prepare();
     await operations.persist();
-    const revision = await appendUpdates(tx, address, row, document, updates);
+    const revision = await appendUpdates(tx, address, row, updates);
     const projected = await projection?.persist(revision);
     await identities?.persist(revision);
     if (projected !== undefined)
       input.diagnostics?.({ phase: "records-projected", owner: input.owner, records: projected });
-    return { value, revision, document, changed: updates.length > 0 };
-  } catch (error) {
-    if (document !== input.cached?.document) document.destroy();
-    throw error;
+    return { value, revision, document, changed: updates.length > 0, foldedRevision: row.folded_revision };
   } finally {
     document.off("update", capture);
     projection?.stop();

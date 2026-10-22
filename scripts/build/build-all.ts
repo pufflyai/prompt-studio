@@ -46,6 +46,7 @@ const extensionReleaseRef = process.env.PSTDIO_EXTENSION_RELEASE_REF?.trim();
 const defines = extensionReleaseRef
   ? ["--define", `PSTDIO_BUILD_EXTENSION_RELEASE_REF=${JSON.stringify(extensionReleaseRef)}`]
   : [];
+defines.push("--define", 'PSTDIO_SYNC_WORKER_ENTRY="./sync-worker.js"');
 const buildTargets = resolveBuildTargets(config.buildTargets);
 for (const { target, pkg, bin } of buildTargets) {
   const outDir = `./packages/pstdio/dist/platforms/${pkg}/bin`;
@@ -53,7 +54,7 @@ for (const { target, pkg, bin } of buildTargets) {
 
   const outfile = join(outDir, bin);
   console.log(`\nCompiling for ${target}...`);
-  await $`bun build ${CLI_ENTRY} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} --outfile ${outfile}`;
+  await $`bun build ${CLI_ENTRY} ./packages/pstdio/src/sync-worker.ts --root ./packages/pstdio/src --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} --outfile ${outfile}`;
   console.log(`  → ${relative(".", outfile)}`);
 }
 

@@ -1,5 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { eq } from "drizzle-orm";
+import { createDocumentStorage } from "pstdio-sync";
 import { extension_storage_journal, storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
@@ -15,9 +17,137 @@ const fixture = async () => {
   cleanup.push(f.close);
   const owner = { workbenchId: f.projectAId, extensionId: "ext.example" };
   const service = createDocumentStorageDBService(f.db);
+  cleanup.push(service.flushCheckpoints);
   const storage = service.open({ owner });
   return { ...f, owner, service, storage };
 };
+
+test("first write after restart hydrates the owner outside the database transaction", async () => {
+  const { spyOn } = await import("bun:test");
+  const Y = await import("yjs");
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "initial", edits: [{ recordId: "note", replace: "before" }] });
+  const transactionContext = new AsyncLocalStorage<boolean>();
+  const transact = f.db.transaction.bind(f.db);
+  const transaction = spyOn(f.db, "transaction").mockImplementation((action, config) =>
+    transact((tx) => transactionContext.run(true, () => action(tx)), config),
+  );
+  const applyUpdate = Y.applyUpdate;
+  let hydrationCalls = 0;
+  const hydration = spyOn(Y, "applyUpdate").mockImplementation((...args) => {
+    if (transactionContext.getStore()) throw new Error("Owner hydration holds the database transaction");
+    hydrationCalls++;
+    return applyUpdate(...args);
+  });
+  try {
+    const restarted = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+    await restarted.records.commit({
+      operationId: "first-after-restart",
+      edits: [{ recordId: "note", replace: "after" }],
+    });
+    expect(hydrationCalls).toBeGreaterThan(0);
+    expect((await restarted.records.read("note")).value).toBe("after");
+  } finally {
+    hydration.mockRestore();
+    transaction.mockRestore();
+  }
+});
+
+test("concurrent cold writers retry preparation without losing either durable save", async () => {
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "initial", edits: [{ recordId: "note", replace: "before" }] });
+  const first = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  const second = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  await Promise.all([
+    first.records.commit({ operationId: "first", edits: [{ recordId: "first", replace: 1 }] }),
+    second.records.commit({ operationId: "second", edits: [{ recordId: "second", replace: 2 }] }),
+  ]);
+  const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  expect((await reopened.records.read("first")).value).toBe(1);
+  expect((await reopened.records.read("second")).value).toBe(2);
+  expect(await reopened.records.outcome("first")).toMatchObject({ status: "saved-locally" });
+  expect(await reopened.records.outcome("second")).toMatchObject({ status: "saved-locally" });
+});
+
+test("a queued warm read discards a document invalidated by an earlier failed transaction", async () => {
+  const f = await fixture();
+  await f.service.transaction(f.owner, async ({ document }) => document.getMap("test").set("value", "before"));
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const failed = f.service.transaction(f.owner, async ({ document }) => {
+    document.getMap("test").set("value", "uncommitted");
+    entered.resolve();
+    await release.promise;
+    throw new Error("Rejected save");
+  });
+  const rejection = failed.catch((error: unknown) => error);
+  await entered.promise;
+  const read = f.service.transaction(f.owner, async ({ document }) => document.getMap("test").get("value"));
+  await Promise.resolve();
+  release.resolve();
+  expect(await rejection).toMatchObject({ message: "Rejected save" });
+  expect(await read).toBe("before");
+});
+
+test("concurrent first saves on one service share the cold owner hydration", async () => {
+  const { spyOn } = await import("bun:test");
+  const Y = await import("yjs");
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "before" }] });
+  const restarted = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  const documents = new Set<InstanceType<typeof Y.Doc>>();
+  const applyUpdate = Y.applyUpdate;
+  const hydrate = spyOn(Y, "applyUpdate").mockImplementation((...args) => {
+    documents.add(args[0]);
+    return applyUpdate(...args);
+  });
+  try {
+    await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        restarted.records.commit({
+          operationId: `parallel-${index}`,
+          edits: [{ recordId: `parallel-${index}`, replace: index }],
+        }),
+      ),
+    );
+    expect(documents.size).toBe(1);
+    expect((await restarted.records.list()).length).toBe(9);
+  } finally {
+    hydrate.mockRestore();
+  }
+});
+
+test("save-handler capture reads the durable snapshot and releases the database before staging writes", async () => {
+  const f = await fixture();
+  await f.storage.records.commit({
+    operationId: "seed-capture",
+    edits: [{ recordId: "note", replace: { title: "before", count: 0 } }],
+  });
+  const cold = createDocumentStorageDBService(f.db);
+  const storage = createDocumentStorage({
+    owner: f.owner,
+    store: {
+      ...cold,
+      transaction: async () => {
+        throw new Error("Capture must use its durable binary snapshot");
+      },
+    },
+  });
+  const captured = await storage.capture(async (fork) => {
+    await f.storage.records.commit({
+      operationId: "concurrent-capture",
+      edits: [{ recordId: "note", replace: { title: "before", count: 1 } }],
+    });
+    await createDocumentStorage({ owner: f.owner, store: fork }).records.commit({
+      operationId: "staged-capture",
+      edits: [{ recordId: "note", replace: { title: "after", count: 0 } }],
+    });
+  });
+  expect((await f.storage.records.read("note")).value).toEqual({ title: "before", count: 1 });
+  await f.storage.applyUpdate(captured.update);
+  const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  expect((await reopened.records.read("note")).value).toEqual({ title: "after", count: 1 });
+});
 
 test("clearing owner data refreshes every open store and allows operation IDs to be reused", async () => {
   const f = await fixture();
@@ -42,6 +172,7 @@ test("a durable multi-record update survives a new service and folds without rep
       ],
     });
   const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  await f.service.flushCheckpoints();
   expect((await reopened.records.read("ticket")).value).toEqual({ title: "Title 129", status: "ready" });
   expect((await reopened.records.read("note")).value).toBe("first\nlast");
   expect(await f.db.select().from(extension_storage_journal)).toHaveLength(0);
@@ -215,4 +346,167 @@ test("sync discovers text documents through the encrypted records document", asy
     (await import("yjs")).applyUpdate(document, update);
   });
   expect(await second.service.openTextDocument({ owner: second.owner, fileId: "note.md" }).read()).toBe("offline text");
+});
+
+test("folds and exports use persisted binary updates without encoding the owner", async () => {
+  const { spyOn } = await import("bun:test");
+  const Y = await import("yjs");
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "seed-binary", edits: [{ recordId: "note", replace: "before" }] });
+  const encode = spyOn(Y, "encodeStateAsUpdate");
+  try {
+    for (let index = 0; index < 130; index++)
+      await f.storage.records.commit({
+        operationId: `binary-${index}`,
+        edits: [{ recordId: "note", replace: `after ${index}` }],
+      });
+    const update = await f.storage.exportUpdate();
+    await f.service.flushCheckpoints();
+    const reopened = new Y.Doc();
+    Y.applyUpdate(reopened, update);
+    expect(reopened.getMap("records").has("note")).toBe(true);
+    expect(encode.mock.calls).toHaveLength(0);
+    reopened.destroy();
+  } finally {
+    encode.mockRestore();
+  }
+});
+
+test("accepted out-of-order updates survive restart before their missing predecessor arrives", async () => {
+  const Y = await import("yjs");
+  const source = new Y.Doc();
+  const updates: Uint8Array[] = [];
+  source.on("update", (update: Uint8Array) => updates.push(update));
+  source.getMap("values").set("one", 1);
+  source.getMap("values").set("two", 2);
+  const f = await fixture();
+  await f.storage.applyUpdate(updates[1]);
+  const reopened = createDocumentStorageDBService(f.db);
+  await reopened.open({ owner: f.owner }).applyUpdate(updates[0]);
+  expect(await reopened.transaction(f.owner, async ({ document }) => document.getMap("values").toJSON())).toEqual({
+    one: 1,
+    two: 2,
+  });
+  source.destroy();
+});
+
+test("checkpointing retains accepted updates whose predecessor is still offline", async () => {
+  const Y = await import("yjs");
+  const source = new Y.Doc();
+  const updates: Uint8Array[] = [];
+  source.on("update", (update: Uint8Array) => updates.push(update));
+  source.getMap("values").set("one", 1);
+  source.getMap("values").set("two", 2);
+  const f = await fixture();
+  await f.storage.applyUpdate(updates[1]);
+  for (let index = 0; index < 128; index++)
+    await f.storage.records.commit({ operationId: `pending-${index}`, edits: [{ recordId: "local", replace: index }] });
+  await f.service.flushCheckpoints();
+  const reopened = createDocumentStorageDBService(f.db);
+  await reopened.open({ owner: f.owner }).applyUpdate(updates[0]);
+  expect(await reopened.transaction(f.owner, async ({ document }) => document.getMap("values").toJSON())).toEqual({
+    one: 1,
+    two: 2,
+  });
+  source.destroy();
+});
+
+test("checkpoint draining includes writes accepted while an earlier fold is pending", async () => {
+  const { runBinaryTask } = await import("pstdio-sync");
+  const { foldEvery } = await import("./document-persistence");
+  const f = await fixture();
+  const gate = Promise.withResolvers<void>();
+  const entered = Promise.withResolvers<void>();
+  const held = runBinaryTask(async () => {
+    entered.resolve();
+    await gate.promise;
+    return { kind: "checkpoint", updates: [new Uint8Array([0, 0])] };
+  });
+  await entered.promise;
+  try {
+    for (let index = 0; index < foldEvery * 2 + 4; index++)
+      await f.storage.records.commit({
+        operationId: `drain-${index}`,
+        edits: [{ recordId: "note", replace: index }],
+      });
+  } finally {
+    gate.resolve();
+    await held;
+  }
+  await f.service.flushCheckpoints();
+  const [saved] = await f.db.select().from(storage_documents);
+  expect(saved.revision - saved.folded_revision).toBeLessThan(foldEvery);
+  expect(await f.db.select().from(storage_document_updates)).toHaveLength(saved.revision - saved.folded_revision);
+  expect((await createDocumentStorageDBService(f.db).open({ owner: f.owner }).records.read("note")).value).toBe(
+    foldEvery * 2 + 3,
+  );
+});
+
+test("a delayed checkpoint keeps newer edits and cannot restore purged data", async () => {
+  const { runBinaryTask } = await import("pstdio-sync");
+  const { readDocumentSnapshot, saveDocumentCheckpoint } = await import("./document-checkpoints");
+  const f = await fixture();
+  const address = { workbench_id: f.owner.workbenchId, extension_id: f.owner.extensionId, document_id: "records" };
+  await f.storage.records.commit({ operationId: "before-fold", edits: [{ recordId: "note", replace: "before" }] });
+  const snapshot = (await readDocumentSnapshot(f.db, address))!;
+  const prepared = await runBinaryTask({ kind: "checkpoint", updates: snapshot.updates });
+  await f.storage.records.commit({ operationId: "after-fold", edits: [{ recordId: "note", replace: "after" }] });
+  const checkpoint = { ...snapshot, state: prepared.state };
+  expect(await saveDocumentCheckpoint(f.db, address, checkpoint)).toBe(true);
+  expect((await createDocumentStorageDBService(f.db).open({ owner: f.owner }).records.read("note")).value).toBe(
+    "after",
+  );
+  await createExtensionUserDataDBService(f.db).deleteForInstance(f.instanceAId);
+  expect(await saveDocumentCheckpoint(f.db, address, checkpoint)).toBe(false);
+  expect((await f.storage.records.read("note")).exists).toBe(false);
+});
+
+test("a failed durable receive publishes no notification or partial owner state", async () => {
+  const Y = await import("yjs");
+  const f = await fixture();
+  const notifications: unknown[] = [];
+  const stop = f.service.watch((owner) => notifications.push(owner));
+  const remote = new Y.Doc();
+  remote.getMap("values").set("note", "uncommitted");
+  const update = Y.encodeStateAsUpdate(remote);
+  await expect(
+    f.service.transaction(f.owner, async (state) => {
+      state.applyUpdate!(update);
+      throw new Error("Commit interrupted");
+    }),
+  ).rejects.toThrow("Commit interrupted");
+  expect(notifications).toEqual([]);
+  expect(await f.service.transaction(f.owner, async ({ document }) => document.getMap("values").size)).toBe(0);
+  expect(await f.db.select().from(storage_document_updates)).toHaveLength(0);
+  stop();
+  remote.destroy();
+});
+
+test("background checkpoints reclaim deleted payload and retain tombstones through late edits and restore", async () => {
+  const Y = await import("yjs");
+  const { foldEvery } = await import("./document-persistence");
+  const f = await fixture();
+  const body = "retired private body\n".repeat(2000);
+  await f.storage.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: { body } }] });
+  const original = await f.storage.exportUpdate();
+  await f.storage.records.commit({ operationId: "delete", edits: [{ recordId: "note", deleted: true }] });
+  for (let index = 0; index < foldEvery; index++)
+    await f.storage.records.commit({ operationId: `churn-${index}`, edits: [{ recordId: "live", replace: index }] });
+  await f.service.flushCheckpoints();
+  const [saved] = await f.db.select().from(storage_documents);
+  expect(saved.state.length).toBeLessThan(original.length);
+  const compacted = new Y.Doc();
+  Y.applyUpdate(compacted, saved.state);
+  expect(compacted.getMap("deleted").has("note")).toBe(true);
+  expect(compacted.getMap("retired-records").has(JSON.stringify(["record", "note"]))).toBe(true);
+  const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  await reopened.applyUpdate(original);
+  expect(await reopened.records.read("note")).toMatchObject({ deleted: true, value: null });
+  await reopened.records.commit({
+    operationId: "restore",
+    edits: [{ recordId: "note", deleted: false, replace: { body: "Restored" } }],
+  });
+  await reopened.applyUpdate(original);
+  expect((await reopened.records.read("note")).value).toEqual({ body: "Restored" });
+  compacted.destroy();
 });

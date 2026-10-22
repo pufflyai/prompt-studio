@@ -50,7 +50,8 @@ export const registerGroupedStorageSmokeTests = () => {
         expect(body.outcome).toMatchObject({ ok: true });
         return body.outcome.value;
       };
-      const read = (id: string) => command<{ note: StorageRecord; caption: StorageRecord }>(id, "read");
+      const read = (id: string) =>
+        command<{ note: StorageRecord; caption: StorageRecord; checkpoint: StorageRecord }>(id, "read");
       try {
         const created = await post("/projects", folderProjectInput({ name: "Shared notes" }, root));
         expect(created.status).toBe(201);
@@ -149,6 +150,7 @@ export const registerGroupedStorageSmokeTests = () => {
         expect(await command(project.id, "identity", { id: allocated.id })).toEqual(identity);
         expect(await command(project.id, "find-number", { shorthand: allocated.shorthand })).toEqual([identity]);
         const final = await read(project.id);
+        expect(final.checkpoint.value).toBe(129);
         expect(final.caption.value).toBe("Second caption");
         expect(final.note.asset).toEqual(replacement);
         expect(final.note.shared?.kind).toBe("text");

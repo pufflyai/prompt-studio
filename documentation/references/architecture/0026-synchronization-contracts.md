@@ -109,10 +109,19 @@ The document address is the project, extension and document ID. The extension's
 records use `records`; text files use a separate address based on their stable file ID.
 Foreign keys remove these rows when their project or document is removed.
 
-A database transaction locks the document row, checks its revision and loads the saved
-state plus its remaining updates when needed. A bounded cache reuses a matching loaded
-document. A save appends only its new update. Every 128 updates, the same transaction
-writes a new saved state and removes the folded updates. Normal saves and reads do not
+A bounded cache reuses a revision-matched loaded document. A cold load reads the saved
+state and remaining updates in a short database transaction, then hydrates the document
+outside that transaction. Before running the caller's action, another transaction locks
+the row and checks the captured revision. If a concurrent save changed it, preparation
+starts again; the caller's action has not run yet. Warm reads and writes use one transaction.
+Each service admits one operation per owner document through preparation, commit and
+cache publication. Waiting operations reuse the accepted document instead of hydrating
+the same cold state repeatedly. A failed operation releases admission and discards its
+uncommitted document before the next operation reads it.
+A save appends only its new update. After 128 updates, a background worker
+merges the captured binary checkpoint and update tail. A short transaction then saves
+that checkpoint and removes only its covered updates. Newer updates stay in the tail.
+A changed folded revision, including a purge, rejects a stale checkpoint. Normal saves and reads do not
 load the old grouped journal. Retry metadata stays outside the CRDT state, so folding
 does not copy every past save ID.
 
@@ -124,6 +133,12 @@ The cache is published and listeners run after database commit. A failed transac
 discards the cached document. Another service checks the database revision before using
 its own cache. A save returns `state: "saved-locally"` only after the local transaction
 commits. Relay synchronization runs separately from that local save outcome.
+
+Binary exports read a consistent persisted checkpoint and tail without opening Yjs.
+Their merge runs outside the database transaction. Loaded documents also retain the
+original binary updates, so exports and folds do not encode every named root again.
+Received bytes are persisted even when Yjs buffers them while waiting for an earlier
+offline update. An update event alone is not proof that every accepted byte was saved.
 
 An explicit extension data purge replaces its documents with empty snapshots and
 clears their updates and retry identities. Revisions keep increasing across the purge,
@@ -142,18 +157,32 @@ use verified asset references.
 
 ## Encrypted document transport
 
-A connection keeps an in-memory replica of what the relay holds and a sequence cursor.
+A connection keeps a binary replica of what the relay holds and a sequence cursor.
 It opens the latest state, checks its encrypted Yjs state vector, and reads every later
 update. If a latest state changes during pagination, reading restarts at its boundary.
 The uploader may have seen fewer updates than this reader. Each completed page is
 saved locally before reading the next, so an incomplete replacement cannot erase edits
 that this device already received.
 
+Decode, validation and deletion-aware comparison run in a shared background worker.
+Incoming pages stage at most 16 envelopes per job. Owners await their job before
+offering the next batch, so already queued owners run first. A rejected update discards
+its staged document; only validated updates reach local storage. Blob bytes are verified
+before durable acceptance. A failed local commit retains the pending batch for retry.
+The worker is an explicit entrypoint in source and compiled builds.
+
 Downloaded data merges into the durable local document. It never replaces it. The
 client compares its document with the relay replica and sends missing edits, even
 without a new local save. The comparison also includes Yjs deletion sets, since state
 vectors alone cannot describe deletions. This repairs an incomplete latest state and
 keeps edits made while a device was offline across several state replacements.
+
+Status reuses a comparison only while both the local durable revision and relay
+replica revision match. An unchanged database status read fetches revision metadata,
+without fetching the binary state or hydrating Yjs. Local writes, deletion-only updates,
+purges and relay replacements invalidate the comparison. A changed comparison still
+compares binary struct identities and deletion ranges, including retained causal gaps.
+State vectors alone cannot describe either missing deletions or unresolved causal bytes.
 
 After more than 1 MiB or 1,000 updates beyond the current latest state, a caught-up
 client uploads a full state and encrypted state vector. It names the previous state

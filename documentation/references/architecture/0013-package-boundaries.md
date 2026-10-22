@@ -118,6 +118,9 @@ layer-map change.
 
 8. **Packaging glue**
    `pstdio` may include generated packaging glue for compiled runtime artifacts.
+   Its sync worker entry calls `pstdio-sync` through that package's main export.
+   Keeping the entry under the CLI source root preserves embedded asset paths and
+   lets the compiled host start its worker without reading checkout source files.
    The CLI consumes runtime and capability contracts directly from
    `pstdio-api-contracts`, rather than deprecated SDK host exports.
    The host embeds the default extension catalog as data. Extension source is fetched

@@ -7,6 +7,8 @@ import { loadEmbedConfig, resolveEmbedFiles } from "./embed-manifest";
 process.chdir(join(import.meta.dirname, "..", ".."));
 
 const CLI_ENTRY = "./packages/pstdio/src/index.ts";
+const SYNC_WORKER_ENTRY = "./packages/pstdio/src/sync-worker.ts";
+const syncWorkerDefine = 'PSTDIO_SYNC_WORKER_ENTRY="./sync-worker.js"';
 const EMBED_MANIFEST = "./packages/pstdio/src/_embed-manifest.generated.ts";
 
 // 0. Vendor PGlite runtime assets locally so the embedded imports do not reach
@@ -40,7 +42,7 @@ const target = `bun-${process.platform}-${process.arch}`;
 const outfile = "./dist/pstdio";
 
 console.log(`\nCompiling for ${target}...`);
-await $`bun build ${CLI_ENTRY} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] --outfile ${outfile}`;
+await $`bun build ${CLI_ENTRY} ${SYNC_WORKER_ENTRY} --root ./packages/pstdio/src --compile --define ${syncWorkerDefine} --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] --outfile ${outfile}`;
 
 // 4. Verify the binary works
 const version = await $`${outfile} --version`.text();

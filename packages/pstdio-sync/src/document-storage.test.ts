@@ -197,3 +197,26 @@ test("accepted text has the same Unicode values and keys before and after serial
   first.document.destroy();
   second.document.destroy();
 });
+
+test("save-handler capture reuses binary state and encodes only its incremental result", async () => {
+  const { spyOn } = await import("bun:test");
+  const { createMemoryDocumentStore } = await import("./memory-document-store");
+  const store = createMemoryDocumentStore();
+  const storage = createDocumentStorage({ owner, store });
+  await storage.records.commit({ operationId: "before-capture", edits: [{ recordId: "note", replace: "before" }] });
+  const encode = spyOn(Y, "encodeStateAsUpdate");
+  try {
+    const captured = await storage.capture(async (fork) => {
+      await createDocumentStorage({ owner, store: fork }).records.commit({
+        operationId: "captured-edit",
+        edits: [{ recordId: "note", replace: "after" }],
+      });
+    });
+    expect(encode.mock.calls.filter(([, vector]) => vector === undefined)).toHaveLength(0);
+    expect((await storage.records.read("note")).value).toBe("before");
+    await storage.applyUpdate(captured.update);
+    expect((await storage.records.read("note")).value).toBe("after");
+  } finally {
+    encode.mockRestore();
+  }
+});

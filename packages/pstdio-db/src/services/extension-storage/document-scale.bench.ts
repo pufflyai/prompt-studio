@@ -73,7 +73,7 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
       ...first,
       durable: first.value.status === "saved-locally",
       fullOwnerLoads: 1,
-      note: "Current document store hydrates on its first transaction",
+      note: "Current document store hydrates the full owner before its first operation, outside the database lock",
     });
     assert.equal(
       (await storage.records.read(row.id)).value &&
@@ -127,6 +127,7 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
       );
       emit("folding-writes", { ...fold, sample });
     }
+    emit("checkpoint-drain", await measure(() => service.flushCheckpoints()));
     const after = await db.execute(sql`select revision, folded_revision from storage_documents`);
     emit("fold-boundary", { before: before.rows, after: after.rows });
     assert(Number(after.rows[0].folded_revision) > Number(before.rows[0].folded_revision));
@@ -147,7 +148,11 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
     });
     await target.commit({ operationId: `restore-${operationId}`, rows: [row], deleted: [] });
   } finally {
-    await close();
+    try {
+      await service.flushCheckpoints();
+    } finally {
+      await close();
+    }
   }
   assertMeasurementWindow();
 };
