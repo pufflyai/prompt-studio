@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import * as Y from "yjs";
 import { applyDocumentEdit } from "./document-edits";
+import { encodeRecordFragment } from "./document-fragment-encoding";
 import { buildRecordFragments } from "./document-fragments";
 import { readDocumentRecord } from "./document-record";
 
@@ -33,6 +34,14 @@ test("structural backfill preserves sparse original clocks without inventing omi
   Y.applyUpdate(reopened, selected.state);
   expect(reopened.store.pendingStructs).not.toBeNull();
   expect(reopened.getMap("records").has("a")).toBe(false);
+  const ownership = [...result.ownership];
+  expect(ownership).toHaveLength(9);
+  const name = source.getMap<string>("records").get("b")!;
+  const id = source.getMap(name)._map.get("value")!.id;
+  const range = ownership.find(
+    (entry) => entry.client === id.client && entry.startClock <= id.clock && entry.endClock > id.clock,
+  );
+  expect(range?.recordId).toBe("b");
 });
 
 test("backfill fragments retain deleted generations and original identities across restore", async () => {
@@ -86,4 +95,16 @@ test("a long selected map history does not depend on JavaScript recursion depth"
   const reopened = createDocument();
   Y.applyUpdate(reopened, Y.mergeUpdates(fragments.map((fragment) => fragment.state)));
   expect(await readDocumentRecord(reopened, "a")).toEqual(await readDocumentRecord(source, "a"));
+});
+
+test("authoritative GC and non-record metadata retain clocks without inventing record ownership", () => {
+  const source = createDocument();
+  source.clientID = 101;
+  source.getMap("data-migrations").set("version", 1);
+  Y.applyUpdate(source, encodeRecordFragment([new Y.GC(Y.createID(909, 0), 3)], new Map()).state);
+  const indexed = buildRecordFragments(source);
+  expect(indexed.clocks.get(101)).toBe(1);
+  expect(indexed.clocks.get(909)).toBe(3);
+  expect([...indexed.ownership]).toEqual([]);
+  expect([...indexed.fragments]).toEqual([]);
 });

@@ -1,6 +1,6 @@
 import type * as Y from "yjs";
 
-const recordOf = (name: string) => {
+export const recordIdFromRoot = (name: string) => {
   while (/^\d+:/.test(name)) {
     const start = name.indexOf(":") + 1;
     name = name.slice(start, start + Number(name.slice(0, start - 1)));
@@ -24,8 +24,8 @@ export const indexRecordRoots = (document: Y.Doc) => {
   };
   for (const [name, type] of document.share) {
     // Decoding a pending update can create an empty root before any item integrates.
-    if (type._start || type._map.size) add(roots, recordOf(name), name);
+    if (type._start || type._map.size) add(roots, recordIdFromRoot(name), name);
   }
-  for (const name of document.getMap("retired-records")._map.keys()) add(retired, recordOf(name), name);
+  for (const name of document.getMap("retired-records")._map.keys()) add(retired, recordIdFromRoot(name), name);
   return { roots, retired };
 };

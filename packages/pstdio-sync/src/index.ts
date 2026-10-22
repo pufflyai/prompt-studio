@@ -13,6 +13,7 @@ export { buildRecordFragments, type RecordFragment } from "./document-fragments"
 export { type DocumentHistory, documentHistory } from "./document-history";
 export { trackDocumentPayload } from "./document-payload";
 export { documentRecordTypes, type RecordType, readDocumentRecord } from "./document-record";
+export type { RecordOwnershipRange } from "./document-record-ownership";
 export { type DocumentSnapshot, findDocumentReplacements, snapshotDocumentRecords } from "./document-replacements";
 export { createDocumentStorage } from "./document-storage";
 export { type DocumentState, type DocumentStore, hasDocumentUserData, memoryDocumentState } from "./document-types";

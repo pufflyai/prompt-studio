@@ -1,6 +1,7 @@
 import * as Y from "yjs";
 import { encodeRecordFragment, type FragmentDeletes, type FragmentStruct } from "./document-fragment-encoding";
 import { indexRecordRoots } from "./document-fragment-roots";
+import { documentRecordOwnership } from "./document-record-ownership";
 
 export interface RecordFragment {
   recordId: string;
@@ -63,5 +64,6 @@ export const buildRecordFragments = (document: Y.Doc) => {
       for (const id of ids) yield captureRecordFragment(document, id, roots);
     })(),
     clocks: Y.decodeStateVector(Y.encodeStateVector(document)),
+    ownership: documentRecordOwnership(document),
   };
 };
