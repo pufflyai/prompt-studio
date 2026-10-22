@@ -48,7 +48,6 @@ const createFixture = (modeLabel: string, showHeader: boolean) => {
     getSections: () => [
       {
         id: "files",
-        label: "Files",
         nodes: Array.from({ length: 60 }, (_, index) => ({
           id: `file-${index}`,
           label: `File ${index + 1}`,
@@ -109,18 +108,18 @@ export const Project: Story = {
       const pinned = await canvas.findByRole("option", { name: "Pinned note" });
       await expect(button.getBoundingClientRect().top).toBeGreaterThanOrEqual(pinned.getBoundingClientRect().bottom);
     }
-    const before = button.getBoundingClientRect();
-    for (const viewport of canvasElement.querySelectorAll(
-      '[data-workbench-region="sidenav"] [data-scope="scroll-area"][data-part="viewport"]',
-    ))
-      viewport.scrollTop = viewport.scrollHeight;
-    const after = button.getBoundingClientRect();
-    await expect(after.top).toBe(before.top);
-    await expect(
-      button.contains(
-        canvasElement.ownerDocument.elementFromPoint(after.x + after.width / 2, after.y + after.height / 2),
-      ),
-    ).toBe(true);
+    const viewport = button.closest('[data-scope="scroll-area"][data-part="viewport"]');
+    await expect(viewport).not.toBeNull();
+    const first = await canvas.findByRole("option", { name: "File 1" });
+    const second = await canvas.findByRole("option", { name: "File 2" });
+    const bounds = button.getBoundingClientRect();
+    await expect(first.closest('[data-scope="scroll-area"][data-part="viewport"]')).toBe(viewport);
+    const firstBounds = first.getBoundingClientRect();
+    const secondBounds = second.getBoundingClientRect();
+    await expect(bounds.x).toBe(firstBounds.x);
+    await expect(bounds.width).toBe(firstBounds.width);
+    await expect(bounds.height).toBe(firstBounds.height);
+    await expect(firstBounds.top - bounds.bottom).toBe(secondBounds.top - firstBounds.bottom);
     await userEvent.click(button);
     await expect(await within(canvas.getByRole("main")).findByText("home", { exact: true })).toBeVisible();
     await expect(canvas.queryByRole("button", { name: args.modeLabel })).toBeNull();

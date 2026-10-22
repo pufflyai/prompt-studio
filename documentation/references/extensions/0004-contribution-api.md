@@ -522,7 +522,7 @@ export default defineExtension({
 
 The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels.
 
-Inside a level, the shared Sidenav adds a fixed left-arrow button labeled with the current mode name, such as Project. It stays below all customized header rows and outside the scrolling body. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
+Inside a level, the shared Sidenav adds a fixed left-arrow button labeled with the current mode name, such as Project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
 
 Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
 

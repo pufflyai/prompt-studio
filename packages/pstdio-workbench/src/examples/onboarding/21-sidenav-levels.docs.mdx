@@ -11,7 +11,7 @@ mode's body, so the Sidenav shows only what belongs to the page. Header and foot
 
 Press Recipes to enter the level. The recipe list replaces the project rows, while Pantry stays in the header. Open a
 recipe: its page declares Recipes as its parent, so the level stays open. Press the fixed ← Project button at the
-bottom of the header to return to the main level. It shows the current mode name and cannot be moved or hidden.
+top of the main navigation content to return to the main level. It shows the current mode name and cannot be moved or hidden.
 The breadcrumb and browser history also remain available.
 
 <Canvas of={OnboardingStories.SidenavLevels} sourceState="none" />
@@ -34,8 +34,7 @@ The breadcrumb and browser history also remain available.
 - Rows set `resource` as their action subject and `target` as their click destination.
 
 Users can drag rows into the header or footer. Those rows also stay visible inside levels. In the customize menu, users
-can hide a level's labeled sections but not its rows. The mode return button stays below customized header rows and
-outside the scrolling body.
+can hide a level's labeled sections but not its rows. The mode return button stays first in the main navigation content, with the same spacing as other entries.
 
 ## Leaving a level
 

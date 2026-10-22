@@ -216925,24 +216925,6 @@
                       "content": "Search"
                     }
                   }
-                },
-                {
-                  "id": "hkhp6",
-                  "type": "ref",
-                  "ref": "t5G2s8",
-                  "name": "Mode return · fixed last row",
-                  "width": "fill_container",
-                  "descendants": {
-                    "w2TSr": {
-                      "enabled": false
-                    },
-                    "Mbu4C": {
-                      "icon": "arrow-left"
-                    },
-                    "ROY2j": {
-                      "content": "Project"
-                    }
-                  }
                 }
               ]
             },
@@ -216954,10 +216936,6 @@
               "height": "fill_container",
               "layout": "vertical",
               "gap": 16,
-              "padding": [
-                16,
-                0
-              ],
               "children": [
                 {
                   "type": "frame",
@@ -216965,8 +216943,26 @@
                   "name": "Ticket",
                   "width": "fill_container",
                   "layout": "vertical",
-                  "gap": 4,
+                  "gap": 1,
                   "children": [
+                    {
+                      "id": "hkhp6",
+                      "type": "ref",
+                      "ref": "t5G2s8",
+                      "name": "Mode return · fixed first entry",
+                      "width": "fill_container",
+                      "descendants": {
+                        "w2TSr": {
+                          "enabled": false
+                        },
+                        "Mbu4C": {
+                          "icon": "arrow-left"
+                        },
+                        "ROY2j": {
+                          "content": "Project"
+                        }
+                      }
+                    },
                     {
                       "id": "YEObO",
                       "type": "ref",
@@ -217112,7 +217108,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "The last header row shows ← and the current mode name. It stays fixed while page navigation scrolls. It cannot be moved or hidden. Selecting it returns to the last root-level page.",
+          "content": "The first entry in the main navigation content shows ← and the current mode name, with the same spacing as other entries. It cannot be moved or hidden. Selecting it returns to the last root-level page.",
           "lineHeight": 1.4,
           "fontFamily": "$font-body",
           "fontSize": 12,

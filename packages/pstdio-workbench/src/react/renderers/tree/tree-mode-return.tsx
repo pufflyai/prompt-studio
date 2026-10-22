@@ -27,7 +27,7 @@ export const TreeModeReturn = (props: { workbench: WorkbenchCore }) => {
   if (!hasLevel || !mode) return null;
 
   return (
-    <Box px="xs" pb="xs" flexShrink={0}>
+    <Box pb="1px">
       <ListRow
         id="workbench.navigation.root"
         role="button"

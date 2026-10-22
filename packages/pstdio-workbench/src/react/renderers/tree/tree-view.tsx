@@ -256,7 +256,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             />
           </Flex>
         ) : null}
-        {isSidenav ? <TreeModeReturn workbench={workbench} /> : null}
         <TreeViewSearch
           visible={Boolean(treeRenderer.searchable)}
           placeholder={treeRenderer.searchPlaceholder}
@@ -279,6 +278,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         >
           <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
             <TreeViewBody
+              leadingContent={isSidenav ? <TreeModeReturn workbench={workbench} /> : undefined}
               error={error}
               loading={loading}
               moduleLoading={treeState.loading}
