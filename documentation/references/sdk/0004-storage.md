@@ -118,10 +118,17 @@ An optional complete-address `prefix` restricts the index to a namespace or
 collection. Record methods otherwise cover the whole extension owner across scopes.
 The host supplies the owner; callers cannot query another extension or workbench.
 
-Predicates use `{ field, op, value }`, nested `{ all: [...] }`, or `{ any: [...] }`.
+Predicates use `{ field, op, value }`, nested `{ all: [...] }`, `{ any: [...] }`,
+or `{ not: predicate }`. Negation is the boolean complement, including for missing
+and null fields: negating a failed comparison matches those records.
 Supported comparisons are `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in` and `notIn`.
 `contains` tests exact string-array membership or a case-insensitive literal string
-substring. `%` and `_` have no wildcard meaning. `empty`, `notEmpty`, `exists` and
+substring. `equalsIgnoreCase` compares a string field with a complete string value.
+Both string operations use JavaScript's locale-independent `toLowerCase` rule.
+Case-insensitive equality does not match missing or null values; `eq` and `ne`
+retain their exact comparison semantics. Negate `contains` or `equalsIgnoreCase`
+to express negative text filters. `%` and `_` have no wildcard meaning.
+`empty`, `notEmpty`, `exists` and
 `missing` do not take a value. Empty means missing, null, empty string or empty
 array. Equality and grouping combine missing with null; existence predicates
 distinguish them. Values with a different declared type are treated as missing.
