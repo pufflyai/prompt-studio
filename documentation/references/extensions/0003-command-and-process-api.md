@@ -467,6 +467,35 @@ The dashboard previews the change in navigation, tabs, and breadcrumbs while the
 
 ## Sessions
 
+`ctx.sessions` exposes the host's session operations inside the current project. The capabilities below are available on `main` in extension API 0.2.2 and ship after 0.45.0. `ctx.sessions.get(sessionId)` and conversation reads also include `projectId`, `agentSessionId`, `sessionFileId`, and saved harness `params`. Mutations reject missing or foreign sessions. Reading a synced personal conversation does not start execution on this device; continue it on its owning device.
+
+| Method | Behavior |
+| --- | --- |
+| `ctx.sessions.getConversation(sessionId)` | Returns `{ session, messages }`, including pending queued messages. |
+| `ctx.sessions.getConversationSources(sessionId)` | Reads checkpoint and native history separately, with source errors. |
+| `ctx.sessions.getQueuedMessages(sessionId)` | Reads the pending messages and queue without loading conversation history. |
+| `ctx.sessions.stream(sessionId, onEvent, { signal }?)` | Awaits snapshot and live events: `ready`, `patch`, `approval_request`, `queued_messages`, and `end`. The callback receives a typed `{ event, data }` value and may return a promise for backpressure. |
+| `ctx.sessions.retainResources(sessionId)` | Returns `{ close() }` to keep idle harness resources while needed. |
+| `ctx.sessions.approve(sessionId, { id, decision })` | Resolves a tool approval request with `approve` or `deny`. |
+| `ctx.sessions.rename(sessionId, title)` | Renames the session; trims and rejects an empty title. |
+| `ctx.sessions.archive(sessionId)` | Archives the session and records its activity. |
+| `ctx.sessions.delete(sessionId)` | Deletes an inactive session. Active or queued work must be stopped first. Workspace files and native history are kept. |
+| `ctx.sessions.updateStatus(sessionId, status)` | Uses the host's status transition service. Use `stop` to cancel execution. |
+| `ctx.sessions.listActivity(sessionId, input?)` | Returns `{ items, nextCursor }`; accepts `eventType`, `from`, `to`, `cursor`, and `limit`. |
+| `ctx.sessions.removeQueuedFollowUp(sessionId, queuePosition, expectedRevision?)` | Removes a pending request; rejects a stale revision or a request being consumed. |
+| `ctx.sessions.moveQueuedFollowUp(sessionId, queuePosition, input)` | Moves a request `up` or `down`, optionally by `steps`, with `expectedRevision` and `expectedOrder` guards. Returns its new `queuePosition`. |
+| `ctx.sessions.getDraftHarnessCommands({ harness, workspaceId? })` | Discovers native commands before creating a session. `harness` uses `{ harnessId, model?, params? }`. |
+| `ctx.sessions.getHarnessCommands(sessionId)` | Reads native commands and modes for an existing session. |
+| `ctx.sessions.invokeHarnessOperation(sessionId, operation, expectedHarnessId?)` | Runs a native command or control through the host's execution and cancellation rules. |
+| `ctx.sessions.resolveSessionId({ harnessId, agentSessionId, cwd? })` | Resolves a native identity within this project; rejects ambiguous matches. |
+| `ctx.sessions.uploadAttachment({ name, data, mimeType? })` | Uploads supported attachment bytes. Returns the canonical attachment fields, including `fileId`. The same type and size limits apply as in the app. |
+| `ctx.sessions.readAttachment(fileId)` | Reads attachment bytes from this project. |
+| `ctx.sessions.deleteAttachment(fileId)` | Deletes an unsubmitted attachment; submitted or in-flight files are kept. |
+
+Streams and resource retention are released when the invoking command ends or is cancelled. Closing a stream or retention handle does not stop the agent session. A webview can forward stream events through a command declared with `streamOf`, using `await ctx.stream.write(event)` in the callback. See [command streams](#stream-command-output).
+
+`ctx.sessions.create` also accepts `operation` to start with a native command instead of a prompt, and returns its optional `operationResult`. `ctx.sessions.followup` accepts `harness` to select the next harness, model, or parameters, `questionResponse: { callId?, answers }` to answer a structured question, and `summaryFromSessionId`, `summaryFormat`, and `summaryRole` to include another project session's summary. Attachments remain references of the form `{ file_id }`. An answer to a question cannot include attachments. Existing `expectedRun` guards still reject continuation after execution changes.
+
 Use `await ctx.sessions.stop(sessionId)` to cancel a session in the current project and its queued follow-ups. This is available on `main` in extension API 0.2.2 and ships after 0.45.0. It supports queued, running, and awaiting-input sessions. The host waits for the harness's stop acknowledgement when the harness supports it. Harness failures and a change of execution owner reject the call; a caller must not report a successful stop in that case. Read the session again before deciding what to do next. Missing sessions and sessions from another project are rejected. Calling stop on a terminal session also records explicit stop intent and cancels its queued follow-ups. An uncertain live-input delivery remains recorded for host recovery.
 
 Use `ctx.sessions.query(input?)` to read sessions in the current project. It returns `{ items, nextCursor }`. Each item includes `agent` (harness ID), `last_selected_model`, `workspace_id`, status, archive state, anchors, creation and update times, latest-run start and end times, and `usage`.
