@@ -45,3 +45,16 @@ release:
           - scripts/release/**
           - scripts/embed.json
           - .changeset/config.json
+# What people see in the dashboard: its modules, the workbench chrome, shared components and theme, and
+# the design system. Test-only files do not count.
+dashboard-ui:
+  - changed-files:
+      - all-globs-to-any-file:
+          - "{packages/pstdio-dashboard,packages/pstdio-workbench,packages/ui}/src/**"
+          - "!**/*.test.*"
+          - "!**/*.fixture.*"
+          - "!**/*.test-fixture.*"
+          - "!**/*test-helpers*"
+  - changed-files:
+      - any-glob-to-any-file:
+          - design/prompt-studio-design-system.pen
