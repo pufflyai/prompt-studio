@@ -40,6 +40,9 @@ test("memory queries support typed predicates, selected fields, aggregates and s
     [{ field: "text", op: "contains", value: "%_" }, ["a"]],
     [{ field: "text", op: "contains", value: "PERcent" }, ["a"]],
     [{ field: "text", op: "equalsIgnoreCase", value: "PERCENT%_" }, ["a"]],
+    [{ field: "text", op: "textContains", value: "PERcent" }, ["a"]],
+    [{ field: "rank", op: "textContains", value: "2" }, ["a", "b"]],
+    [{ field: "active", op: "textContains", value: "RU" }, ["a", "d"]],
     [{ not: { field: "text", op: "contains", value: "PERCENT" } }, ["b", "c", "d"]],
     [{ field: "active", op: "in", value: [true] }, ["a", "d"]],
     [

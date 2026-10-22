@@ -61,7 +61,11 @@ const validateOperator = (field: StorageIndexField, predicate: Extract<StoragePr
     throw new Error("Contains requires a string or array field");
   if (field.type === "array" && ["gt", "gte", "lt", "lte"].includes(predicate.op))
     throw new Error("Array fields do not support ordering predicates");
-  if (!["eq", "ne", "gt", "gte", "lt", "lte", "contains", "equalsIgnoreCase", "in", "notIn"].includes(predicate.op))
+  if (
+    !["eq", "ne", "gt", "gte", "lt", "lte", "contains", "equalsIgnoreCase", "textContains", "in", "notIn"].includes(
+      predicate.op,
+    )
+  )
     throw new Error("Unsupported query predicate");
 };
 
@@ -77,6 +81,11 @@ const validatePredicateValues = (field: StorageIndexField, predicate: Extract<St
       throw new Error("Query arrays contain strings");
     if (typeof value === "number" && !Number.isFinite(value)) throw new Error("Query number must be finite");
   }
+};
+
+const validateScalarTextPredicate = (field: StorageIndexField, value: Json) => {
+  if (field.type === "array") throw new Error("Text contains requires a scalar field");
+  if (typeof value !== "string") throw new Error("Query value must be string");
 };
 
 export const validatePredicate = (index: StorageRecordIndex, predicate?: StoragePredicate, depth = 0) => {
@@ -95,6 +104,7 @@ export const validatePredicate = (index: StorageRecordIndex, predicate?: Storage
   const field = queryField(index, predicate.field);
   if (["empty", "notEmpty", "exists", "missing"].includes(predicate.op)) return;
   if (!("value" in predicate)) throw new Error("Query predicate needs a value");
+  if (predicate.op === "textContains") return validateScalarTextPredicate(field, predicate.value);
   validatePredicateValues(field, predicate);
 };
 
@@ -161,6 +171,8 @@ const matchesFieldPredicate = (
       return canonicalJson(actual ?? null) !== canonicalJson(predicate.value);
     case "equalsIgnoreCase":
       return typeof actual === "string" && actual.toLowerCase() === String(predicate.value).toLowerCase();
+    case "textContains":
+      return actual != null && String(actual).toLowerCase().includes(String(predicate.value).toLowerCase());
     case "in":
       return predicate.value.some((item) => canonicalJson(actual ?? null) === canonicalJson(item));
     case "notIn":

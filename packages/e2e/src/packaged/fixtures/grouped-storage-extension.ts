@@ -138,6 +138,11 @@ const queryRecords = defineCommand({
       next: await records.query({ ...request, cursor: page.cursor! }),
       rows: await records.readMany(page.records.map((row) => row.recordId)),
       count: await records.aggregate({ index: "ready", where: request.where }),
+      scalarText: await records.query({
+        index: "ready",
+        fields: ["rank"],
+        where: { field: "rank", op: "textContains", value: "2" },
+      }),
     };
   },
 });
