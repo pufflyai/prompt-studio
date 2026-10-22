@@ -1,4 +1,30 @@
-# Allocated extension files in API 0.2
+# Allocated extension files
+
+Extension files belong to their full publisher and name. Use the context file methods so the host can preserve ownership during upgrades.
+
+## Full extension IDs
+
+The host release that introduces independent extension updates moves allocated
+files and artifact mounts under
+`.pstdio/extension-storage/<publisher>.<name>/`.
+For example, Planner tickets move from
+`.pstdio/extension-storage/pstdio-planner/tickets/` to
+`.pstdio/extension-storage/pstdio.pstdio-planner/tickets/`.
+
+The host moves existing data without keeping a second copy. Deprecated
+name-only paths and `.publishers/<publisher>/` paths resolve to the same owned
+data until the next breaking extension API release. Use the full ID in new
+scripts. An ambiguous name-only path cannot select either publisher.
+
+Migration preserves publisher folders even when their extensions are disabled or
+uninstalled. Read-only workspaces read the earlier layout without moving files or
+writing ignore rules. Migration runs when the workspace permits writes.
+
+Windows reserves device names even before a dot. A publisher such as
+`con.notes` uses the portable directory `_con.notes`. Let the host return
+paths instead of constructing them.
+
+## Earlier API 0.2 migration
 
 Extension API 0.2 moves the documented `ctx.extensionFiles` root from
 `.pstdio/ext/<publisher>.<name>/` to
@@ -7,7 +33,7 @@ Publishers with the same package name keep separate files and ignore rules, incl
 after disable, reload, and uninstall. The relative file methods stay unchanged.
 This is a breaking filesystem layout change.
 
-API 0.2 is on `main` and in `0.44.0-nightly` builds. It ships in the release after 0.43.x. Release 0.43.x provides API 0.1.6 and still uses `.pstdio/ext/<publisher>.<name>/`, so do not move files before the app you run provides API 0.2. See [App, SDK, and extension API versions](../../references/extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
+API 0.2 shipped in 0.44.0. Release 0.43.x provides API 0.1.6 and still uses `.pstdio/ext/<publisher>.<name>/`, so do not move files before the app you run provides API 0.2. See [App, SDK, and extension API versions](../../references/extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
 
 Declared artifact mounts keep their existing paths under the package-name root.
 They cannot start with the reserved `.publishers` segment, including case variants.

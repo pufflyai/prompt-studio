@@ -370,7 +370,7 @@ jobs:
           VERSION: ${{ needs.plan.outputs.version }}
         run: |
           set -euo pipefail
-          for service in relay account-manager; do
+          for service in relay account-manager psx; do
             docker load --input "service-images/$service.tar"
             docker push "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION"
           done
@@ -383,7 +383,7 @@ jobs:
         run: |
           set -euo pipefail
           docker logout ghcr.io
-          for service in relay account-manager; do
+          for service in relay account-manager psx; do
             if ! docker manifest inspect "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION" > /dev/null; then
               echo "::error::ghcr.io/$GITHUB_REPOSITORY/$service is private. In its package settings, choose Danger Zone > Change visibility > Public, then re-run this job."
               exit 1

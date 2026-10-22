@@ -3,7 +3,10 @@ import { expandHomePath, resolvePstdioDbPath, resolvePstdioStoragePath } from "p
 const DEFAULT_EVENT_BUFFER_SIZE = 1000;
 const DEFAULT_AUTOMATION_RUNS_PER_MINUTE = 60;
 
-export type ExtensionRelease = { source: "git"; ref: string } | { source: "workspace"; ref: string; root: string };
+export type ExtensionRelease =
+  | { source: "git"; ref: string }
+  | { source: "registry"; ref: string }
+  | { source: "workspace"; ref: string; root: string };
 
 export interface AppConfig {
   /** Private file with this device's cloud login. Defaults to `native-account.json` beside the database. */
@@ -49,6 +52,12 @@ const resolveRelease = (input: ResolveAppConfigInput): ExtensionRelease | null =
     throw new Error("PSTDIO_EXTENSION_SOURCE_ROOT requires PSTDIO_EXTENSION_RELEASE_REF");
   }
   if (root && ref) return { source: "workspace", ref, root };
+  if (ref?.startsWith("psx:")) {
+    return {
+      source: "registry",
+      ref: input.env.PSTDIO_EXTENSION_REGISTRY ? `psx:${input.env.PSTDIO_EXTENSION_REGISTRY}` : ref,
+    };
+  }
   if (ref) return { source: "git", ref };
   return null;
 };

@@ -18,7 +18,10 @@ interface AvailableExtensionDetailProps {
 export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) => {
   const { extension, metadata, contributionsError, loadingContributions, installing, onBack, onInstall } = props;
   const { t } = useTranslation("projects");
-  const extensionId = metadata?.extensions[0]?.id ?? extension.installName;
+  const extensionId = metadata?.extensions[0]?.id ?? extension.registry?.extensionId ?? extension.installName;
+  const origin = extension.registry
+    ? `${extension.registry.url}/${extension.registry.extensionId}`
+    : `${extension.origin.url}@${extension.origin.ref}#${extension.origin.path}`;
 
   return (
     <Stack gap="md" paddingBottom="lg" data-testid="available-extension-detail">
@@ -50,7 +53,7 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
             </Text>
             <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" truncate>
               {extension.publisher ? `${extension.publisher} · ` : ""}
-              {extension.origin.url}@{extension.origin.ref}#{extension.origin.path}
+              {origin}
             </Text>
           </Stack>
           <Button

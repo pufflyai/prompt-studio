@@ -6,7 +6,8 @@ export {
   resolveArtifactMountRoot,
 } from "./artifact-mount";
 export { isPackageAssetDescriptor } from "./asset-validation";
-export { type ExtensionStorageOwner, extensionFilesPath } from "./extension-storage-path";
+export { type ExtensionStorageOwner, extensionFilesPath, isWindowsDeviceName } from "./extension-storage-path";
+export { createLegacyExtensionPathResolver } from "./legacy-extension-paths";
 export {
   PackageAssetError,
   type PackageAssetKind,
@@ -18,6 +19,12 @@ export {
 } from "./package-assets";
 export { normalizeArtifactMountPath, normalizeCliPath } from "./path-normalization";
 export { normalizeMountRelativePath } from "./safe-file-root";
+export { extensionStorageDirectory, migrateExtensionStorage } from "./storage-migration";
+export {
+  discoverExtensionStorageOwners,
+  resolveReadExtensionStoragePath,
+  resolveReadExtensionStorageRoot,
+} from "./storage-owners";
 export {
   WorkspaceFileAccessError,
   type WorkspaceMountEntry,

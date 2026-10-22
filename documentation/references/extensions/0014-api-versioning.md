@@ -217,6 +217,13 @@ API 0.2 is on `main` and in nightly builds. It ships in the release after 0.43.x
 
 API 0.2 moves `ctx.extensionFiles` from `.pstdio/ext/<publisher>.<name>/` to `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. Publishers with the same package name keep separate files. Artifact mount paths cannot start with the reserved `.publishers` segment, including case variants. This is a breaking filesystem layout change; relative file operations stay the same. Move existing allocated files using the [storage migration guide](../../guides/extensions/0009-allocated-extension-files.md). Extensions that work with both layouts can declare `^0.1.0 || ^0.2.0`.
 
+The host release introducing independent extension delivery adds full-ID storage
+roots under `.pstdio/extension-storage/<publisher>.<name>/`. Existing paths
+remain deprecated aliases to the same data until the next breaking extension API
+release. This migration does not remove the API 0.2 forms. Name-only CLI
+namespaces also remain available when unambiguous; full-ID namespaces replace
+them. Declared global aliases keep their short form.
+
 ## Independent panel permissions in API 0.2.1
 
 API 0.2.1 also adds optional `HarnessProvider.releaseSession(ctx, { sessionId })` for host-managed idle-resource cleanup. The host retains open tabs, active work, and sessions used within 30 minutes. Return `true` after releasing idle resources and `false` while native work or delivery remains uncertain. Preserve history and recreate resources on the next call. Existing providers keep working. Publish the SDK and host before separately released harnesses adopt it.

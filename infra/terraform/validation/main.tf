@@ -14,6 +14,7 @@ module "cloud" {
   image_digests = {
     relay   = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     manager = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    psx     = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
   }
   relay_secrets = {
     S3_ACCESS_KEY_ID     = "validation-only"
@@ -25,6 +26,11 @@ module "cloud" {
     BETTER_AUTH_SECRET   = "validation-only-never-use-in-a-deployment"
     GOOGLE_CLIENT_ID     = "validation-only"
     GOOGLE_CLIENT_SECRET = "validation-only"
+  }
+  psx_secrets = {
+    S3_ACCESS_KEY_ID     = "validation-only"
+    S3_SECRET_ACCESS_KEY = "validation-only"
+    PSX_PUBLISH_TOKEN    = "validation-only"
   }
 }
 

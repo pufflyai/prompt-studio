@@ -27,13 +27,13 @@ const validateResourceKindOwnership = (runtime: Accumulator) => {
   const reservedIds = new Set(Object.keys(workbenchResourceKindDefinitions));
   const owners = new Map<string, (typeof runtime.resourceKinds)[number]>();
   runtime.resourceKinds = runtime.resourceKinds.filter((kind) => {
-    if (reservedIds.has(kind.id)) {
+    if (reservedIds.has(kind.localId)) {
       addDiagnostic(
         runtime,
         kind,
         "extension_resource_kind_reserved",
-        kind.id,
-        `Resource kind "${kind.id}" is declared by the host`,
+        kind.localId,
+        `Resource kind "${kind.localId}" is declared by the host`,
       );
       return false;
     }
@@ -60,7 +60,7 @@ const validateResourceMenuOwnership = (runtime: Accumulator) => {
   >();
   for (const kind of runtime.resourceKinds) {
     for (const [slotId, slot] of Object.entries(kind.contribution.menuSlots ?? {})) {
-      const key = `${kind.id}.${slotId}`;
+      const key = `${kind.localId}.${slotId}`;
       slots.set(key, [...(slots.get(key) ?? []), { kind, slot }]);
       slots.set(`${kind.extensionId}.resource-kind.${key}`, [{ kind, slot }]);
     }

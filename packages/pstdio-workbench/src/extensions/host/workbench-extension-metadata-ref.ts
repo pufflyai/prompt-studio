@@ -17,7 +17,9 @@ export const toWorkbenchWhenExpression = (
     mode: ids(when.mode as MetadataRef | MetadataRef[] | undefined),
     source: when.source,
     viewId: ids(when.view as MetadataRef | MetadataRef[] | undefined),
-    resourceType: when.resourceType?.map((ref) => ref.id),
+    resourceType: when.resourceType?.map((ref) =>
+      ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.${ref.id}`,
+    ),
     metadata: when.metadata,
   };
 };

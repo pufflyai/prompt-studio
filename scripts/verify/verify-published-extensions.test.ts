@@ -22,7 +22,7 @@ const write = async (root: string, path: string, content: unknown) => {
 test("finds registry-backed extensions across workspace locations and excludes local SDK consumers", async () => {
   const root = await fixture();
   await write(root, "package.json", { workspaces: ["extensions/*", ".pstdio/extensions/dev", "packages/*"] });
-  await write(root, ".changeset/config.json", { fixed: [["released-tool"]] });
+  await write(root, ".changeset/config.json", { fixed: [["pstdio"]], ignore: ["local-tool"] });
   const manifest = (sdk: string) => ({
     name: "released-tool",
     engines: { pstdio: "^0.1.0" },

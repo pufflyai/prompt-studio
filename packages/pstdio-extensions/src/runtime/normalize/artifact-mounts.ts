@@ -1,5 +1,6 @@
 import { type ArtifactMountContribution, artifactChanged } from "@pstdio/sdk/extensions";
 import { ARTIFACT_MOUNT_ROOT } from "../../artifacts/artifact-mount";
+import { extensionStorageDirectory } from "../../artifacts/extension-storage-path";
 import { normalizeArtifactMountPath } from "../../artifacts/path-normalization";
 import type { NormalizedExtension, RuntimeArtifactMount } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
@@ -39,8 +40,8 @@ export const registerArtifactMounts = (
       continue;
     }
 
-    const fullPath = `${ARTIFACT_MOUNT_ROOT}/${ext.name}/${relativePath}`;
-    const collisionKey = `${ext.name}:${relativePath}`;
+    const fullPath = `${ARTIFACT_MOUNT_ROOT}/${extensionStorageDirectory(ext.id)}/${relativePath}`;
+    const collisionKey = `${ext.id}:${relativePath}`;
     const existing = index.mountKeys.get(collisionKey);
     if (existing) {
       runtime.diagnostics.push(

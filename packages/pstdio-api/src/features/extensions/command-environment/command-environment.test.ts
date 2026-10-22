@@ -159,7 +159,9 @@ describe("createCommandEnvironment host primitives", () => {
         "utf8",
       ),
     ).toBe("{}");
-    expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain("/extension-storage/extension-lab/");
+    expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain(
+      "/extension-storage/pstdio.extension-lab/",
+    );
     await expect(env.extensionFiles?.readText("../secret.md")).rejects.toThrow("escapes");
   });
 

@@ -14,6 +14,10 @@ const gitOriginSchema = z.object({
 
 const extensionCatalogEntrySchema = z.object({
   installName: z.string().min(1),
+  extensionId: z
+    .string()
+    .regex(/^[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*$/)
+    .optional(),
   displayName: z.string().min(1),
   description: z.string(),
   origin: gitOriginSchema,
@@ -112,4 +116,6 @@ export class ExtensionNotInCatalogError extends Error {
 }
 
 export const findExtensionCatalogEntry = async (installName: string) =>
-  (await getExtensionCatalog()).extensions.find((entry) => entry.installName === installName);
+  (await getExtensionCatalog()).extensions.find(
+    (entry) => entry.installName === installName || entry.extensionId === installName,
+  );

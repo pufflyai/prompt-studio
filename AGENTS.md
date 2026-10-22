@@ -188,7 +188,7 @@ Do not add:
 
 - Changesets for changes that only affect tests or code structure.
 
-All released workspace packages share one Changesets fixed version group. Add new core extensions to that group in `.changeset/config.json`. The highest requested bump sets the next version for the whole group. The named packages still decide where summaries appear in release notes. Extension SDK and UI dependency ranges remain owned by extension PRs.
+The host, SDK, UI, workbench and desktop share one Changesets fixed version group. Core extensions have independent versions and changelogs and must stay outside that group. Extension-only changesets must not bump the host or other extensions. Extension SDK and UI dependency ranges remain owned by extension PRs. See [independent extension releases](documentation/guides/development/0013-independent-extension-releases.md).
 
 ### 7. Migrations
 

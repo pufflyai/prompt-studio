@@ -52,6 +52,8 @@ import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smo
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
+// A separately published PSX package upgrades and runs on the same packaged host version.
+import { registerIndependentExtensionSmokeTests } from "./packaged-independent-extensions-smoke";
 import { registerLinkIconsSmokeTests } from "./packaged-link-icons-smoke";
 // Harness discovery/models live in harness-npm-detection.test.ts; Codex exit outcomes in codex-transport.test.ts.
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
@@ -268,6 +270,7 @@ registerPackagedPlannerSmokeTests();
 
 registerCoreDefaultExtensionSmokeTests();
 registerExtensionDiagnosticsSmokeTests();
+registerIndependentExtensionSmokeTests();
 registerLinkedWebviewSmokeTests();
 registerRemoteExecutionSmokeTests();
 registerConcurrentHostsSmokeTests();

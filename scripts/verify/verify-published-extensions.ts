@@ -12,13 +12,13 @@ interface ExtensionManifest {
 export async function publishedExtensionDirs(root: string) {
   const manifest = await Bun.file(join(root, "package.json")).json();
   const releaseConfig = await Bun.file(join(root, ".changeset/config.json")).json();
-  const released = new Set<string>(releaseConfig.fixed.flat());
+  const ignored = new Set<string>(releaseConfig.ignore ?? []);
   const dirs = new Set<string>();
   for (const workspace of manifest.workspaces as string[]) {
     for await (const path of new Bun.Glob(`${workspace}/package.json`).scan({ cwd: root })) {
       const pkg: ExtensionManifest = await Bun.file(join(root, path)).json();
       const sdk = pkg.dependencies?.["@pstdio/sdk"];
-      if (released.has(pkg.name) && pkg.engines?.pstdio && sdk && !sdk.startsWith("workspace:"))
+      if (!ignored.has(pkg.name) && pkg.engines?.pstdio && sdk && !sdk.startsWith("workspace:"))
         dirs.add(dirname(path));
     }
   }

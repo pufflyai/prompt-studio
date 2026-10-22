@@ -1,6 +1,7 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { HarnessStateApi } from "pstdio-api-contracts/extension-kernel";
+import { extensionStorageDirectory } from "pstdio-extensions";
 import { type PstdioPathsEnv, resolvePstdioStatePath } from "pstdio-paths";
 
 const writes = new Map<string, Promise<void>>();
@@ -34,17 +35,37 @@ const enqueue = (path: string, action: () => Promise<void>) => {
 };
 
 export const createHarnessStateApi = (extensionId: string, options: { env?: PstdioPathsEnv } = {}): HarnessStateApi => {
-  const path = join(resolvePstdioStatePath({ env: options.env }), `${extensionId}.json`);
+  const path = join(resolvePstdioStatePath({ env: options.env }), `${extensionStorageDirectory(extensionId)}.json`);
+  const legacy = join(resolvePstdioStatePath({ env: options.env }), `${extensionId}.json`);
+  const prepare = async () => {
+    if (path === legacy || process.platform === "win32") return;
+    try {
+      await lstat(path);
+      return;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    try {
+      await rename(legacy, path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  };
   return {
-    get: async (key) => (await readValues(path))[key] as never,
+    get: async (key) => {
+      await prepare();
+      return (await readValues(path))[key] as never;
+    },
     set: (key, value) =>
       enqueue(path, async () => {
+        await prepare();
         const values = await readValues(path);
         values[key] = value;
         await writeValues(path, values);
       }),
     delete: (key) =>
       enqueue(path, async () => {
+        await prepare();
         const values = await readValues(path);
         delete values[key];
         await writeValues(path, values);

@@ -7,8 +7,10 @@ import {
   createReadBoundary,
   createWorkspaceFilesMount,
   type InvocationScope,
+  migrateExtensionStorage,
   type RuntimeArtifactMount,
   type RuntimeExtensionSettingRecord,
+  resolveReadExtensionStoragePath,
   type ScopedHostApis,
 } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
@@ -26,7 +28,6 @@ import { createExtensionFilesApi } from "./extension-files";
 import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
 import { createExtensionPackageFilesApi } from "./package-files";
-import { createProjectFilesApi } from "./project-files";
 import { createResourcesApi } from "./resources";
 import { createScopedHostApis } from "./scoped-host-apis";
 import { createSettingsApi } from "./settings";
@@ -80,19 +81,30 @@ export const createCommandEnvironment = (
   const manifest = (enabledSource.installedSource.manifest_json ?? {}) as {
     pstdio?: { projectFiles?: { tracked?: boolean } };
   };
+  const storageOwners = enabledSources.map(({ installedSource }) => ({
+    extensionId: installedSource.extension_id,
+    name: installedSource.extension_id.split(".")[1]!,
+  }));
+  const prepareStorageRoot = async (root: string, access: FileAccess) => {
+    if (access === "write") await migrateExtensionStorage(root, storageOwners);
+    return root;
+  };
 
   const scopedHostApis = (scope?: InvocationScope) => {
     const signal = scope?.signal;
     const provisioningWorkspaceId = input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined;
-    const resolveWorkingPath = (access: FileAccess) =>
-      resolveWorkspaceFilesPath(
-        deps,
-        {
-          projectId: input.projectId,
-          workspaceId: input.workspaceId,
-          provisioningWorkspaceId,
-          eventId: input.eventId,
-        },
+    const resolveWorkingPath = async (access: FileAccess) =>
+      prepareStorageRoot(
+        await resolveWorkspaceFilesPath(
+          deps,
+          {
+            projectId: input.projectId,
+            workspaceId: input.workspaceId,
+            provisioningWorkspaceId,
+            eventId: input.eventId,
+          },
+          access,
+        ),
         access,
       );
     const workingFiles = input.workspaceDir
@@ -103,8 +115,11 @@ export const createCommandEnvironment = (
         })
       : undefined;
 
-    const resolveProjectPath = (access: FileAccess) =>
-      resolveWorkspaceFilesPath(deps, { projectId: input.projectId, provisioningWorkspaceId }, access);
+    const resolveProjectPath = async (access: FileAccess) =>
+      prepareStorageRoot(
+        await resolveWorkspaceFilesPath(deps, { projectId: input.projectId, provisioningWorkspaceId }, access),
+        access,
+      );
     const storage = createStorageApi(deps, {
       extensionId: input.extensionId,
       extensionInstanceId: enabledSource.instance.id,
@@ -130,11 +145,15 @@ export const createCommandEnvironment = (
         },
         deps,
       ),
-      projectFiles: createProjectFilesApi(deps, input.projectId, provisioningWorkspaceId, signal),
+      projectFiles: createWorkspaceFileMount(resolveProjectPath, signal, async (path) =>
+        resolveReadExtensionStoragePath(await resolveProjectPath("read"), path, storageOwners),
+      ),
       workspaceFiles:
         input.workspaceId && workingFiles
           ? {
-              ...createWorkspaceFileMount(resolveWorkingPath, signal),
+              ...createWorkspaceFileMount(resolveWorkingPath, signal, async (path) =>
+                resolveReadExtensionStoragePath(await resolveWorkingPath("read"), path, storageOwners),
+              ),
               syncDir: async (dir, files) => {
                 const workspaceDir = await resolveWorkingPath("write");
                 return createWorkspaceFilesMount(workspaceDir, {

@@ -1,4 +1,9 @@
-import { type loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
+import {
+  type ExtensionRuntime,
+  type loadExtensionSources,
+  migrateExtensionStorage,
+  normalizeExtensionSources,
+} from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
@@ -44,6 +49,16 @@ export type ProjectExtensionRuntimeCatalogObserver = {
 export type ProjectExtensionRuntimeCatalog = ReturnType<typeof createProjectExtensionRuntimeCatalog>;
 
 type CandidateExtensionSource = LoadableExtensionSource & { extension_id: string };
+const migrateRuntimeStorage = async (root: string | null | undefined, runtime: ExtensionRuntime) => {
+  if (!root || !runtime.extensions.length) return;
+  await migrateExtensionStorage(
+    root,
+    runtime.extensions.map((extension) => ({
+      name: extension.name,
+      extensionId: extension.id,
+    })),
+  );
+};
 
 export const createProjectExtensionRuntimeCatalog = (deps: {
   extensionService: ReturnType<typeof createExtensionService>;
@@ -90,6 +105,8 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       cachedSources.flatMap((cached) => cached.diagnostics),
       { projectFolder: workspace?.root_path ?? undefined },
     );
+    const fileAccess = workspace?.provider_capabilities_json?.files;
+    if (!fileAccess || fileAccess === "write") await migrateRuntimeStorage(workspace?.root_path, runtime);
 
     return { enabledSources, project, runtime };
   };

@@ -123,7 +123,10 @@ export const buildDashboardMenuSlotRegistry = (metadata: DashboardExtensionMetad
   ]);
   const resourceKindsBySlotId = new Map<string, string>();
   const resourceOwnersBySlotId = new Map<string, string>();
-  const resourceKinds = [...hostResourceKinds, ...metadata.resourceKinds];
+  const resourceKinds = [
+    ...hostResourceKinds,
+    ...metadata.resourceKinds.map((kind) => ({ ...kind, id: kind.localId })),
+  ];
 
   for (const resourceKind of resourceKinds) {
     for (const slot of resourceKind.menuSlots ?? []) {
@@ -172,8 +175,12 @@ export const buildDashboardWorkbenchWhenExpression = (when: ExtensionMenuContrib
   if (!when) return undefined;
 
   const resourceTypeTerms =
-    when.resourceType?.map((resourceType) => `${workbenchResourceTypeContextKey} == ${contextValue(resourceType)}`) ??
-    [];
+    when.resourceType?.map((resourceType) => {
+      const parts = resourceType.split(".");
+      if (parts.length < 3) return `${workbenchResourceTypeContextKey} == ${contextValue(resourceType)}`;
+      const owner = parts.splice(0, 2).join(".");
+      return `${workbenchResourceTypeContextKey} == ${contextValue(parts.join("."))} && ${workbenchResourceOwnerContextKey} == ${contextValue(owner)}`;
+    }) ?? [];
   const metadataTerms = Object.entries(when.metadata ?? {})
     .filter((entry): entry is [string, string | number | boolean] => isContextPrimitive(entry[1]))
     .map(([key, value]) => `${workbenchResourceMetadataContextKey(key)} == ${contextValue(value)}`);

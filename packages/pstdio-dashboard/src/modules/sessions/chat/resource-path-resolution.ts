@@ -10,6 +10,7 @@ import { extensionResourceRefSchema, qualifyNavigationTarget } from "pstdio-api-
 
 interface ResourcePathKind {
   id: string;
+  localId: string;
   extensionId: string;
   icon?: string;
   paths?: Array<{ prefix: string; resolveCommand: string }>;
@@ -77,7 +78,7 @@ export const resolveResourcePath = async (input: ResourcePathInput) => {
   if (value === null || value === undefined) return null;
   const result = value as ResourceResolution;
   const resource = scopedResource(result.resource, handler.kind.extensionId, input.projectId);
-  if (resource.type !== handler.kind.id)
+  if (resource.type !== handler.kind.localId)
     throw new Error("The path handler returned a resource outside its owner or project.");
   if (
     !result.target ||

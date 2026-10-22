@@ -13,8 +13,8 @@ import { runtimeAuthorization, startPackagedServe, stopProcess } from "./package
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
-// Stable hosts use a version tag; nightlies retain their exact main commit.
-const hostReleaseRef = /^(?:pstdio@\d|[0-9a-f]{40}$)/;
+// Stable hosts use PSX; nightlies retain their exact main commit.
+const hostReleaseRef = /^(?:\{hostRelease\}|pstdio@\d|[0-9a-f]{40}$)/;
 
 const expectPackagedProjectSetup = (logPath: string, projectId: string) => {
   const entries = readFileSync(logPath, "utf8")
@@ -127,6 +127,7 @@ export const registerPackagedProjectSetupSmokeTests = () => {
             installName: string;
             origin: { kind: "git"; path: string; ref: string; url: string };
             publisher?: string;
+            registry?: { url: string; extensionId: string };
           }>;
         };
         expect(extensionCatalog.marketplace).toContainEqual(
@@ -136,7 +137,7 @@ export const registerPackagedProjectSetupSmokeTests = () => {
             origin: {
               kind: "git",
               path: "extensions/pstdio-artifacts",
-              ref: expect.stringMatching(hostReleaseRef),
+              ref: expect.any(String),
               url: "https://github.com/pufflyai/prompt-studio",
             },
             publisher: "pstdio",
@@ -163,9 +164,18 @@ export const registerPackagedProjectSetupSmokeTests = () => {
               ref: expect.stringMatching(hostReleaseRef),
               url: "https://github.com/pufflyai/prompt-studio",
             },
-            publisher: "pufflyai",
+            publisher: "pstdio",
           }),
         );
+
+        for (const extension of extensionCatalog.marketplace) {
+          if (extension.origin.ref === "{hostRelease}") {
+            expect(extension.registry).toEqual({
+              url: expect.stringMatching(/^https:\/\//),
+              extensionId: expect.stringMatching(/^pstdio\./),
+            });
+          }
+        }
 
         const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`, {
           headers: runtimeAuthorization(started.descriptor),
