@@ -93,8 +93,10 @@ export const verifyPackagedSessionMenus = async (
   await page.keyboard.press("ControlOrMeta+Alt+s");
   const sideTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
   await expect(sideTabs.filter({ hasText: "New session" })).toBeVisible();
-  const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
+  const sidePanel = page.locator('[data-workbench-panel="side"]').filter({ visible: true });
+  const editor = sidePanel.getByTestId("content-editable").filter({ visible: true });
   await editor.fill("Packaged created session");
+  await expect(sidePanel.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
   const created = page.waitForResponse(
     (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/sessions",
   );
