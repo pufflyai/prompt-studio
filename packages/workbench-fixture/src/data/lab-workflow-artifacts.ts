@@ -48,8 +48,8 @@ export const queryLabWorkflowArtifacts = async (ctx: Pick<ExtensionContextBase, 
       resource: artifactResource(artifact),
     })),
     boardColumnConfigs: {
-      idea: { color: "gray", canCreate: true, canDragIn: true, canDragOut: true },
-      testing: { color: "blue", canCreate: false, canDragIn: true, canDragOut: true },
+      idea: { color: "gray", canCreate: true },
+      testing: { color: "blue", canCreate: false },
     },
   };
 };

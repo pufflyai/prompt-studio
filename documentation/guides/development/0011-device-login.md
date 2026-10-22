@@ -52,7 +52,7 @@ The host account response also includes `features: { relay: boolean } | null`. A
 
 The public SDK `/client` account methods are additive API changes. API `0.2.1` records that step under [API versioning](../../references/extensions/0014-api-versioning.md#public-sdk-subpaths). Existing `^0.2.0` extension ranges still accept this version; no manifest range changes are needed.
 
-The host-provided account feature field is additive in API `0.2.2`, on `main` after release `0.45.0`.
+The host-provided account feature field is additive and ships in API `0.3.0`, on `main` after release `0.45.0`.
 
 The browser bridge uses Better Auth's [single-use token plugin](https://better-auth.com/docs/plugins/one-time-token) and [bearer session plugin](https://better-auth.com/docs/plugins/bearer). It adds no auth provider or hosted execution service.
 

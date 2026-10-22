@@ -98,8 +98,8 @@ export const createGenericCollectionRendererModule = (): WorkbenchModuleContribu
           ...(commandId === configuredRecord.queryHandlerId
             ? {
                 boardColumnConfigs: {
-                  draft: { color: "yellow", canCreate: true, canDragIn: true, canDragOut: true },
-                  published: { color: "teal", canCreate: false, canDragIn: true, canDragOut: false },
+                  draft: { color: "yellow", canCreate: true },
+                  published: { color: "teal", canCreate: false },
                 },
               }
             : {}),

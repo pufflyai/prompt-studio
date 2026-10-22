@@ -245,7 +245,7 @@ const LiveWrapper = () => {
           onAttributeChange={handleAttributeChange}
           getBoardColumnConfig={(groupKey) => {
             const option = statuses.find((entry) => entry.value === groupKey);
-            return { color: option?.color, canDragIn: true, canDragOut: true };
+            return { color: option?.color };
           }}
         />
       </Box>

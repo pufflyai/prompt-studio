@@ -18,8 +18,6 @@ export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind }) => {
   const styles = useToolDemoStyles();
   const columns = AGENT_BOARD_COLUMNS.map((column) => ({
     ...column,
-    canDragIn: false,
-    canDragOut: false,
     canCreate: false,
     actions: [],
     items: board.tasks

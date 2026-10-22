@@ -16,8 +16,6 @@ const column: KanbanRendererBoardColumn = {
   label: "Todo",
   items,
   actions: [],
-  canDragIn: true,
-  canDragOut: true,
   canCreate: false,
 };
 

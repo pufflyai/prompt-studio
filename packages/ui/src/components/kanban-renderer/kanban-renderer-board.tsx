@@ -39,8 +39,10 @@ export interface KanbanRendererBoardColumn {
   groups?: KanbanRendererBoardGroup[];
   /** Cards in the column before search narrowed it. Set only while a search is active. */
   totalCount?: number;
-  canDragIn: boolean;
-  canDragOut: boolean;
+  /** @deprecated Remove this option. Cards can always be dragged between columns. */
+  canDragIn?: boolean;
+  /** @deprecated Remove this option. Cards can always be dragged between columns. */
+  canDragOut?: boolean;
   canCreate: boolean;
   actions: KanbanRendererBoardColumnAction[];
 }
@@ -129,9 +131,9 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
           overflow="hidden"
           minW="260px"
           flex="1 0 260px"
-          onDragOver={column.canDragIn ? handleDragOver(column.id) : undefined}
-          onDragLeave={column.canDragIn ? handleDragLeave : undefined}
-          onDrop={column.canDragIn ? handleDrop(column.id) : undefined}
+          onDragOver={handleDragOver(column.id)}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop(column.id)}
         >
           <ColumnHeader column={column} onCreateStart={onCreateStart} onColumnAction={onColumnAction} />
 
