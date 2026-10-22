@@ -50,6 +50,25 @@ alone is not acceptance. If document granularity prevents passing, PS-905 must
 record and implement the revised boundary in an ADR coordinated with PS-904
 queries/atomic groups and PS-906 migration.
 
+## Measured encoding bottleneck
+
+At commit `15306649b`, a fresh fixed 100,000-small-row database seed stopped at
+the unchanged 60-second case cap after 15,000 rows in its first history round.
+Database open took 1,143 ms. The partial seed is invalid; no cold or warm edit
+sample exists. The normal 128-commit checkpoint boundary was not reached.
+
+A separate profiling run kept the same workload and cap. Yjs `findRootTypeKey`
+accounted for 28.064 seconds of sampled self time in a 30.441-second profile
+(92.192%). This is diagnostic attribution, not accepted timing. The report keeps
+profiler overhead, ambient process inventories and the incomplete result visible.
+
+[ADR 0092](../../adrs/0092-temporary-yjs-root-name-index.md) records the temporary
+version-pinned dependency patch. It indexes root names where Yjs creates or
+specializes roots and preserves the existing bytes and identities. This removes
+repeated scans of unrelated root types during incremental encoding. It does not
+prove that full-owner hydration, receive validation or memory meet the contract.
+The fixed workloads must still pass after this correction.
+
 ## Functional checks
 
 Targeted tests cover revision invalidation, deletion-only repairs, quarantine,
