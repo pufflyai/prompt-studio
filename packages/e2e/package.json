@@ -37,6 +37,7 @@
     "pstdio-api-contracts": "workspace:*",
     "pstdio-artifacts": "workspace:*",
     "pstdio-base-themes": "workspace:*",
+    "pstdio-benchmarks": "workspace:*",
     "pstdio-dashboard": "workspace:*",
     "pstdio-extensions": "workspace:*",
     "pstdio-notes": "workspace:*",

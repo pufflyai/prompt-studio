@@ -1,3 +1,4 @@
+import { recordMeasurement, recordPeakMemory } from "pstdio-benchmarks/writer";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 
@@ -30,7 +31,15 @@ try {
       largestUpdateBytes: Math.max(0, ...updates.map((row) => row.update.length)),
     });
     console.log(JSON.stringify(samples.at(-1)));
+    const edits = priorEdits.toLocaleString("en-US");
+    recordMeasurement({
+      metric: `save-after-${priorEdits}`,
+      label: `Record save after ${edits} edits`,
+      unit: "ms",
+      value: elapsed / 100,
+    });
   }
+  recordPeakMemory("document-storage-memory", "Record storage peak memory");
 } finally {
   await f.close();
 }

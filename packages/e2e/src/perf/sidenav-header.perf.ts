@@ -3,10 +3,11 @@ import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-fo
 import {
   afterTwoFrames,
   collectRepeatSamples,
+  expectWithinBudget,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
-  reportSamples,
+  reportPageMemory,
   resetInteraction,
   waitForTicketsView,
 } from "./perf-helpers";
@@ -66,15 +67,17 @@ test("navigates global collections within the interaction budget", async ({ page
     samples.push({ collection, duration: result.duration });
   }
 
+  await reportPageMemory(page, "sidenav-header");
+
   const results = collectRepeatSamples(testInfo, "sidenav-header", samples);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach * collections.length);
   for (const collection of collections) {
-    const summary = reportSamples(
+    expectWithinBudget(
       "sidenav-header",
       collection,
       results.filter((result) => result.collection === collection).map((result) => result.duration),
+      150,
     );
-    expect(summary.max).toBeLessThanOrEqual(150);
   }
 });

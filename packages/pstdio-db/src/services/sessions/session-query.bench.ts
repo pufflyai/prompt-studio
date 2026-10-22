@@ -1,3 +1,4 @@
+import { recordMeasurement, recordPeakMemory } from "pstdio-benchmarks/writer";
 import { createDb } from "../../db/connection.pglite";
 import { sessions, workspace_sessions } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
@@ -88,6 +89,14 @@ try {
         if (results.get(id) !== expected) throw new Error(`Incorrect badge for ${id}`);
       }
       const used = process.cpuUsage(cpu);
+      // "history" is the earlier strategy this benchmark compares against; only the badge query ships.
+      if (strategy === "badge")
+        recordMeasurement({
+          metric: "badge-query",
+          label: "Session badges for 28 workspaces",
+          unit: "ms",
+          value: performance.now() - started,
+        });
       console.log(
         JSON.stringify({
           repeat,
@@ -103,6 +112,7 @@ try {
       );
     }
   }
+  recordPeakMemory("session-query-memory", "Session query peak memory");
 } finally {
   await conn.close();
 }

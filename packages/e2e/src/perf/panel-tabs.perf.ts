@@ -2,10 +2,11 @@ import { expect, test } from "@playwright/test";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import {
   collectRepeatSamples,
+  expectWithinBudget,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
-  reportSamples,
+  reportPageMemory,
   resetInteraction,
 } from "./perf-helpers";
 
@@ -49,8 +50,10 @@ test("opens one Panel tab within the interaction budget", async ({ page, request
   expect(finalTabs - initialTabs).toBe(1);
   expect(result.longTasks).toEqual([]);
 
+  await reportPageMemory(page, "panel-tabs");
+
   const results = collectRepeatSamples(testInfo, "panel-tabs", [result.duration]);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach);
-  expect(reportSamples("panel-tabs", "open-panel", results).max).toBeLessThanOrEqual(150);
+  expectWithinBudget("panel-tabs", "open-panel", results, 150);
 });

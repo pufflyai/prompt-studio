@@ -3,10 +3,11 @@ import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-fo
 import {
   afterTwoFrames,
   collectRepeatSamples,
+  expectWithinBudget,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
-  reportSamples,
+  reportPageMemory,
   resetInteraction,
 } from "./perf-helpers";
 
@@ -98,15 +99,17 @@ test("closes and reopens the live Side Panel within budget", async ({ page, requ
     expect(result.longTasks).toEqual([]);
   }
 
+  await reportPageMemory(page, "side-panel");
+
   const results = collectRepeatSamples(testInfo, "side-panel", [{ close: close.duration, reopen: reopen.duration }]);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach);
   for (const action of ["close", "reopen"] as const) {
-    const summary = reportSamples(
+    expectWithinBudget(
       "side-panel",
       action,
       results.map((result) => result[action]),
+      150,
     );
-    expect(summary.max).toBeLessThanOrEqual(150);
   }
 });
