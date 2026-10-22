@@ -19,7 +19,9 @@ export const verifyPackagedWebviewDisposal = async (
   projectId: string,
   headers: Record<string, string>,
 ) => {
+  await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.workbench-fixture/lab`);
   const iframe = page.locator('iframe[title="Lab"]');
+  await expect(iframe.contentFrame().getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
   const frame = await (await iframe.elementHandle())!.contentFrame();
   const host = await iframe.evaluateHandle((element) => element.closest("[data-workbench-instance]")!.parentElement!);
   const response = await page.request.get(`${baseUrl}/v1/projects/${projectId}/extensions`, { headers });

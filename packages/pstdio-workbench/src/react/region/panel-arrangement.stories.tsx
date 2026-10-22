@@ -1,6 +1,6 @@
 import { Box, Button, Input, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { type ReactNode, StrictMode, useState } from "react";
+import { Activity, type ReactNode, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench, type WorkbenchPanelRegion } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
@@ -253,10 +253,18 @@ export const BottomTabs: Story = {
 const SessionSwitchWorkbench = (props: { workbench: ReturnType<typeof createArrangementWorkbench> }) => {
   const { workbench } = props;
   const [open, setOpen] = useState(true);
+  const [visible, setVisible] = useState(true);
   return (
     <WorkbenchThemeProvider>
       <Button onClick={() => setOpen(false)}>Close example workbench</Button>
-      {open ? <WorkbenchStory workbench={workbench} /> : <Text>Workbench closed</Text>}
+      <Button onClick={() => setVisible(!visible)}>{visible ? "Hide workbench" : "Show workbench"}</Button>
+      {open ? (
+        <Activity mode={visible ? "visible" : "hidden"}>
+          <WorkbenchStory workbench={workbench} />
+        </Activity>
+      ) : (
+        <Text>Workbench closed</Text>
+      )}
     </WorkbenchThemeProvider>
   );
 };
@@ -270,11 +278,7 @@ export const SessionSwitchKeepsMainView: Story = {
       </Box>,
     ),
   },
-  render: (args) => (
-    <StrictMode>
-      <SessionSwitchWorkbench workbench={args.workbench} />
-    </StrictMode>
-  ),
+  render: (args) => <SessionSwitchWorkbench workbench={args.workbench} />,
   play: async ({ canvasElement, args }) => {
     await waitFor(() =>
       expect(
@@ -299,6 +303,11 @@ export const SessionSwitchKeepsMainView: Story = {
       await expect(iframe.contentDocument).toBe(document);
       await expect(input.value).toBe("Keep this unsaved draft");
     }
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "Hide workbench" }));
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "Show workbench" }));
+    await waitFor(() => expect(iframe).toBeVisible());
+    await expect(iframe.contentDocument).toBe(document);
+    await expect(input.value).toBe("Keep this unsaved draft");
     await userEvent.click(within(canvasElement).getByRole("button", { name: "Close example workbench" }));
     await waitFor(() => expect(host.isConnected).toBe(false));
     await expect(host.hasChildNodes()).toBe(false);
