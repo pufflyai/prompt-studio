@@ -29,7 +29,7 @@ To stop syncing a project, run `pst projects local PROJECT_ID`. Every device kee
 
 After you log in on a new or reset computer, every cloud project of your account appears in the project picker with its name. Its data, such as tickets, notes and artifacts, downloads without a folder. Until the first download finishes, the project reports `first-download-incomplete`.
 
-The project's files come later. The first time something needs them, such as opening Files or creating a workspace, Prompt Studio asks for a folder. It offers to clone the project's recorded git remote, or to use a folder that already holds the same repository. Work that needs files on a computer without the project's folder fails with the error "This project's files are not on this device."
+The project's files come later. The first time something needs them, such as opening Files, creating a workspace or starting a session with an agent that works on files, Prompt Studio asks for a folder. It offers to clone the project's recorded git remote, or to use a folder that already holds the same repository. Work that needs files on a computer without the project's folder fails with the error "This project's files are not on this device."
 
 To use a folder you already have from the command line, bind the project ID to it:
 

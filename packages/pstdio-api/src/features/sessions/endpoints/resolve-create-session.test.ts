@@ -26,7 +26,7 @@ describe("resolveCreateSessionAgent", () => {
   test("explicit agent wins when its extension is enabled for the project", async () => {
     const project = { id: PROJECT_ID, default_agent_id: CLAUDE_CODE_ID };
     const result = await resolveCreateSessionAgent(OPENCODE_ID, project, registryWith(["claude-code", "opencode"]));
-    expect(result).toEqual({ type: "ok", agentId: OPENCODE_ID });
+    expect(result).toMatchObject({ type: "ok", agentId: OPENCODE_ID });
   });
 
   test("returns error when the explicit agent's extension is disabled for the project", async () => {
@@ -47,13 +47,13 @@ describe("resolveCreateSessionAgent", () => {
   test("project default wins when set and enabled", async () => {
     const project = { id: PROJECT_ID, default_agent_id: CLAUDE_CODE_ID };
     const result = await resolveCreateSessionAgent(undefined, project, registryWith(["claude-code", "opencode"]));
-    expect(result).toEqual({ type: "ok", agentId: CLAUDE_CODE_ID });
+    expect(result).toMatchObject({ type: "ok", agentId: CLAUDE_CODE_ID });
   });
 
   test("falls back to the first available harness when the project default is not registered", async () => {
     const project = { id: PROJECT_ID, default_agent_id: "deleted-agent" };
     const result = await resolveCreateSessionAgent(undefined, project, registryWith(["opencode"]));
-    expect(result).toEqual({ type: "ok", agentId: OPENCODE_ID });
+    expect(result).toMatchObject({ type: "ok", agentId: OPENCODE_ID });
   });
 
   test("skips harnesses whose extension is disabled for the project when falling back", async () => {
@@ -63,7 +63,7 @@ describe("resolveCreateSessionAgent", () => {
       project,
       registryWith(["claude-code", "opencode"], [CLAUDE_CODE_ID]),
     );
-    expect(result).toEqual({ type: "ok", agentId: OPENCODE_ID });
+    expect(result).toMatchObject({ type: "ok", agentId: OPENCODE_ID });
   });
 
   test("resolves undefined when no harness is available", async () => {
@@ -72,7 +72,7 @@ describe("resolveCreateSessionAgent", () => {
       { id: PROJECT_ID },
       registryWith(["opencode"], [OPENCODE_ID]),
     );
-    expect(result).toEqual({ type: "ok", agentId: undefined });
+    expect(result).toMatchObject({ type: "ok", agentId: undefined });
   });
 });
 

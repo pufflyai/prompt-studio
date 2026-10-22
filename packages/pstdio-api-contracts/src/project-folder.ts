@@ -12,3 +12,6 @@ export const chooseProjectFolderInputSchema = z.object({
 });
 export type ProjectFolder = z.infer<typeof projectFolderSchema>;
 export type ChooseProjectFolderInput = z.infer<typeof chooseProjectFolderInputSchema>;
+
+/** Error code of work that needs the project's files on a device where the project has no folder yet. */
+export const projectFolderMissingCode = "project_folder_missing";

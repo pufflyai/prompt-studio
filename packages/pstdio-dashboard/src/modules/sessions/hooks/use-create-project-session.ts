@@ -2,6 +2,7 @@ import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import { useMutation } from "@tanstack/react-query";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { getApiClient } from "@/lib/api";
+import { isFolderMissingError } from "@/shared/projects/folder-missing-error";
 
 interface CreateProjectSessionInput {
   projectId: string;
@@ -24,11 +25,15 @@ const buildCreateProjectSessionBody = (input: CreateProjectSessionInput) => ({
   workspace_id: input.workspaceId,
 });
 
-export const useCreateProjectSession = () =>
+// `onFolderMissing` runs when the harness works on files and the project's folder is not on this device yet.
+export const useCreateProjectSession = (options: { onFolderMissing?: () => void } = {}) =>
   useMutation({
     mutationFn: async (input: CreateProjectSessionInput) => {
       const response = await getApiClient().sessions.create(buildCreateProjectSessionBody(input));
 
       return { sessionId: response.id, status: response.status };
+    },
+    onError: (error) => {
+      if (isFolderMissingError(error)) options.onFolderMissing?.();
     },
   });

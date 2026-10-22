@@ -40,7 +40,7 @@ export const createWorkspaceRoute = createRoute({
     },
     409: {
       description: "The project has no folder on this device yet.",
-      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+      content: { "application/json": { schema: z.object({ error: z.string(), code: z.string().optional() }) } },
     },
   },
 });
@@ -64,7 +64,7 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
       if (error instanceof InvalidWorkspaceShorthandError || error instanceof InvalidWorkspaceParamsError)
         return c.json({ error: error.message }, 400);
       if (error instanceof WorkspaceSourceNotFoundError) return c.json({ error: error.message }, 404);
-      if (error instanceof ProjectFolderMissingError) return c.json({ error: error.message }, 409);
+      if (error instanceof ProjectFolderMissingError) return c.json({ error: error.message, code: error.code }, 409);
       throw error;
     }
 
