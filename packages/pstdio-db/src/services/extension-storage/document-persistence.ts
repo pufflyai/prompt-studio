@@ -77,6 +77,8 @@ export const prepareDocument = async (
     input.diagnostics?.({
       phase,
       owner: input.owner,
+      documentId: input.address.document_id,
+      sourceRevision: row.revision,
       bytes: updates.reduce((sum, update) => sum + update.length, 0),
     });
   report("document-captured");
@@ -200,7 +202,13 @@ export const runDocumentTransaction = async <T>(
     const projected = await projection?.persist(revision);
     await identities?.persist(revision);
     if (projected !== undefined)
-      input.diagnostics?.({ phase: "records-projected", owner: input.owner, records: projected });
+      input.diagnostics?.({
+        phase: "records-projected",
+        owner: input.owner,
+        documentId: address.document_id,
+        sourceRevision: revision,
+        records: projected,
+      });
     return { value, revision, document, changed: updates.length > 0, foldedRevision: row.folded_revision };
   } finally {
     document.off("update", capture);

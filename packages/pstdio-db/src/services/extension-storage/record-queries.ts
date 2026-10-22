@@ -162,7 +162,13 @@ export const createRecordQueries = (
           );
           if (next.rows.length) cursor = encodeQueryCursor({ ...after, identity: page.identity, revision });
         }
-        diagnostics?.({ phase: "records-queried", owner, records: result.rows.length });
+        diagnostics?.({
+          phase: "records-queried",
+          owner,
+          documentId: "records",
+          sourceRevision: Number(revision),
+          records: result.rows.length,
+        });
         return {
           revision,
           cursor,

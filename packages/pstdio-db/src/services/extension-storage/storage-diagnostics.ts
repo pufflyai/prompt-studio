@@ -8,9 +8,12 @@ export interface StorageDiagnostic {
     | "checkpoint-captured"
     | "checkpoint-compacted"
     | "checkpoint-persisted"
+    | "receiver-persisted"
     | "records-projected"
     | "records-queried";
   owner: StorageOwner;
+  documentId?: string;
+  sourceRevision?: number;
   records?: number;
   bytes?: number;
 }

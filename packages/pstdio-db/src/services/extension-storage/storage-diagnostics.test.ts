@@ -36,3 +36,32 @@ test("storage diagnostics distinguish source capture, hydration and durable chec
     await fixture.close();
   }
 });
+
+test("receiver diagnostics report only accepted durable updates with the committed owner revision", async () => {
+  const f = await createExtensionStorageFixture();
+  const events: StorageDiagnostic[] = [];
+  const service = createDocumentStorageDBService(f.db, undefined, (event) => events.push(event));
+  const sourceOwner = { workbenchId: f.projectAId, extensionId: "diagnostics.example" };
+  const receiverOwner = { workbenchId: f.projectBId, extensionId: "diagnostics.example" };
+  try {
+    const source = service.open({ owner: sourceOwner });
+    await source.records.commit({ operationId: "source", edits: [{ recordId: "note", replace: "Saved remotely" }] });
+    const update = await source.exportUpdate();
+    const expected = await service.revision(receiverOwner);
+    events.length = 0;
+    expect(await service.receive(receiverOwner, expected, update)).toBe(true);
+    const revision = await service.revision(receiverOwner);
+    expect(events.filter((event) => event.phase === "receiver-persisted")).toEqual([
+      { phase: "receiver-persisted", owner: receiverOwner, documentId: "records", sourceRevision: revision },
+    ]);
+    expect((await service.open({ owner: receiverOwner }).records.read("note")).value).toBe("Saved remotely");
+    events.length = 0;
+    expect(await service.receive(receiverOwner, expected, update)).toBe(false);
+    expect(events.filter((event) => event.phase === "receiver-persisted")).toEqual([]);
+    await expect(service.receive(receiverOwner, revision, new Uint8Array([255]))).rejects.toThrow();
+    expect(events.filter((event) => event.phase === "receiver-persisted")).toEqual([]);
+  } finally {
+    await service.flushCheckpoints();
+    await f.close();
+  }
+});

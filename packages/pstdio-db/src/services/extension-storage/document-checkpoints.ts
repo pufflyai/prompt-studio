@@ -82,6 +82,8 @@ export const createDocumentCheckpoints = (db: DbClient, diagnostics?: StorageDia
           diagnostics?.({
             phase,
             owner: { workbenchId: address.workbench_id, extensionId: address.extension_id },
+            documentId: address.document_id,
+            sourceRevision: revision,
             bytes,
           });
         let snapshot: Awaited<ReturnType<typeof readDocumentSnapshot>>;

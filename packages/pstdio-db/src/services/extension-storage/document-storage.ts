@@ -16,12 +16,13 @@ import { createDocumentCheckpoints, readDocumentSnapshot } from "./document-chec
 import { foldEvery } from "./document-persistence";
 import { createDocumentAdmission, transactPreparedDocument } from "./document-transaction";
 import { createRecordQueries } from "./record-queries";
+import { runtimeStorageDiagnostics } from "./storage-diagnostic-sink";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
 export const createDocumentStorageDBService = (
   db: DbClient,
   observer?: StorageObserver,
-  diagnostics?: StorageDiagnostics,
+  diagnostics: StorageDiagnostics | undefined = runtimeStorageDiagnostics(),
 ) => {
   const cache = createDocumentCache();
   const admit = createDocumentAdmission();
@@ -29,7 +30,7 @@ export const createDocumentStorageDBService = (
   const listeners = new Set<(owner: StorageOwner) => void>();
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
   const getEnvironment = () => (environment ??= createEnvironmentDBService(db).get());
-  const transactionFor = (documentId: string) => {
+  const transactionFor = (documentId: string, origin: "local" | "receive" = "local") => {
     const transaction: DocumentStore["transaction"] = async (owner, action) => {
       const { environmentId } = await getEnvironment();
       const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: documentId };
@@ -40,6 +41,8 @@ export const createDocumentStorageDBService = (
           { address, owner, environmentId, cache, diagnostics },
           action,
         );
+        if (origin === "receive" && result.value === true)
+          diagnostics?.({ phase: "receiver-persisted", owner, documentId, sourceRevision: result.revision });
         cache.publish(key, result);
         if (result.changed) for (const listener of listeners) listener(owner);
         if (result.revision - result.foldedRevision >= foldEvery) checkpoints.schedule(address, result);
@@ -78,7 +81,7 @@ export const createDocumentStorageDBService = (
   };
   const receiveFor =
     (documentId: string) => (owner: StorageOwner, expected: number, update: Uint8Array, signal?: AbortSignal) =>
-      transactionFor(documentId)(owner, async (state) => {
+      transactionFor(documentId, "receive")(owner, async (state) => {
         signal?.throwIfAborted();
         if (state.revision !== expected) return false;
         state.applyUpdate!(update);

@@ -320,6 +320,26 @@ its wall time happens to be below 1,000 ms.
 
 ## Evidence and release interpretation
 
+For packaged runtime phase capture, set `PSTDIO_STORAGE_DIAGNOSTICS_PATH` to a
+JSONL file in that runtime's disposable home before starting it. Its parent folder
+must exist. The opt-in sink appends metadata synchronously, without retaining an
+event queue. Each line records the process ID, monotonic time, time origin and
+sequence; the first line is `capture-start`. Later events identify the owner,
+document and source revision where available. No record contents are included.
+Completed writes are immediately readable by the external harness. Use a separate
+path per runtime, retain the instrumentation cost in measured durations, and
+report sink failures as failed capture rather than zero work.
+An append can fail after a storage transaction has committed; a diagnostic error
+does not mean that the storage write rolled back.
+
+`receiver-persisted` is emitted only after an accepted receive transaction commits.
+It records the receiver's local source revision, not a relay sequence or a
+producer operation acknowledgement. Rejected revisions and failed transactions
+do not emit it. `records-projected` remains an in-transaction work event and does
+not prove durability. This capture does not yet expose queue admission, selected
+working-state preparation or per-operation receive correlation. Keep those
+coverage fields unknown until their actual owners supply evidence.
+
 Save commands, environment, exact commit, fixture manifests, full compressed input
 files, stored-shape verification, raw JSONL, stderr, screenshots, pause evidence,
 control calibration and coverage ledger under the change-request report's
