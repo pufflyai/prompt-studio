@@ -1,8 +1,9 @@
+import type { ProjectSyncStatus } from "../project-sync";
 import { workbenchResourceKinds } from "./builtin-refs";
 import { eventRef } from "./refs";
 import { defineSlot } from "./slots";
 import type { Struct } from "./types/json";
-import type { ResourceAnchor } from "./types/resources";
+import type { ResourceAnchor, ResourceRenumberedEvent } from "./types/resources";
 import type { ExtensionWorkspace } from "./types/workspaces";
 
 const hostEventRef = <TPayload extends Struct>(id: string) => eventRef<TPayload>({ extensionId: "pstdio", id });
@@ -98,6 +99,11 @@ export const projectEvents = {
   opened: hostEventRef<{ projectId: string }>("project.opened"),
 };
 
+export const accountEvents = {
+  /** The project's derived sync status changed. The host sends it only when the status differs. */
+  projectSyncChanged: hostEventRef<ProjectSyncStatus & { projectId: string }>("account.project-sync.changed"),
+};
+
 /** View dependencies delivered by the host when synced project data changes. */
 export const viewDataEvents = {
   boardViewsChanged: hostEventRef<{ projectId: string }>("view.board-views.changed"),
@@ -121,6 +127,10 @@ export const sessionEvents = {
    * Read `sessionStatus` to tell them apart.
    */
   completed: hostEventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.completed"),
+};
+
+export const resourceEvents = {
+  renumbered: hostEventRef<ResourceRenumberedEvent>("resource.renumbered"),
 };
 
 export const workspaceEvents = {

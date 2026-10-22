@@ -10,6 +10,7 @@ COPY services/telemetry/src ./services/telemetry/src
 COPY services/account-manager/scripts ./services/account-manager/scripts
 COPY packages/pstdio-sync-contracts/src ./packages/pstdio-sync-contracts/src
 RUN bun build services/account-manager/src/index.ts services/account-manager/src/server.ts services/account-manager/scripts/smoke.ts services/account-manager/scripts/environment-verifier-smoke.ts --target bun --outdir dist
+RUN bun build services/account-manager/scripts/account-feature.ts --target bun --outfile dist/scripts/account-feature.js
 
 RUN bun build services/telemetry/src/telemetry.test.ts --target bun --outfile dist/telemetry.test.js
 
@@ -20,6 +21,7 @@ COPY --from=build --chown=bun:bun /build/dist/src/index.js ./authority.js
 COPY --from=build --chown=bun:bun /build/dist/scripts/smoke.js ./smoke.js
 COPY --from=build --chown=bun:bun /build/dist/src/server.js ./server.js
 COPY --from=build --chown=bun:bun /build/dist/scripts/environment-verifier-smoke.js ./environment-verifier-smoke.js
+COPY --from=build --chown=bun:bun /build/dist/scripts/account-feature.js ./account-feature.js
 COPY --chown=bun:bun services/account-manager/drizzle ./drizzle
 USER bun
 CMD ["bun", "smoke.js"]

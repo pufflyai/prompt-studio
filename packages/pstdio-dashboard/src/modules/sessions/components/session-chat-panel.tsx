@@ -3,7 +3,7 @@ import { Tooltip } from "@pstdio/ui";
 import { type ChatInputQuestionResponse, ChatSkeleton } from "@pstdio/ui/chat-ui";
 import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
-import { useWorkbenchStore, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
+import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
@@ -32,7 +32,7 @@ import { canSubmitSessionMessage } from "../runtime/session-runtime-selection";
 import { useSessionLinks } from "./session-chat-links";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";
-import { SessionHarnessUnavailable } from "./session-harness-unavailable";
+import { SessionComposerFallback } from "./session-composer-fallback";
 import { SessionQueuedChatPanel } from "./session-queued-chat-panel";
 import { useCommandComposer } from "./use-command-composer";
 import { usePendingSessionFollowUp } from "./use-pending-session-follow-up";
@@ -143,6 +143,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     commandDraft,
     (operation) => createDraftCommandSession(commandDraft, operation),
     openCreatedSession,
+    input,
   );
   const { pendingFollowUp, displayedMessages, streamingStartedAt, pendingWork } = usePendingSessionFollowUp(
     view.draftKey,
@@ -198,9 +199,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     chatDraft.change("");
     draftAttachments.clearSubmittedAttachments();
   });
-  const interrupt = sessionId && canInterrupt ? () => stopSession.mutate(sessionId) : undefined;
-  const reviewExtensions = () =>
-    void input.workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "extensions" });
+  const interrupt = sessionId && canInterrupt && !view.device ? () => stopSession.mutate(sessionId) : undefined;
 
   return (
     // The widget host sizes itself to its content, so the chat panel is pinned
@@ -254,8 +253,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             chatInputCommands={commandComposer.suggestions}
             composerDecision={decision}
             composerFallback={
-              noHarnessAvailable ? (
-                <SessionHarnessUnavailable onInterrupt={interrupt} onReviewExtensions={reviewExtensions} />
+              view.device || noHarnessAvailable ? (
+                <SessionComposerFallback input={input} deviceName={view.device?.name} onInterrupt={interrupt} />
               ) : undefined
             }
             attachedResources={attachedResources}
@@ -277,7 +276,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               setHarnessParamOverrides,
               children: commandComposer.controls,
             }}
-            submitDisabled={!canSubmit}
+            submitDisabled={!canSubmit || Boolean(view.device)}
+            inputDisabled={Boolean(view.device)}
             workspaceHub={
               <SessionChatWorkspaceHub
                 view={view}
@@ -294,7 +294,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
                 action={workspaceAction}
               />
             }
-            onSubmitMessage={submit}
+            onSubmitMessage={view.device ? undefined : submit}
             onInterrupt={interrupt}
           />
         </Box>

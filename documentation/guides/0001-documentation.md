@@ -155,7 +155,7 @@ Write `published` as an unquoted date or UTC timestamp. Use a release's actual p
 
 Keep an original post's publication date when adding images or correcting it. Reuse relevant documentation screenshots. Label a recent capture when it illustrates an older release, and do not imply that a pictured control was introduced in that release unless the changelog confirms it.
 
-Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENTS.md) for concise feature ordering and recording checks. Markdown GIFs named `-light.gif` and `-dark.gif` use the page's active theme. Include both with matching alt text and one caption; the website hides the inactive variant.
+Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/write-blog-post/SKILL.md) for post structure, charts, recordings, code examples and publication checks. Markdown GIFs and SVGs named `-light` and `-dark` use the page's active theme. Include both with matching alt text and one caption; the website hides the inactive variant.
 
 ## Guides
 
@@ -185,6 +185,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0003 — Storybook coverage](development/0003-storybook-coverage.md)
 - [0004 — Pull request area labels](development/0004-pull-request-labels.md)
 - [0005 — Extension conformance and regression coverage](development/0005-conformance.md)
+- [0012 — Portable relay and account manager deployment](development/0012-portable-cloud-deployment.md)
 
 ### Build extensions
 

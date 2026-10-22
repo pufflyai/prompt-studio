@@ -17,8 +17,6 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     sortOrder: 0,
     isDefault: true,
     canCreate: true,
-    canDragIn: true,
-    canDragOut: true,
     columnActions: [],
   },
   {
@@ -29,8 +27,6 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     sortOrder: 1,
     isDefault: false,
     canCreate: false,
-    canDragIn: true,
-    canDragOut: true,
     columnActions: [],
   },
   {
@@ -41,8 +37,6 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     sortOrder: 2,
     isDefault: false,
     canCreate: false,
-    canDragIn: true,
-    canDragOut: true,
     columnActions: [],
   },
   {
@@ -53,8 +47,6 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     sortOrder: 3,
     isDefault: false,
     canCreate: false,
-    canDragIn: true,
-    canDragOut: true,
     columnActions: [],
   },
   {
@@ -65,8 +57,6 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     sortOrder: 4,
     isDefault: false,
     canCreate: false,
-    canDragIn: true,
-    canDragOut: true,
     columnActions: [],
   },
   {
@@ -77,8 +67,6 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     sortOrder: 5,
     isDefault: false,
     canCreate: false,
-    canDragIn: true,
-    canDragOut: true,
     columnActions: ["archive_all"],
   },
 ];

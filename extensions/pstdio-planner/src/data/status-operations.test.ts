@@ -44,13 +44,13 @@ describe("ticket status operations", () => {
     expect(statuses.at(-1)?.id).toBe(created.id);
   });
 
-  test("updateTicketStatus renames without losing board behavior flags", async () => {
+  test("updateTicketStatus renames without losing column actions", async () => {
     const storage = createMemoryStorage();
     const [first] = (await readTicketStatuses(storage)).statuses;
 
     const updated = await updateTicketStatus({ storage, statusId: first.id, name: "Renamed", color: "pink" });
 
-    expect(updated).toMatchObject({ name: "Renamed", color: "pink", canDragIn: first.canDragIn });
+    expect(updated).toMatchObject({ name: "Renamed", color: "pink", canCreate: first.canCreate });
   });
 
   test("updateTicketStatus persists a new sort order for reordering", async () => {
@@ -71,16 +71,12 @@ describe("ticket status operations", () => {
       storage,
       statusId: first.id,
       canCreate: false,
-      canDragIn: false,
-      canDragOut: false,
       columnActions: ["archive_all"],
     });
 
     expect(updated).toMatchObject({
       name: first.name,
       canCreate: false,
-      canDragIn: false,
-      canDragOut: false,
       columnActions: ["archive_all"],
     });
   });
@@ -97,8 +93,6 @@ describe("ticket status operations", () => {
 
     expect(created).toMatchObject({
       canCreate: true,
-      canDragIn: true,
-      canDragOut: true,
       columnActions: ["archive_all"],
     });
   });

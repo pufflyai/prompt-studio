@@ -44,6 +44,12 @@ export const verifyEmptyPanelAddition = async (page: Page) => {
   await expect(bottom.getByRole("tab")).toHaveCount(0);
   expect(await bottomTabs.evaluate((watcher) => watcher.stop())).toBe(false);
   await bottomTabs.dispose();
+  const terminal = page.locator('[data-workbench-panel="side"]:visible');
+  const input = terminal.getByRole("textbox", { name: "Terminal input" });
+  await expect(input).toBeVisible();
+  await input.pressSequentially('printf "__panel_%s__\\n" ready');
+  await input.press("Enter");
+  await expect(terminal.locator(".xterm-rows")).toContainText("__panel_ready__");
   await closeSelected(side);
   await expect(side.getByRole("tab")).toHaveCount(0);
   await showSide.click();

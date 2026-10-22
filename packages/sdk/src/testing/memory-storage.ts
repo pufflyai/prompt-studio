@@ -17,7 +17,7 @@ import { createMemoryRecordOwner, type MemoryStorageSeed } from "./memory-record
 
 export type { MemoryStorageSeed } from "./memory-record-owner";
 
-interface MemoryStorageOptions extends MemoryStorageSeed {
+export interface MemoryStorageOptions extends MemoryStorageSeed {
   /** Reuse these owner IDs to simulate the same extension and workbench on two devices. */
   workbenchId?: string;
   extensionId?: string;
@@ -25,7 +25,9 @@ interface MemoryStorageOptions extends MemoryStorageSeed {
   legacyData?: Record<string, { version: string; records: JsonObject[] }>;
 }
 
-export const createMemoryStorage = (options: MemoryStorageOptions = {}): ExtensionStorageApi => {
+export const createMemoryStorage = (options: MemoryStorageOptions = {}) => createMemoryStorageDevice(options).storage;
+
+export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) => {
   const assets = createMemoryAssets();
   const owner = createMemoryRecordOwner(assets, options, {
     workbenchId: options.workbenchId ?? crypto.randomUUID(),
@@ -164,5 +166,11 @@ export const createMemoryStorage = (options: MemoryStorageOptions = {}): Extensi
     return api;
   };
 
-  return scopedApi("project", owner.workbenchId);
+  return {
+    storage: scopedApi("project", owner.workbenchId),
+    workbenchId: owner.workbenchId,
+    exportUpdate: owner.exportUpdate,
+    applyUpdate: owner.applyUpdate,
+    snapshot: owner.snapshot,
+  };
 };

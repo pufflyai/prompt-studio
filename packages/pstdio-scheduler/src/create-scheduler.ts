@@ -10,7 +10,6 @@ type ActiveJob = {
   job: Job;
   handle: CronHandle;
   inFlight: Promise<void> | null;
-  runId: string | null;
   catchupChecked: boolean;
 };
 
@@ -23,6 +22,7 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
   const active = new Map<string, ActiveJob>();
   const watermarks = new Map<string, number>();
   const inFlight = new Set<Promise<void>>();
+  const activity = new Map<string, { id: string; label: string; description?: string }>();
 
   let disposed = false;
   let watermarksLoaded = false;
@@ -72,7 +72,7 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
     if (!tryClaimMinute(entry.job.key, minuteEpoch)) return null;
 
     const ctx = {
-      runId: crypto.randomUUID(),
+      runId: entry.job.runId?.(scheduledFor) ?? crypto.randomUUID(),
       scheduledFor,
       reason,
     };
@@ -81,10 +81,14 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
 
     const tracked = activeRun.completion.finally(() => {
       entry.inFlight = null;
-      entry.runId = null;
+      activity.delete(ctx.runId);
     });
     entry.inFlight = tracked;
-    entry.runId = ctx.runId;
+    activity.set(ctx.runId, {
+      id: ctx.runId,
+      label: entry.job.label ?? entry.job.key,
+      ...(entry.job.description ? { description: entry.job.description } : {}),
+    });
 
     const awaitable = activeRun.awaitableForShutdown.finally(() => {
       inFlight.delete(awaitable);
@@ -99,7 +103,6 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
       job,
       handle: { stop: () => {} },
       inFlight: null,
-      runId: null,
       catchupChecked: false,
     };
 
@@ -113,7 +116,7 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
   };
 
   const runCatchupOnce = (entry: ActiveJob) => {
-    if (entry.catchupChecked) return;
+    if (entry.catchupChecked || entry.job.catchup === "skip") return;
     entry.catchupChecked = true;
 
     const nowMinute = floorToMinute(now());
@@ -196,18 +199,7 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
   void refresh();
 
   return {
-    activity: () =>
-      [...active.values()].flatMap((entry) =>
-        entry.runId
-          ? [
-              {
-                id: entry.runId,
-                label: entry.job.label ?? entry.job.key,
-                ...(entry.job.description ? { description: entry.job.description } : {}),
-              },
-            ]
-          : [],
-      ),
+    activity: () => [...activity.values()],
     refresh,
     async dispose() {
       disposed = true;

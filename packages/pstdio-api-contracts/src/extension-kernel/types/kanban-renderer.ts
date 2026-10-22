@@ -99,7 +99,9 @@ export interface KanbanRendererColumnAction {
 
 export interface KanbanRendererBoardColumnConfig {
   color?: string;
+  /** @deprecated Remove this option. Cards can always be dragged between columns. */
   canDragIn?: boolean;
+  /** @deprecated Remove this option. Cards can always be dragged between columns. */
   canDragOut?: boolean;
   canCreate?: boolean;
   actions?: KanbanRendererColumnAction[];

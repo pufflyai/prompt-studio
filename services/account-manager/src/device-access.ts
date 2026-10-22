@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { identitySchema } from "pstdio-sync-contracts";
+import { readAccountFeatures, requireRelay } from "./account-features";
 import { account } from "./auth-schema";
 import { deviceNameSchema, deviceProfileSchema } from "./contracts";
 import { digestCredential } from "./credential";
@@ -8,6 +9,7 @@ import {
   accountOfCredential,
   addWorkbenchInTransaction,
   findDevice,
+  heartbeatDeviceInTransaction,
   listDevices,
   listWorkbenches,
   registerDeviceInTransaction,
@@ -66,6 +68,12 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
     });
   };
   return {
+    account: (token: string) =>
+      apply(token, async (transaction, device) => ({
+        features: await readAccountFeatures(transaction, device.accountId),
+      })),
+    heartbeat: (token: string) =>
+      apply(token, (transaction, device) => heartbeatDeviceInTransaction(transaction, device)),
     devices: (token: string) =>
       apply(token, async (transaction, device) => ({
         ...device,
@@ -95,6 +103,7 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
       ),
     addWorkbench: (token: string, workbenchId: string) =>
       apply(token, async (transaction, device) => {
+        await requireRelay(transaction, device.accountId);
         await addWorkbenchInTransaction(transaction, {
           accountId: device.accountId,
           workbenchId: identitySchema.parse(workbenchId),

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Tooltip } from "./tooltip";
 
 export interface CopyButtonProps extends Omit<IconButtonProps, "children" | "onClick"> {
-  text: string;
+  text: string | (() => string);
   label?: string;
   onCopy?: () => void;
   onCopyError?: (error: unknown) => void;
@@ -23,7 +23,7 @@ export const CopyButton = (props: CopyButtonProps) => {
   );
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(typeof text === "function" ? text() : text);
       setState("copied");
       onCopy?.();
     } catch (error) {

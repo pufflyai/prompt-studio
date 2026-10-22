@@ -14,6 +14,7 @@ export const startRelayExtension = async (input: {
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
   notify: () => void;
+  statusChanged: () => void;
   contextKey: string;
   snapshot: Awaited<ReturnType<ExtensionsRouteDeps["extensionRuntimeCatalog"]["get"]>>;
   access: () => Promise<{ token: string; expiresAt: string }>;
@@ -85,12 +86,15 @@ export const startRelayExtension = async (input: {
           { event: "relay.reconnecting", workbenchId: owner.workbenchId, extensionId },
           "Relay connection will retry",
         ),
+      onStatusChange: input.statusChanged,
     });
+    const active = connection;
     return {
       owner,
       contextKey: input.contextKey,
       wake: connection.wake,
       done: connection.done.finally(documents.close),
+      status: async () => ({ ...(await documents.status()), ...active.status() }),
       close: () => {
         for (const watch of watches) watch.close();
         controller.abort();

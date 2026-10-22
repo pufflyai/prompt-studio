@@ -17,12 +17,14 @@ Attempt handoffs ask one required text question with the ID `result`. Its answer
 
 ## Lifecycle
 
-1. `request-human` saves the request, links a chat session, and sets Needs attention. A request from an attempt reuses the attempt's session when that session owns the work. Otherwise Planner starts a new chat for the ticket.
+1. `request-human` saves the request and sets Needs attention. It does not start or continue an agent session.
 2. A person or an agent answers with `review` or cancels with `review-requests cancel`. Schedules, automations, and event handlers cannot do either.
 3. Each request has one current outcome: an answer or a cancellation. If the first answer races another answer or cancellation, the first write wins and the other caller sees the saved outcome.
 4. When no open request is left on the ticket, Planner clears Needs attention. Managed attempt tickets refresh their status: stopped implementations become Todo, and running implementations become In Progress. Open or unreadable requests keep managed tickets Blocked.
 
-Requests do not change after they are saved. To correct one, cancel it and create a new request. Answers to one request never close another open request.
+The request title, instructions, questions, and workflow context do not change after they are saved. To correct them, cancel the request and create a new one. Answers to one request never close another open request.
+
+Choose **Open session** when you want to discuss a request with an agent. The first click starts a conversation or resumes the related session when it owns the ticket or attempt. Later clicks reopen that conversation without sending another prompt. You can answer the form without opening a conversation. The request's session link stays empty until you open it.
 
 Decision forms stay editable after submission, with saved choices and text filled in. Change the answers and choose **Update answer** to save a revision. The same `review` command updates a saved decision from the CLI. Each revision is validated and replaces the current answer; when revisions race, the last saved revision is current. The request stays answered, so revising it does not pause work again. Cancelled requests stay closed. Task confirmations stay completed.
 

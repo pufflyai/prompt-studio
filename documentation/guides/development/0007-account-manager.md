@@ -18,8 +18,25 @@ A device is one client runtime. Its environment ID is its device ID. Logging in 
 - Logging in again on the same device replaces its credential and undoes an earlier removal. The device keeps its name.
 - `manager_workbenches` lists the account's cloud projects. A device renews access only for those.
 - Removing a device stops its renewal. Removing a cloud project stops renewal for it on every device. Access already issued stays valid until it expires.
-- `manager_space_keys` holds the encryption keys of each cloud project: a project key and the owner's personal-space key, one row per generation. The first key request for a cloud project creates generation 1. Removing a device adds the next generation of every key of the account, so the removed device cannot read data written afterward. Older generations stay. See [ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md).
+- `manager_space_keys` holds the encryption keys of each cloud project: a project key and the key for the owner's private project data, one row per generation. The first key request for a cloud project creates generation 1. Removing a device adds the next generation of every key of the account, so the removed device cannot read data written afterward. Older generations stay. See [ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md).
 - Every renewal updates the device's last-seen time.
+
+## Cloud early access
+
+Signing in and managing devices work for every active account. Cloud projects, encryption keys and new relay access require the account's `relay` feature. `manager_account_features` stores one row per account and feature, with `grantedAt`. There is no grant by default, including for existing accounts after migration. Plans and billing are separate future work.
+
+An operator grants or revokes early access by the verified Google email after the person signs in once. Run these commands with the manager's private `DATABASE_URL` already set in the operator environment:
+
+```sh
+bun run --cwd services/account-manager account-feature grant --email person@example.com --feature relay
+bun run --cwd services/account-manager account-feature revoke --email person@example.com --feature relay
+```
+
+The production manager image includes the same command at `bun dist/account-feature.js`. An unknown, unverified or ambiguous email fails without creating an account. The command follows the stored Google subject to the product account; email itself is not the account identity. Repeating a grant keeps its original timestamp. Repeating a revoke succeeds.
+
+Without the feature, `GET /v1/workbenches` returns an empty list, adding a cloud project returns 403, key requests return 404 and access renewal returns 401. Revoking keeps project membership and keys so a later grant resumes access. It does not remove devices. Tokens already issued remain valid until their existing expiry. The relay continues to verify only the manager's tokens and never reads feature grants.
+
+`GET /v1/account` with a device credential returns `{ features: { relay: boolean } }`. The host refreshes this with project discovery. Its account status exposes the last loaded grants, or `null` before discovery or when signed out. The manager checks the current grant for every new Cloud request; cached host status is never authorization.
 
 ## Internal operations
 
@@ -31,6 +48,7 @@ A device is one client runtime. Its environment ID is its device ID. Logging in 
 | `addWorkbench(input)` / `removeWorkbench(input)` | Make a project a cloud project of the account, or stop syncing it. Removing keeps the project's keys. |
 | `devices(accountId)` / `workbenches(accountId)` | List the account's active devices or cloud projects, without credential material. |
 | `authorize(token, workbenchId)` | Read current account, device and cloud project state. Return `{ accountId, workbenchId, deviceId }` or `null`. |
+| `setFeature({ accountId, feature, enabled })` | Private operator/fixture operation. Grant or revoke a feature under the same account lock used by renewal. Never expose it as a client API. |
 | `disable(intent)` | Disable account authorization and new logins. |
 | `reconcile(intent)` | Apply explicit current operator ownership/lifecycle and remove every device of the account, which adds a new key generation. This is the private recovery boundary, not a user-facing ownership-transfer API. |
 | `snapshot()` | Capture a consistent, versioned private manager snapshot (version 3). It includes encryption keys and excludes devices and credential digests. |
@@ -50,6 +68,7 @@ Better Auth owns `/api/auth/*`, including Google sign-in/callback, sessions, sig
 | GET /v1/native-login, /v1/native-callback | Browser. Starts Google sign-in and returns a single-use code to the native loopback callback. |
 | POST /v1/device-login | Google session and the manager's exact Origin. Body `{ deviceId, name, platform }`. Finds or creates the user's account, registers the device, and returns its credential and the relay origin. |
 | POST /v1/environment-access | Device credential plus JSON workbenchId; returns finite token and expiresAt. |
+| GET /v1/account | Device credential. Returns the account's feature grants. |
 | GET /v1/devices | Device credential. Returns this device's account and device IDs and the account's devices. |
 | POST /v1/devices/:id/rename, /v1/devices/:id/remove | Device credential. Rename or remove a device of the same account. |
 | GET /v1/workbenches | Device credential. Lists the account's cloud projects. |
@@ -58,9 +77,13 @@ Better Auth owns `/api/auth/*`, including Google sign-in/callback, sessions, sig
 
 The Google session is needed only to log in. Login uses the account the Google user already owns. Without one, it creates an account whose ID comes from the Google issuer and subject, so every login of one user finds the same account. Devices of one account manage each other. A device can never see or change the devices or cloud projects of another account. Operator lifecycle and recovery remain private. See [device login development](0011-device-login.md) for the supported browser and CLI flow. Errors discard sensitive causes and responses use no-store.
 
-The Bun listener requires DATABASE_URL, MANAGER_ORIGIN, RELAY_AUDIENCE, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_LIFETIME_SECONDS, SESSION_UPDATE_AGE_SECONDS and ACCESS_LIFETIME_SECONDS. Lifetimes are positive explicit policy, with update age below session lifetime. Origins use HTTPS. MANAGER_HOST/PORT select the listener; optional paired MANAGER_TLS_CERT/KEY paths supply TLS when it terminates in this process. A trusted HTTPS ingress can terminate TLS instead. Configure Google's callback for the trusted origin's /api/auth/callback/google path.
+The Bun listener requires DATABASE_URL, MANAGER_ORIGIN, RELAY_AUDIENCE, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_LIFETIME_SECONDS, SESSION_UPDATE_AGE_SECONDS and ACCESS_LIFETIME_SECONDS. Lifetimes are positive explicit policy, with update age below session lifetime. Origins use HTTPS. MANAGER_HOST/PORT select the listener; optional paired MANAGER_TLS_CERT/KEY paths supply TLS when it terminates in this process. A trusted HTTPS ingress can terminate TLS instead. Configure Google's callback as MANAGER_ORIGIN followed by /api/auth/callback/google.
 
-Build the production image with `docker build -f services/account-manager/Dockerfile .`. Apply generated migrations through operator tooling first. The slim runtime needs no source mount or dependency install. Never put secrets in command arguments, URLs or logs.
+### Addresses with a path
+
+MANAGER_ORIGIN and RELAY_AUDIENCE are HTTPS addresses and may include a path, so both services can share one host, for example `https://base.prompt.studio/accounts` and `https://base.prompt.studio/relay`. The proxy in front of each service removes that path before forwarding, so the services keep serving at `/`. The manager uses its full address for the Google callback, the native sign-in callback and the token issuer, and adds its path back before Better Auth handles a request. Browser `Origin` checks still compare the origin without the path. Clients join every request path under the address they were given.
+
+Build the production image with `docker build -f infra/account-manager/Dockerfile .`. Apply generated migrations through operator tooling first. The slim runtime needs no source mount or dependency install. Never put secrets in command arguments, URLs or logs.
 
 The independent verifier receives only issuer, audience and a public JWKS. It imports no manager database or signing configuration. Keep public keys available for all unexpired access they cover. The library persists signing material outside content; deploying or rotating trust is an operator responsibility. See [Google configuration](https://better-auth.com/docs/authentication/google), [JWT/session separation](https://better-auth.com/docs/plugins/jwt) and [Drizzle integration](https://better-auth.com/docs/adapters/drizzle).
 
@@ -71,6 +94,8 @@ Keep manager and content recovery separate. Restoring content must not call mana
 An owned manager restore uses a new immutable operator request ID. It first validates snapshot account/workbench relationships and receipt result ownership. It rejects a snapshot receipt whose fingerprint or result conflicts with a known request, and a snapshot key whose secret differs from a stored key. Its transaction imports missing account/workbench identities, encryption keys and receipts, retains all known history and current owner metadata, removes every device and disables every known or imported account. Historical identities are not permission. Even an account created after the snapshot stays disabled, and replaying its completed provision cannot create new authority.
 
 The operator then establishes current ownership/lifecycle with a new reconciliation intent. Every device then logs in again with Google. Owned restore preserves known completion history; it does not recover unknown history absent from an external backup.
+
+Feature grants are current operator access policy and are excluded from historical snapshots, like device credentials. A restore preserves surviving feature rows; restoring into an empty database grants no features. After recovery, the operator checks current early access and grants it again when needed. Full database backups include the feature table.
 
 Restore receipts live outside account snapshots. Existence records committed completion, so a retry after a lost response cannot disable fresh registrations. Another intentional restore needs another request ID. Shared/exclusive PostgreSQL transaction locks serialize restore and authority mutations; snapshot reads use repeatable-read isolation.
 

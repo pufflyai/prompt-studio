@@ -22,6 +22,18 @@ transport and latest-state uploads run in `pstdio-sync/src/relay/`. The runtime 
 encrypted document sync for each enabled extension. Local reads and saves do not wait
 for the relay.
 
+## Scheduled automations
+
+The core `pstdio.automations` owner uses the same encrypted document transport as
+extensions. Each schedule record holds `deviceId`, `enabled`, and `startsAt`. No
+automation data or disable acknowledgment is stored separately on the relay.
+
+Schedule admission checks the current device before arming and again just before
+command dispatch. Unassigned cloud schedules stay idle. The local
+`pstdio.automation-runs` owner never joins sync. Its claim and cursor commit together
+before effects. It records missed occurrences as skipped and does not replay claims
+after restart. See the [schedule reference](../cli/0010-scheduled-automations.md).
+
 ## Data merges by shape
 
 A save compares the submitted value with the current document at every depth:

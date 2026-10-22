@@ -118,8 +118,6 @@ export const Wrapper = (props: {
         onReorder={handleReorder}
         getBoardColumnConfig={(groupKey) => ({
           color: boardColumnColors[groupKey] ?? "gray",
-          canDragIn: true,
-          canDragOut: true,
           canCreate: false,
         })}
         getRowContextMenuActions={

@@ -125,7 +125,7 @@ export const parseStoredRequest = (value: unknown): ReviewRequest => {
       reason: nullableText(context.reason, "Request reason") as ReviewRequest["context"]["reason"],
       workspaceId: nullableText(context.workspaceId, "Request workspace"),
       attemptRevision: revision(context.attemptRevision),
-      sessionId: text(context.sessionId, "Request session"),
+      sessionId: nullableText(context.sessionId, "Request session"),
       relatedSessionId: nullableText(context.relatedSessionId, "Related session"),
     },
   };

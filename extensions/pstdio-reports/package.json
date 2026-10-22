@@ -1,6 +1,6 @@
 {
   "name": "pstdio-reports",
-  "version": "0.44.0",
+  "version": "0.45.0",
   "displayName": "Prompt Studio Reports",
   "description": "Built-in pstdio workspace reports for agent handoffs.",
   "publisher": "pstdio",

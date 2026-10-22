@@ -7,11 +7,12 @@ import { AlertMessage } from "./alert";
 const meta = {
   title: "Primitives/AlertMessage",
   component: AlertMessage,
+  tags: ["alerts"],
   parameters: {
     docs: {
       description: {
         component:
-          "Place recovery controls in endElement for a wrapping bottom-right footer. Dismiss buttons stay at the top right, aligned with the icon and the first title line. Both use compact ghost buttons with hover, focus, and pressed backgrounds tinted by the alert's semantic color.",
+          "Titles and descriptions wrap and scroll within the alert. Alerts use at most half the viewport, capped at 24rem, and shrink inside constrained flex layouts. Error alerts include Copy error message, which copies the complete title and message. Extension webviews need clipboard.write. Place recovery controls in endElement for a wrapping bottom-right footer outside the scrolling content. Dismiss buttons stay at the top right, aligned with the icon and the first title line. Both use compact ghost buttons with hover, focus, and pressed backgrounds tinted by the alert's semantic color.",
       },
     },
   },
@@ -199,5 +200,112 @@ export const LongContent: Story = {
   play: async ({ canvas }) => {
     const alert = canvas.getByRole("alert");
     await expect(alert.scrollWidth).toBeLessThanOrEqual(alert.clientWidth);
+  },
+};
+
+const VariableContentPreview = (props: { titleOnly?: boolean; constrained?: boolean }) => {
+  const { titleOnly = false, constrained = false } = props;
+  const [requested, setRequested] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const details = Array.from({ length: 100 }, (_, index) => `Diagnostic ${index}: /${"resource-path".repeat(10)}`).join(
+    "\n",
+  );
+  return (
+    <Stack width="sm" maxW="full" height={constrained ? "48" : undefined} minH="0">
+      {dismissed ? (
+        <>
+          <Text>Dismissed</Text>
+          <Button
+            onClick={() => {
+              setDismissed(false);
+              setRequested(false);
+            }}
+          >
+            Reset alert
+          </Button>
+        </>
+      ) : (
+        <AlertMessage
+          status="error"
+          role="alert"
+          title={titleOnly ? details : "Service unavailable"}
+          onClose={() => setDismissed(true)}
+          endElement={<Button onClick={() => setRequested(true)}>{requested ? "Requested" : "Retry"}</Button>}
+        >
+          {titleOnly ? null : (
+            <Box as="pre">
+              {details}
+              {requested ? "\nRetry requested" : ""}
+            </Box>
+          )}
+        </AlertMessage>
+      )}
+    </Stack>
+  );
+};
+
+const checkVariableContent: Story["play"] = async ({ canvas, canvasElement }) => {
+  const alert = canvas.getByRole("alert");
+  const bounds = alert.getBoundingClientRect();
+  const window = canvasElement.ownerDocument.defaultView!;
+  await expect(bounds.height).toBeLessThanOrEqual(window.innerHeight / 2);
+  await expect(alert.scrollWidth).toBeLessThanOrEqual(alert.clientWidth);
+  const viewport = alert.querySelector<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]')!;
+  await expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
+  viewport.scrollTop = viewport.scrollHeight;
+  await expect(viewport.scrollTop).toBeGreaterThan(0);
+  const scrollbar = alert.querySelector<HTMLElement>('[data-part="scrollbar"][data-orientation="vertical"]')!;
+  const thumb = scrollbar.querySelector<HTMLElement>('[data-part="thumb"]')!;
+  const alertStyle = window.getComputedStyle(alert);
+  await expect(window.getComputedStyle(thumb).backgroundColor).toBe(alertStyle.color);
+  await expect(
+    Math.abs(scrollbar.getBoundingClientRect().right - bounds.right + Number.parseFloat(alertStyle.paddingRight)),
+  ).toBeLessThan(1);
+  await userEvent.hover(scrollbar);
+  await expect(window.getComputedStyle(thumb).backgroundColor).toBe(alertStyle.color);
+  await userEvent.unhover(scrollbar);
+  const retry = canvas.getByRole("button", { name: "Retry" });
+  await expect(retry.getBoundingClientRect().bottom).toBeLessThanOrEqual(bounds.bottom);
+  await userEvent.click(retry);
+  await expect(canvas.getByRole("button", { name: "Requested" })).toBeVisible();
+  await userEvent.click(canvas.getByRole("button", { name: "Dismiss" }));
+  await expect(canvas.getByText("Dismissed")).toBeVisible();
+  await userEvent.click(canvas.getByRole("button", { name: "Reset alert" }));
+};
+
+export const VariableContent: Story = {
+  render: () => <VariableContentPreview />,
+  play: checkVariableContent,
+};
+
+export const VariableTitle: Story = {
+  render: () => <VariableContentPreview titleOnly />,
+  play: checkVariableContent,
+};
+
+export const ConstrainedContent: Story = {
+  render: () => <VariableContentPreview constrained />,
+  play: async (context) => {
+    const alert = context.canvas.getByRole("alert");
+    await expect(alert.getBoundingClientRect().height).toBeLessThanOrEqual(
+      alert.parentElement!.getBoundingClientRect().height,
+    );
+    await checkVariableContent!(context);
+  },
+};
+
+export const CopyMessage: Story = {
+  render: () => <VariableContentPreview />,
+  play: async ({ canvas }) => {
+    const user = userEvent.setup();
+    await user.click(canvas.getByRole("button", { name: "Copy error message" }));
+    const copied = await navigator.clipboard.readText();
+    await expect(copied).toContain("Service unavailable");
+    await expect(copied).toContain("Diagnostic 99");
+    await expect(copied).not.toContain("Copy error message");
+    await expect(copied).not.toContain("Retry");
+    await user.click(canvas.getByRole("button", { name: "Retry" }));
+    await user.click(canvas.getByRole("button", { name: "Copied" }));
+    await expect(await navigator.clipboard.readText()).toContain("Retry requested");
   },
 };

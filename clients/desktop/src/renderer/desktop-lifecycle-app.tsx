@@ -49,16 +49,16 @@ const RecoveryState = (props: {
   const { actions, state } = props;
   const availableActions = new Set(state.error.actions);
   return (
-    <SimpleCard width="full">
-      <SimpleCardBody>
-        <Stack gap="lg" role="alert">
-          <Stack gap="xs">
-            <Heading textStyle="heading/M">Prompt Studio needs attention</Heading>
-            <AlertMessage status="error" title={state.error.code}>
-              {state.error.message}
-            </AlertMessage>
-          </Stack>
-          <HStack gap="xs" flexWrap="wrap">
+    <SimpleCard width="full" maxHeight="full" display="flex" minHeight="0">
+      <SimpleCardBody display="flex" minHeight="0" width="full">
+        <Stack gap="lg" role="alert" minHeight="0" minWidth="0" width="full">
+          <Heading textStyle="heading/M" flexShrink="0">
+            Prompt Studio needs attention
+          </Heading>
+          <AlertMessage status="error" title={state.error.code}>
+            {state.error.message}
+          </AlertMessage>
+          <HStack gap="xs" flexWrap="wrap" flexShrink="0">
             {availableActions.has("retry") && <Button onClick={actions.retryRuntime}>Retry</Button>}
             {availableActions.has("open_logs") && (
               <Button variant="outline" onClick={actions.openLogs}>
@@ -104,10 +104,10 @@ export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
   if (state.kind === "workbench" || state.kind === "confirming_active_work") return null;
 
   return (
-    <Stack as="main" width="full" minHeight="100vh" bg="bg" color="fg" gap="0">
+    <Stack as="main" width="full" height="100dvh" overflow="hidden" bg="bg" color="fg" gap="0">
       <WindowTitleBar platform={platform} />
-      <Box flex="1" display="grid" placeItems="center" padding="xl">
-        <Box width="full" maxWidth="2xl">
+      <Box flex="1" minHeight="0" display="flex" justifyContent="center" padding="xl">
+        <Box width="full" maxWidth="2xl" height="full" display="flex" alignItems="center" justifyContent="center">
           {state.kind === "starting" && <DesktopStartingState phase={state.phase} />}
           {state.kind === "recovery" && <RecoveryState actions={actions} state={state} />}
           {state.kind === "closing" && <ClosingState />}
