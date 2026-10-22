@@ -1,24 +1,12 @@
 import { strict as assert } from "node:assert";
 import { randomUUID } from "node:crypto";
-import { cpSync, mkdirSync } from "node:fs";
-import { basename, join } from "node:path";
+import { mkdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { type Background, contract, createRow, owners, workload } from "storage-scale-fixture";
-import { folderProjectInput } from "../helpers/folder-project";
 import { createPackagedSyncPeer } from "../packaged/packaged-sync-relay.fixture";
-import { type ScaleFixture, type ScaleRuntime, startScaleRuntime } from "./storage-scale-runtime";
-
-const signIn = async (runtime: ScaleRuntime, origin: string) => {
-  const login = await runtime.client.account.login(origin);
-  const url = new URL(login.url);
-  const callback = new URL(url.searchParams.get("callback")!);
-  callback.searchParams.set("state", url.searchParams.get("state")!);
-  callback.searchParams.set("code", "one-use");
-  assert((await fetch(callback)).ok);
-};
-
-const waitSynced = async (runtime: ScaleRuntime, projectId: string) => {
-  while ((await runtime.client.account.projectSyncStatus(projectId)).state !== "synced") await Bun.sleep(25);
-};
+import { configuredContainer } from "./storage-scale-container";
+import type { ScaleFixture, ScaleRuntime } from "./storage-scale-runtime";
+import { prepareScaleSyncDevices, waitScaleSynced } from "./storage-scale-sync-setup";
 
 export const createScaleSyncFixture = async (home: string, fixture: ScaleFixture, emit: (row: object) => void) => {
   const root = join(home, "sync-fixture");
@@ -41,53 +29,28 @@ export const createScaleSyncFixture = async (home: string, fixture: ScaleFixture
     "-subj",
     "/CN=localhost",
     "-addext",
-    "subjectAltName=IP:127.0.0.1,DNS:localhost",
+    "subjectAltName=IP:127.0.0.1,DNS:localhost,DNS:host.docker.internal",
   ]);
   if (generated.exitCode !== 0) throw new Error("Creating isolated sync certificate failed");
-  const peer = createPackagedSyncPeer({ key: Bun.file(key), cert: Bun.file(cert) });
+  const container = configuredContainer(home);
+  const peer = createPackagedSyncPeer(
+    { key: Bun.file(key), cert: Bun.file(cert) },
+    container ? "0.0.0.0" : "127.0.0.1",
+  );
   const environment = { NODE_EXTRA_CA_CERTS: cert };
-  const primary = await startScaleRuntime(home, environment);
   const remoteHome = `${home}-remote-${randomUUID()}`;
-  mkdirSync(join(remoteHome, "project"), { recursive: true });
-  const remote = await startScaleRuntime(remoteHome, environment);
-  try {
-    const started = performance.now();
-    await signIn(primary, peer.origin);
-    await primary.client.account.syncProject(fixture.projectId);
-    await waitSynced(primary, fixture.projectId);
-    await signIn(remote, peer.origin);
-    const { environmentId } = await remote.client.runtime.environment();
-    const folder = join(remoteHome, "project");
-    await remote.client.projects.bindEnvironment(fixture.projectId, {
-      environmentId,
-      name: "Scale remote",
-      initial_workspace: folderProjectInput({}, folder).initial_workspace,
-    });
-    for (const owner of owners(workload(fixture.kind))) {
-      const name = owner.index === 9 ? "pstdio-planner" : `scale-owner-${owner.index}`;
-      const source = join(home, "sources", owner.index === 9 ? "planner-source" : name);
-      const relative = `.pstdio/extensions/${name}`;
-      cpSync(source, join(folder, relative), { recursive: true, filter: (path) => basename(path) !== "node_modules" });
-      await remote.client.extensions.install(fixture.projectId, {
-        source: { kind: "project-folder", path: relative },
-        installName: name,
-      });
-    }
-    await waitSynced(remote, fixture.projectId);
-    emit({
-      phase: "initial-remote-download",
-      durationMs: performance.now() - started,
-      owners: 10,
-      liveRows: owners(workload(fixture.kind)).reduce((sum, owner) => sum + owner.rows, 0),
-      startupOutsideNavigation: true,
-    });
-  } catch (error) {
-    await remote.stop();
-    await peer.stop();
-    throw error;
-  } finally {
-    await primary.stop();
-  }
+  const port = new URL(peer.origin).port;
+  const origins = {
+    primary: container ? `https://host.docker.internal:${port}` : peer.origin,
+    remote: `https://127.0.0.1:${port}`,
+  };
+  const remote = await prepareScaleSyncDevices(home, remoteHome, fixture, environment, origins, emit).catch(
+    async (error) => {
+      await peer.stop();
+      rmSync(remoteHome, { recursive: true, force: true });
+      throw error;
+    },
+  );
   const begin = async (runtime: ScaleRuntime, background: Background) => {
     const offeredAt = performance.now();
     const ownerIndex = background === "other-owner-catchup" ? 1 : 0;
@@ -129,8 +92,8 @@ export const createScaleSyncFixture = async (home: string, fixture: ScaleFixture
       });
     }
     await Promise.all(pending);
-    await waitSynced(remote, fixture.projectId);
-    await waitSynced(runtime, fixture.projectId);
+    await waitScaleSynced(remote, fixture.projectId);
+    await waitScaleSynced(runtime, fixture.projectId);
     if (background !== "noop-sync") {
       const final = await remote.execute(fixture.projectId, owner.id, "scale", {
         input: { action: "read", id: createRow(fixture.kind, ownerIndex, 83, 3).id },
@@ -145,8 +108,8 @@ export const createScaleSyncFixture = async (home: string, fixture: ScaleFixture
       await remote.execute(fixture.projectId, owner.id, "scale", {
         input: { action: "commit", operationId: randomUUID(), rows: [createRow(fixture.kind, ownerIndex, 83, 3)] },
       });
-    await waitSynced(remote, fixture.projectId);
-    await waitSynced(runtime, fixture.projectId);
+    await waitScaleSynced(remote, fixture.projectId);
+    await waitScaleSynced(runtime, fixture.projectId);
     if (background !== "noop-sync") {
       const received = await runtime.execute(fixture.projectId, owner.id, "scale", {
         input: { action: "read", id: createRow(fixture.kind, ownerIndex, 83, 3).id },
@@ -177,8 +140,12 @@ export const createScaleSyncFixture = async (home: string, fixture: ScaleFixture
     remote,
     peer,
     close: async () => {
-      await remote.stop();
-      await peer.stop();
+      try {
+        await remote.stop();
+      } finally {
+        await peer.stop();
+        rmSync(remoteHome, { recursive: true, force: true });
+      }
     },
   };
 };

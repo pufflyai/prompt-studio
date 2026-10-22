@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { contract, type Profile } from "storage-scale-fixture";
 import type { RuntimeDescriptor } from "../packaged/packaged-serve-helpers";
@@ -73,7 +73,8 @@ const readyDescriptor = async (config: ContainerRuntime, previous: string | unde
   }
 };
 
-export const startContainerRuntime = async (config: ContainerRuntime) => {
+export const startContainerRuntime = async (config: ContainerRuntime, environment: Record<string, string> = {}) => {
+  writeFileSync(resolve(config.home, "scale-environment.json"), JSON.stringify(environment));
   const expected = process.env.PSTDIO_SCALE_EXPECTED_NANO_CPUS;
   if (expected && docker(["inspect", "--format", "{{.HostConfig.NanoCpus}}", config.containerId]) !== expected)
     throw new Error("Runtime CPU quota changed before cold startup");
@@ -91,6 +92,23 @@ export const startContainerRuntime = async (config: ContainerRuntime) => {
         baseUrl: config.baseUrl,
         controlEvidence: evidence,
         controlPreparationMs: evidence.calibrationMs,
+        completeLoginCallback: async (url: string) => {
+          // Login owns a separate loopback listener inside this network namespace.
+          const callback = Bun.spawn(
+            [
+              "docker",
+              "exec",
+              "-i",
+              config.containerId,
+              "bun",
+              "-e",
+              "const response = await fetch((await Bun.stdin.text()).trim()); if (!response.ok) throw new Error('Diagnostic login HTTP ' + response.status);",
+            ],
+            { stdin: new TextEncoder().encode(url), stdout: "ignore", stderr: "ignore" },
+          );
+          // Await asynchronously: this process also serves the local TLS peer.
+          if ((await callback.exited) !== 0) throw new Error("Completing container diagnostic login failed");
+        },
         crash: async () => {
           docker(["kill", "--signal", "KILL", config.containerId]);
         },

@@ -201,8 +201,12 @@ writes to cross the current persisted threshold. Driver offered/completed counts
 failures, backlog and drain are recorded. Drain requires both sync statuses and
 exact receiver readback, followed by reset propagation outside timing. Driver
 backlog is not the runtime queue. Backend incoming/fold overlap is not instrumented
-and is explicitly unverified. Container sync needs a reachable relay/certificate
-mount; this adapter rejects unsupported configuration rather than disabling sync.
+and is explicitly unverified. Container sync advertises `host.docker.internal`
+with a matching certificate name and the CA in the mounted disposable home.
+Linux hosts add Docker's `host-gateway` mapping. The login callback runs inside
+the receiver's network namespace because it owns a separate loopback port.
+The second device is a native compiled process outside the receiver's CPU quota.
+Startup and extension installation happen before measured foreground work.
 
 Offline engine checks replay same-record, different-record, conflicting-field and
 delete-versus-edit changes in both delivery orders, preserving the seed's causal

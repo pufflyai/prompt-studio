@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { arch } from "node:os";
+import { arch, platform } from "node:os";
 import { join, resolve } from "node:path";
 import { enterMeasurementWindow } from "./storage-scale-window";
 
@@ -38,6 +38,7 @@ try {
     JSON.stringify({
       services: {
         "prompt-studio": {
+          ...(platform() === "linux" ? { extra_hosts: ["host.docker.internal:host-gateway"] } : {}),
           environment: {
             // Compose expands this from the ports reserved by dev:isolated.
             CONTAINER_API_PORT: "$" + "{CONTAINER_API_PORT}",

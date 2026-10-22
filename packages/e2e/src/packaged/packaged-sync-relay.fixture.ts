@@ -2,7 +2,7 @@ import { expect } from "bun:test";
 
 // A wire-level peer for the compiled host. Real PostgreSQL/object-store behavior is checked in
 // services/relay/src/transport/document-client.integration.ts.
-export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFile }) => {
+export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFile }, hostname = "127.0.0.1") => {
   const projects = new Set<string>();
   const blobs = new Map<string, { parts: Set<number>; complete: boolean }>();
   const documents = new Map<
@@ -162,12 +162,12 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
   };
   const serve = (port: number) =>
     Bun.serve({
-      hostname: "127.0.0.1",
+      hostname,
       port,
       tls,
       async fetch(request, server) {
         const path = new URL(request.url).pathname;
-        const managed = await managerRequest(request, path, server.url.origin);
+        const managed = await managerRequest(request, path, new URL(request.url).origin);
         if (managed) return managed;
         if (!path.startsWith("/sync/")) return new Response(null, { status: 404 });
         expect(request.headers.get("pstdio-sync-protocol")).toBe("1");

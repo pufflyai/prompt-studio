@@ -16,31 +16,17 @@ export interface ScaleFixture {
   churn: boolean;
 }
 
-export const startScaleRuntime = async (home: string, environment: Record<string, string> = {}) => {
-  const before = performance.now();
-  const container = configuredContainer(home);
-  if (container && Object.keys(environment).length)
-    throw new Error(
-      "Container sync requires a reachable TLS relay and certificate mount; this driver does not claim that coverage",
-    );
-  const runtime = container
-    ? await startContainerRuntime(container)
-    : await (async () => {
-        const native = await startPackagedServe(home, { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1", ...environment });
-        return {
-          ...native,
-          controlEvidence: { cgroup: null },
-          controlPreparationMs: 0,
-          stop: () => stopProcess(native.child),
-          crash: async () => {
-            if (native.child.exitCode !== null || native.child.signalCode !== null) return;
-            const exited = new Promise<void>((resolve) => native.child.once("exit", () => resolve()));
-            native.child.kill("SIGKILL");
-            await exited;
-          },
-        };
-      })();
-  const startupMs = performance.now() - before - runtime.controlPreparationMs;
+interface ScaleBackend {
+  descriptor: Awaited<ReturnType<typeof startPackagedServe>>["descriptor"];
+  baseUrl: string;
+  controlEvidence: object;
+  controlPreparationMs: number;
+  stop(): Promise<void>;
+  crash(): Promise<void>;
+  completeLoginCallback(url: string): Promise<void>;
+}
+
+const connectScaleRuntime = (runtime: ScaleBackend, startupMs: number) => {
   const headers = { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" };
   const client = createClient({ baseUrl: runtime.baseUrl, token: runtime.descriptor.token });
   const request = async <T>(path: string, method = "GET", data?: unknown) => {
@@ -63,6 +49,39 @@ export const startScaleRuntime = async (home: string, environment: Record<string
     return { value: reply.outcome.value as T, sdkRequestMs: performance.now() - before };
   };
   return { ...runtime, client, startupMs, request, execute };
+};
+
+export const startNativeScaleRuntime = async (home: string, environment: Record<string, string> = {}) => {
+  const before = performance.now();
+  const native = await startPackagedServe(home, { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1", ...environment });
+  return connectScaleRuntime(
+    {
+      descriptor: native.descriptor,
+      baseUrl: native.baseUrl,
+      controlEvidence: { cgroup: null },
+      controlPreparationMs: 0,
+      stop: () => stopProcess(native.child),
+      completeLoginCallback: async (url) => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Completing diagnostic login: HTTP ${response.status}`);
+      },
+      crash: async () => {
+        if (native.child.exitCode !== null || native.child.signalCode !== null) return;
+        const exited = new Promise<void>((resolve) => native.child.once("exit", () => resolve()));
+        native.child.kill("SIGKILL");
+        await exited;
+      },
+    },
+    performance.now() - before,
+  );
+};
+
+export const startScaleRuntime = async (home: string, environment: Record<string, string> = {}) => {
+  const container = configuredContainer(home);
+  if (!container) return startNativeScaleRuntime(home, environment);
+  const before = performance.now();
+  const runtime = await startContainerRuntime(container, environment);
+  return connectScaleRuntime(runtime, performance.now() - before - runtime.controlPreparationMs);
 };
 export type ScaleRuntime = Awaited<ReturnType<typeof startScaleRuntime>>;
 

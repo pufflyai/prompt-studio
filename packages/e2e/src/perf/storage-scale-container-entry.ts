@@ -1,5 +1,5 @@
 // Test-only entry point for dev:isolated. The measured server is the compiled binary.
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 import type { RuntimeDescriptor } from "../packaged/packaged-serve-helpers";
@@ -7,11 +7,14 @@ import type { RuntimeDescriptor } from "../packaged/packaged-serve-helpers";
 const home = process.env.PSTDIO_HOME!;
 const binary = process.env.PSTDIO_SCALE_LINUX_BINARY!;
 const port = process.env.CONTAINER_API_PORT!;
+const environmentPath = join(home, "scale-environment.json");
+const environment = existsSync(environmentPath) ? JSON.parse(readFileSync(environmentPath, "utf8")) : {};
 const child = Bun.spawn(
   [binary, "serve", "--foreground", "--owner", "persistent", "--host", "0.0.0.0", "--port", port],
   {
     env: {
       ...process.env,
+      ...environment,
       PSTDIO_DISABLE_EMBED_MANIFEST: "0",
       PSTDIO_DEFAULT_EXTENSIONS: "[]",
       PSTDIO_DB_PATH: join(home, "db.sqlite"),
