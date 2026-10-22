@@ -30,4 +30,4 @@ Process identity is PID plus process start identity. CPU is measured as a percen
 
 The host measures backend response time outside the backend. A `reply` has a finite response time. A `timeout` reports its observed waiting interval and a null response time. Disconnected and unsupported readings are `unavailable`. Local process measurements describe only the local runtime. These fields report symptoms and do not infer their cause.
 
-See the [Developer tools guide](../../guides/0003-developer-tools.md) for recording bounds and the [desktop architecture](../architecture/0006-desktop.md#external-runtime-process-capture) for lifecycle ownership.
+See the [Developer tools guide](../../guides/0003-developer-tools.md) for recording bounds and lifecycle behavior.
