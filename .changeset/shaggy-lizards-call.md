@@ -2,4 +2,4 @@
 "pstdio": minor
 ---
 
-Add JSON output to session lists with complete records, full IDs, and existing filters.
+Add JSON session lists and restore harness control hover feedback with explanatory tooltips.

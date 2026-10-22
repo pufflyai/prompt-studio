@@ -44,6 +44,7 @@ export const Speed: Story = {
       service_tier: {
         type: "select",
         label: "Speed",
+        description: "Fast mode uses more of your Codex allowance.",
         defaultValue: "default",
         options: [
           { label: "Standard", value: "default", icon: "Snail" },
@@ -55,6 +56,42 @@ export const Speed: Story = {
 };
 export const RememberedEffort: Story = {
   args: { overrides: { effort: "high" } },
+};
+export const BooleanControl: Story = {
+  args: {
+    schema: {
+      enabled: {
+        type: "boolean",
+        label: "Enabled",
+        description: "Enable this harness option.",
+        defaultValue: false,
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "Enabled: off" }));
+    const enabled = canvas.getByRole("button", { name: "Enabled: on" });
+    await userEvent.hover(enabled);
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("Enabled: on. Enable this harness option.");
+    await userEvent.unhover(enabled);
+  },
+};
+export const Tooltips: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const page = within(canvasElement.ownerDocument.body);
+    const initial = canvas.getByRole("button", { name: "Reasoning effort: Medium" });
+    await userEvent.hover(initial);
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("Reasoning effort: Medium");
+    await userEvent.click(initial);
+    await userEvent.click(page.getByRole("menuitemradio", { name: "Extra high" }));
+    const changed = canvas.getByRole("button", { name: "Reasoning effort: Extra high" });
+    await userEvent.hover(changed);
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("Reasoning effort: Extra high");
+    await userEvent.unhover(changed);
+  },
 };
 export const CommandOwnedPlan: Story = {
   args: {
