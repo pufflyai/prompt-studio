@@ -25,7 +25,7 @@ test("asset uploads hash a stream and resume after a lost acknowledgement withou
         expect(offsets.at(-1)).toBe(offset);
         const bytes = new Uint8Array(await request.arrayBuffer());
         chunkLengths.push(bytes.byteLength);
-        expect(bytes.every((value) => value === 7)).toBe(true);
+        expect(Buffer.compare(bytes, data.subarray(offset, offset + bytes.byteLength))).toBe(0);
         offset += bytes.byteLength;
       } else if (request.method === "PUT") {
         expect(await request.json()).toEqual({ expected });

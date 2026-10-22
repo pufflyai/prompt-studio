@@ -12,6 +12,7 @@ on:
       - scripts/badges/**
       - packages/pstdio-api/src/test-utils/run-api-tests.ts
       - packages/pstdio-db/package.json
+      - packages/sdk/package.json
   workflow_dispatch:
 
 permissions:
@@ -49,8 +50,8 @@ jobs:
         run: bun run build
 
       - name: Run tests with coverage
-        # The pstdio-db coverage target runs alone so other package tests do not
-        # compete with its cold database and crash-recovery fixtures.
+        # Database and SDK coverage targets run alone so other package tests do not
+        # compete with cold database fixtures and full-size streaming asset checks.
         run: bun run test:coverage
 
       - name: Summarize coverage
