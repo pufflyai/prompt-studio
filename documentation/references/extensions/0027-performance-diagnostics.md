@@ -20,7 +20,7 @@ Register a normal `defineSettingsPanel` contribution with `slot: workbenchSlots.
 
 A webview settings control receives intrinsic content height. Its contribution does not own the surrounding settings panel's scrolling or geometry. Use the exported UI components and tokens for its content.
 
-The released SDK includes the source example under `examples/performance`. The example uses public SDK/UI imports, declares permissions, and contributes a toggle without creating a second widget.
+The released UI package includes the source example under `examples/performance`. The example uses public SDK/UI imports, declares permissions, and contributes a toggle without creating a second widget.
 
 ## Snapshot data
 

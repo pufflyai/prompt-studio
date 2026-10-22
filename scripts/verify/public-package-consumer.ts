@@ -119,7 +119,7 @@ void [invalidAttribute, invalidColumn];
   );
   writeStoragePackageConsumer(directory);
   if (react && dependencies["@pstdio/ui"]) {
-    cpSync(join(directory, "node_modules/@pstdio/sdk/examples/performance"), join(directory, "performance-example"), {
+    cpSync(join(directory, "node_modules/@pstdio/ui/examples/performance"), join(directory, "performance-example"), {
       recursive: true,
     });
   }

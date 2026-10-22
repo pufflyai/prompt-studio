@@ -1,5 +1,8 @@
+import type { CommandModule } from "yargs";
 import { runProcessObserver } from "@/features/performance/process-observer";
 
-export const command = "performance-observer";
-export const describe = false;
-export const handler = runProcessObserver;
+export const performanceObserverCommand = {
+  command: "performance-observer",
+  describe: false,
+  handler: runProcessObserver,
+} satisfies CommandModule;
