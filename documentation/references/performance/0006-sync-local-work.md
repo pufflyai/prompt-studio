@@ -14,7 +14,7 @@ established for the PS-905 implementation yet.
 | Incoming page | Decrypt and stage at most 16 envelopes per worker job. Validate before local application; verify blobs before durable acceptance. |
 | Local save | Append the incremental update and local retry metadata. Return after database commit. |
 | Cold owner load | Capture persisted bytes in a short transaction, hydrate outside its lock, then recheck the revision before running the save or read. Concurrent writes force fresh preparation without rerunning the caller's action. Warm owners use the existing single transaction. |
-| Checkpoint | Capture the accepted revision, merge binary updates in the worker, then save with a folded-revision guard. Keep later updates and reject a baseline changed by purge or another checkpoint. |
+| Checkpoint | Capture the accepted revision, apply its bytes and encode garbage-collected state in the worker, then save with a folded-revision guard. Keep later updates, pending causal gaps and delete sets; reject a baseline changed by purge or another checkpoint. |
 | Export | Read persisted binary state and its tail, then merge outside the transaction. |
 | Save-handler capture | Read persisted checkpoint bytes and the update tail, release the database transaction, and hydrate one staging fork. Encode only the resulting incremental update. |
 

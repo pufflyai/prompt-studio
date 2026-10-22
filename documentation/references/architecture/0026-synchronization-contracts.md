@@ -119,7 +119,9 @@ cache publication. Waiting operations reuse the accepted document instead of hyd
 the same cold state repeatedly. A failed operation releases admission and discards its
 uncommitted document before the next operation reads it.
 A save appends only its new update. After 128 updates, a background worker
-merges the captured binary checkpoint and update tail. A short transaction then saves
+applies the captured checkpoint and update tail to Yjs and encodes its garbage-collected
+state. This reclaims deleted live content while retaining causal identities, pending
+updates and delete sets. A short transaction then saves
 that checkpoint and removes only its covered updates. Newer updates stay in the tail.
 A changed folded revision, including a purge, rejects a stale checkpoint. Normal saves and reads do not
 load the old grouped journal. Retry metadata stays outside the CRDT state, so folding
@@ -136,7 +138,8 @@ commits. Relay synchronization runs separately from that local save outcome.
 
 Binary exports read a consistent persisted checkpoint and tail without opening Yjs.
 Their merge runs outside the database transaction. Loaded documents also retain the
-original binary updates, so exports and folds do not encode every named root again.
+original binary updates, so foreground exports do not encode every named root again.
+Only the background checkpoint worker materializes the owner for compaction.
 Received bytes are persisted even when Yjs buffers them while waiting for an earlier
 offline update. An update event alone is not proof that every accepted byte was saved.
 
