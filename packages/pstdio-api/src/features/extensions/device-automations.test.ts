@@ -1,14 +1,56 @@
 import { afterEach, expect, test } from "bun:test";
 import { join } from "node:path";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
-import { assignDeviceAutomation, openDeviceAutomations, setDeviceAutomationEnabled } from "./device-automations";
+import {
+  assignDeviceAutomation,
+  openDeviceAutomations,
+  readDeviceAutomation,
+  setDeviceAutomationEnabled,
+} from "./device-automations";
 import { createDeviceAutomationFixture } from "./device-automations.fixture";
 import { openAutomationRuns } from "./extension-schedule-admission/runs";
 import { createExtensionScheduler } from "./extension-scheduler";
+import { createProjectExtensionLifecycle } from "./project-extension-lifecycle";
 
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => {
   for (const close of cleanup.splice(0).reverse()) await close();
+});
+
+test("a disable overlapping first assignment remains disabled", async () => {
+  const fixture = await createDeviceAutomationFixture();
+  cleanup.push(fixture.close);
+  const { deps } = await fixture.device();
+  const snapshot = await deps.extensionRuntimeCatalog.get(fixture.projectId);
+  const source = snapshot.enabledSources[0]!;
+  const preferences: { extension_instance_id: string; automation_id: string; enabled: boolean }[] = [];
+  const read = Promise.withResolvers<void>();
+  const resume = Promise.withResolvers<void>();
+  deps.extensionAutomationPreferencesService.list = async () => {
+    const captured = [...preferences];
+    read.resolve();
+    await resume.promise;
+    return captured as never;
+  };
+  deps.extensionAutomationPreferencesService.set = async (input) => {
+    preferences.push(input);
+    return input as never;
+  };
+  deps.extensionService.getProjectExtensionInstance = async () => source;
+  const lifecycle = createProjectExtensionLifecycle(deps as never);
+  const assignment = assignDeviceAutomation(deps, fixture.projectId, {
+    scheduleId: fixture.scheduleId,
+    deviceId: "assigned-device",
+  });
+  await read.promise;
+  const disable = lifecycle.setAutomationEnabled(fixture.projectId, "clock", fixture.scheduleId, false);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  resume.resolve();
+  await Promise.all([assignment, disable]);
+  expect(await readDeviceAutomation(deps, fixture.projectId, fixture.scheduleId)).toMatchObject({
+    deviceId: "assigned-device",
+    enabled: false,
+  });
 });
 
 test("replicated automation runs only on its assigned device and a disable lets active work finish", async () => {
@@ -52,7 +94,7 @@ test("replicated automation runs only on its assigned device and a disable lets 
   for (let i = 0; !calls.length && i < 100; i++) await Bun.sleep(10);
   expect(calls).toHaveLength(1);
   expect(calls[0]).toMatchObject({ runId: schedulers[0]!.activity()[0]!.id });
-  await setDeviceAutomationEnabled(b.deps, projectId, scheduleId, false);
+  await setDeviceAutomationEnabled(b.deps, projectId, { scheduleId, instanceId: "clock", enabled: false });
   await catalogs[0]!.applyUpdate(await catalogs[1]!.exportUpdate());
   await schedulers[0]!.refresh();
   expect(clocks[0]!.size()).toBe(0);
@@ -157,7 +199,7 @@ test("a disable during workspace preparation prevents final command dispatch", a
   now = new Date("2026-10-22T09:01:00Z");
   const running = clock.fireAll();
   await prepared.promise;
-  await setDeviceAutomationEnabled(a.deps, projectId, scheduleId, false);
+  await setDeviceAutomationEnabled(a.deps, projectId, { scheduleId, instanceId: "clock", enabled: false });
   gate.resolve();
   await running;
   expect(calls).toEqual([]);

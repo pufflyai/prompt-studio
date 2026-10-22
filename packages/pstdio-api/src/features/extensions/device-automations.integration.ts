@@ -57,7 +57,8 @@ try {
   const start = Math.ceil(Date.now() / 60_000) * 60_000 + 86_400_000;
   let now = new Date(start);
   await assignDeviceAutomation(a.deps, projectId, { scheduleId, deviceId }, now);
-  await setDeviceAutomationEnabled(a.deps, projectId, scheduleId, true);
+  const instanceId = (await a.deps.extensionService.listProjectExtensionInstances(projectId))[0]!.instance.id;
+  await setDeviceAutomationEnabled(a.deps, projectId, { scheduleId, instanceId, enabled: true });
   const catalog = await openDeviceAutomations(a.deps, projectId);
   const replica = await openDeviceAutomations(b.deps, projectId);
   const update = await catalog.exportUpdate();

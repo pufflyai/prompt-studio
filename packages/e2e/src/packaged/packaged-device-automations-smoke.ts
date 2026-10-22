@@ -72,6 +72,7 @@ export const registerDeviceAutomationSmokeTests = () =>
         const clients = hosts.map((host) => createClient({ baseUrl: host.baseUrl, token: host.descriptor.token }));
         const requests = hosts.map((host) => createRequest({ baseUrl: host.baseUrl, token: host.descriptor.token }));
         const deviceIds: string[] = [];
+        const instanceIds: string[] = [];
         for (const [index, client] of clients.entries()) {
           const identity = await requests[index]!<{ environmentId: string }>("/v1/environment");
           deviceIds.push(identity.environmentId);
@@ -86,20 +87,24 @@ export const registerDeviceAutomationSmokeTests = () =>
             },
           });
           // Binding a remote project does not enable the local test source automatically.
-          await requests[index]!(`/v1/projects/${projectId}/extensions/installed/clock/enable`, {
-            method: "POST",
-            body: {
-              displayName: "Clock",
-              extensionId: "test.clock",
-              name: "clock",
-              manifest: { name: "clock" },
-              sourceKind: "local_path",
-              sourcePath: source,
-              sourceHash: null,
-              sourceRef: null,
-              version: null,
+          const installed = await requests[index]!<{ instanceId: string }>(
+            `/v1/projects/${projectId}/extensions/installed/clock/enable`,
+            {
+              method: "POST",
+              body: {
+                displayName: "Clock",
+                extensionId: "test.clock",
+                name: "clock",
+                manifest: { name: "clock" },
+                sourceKind: "local_path",
+                sourcePath: source,
+                sourceHash: null,
+                sourceRef: null,
+                version: null,
+              },
             },
-          });
+          );
+          instanceIds.push(installed.instanceId);
           const login = await client.account.login(peer.origin);
           const url = new URL(login.url);
           const callback = new URL(url.searchParams.get("callback")!);
@@ -109,11 +114,19 @@ export const registerDeviceAutomationSmokeTests = () =>
           await client.account.syncProject(projectId);
         }
         expect(deviceIds[0]).not.toBe(deviceIds[1]);
+        await requests[0]!(
+          `/v1/projects/${projectId}/extensions/${instanceIds[0]}/automations/test.clock.schedule.tick`,
+          {
+            method: "PATCH",
+            body: { enabled: false },
+          },
+        );
         const path = `/v1/projects/${projectId}/extensions/automations`;
         const assigned = await requests[0]!(path, {
           method: "POST",
           body: { scheduleId: "test.clock.schedule.tick", deviceId: deviceIds[0] },
         });
+        expect(assigned).toMatchObject({ enabled: false });
         let replica: unknown[] = [];
         while (!replica.length) {
           replica = await requests[1]!<unknown[]>(path);

@@ -31,8 +31,7 @@ const createRunJournal = (deps: ExtensionsRouteDeps, projectId: string) => {
   const advance = async (definition: DeviceAutomation, cron: string, through: Date, dispatch: boolean) => {
     const storage = await openAutomationRuns(deps, projectId);
     const cursorId = JSON.stringify(["cursor", definition.scheduleId]);
-    const records = new Map((await storage.records.list()).map((record) => [record.recordId, record]));
-    const cursor = records.get(cursorId);
+    const cursor = await storage.records.read(cursorId);
     const from = typeof cursor?.value === "string" ? new Date(cursor.value) : new Date(definition.startsAt);
     const end = minute(through);
     if (from >= end) return null;
@@ -40,7 +39,7 @@ const createRunJournal = (deps: ExtensionsRouteDeps, projectId: string) => {
     for (let next = Bun.cron.parse(cron, from); next && next <= end; next = Bun.cron.parse(cron, next)) {
       const scheduledFor = next.toISOString();
       const runId = automationRunId(projectId, definition.scheduleId, scheduledFor);
-      if (records.has(runId)) continue;
+      if ((await storage.records.read(runId)).exists) continue;
       const status = dispatch && next.getTime() === end.getTime() ? "started" : "skipped";
       edits.push({
         recordId: runId,

@@ -13,6 +13,7 @@ for (const membership of ["local", "cloud", "unknown"] as const) {
       hostname: "127.0.0.1",
       port: 0,
       fetch(request) {
+        if (new URL(request.url).pathname === "/v1/account") return Response.json({ features: { relay: true } });
         if (new URL(request.url).pathname !== "/v1/workbenches") return Response.json({ ok: true });
         if (membership === "unknown") return new Response("Unavailable", { status: 503 });
         return Response.json(membership === "cloud" ? [{ workbenchId: fixture.projectId }] : []);

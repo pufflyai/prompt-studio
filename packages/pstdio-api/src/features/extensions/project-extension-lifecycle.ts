@@ -88,14 +88,7 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     );
     if (!schedule) return null;
 
-    const assigned = await setDeviceAutomationEnabled(deps, projectId, automationId, enabled);
-    if (!assigned)
-      await deps.extensionAutomationPreferencesService.set({
-        project_id: projectId,
-        extension_instance_id: instanceId,
-        automation_id: automationId,
-        enabled,
-      });
+    await setDeviceAutomationEnabled(deps, projectId, { scheduleId: automationId, instanceId, enabled });
 
     return {
       id: schedule.id,
