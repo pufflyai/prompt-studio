@@ -5,12 +5,8 @@ import { peer, sink } from "./shared-server-peer";
 test("offers Standard and Fast speed independently from reasoning effort", () => {
   expect(createCodexHarness().params?.service_tier).toMatchObject({
     type: "select",
-    label: "Speed",
     defaultValue: "default",
-    options: [
-      { label: "Standard", value: "default" },
-      { label: "Fast", value: "fast" },
-    ],
+    options: [{ value: "default" }, { value: "fast" }],
   });
 });
 
