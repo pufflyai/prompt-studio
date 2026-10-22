@@ -126,7 +126,10 @@ export const registerTwoDeviceSyncSmokeTests = () =>
         // A new device reads the project's info before anything else. Let it read that one document and none
         // of the project's data yet.
         let info: string | undefined;
-        peer.failReads((documentId) => (info ??= documentId) !== documentId);
+        peer.failReads((documentId) => {
+          info ??= documentId;
+          return documentId !== info;
+        });
         await signIn(second, peer.origin);
         await waitFor(async () => (await second.client.projects.query()).items.some((item) => item.id === project.id));
         expect((await second.client.projects.get(project.id)).name).toBe("Shared notes");
