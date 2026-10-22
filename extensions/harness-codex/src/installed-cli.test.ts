@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
 import type { HarnessContext, JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
 import { defaultSpawnProcess } from "./codex-process";
 import { createCodexRuntime } from "./codex-runtime";
@@ -109,7 +110,23 @@ describe.if(enabled)("installed Codex CLI", () => {
       env: { ...env, PSTDIO_SESSION_ID: "speed" },
       params: { service_tier: "fast" },
     };
-    const owned = createCodexRuntime();
+    let onSettings: ((threadId: string, tier: string | null) => void) | undefined;
+    const owned = createCodexRuntime({
+      spawnProcess: (...args) => {
+        const child = defaultSpawnProcess(...args);
+        const observer = createInterface({ input: child.stdout });
+        observer.on("line", (line) => {
+          const message = JSON.parse(line) as {
+            method?: string;
+            params?: { threadId: string; threadSettings: { serviceTier: string | null } };
+          };
+          if (message.method === "thread/settings/updated" && message.params)
+            onSettings?.(message.params.threadId, message.params.threadSettings.serviceTier);
+        });
+        child.onExit.then(() => observer.close());
+        return child;
+      },
+    });
     try {
       const worker = owned.worker(input);
       const threadId = await worker.load(input);
@@ -122,10 +139,24 @@ describe.if(enabled)("installed Codex CLI", () => {
       const resumed = owned.worker(resumedInput);
       await resumed.load(resumedInput);
       expect(await resumed.request("thread/resume", { threadId })).toMatchObject({ serviceTier: "default" });
+      const nextSettings = (tiers: string[]) => {
+        const applied = Promise.withResolvers<void>();
+        onSettings = (id, tier) => {
+          if (id !== threadId || !tier || !tiers.includes(tier)) return;
+          onSettings = undefined;
+          applied.resolve();
+        };
+        return applied.promise;
+      };
+      // The response acknowledges queueing; this notification confirms the core applied the update.
+      const fastApplied = nextSettings(["fast", "priority"]);
       await resumed.request("thread/settings/update", { threadId, serviceTier: "fast" });
+      await fastApplied;
       const warm = (await resumed.request("thread/resume", { threadId })) as { serviceTier: string };
       expect(["fast", "priority"]).toContain(warm.serviceTier);
+      const standardApplied = nextSettings(["default"]);
       await resumed.request("thread/settings/update", { threadId, serviceTier: "default" });
+      await standardApplied;
       expect(await resumed.request("thread/resume", { threadId })).toMatchObject({ serviceTier: "default" });
     } finally {
       await owned.dispose();
