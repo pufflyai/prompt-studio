@@ -38,6 +38,12 @@ export const requestHumanCommand = defineCommand({
     title: params.text({ required: true }),
     instructions: params.longText({ required: true }),
     request: params.json<ReviewRequestBody, { required: true }>({ required: true }),
+    affectedAction: params.select({
+      options: [
+        { label: "Implementation", value: "implementation" },
+        { label: "Merge", value: "merge" },
+      ],
+    }),
     reason: params.select({ options: humanRequestReasons.map((reason) => ({ label: reason, value: reason })) }),
     workspaceId: params.text(),
     revision: params.number(),
@@ -110,7 +116,8 @@ export const cancelReviewRequestCommand = defineCommand({
 export const openReviewRequestCommand = defineCommand({
   id: "review-requests.open",
   title: "Open a review request chat",
-  cli: { description: "Open the chat linked to a request. Opening it records no answer." },
+  cli: { description: "Start or reopen a request conversation. Opening it records no answer." },
+  mutating: true,
   params: { requestId: params.text({ required: true }) },
   async run(ctx, { requestId }) {
     return openReviewRequestSession(ctx, requestId);

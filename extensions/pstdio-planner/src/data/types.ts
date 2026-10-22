@@ -71,8 +71,6 @@ export interface StoredStatus {
   sortOrder: number;
   isDefault: boolean;
   canCreate: boolean;
-  canDragIn: boolean;
-  canDragOut: boolean;
   columnActions: string[];
 }
 

@@ -9,6 +9,19 @@ export const createResourceLinksApi = (
   input: { projectId: string; extensionId?: string },
 ) => {
   const canonical = (resource: ResourceRef) => canonicalResource(deps, input, resource);
+  const listAnchors = async (query: ResourceAnchorQuery) => {
+    const page = await deps.resourceLinksService.list({
+      ...resourceAnchorQuerySchema.parse(query),
+      resource: await canonical(query.resource),
+    });
+    const items = await Promise.all(
+      page.items.map(async (item) => ({
+        source: await canonical(item.source),
+        target: { ...(await canonical(item.target)), role: item.target.role },
+      })),
+    );
+    return { ...page, items };
+  };
 
   const publish = async (
     items: Array<{ source: ResourceRef; target: ResourceAnchor }>,
@@ -59,17 +72,10 @@ export const createResourceLinksApi = (
       }
     },
     queryAnchors: async (query: ResourceAnchorQuery) => {
-      const page = await deps.resourceLinksService.list({
-        ...resourceAnchorQuerySchema.parse(query),
-        resource: await canonical(query.resource),
-      });
+      const page = await listAnchors(query);
       return { ...page, nextCursor: page.nextCursor ?? null };
     },
-    listAnchors: async (query: ResourceAnchorQuery) =>
-      deps.resourceLinksService.list({
-        ...resourceAnchorQuerySchema.parse(query),
-        resource: await canonical(query.resource),
-      }),
+    listAnchors,
     removedLinks: async (resource: ResourceRef) =>
       publish(await deps.resourceLinksService.removeResource(await canonical(resource)), "remove"),
   };

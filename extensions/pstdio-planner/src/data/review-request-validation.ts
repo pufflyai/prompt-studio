@@ -110,6 +110,12 @@ const revision = (value: unknown) => {
   return value as number;
 };
 
+const affectedAction = (value: unknown) => {
+  if (value === undefined) return {};
+  if (value !== "implementation" && value !== "merge") throw new Error("Request affected action is invalid.");
+  return { affectedAction: value } as const;
+};
+
 export const parseStoredRequest = (value: unknown): ReviewRequest => {
   const input = record(value, "Stored request");
   const context = record(input.context, "Request context");
@@ -122,10 +128,11 @@ export const parseStoredRequest = (value: unknown): ReviewRequest => {
     requestedAt: text(input.requestedAt, "Request time"),
     requestedBy: actor(input.requestedBy),
     context: {
+      ...affectedAction(context.affectedAction),
       reason: nullableText(context.reason, "Request reason") as ReviewRequest["context"]["reason"],
       workspaceId: nullableText(context.workspaceId, "Request workspace"),
       attemptRevision: revision(context.attemptRevision),
-      sessionId: text(context.sessionId, "Request session"),
+      sessionId: nullableText(context.sessionId, "Request session"),
       relatedSessionId: nullableText(context.relatedSessionId, "Related session"),
     },
   };

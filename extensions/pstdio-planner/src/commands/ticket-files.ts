@@ -8,13 +8,11 @@ import {
   type TreeNode,
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
-import { statusesCollection, ticketsCollection } from "../data/collections";
-import { selectedDocumentFromResource } from "../data/document-selection";
+import { ticketsCollection } from "../data/collections";
+import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
-import { listTicketReviewRequests } from "../data/review-request-storage";
 import { REVIEW_REQUEST_ICON, reviewRequestSummary } from "../data/review-request-summary";
-import { readSessionHistory } from "../data/session-history";
 import {
   REVIEW_REQUESTS_DOCUMENT,
   ticketFileTarget,
@@ -22,16 +20,14 @@ import {
   ticketRequestsTarget,
 } from "../data/ticket-page-target";
 import { linkedResourceParentMetadata, ticketResourceReference } from "../data/ticket-resource-hierarchy";
-import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { plannerTicketsChanged } from "../events";
 import { isImageAttachment } from "../utils/is-image-attachment";
+import { readTicketTreeData } from "./ticket-files-tree-data";
 import { buildSessionsSection } from "./ticket-sessions-tree";
 import { buildSubTicketsSection } from "./ticket-sub-tickets-tree";
 import { buildWorkspacesSection } from "./ticket-workspaces-tree";
 
 const ticketResourceKind = { extensionId: "pstdio.pstdio-planner", kind: "resource-kind", id: "ticket" } as const;
-
-const TICKET_BODY_ID = "__ticket__";
 
 type TicketTreeResource = {
   type?: string;
@@ -193,20 +189,22 @@ export const listTicketFilesTree = async (
   if (!ticket) return [emptyFilesSection()];
 
   const selectedDocument = selectedDocumentFromResource(resource);
-  const [tickets, workspaces, providers, statuses, ticketSessions] = await Promise.all([
-    ticketsCollection(ctx.storage).list(),
-    ctx.workspaces.list(),
-    ctx.workspaces.listProviders(),
-    statusesCollection(ctx.storage).list(),
-    readSessionHistory(ctx.sessions, { anchor: { type: "ticket", id: ticket.id } }),
-  ]);
+  const {
+    tickets,
+    reviewRequests,
+    workspaces,
+    linkedWorkspaces,
+    providers,
+    statusesById,
+    sessions,
+    workspaceSessions,
+  } = await readTicketTreeData(ctx, ticket);
 
   const parentLookup = createTicketParentLookup(tickets);
   const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup);
 
   const ticketResource = ticketResourceReference(ticket, parentLookup);
 
-  const reviewRequests = await listTicketReviewRequests(ctx.storage, ticket.id);
   const summary = reviewRequestSummary(reviewRequests);
   const reviewRequestsNode: TreeNode = {
     id: REVIEW_REQUESTS_DOCUMENT,
@@ -223,12 +221,12 @@ export const listTicketFilesTree = async (
     collapsible: false,
     nodes: [
       {
-        id: TICKET_BODY_ID,
+        id: TICKET_BODY_DOCUMENT,
         label: ticketDisplayTitle(ticket),
         icon: TICKET_RESOURCE_ICON,
         resource: ticketResource,
         target: ticketPageTarget(ticketResource),
-        selected: selectedDocument === TICKET_BODY_ID,
+        selected: selectedDocument === TICKET_BODY_DOCUMENT,
       },
       ...(summary ? [reviewRequestsNode] : []),
     ],
@@ -268,12 +266,10 @@ export const listTicketFilesTree = async (
   };
 
   // Linked workspaces open as native workspace tabs from the same sidenav.
-  const linkedWorkspaces = workspaces.filter((workspace) => isWorkspaceLinkedToTicket(workspace, ticket.shorthand));
   const visibleWorkspaces = workspaces.filter(
     (workspace) => workspace.is_default || linkedWorkspaces.includes(workspace),
   );
 
-  const statusesById = new Map(statuses.map((status) => [status.id, status]));
   const maybeSubTicketsSection = buildSubTicketsSection({
     tickets,
     parentTicketId: ticket.id,
@@ -294,13 +290,8 @@ export const listTicketFilesTree = async (
 
   // Refine / Break into sub-tickets sessions anchor themselves to the ticket; attempts belong
   // to its workspaces. The ticket shows the whole conversation history either way.
-  const workspaceSessions = (
-    await Promise.all(
-      linkedWorkspaces.map((workspace) => readSessionHistory(ctx.sessions, { workspaceId: workspace.id })),
-    )
-  ).flat();
   const sessionsSection = buildSessionsSection({
-    sessions: ticketSessions,
+    sessions,
     ticketId: ticket.id,
     workspaceSessions,
   });

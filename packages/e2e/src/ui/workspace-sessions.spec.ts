@@ -32,11 +32,13 @@ test.describe("workspace sessions", () => {
     await page.goto(storyUrl(baseUrl, workspaceResourceStoryId));
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
-    await expect(sidenav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
+    // The region shell appears before the asynchronous navigation tree is rendered.
+    await expect(sidenav.getByRole("option", { name: "Refactor sidenav", exact: true })).toBeVisible({
+      timeout: STORY_RENDER_TIMEOUT_MS,
+    });
     const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="workspace-sessions"]');
     await expect(workspaceSessions).toBeVisible();
     await expect(workspaceSessions).toHaveAttribute("aria-expanded", "true");
-    await expect(sidenav.getByRole("option", { name: "Refactor sidenav", exact: true })).toBeVisible();
     await expect(sidenav.getByRole("option", { name: "Wire up board", exact: true })).toBeVisible();
 
     const workspacesNavigation = await showSidenavEntry(page, "Workspaces");

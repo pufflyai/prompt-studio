@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
+import { createStoragePositions } from "pstdio-api-contracts";
 import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase } from "./app-database";
@@ -28,6 +29,7 @@ import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createAppAccount } from "./services/account/app-account";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
+import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
@@ -94,6 +96,8 @@ const buildApp = async (
   ensureStorageRoot(storageRoot);
 
   const dbs = createAppDatabaseServices(db);
+  const { environmentId } = await dbs.environmentDBService.get();
+  const storagePositions = createStoragePositions(environmentId);
   const {
     activityEventsDBService,
     automationDBService,
@@ -177,35 +181,7 @@ const buildApp = async (
   });
 
   const sessionQueueLifecycle = createSessionQueueLifecycle();
-  const sessionHookDeps = (): SessionHookDeps => ({
-    assetTransferService,
-    artifactMountWrites,
-    boardViewsService: boardViewsDBService,
-    automationService,
-    extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,
-    resourceLinksService: dbs.resourceLinksDBService,
-    activityEventsService: activityEventsDBService,
-    eventBus,
-    extensionAutomationPreferencesService,
-    extensionConnectionService,
-    extensionFileService,
-    extensionRuntimeCatalog,
-    extensionService,
-    extensionSettingsDBService,
-    extensionSettingsService,
-    extensionStorageService: extensionStorageDBService,
-    fileService,
-    harnessRegistry,
-    projectService,
-    sessionQueueEntriesService,
-    sessionQueueLifecycle,
-    sessionService,
-    skillService,
-    notificationService,
-    settingsService,
-    workspaceService,
-    workspaceSessionService,
-  });
+  const sessionHookDeps = (): SessionHookDeps => deps;
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
 
@@ -226,9 +202,16 @@ const buildApp = async (
   const account = createAppAccount(input.config, dbs.environmentDBService, projectService);
 
   deps = {
+    personalHistoryService: createPersonalHistoryService({
+      eventBus,
+      documents: extensionStorageDBService.documents,
+      account: account.accountService,
+      projects: projectService,
+    }),
     accountService: account.accountService,
     assetTransferService,
     environmentService: dbs.environmentDBService,
+    storagePositions,
     artifactMountWrites,
     resourceLinksService: dbs.resourceLinksDBService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,

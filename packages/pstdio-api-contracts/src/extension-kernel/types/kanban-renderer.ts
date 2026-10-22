@@ -85,6 +85,8 @@ export type KanbanRendererResourceRef = ResourceRef;
 export interface KanbanRendererRow {
   id: string;
   title: string;
+  /** Navigate using query data immediately, without running an activation callback. */
+  target?: NavigationTargetPage;
   resource?: KanbanRendererResourceRef;
   attributes: Record<string, unknown>;
 }
@@ -97,7 +99,9 @@ export interface KanbanRendererColumnAction {
 
 export interface KanbanRendererBoardColumnConfig {
   color?: string;
+  /** @deprecated Remove this option. Cards can always be dragged between columns. */
   canDragIn?: boolean;
+  /** @deprecated Remove this option. Cards can always be dragged between columns. */
   canDragOut?: boolean;
   canCreate?: boolean;
   actions?: KanbanRendererColumnAction[];

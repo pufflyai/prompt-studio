@@ -1,4 +1,4 @@
-import { jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { Json } from "pstdio-sync-contracts";
 
 export const accounts = pgTable("manager_accounts", {
@@ -7,6 +7,17 @@ export const accounts = pgTable("manager_accounts", {
   ownerSubject: text().notNull(),
   state: text({ enum: ["active", "disabled"] }).notNull(),
 });
+export const accountFeatures = pgTable(
+  "manager_account_features",
+  {
+    accountId: text()
+      .notNull()
+      .references(() => accounts.id),
+    feature: text({ enum: ["relay"] }).notNull(),
+    grantedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.accountId, table.feature] })],
+);
 export const restoreRequests = pgTable("manager_restore_requests", {
   id: text().primaryKey(),
   fingerprint: text().notNull(),
@@ -20,6 +31,21 @@ export const workbenches = pgTable(
     id: text().notNull(),
   },
   (table) => [primaryKey({ columns: [table.accountId, table.id] })],
+);
+// Encryption keys for a cloud project's shared space and the owner's personal space. A new generation
+// is added whenever a device leaves; older generations stay so older data stays readable.
+export const spaceKeys = pgTable(
+  "manager_space_keys",
+  {
+    accountId: text()
+      .notNull()
+      .references(() => accounts.id),
+    workbenchId: text().notNull(),
+    space: text({ enum: ["project", "personal"] }).notNull(),
+    generation: integer().notNull(),
+    secret: text().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.accountId, table.workbenchId, table.space, table.generation] })],
 );
 // A device is one client runtime; its environment ID is the device ID. Each login replaces the credential digest.
 export const devices = pgTable(

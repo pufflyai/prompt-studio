@@ -1,9 +1,12 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { devicePresenceLeaseMs } from "pstdio-sync-contracts";
+import { relayEnabled } from "./account-features";
 import type { DeviceInput, DeviceRegistrationInput, WorkbenchInput } from "./contracts";
 import { createCredential, digestCredential } from "./credential";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
 import { DeviceAccessDenied } from "./renewal-errors";
-import { accounts, devices, workbenches } from "./schema";
+import { accountFeatures, accounts, devices, workbenches } from "./schema";
+import { rotateSpaceKeysInTransaction } from "./space-keys";
 
 type Reader = Pick<ManagerDatabase, "select">;
 
@@ -34,6 +37,7 @@ export const listDevices = async (db: Reader, accountId: string) => {
       platform: devices.platform,
       createdAt: devices.createdAt,
       lastSeenAt: devices.lastSeenAt,
+      online: sql<boolean>`${devices.lastSeenAt} > clock_timestamp() - ${devicePresenceLeaseMs} * interval '1 millisecond'`,
     })
     .from(devices)
     .where(and(eq(devices.accountId, accountId), isNull(devices.removedAt)))
@@ -44,6 +48,9 @@ export const listDevices = async (db: Reader, accountId: string) => {
     lastSeenAt: row.lastSeenAt.toISOString(),
   }));
 };
+
+export const heartbeatDeviceInTransaction = (transaction: ManagerTransaction, input: DeviceInput) =>
+  transaction.update(devices).set({ lastSeenAt: sql`clock_timestamp()` }).where(activeDevice(input));
 
 const activeDevice = (input: DeviceInput) =>
   and(eq(devices.accountId, input.accountId), eq(devices.id, input.deviceId), isNull(devices.removedAt));
@@ -57,14 +64,20 @@ export const renameDeviceInTransaction = async (transaction: ManagerTransaction,
   return renamed.length > 0;
 };
 
-export const removeDeviceInTransaction = (transaction: ManagerTransaction, input: DeviceInput) =>
-  transaction.update(devices).set({ removedAt: sql`clock_timestamp()` }).where(activeDevice(input));
+export const removeDeviceInTransaction = async (transaction: ManagerTransaction, input: DeviceInput) => {
+  const removed = await transaction
+    .update(devices)
+    .set({ removedAt: sql`clock_timestamp()` })
+    .where(activeDevice(input))
+    .returning({ id: devices.id });
+  if (removed.length) await rotateSpaceKeysInTransaction(transaction, input.accountId);
+};
 
 export const listWorkbenches = (db: Reader, accountId: string) =>
   db
     .select({ workbenchId: workbenches.id })
     .from(workbenches)
-    .where(eq(workbenches.accountId, accountId))
+    .where(and(eq(workbenches.accountId, accountId), relayEnabled(db, accountId)))
     .orderBy(asc(workbenches.id));
 
 export const addWorkbenchInTransaction = (transaction: ManagerTransaction, input: WorkbenchInput) =>
@@ -82,6 +95,10 @@ export const findDeviceAccess = async (db: Reader, token: string, workbenchId: s
     .from(devices)
     .innerJoin(accounts, eq(accounts.id, devices.accountId))
     .innerJoin(workbenches, and(eq(workbenches.accountId, devices.accountId), eq(workbenches.id, workbenchId)))
+    .innerJoin(
+      accountFeatures,
+      and(eq(accountFeatures.accountId, devices.accountId), eq(accountFeatures.feature, "relay")),
+    )
     .where(and(eq(devices.digest, digestCredential(token)), isNull(devices.removedAt), eq(accounts.state, "active")));
   return access ?? null;
 };

@@ -1,5 +1,6 @@
 import { defineCommand, l10n } from "@pstdio/sdk/extensions";
 import { savedTargetBranch } from "../data/implementation-targets";
+import { readWorkflowStatuses } from "../data/workflow-statuses";
 
 export const implementationPolicyCommand = defineCommand({
   id: "implementation-policy",
@@ -8,6 +9,7 @@ export const implementationPolicyCommand = defineCommand({
   async run(ctx, _commandParams) {
     const settings = await ctx.settings.all();
     return {
+      workflow: await readWorkflowStatuses(ctx),
       adversarialReview: settings["implementation.adversarialReview"],
       openPr: settings["implementation.openPr"],
       defaultTargetBranch: savedTargetBranch(settings) || null,

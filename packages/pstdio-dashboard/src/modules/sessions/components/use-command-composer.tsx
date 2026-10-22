@@ -1,4 +1,5 @@
 import { type ChatInputQuestionResponse, HarnessControls } from "@pstdio/ui/chat-ui";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import type {
   DraftHarnessCommandInput,
   HarnessCommandState,
@@ -29,18 +30,20 @@ export const useCommandComposer = (
   draft: DraftHarnessCommandInput | undefined,
   createCommand: Parameters<typeof useHarnessCommands>[3],
   onCreated: (sessionId: string, title: string) => void,
+  input: WorkbenchPanelRenderInput,
 ) => {
   const scope = JSON.stringify([sessionId, selectedAgent, sessionId ? undefined : draft]);
   const currentScope = useRef(scope);
   currentScope.current = scope;
-  const pendingCommand = useRef<{
+  // An acknowledgement must trigger recovery even if the session already failed.
+  const [pendingCommand, setPendingCommand] = useState<{
     scope: string;
     text: string;
     previousRequest: string | null | undefined;
     message?: string;
     submitted?: SubmittedCommand;
   } | null>(null);
-  const commands = useHarnessCommands(sessionId, selectedAgent, draft, createCommand);
+  const commands = useHarnessCommands(sessionId, selectedAgent, draft, createCommand, input);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [commandOutcome, setCommandOutcome] = useState<string | null>(null);
   const [intent, setIntent] = useState<ComposerIntent | null>(null);
@@ -67,7 +70,7 @@ export const useCommandComposer = (
     if (previousScope.current === scope) return;
     previousScope.current = scope;
     const handedOff = takeNativeCommand(sessionId, selectedAgent);
-    pendingCommand.current = handedOff?.kind === "pending" ? { scope, ...handedOff } : null;
+    setPendingCommand(handedOff?.kind === "pending" ? { scope, ...handedOff } : null);
     setCommandError(null);
     setCommandOutcome(handedOff?.kind === "outcome" ? (handedOff.message ?? null) : null);
     setSubmitted(handedOff?.submitted ?? null);
@@ -82,10 +85,10 @@ export const useCommandComposer = (
   }, [submitted, commands.state]);
 
   useEffect(() => {
-    const pending = pendingCommand.current;
+    const pending = pendingCommand;
     if (!status || !pending || pending.scope !== scope || lastRequestStarted === pending.previousRequest) return;
     if (["in_progress", "awaiting_input", "queued"].includes(status)) return;
-    pendingCommand.current = null;
+    setPendingCommand(null);
     if (status === "failed" || status === "disconnected") {
       if (!chatDraft.text) {
         chatDraft.change(pending.submitted?.objective ?? pending.text);
@@ -96,7 +99,7 @@ export const useCommandComposer = (
         pending.message ?? `Native command ${pending.text} ${status}. Check the conversation before retrying.`,
       );
     }
-  }, [scope, status, lastRequestStarted, chatDraft]);
+  }, [scope, status, lastRequestStarted, chatDraft, pendingCommand]);
   const acceptCommand = (result: Awaited<ReturnType<typeof invokeCommand>>, text: string, onSubmitted?: () => void) => {
     const reference = intent ? { intent, objective: text.trim() } : undefined;
     if (result.status === "started") {
@@ -109,7 +112,7 @@ export const useCommandComposer = (
           message: result.message,
           submitted: reference,
         });
-      else pendingCommand.current = { scope, text, previousRequest: lastRequestStarted, submitted: reference };
+      else setPendingCommand({ scope, text, previousRequest: lastRequestStarted, submitted: reference });
     } else if (result.sessionId)
       handOffNativeCommand(result.sessionId, {
         kind: "outcome",

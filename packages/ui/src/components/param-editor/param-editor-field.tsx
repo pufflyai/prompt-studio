@@ -96,7 +96,7 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
         />
       );
     case "text":
-      if (horizontal) {
+      if (horizontal && param.singleLine !== false) {
         return (
           <HorizontalTextInput
             {...common}

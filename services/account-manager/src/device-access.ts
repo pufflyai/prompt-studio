@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { identitySchema } from "pstdio-sync-contracts";
+import { readAccountFeatures, requireRelay } from "./account-features";
 import { account } from "./auth-schema";
 import { deviceNameSchema, deviceProfileSchema } from "./contracts";
 import { digestCredential } from "./credential";
@@ -8,6 +9,7 @@ import {
   accountOfCredential,
   addWorkbenchInTransaction,
   findDevice,
+  heartbeatDeviceInTransaction,
   listDevices,
   listWorkbenches,
   registerDeviceInTransaction,
@@ -17,6 +19,7 @@ import {
 } from "./devices";
 import { DeviceAccessDenied } from "./renewal-errors";
 import { accounts } from "./schema";
+import { spaceKeysInTransaction } from "./space-keys";
 import { withAccountTransaction } from "./transactions";
 
 const googleIssuer = "https://accounts.google.com";
@@ -65,6 +68,12 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
     });
   };
   return {
+    account: (token: string) =>
+      apply(token, async (transaction, device) => ({
+        features: await readAccountFeatures(transaction, device.accountId),
+      })),
+    heartbeat: (token: string) =>
+      apply(token, (transaction, device) => heartbeatDeviceInTransaction(transaction, device)),
     devices: (token: string) =>
       apply(token, async (transaction, device) => ({
         ...device,
@@ -84,8 +93,17 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
       }),
     workbenches: (token: string) =>
       apply(token, (transaction, device) => listWorkbenches(transaction, device.accountId)),
+    /** The keys of a cloud project, or null when the account has no such project. */
+    keys: (token: string, workbenchId: string) =>
+      apply(token, (transaction, device) =>
+        spaceKeysInTransaction(transaction, {
+          accountId: device.accountId,
+          workbenchId: identitySchema.parse(workbenchId),
+        }),
+      ),
     addWorkbench: (token: string, workbenchId: string) =>
       apply(token, async (transaction, device) => {
+        await requireRelay(transaction, device.accountId);
         await addWorkbenchInTransaction(transaction, {
           accountId: device.accountId,
           workbenchId: identitySchema.parse(workbenchId),

@@ -66,6 +66,7 @@ beforeEach(async () => {
   extensionInstancesService = createExtensionInstancesDBService(result.db);
   extensionUserDataService = createExtensionUserDataDBService(result.db);
   service = createExtensionService({
+    sourceExists: () => true,
     extensionInstancesService,
     installedExtensionSourcesService,
     extensionUserDataService,
@@ -181,9 +182,9 @@ describe("extensionService extension id ownership", () => {
       projectId: project.id,
       ...fontEditorSource("/repo-two/.pstdio/extensions/font-editor"),
     });
-    expect(discovered.instance.enabled).toBe(false);
+    expect(discovered!.instance.enabled).toBe(false);
 
-    await service.setProjectExtensionEnabled(discovered.instance.id, true);
+    await service.setProjectExtensionEnabled(discovered!.instance.id, true);
 
     const enabled = await service.listEnabledSourcesForProject(project.id);
     expect(enabled.map(({ installedSource }) => installedSource.source_path)).toEqual([
@@ -253,10 +254,10 @@ describe("extensionService source installation", () => {
       manifest: { id: "pstdio.pstdio-planner", version: "2.0.0" },
     });
 
-    expect(synced.installedSource.id).toBe(migratedSource.id);
-    expect(synced.installedSource.source_path).toBe("/home/user/.pstdio/extensions/pstdio-planner");
-    expect(synced.instance.id).toBe(migratedInstance.id);
-    expect(synced.instance.enabled).toBe(true);
+    expect(synced!.installedSource.id).toBe(migratedSource.id);
+    expect(synced!.installedSource.source_path).toBe("/home/user/.pstdio/extensions/pstdio-planner");
+    expect(synced!.instance.id).toBe(migratedInstance.id);
+    expect(synced!.instance.enabled).toBe(true);
   });
 });
 
@@ -291,10 +292,10 @@ describe("extensionService", () => {
       manifest: { version: "2.0.0" },
     });
 
-    expect(synced.installedSource.id).toBe(adopted.installedSource.id);
-    expect(synced.installedSource.source_hash).toBe("hash-1");
-    expect(synced.installedSource.version).toBe("1.0.0");
-    expect(synced.installedSource.manifest_json).toEqual({ version: "1.0.0" });
+    expect(synced!.installedSource.id).toBe(adopted.installedSource.id);
+    expect(synced!.installedSource.source_hash).toBe("hash-1");
+    expect(synced!.installedSource.version).toBe("1.0.0");
+    expect(synced!.installedSource.manifest_json).toEqual({ version: "1.0.0" });
   });
 
   test("sync still registers a source the project has never seen", async () => {
@@ -313,8 +314,8 @@ describe("extensionService", () => {
       manifest: { version: "1.0.0" },
     });
 
-    expect(synced.installedSource.source_hash).toBe("hash-1");
-    expect(synced.instance.enabled).toBe(false);
+    expect(synced!.installedSource.source_hash).toBe("hash-1");
+    expect(synced!.instance.enabled).toBe(false);
   });
 
   test("fails with ProjectNotFoundError when the project does not exist", async () => {

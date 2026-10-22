@@ -9,13 +9,13 @@ describe("runReviewCommand", () => {
     const creates: unknown[] = [];
     const storage = createMemoryStorage();
     await putAttempt(storage, {
-      schemaVersion: 1,
+      schemaVersion: 2,
       workspaceId: "workspace-1",
       workspaceShorthand: "PS-7_A1",
       ticketId: "ticket-7",
       ticketShorthand: "PS-7",
       implementationSessionId: "implementation-1",
-      state: "review_ready",
+
       base: { workspaceId: null, headSha: "base-sha" },
       revisions: [
         {
@@ -73,13 +73,13 @@ describe("runReviewCommand", () => {
   test("starts at most one automatic review for a ready revision", async () => {
     const storage = createMemoryStorage();
     await putAttempt(storage, {
-      schemaVersion: 1,
+      schemaVersion: 2,
       workspaceId: "workspace-1",
       workspaceShorthand: "PS-7_A1",
       ticketId: "ticket-7",
       ticketShorthand: "PS-7",
       implementationSessionId: "implementation-1",
-      state: "review_ready",
+
       base: { workspaceId: null, headSha: "base-sha" },
       revisions: [
         {

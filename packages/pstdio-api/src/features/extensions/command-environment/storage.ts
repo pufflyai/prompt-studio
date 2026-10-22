@@ -1,3 +1,4 @@
+import { createStorageId, createStorageMigration } from "pstdio-api-contracts";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createExtensionAssetsApi } from "./assets";
@@ -42,9 +43,14 @@ export const createStorageApi = (
     migrate: (version, run) =>
       deps.extensionStorageService.migrate(scope, version, async (previous) => {
         input.signal?.throwIfAborted();
-        await run(previous);
+        await run(
+          previous,
+          createStorageMigration([input.extensionId, input.projectId, scope.scope_type, scope.scope_id, version]),
+        );
         input.signal?.throwIfAborted();
       }),
+    ids: { create: createStorageId },
+    positions: deps.storagePositions,
     readLegacy: (source) =>
       read(() =>
         deps.extensionStorageService.readLegacy(source, {

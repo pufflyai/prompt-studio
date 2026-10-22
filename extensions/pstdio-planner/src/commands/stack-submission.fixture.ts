@@ -49,13 +49,12 @@ export async function stackSubmissionFixture() {
     });
   await ticket("Child");
   const attempt: AttemptRecord = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     workspaceId: "child",
     workspaceShorthand: "Child_A1",
     ticketId: "Child",
     ticketShorthand: "Child",
     implementationSessionId: "owner",
-    state: "implementing",
     base: { workspaceId: null, headSha: base },
     revisions: [],
     blocker: null,

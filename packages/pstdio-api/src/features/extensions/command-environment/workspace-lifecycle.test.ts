@@ -230,6 +230,7 @@ test("does not expose or mutate a workspace owned by another project", async () 
   const env = createCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
+      personalHistoryService: { getWorkspace: async () => null },
       workspaceService: { setInitializing: async () => null, get: async () => workspace, softDelete },
     } as never,
     makeEnabledSources() as never,

@@ -66,7 +66,16 @@ export const InputText: Story = {
   ...inputStory(paramEditorInputFixtures.text),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getAllByRole("textbox", { name: paramEditorInputFixtures.text.param.name })).toHaveLength(2);
+    const inputs = canvas.getAllByRole("textbox", { name: paramEditorInputFixtures.text.param.name });
+    await expect(inputs).toHaveLength(2);
+    for (const input of inputs) {
+      await expect(input.tagName).toBe("TEXTAREA");
+      const field = input.parentElement;
+      if (!field) throw new Error("Text field is missing its container");
+      const label = within(field).getByText(paramEditorInputFixtures.text.param.name);
+      await expect(label.getBoundingClientRect().bottom).toBeLessThanOrEqual(input.getBoundingClientRect().top);
+      await expect(input.getBoundingClientRect().width).toBe(field.getBoundingClientRect().width);
+    }
   },
 };
 export const InputMarkdown = inputStory(paramEditorInputFixtures.markdown);

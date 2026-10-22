@@ -1,24 +1,13 @@
 import {
-  defineArtifactMount,
+  accountEvents,
   defineCommand,
   defineExtension,
+  defineHook,
+  defineResourceKind,
   params,
+  resourceEvents,
   type StorageGroup,
-  type StorageResolution,
 } from "@pstdio/sdk/extensions";
-
-const documents = defineArtifactMount({ id: "documents", path: "documents", label: "Documents" });
-const readFiles = defineCommand({
-  id: "read-files",
-  title: "Read ordinary extension files",
-  async run(ctx) {
-    return {
-      document: await ctx.artifacts.mount(documents.id).readText("remote.txt"),
-      attachment: new TextDecoder().decode(await ctx.storage.files.getBytes("remote-attachment")),
-      reference: await ctx.storage.files.get("remote-attachment"),
-    };
-  },
-});
 
 const read = defineCommand({
   id: "read",
@@ -52,21 +41,6 @@ const commit = defineCommand({
   run: (ctx, { group }) => ctx.storage.records.commit(group),
 });
 
-const inspect = defineCommand({
-  id: "inspect",
-  title: "Inspect a retained note",
-  params: { conflictId: params.text({ required: true }) },
-  run: (ctx, { conflictId }) => ctx.storage.records.inspect(conflictId),
-});
-
-const resolve = defineCommand({
-  id: "resolve",
-  title: "Resolve a retained note",
-  mutating: true,
-  params: { proposal: params.json<StorageResolution, { required: true }>({ required: true }) },
-  run: (ctx, { proposal }) => ctx.storage.records.resolve(proposal),
-});
-
 const outcome = defineCommand({
   id: "outcome",
   title: "Read a durable save outcome",
@@ -96,7 +70,42 @@ const checkReadCache = defineCommand({
   },
 });
 
+const allocate = defineCommand({
+  id: "allocate",
+  title: "Allocate identity",
+  mutating: true,
+  run: (ctx) => ctx.resources.allocate({ kind: "note" }),
+});
+const identity = defineCommand({
+  id: "identity",
+  title: "Read identity",
+  params: { id: params.text({ required: true }) },
+  run: (ctx, { id }) => ctx.resources.identity({ kind: "note", id }),
+});
+const find = defineCommand({
+  id: "find-number",
+  title: "Find identity",
+  params: { shorthand: params.text({ required: true }) },
+  run: (ctx, { shorthand }) => ctx.resources.findByShorthand({ kind: "note", shorthand }),
+});
+// Sync events stay in memory. Saving them would change the sync status the hook observes.
+const syncEvents: string[] = [];
+const recordSyncEvent = defineHook({
+  id: "record-sync-event",
+  event: accountEvents.projectSyncChanged,
+  run: (_ctx, payload) => {
+    syncEvents.push(payload.state);
+  },
+});
+const syncHistory = defineCommand({
+  id: "sync-history",
+  title: "Read sync status events",
+  run: async (ctx) => ({ events: syncEvents, current: await ctx.account.projectSyncStatus() }),
+});
+// The compiled host must expose this public event reference as well as the methods.
+const numberEvent = defineCommand({ id: "number-event", title: "Number event", run: () => resourceEvents.renumbered });
 export default defineExtension({
-  artifactMounts: [documents],
-  commands: [read, readFiles, stage, commit, inspect, resolve, outcome, checkReadCache],
+  resourceKinds: [defineResourceKind({ id: "note", prefix: "NR" })],
+  commands: [read, stage, commit, outcome, checkReadCache, allocate, identity, find, numberEvent, syncHistory],
+  hooks: [recordSyncEvent],
 });

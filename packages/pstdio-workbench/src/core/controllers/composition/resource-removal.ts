@@ -5,7 +5,7 @@ import { getOwnedPlacementPreparation } from "../../registries/placements/owned-
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
 
-export const removeWorkbenchResource = (
+const removeActiveWorkbenchResource = (
   core: WorkbenchCore,
   resource: ResourceRef,
   retained: readonly PlacementIdentity[],
@@ -41,3 +41,14 @@ export const removeWorkbenchResource = (
     core.pageLocations.removeResource(resource, retained);
   });
 };
+
+export const removeWorkbenchResource = (
+  core: WorkbenchCore,
+  resource: ResourceRef,
+  retained: readonly PlacementIdentity[],
+  removeCached: (resource: ResourceRef) => void,
+) =>
+  batchWorkbenchChanges(() => {
+    removeActiveWorkbenchResource(core, resource, retained);
+    removeCached(resource);
+  });

@@ -68,3 +68,110 @@ test("a closed socket cancels stalled synchronization before reconnecting withou
     await connection.done;
   }
 });
+
+test("separate wakes on one connection reuse the attempt signal", async () => {
+  const { createDocumentRelayConnection } = await import("./connection");
+  const controller = new AbortController();
+  const first = Promise.withResolvers<void>();
+  const second = Promise.withResolvers<void>();
+  const signals: AbortSignal[] = [];
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(socket) {
+        socket.send(JSON.stringify({ type: "ready", protocolVersion: 1 }));
+      },
+      message() {},
+    },
+  });
+  const connection = createDocumentRelayConnection({
+    origin: server.url.origin,
+    projectId: "project",
+    signal: controller.signal,
+    access: async () => ({ token: "access", expiresAt: new Date(Date.now() + 30_000).toISOString() }),
+    synchronize: async (signal) => {
+      signals.push(signal);
+      if (signals.length === 1) first.resolve();
+      else second.resolve();
+    },
+  });
+  try {
+    await first.promise;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    connection.wake();
+    await second.promise;
+    expect(signals[0]).toBe(signals[1]);
+  } finally {
+    controller.abort();
+    await connection.done;
+    await server.stop(true);
+  }
+});
+
+test("transport status follows the socket through offline and back and signals each change", async () => {
+  const controller = new AbortController();
+  let socket: Bun.ServerWebSocket<unknown> | undefined;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(client) {
+        socket = client;
+        client.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+      },
+      message() {},
+    },
+  });
+  const changes: { connected: boolean; busy: boolean }[] = [];
+  let signalled = () => {};
+  const signal = (count: number) => {
+    const reached = Promise.withResolvers<void>();
+    signalled = () => {
+      if (changes.length >= count) reached.resolve();
+    };
+    signalled();
+    return reached.promise;
+  };
+  const connection = createRelayConnection({
+    origin: server.url.origin,
+    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    access: async () => ({ token: "fixture-access", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
+    signal: controller.signal,
+    synchronize: async () => {},
+    onStatusChange: () => {
+      changes.push(connection.status());
+      signalled();
+    },
+  });
+  try {
+    // Opening the socket, then the end of the first run.
+    await signal(2);
+    expect(changes).toEqual([
+      { connected: true, busy: false },
+      { connected: true, busy: false },
+    ]);
+    // A closed socket is how the relay looks when the network drops.
+    socket?.close();
+    await signal(3);
+    expect(changes[2]).toEqual({ connected: false, busy: false });
+    // The connection retries, opens again and runs once more.
+    await signal(5);
+    expect(changes.slice(3)).toEqual([
+      { connected: true, busy: false },
+      { connected: true, busy: false },
+    ]);
+  } finally {
+    controller.abort();
+    await server.stop(true);
+    await connection.done;
+  }
+});

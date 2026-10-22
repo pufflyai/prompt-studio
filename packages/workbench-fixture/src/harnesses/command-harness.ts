@@ -52,7 +52,7 @@ export const createCommandHarness = (modes: boolean) =>
           execution: "exclusive",
           invoke: async () => ({
             kind: "started",
-            session: { done: Bun.sleep(200).then(() => ({ status: "failed" })), stop: () => {} },
+            session: { done: Promise.resolve({ status: "failed" }), stop: () => {} },
           }),
         };
       const command = /^\/(goal|plan)(?:\s+([\s\S]*))?$/.exec(operation.text.trim());

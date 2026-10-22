@@ -56,10 +56,10 @@ try {
     assert.equal(initial.value.rows.length, 0, "Use a fresh dev:playwright stack");
   }
   const statuses = await executePlanner<{
-    statuses: Array<{ id: string; isDefault: boolean; canDragIn: boolean; canDragOut: boolean }>;
+    statuses: Array<{ id: string; isDefault: boolean }>;
   }>(api, project.id, "ticket-status.read", {});
   const backlog = statuses.value.statuses.find((status) => status.isDefault)!;
-  const ready = statuses.value.statuses.find((status) => !status.isDefault && status.canDragIn && status.canDragOut)!;
+  const ready = statuses.value.statuses.find((status) => !status.isDefault)!;
   const statusIds = { backlog: backlog.id, ready: ready.id };
   for (const scenario of cases) {
     if (scenario.count < tickets.length) continue;

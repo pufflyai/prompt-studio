@@ -1,358 +1,200 @@
-# Synchronization contracts
+# Local CRDT storage
 
-The private `pstdio-sync-contracts` package defines wire protocol 1 and an executable
-reference for the v0.1 synchronization model. The protocol 2 replacement contracts
-are defined in [covered checkpoints](0027-covered-checkpoints.md); their production
-cutover is separate. The owners below currently build on protocol 1:
-grouped local storage in `pstdio-sync` and `pstdio-db`, the relay in `services/relay`,
-account authority in `services/account-manager`, and an opt-in runtime connection in
-`pstdio-api`. They are on `main` but in no release.
+Extension records live in one Yjs document per extension and project. A declared text
+file uses its own document. The runtime owns merging and persistence. Extensions keep
+using `storage.records`, the deprecated KV and collection methods, and the file APIs.
+[PRD 0014](../../requirements/platform/0014-local-first-sync.md) defines the requirements.
 
-[PRD 0014](../../requirements/platform/0014-local-first-sync.md) replaces this design
-with client-side merging and a relay that cannot read content. The
-[blind relay](0029-blind-relay.md) already serves the new protocol next to this one. This
-reference describes the current code until that work replaces it.
+## Ownership
 
-## Package and ownership
-
-Import schemas, types, fingerprint validation and compatibility checks from
-`pstdio-sync-contracts`. The main export uses Zod and Web Crypto, with no Node,
-Bun, host, SDK, UI, database, Yjs or provider imports. `./conformance` is a separate,
-test-only export. Its development dependencies are not a runtime implementation.
-[Package boundaries](0013-package-boundaries.md) record this layer.
-
-| Owner | Responsibility |
+| Package | Responsibility |
 | --- | --- |
-| Contracts, PS-744 | Versioned envelopes, validation and executable semantics. |
-| Identity, PS-745 | Persist stable IDs, map local folders/environments, isolate credentials and caches. |
-| Assets, PS-747 | Immutable content references, streamed persistence, integrity, completion and recovery. |
-| Storage/SDK, PS-746 | Journal, accepted state, atomic local saves, authoring operations and conflict inspection/resolution. |
-| Relay, `services/relay` | Authorization, immutable publication checks, atomic PostgreSQL publication, durable replay/snapshots and restore epochs. |
-| Account manager, `services/account-manager` | Account lifecycle, devices and cloud projects; independent from content restore. |
-| Native connection, `pstdio-sync/relay` and `pstdio-api` | Device login, access renewal, snapshot download, submission, recovery and view refresh. |
-| Extensions | Data models, domain validation and pure local handlers from published packages. |
+| `pstdio-sync` | Shape-based edits, document reads, shared primitives, checkpoint staging and legacy namespaces. |
+| `pstdio-db` | Durable document state, incremental updates, local retry identities, migration versions and the one-time journal import. |
+| `pstdio-api` | Public storage adapters, verified assets, file projection and notifications after local commits. |
+| `@pstdio/sdk/testing` | The same document engine with an in-memory store. |
+| Extensions | Domain data and validation, without merge rules or relay code. |
 
-The [kernel storage API](../../../packages/pstdio-api-contracts/src/extension-kernel/types/storage.ts)
-adds `storage.assets` and grouped `storage.records` through the public SDK and host adapter.
-The older key-value and collection methods remain and are marked `@deprecated`, following
-[API versioning](../extensions/0014-api-versioning.md). Only nightly SDK builds contain the new methods.
+The [blind relay](0029-blind-relay.md) stores encrypted payloads. Clients seal them with
+the functions in `packages/pstdio-sync/src/encryption/` and keys from the account manager
+([ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md)). Document
+transport and latest-state uploads run in `pstdio-sync/src/relay/`. The runtime starts
+encrypted document sync for each enabled extension. Local reads and saves do not wait
+for the relay.
 
-PS-758 implements the internal PostgreSQL persistence owner in `services/relay/src/storage/`.
-It reuses the production record evaluator and pure resolution validator from `pstdio-sync`.
-Account/workbench/extension scope rows serialize independent writers. Current records,
-conflict metadata, one canonical operation body, its outcome, and the accepted replay
-sequence commit together. Supersession is derived from accepted resolution captures;
-it is not another stored status. Test-only references remain independent from this owner.
+## Scheduled automations
 
-The owner provides repeatable-read snapshots and contiguous accepted replay. Restore
-validates receipt fingerprints and the immutable bytes required by retained history,
-replaces scoped content in one transaction, and creates a new epoch. Old receipts keep
-their saved acknowledgments. Replay after restore begins at the restored sequence in
-the new epoch. It does not erase receipt ancestry or use a TTL to discard offline work.
+The core `pstdio.automations` owner uses the same encrypted document transport as
+extensions. Each schedule record holds `deviceId`, `enabled`, and `startsAt`. No
+automation data or disable acknowledgment is stored separately on the relay.
 
-This internal scope is not authorization. PS-768 adds authenticated HTTP and finite
-WebSocket subscriptions in `services/relay/src/transport/`. They check finite access
-from the account manager and derive current grants and published revisions. PS-760's
-production S3 owner keeps scoped upload intent and acknowledged multipart parts in
-PostgreSQL. Each upload has its own object key. Completion streams the durable object
-through full SHA-256 and length verification before publishing the verified mapping
-and upload receipt in one transaction. Lost completion responses and process restarts
-recover that intent without accepting unchecked bytes. Conditional ETag reads detect
-changed objects. Cancellation commits its durable row and PostgreSQL notification together,
-interrupts writers across owners, and drains the writer before removing only its temporary bytes;
-completed objects stay available through publication and retained history without a TTL.
-Asset routes use the same authenticated transport. RustFS evidence does not
-establish live Spaces compatibility. See the [relay guide](../../guides/development/0006-relay.md) for migrations,
-isolated PostgreSQL/process-kill checks, and the built persistence smoke.
+Schedule admission checks the current device before arming and again just before
+command dispatch. Unassigned cloud schedules stay idle. The local
+`pstdio.automation-runs` owner never joins sync. Its claim and cursor commit together
+before effects. It records missed occurrences as skipped and does not replay claims
+after restart. See the [schedule reference](../cli/0010-scheduled-automations.md).
 
-## Local staged assets
+## Data merges by shape
 
-The local runtime implements immutable `{sha256, byteLength, mediaType}` references through
-`pstdio-storage` and the API's asset-transfer service. The storage package owns streamed bytes and integrity checks;
-the API owns persisted operation identities and cancellation. It resolves ownership from the actual project extension instance
-to stable workbench and extension IDs. Local paths and credentials never enter portable references.
+A save compares the submitted value with the current document at every depth:
 
-An operation binds its expected reference once. Temporary file size supplies its resumable offset, including after restart.
-Only a fully verified file can be linked atomically into the immutable version store. A retry finds the same version;
-it cannot replace its bytes or change the operation's expected reference. No duplicate progress or completion flag must be kept in sync.
-Reads stream and verify content, and consumers must reach the end before marking a download verified.
+- Objects change only their changed keys. Named child maps let concurrent creation of
+  the same nested object merge its keys too.
+- Lists keep values in an item map and their sequence in a Yjs array. An object's `id`
+  supplies its identity. Other values use their canonical JSON and occurrence number.
+  Concurrent moves may leave more than one sequence reference; reading selects the last
+  visible reference, so each item appears once. Removing the item hides later nested edits.
+- Strings use Yjs text after their first line break, and stay text after the line break
+  is removed. Promotion gives both devices the same original character identities.
+- Other values, including single-line strings, use Yjs map replacement. Concurrent
+  replacements follow Yjs ordering. Wall clocks do not decide the winner.
 
-Disconnection preserves partial bytes. Explicit cancellation first interrupts active writes, persists cancellation,
-and removes eligible temporary bytes. Retrying reads after restart finishes any interrupted cancellation cleanup.
-Completed versions are retained without automatic expiry or garbage collection. This makes verification safe from
-temporary-upload cleanup while the grouped-storage child commits references. Future manual cleanup must account for
-accepted content, pending work, unresolved alternatives, and backups before deleting any completed version.
+Child references use deterministic paths inside a document. Their content lives in
+named Yjs types, so a concurrent parent assignment cannot discard another child's
+edits. A deleted reference hides its children. Deleting a record removes its live
+reference and records a tombstone. A concurrent edit to its fields cannot restore it.
+An explicit `deleted: false` can create a new live record.
 
-`ctx.storage.assets.stage`, `getTransfer`, `cancel`, `read`, and `verifyComplete` are the narrow extension boundary.
-`client.assets.upload` owns chunking and mechanical transport retries. Existing buffered blob calls remain supported;
-their HTTP adapter now streams local persistence and download. See the [asset guide](../../guides/sdk/0002-assets.md).
-New legacy blobs encode workbench and file IDs under a separate `files` directory. Existing rows keep their stored paths
-for reads, updates, and rollback. Project cleanup deletes only its database-owned file paths and readable siblings;
-it never derives a recursive directory from an opaque identity or removes retained asset versions.
-Grouped commits, relay storage, and grants live in the owners above. Backup scheduling and full offline readiness are not implemented.
+`records.commit` validates the whole group before changing Yjs state. Every edit in the
+same group runs in one Yjs transaction and becomes one durable database update. Invalid
+shared sequence ranges cannot leave an earlier record half saved. `expectedRevision`
+is accepted and ignored. Read revisions are content hashes for observation; they do not
+carry or replay operation history.
 
-## Local UI sync and relay ownership
+The deprecated collection stores `{ value, sortOrder }`. Its `value` is a nested shared
+object, so fields inside the item merge independently. Legacy conditional operations
+still read and change data under the same owner lock. Collection listing filters the
+namespace before materializing values.
 
-`environmentIdentitySchema` and `environmentTargetSchema` define stable runtime identities and exact execution targets. The local runtime persists one identity and reuses project IDs for workbenches. Its workspace records supply local folder bindings. See [projects](0015-projects.md#workbench-and-environment-identity).
+## Durable local state
 
-The exported `dataOwnership` map is the explicit relay boundary. Workbench content, assets, published extension/catalog revisions, and automation definitions belong to the workbench. Sessions, processes, workspaces, folders, terminals, credentials, caches, and development overrides belong to an environment. Published extension state must be selected explicitly; installed local sources and overrides are not publication records.
+[Document storage](../../../packages/pstdio-db/src/services/extension-storage/document-storage.ts)
+uses three tables:
 
-The dashboard's local SSE stream sends 11 tables: `board_views`, `board_default_views`, `settings`, `projects`, `installed_extension_sources`, `notifications`, `extension_instances`, `sessions`, `workspaces`, `files`, and `workspace_sessions` ([source](../../../packages/pstdio-api/src/features/sync/get-full-state.ts)). A delete sends its `sync:delete` events, including rows removed by cascade, only after the database delete succeeds; see [real-time updates](../../requirements/platform/0003-realtime-updates.md). These tables mirror one runtime for its UI and are not a replication allow-list. A relay must never copy those tables as shared workbench content. Dashboard collection data, indexes, readiness, and subscriptions belong to the API connection; disposing a connection closes its stream and releases its collection store. Browser credentials are scoped to the selected API origin, including its port. CLI clients capture their runtime URL and credential together.
-
-A runtime starts relay synchronization only after `pst login` registers it as a device. It then syncs every cloud project of the account that exists locally ([device login](../../guides/development/0011-device-login.md)). Without a login, the runtime stays local. An account ID in a protocol envelope remains data, not proof of authorization.
-
-## Identity and immutable requests
-
-`Scope` contains `accountId`, `workbenchId`, and `extensionId`. A `recordId` is unique
-inside that scope. `environmentId` identifies the originating local runtime, not a
-path, session, Git workspace, access token, or account. IDs are opaque, stable,
-nonempty strings; their persistence and authentication belong to the owners above.
-The relay binds account and environment to current authorization before any access.
-No wire ID grants access by itself.
-
-An operation ID is unique within the extension/workbench/account scope and is never
-reassigned, even after restore, deletion, conflict, or a lost acknowledgment. Record
-IDs cannot be reused to bypass a retained tombstone. A mutation has one change per
-record, one protocol version, one originating environment, and explicit parent IDs.
-Parents represent causal dependencies between grouped mutations, not device clocks.
-
-The fingerprint covers the whole mutation body except the fingerprint itself.
-`canonicalJson` sorts object keys, preserves array order, uses JSON scalar encoding,
-and omits absent optional properties. SHA-256 is lowercase hexadecimal over UTF-8.
-JSON cannot contain undefined array elements, nonfinite numbers, or non-JSON values.
-`sealMutation` constructs a validated envelope; `validateMutation` checks structure
-and digest. A matching operation ID and digest returns the existing terminal receipt.
-A changed digest is rejected. Pending receipts bind the ID too, but can progress
-when bytes or parents become available. Reordering a meaningful array changes the
-digest. Peers must retain and retry the original sealed payload, never regenerate it.
-Fingerprints detect identity/content mismatch; they are not signatures or permission.
-
-## Authoring operations and wire representation
-
-[Authoring inputs](../../../packages/pstdio-sync-contracts/src/authoring.ts) describe
-behavior, not SDK signatures. The SDK signatures are `storage.records` in
-[storage records](../../../packages/pstdio-api-contracts/src/extension-kernel/types/storage-records.ts).
-Commands are scoped through an authorized storage context. Grouped edit, revisioned
-read, status inspection, conflict inspection and resolution are available to agents
-and extensions without exposing Yjs documents. The dashboard has no view for them yet.
-
-| Input | Supported reconciliation |
+| Table | Content |
 | --- | --- |
-| `text.insert`, `text.delete` | Translate indices from the current local view into stable Yjs sequence operations. Concurrent inserts survive; overlapping deletes are idempotent. No whole-document replacement during remote delivery. |
-| `list.insert`, `list.delete` | Insert JSON elements or delete existing sequence elements. Concurrent insertions survive. Deleting an observed element cannot delete an unseen concurrent insertion. List elements are atomic JSON; nested edits and moves are not inferred. |
-| `map.set`, `map.delete` | Changes to different explicit keys commute. Each key checks the captured cell fingerprint, including whether the key exists. Repeated edits to a key within one local group use the final edit and the original cell fingerprint. Keys can be any string, including an empty string. Same-key divergence preserves alternatives. Values are atomic JSON, not recursively merged. |
-| `replace` | Replace an arbitrary JSON value only when its captured value fingerprint matches. Different JSON fields do not establish semantic compatibility. |
-| `asset` | Versioned immutable `{sha256, byteLength, mediaType}` reference, including zero-byte content. Compare the captured base or identical next reference. Competing replacements preserve bytes and alternatives. |
-| `deleted` | Tombstone or explicit restore. Check the deletion state and exact record revision. Never silently resurrect an offline edit. |
+| `storage_documents` | Saved Yjs state, document revision and the revision folded into the saved state. |
+| `storage_document_updates` | Incremental updates written after that state. |
+| `storage_document_operations` | Indexed local operation IDs and input fingerprints for retry outcomes. |
 
-Each record has one shared primitive kind once established. Primitive conversion
-requires a separate future contract. A record can also carry an atomic JSON value
-and asset reference. A mutation may edit several records and references together.
+The document address is the project, extension and document ID. The extension's
+records use `records`; text files use a separate address based on their stable file ID.
+Foreign keys remove these rows when their project or document is removed.
 
-Text/list wire changes carry internal base64 Yjs state updates; the reference uses
-record-scoped documents. Their encoding is part of protocol 1, not the public
-extension API. Maps carry explicit key preconditions and set/delete operations.
-Indexes never travel as replay instructions. No Yjs object crosses the SDK boundary.
-A production receiver must validate update encoding and consistency before staging.
-The reference decodes real updates and rolls back invalid transactions. JSON and dictionary validation preserve all permitted property names, including `__proto__` and `constructor`.
+A database transaction locks the document row, checks its revision and loads the saved
+state plus its remaining updates when needed. A bounded cache reuses a matching loaded
+document. A save appends only its new update. Every 128 updates, the same transaction
+writes a new saved state and removes the folded updates. Normal saves and reads do not
+load the old grouped journal. Retry metadata stays outside the CRDT state, so folding
+does not copy every past save ID.
 
-`expectedRevision` is the record version observed in the author's working branch.
-Accepted record revisions advance once per accepted group touching that record.
-Text/list and explicit map-key checks allow supported concurrent divergence; JSON
-and assets use their own base preconditions. Future or incompatible bases preserve
-a conflict. Parents gate pending descendants until accepted. They cannot be replaced
-by comparing integer revisions alone. Local revision projection applies an active
-replacement once, rather than counting both it and its captured pending branch.
+The PGlite adapter uses native hex conversion for binary values. This avoids a
+JavaScript callback for every byte in a large saved document; values still use the
+same Uint8Array database contract.
 
-## Transaction and acknowledgment boundaries
+The cache is published and listeners run after database commit. A failed transaction
+discards the cached document. Another service checks the database revision before using
+its own cache. A save returns `state: "saved-locally"` only after the local transaction
+commits. Relay synchronization runs separately from that local save outcome.
 
-Local storage serializes callers and durably saves the full group, ordered pending
-journal entry, identity, and required bytes before reporting `saved-locally`. The public SDK accepts caller-observed revisions for read-modify-write. An edit without `expectedRevision` bases on the record's current revision in the local working view when the group is authored. Local
-working state is derived from accepted state plus active pending branches. It is
-not a third authoritative stored copy. An online stale save still preserves the
-proposed work and returns revision/conflict information; core never reruns arbitrary
-extension commands with external effects.
+An explicit extension data purge replaces its documents with empty snapshots and
+clears their updates and retry identities. Revisions keep increasing across the purge,
+so every running service drops its old cache. Migration metadata resets with the
+content. An empty migration checkpoint alone does not count as user data for uninstall.
 
-The relay validates structure, identity/digest, authorization, parents, asset
-completion and preconditions. It applies all records to temporary candidate state.
-On any unsupported edit it retains the complete group as a conflict alternative.
-No candidate record is published. Missing assets or unaccepted parents return
-`pending`; unrelated groups can progress. Known conflicts keep their whole group,
-including dependent changes to other records.
+Assets remain immutable, verified content references. The asset service verifies bytes
+before a record can refer to them. Shared artifact mounts and attachments keep their
+existing public APIs. File projections still check workspace permission and on-disk
+identity before replacing bytes downloaded while an editor was saving.
 
-Commit candidate records, tombstones, receipt, conflict metadata and replay boundary
-in one database transaction. Only then acknowledge or notify. Before-commit failure
-publishes nothing. After-commit acknowledgment loss returns the original receipt on
-retry. Bytes are immutable and must be verified complete before the transaction can
-publish their references. Production asset completion must prevent cleanup racing
-this transaction. Notifications are hints; the current local event bus is not a
-durable replay log.
+`openTextDocument` is the internal host port for a declared text file. It persists a
+Yjs text document even for single-line content. Binding native editor collaboration to
+that port is separate from this storage implementation; ordinary artifact files still
+use verified asset references.
 
-`Receipt` retains the sealed mutation, digest, outcome, stable journal order and
-acceptance checkpoint. `syncOutcomeSchema` names `saved-locally`, `pending`,
-`synchronized`, and `conflict`. The public `StorageSaveOutcome` adds a `state` derived
-from that status: `saved-locally`, `waiting-to-sync`, `synced`, and `needs-attention`.
-A synchronized result describes relay acceptance;
-it does not mean every peer has received it or that initial download is complete.
-Offline readiness requires all records, packages and bytes to be locally complete.
+## Encrypted document transport
 
-## Conflict alternatives and resolution
+A connection keeps an in-memory replica of what the relay holds and a sequence cursor.
+It opens the latest state, checks its encrypted Yjs state vector, and reads every later
+update. If a latest state changes during pagination, reading restarts at its boundary.
+The uploader may have seen fewer updates than this reader. Each completed page is
+saved locally before reading the next, so an incomplete replacement cannot erase edits
+that this device already received.
 
-Normal reads keep the first accepted version and conflict metadata. Retain complete
-alternative envelopes and their referenced bytes; do not create duplicate domain
-records. A conflict has its own monotonic revision. Any accepted edit or new
-alternative touching its records changes that revision. Inspection must expose
-accepted inputs and all alternative operation IDs and payloads to authorized callers.
+Downloaded data merges into the durable local document. It never replaces it. The
+client compares its document with the relay replica and sends missing edits, even
+without a new local save. The comparison also includes Yjs deletion sets, since state
+vectors alone cannot describe deletions. This repairs an incomplete latest state and
+keeps edits made while a device was offline across several state replacements.
 
-A proposal names `conflictId`, `expectedConflicts` for every covered conflict, exact `expectedInputs`,
-and `capturedOperationIds`. Captured operations must be retained nonaccepted members
-of the root's descendant branch and its complete nonaccepted prerequisite closure, in ancestry order. Joined branches capture whole prerequisite groups, including their other records. Every captured record must be
-included; duplicate records, missing input checks, self-dependencies and unrelated
-captures are invalid. Captured operations are also parents. Other parents must have
-accepted receipts. The relay checks causal closure, membership and every covered conflict/input revision atomically. An unaccepted parent cannot be bypassed by capturing only its child.
+After more than 1 MiB or 1,000 updates beyond the current latest state, a caught-up
+client uploads a full state and encrypted state vector. It names the previous state
+and its last included sequence. A stale compare-and-swap response makes the client
+read the winner and try again. An offline diff larger than the relay update limit uses
+the same state channel with the merged local document. Concurrent tail updates remain.
 
-A proposal may replace only its captured branch. A resolution carries that branch's
-complete sequence state, merged with current accepted sequence state, and explicit
-choices for incompatible values/assets/map keys. Its accepted receipt supersedes
-only the named operations. Later edits depend on the active replacement and remain
-pending until their own acceptance. A stale rejected proposal stays retained and
-is included in the next replacement's captured ancestry. Never delete the old branch
-because a proposal was merely sent. Third-client alternatives outside a capture
-remain retained and require their own decision. Derive supersession from accepted resolution receipts so a previously captured proposal is never reopened. A late proposal against an already resolved root gets a new unresolved conflict identity so it can be inspected and proposed again.
+The records document carries an encrypted directory of local text-document names.
+After syncing records, a new device opens those text documents with the same keyed
+IDs. Neither filenames nor extension record names appear in relay routing metadata.
 
-Automatic handlers run locally, are pure, and have no external effects. Proposals
-include the published immutable package revision and handler ID. The relay compares
-that revision with the workbench publication and checks all expected conflict/input
-revisions. It never runs extension code or trusts a local development override.
-Unavailable handlers leave the conflict inspectable. Explicit proposals use the
-same revision checks without requiring a handler field. The relay authorizes callers,
-and the native connection initializes each scope with the installed source revision.
-The fixture uses a publication marker.
+Each asset hash has a random blob ID in an encrypted `sync-blobs` map. The local asset
+service stores the sealed ciphertext before that ID enters the durable document.
+Multipart retries reuse the same bytes. Every outgoing update and latest state lists
+its active blob IDs, and every listed blob finishes uploading first. Receivers verify
+and decrypt blobs before publishing records locally. Inactive mappings remain for
+offline reuse, without keeping their relay blobs alive. If cleanup removed a blob,
+the client seals a new one from complete local plaintext.
 
-## Local read projections
+Unreadable ciphertext, invalid Yjs updates, mismatched state vectors, and invalid blob
+metadata are checked on disposable documents. The runtime saves the encrypted envelope
+under `PSTDIO_HOME/state/sync-quarantine/` and logs only its opaque identity. Later
+healthy updates continue. A client that skipped an update does not compact it away;
+large healthy uploads keep that envelope in the update tail.
 
-Accepted state and the immutable journal are the only durable storage authorities.
-The database storage service owns a disposable projection cache, with at most 32
-owner/environment entries per service. Each entry contains the working records,
-operation outcomes and conflicts derived by the same projector used for recovery.
-There is no writable working-record table.
+Blob encryption currently buffers whole files. Uploads resume verified parts, while
+interrupted encrypted downloads restart from offset zero. Streaming encryption and
+resumable downloads remain separate transport work.
 
-Each owner row has an opaque UUID revision. The storage transaction changes it
-when appending operations, changing acceptance or recovery evidence, or replacing
-accepted state. The token commits with those changes under the owner lock. A
-journal ordinal alone would miss acceptance-only changes; snapshot checkpoint
-counters would miss pending work and conflicts. A new owner receives a new token,
-so deleting and recreating an owner cannot revive its previous cached records.
+## Upgrade and data migrations
 
-Ordinary record reads, outcomes, conflict summaries and deprecated KV/collection
-reads first fetch only this token. A matching projection serves the read without
-loading the journal or acquiring the owner write lock. Single-record work depends
-on that record's payload and revision ancestry, rather than unrelated retained
-history. Listing still scans current records. Callers receive
-copies of cached values and metadata.
+The first records-document open runs the existing projector once for that owner. It
+imports the accepted state and current local journal, and any older KV or collection
+rows. It also imports the existing per-scope data migration versions. The new document
+and removal of the older KV rows commit together. The grouped journal tables stay
+unchanged for PS-824; later opens use the document row as the import marker.
 
-A committed local append advances existing projections through only the new
-operations. The service copies the derived view and appended payloads so issued
-views stay immutable. Copying this derived state still costs work during writes;
-only replay is limited to the appended operations. The new view becomes available
-after the transaction commits. Failed transactions publish no cache changes.
-Acceptance changes and accepted-state replacement discard old projections. This
-also covers epoch, snapshot frontier and document-generation changes represented
-by a replacement snapshot, even when checkpoint counters do not change. Any
-future history compaction must update the owner token in its storage transaction.
+Equal projected data gets equal bootstrap identities. Data migrations assign stable
+Yjs authors to equal field changes from the same baseline. Two offline devices running
+the same migration therefore do not insert the same text twice. Migration completion
+is stored in the document as per-scope version markers. Reading the highest completed
+version prevents a concurrent older marker from downgrading it, and receiving a marker
+prevents running an already received migration again.
 
-A cache miss rebuilds from accepted state and the retained journal under the
-owner lock, including any legacy import in the same transaction. Eviction,
-independent service instances and process restart use this same recovery path.
-The cache does not change durability, stale-write guards, conflict retention or
-public storage contracts. Writes, branch inspection and recovery can still read
-retained history; this cache does not implement history compaction.
+Random record IDs created by a migration remain the separate core ID work in PS-842.
+Extensions must still follow the migration API's supported version ordering. An older
+installed extension cannot migrate data backward.
 
-## Replay, snapshots, retention and restore
+## Staging save handlers
 
-The current protocol 1 owners use checkpoints of `(epoch, sequence)`, whole-group
-replay, and retained receipts. Replay cursors outside the retained range or epoch
-require snapshots. A content restore starts a fresh epoch and never restores grants.
-Local reconnect preserves newer accepted and pending work and their source bytes.
-These owners do not implement production compaction yet.
+`captureCheckpoint` runs ordinary storage writes against a document fork. It returns
+one Yjs update after the handler succeeds. The original document and materialized files
+stay unchanged during preparation. Applying the update publishes the complete group;
+a failed handler discards all staged edits. This replaces receipt and journal-parent
+capture. Storage observations report current versions and no longer enforce stale
+revision conflicts.
 
-PS-808 replaces permanent receipt retention with the
-[covered checkpoint contract](0027-covered-checkpoints.md). Protocol 2 snapshots
-carry current records, required tombstones, explicit retained branches, document
-generations, writer floors, and outstanding receipts. Coverage requires durable
-installation by every enrolled environment and an independent verified backup.
-Offline environments, active recovery, retained ancestry, and in-flight publication
-or capture restrict the cut. There is no time-based expiry.
+The deprecated `conflicts` method returns an empty list. `inspect` and `resolve` report
+that records merge automatically. Their public declarations remain until the planned
+breaking API removal. The old projector and relay evaluator remain only for upgrade and
+legacy protocol ownership, not as a second writable extension store.
 
-Generation retirement replaces covered terminal outcomes with per-environment
-floors and preserves outstanding exceptions. Late old-generation operations require
-resynchronization with their proposals intact. Document rotation fences all writers
-and publishes one shared fresh CRDT seed. Deletion follows committed retirement and
-rechecks reachability under the publication boundary. Backup manifests own independent
-copies; restore starts a new epoch and preserves newer local recovery proposals.
+## Verification
 
-The isolated reference proves these rules; PS-776, PS-780, PS-781, and PS-782 own
-production editing, backups, compaction, and restore. Do not apply protocol 2 deletion
-rules to protocol 1 production data before the paired host/relay cutover. There is no
-mixed-client fallback or historical conversion in this alpha redesign.
+The document tests cover two offline databases, nested fields, identified list items,
+list additions/removals/moves, multiline strings, text promotion, deletion versus edit,
+atomic groups, durable reopening and repeatable data migrations. The process-kill test
+checks local durability before database close. The packaged storage smoke exercises
+public APIs through a compiled runtime and restarts it.
 
-## Compatibility
-
-Peers advertise supported wire versions, supported features and required features.
-Release labels are diagnostic and do not select a protocol. Negotiate version 1 only
-when both support it and every required feature is supported in both directions.
-Optional features are ignored unless required; unknown mandatory structure and
-unknown envelope fields are rejected. This contract does not claim future version
-support merely because two peers advertise the same unknown number.
-
-An unsupported result is actionable and recoverable. Keep the original durable
-journal and bytes, do not send or rewrite queued envelopes, and retry after a local
-runtime or relay update. Schema evolution needs a separately versioned decoder and
-compatibility evidence before enabling a new wire version.
-
-## Executable evidence
-
-Run from the repository root after `bun install --frozen-lockfile`:
-
-```sh
-bun run --cwd packages/pstdio-sync-contracts test
-bun run --cwd packages/pstdio-sync-contracts typecheck
-bun run --cwd packages/pstdio-sync-contracts lint
-bun run --cwd packages/pstdio-sync-contracts test:conformance
-bun run verify:boundaries
-bun run verify:lockfile
-```
-
-The production owners have their own Docker-backed suites. CI runs them in the
-`relay_smoke` job: `bun run --cwd services/relay test:storage`, `test:assets`,
-`test:transport`, and `test:isolated`, `test:conformance` with
-`SYNC_TEST_ENTRY` set to the production-relay entry
-(`packages/pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts`),
-and `bun run --cwd services/account-manager test:isolated`.
-
-`registerConformance` takes a structural adapter factory so later storage/relay
-implementations can reuse the scenarios. `createReferenceFixture` supplies disposable
-PGlite databases for three environments, PostgreSQL row transactions, and RustFS
-objects. The command creates a named Docker stack, exposes no database/object ports,
-mounts source/dependencies read-only, and removes its containers/network/volume in
-`finally`. The default test subnet is `10.254.236.0/24`; set `SYNC_TEST_SUBNET` to an
-unused subnet for concurrent stacks. It never opens the application's database.
-Its test tables and fault controls are not production migrations or service APIs.
-
-Snapshot requests capture the current accepted state before network work. Install
-a response only if that observed state still matches, including receipts and
-conflicts. Receipt outcomes can change without advancing checkpoint counters.
-Within one epoch, older journal or accepted positions cannot replace current
-state. A fresh restore can start a new epoch at a lower position. Local pending
-edits remain in the journal during this check.
-
-The source cases were inspected at WS-272 commit `565ceab57` in
-`infra/relay/prototype/src/{protocol,staging,client-model,recovery}.ts` and adjacent
-tests. That branch's `0026-cloud-sync-prototype.md` is evidence, not a merged
-prerequisite. The fixture ports the protocol failures and adds map/list, third-client,
-handler revision, compatibility, canonical fingerprint and resolution-restore cases.
-It uses throw-based faults immediately before commit and after commit/before receipt,
-and closes/reopens durable client stores. This suite alone does not establish OS-kill
-recovery, WebSocket delivery, or revocation; the relay storage, transport, and account
-manager suites cover those. Production backups and Spaces behavior remain unproven.
-No production service from the prototype is imported.
+[Planner cold-open measurements](../performance/0002-planner-board-cold-open.md) describe
+history-independent saves and the separate browser measurement.

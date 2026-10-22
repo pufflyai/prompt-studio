@@ -1,5 +1,5 @@
-import { spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionInstallEnvironment } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
@@ -32,34 +32,35 @@ export type DependencyInstallInput = {
   signal?: AbortSignal;
 };
 
-export const runCommand = (command: string, args: string[], options: CommandOptions) =>
-  new Promise<CommandResult>((resolveResult) => {
+// File capture removes Bun 1.4.2's crashing Windows output-pipe lifecycle (ADR 0086).
+export const runCommand = async (command: string, args: string[], options: CommandOptions) => {
+  try {
+    options.signal?.throwIfAborted();
     const resolved = resolveProcessCommand([command, ...args]);
-    const [resolvedCommand, ...resolvedArgs] = resolved.argv;
-    const child = spawn(resolvedCommand as string, resolvedArgs, {
-      cwd: options.cwd,
-      env: options.env,
-      signal: options.signal,
-      stdio: ["ignore", "pipe", "pipe"],
-      windowsHide: true,
-      windowsVerbatimArguments: resolved.windowsVerbatimArguments,
-    });
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
-
-    child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
-    child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
-    child.on("error", (error) => {
-      resolveResult({ exitCode: 1, stdout: "", stderr: error.message });
-    });
-    child.on("close", (code) => {
-      resolveResult({
-        exitCode: code ?? 1,
-        stdout: Buffer.concat(stdout).toString("utf8"),
-        stderr: Buffer.concat(stderr).toString("utf8"),
+    const outputRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-command-"));
+    try {
+      const stdoutFile = Bun.file(join(outputRoot, "stdout"));
+      const stderrFile = Bun.file(join(outputRoot, "stderr"));
+      const child = Bun.spawn(resolved.argv, {
+        cwd: options.cwd,
+        env: options.env,
+        signal: options.signal,
+        stdin: "ignore",
+        stdout: stdoutFile,
+        stderr: stderrFile,
+        windowsHide: true,
+        windowsVerbatimArguments: resolved.windowsVerbatimArguments,
       });
-    });
-  });
+      const exitCode = await child.exited;
+      const [stdout, stderr] = await Promise.all([stdoutFile.text(), stderrFile.text()]);
+      return { exitCode, stdout, stderr };
+    } finally {
+      rmSync(outputRoot, { recursive: true, force: true });
+    }
+  } catch (error) {
+    return { exitCode: 1, stdout: "", stderr: error instanceof Error ? error.message : String(error) };
+  }
+};
 
 const declaredRuntimeDependencies = (targetPath: string) => {
   const packageJsonPath = join(targetPath, "package.json");

@@ -4,13 +4,23 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { AutoBuildButton } from "./auto-build-button";
 import { PlanHeader } from "./plan-header";
+import { TimelinePresentationProvider } from "./timeline-presentation";
 import { timelineInitialState } from "./timeline-query";
 
-function HeaderStory(props: { filtered?: boolean; running?: boolean }) {
-  const { filtered, running } = props;
+function HeaderStory(props: { filtered?: boolean; running?: boolean; obsoleteProperties?: boolean }) {
+  const { filtered, running, obsoleteProperties } = props;
   const [search, setSearch] = useState("");
   const [views, setViews] = useState<CollectionViewsSource<KanbanRendererSettings>["views"]>([
-    { id: "all", title: "All", ...timelineInitialState, builtIn: true },
+    {
+      id: "all",
+      title: "All",
+      ...timelineInitialState,
+      settings: {
+        ...timelineInitialState.settings,
+        displayProperties: obsoleteProperties ? ["status", "reviewRequests", "deleted-tag"] : ["status"],
+      },
+      builtIn: true,
+    },
     {
       id: "active",
       title: "In progress",
@@ -56,9 +66,10 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean }) {
               ],
             },
             filterable: true,
+            displayable: true,
           },
         ],
-        storageKey: `timeline-header-story:${filtered ? "filtered" : "all"}`,
+        storageKey: `timeline-header-story:${filtered ? "filtered" : "all"}:${obsoleteProperties ? "obsolete" : "current"}`,
       }}
       viewsSource={source}
       search={search}
@@ -71,8 +82,6 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean }) {
           running={0}
           capacity={2}
           onOpenSession={() => {}}
-          onConfigure={() => {}}
-          onTurnOff={async () => true}
           t={(_key, fallback) => fallback ?? _key}
         />
       }
@@ -83,9 +92,18 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean }) {
 const meta: Meta<typeof HeaderStory> = {
   title: "Extensions/Planner/Timeline header",
   component: HeaderStory,
+  decorators: [
+    (Story) => (
+      <TimelinePresentationProvider projectId="timeline-header-story">
+        <Story />
+      </TimelinePresentationProvider>
+    ),
+  ],
 };
 export default meta;
 type Story = StoryObj<typeof HeaderStory>;
 export const SavedViews: Story = {};
 export const FilteredView: Story = { args: { filtered: true } };
 export const AutoBuildRunning: Story = { args: { running: true } };
+
+export const RetiredDisplayProperties: Story = { args: { obsoleteProperties: true } };

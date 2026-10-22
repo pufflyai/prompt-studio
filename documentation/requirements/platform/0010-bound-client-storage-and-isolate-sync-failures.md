@@ -151,9 +151,9 @@ deleting a record frees all related bytes right away.
 
 Compaction and eviction conflict with two existing contracts:
 
-- The [synchronization contract reference](../../references/architecture/0026-synchronization-contracts.md#replay-snapshots-retention-and-restore)
-  says not to compact receipts until a coverage design is proved, keeps completed versions without
-  expiry, and has restore validate the immutable bytes that retained history needs.
+- The earlier synchronization contract kept receipts and immutable versions for replay and
+  restore. [Local CRDT storage](../../references/architecture/0026-synchronization-contracts.md#durable-local-state)
+  now replaces journal replay. PRD 0014 owns the new relay retention rules.
 - The synchronization contracts PRD (0007, now deleted) gave retention to later relay work.
   [PRD 0014](0014-local-first-sync.md) replaces it and owns relay retention and sync failures.
 
@@ -238,8 +238,8 @@ Budget enforcement also changes calls that succeed today, so it ships only in a 
 - [Snapshot assets include retained receipt references](../../../packages/pstdio-sync/src/asset-transfer.ts)
 - [Assets download before snapshot application and local submission](../../../packages/pstdio-sync/src/synchronize.ts)
 - [Production relay synchronization](../../../packages/pstdio-api/src/services/relay/extension-owner.ts)
-- [Journal-backed shared files](../../../packages/pstdio-api/src/services/shared-files/artifact-mount.ts)
-- [Journal retention and restore rules](../../references/architecture/0026-synchronization-contracts.md#replay-snapshots-retention-and-restore)
+- [Document-backed shared files](../../../packages/pstdio-api/src/services/shared-files/artifact-mount.ts)
+- [Local document persistence](../../references/architecture/0026-synchronization-contracts.md#durable-local-state)
 - [Local save and synchronization outcomes](../../references/sdk/0004-storage.md#edits-and-outcomes)
 - [Read revisions name journal operations](../../../packages/pstdio-sync/src/projection.ts)
 - [Saving rebuilds the captured revision](../../../packages/pstdio-sync/src/authoring.ts)

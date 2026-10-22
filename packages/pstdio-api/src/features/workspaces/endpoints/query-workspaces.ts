@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { pageQuerySchema } from "pstdio-api-contracts";
+import { queryReadableWorkspaces } from "../../../services/personal-history/queries";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { workspaceListItemResponseSchema } from "../dto";
@@ -25,7 +26,7 @@ export const queryWorkspacesRoute = createRoute({
 export const queryWorkspacesHandler = (deps: WorkspacesRouteDeps) => {
   const handler: AppRouteHandler<typeof queryWorkspacesRoute> = async (c) => {
     const { projectId } = c.req.valid("param");
-    const page = await deps.workspaceService.query(projectId, c.req.valid("query"));
+    const page = await queryReadableWorkspaces(deps, projectId, c.req.valid("query"));
     return c.json(
       { items: page.rows.map((row) => ({ ...row, ...toExtensionWorkspace(row) })), nextCursor: page.nextCursor },
       200,

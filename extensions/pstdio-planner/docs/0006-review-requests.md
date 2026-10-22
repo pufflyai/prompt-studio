@@ -2,7 +2,7 @@
 
 **Needs attention** is the place for ticket actions that need a person. It currently contains review requests: tasks and decisions that ask for input on a ticket. Other agent actions can use this area as they are added.
 
-Planner owns every review request: attempt handoffs, timeline tasks, and decisions all use the same commands and storage. The **Needs attention** flag is derived from open or unreadable requests.
+Planner owns every review request: attempt handoffs, timeline tasks, and decisions all use the same commands and storage. The numbered **Needs attention** bubble counts open or unreadable requests.
 
 "Review" here means a person's answer. Code reviews of an attempt use `run-review` and `submit-review` instead. See [Attempts](0002-attempts.md).
 
@@ -17,12 +17,14 @@ Attempt handoffs ask one required text question with the ID `result`. Its answer
 
 ## Lifecycle
 
-1. `request-human` saves the request, links a chat session, and sets Needs attention. A request from an attempt reuses the attempt's session when that session owns the work. Otherwise Planner starts a new chat for the ticket.
+1. `request-human` saves the request and updates the Needs attention count. It does not start or continue an agent session.
 2. A person or an agent answers with `review` or cancels with `review-requests cancel`. Schedules, automations, and event handlers cannot do either.
 3. Each request has one current outcome: an answer or a cancellation. If the first answer races another answer or cancellation, the first write wins and the other caller sees the saved outcome.
-4. When no open request is left on the ticket, Planner clears Needs attention. Managed attempt tickets refresh their status: stopped implementations become Todo, and running implementations become In Progress. Open or unreadable requests keep managed tickets Blocked.
+4. When no open request is left on the ticket, the bubble shows the resolved count. Planner does not change the ticket status; the implementation agent updates it when it continues.
 
-Requests do not change after they are saved. To correct one, cancel it and create a new request. Answers to one request never close another open request.
+The request title, instructions, questions, and workflow context do not change after they are saved. To correct them, cancel the request and create a new one. Answers to one request never close another open request.
+
+Choose **Open session** when you want to discuss a request with an agent. The first click starts a conversation or resumes the related session when it owns the ticket or attempt. Later clicks reopen that conversation without sending another prompt. You can answer the form without opening a conversation. The request's session link stays empty until you open it.
 
 Decision forms stay editable after submission, with saved choices and text filled in. Change the answers and choose **Update answer** to save a revision. The same `review` command updates a saved decision from the CLI. Each revision is validated and replaces the current answer; when revisions race, the last saved revision is current. The request stays answered, so revising it does not pause work again. Cancelled requests stay closed. Task confirmations stay completed.
 
@@ -32,7 +34,7 @@ Revising an answer does not undo actions already taken using the earlier answer.
 
 New requests need a ticket that is not done. Answers and cancellations still work after the ticket is done, because a merge can finish the ticket before its approval request is answered. Deleting a ticket deletes its requests.
 
-Answering or cancelling the last open request clears Needs attention when no unreadable record remains. Board cards with pending input open the ticket's **Needs attention** page directly. The ticket sidebar stays beside the forms, so the ticket body is one click away. The forms use the same question controls as questions an agent asks in chat: one step tab per question, with radio buttons or checkboxes for choices. Generic UI and CLI tag edits cannot create a false blocker or hide a real request.
+Answering or cancelling the last open request resolves pending input when no unreadable record remains. Board cards with pending input open the ticket's **Needs attention** page directly. The ticket sidebar stays beside the forms, so the ticket body is one click away. The forms use the same question controls as questions an agent asks in chat: one step tab per question, with radio buttons or checkboxes for choices. Generic UI and CLI tag edits cannot create a false blocker or hide a real request.
 
 ## CLI
 
@@ -65,6 +67,6 @@ Requests live in the `planner-review-requests` collection. Outcomes live in `pla
 
 Legacy free-text requests in `planner-human-requests` are not inferred as actionable requests. Inspect the ticket for an actual outstanding task or decision. If one exists, create a structured request with concrete instructions and questions. Otherwise no human input is needed.
 
-Board, CLI, and timeline reads derive the indicator from current requests, including on archived and completed tickets. This reconciles legacy display tags without rewriting ticket content, other tags, statuses, dependencies, requests, or answers. Generic ticket edits save the derived tag as part of their existing write. Request changes only refresh readers; they do not rewrite a ticket to synchronize its flag.
+Board, CLI, and timeline reads derive pending input and counts from current requests, including on archived and completed tickets. Request changes refresh readers without rewriting ticket tags. The storage upgrade removes the old Needs attention tag option and its ticket references, while preserving custom flag options and request history.
 
 Unreadable request or outcome records remain visible and keep work paused. Ask your project maintainer to restore the named record and its outcome from a known-good backup through the public extension storage API, then reopen the ticket. Reconciliation does not delete or mark a broken record as answered.

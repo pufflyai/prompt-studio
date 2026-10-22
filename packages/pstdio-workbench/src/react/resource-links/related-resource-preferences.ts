@@ -40,7 +40,13 @@ export const createRelatedResourcePreferences = (
   const write = (value: PageChoices) => {
     const destination = scope();
     const queued = writes.get(destination.scopeId);
-    const save = () => ctx.preferences.setOwnedValue("workbench.related-resources", "panels", value, destination);
+    const save = () => {
+      try {
+        return ctx.preferences.setOwnedValue("workbench.related-resources", "panels", value, destination);
+      } catch (error) {
+        console.warn("Could not save resource page choices", error);
+      }
+    };
     const result = queued ? queued.promise.then(save, save) : save();
     if (!(result instanceof Promise)) return;
     const pending = { value, promise: result };
@@ -126,6 +132,25 @@ export const createRelatedResourcePreferences = (
     void write({});
     previous = snapshot();
   });
+  const removing = ctx.resources.onWillRemove((resource) => {
+    updating++;
+    const forget = (choices: PageChoices) =>
+      Object.fromEntries(
+        Object.entries(choices).map(([region, choice]) => [
+          region,
+          resourceKey(choice.resource) === resourceKey(resource) ? { visible: choice.visible } : choice,
+        ]),
+      ) as PageChoices;
+    const choices = read();
+    if (Object.values(choices).some((choice) => resourceKey(choice.resource) === resourceKey(resource)))
+      void write(forget(choices));
+    pendingChoices = forget(pendingChoices);
+    return [];
+  });
+  const removed = ctx.resources.onDidRemove(() => {
+    previous = snapshot();
+    updating--;
+  });
   return {
     run,
     enter(source: ResourceRef) {
@@ -163,6 +188,8 @@ export const createRelatedResourcePreferences = (
     dispose() {
       unsubscribe();
       reset.dispose();
+      removing.dispose();
+      removed.dispose();
     },
   };
 };

@@ -78,7 +78,10 @@ test("keeps history, breadcrumbs and panel controls in the navigation header", a
   await expect(back).toBeVisible();
   await expect(forward).toBeVisible();
   await expect(nav.locator("[data-workbench-breadcrumb-action-slot]")).toBeVisible();
-  await expect(nav.getByRole("button", { name: /Sidenav/ })).toHaveCount(0);
+  await expect(controls.getByRole("button", { name: "Hide Sidenav", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
   const closedPanelBackground = await backgroundColor(showSecondary);
   await showSecondary.click();
@@ -102,9 +105,9 @@ test("keeps history, breadcrumbs and panel controls in the navigation header", a
   await expect(closedSidenav).toHaveAttribute("aria-pressed", "false");
   await expect.poll(() => backgroundColor(closedSidenav)).toBe(closedPanelBackground);
   await orderedCenters([
-    closedSidenav,
     back,
     forward,
+    closedSidenav,
     secondary,
     controls.getByRole("button", { name: "Show Side Panel" }),
   ]);
@@ -124,11 +127,17 @@ test("keeps history, breadcrumbs and panel controls in the navigation header", a
   await expect(closedSidenav).toBeFocused();
   await closedSidenav.press("Enter");
   await expect(sidenavSeparator).toBeVisible();
-  await expect(nav.getByRole("button", { name: /Sidenav/ })).toHaveCount(0);
+  await expect(controls.getByRole("button", { name: "Hide Sidenav", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 
   await forward.click();
   await expect(page.getByRole("link", { name: `${ticket.shorthand} Own navigation chrome` })).toBeVisible();
-  await expect(nav.getByRole("button", { name: /Sidenav/ })).toHaveCount(0);
+  await expect(controls.getByRole("button", { name: "Hide Sidenav", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   const side = controls.getByRole("button", { name: "Show Side Panel" });
   await expect(side).toHaveAttribute("aria-pressed", "false");
   expect(await backgroundColor(side)).toBe(closedPanelBackground);

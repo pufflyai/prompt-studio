@@ -1,6 +1,6 @@
 import type { AttemptRecord, TicketAttemptSelection } from "./attempt-types";
 import type { DependencyDelivery } from "./dependency-deliveries";
-import { hasPendingInput } from "./review-request-storage";
+import { hasPendingImplementationInput } from "./implementation-input";
 import type { TicketReviewRequests } from "./review-request-types";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
 
@@ -35,7 +35,8 @@ export type AttemptReadinessResult =
 interface ResolveAttemptReadinessInput {
   requests: Map<string, TicketReviewRequests>;
   activeImplementationWorkspaceIds?: Set<string>;
-  dependencyReview?: "approved" | "submitted";
+  retiredWorkspaceIds?: Set<string>;
+  requireMergedDependencies?: boolean;
   target: string;
   tickets: AttemptReadinessTicket[];
   attempts: AttemptRecord[];
@@ -51,20 +52,12 @@ interface ResolveAttemptReadinessInput {
 
 const latestHead = (attempt: AttemptRecord) => attempt.revisions.at(-1)?.headSha ?? null;
 
-const isSelectedAttemptViable = (attempt: AttemptRecord) => {
-  return attempt.state !== "blocked" && attempt.state !== "abandoned" && latestHead(attempt) !== null;
-};
-
-const isApprovedAttempt = (attempt: AttemptRecord) => attempt.state === "approved" && latestHead(attempt) !== null;
-
 type DependencyInput = Omit<ResolveAttemptReadinessInput, "activeImplementationCount" | "maxInProgress">;
-const isDependencyAttemptReady = (input: DependencyInput, attempt: AttemptRecord, done: boolean, selected: boolean) => {
-  if (input.activeImplementationWorkspaceIds?.has(attempt.workspaceId)) return false;
-  if (isApprovedAttempt(attempt)) return true;
-  if (done || input.dependencyReview === "submitted")
-    return ["review_ready", "reviewing"].includes(attempt.state) && latestHead(attempt) !== null;
-  return input.dependencyReview === undefined && selected && isSelectedAttemptViable(attempt);
-};
+// A submitted commit is the dependency evidence. Review verdicts are optional and never gate stacking.
+const isDependencyAttemptReady = (input: DependencyInput, attempt: AttemptRecord) =>
+  latestHead(attempt) !== null &&
+  !input.retiredWorkspaceIds?.has(attempt.workspaceId) &&
+  !input.activeImplementationWorkspaceIds?.has(attempt.workspaceId);
 
 const selectDependencyAttempt = async (input: DependencyInput, dependency: AttemptReadinessTicket) => {
   const selection = input.selections.find((candidate) => candidate.ticketId === dependency.id);
@@ -74,8 +67,7 @@ const selectDependencyAttempt = async (input: DependencyInput, dependency: Attem
   const active = attempts.some((attempt) => input.activeImplementationWorkspaceIds?.has(attempt.workspaceId));
   const candidates = attempts.filter(
     (attempt) =>
-      (!selection || attempt.workspaceId === selection.workspaceId) &&
-      isDependencyAttemptReady(input, attempt, done, Boolean(selection)),
+      (!selection || attempt.workspaceId === selection.workspaceId) && isDependencyAttemptReady(input, attempt),
   );
   if (delivery && active)
     return {
@@ -139,6 +131,7 @@ export const findPendingPrerequisites = (
   target: AttemptReadinessTicket,
   byRef: Map<string, AttemptReadinessTicket>,
   requests: ResolveAttemptReadinessInput["requests"],
+  requireMergedDependencies = false,
 ) => {
   // Requests still pause dependent work after the prerequisite code is integrated.
   const prerequisites = new Map<string, AttemptReadinessTicket>();
@@ -153,7 +146,7 @@ export const findPendingPrerequisites = (
     }
   }
   return [...prerequisites.values()].filter((ticket) =>
-    hasPendingInput(requests.get(ticket.id) ?? { requests: [], errors: [] }),
+    hasPendingImplementationInput(requests.get(ticket.id) ?? { requests: [], errors: [] }, requireMergedDependencies),
   );
 };
 
@@ -208,7 +201,7 @@ export const resolveAttemptDependencies = async (input: DependencyInput): Promis
   if (missing) return { decision: "wait", reason: "dependency-missing", dependencyIds: [missing] };
   if (cycle) return { decision: "wait", reason: "dependency-cycle", dependencyIds: [cycle] };
   const unresolvedTickets = [...unresolved.values()];
-  const pending = findPendingPrerequisites(target, byRef, input.requests);
+  const pending = findPendingPrerequisites(target, byRef, input.requests, input.requireMergedDependencies);
   if (pending.length)
     return { decision: "wait", reason: "human-input-needed", dependencyIds: pending.map((ticket) => ticket.shorthand) };
   const selectedAttempts = await selectDependencyAttempts(input, unresolvedTickets);
@@ -223,6 +216,16 @@ export const resolveAttemptDependencies = async (input: DependencyInput): Promis
       dependencyAttemptIds: [],
     };
   }
+
+  if (input.requireMergedDependencies)
+    return {
+      decision: "wait",
+      reason: "dependency-not-ready",
+      dependencyIds: unresolvedTickets
+        .filter(({ id }) => selectedAttempts.some(({ ticketId }) => ticketId === id))
+        .map(({ shorthand }) => shorthand),
+    };
+
   const tips: AttemptRecord[] = [];
   for (const candidate of selectedAttempts) {
     const candidateHead = latestHead(candidate)!;

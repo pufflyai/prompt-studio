@@ -10,19 +10,18 @@ import type { Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { readRetiredData } from "../../db/retired-data";
 import { createStorageMigrations } from "./data-migrations";
-import { createGroupedStorageDBService } from "./grouped-storage";
+import { createDocumentStorageDBService } from "./document-storage";
 import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
 import { getExtensionStorageOwner } from "./storage-owner";
 
 export type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
 
 export const createExtensionStorageDBService = (db: DbClient, observer?: StorageObserver) => {
-  const grouped = createGroupedStorageDBService(db, observer);
+  const documents = createDocumentStorageDBService(db, observer);
   const scopeFor = async (scope: KvScope) => {
     const owner = await getExtensionStorageOwner(db, scope.extension_instance_id);
     if (!owner) return null;
-    const { environmentId } = await grouped.getEnvironment();
-    return createLegacyRecordStorage({ owner, environmentId, store: grouped }).scope(scope.scope_type, scope.scope_id);
+    return createLegacyRecordStorage({ owner, store: documents }).scope(scope.scope_type, scope.scope_id);
   };
   const requireScope = async (scope: KvScope) => {
     const storage = await scopeFor(scope);
@@ -39,14 +38,15 @@ export const createExtensionStorageDBService = (db: DbClient, observer?: Storage
     return item ? { ...scope, item_id: item.id, value_json: item.value, sort_order: item.sortOrder } : null;
   };
   return {
-    watch: grouped.watch,
-    migrate: createStorageMigrations(db),
+    watch: documents.watch,
+    documents: documents.documents,
+    openTextDocument: documents.openTextDocument,
+    migrate: createStorageMigrations(db, documents),
     readLegacy: (source: string, scope: { projectId: string; extensionInstanceId: string }) =>
       readRetiredData(db, source, scope),
     recordId: (scopeType: string, scopeId: string, key: string) => storageRecordId([scopeType, scopeId, "kv"], key),
     open: async (input: { owner: StorageOwner; assets?: AssetStore }) => {
-      const { environmentId } = await grouped.getEnvironment();
-      const storage = grouped.open({ ...input, environmentId });
+      const storage = documents.open(input);
       return {
         ...storage,
         scopedRecords: (type: string, id: string) => scopeRecordStorage(storage.records, [type, id, "kv"]),

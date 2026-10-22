@@ -17,7 +17,7 @@ describe("implementation workflow policy", () => {
       }),
     );
 
-    expect(result).toEqual({ adversarialReview: true, openPr: true, defaultTargetBranch: null });
+    expect(result).toMatchObject({ adversarialReview: true, openPr: true, defaultTargetBranch: null });
   });
 
   test.each([
@@ -40,6 +40,6 @@ describe("implementation workflow policy", () => {
       }),
     );
 
-    expect(result).toEqual({ adversarialReview, openPr, defaultTargetBranch: null });
+    expect(result).toMatchObject({ adversarialReview, openPr, defaultTargetBranch: null });
   });
 });

@@ -33,6 +33,11 @@ export const canonicalResource = async (
   if (extensionId === "pstdio") {
     const projectId = await hostProject(deps, ref);
     if (projectId && projectId !== input.projectId) throw new Error("Resource belongs to another project.");
+    const pointer = await deps.personalHistoryService.reference(input.projectId, ref.type, ref.id);
+    if (pointer) {
+      const { label: _label, shorthand: _shorthand, metadata: _metadata, icon: _icon, ...publicRef } = ref;
+      return { ...publicRef, device: pointer.device };
+    }
   }
   return ref;
 };

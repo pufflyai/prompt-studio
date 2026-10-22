@@ -35,6 +35,14 @@ export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locato
   await page.reload();
   await expect(group).toBeVisible();
   await expect(source).toBeVisible();
+  const header = (await group.boundingBox())!;
+  await page.mouse.move(header.x + 15, header.y + header.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(header.x + 15, header.y + header.height / 2 - 35, { steps: 8 });
+  await expect(page.locator("[data-panel-dragging]")).toHaveCount(0);
+  await expect(page.locator("[data-workbench-edge-drop]")).toHaveCount(0);
+  await page.mouse.up();
+  await page.waitForTimeout(100);
   await group.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Rename group", exact: true }).click();
   await input.fill("Product research");

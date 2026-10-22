@@ -1,8 +1,9 @@
-// Settle review requests and notify readers to derive the current Needs attention flag.
+// Settle review requests and notify readers to refresh pending input and request counts.
 import { type CommandContext, workbenchPanels } from "@pstdio/sdk/extensions";
 import { plannerTicketsChanged } from "../events";
 import { actorFromSource } from "./attempt-actors";
 import { ticketsCollection } from "./collections";
+import { getReviewRequestSession } from "./review-request-session";
 import {
   deleteTicketReviewRequests,
   readReviewRequest,
@@ -82,12 +83,9 @@ export const cancelReviewRequest = async (ctx: CommandContext, requestId: string
   });
 };
 
-// Opening the linked chat helps with the request; it records nothing.
+// Opening a conversation may start an agent, but never answers the request.
 export const openReviewRequestSession = async (ctx: CommandContext, requestId: string) => {
-  const request = await readReviewRequest(ctx.storage, requestId);
-  if (!request) throw new Error(`Unknown review request "${requestId}".`);
-  const session = await ctx.sessions.get(request.context.sessionId);
-  if (!session) throw new Error("The linked chat session was removed.");
+  const session = await getReviewRequestSession(ctx, requestId);
   ctx.navigation.open({
     kind: "panel",
     panel: workbenchPanels.projectSession,

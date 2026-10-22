@@ -73,7 +73,7 @@
     },
     "packages/e2e": {
       "entry": [
-        "playwright.config.ts",
+        "playwright*.config.ts",
         "src/cli/run-pstdio.ts",
         "src/**/*.spec.ts",
         "src/**/*.perf.ts",
@@ -85,9 +85,11 @@
         // Packaged smoke tests bundle these extension entries by path.
         "src/packaged/fixtures/*-extension.ts",
         // Specs install fixture extensions by path.
-        "src/fixtures/**/extension.ts"
+        "src/fixtures/**/extension.ts",
+        // Extension manifests load this webview entry by packageAsset path.
+        "src/fixtures/editing-session/view.ts"
       ],
-      "project": ["playwright.config.ts", "src/**/*.ts"],
+      "project": ["playwright*.config.ts", "src/**/*.ts"],
       "ignore": ["playwright-report/**", "screenshots/**", "test-results/**"],
       // Extensions e2e installs at runtime by path, and the dashboard it builds and serves.
       // Declared so CI treats their changes as e2e changes.
@@ -136,6 +138,7 @@
         "scripts/**/*.ts",
         "src/index.ts",
         "src/services/sessions/session-query.bench.ts",
+        "src/services/extension-storage/document-storage.bench.ts",
         "src/**/*.test.ts",
         // The isolated conformance runner and durability tests launch these by path.
         "src/**/*.integration.ts",

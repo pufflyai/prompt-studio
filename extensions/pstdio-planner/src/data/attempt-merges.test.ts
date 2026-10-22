@@ -15,7 +15,6 @@ test("a recorded squash merge satisfies code dependencies only in targets contai
       ...f.attempt,
       workspaceId: "parent",
       ticketId: "Parent",
-      state: "review_ready",
       revisions: [
         {
           revision: 1,

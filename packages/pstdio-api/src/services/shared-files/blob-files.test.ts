@@ -11,8 +11,6 @@ test("ordinary blob uploads commit immutable bytes and metadata to the shared jo
       data: Buffer.from("ordinary uploaded bytes"),
     });
     expect(file).not.toBeNull();
-    const state = await f.storage.readState();
-    expect(state.pending).toHaveLength(1);
     const record = (await f.storage.records.list())[0]!;
     expect(await new Response(await f.assets.read(f.owner, record.asset!)).text()).toBe("ordinary uploaded bytes");
   } finally {

@@ -1,5 +1,35 @@
 # @pstdio/ui
 
+## 0.45.0
+
+_2026-10-22_
+
+### Minor Changes
+
+- 107c9e0: Add Windows drive selection to the folder picker and expose runtime drive discovery through the SDK.
+- 9286f4a: Share harness controls and native resource actions with webviews and preserve popover keyboard focus.
+- e7f8c90: Enforce independent mode panel permissions and share accessible panel controls across hosts.
+
+### Patch Changes
+
+- d15c674: Render sortable subnavigation lists by visible rows, show declared structure before loading contents, defer row menus and editor mounting, and return session launches before agent startup finishes while preserving requests for recovery.
+- d10df43: Paths guessed from chat prose or inline code become links only when the host's `resolveResource` confirms them, and copied messages keep bubble text.
+- 9cea817: Align project tab drop indicators, drag bounds, and label sizing with shared tabs, and keep the add button beside them.
+- 09a3062: Dismiss open menus and popovers when clicking the desktop title bar.
+- f70dd3f: Keep the bubble launcher ready for keyboard focus when its panel closes.
+- 217a38b: Keep toast close buttons and actions clickable over the desktop title bar in macOS fullscreen.
+- c2807ac: Show a reload action when the Markdown editor cannot download.
+- db3783d: Show harness availability on Start and in sessions, surface harness issues through extension health indicators, preserve pending answers and confirmations, and keep outline action borders consistent.
+- 63d2424: Update ticket properties immediately while changes save in the background.
+- aad171f: Show streamed conversations when opening them while content keeps arriving.
+- bf68de5: Keep system errors in a scrollable status-bar widget with a count tag, keep action failures local, and align compact ghost alert controls with semantic interaction colors.
+- 07028df: Keep desktop and browser panel controls together at the right edge and separate Windows and Ubuntu window controls.
+- 9a6b0d2: Open large Planner boards faster after a restart, show loading placeholders until views and field labels are ready, and keep visible navigation mounted during refreshes.
+- d63201a: Show correct panel cursors and mirror Navigation controls with their placement.
+- d63201a: Show filled panel insertion targets while preserving layout space.
+- b838ba9: Render multiline parameter text at full width with its label above.
+- 77fb351: Show web links in chat messages as bubbles with the site's icon when the host provides `resolveIcon`.
+
 ## 0.44.0
 
 _2026-10-18_

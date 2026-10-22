@@ -118,13 +118,13 @@ for (const target of ["workspace", "implementation", "review"] as const) {
     const [one, two] = env.tickets;
     const now = new Date().toISOString();
     await putAttempt(env.storage, {
-      schemaVersion: 1,
+      schemaVersion: 2,
       workspaceId: "workspace",
       workspaceShorthand: "WS-1",
       ticketId: one.id,
       ticketShorthand: one.shorthand,
       implementationSessionId: target === "implementation" ? "session" : "implementation",
-      state: "implementing",
+
       base: { workspaceId: null, headSha: "base" },
       implementationDisconnectRetries: 0,
       reviewDisconnectRetries: 0,

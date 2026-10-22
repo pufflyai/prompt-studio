@@ -2,6 +2,7 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
+import { resolveNavigationLevels } from "../../../core/controllers/page-location/navigation-level";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
@@ -32,8 +33,14 @@ export const useTreeData = (
   const mode = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const location = useWorkbenchStore(workbench.pages.store, (state) => state.location);
   const project = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
-  const activePage = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
-  const getPageOwner = () => (activePage ? workbench.navigationTrees.resolveOwner("page", activePage) : undefined);
+  const getPageOwner = () =>
+    JSON.stringify(
+      resolveNavigationLevels({
+        location,
+        pages: Object.values(workbench.pages.store.getState().pages),
+        navigationTrees: workbench.navigationTrees,
+      }).map(({ owner, location }) => [owner, resourceKey(location.resource)]),
+    );
   const pageOwner = useSyncExternalStore(
     (listener) => {
       const subscription = workbench.navigationTrees.onDidChange(listener);
@@ -42,17 +49,23 @@ export const useTreeData = (
     getPageOwner,
     getPageOwner,
   );
-  // Navigation keeps mounted rows. A new search clears results that no longer match its query.
-  const queryKey = JSON.stringify([treeViewId, viewId, project, filter, pageParams]);
-  const refreshKey = JSON.stringify(
-    trees.getTreeRenderer(treeViewId)?.getReadKey?.({ resource, viewId, filter, pageParams }) ?? [
-      resourceKey(resource),
-      resourceKey(location?.resource),
-      mode,
-      pageOwner,
-    ],
-  );
+  // A new owner or bound resource starts with its structure. Selecting a child page
+  // refreshes the same owner's data without removing its mounted rows.
+  const scope = trees.getTreeRenderer(treeViewId)?.getReadKey?.({ resource, viewId, filter, pageParams });
+  const refreshKey = JSON.stringify(scope ?? [resourceKey(resource), resourceKey(location?.resource), mode, pageOwner]);
+  const queryKey = JSON.stringify([
+    treeViewId,
+    viewId,
+    project,
+    resourceKey(resource),
+    filter,
+    pageParams,
+    mode,
+    pageOwner,
+  ]);
   const childrenKey = JSON.stringify([queryKey, refreshKey]);
+  const renderer = trees.getTreeRenderer(treeViewId);
+  const structure = renderer?.getStructure?.({ resource, viewId, filter, pageParams }) ?? [];
   // Defaults apply when the view starts. Refreshes keep sections the user collapsed.
   useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);
   const [expandedChildren, setExpandedChildren] = useState<{ queryKey: string; byNodeId: Record<string, TreeNode[]> }>({
@@ -72,7 +85,12 @@ export const useTreeData = (
         data && trees.getTreeRenderer(treeViewId)
           ? await loadExpandedTreeChildren(trees, treeViewId, data, trees.getTreeState(treeViewId).expandedNodeIds, ctx)
           : {};
-      return { header: data?.header ?? [], body: data?.body ?? [], footer: data?.footer ?? [], children };
+      return {
+        header: data?.header ?? [],
+        body: data?.body ?? [],
+        footer: data?.footer ?? [],
+        children,
+      };
     },
     subscribe: (refresh) =>
       trees.onDidRefresh((event) => {
@@ -100,14 +118,13 @@ export const useTreeData = (
     });
     return () => subscription.dispose();
   }, [workbench, read.retry, read.value]);
-  const savedBody = read.value?.body ?? [];
+  const savedBody = read.loading && !read.value?.body.length ? structure : (read.value?.body ?? []);
   const savedChildren = {
     ...(expandedChildren.queryKey === childrenKey ? expandedChildren.byNodeId : {}),
     ...read.value?.children,
   };
-  const renderer = trees.getTreeRenderer(treeViewId);
   const movement = useTreeMovement({
-    scope: queryKey,
+    scope: childrenKey,
     body: savedBody,
     childrenByNodeId: savedChildren,
     canMove: (sourceId, targetId) =>
@@ -133,7 +150,7 @@ export const useTreeData = (
     footer: read.value?.footer ?? [],
     loadChildren,
     error: read.error ?? null,
-    loading: read.loading && !read.value,
+    loading: read.loading,
     retry: read.retry,
   };
 };

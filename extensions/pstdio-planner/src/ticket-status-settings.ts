@@ -10,9 +10,8 @@ export interface TicketStatusDraft {
   actions?: string[];
 }
 
-import { cleanupLegacyTicketFields } from "./data/cleanup-legacy-ticket-fields";
-import { cleanupLegacyWorkspaceStatus } from "./data/cleanup-legacy-workspace-status";
 import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./data/collections";
+import { migratePlannerStorage } from "./data/migrate-storage";
 import { seedDefaultStatuses } from "./data/seed";
 import type { StoredStatus } from "./data/types";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
@@ -49,9 +48,6 @@ const toStoredStatus = (status: TicketStatusDraft, stored: StoredStatus | undefi
     sortOrder: status.sortOrder,
     isDefault: status.isDefault ?? false,
     canCreate: commands.includes(CREATE_COMMAND),
-    // Drag rules have no editor yet; transitions replace them, so keep what is stored.
-    canDragIn: stored?.canDragIn ?? true,
-    canDragOut: stored?.canDragOut ?? true,
     columnActions: commands.filter((command) => command !== CREATE_COMMAND),
   };
 };
@@ -60,8 +56,7 @@ export const readStatusSettings = defineCommand({
   id: "ticket-status.read-settings",
   title: "Ticket status",
   async run(ctx) {
-    await cleanupLegacyWorkspaceStatus(ctx.storage);
-    await cleanupLegacyTicketFields(ctx.storage);
+    await migratePlannerStorage(ctx);
     return { statuses: sortedBySortOrder(await seedDefaultStatuses(ctx.storage)).map(toTicketStatusDraft) };
   },
 });

@@ -50,7 +50,7 @@ export interface KanbanRendererContribution<
    */
   attributes: AttributeDescriptor<TNode>[] | AttributesSource<TNode>;
 
-  /** Per-board-column overrides (color, drag/create rules, custom actions). */
+  /** Per-board-column overrides (color, creation, custom actions). */
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig<TIcon>;
   hideToolbar?: boolean;
   emptyTitle?: string;

@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { fingerprintSchema, identitySchema } from "../wire";
 
-// Clients create document, blob, update and state IDs at random. The shape keeps them opaque path
-// segments; it cannot prove randomness, so clients must never derive them from names.
+// Blob, update and state IDs are random. Document IDs are a keyed hash of the document name, so every
+// device finds the same document while the relay learns nothing about the name. The shape only keeps
+// them opaque path segments; it cannot prove that a client followed these rules.
 export const syncIdSchema = z.string().regex(/^[A-Za-z0-9_-]{16,128}$/);
 export const sequenceSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const byteLengthSchema = sequenceSchema;

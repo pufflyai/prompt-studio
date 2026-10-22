@@ -2,6 +2,7 @@ export type * from "./authoring";
 export * from "./checkpoint";
 export * from "./checkpoint-peer";
 export * from "./compatibility";
+export { devicePresenceIntervalMs, devicePresenceLeaseMs } from "./device-presence";
 export * from "./fingerprint";
 export * from "./identity";
 export * from "./protocol";

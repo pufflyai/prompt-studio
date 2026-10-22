@@ -1,4 +1,4 @@
-import { CommandOutcomeError } from "@pstdio/sdk/extensions";
+import { CommandOutcomeError, getCommandValue } from "@pstdio/sdk/extensions";
 import { validatedCommandOutcomeSchema } from "pstdio-api-contracts";
 import type {
   MaybePromise,
@@ -8,6 +8,7 @@ import type {
 import type { HostCapability } from "pstdio-extensions/bridge/contract";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import { z } from "zod";
+import { createAccountCapability } from "./account-capability";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
 import { parseWebviewCapabilityParams, WebviewHostCapabilityError } from "./webview-capability-params";
@@ -59,6 +60,16 @@ const commandStreaming = (adapters: ExtensionWebviewHostAdapters) => {
     streamHandler(hostEvents)(request, { stream: streamCommand, publish: adapters.commandCompleted });
 };
 
+const editingSession = (adapters: ExtensionWebviewHostAdapters) => {
+  const { editing, executeCommand } = adapters;
+  if (!editing || !executeCommand) return;
+  return (request: WebviewHostCapabilityParams["editing.session"]) =>
+    editing.request(request, async (input) => {
+      const response = commandResponse.parse(await executeCommand(input));
+      return getCommandValue(response.outcome);
+    });
+};
+
 export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebviewHostAdapters) => {
   const {
     hostEvents,
@@ -75,11 +86,13 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
   const terminalCapability =
     terminal && hostEvents ? createTerminalSessionCapability({ terminal, hostEvents }) : undefined;
   const readHarnesses = adapters.harnesses?.read.bind(adapters.harnesses);
+  const account = createAccountCapability(adapters.account);
   return {
     "harnesses.read": capability("harnesses.read", readHarnesses),
     "resources.actions": capability("resources.actions", adapters.resourceActions),
     "commands.execute": capability("commands.execute", commandExecution(adapters)),
     "commands.stream": capability("commands.stream", commandStreaming(adapters)),
+    "editing.session": capability("editing.session", editingSession(adapters)),
     "navigation.open": capability(
       "navigation.open",
       navigation && ((request) => after(navigation.open(request.target), () => undefined)),
@@ -165,5 +178,7 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
     "files.list": capability("files.list", files && ((request) => files.list(request))),
     "files.delete": capability("files.delete", files && ((request) => files.delete(request))),
     "artifacts.read": capability("artifacts.read", artifacts && ((request) => artifacts.read(request))),
+    "account.read": capability("account.read", account),
+    "account.manage": capability("account.manage", account),
   } satisfies Record<WebviewHostCapability, HostCapability>;
 };

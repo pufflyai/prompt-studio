@@ -8,15 +8,17 @@ export async function readSelectedStackRepair(
   ticketId: string,
   attempts: AttemptRecord[],
   selections: TicketAttemptSelection[],
+  retired: Set<string>,
+  policy: { requireMergedDependencies: boolean },
 ) {
-  const existing = attempts.filter((attempt) => attempt.ticketId === ticketId && attempt.state !== "abandoned");
+  const existing = attempts.filter((attempt) => attempt.ticketId === ticketId && !retired.has(attempt.workspaceId));
   const selection = selections.find((selection) => selection.ticketId === ticketId);
   let chosen: AttemptRecord | undefined;
   if (selection) chosen = existing.find(({ workspaceId }) => workspaceId === selection.workspaceId);
   else if (existing.length === 1) chosen = existing[0];
   if (!chosen) return null;
   try {
-    return await readStackRepair(ctx, chosen);
+    return await readStackRepair(ctx, chosen, policy);
   } catch (error) {
     if (!(error instanceof WorkspaceUnavailableError)) throw error;
     return { unavailableWorkspaceId: chosen.workspaceId, detail: error.message, attempt: chosen };

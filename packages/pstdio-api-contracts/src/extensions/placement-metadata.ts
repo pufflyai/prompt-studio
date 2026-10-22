@@ -28,6 +28,7 @@ export const regionSettingsSchema = z.object({
   canClose: z.boolean().optional(),
   acceptsTabs: z.boolean().optional(),
   resizable: z.boolean().optional(),
+  movable: z.boolean().optional(),
   floatable: z.boolean().optional(),
   size: regionSizeSchema.optional(),
   collapsible: z.boolean().optional(),

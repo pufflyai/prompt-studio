@@ -1,5 +1,6 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
+import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import {
   ANSWER_WITH_FILES_ERROR,
@@ -126,23 +127,32 @@ const startScheduledSession = async (
       submittedQueuePosition,
       entry: owner,
     });
-  if (!input.signal) {
-    void spawning.catch(fail);
-    return;
-  }
-
-  try {
-    await spawning;
-  } catch (error) {
-    if (error instanceof SessionCancellationCleanupError) throw error;
-    if (input.signal.aborted) {
-      if (submittedQueuePosition !== undefined) await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
-      await deps.sessionService.cancel(session.id);
-      input.signal.throwIfAborted();
-    }
-    await fail(error);
-    throw error;
-  }
+  // The session and its initial request are durable. Startup now belongs to the host,
+  // just as it does for REST-created sessions, rather than the command that requested it.
+  void spawning
+    .then(
+      async () => {
+        if (submittedQueuePosition !== undefined && !input.attachmentRefs?.length) {
+          await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
+        }
+      },
+      async (error) => {
+        if (input.signal?.aborted && !(error instanceof SessionCancellationCleanupError)) {
+          if (submittedQueuePosition !== undefined)
+            await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
+          await deps.sessionService.cancel(session.id);
+          return;
+        }
+        await fail(error);
+      },
+    )
+    // Startup has already succeeded or failed here. A queue bookkeeping error must not change that outcome.
+    .catch((err) =>
+      sessionLogger.error(
+        { err, event: "session.spawn.cleanup_failed", session_id: session.id, project_id: input.projectId },
+        "Agent session startup cleanup failed",
+      ),
+    );
 };
 
 const assertObservedRun = (input: StartExistingInput, fresh: ExistingSession) => {
@@ -220,6 +230,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
           sessionId: started.id,
           prompt: input.prompt,
           requestKind: "start",
+          model: input.model,
           attachmentRefs: input.attachmentRefs,
           params: input.params,
         });

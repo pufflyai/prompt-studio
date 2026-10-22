@@ -7,7 +7,7 @@ import { RequestsPanel } from "./requests-panel";
 
 const person = { type: "human" as const, id: "person", displayName: "Human" };
 const agent = { type: "agent" as const, id: "agent", displayName: "Agent" };
-const context = { reason: null, workspaceId: null, attemptRevision: null, sessionId: "chat", relatedSessionId: null };
+const context = { reason: null, workspaceId: null, attemptRevision: null, sessionId: null, relatedSessionId: null };
 
 const task: ReviewRequestView = {
   id: "task",
@@ -217,10 +217,3 @@ export const CompleteTicket: Story = {
 export const UnreadableRequest: Story = {
   args: { row: { ...row, requestErrors: ["Request broken: Request title is required."] } },
 };
-
-const staleRow: PlanRow = {
-  ...row,
-  tagIds: ["default-human-requested-true"],
-  instructions: "# Ticket body\n\nThis is not a review request.",
-};
-export const StaleDisplayTag: Story = { args: { row: staleRow } };
