@@ -1,5 +1,13 @@
 import { strict as assert } from "node:assert";
-import { assertMeasurementWindow, createRow, measure, seedOwner, type Workload } from "storage-scale-fixture";
+import {
+  assertBenchmarkWorker,
+  assertMeasurementWindow,
+  createRow,
+  measure,
+  runBenchmarkEntrypoint,
+  seedOwner,
+  type Workload,
+} from "storage-scale-fixture";
 import * as Y from "yjs";
 import { verifyScaleOfflineMerges } from "../document-scale-offline";
 import { createDocumentStorage } from "../document-storage";
@@ -8,6 +16,7 @@ import { cloneDocument, missingUpdate } from "./document-merge";
 
 // An explicit diagnostic, never discovered by bun test. Run in a disposable worker per owner.
 export const benchmarkSyncOwner = async (kind: Workload, count: number, churn: boolean) => {
+  assertBenchmarkWorker();
   const lease = assertMeasurementWindow();
   console.log(JSON.stringify({ phase: "timing-window", lease }));
   const owner = { workbenchId: "scale", extensionId: "scale.owner" };
@@ -145,5 +154,5 @@ if (import.meta.main) {
     (kind === "rich" && Number(count) === 100_000)
   )
     throw new Error("Use rich 1000|10000 or small 1000|10000|100000 [churn]");
-  await benchmarkSyncOwner(kind, Number(count), variant === "churn");
+  await runBenchmarkEntrypoint("sync-owner", () => benchmarkSyncOwner(kind, Number(count), variant === "churn"));
 }

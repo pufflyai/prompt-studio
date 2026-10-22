@@ -1,8 +1,16 @@
 import { strict as assert } from "node:assert";
-import { mkdirSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { sql } from "drizzle-orm";
-import { assertMeasurementWindow, createRow, measure, seedOwner, type Workload } from "storage-scale-fixture";
+import {
+  assertBenchmarkWorker,
+  assertMeasurementWindow,
+  createRow,
+  measure,
+  runBenchmarkEntrypoint,
+  seedOwner,
+  type Workload,
+} from "storage-scale-fixture";
 import { createDb } from "../../db/connection.pglite";
 import { projects } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
@@ -12,6 +20,7 @@ const address = { workbenchId: projectId, extensionId: "scale.owner" };
 
 // This owns a disposable database, never the running application's data directory.
 export const benchmarkDatabase = async (kind: Workload, count: number, root: string, phase: string) => {
+  assertBenchmarkWorker();
   const lease = assertMeasurementWindow();
   console.log(JSON.stringify({ phase: "timing-window", lease }));
   mkdirSync(root, { recursive: true });
@@ -144,7 +153,7 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
 };
 
 if (import.meta.main) {
-  const [kind, rows, root, phase] = process.argv.slice(2);
+  const [kind, rows, root, phase, snapshot] = process.argv.slice(2);
   if (
     (kind !== "rich" && kind !== "small") ||
     ![1_000, 10_000, 100_000].includes(Number(rows)) ||
@@ -152,5 +161,12 @@ if (import.meta.main) {
     !["seed", "sample", "churn"].includes(phase)
   )
     throw new Error("Use rich|small 1000|10000|100000 <disposable-directory> seed|sample|churn");
-  await benchmarkDatabase(kind, Number(rows), resolve(root), phase);
+  await runBenchmarkEntrypoint(`database-${phase}`, async () => {
+    if (phase === "sample" && snapshot) {
+      console.log(JSON.stringify({ phase: "case-setup", action: "copy-closed-seed", status: "started" }));
+      rmSync(resolve(root), { recursive: true, force: true });
+      cpSync(resolve(snapshot), resolve(root), { recursive: true });
+    }
+    await benchmarkDatabase(kind, Number(rows), resolve(root), phase);
+  });
 }

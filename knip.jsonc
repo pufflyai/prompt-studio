@@ -83,6 +83,8 @@
         // These diagnostics compile or launch fixture modules by path.
         "src/perf/storage-scale-container-setup.ts",
         "src/perf/storage-scale-container-entry.ts",
+        "src/perf/storage-scale-case.ts",
+        "src/perf/storage-scale-prepare.ts",
         "src/perf/storage-scale-extension.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",

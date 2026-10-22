@@ -3,6 +3,7 @@ import type { Workload } from "./fixture";
 export const contract = {
   samples: 10,
   ceilingMs: 1_000,
+  caseTimeoutMs: 60_000,
   atomicRows: 100,
   // Offered workload is fixed, even if the receiver falls behind.
   incoming: { durationMs: 10_000, intervalMs: 100, operations: 100 },
