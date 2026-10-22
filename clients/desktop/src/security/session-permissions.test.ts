@@ -22,7 +22,6 @@ describe("desktop clipboard permissions", () => {
     "https://example.com",
     "http://127.0.0.1:43128",
     "http://127.0.0.1:43127.example.com",
-    "pstdio://lifecycle/index.html",
     "about:blank",
     "invalid",
     undefined,
@@ -53,4 +52,18 @@ describe("desktop clipboard permissions", () => {
     expect(canGrantSessionPermission({ ...request, isMainFrame: false })).toBe(false);
     expect(canGrantSessionPermission({ ...request, runtimeOrigin: null })).toBe(false);
   });
+
+  test("lets the trusted recovery document copy text before the runtime starts", () => {
+    const lifecycle = { ...request, requestingUrl: "pstdio://lifecycle/index.html#recovery", runtimeOrigin: null };
+    expect(canGrantSessionPermission(lifecycle)).toBe(true);
+    expect(canGrantSessionPermission({ ...lifecycle, isMainFrame: false })).toBe(false);
+    expect(canGrantSessionPermission({ ...lifecycle, permission: "clipboard-read" })).toBe(false);
+  });
+
+  test.each([
+    "pstdio://lifecycle/other.html",
+    "pstdio://other/index.html",
+    "pstdio://user@lifecycle/index.html",
+  ])("denies clipboard writes from an unrelated application document %s", (requestingUrl) =>
+    expect(canGrantSessionPermission({ ...request, requestingUrl })).toBe(false));
 });
