@@ -24,6 +24,12 @@ Most hooks do follow-up work after a change was accepted. Provisioning is differ
 
 Use `defineSchedule` to bind a cron schedule to a command. A project's automation toggle overrides the author's enabled default.
 
+In a cloud project, assign each schedule to one device with
+[`pst extensions automations`](../cli/0010-scheduled-automations.md). Only that device
+runs it. Unassigned cloud schedules stay idle. Missed occurrences are recorded as
+skipped when the device returns; they are not caught up. The assigned device never
+falls back to another one. Assignment and enablement sync as normal project records.
+
 Use `ctx.automation.enqueue` for accepted work that needs a durable run record beyond the invoking request. See [durable automation](0007-durable-automation.md) for limits, cancellation, retries, and restart behavior. An unawaited promise is not durable execution.
 
 ## Logging

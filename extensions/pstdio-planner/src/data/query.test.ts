@@ -64,8 +64,6 @@ describe("runTicketsQuery", () => {
     expect(result.boardColumnConfigs?.[todo.id]).toMatchObject({
       color: todo.color,
       canCreate: todo.canCreate,
-      canDragIn: todo.canDragIn,
-      canDragOut: todo.canDragOut,
     });
   });
 
@@ -89,8 +87,6 @@ describe("runTicketsQuery", () => {
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
     expect(result.boardColumnConfigs?.done).toMatchObject({
       canCreate: false,
-      canDragIn: true,
-      canDragOut: true,
       actions: [{ id: "archive_all" }],
     });
   });

@@ -125,8 +125,6 @@ export const buildKanbanBoardColumns = <TRow extends KanbanRendererRow>(input: B
       label: column.label,
       color: columnConfig.color ?? enumOption?.color,
       icon: enumOption?.icon ?? "circle",
-      canDragIn: columnConfig.canDragIn ?? false,
-      canDragOut: columnConfig.canDragOut ?? false,
       canCreate: columnConfig.canCreate ?? false,
       actions: columnConfig.actions ?? [],
       items: groups

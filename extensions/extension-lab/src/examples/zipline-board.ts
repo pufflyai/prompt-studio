@@ -93,9 +93,9 @@ export const board = defineView({
           },
         })),
         boardColumnConfigs: {
-          Backlog: { color: "gray", canDragIn: true, canDragOut: true },
-          "In progress": { color: "purple", canDragIn: true, canDragOut: true },
-          Done: { color: "green", canDragIn: true, canDragOut: true },
+          Backlog: { color: "gray" },
+          "In progress": { color: "purple" },
+          Done: { color: "green" },
         },
       };
     },

@@ -304,8 +304,6 @@ export const buildTicketAttributes = (
 
 export const statusToColumnConfig = (status: StoredStatus): KanbanRendererBoardColumnConfig => ({
   color: status.color,
-  canDragIn: status.canDragIn,
-  canDragOut: status.canDragOut,
   canCreate: status.canCreate,
   actions: status.columnActions.map((id) => ({
     id,

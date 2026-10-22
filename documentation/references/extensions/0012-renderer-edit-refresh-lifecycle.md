@@ -164,6 +164,8 @@ Extensions use public `viewDataEvents` for host-owned session, workspace, and se
 
 ## Kanban moves
 
+Every board column allows dragging cards in and out, including the “No status” group for missing or unknown values. Column configuration controls color, creation, and actions. The deprecated `canDragIn` and `canDragOut` inputs are ignored; remove them from contributions.
+
 A Kanban view can declare `onMove(ctx, { rowId, attributes, order })`. One drop calls it once with the destination grouping attributes. The extension skips unchanged values when saving. Retaining the destination makes later drops independent when an earlier save fails. `order` is omitted for sorted views. In a manual view, `order.beforeRowId` places the row before that target; an empty `order` appends it. The extension validates and saves the complete operation before publishing its refresh event.
 
 The workbench read owner previews the move immediately and saves consecutive gestures in order. It keeps a journal of local edits over its last accepted query. Reads begun before a move or during saving cannot replace that preview. Failed saves remove only that operation's preview, preserve later gestures, and report the failure once. After the saves settle, one fresh query replaces the journal. A failed refresh retains the preview and exposes Retry.

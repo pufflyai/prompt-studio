@@ -10,8 +10,6 @@ export const readTicketStatuses = async (storage: ExtensionStorageApi) => ({
 
 export interface StatusActionFlags {
   canCreate?: boolean;
-  canDragIn?: boolean;
-  canDragOut?: boolean;
   columnActions?: string[];
 }
 
@@ -28,8 +26,6 @@ export const createTicketStatus = async (
     sortOrder,
     isDefault: false,
     canCreate: input.canCreate ?? false,
-    canDragIn: input.canDragIn ?? true,
-    canDragOut: input.canDragOut ?? true,
     columnActions: input.columnActions ?? [],
   };
   return putStatus(input.storage, status);
@@ -55,8 +51,6 @@ export const updateTicketStatus = async (
     icon: input.icon === undefined ? (current.icon ?? null) : input.icon,
     sortOrder: input.sortOrder ?? current.sortOrder,
     canCreate: input.canCreate ?? current.canCreate,
-    canDragIn: input.canDragIn ?? current.canDragIn,
-    canDragOut: input.canDragOut ?? current.canDragOut,
     columnActions: input.columnActions ?? current.columnActions,
   });
 };
