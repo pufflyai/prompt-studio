@@ -11,6 +11,7 @@ import { ExtensionsPanel } from "./components/extensions-panel";
 import { MachineTokensPanel } from "./components/machine-tokens-panel";
 import { ProjectDangerZone } from "./components/project-danger-zone";
 import { ProjectFolderPanel } from "./components/project-folder-panel";
+import { ProjectRecoveryPanel } from "./components/project-recovery-panel";
 import { RuntimeSettingsPanel } from "./components/runtime-settings-panel";
 import { TemplateSettingsEditor } from "./components/template-settings-editor";
 import { getProjectSkills, type ProjectSkill } from "./data/skills-api";
@@ -60,6 +61,24 @@ export const machineTokensSettingsPanel = {
 // settings registry. The unified surface (`createWorkbenchSettingsModule`) turns
 // these into the navigation tree and dispatching panel.
 export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContext) => {
+  ctx.views.registerView({
+    id: "dashboard.settings.recovery",
+    title: "Recovery",
+    body: {
+      kind: "react",
+      render: () => <ProjectRecoveryPanel projectId={getDashboardSelectedProjectId(ctx)} />,
+    },
+  });
+  ctx.settings.registerPanel({
+    id: "recovery",
+    title: "Recovery",
+    kind: "view",
+    section: "project",
+    scope: "project",
+    order: 60,
+    icon: "History",
+    viewId: "dashboard.settings.recovery",
+  });
   ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10, scope: "global" });
   ctx.settings.registerSection({ id: "experimental", title: "Experimental", order: 30, scope: "global" });
   ctx.views.registerView({

@@ -7,7 +7,9 @@ import type {
   PageQuery,
   ProjectCreateRequest,
   ProjectDetails,
+  ProjectSnapshot,
   ProjectUpdateRequest,
+  RestoreProjectInput,
   UpdateProjectInput,
 } from "pstdio-api-contracts";
 import type { ExtensionWorkspace } from "pstdio-api-contracts/extension-kernel";
@@ -16,6 +18,8 @@ import { pageQuery } from "./page-query";
 import type { RequestFn } from "./request";
 
 export type ProjectClient = {
+  snapshots(projectId: string): Promise<ProjectSnapshot[]>;
+  restore(projectId: string, input: RestoreProjectInput): Promise<{ restored: number }>;
   query(input?: PageQuery): Promise<Page<Project & ProjectDetails>>;
   /** @deprecated Use query to read one bounded page. */
   list(): Promise<Project[]>;
@@ -35,6 +39,9 @@ export type ProjectClient = {
 };
 
 export const createProjectClient = (request: RequestFn): ProjectClient => ({
+  snapshots: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/snapshots`),
+  restore: (projectId, input) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/restore`, { method: "POST", body: input }),
   query: (input) => request(`/v1/projects/query${pageQuery(input)}`),
   list: () => request("/v1/projects"),
   get: (projectId) => request(`/v1/projects/${projectId}`),

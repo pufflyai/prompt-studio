@@ -3,6 +3,7 @@ import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
 import { startRelayExtension } from "./extension-owner";
+import { startRecoverySnapshots } from "./recovery-snapshots";
 
 export type RelayWorkbench = {
   accountId: string;
@@ -20,6 +21,18 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
   const controller = new AbortController();
   const { deps } = input;
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
+  const expectedExtensions = new Map<string, Set<string>>();
+  const recovery = startRecoverySnapshots({
+    storage: deps.extensionStorageService,
+    projects: () =>
+      [...workbenches.keys()].filter((id) => {
+        const expected = expectedExtensions.get(id);
+        return (
+          !!expected?.size &&
+          [...expected].every((extensionId) => connections.get(JSON.stringify([id, extensionId]))?.synchronized())
+        );
+      }),
+  });
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
     await connection.done;
@@ -27,12 +40,13 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
   };
   let running: Promise<void> | undefined;
   let dirty = false;
-  const notify = (workbenchId: string) =>
+  const notify = (workbenchId: string) => {
     deps.eventBus.emit("extension_events", "set", {
       id: crypto.randomUUID(),
       projectId: workbenchId,
       eventId: "pstdio.event.storage-changed",
     });
+  };
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
@@ -45,6 +59,7 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
       workspace?.provider_capabilities_json,
     ]);
     const desired = new Set(snapshot.enabledSources.map(({ installedSource }) => installedSource.extension_id));
+    expectedExtensions.set(workbenchId, desired);
     const obsolete = [...connections].filter(
       ([, connection]) =>
         connection.owner.workbenchId === workbenchId &&
@@ -64,6 +79,7 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
         deps,
         signal: controller.signal,
         notify: () => notify(workbenchId),
+        onSynchronized: () => void recovery.capture(),
       });
       if (controller.signal.aborted || workbenches.get(workbenchId) !== config) {
         connection.close();
@@ -134,8 +150,10 @@ export const startRelayRuntime = async (input: { deps: ExtensionsRouteDeps; deni
       const obsolete = [...connections].filter(([, active]) => changed.has(active.owner.workbenchId));
       await Promise.all(obsolete.map(([key, active]) => stopConnection(key, active)));
       await refresh();
+      await recovery.capture();
     },
     async close() {
+      await recovery.close();
       stopStorage();
       stopCatalog();
       stopEvents();

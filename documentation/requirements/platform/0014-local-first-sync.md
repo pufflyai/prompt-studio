@@ -219,9 +219,13 @@ anything.
 
 - R46. After resetting or replacing a device, a user logs in with Google and gets every
   cloud project and personal space back.
-- R53. Each device keeps a daily snapshot of every cloud document for 30 days. A person
-  can restore a project, or one extension's data in it, to a snapshot. A restore is a
-  normal edit, so it syncs to every device.
+- R53. Each device keeps at most three recovery snapshots of every cloud document:
+  one captured hourly, one every 12 hours, and one daily. Show their actual capture
+  times. Use the disk capacity the device supports, with no fixed snapshot byte
+  quota or free-space reserve. If space cannot hold three snapshots, keep only the
+  12-hour snapshot. A person can restore a project, or one extension's data in it,
+  to a snapshot. A restore is a normal edit, so it syncs to every device. This policy
+  was decided on 2026-10-22 and replaces daily snapshots retained for 30 days.
 
 ### Running the relay
 

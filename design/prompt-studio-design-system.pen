@@ -193651,6 +193651,308 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "XlE5q",
+      "x": 55870,
+      "y": 0,
+      "name": "Project settings · Recovery · PS-847",
+      "clip": true,
+      "width": 720,
+      "height": 580,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "MW2J7",
+          "fill": "$ds-fg",
+          "content": "Recovery",
+          "fontFamily": "$font-heading",
+          "fontSize": 20,
+          "fontWeight": "500"
+        },
+        {
+          "type": "text",
+          "id": "ggNIB",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Restore this cloud project or one extension to a recent recovery point. The restore syncs to your other devices.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "g01DC",
+          "name": "Last hour",
+          "width": "fill_container",
+          "gap": 16,
+          "padding": [
+            12,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "v1tW9",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "bb7Ff",
+                  "fill": "$ds-fg",
+                  "content": "Last hour",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "wRKb9",
+                  "fill": "$ds-fg-muted",
+                  "content": "22 October 2026, 10:00",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "pTJck",
+              "type": "ref",
+              "ref": "c24zV7",
+              "theme": {
+                "btn": "outline",
+                "size": "sm"
+              },
+              "height": 32,
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "content": "Choose"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "T94dp",
+          "name": "Last 12 hours",
+          "width": "fill_container",
+          "gap": 16,
+          "padding": [
+            12,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "R9KdD",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "K2RR0",
+                  "fill": "$ds-fg",
+                  "content": "Last 12 hours",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "lmBC3",
+                  "fill": "$ds-fg-muted",
+                  "content": "22 October 2026, 00:00",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "sDQ7F",
+              "type": "ref",
+              "ref": "c24zV7",
+              "theme": {
+                "btn": "outline",
+                "size": "sm"
+              },
+              "height": 32,
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "content": "Choose"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "BUdqI",
+          "name": "Last day",
+          "width": "fill_container",
+          "gap": 16,
+          "padding": [
+            12,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "yDCNj",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "tQ5Q2",
+                  "fill": "$ds-fg",
+                  "content": "Last day",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "f76MU",
+                  "fill": "$ds-fg-muted",
+                  "content": "21 October 2026, 12:00",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "VbpWm",
+              "type": "ref",
+              "ref": "c24zV7",
+              "theme": {
+                "btn": "outline",
+                "size": "sm"
+              },
+              "height": 32,
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "content": "Choose"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "p9ezQb",
+          "name": "Low disk state",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "When disk space is low, only the 12-hour recovery point is kept.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "id": "ELt7D",
+      "type": "ref",
+      "ref": "oEM2Q",
+      "x": 56670,
+      "y": 0,
+      "name": "Restore recovery point · Confirmation",
+      "descendants": {
+        "lhmhO": {
+          "content": "Restore project data?"
+        },
+        "QBUX8": {
+          "type": "frame",
+          "id": "U3pfHb",
+          "name": "Restore scope",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            8,
+            24,
+            24,
+            24
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "OWdZG",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Changes sync to your other devices. The current state is kept in a recovery slot so you can undo this restore.",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "e9PZr",
+              "fill": "$ds-fg-muted",
+              "content": "22 October 2026, 10:00",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "jaAEk",
+              "type": "ref",
+              "ref": "c24zV7",
+              "width": "fill_container",
+              "height": 32,
+              "theme": {
+                "btn": "outline",
+                "size": "sm"
+              },
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "content": "Whole project ▾"
+                }
+              }
+            }
+          ]
+        },
+        "aWg2H": {
+          "theme": {
+            "btn": "primary",
+            "size": "sm"
+          }
+        },
+        "aWg2H/Hf4GT": {
+          "content": "Restore"
+        }
+      }
     }
   ],
   "themes": {

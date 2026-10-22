@@ -13,8 +13,9 @@ import { storage_documents } from "../../db/schemas.pg";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { runDocumentTransaction } from "./document-persistence";
+import { createDocumentSnapshots } from "./document-snapshots";
 
-export const createDocumentStorageDBService = (db: DbClient, observer?: StorageObserver) => {
+export const createDocumentStorageDBService = (db: DbClient, observer?: StorageObserver, snapshotPath?: string) => {
   const cache = createDocumentCache();
   const listeners = new Set<(owner: StorageOwner) => void>();
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
@@ -40,6 +41,12 @@ export const createDocumentStorageDBService = (db: DbClient, observer?: StorageO
   };
   const transaction = transactionFor("records");
   return {
+    snapshots: createDocumentSnapshots(db, {
+      path: snapshotPath,
+      restored: (owner) => {
+        for (const listener of listeners) listener(owner);
+      },
+    }),
     transaction,
     observer,
     getEnvironment,

@@ -1,0 +1,31 @@
+import type { Meta, StoryObj } from "@storybook/react";
+import { ProjectRecoveryView } from "./project-recovery-view";
+
+const meta = {
+  title: "ProjectSettings/Recovery",
+  component: ProjectRecoveryView,
+  args: {
+    extensionNames: { "pstdio-planner": "Planner", "pstdio-notes": "Notes" },
+    snapshots: [1, 12, 24].map((hours) => ({
+      hours: hours as 1 | 12 | 24,
+      capturedAt: new Date(Date.UTC(2026, 9, 22, 12 - hours)).toISOString(),
+      extensions: ["pstdio-planner", "pstdio-notes"],
+    })),
+    onRefresh: () => {},
+    onRestore: async () => {},
+  },
+} satisfies Meta<typeof ProjectRecoveryView>;
+export default meta;
+type Story = StoryObj<typeof meta>;
+export const Default: Story = {};
+export const Empty: Story = { args: { snapshots: [] } };
+export const Loading: Story = { args: { snapshots: [], loading: true } };
+export const LoadError: Story = { args: { snapshots: [], error: "Unable to read recovery points. Try refreshing." } };
+export const LowDiskSpace: Story = { args: { snapshots: [meta.args.snapshots[1]!] } };
+export const RestoreError: Story = {
+  args: {
+    onRestore: async () => {
+      throw new Error("Snapshot changed. Refresh the recovery points.");
+    },
+  },
+};

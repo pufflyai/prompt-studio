@@ -16,8 +16,8 @@ import { getExtensionStorageOwner } from "./storage-owner";
 
 export type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
 
-export const createExtensionStorageDBService = (db: DbClient, observer?: StorageObserver) => {
-  const documents = createDocumentStorageDBService(db, observer);
+export const createExtensionStorageDBService = (db: DbClient, observer?: StorageObserver, snapshotPath?: string) => {
+  const documents = createDocumentStorageDBService(db, observer, snapshotPath);
   const scopeFor = async (scope: KvScope) => {
     const owner = await getExtensionStorageOwner(db, scope.extension_instance_id);
     if (!owner) return null;
@@ -38,6 +38,7 @@ export const createExtensionStorageDBService = (db: DbClient, observer?: Storage
     return item ? { ...scope, item_id: item.id, value_json: item.value, sort_order: item.sortOrder } : null;
   };
   return {
+    snapshots: documents.snapshots,
     watch: documents.watch,
     documents: documents.documents,
     openTextDocument: documents.openTextDocument,

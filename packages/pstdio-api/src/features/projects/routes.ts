@@ -13,12 +13,20 @@ import {
 } from "./endpoints/harness-param-defaults";
 import { listProjectsHandler, listProjectsRoute } from "./endpoints/list-projects";
 import { queryProjectsHandler, queryProjectsRoute } from "./endpoints/query-projects";
+import {
+  listSnapshotsHandler,
+  listSnapshotsRoute,
+  restoreProjectHandler,
+  restoreProjectRoute,
+} from "./endpoints/recovery";
 import { removeProjectHandler, removeProjectRoute } from "./endpoints/remove-project";
 import { retryProjectSetupHandler, retryProjectSetupRoute } from "./endpoints/retry-project-setup";
 import { updateProjectHandler, updateProjectRoute } from "./endpoints/update-project";
 
 export const createProjectRoutes = (deps: ProjectsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.openapi(listSnapshotsRoute, listSnapshotsHandler(deps));
+  routes.openapi(restoreProjectRoute, restoreProjectHandler(deps));
 
   routes.openapi(queryProjectsRoute, queryProjectsHandler(deps));
   routes.openapi(listProjectsRoute, listProjectsHandler(deps));

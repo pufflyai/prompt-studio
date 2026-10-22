@@ -1,11 +1,14 @@
 import { expect, test } from "bun:test";
+import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { createClient } from "@pstdio/sdk/client";
 import type { StorageRecord } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -96,6 +99,46 @@ export const registerDocumentSyncSmokeTests = () =>
         });
         await client.account.syncProject(project.id);
         await waitFor(() => peer.states() > 0);
+        await waitFor(async () => (await client.projects.snapshots(project.id)).length === 3);
+        const listed = await promisify(execFile)(PACKAGED_BINARY_PATH, ["projects", "snapshots", project.id], {
+          cwd: root,
+          env: {
+            ...process.env,
+            PSTDIO_HOME: root,
+            PSTDIO_API_URL: host.baseUrl,
+            PSTDIO_API_TOKEN: host.descriptor.token,
+          },
+        });
+        const [recovery] = JSON.parse(listed.stdout);
+        await command("commit", {
+          group: { operationId: "accidental-delete", edits: [{ recordId: note.recordId, deleted: true }] },
+        });
+        await promisify(execFile)(
+          PACKAGED_BINARY_PATH,
+          [
+            "projects",
+            "restore",
+            project.id,
+            "--hours",
+            String(recovery.hours),
+            "--captured-at",
+            recovery.capturedAt,
+            "--extension-id",
+            "example.shared-notes",
+          ],
+          {
+            cwd: root,
+            env: {
+              ...process.env,
+              PSTDIO_HOME: root,
+              PSTDIO_API_URL: host.baseUrl,
+              PSTDIO_API_TOKEN: host.descriptor.token,
+            },
+          },
+        );
+        expect((await command<{ note: StorageRecord }>("read")).note.value).toBe(
+          `packaged-secret${"x".repeat(1_048_576)}`,
+        );
         peer.corrupt();
         const quarantine = join(root, "state", "sync-quarantine");
         await waitFor(async () => (await readdir(quarantine).catch(() => [])).some((file) => file.endsWith(".json")));

@@ -94,7 +94,7 @@ const buildApp = async (
   const storageRoot = input.config.storage.root;
   ensureStorageRoot(storageRoot);
 
-  const dbs = createAppDatabaseServices(db);
+  const dbs = createAppDatabaseServices(db, database.path === ":memory:" ? storageRoot : database.path);
   const { environmentId } = await dbs.environmentDBService.get();
   const storagePositions = createStoragePositions(environmentId);
   const {

@@ -1,5 +1,6 @@
 export { captureCheckpoint } from "./checkpoint-capture";
 export { type DocumentHistory, documentHistory } from "./document-history";
+export { restoreDocument } from "./document-restore";
 export { createDocumentStorage } from "./document-storage";
 export { type DocumentState, type DocumentStore, hasDocumentUserData, memoryDocumentState } from "./document-types";
 export * from "./encryption";

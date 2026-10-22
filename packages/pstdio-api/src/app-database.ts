@@ -56,7 +56,7 @@ export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}
   }
 };
 
-export const createAppDatabaseServices = (db: DbClient) => ({
+export const createAppDatabaseServices = (db: DbClient, snapshotPath?: string) => ({
   assetTransfersDBService: createAssetTransfersDBService(db),
   environmentDBService: createEnvironmentDBService(db),
   boardViewsDBService: createBoardViewsDBService(db),
@@ -77,7 +77,7 @@ export const createAppDatabaseServices = (db: DbClient) => ({
   extensionFilesDBService: createExtensionFilesDBService(db),
   extensionSkillPreferencesDBService: createExtensionSkillPreferencesDBService(db),
   extensionAutomationPreferencesDBService: createExtensionAutomationPreferencesDBService(db),
-  extensionStorageDBService: createExtensionStorageDBService(db, storageObserver),
+  extensionStorageDBService: createExtensionStorageDBService(db, storageObserver, snapshotPath),
   resourceLinksDBService: createResourceLinksDBService(db),
   extensionResourceSequencesDBService: createExtensionResourceSequencesDBService(db),
   extensionSettingsDBService: createExtensionSettingsDBService(db),

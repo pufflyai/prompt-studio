@@ -1,11 +1,19 @@
 import { and, eq } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_document_operations, storage_document_updates, storage_documents } from "../../db/schemas.pg";
+import {
+  projects,
+  storage_document_operations,
+  storage_document_updates,
+  storage_documents,
+} from "../../db/schemas.pg";
+import { removeSnapshotOwner } from "./snapshot-content";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
 export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) => {
+  await tx.select({ id: projects.id }).from(projects).where(eq(projects.id, owner.workbenchId)).for("update");
+  await removeSnapshotOwner(tx, owner.workbenchId, owner.extensionId);
   const ownerWhere = (
     table: typeof storage_documents | typeof storage_document_updates | typeof storage_document_operations,
   ) => and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
