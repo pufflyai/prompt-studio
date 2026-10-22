@@ -6,6 +6,7 @@ import { createTicketCommand } from "../../commands/create-ticket";
 import { requestHumanCommand, reviewCommand } from "../../commands/review-requests";
 import { putAttempt } from "../../data/attempt-storage";
 import { putTicket, statusesCollection, ticketsCollection } from "../../data/collections";
+import { migratePlannerStorage } from "../../data/migrate-storage";
 import { DEFAULT_STATUSES } from "../../data/seed";
 import { createTicketTag } from "../../data/tag-operations";
 import { timelineBoard } from "../../data/ticket-board";
@@ -77,6 +78,7 @@ test("the plan reads one ticket snapshot without loading workspace session histo
   const storage = createMemoryStorage();
   const [ctx] = makeCommandArgs({ storage, params: {} });
   const ticket = await createTicketCommand.run(ctx, { title: "Visible work", statusId: "ready" });
+  await migratePlannerStorage(ctx);
   let ticketReads = 0;
   let sessionReads = 0;
   const collection = storage.collection.bind(storage);

@@ -1,4 +1,4 @@
-// Settle review requests and notify readers to derive the current Needs attention flag.
+// Settle review requests and notify readers to refresh pending input and request counts.
 import { type CommandContext, workbenchPanels } from "@pstdio/sdk/extensions";
 import { plannerTicketsChanged } from "../events";
 import { actorFromSource } from "./attempt-actors";

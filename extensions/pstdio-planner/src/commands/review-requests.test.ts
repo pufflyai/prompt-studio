@@ -2,10 +2,13 @@ import { describe, expect, test } from "bun:test";
 import type { CommandSource } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt, readAttempt } from "../data/attempt-storage";
-import { putTicket, tagsCollection, ticketsCollection } from "../data/collections";
-import { findTicket } from "../data/resolve";
-import { REVIEW_OUTCOMES_COLLECTION, reviewRequestsCollection } from "../data/review-request-storage";
-import { seedDefaultTags } from "../data/seed";
+import { putTicket, ticketsCollection } from "../data/collections";
+import {
+  hasPendingInput,
+  listTicketReviewRequests,
+  REVIEW_OUTCOMES_COLLECTION,
+  reviewRequestsCollection,
+} from "../data/review-request-storage";
 import { reviewRequestCleanupHook } from "../hooks/review-request-cleanup";
 import { makeCommandContext } from "./command-context.fixture";
 import {
@@ -18,7 +21,6 @@ import {
 } from "./review-requests";
 
 const timestamp = "2026-08-18T09:00:00.000Z";
-const FLAG = "default-human-requested-true";
 
 const ticket = (id: string, statusId = "in-review") => ({
   id,
@@ -71,8 +73,8 @@ const setup = async () => {
         ...extra,
       },
     });
-  const flagged = async () => (await findTicket(storage, "ps-1"))?.tagIds?.includes(FLAG);
-  return { storage, created, opened, followups, context, flagged };
+  const inputPending = async () => hasPendingInput(await listTicketReviewRequests(storage, "ps-1"));
+  return { storage, created, opened, followups, context, inputPending };
 };
 
 const task = {
@@ -119,7 +121,7 @@ const decision = {
 
 describe("review requests", () => {
   test("a fresh project creates and answers a task without starting a session", async () => {
-    const { storage, created, context, flagged } = await setup();
+    const { storage, created, context, inputPending } = await setup();
 
     const request = await requestHumanCommand.run(context(), task as never);
 
@@ -129,7 +131,7 @@ describe("review requests", () => {
       context: { sessionId: null },
     });
     expect(created).toHaveLength(0);
-    expect(await flagged()).toBe(true);
+    expect(await inputPending()).toBe(true);
 
     await reviewCommand.run(context("dashboard"), { requestId: request.id, response: { confirmed: true } });
 
@@ -141,7 +143,7 @@ describe("review requests", () => {
       outcome: { kind: "answered", by: { type: "human" }, response: { confirmed: true } },
       outcomeText: "Completion confirmed",
     });
-    expect(await flagged()).toBe(false);
+    expect(await inputPending()).toBe(false);
     expect(created).toHaveLength(0);
   });
 
@@ -164,28 +166,28 @@ describe("review requests", () => {
     );
   });
 
-  test("the attention flag stays until the last open request is answered or cancelled", async () => {
-    const { context, flagged } = await setup();
+  test("input stays pending until the last open request is answered or cancelled", async () => {
+    const { context, inputPending } = await setup();
     const first = await requestHumanCommand.run(context(), task as never);
     const second = await requestHumanCommand.run(context(), decision as never);
 
     await reviewCommand.run(context(), { requestId: first.id, response: { confirmed: true } });
-    expect(await flagged()).toBe(true);
+    expect(await inputPending()).toBe(true);
     const open = await listReviewRequestsCommand.run(context(), { ticket: "PS-1", openOnly: true });
     expect(open.requests.map(({ id }) => id)).toEqual([second.id]);
 
     await cancelReviewRequestCommand.run(context(), { requestId: second.id, reason: "The scope changed." });
-    expect(await flagged()).toBe(false);
+    expect(await inputPending()).toBe(false);
     expect((await listReviewRequestsCommand.run(context(), { ticket: "PS-1" })).requests).toHaveLength(2);
   });
 
   test("a saved decision can be revised without hiding other pending input", async () => {
-    const { context, flagged } = await setup();
+    const { context, inputPending } = await setup();
     const request = await requestHumanCommand.run(context(), decision as never);
     const answer = (answers: Record<string, string | string[]>) =>
       reviewCommand.run(context("dashboard"), { requestId: request.id, response: { answers } });
     await answer({ scope: "preview", platforms: ["mac"], limits: "Internal only" });
-    expect(await flagged()).toBe(false);
+    expect(await inputPending()).toBe(false);
     const pending = await requestHumanCommand.run(context(), task as never);
 
     await expect(answer({ scope: "beta", limits: "None" })).rejects.toThrow("Invalid choice");
@@ -203,7 +205,7 @@ describe("review requests", () => {
       },
       outcomeText: "Release scope: Full release\nPlatforms: Windows\nLimits: Public release",
     });
-    expect(await flagged()).toBe(true);
+    expect(await inputPending()).toBe(true);
     expect(
       (await listReviewRequestsCommand.run(context(), { ticket: "PS-1", openOnly: true })).requests.map(({ id }) => id),
     ).toEqual([pending.id]);
@@ -322,15 +324,15 @@ describe("review request conversations", () => {
 
 describe("review request ownership", () => {
   test("a request opened before the ticket was done can still be settled", async () => {
-    const { storage, context, flagged } = await setup();
+    const { storage, context, inputPending } = await setup();
     const request = await requestHumanCommand.run(context(), task as never);
-    await putTicket(storage, { ...ticket("ps-1"), statusId: "done", tagIds: [FLAG] });
+    await putTicket(storage, { ...ticket("ps-1"), statusId: "done", tagIds: [] });
 
     await expect(requestHumanCommand.run(context(), task as never)).rejects.toThrow("The ticket is complete.");
     await reviewCommand.run(context(), { requestId: request.id, response: { confirmed: true } });
 
     expect((await readReviewRequestCommand.run(context(), { requestId: request.id })).state).toBe("answered");
-    expect(await flagged()).toBe(false);
+    expect(await inputPending()).toBe(false);
   });
 
   test("an answer that races ticket deletion leaves no records behind", async () => {
@@ -379,9 +381,6 @@ describe("review request ownership", () => {
 describe("attempt handoffs", () => {
   const setupAttempt = async () => {
     const fixture = await setup();
-    await seedDefaultTags(fixture.storage);
-    const flags = await tagsCollection(fixture.storage).get("default-human-requested");
-    await tagsCollection(fixture.storage).put("default-human-requested", { ...flags!, name: "Interruptions" });
     await putAttempt(fixture.storage, {
       schemaVersion: 2,
       workspaceId: "workspace-1",
@@ -427,7 +426,7 @@ describe("attempt handoffs", () => {
   };
 
   test("a retried handoff reuses its open request and does not reuse an unrelated session", async () => {
-    const { context, created, flagged } = await setupAttempt();
+    const { context, created, inputPending } = await setupAttempt();
 
     const first = await requestHumanCommand.run(context("automation"), handoff as never);
     const second = await requestHumanCommand.run(context("automation"), handoff as never);
@@ -441,7 +440,7 @@ describe("attempt handoffs", () => {
       sessionId: null,
       relatedSessionId: "unrelated-session",
     });
-    expect(await flagged()).toBe(true);
+    expect(await inputPending()).toBe(true);
   });
 
   test("a changed revision refuses the handoff before writing", async () => {

@@ -141,7 +141,6 @@ async function expectSharedMilestoneProperties(execute: Execute, ticketId: strin
 }
 
 type Execute = ReturnType<typeof commandRunner>;
-const reviewNeeded = "default-human-requested-true";
 
 async function expectAgentOwnedStatus(execute: Execute) {
   const ticket = await execute("create-ticket", { content: "# Live implementation status", status: "Todo" });
@@ -165,8 +164,6 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
     content: "# Review request smoke",
     deadline: deadlineId,
   });
-  await execute("update-ticket", { id: ticket.id, tagIds: [reviewNeeded] });
-  expect((await execute("get-ticket", { id: ticket.id })).tagIds ?? []).not.toContain(reviewNeeded);
   const handoff = await execute("request-human", {
     ticket: ticket.id,
     reason: "approved-revision",
@@ -206,7 +203,9 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
     },
   });
   await execute("set-ticket-tags", { rowId: ticket.id, tagIds: [] });
-  expect((await execute("get-ticket", { id: ticket.id })).tagIds).toContain(reviewNeeded);
+  expect(await execute("review-requests.list", { ticket: ticket.id, openOnly: true })).toMatchObject({
+    requests: expect.arrayContaining([expect.objectContaining({ id: task.id })]),
+  });
   for (const request of [handoff, task, decision]) {
     expect(request).toMatchObject({ state: "open", context: { sessionId: null } });
   }
@@ -257,8 +256,6 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
   );
   const settled = await execute("review-requests.read", { requestId: decision.id });
   expect(settled).toMatchObject({ state: "answered", outcomeText: "Platforms: Windows" });
-  const [stored] = (await execute("read-tickets", {})).filter((entry: { id: string }) => entry.id === ticket.id);
-  expect(stored.tagIds ?? []).not.toContain(reviewNeeded);
   const resolved = await execute("timeline.plan.read", {});
   expect(
     resolved.ticketRows.find((entry: { id: string }) => entry.id === ticket.id).attributes.reviewRequestItems,

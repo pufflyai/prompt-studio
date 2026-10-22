@@ -3,7 +3,7 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ATTEMPTS_COLLECTION, putAttempt, readAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { putTicket } from "../data/collections";
-import { findTicket } from "../data/resolve";
+import { listTicketReviewRequests } from "../data/review-request-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
 import { reconcileAttemptCommand } from "./reconcile-attempt";
@@ -90,7 +90,9 @@ describe("reconcileAttemptCommand", () => {
       sessionId: "implementation-1",
       retryCount: 1,
     });
-    expect((await findTicket(fixture.storage, "ticket-1"))?.tagIds).toContain("default-human-requested-true");
+    expect((await listTicketReviewRequests(fixture.storage, "ticket-1")).requests).toEqual([
+      expect.objectContaining({ state: "open" }),
+    ]);
   });
 
   test("creates a linked review round when retrying a disconnected review", async () => {

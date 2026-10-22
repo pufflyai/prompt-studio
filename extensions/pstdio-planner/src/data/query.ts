@@ -20,7 +20,7 @@ import {
   TICKET_ARCHIVE_STATE_ARCHIVED,
   TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
 } from "./mappers";
-import { readTicketReviewRequests, withReviewNeededFlag } from "./review-request-storage";
+import { readTicketReviewRequests } from "./review-request-storage";
 import { REVIEW_REQUEST_ITEMS_ATTRIBUTE, reviewRequestBadgeItems } from "./review-request-summary";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "./workflow-statuses";
@@ -45,16 +45,13 @@ export const runTicketsQuery = async ({
   workspaces = [],
   workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
-  const [storedTickets, tags, statuses, storedPlan, requests] = await Promise.all([
+  const [tickets, tags, statuses, storedPlan, requests] = await Promise.all([
     ticketsCollection(storage).list(),
     seedDefaultTags(storage),
     seedDefaultStatuses(storage),
     readStoredPlan(storage),
     readTicketReviewRequests(storage),
   ]);
-  const tickets = storedTickets.map((ticket) =>
-    withReviewNeededFlag(ticket, requests.get(ticket.id) ?? { requests: [], errors: [] }),
-  );
   const activeTickets = sortedBySortOrder(tickets.filter((ticket) => !ticket.archived));
   const timeline = timelineTicketProperties(
     buildPlan({

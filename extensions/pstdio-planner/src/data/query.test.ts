@@ -118,7 +118,6 @@ describe("runTicketsQuery", () => {
       "priority",
       "type",
       "complexity",
-      "default-human-requested",
       "milestone",
       "milestoneDate",
       "milestoneState",

@@ -8,6 +8,7 @@ import {
   createTicketRowMapper,
   createTicketWorkspaceLookup,
 } from "../../data/mappers";
+import { migratePlannerStorage } from "../../data/migrate-storage";
 import { hasPendingInput } from "../../data/review-request-storage";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
@@ -30,6 +31,7 @@ export const readPlanCommand = defineCommand({
   title: "Read execution plan",
   cli: { description: "Print the execution order, deadlines, blockers, and risk as JSON." },
   async run(ctx) {
+    await migratePlannerStorage(ctx);
     const [{ tickets, requests }, { statuses }, { tags }, stored, gates, attempts, workspaces, selections] =
       await Promise.all([
         readTicketSnapshot(ctx.storage),

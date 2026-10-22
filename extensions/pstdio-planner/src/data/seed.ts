@@ -162,46 +162,7 @@ export const DEFAULT_TAGS: TagSeed[] = [
       option("default-complexity-complex", "Complex", "red", 2, "level-xhigh"),
     ],
   }),
-  () => HUMAN_REQUESTED_TAG(),
 ];
-
-// Durable automation interrupt: loops skip tagged tickets and never clear the tag.
-export const HUMAN_REQUESTED_TAG: TagSeed = () => ({
-  id: "default-human-requested",
-  name: "Flags",
-  type: "multi_select",
-  sortOrder: 3,
-  options: [option("default-human-requested-true", "Needs attention", "gray", 0, "message-circle-warning")],
-});
-
-// The stable workflow identity is authoritative. Display names may be customized,
-// but deleting the tag or its required option would silently disable human handoffs.
-const ensureHumanRequestedTag = async (storage: ExtensionStorageApi, existing: StoredTag[]) => {
-  const required = HUMAN_REQUESTED_TAG();
-  const current = existing.find((candidate) => candidate.id === required.id);
-  if (!current) return [...existing, await putTag(storage, required)];
-  const defaultOption = required.options[0]!;
-  const currentOption = current.options.find((candidate) => candidate.id === defaultOption.id);
-  const hasOldDefaultName = currentOption?.name === "Human Requested" || currentOption?.name === "Review Needed";
-  if (currentOption && !hasOldDefaultName && currentOption.icon === defaultOption.icon) return existing;
-
-  const options = current.options.map((candidate) =>
-    candidate.id === defaultOption.id
-      ? {
-          ...candidate,
-          name: hasOldDefaultName ? defaultOption.name : candidate.name,
-          color: candidate.name === "Human Requested" ? defaultOption.color : candidate.color,
-          icon: defaultOption.icon,
-        }
-      : candidate,
-  );
-  const repaired = {
-    ...current,
-    options: currentOption ? options : [...options, defaultOption],
-  };
-  await putTag(storage, repaired);
-  return existing.map((candidate) => (candidate.id === repaired.id ? repaired : candidate));
-};
 
 const defaultTagIds = new Set(DEFAULT_TAGS.map((seed) => seed().id));
 const isOnlyDefaultTags = (tags: StoredTag[]) => tags.every((tag) => defaultTagIds.has(tag.id));
@@ -215,14 +176,14 @@ export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
     const [existing, seeded] = await Promise.all([tagsCollection(storage).list(), storage.get(TAG_SEED_MARKER)]);
     if (seeded || (existing.length > 0 && !isOnlyDefaultTags(existing))) {
       if (!seeded) await storage.set(TAG_SEED_MARKER, true);
-      return sortedBySortOrder(await ensureHumanRequestedTag(storage, existing));
+      return sortedBySortOrder(existing);
     }
 
     const existingIds = new Set(existing.map((tag) => tag.id));
     const missing = DEFAULT_TAGS.map((seed) => seed()).filter((tag) => !existingIds.has(tag.id));
     await Promise.all(missing.map((tag) => putTag(storage, tag)));
     await storage.set(TAG_SEED_MARKER, true);
-    return sortedBySortOrder(await ensureHumanRequestedTag(storage, await tagsCollection(storage).list()));
+    return sortedBySortOrder(await tagsCollection(storage).list());
   })();
   tagSeedPromises.set(storage, promise);
   try {
