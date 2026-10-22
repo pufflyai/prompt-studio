@@ -40,28 +40,39 @@ const createSSEReader = (response: Response) => {
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  const pending: SSEEvent[] = [];
+  const queueChunk = (value: Uint8Array) => {
+    buffer += decoder.decode(value, { stream: true });
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() ?? "";
+    for (const block of blocks) {
+      const parsed = parseSSEBlock(block);
+      if (parsed) pending.push(parsed);
+    }
+  };
 
   const readUntil = async (predicate: (event: SSEEvent) => boolean, timeoutMs = 5_000) => {
     const events: SSEEvent[] = [];
-    const deadline = Date.now() + timeoutMs;
+    const timeout = setTimeout(() => void reader.cancel(), timeoutMs);
 
-    while (Date.now() < deadline) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const next = pending.shift();
+        if (next) {
+          events.push(next);
+          if (predicate(next)) return events;
+          continue;
+        }
 
-      buffer += decoder.decode(value, { stream: true });
-      const blocks = buffer.split("\n\n");
-      buffer = blocks.pop() ?? "";
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      for (const block of blocks) {
-        const parsed = parseSSEBlock(block);
-        if (!parsed) continue;
-        events.push(parsed);
-        if (predicate(parsed)) return events;
+        queueChunk(value);
       }
+      return events;
+    } finally {
+      clearTimeout(timeout);
     }
-
-    return events;
   };
 
   return { readUntil, close: () => reader.cancel() };
@@ -176,8 +187,8 @@ const createDelayedResumeRecord = (): RuntimeHarnessRecord => {
 };
 
 const getPatchTextParts = (patch: JsonPatch) => {
-  if (!Array.isArray(patch.value)) return [];
-  return patch.value.flatMap((message) => {
+  const messages = Array.isArray(patch.value) ? patch.value : [patch.value];
+  return messages.flatMap((message) => {
     if (!message || typeof message !== "object") return [];
     const parts = (message as { parts?: Array<{ type?: string; text?: string }> }).parts;
     if (!Array.isArray(parts)) return [];
@@ -207,6 +218,27 @@ afterAll(async () => {
 });
 
 describe("session stream follow-up resume continuity", () => {
+  test("keeps indexed follow-up patches after a snapshot in the same read", async () => {
+    const patches: JsonPatch[] = [
+      { op: "replace", path: "/messages", value: [message("first", "assistant", "FIRST DONE")] },
+      { op: "add", path: "/messages/1", value: message("second", "assistant", "SECOND DONE") },
+    ];
+    const response = new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          const events = patches.map((patch) => `event: patch\ndata: ${JSON.stringify(patch)}\n\n`).join("");
+          controller.enqueue(new TextEncoder().encode(events));
+          controller.close();
+        },
+      }),
+    );
+    const sse = createSSEReader(response);
+    await sse.readUntil((event) => getPatchTextParts(event.data as JsonPatch).includes("FIRST DONE"));
+    const resumed = await sse.readUntil((event) => getPatchTextParts(event.data as JsonPatch).includes("SECOND DONE"));
+    expect(resumed.flatMap((event) => getPatchTextParts(event.data as JsonPatch))).toContain("SECOND DONE");
+    await sse.close();
+  });
+
   test("picks up the dispatched follow-up's events without requiring a reconnect", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
@@ -235,17 +267,19 @@ describe("session stream follow-up resume continuity", () => {
     expect(streamRes.status).toBe(200);
     const sse = createSSEReader(streamRes);
 
-    // Read the initial snapshot from the first agent.
+    // Subscription timing can deliver a snapshot followed by indexed message patches.
     const initial = await sse.readUntil(
       (event) => event.event === "patch" && getPatchTextParts(event.data as JsonPatch).includes("FIRST DONE"),
     );
-    const firstSnapshot = initial.find((e) => e.event === "patch")?.data as JsonPatch | undefined;
-    expect(firstSnapshot && getPatchTextParts(firstSnapshot)).toContain("FIRST");
+    const firstText = initial
+      .filter((event) => event.event === "patch")
+      .flatMap((event) => getPatchTextParts(event.data as JsonPatch));
+    expect(firstText).toContain("FIRST");
 
     // Now release the first session; the follow-up auto-dispatches inside transitionStatus.
     firstExit();
 
-    // The stream should pick up the new eventStore's snapshot, which contains SECOND DONE.
+    // The same subscription receives resumed messages as snapshots or indexed patches.
     const resumed = await sse.readUntil(
       (event) => event.event === "patch" && getPatchTextParts(event.data as JsonPatch).includes("SECOND DONE"),
     );
