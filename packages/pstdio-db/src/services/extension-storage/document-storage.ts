@@ -13,8 +13,14 @@ import { storage_documents } from "../../db/schemas.pg";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { runDocumentTransaction } from "./document-persistence";
+import { createRecordQueries } from "./record-queries";
+import type { StorageDiagnostics } from "./storage-diagnostics";
 
-export const createDocumentStorageDBService = (db: DbClient, observer?: StorageObserver) => {
+export const createDocumentStorageDBService = (
+  db: DbClient,
+  observer?: StorageObserver,
+  diagnostics?: StorageDiagnostics,
+) => {
   const cache = createDocumentCache();
   const listeners = new Set<(owner: StorageOwner) => void>();
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
@@ -26,7 +32,7 @@ export const createDocumentStorageDBService = (db: DbClient, observer?: StorageO
       const key = JSON.stringify(address);
       try {
         const result = await db.transaction((tx) =>
-          runDocumentTransaction(tx, { address, owner, environmentId, cached: cache.get(key) }, action),
+          runDocumentTransaction(tx, { address, owner, environmentId, cached: cache.get(key), diagnostics }, action),
         );
         cache.publish(key, result);
         if (result.changed) for (const listener of listeners) listener(owner);
@@ -86,7 +92,29 @@ export const createDocumentStorageDBService = (db: DbClient, observer?: StorageO
       };
     },
     open(input: { owner: StorageOwner; assets?: AssetStore }) {
-      return createDocumentStorage({ ...input, store: { transaction, observer } });
+      const queries = createRecordQueries(
+        db,
+        input.owner,
+        () =>
+          transaction(input.owner, async (state) => {
+            if (!state.rebuildProjection) throw new Error("Storage projection rebuild is unavailable");
+            await state.rebuildProjection();
+          }),
+        diagnostics,
+      );
+      const storage = createDocumentStorage({ ...input, store: { transaction, observer, queries: () => queries } });
+      return {
+        ...storage,
+        records: {
+          ...storage.records,
+          read: async (id: string, branch?: { operationId: string }) => {
+            if (!(await queries.hasProjection())) return storage.records.read(id, branch);
+            const [record] = await queries.readMany([id]);
+            observer?.read(input.owner, record);
+            return record;
+          },
+        },
+      };
     },
     openTextDocument(input: { owner: StorageOwner; fileId: string }) {
       return createTextDocumentStorage({

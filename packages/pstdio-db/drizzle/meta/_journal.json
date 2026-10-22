@@ -351,6 +351,13 @@
       "when": 1792484214132,
       "tag": "0049_dizzy_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1792698737021,
+      "tag": "0050_supreme_wild_child",
+      "breakpoints": true
     }
   ]
 }

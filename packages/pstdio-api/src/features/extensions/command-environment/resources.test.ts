@@ -63,6 +63,8 @@ test("enabled extensions allocate declared prefixes and reject conflicting insta
     const resources = createResourcesApi(app.deps, { projectId: project.id, extensionId: "example.planner" });
     const identity = { ...first, kind: "planner", aliases: [] };
     expect(await resources.identity({ kind: "planner", id: first.id })).toEqual(identity);
+    expect(await resources.identityMany({ kind: "planner", ids: ["missing", first.id] })).toEqual([null, identity]);
+    await expect(resources.identityMany({ kind: "reports", ids: [first.id] })).rejects.toThrow("not owned");
     expect(await resources.findByShorthand({ kind: "planner", shorthand: first.shorthand })).toEqual([identity]);
     await expect(resources.identity({ kind: "reports", id: first.id })).rejects.toThrow("not owned");
     await expect(resources.findByShorthand({ kind: "reports", shorthand: first.shorthand })).rejects.toThrow(

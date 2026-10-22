@@ -1,11 +1,20 @@
 import { and, eq } from "drizzle-orm";
-import { type DocumentState, documentHistory, type StorageOwner } from "pstdio-sync";
+import {
+  type DocumentState,
+  documentHistory,
+  resourceNumbersDocumentId,
+  resourceNumbersOwnerId,
+  type StorageOwner,
+} from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_operations, storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { dataMigrationContext } from "./data-migration-context";
 import type { LoadedDocument } from "./document-cache";
 import { importOwnerDocument } from "./document-import";
+import { trackRecordProjection } from "./record-projection";
+import { trackResourceIdentityProjection } from "./resource-identity-projection";
+import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export interface DocumentAddress {
@@ -33,6 +42,7 @@ const loadDocument = async (
   owner: StorageOwner,
   environmentId: string,
   cached?: LoadedDocument,
+  diagnostics?: StorageDiagnostics,
 ) => {
   const inserted = await tx
     .insert(storage_documents)
@@ -61,7 +71,12 @@ const loadDocument = async (
     .where(updatesWhere(address))
     .orderBy(storage_document_updates.revision);
   for (const update of updates) Y.applyUpdate(document, update.update);
-  return { row, document };
+  diagnostics?.({
+    phase: "document-loaded",
+    owner,
+    bytes: saved.state.length + updates.reduce((sum, update) => sum + update.update.length, 0),
+  });
+  return { row, document, initialize: inserted.length > 0 };
 };
 
 const localOperations = (tx: Transaction, address: DocumentAddress) => {
@@ -121,11 +136,25 @@ export const runDocumentTransaction = async <T>(
     owner: StorageOwner;
     environmentId: string;
     cached?: LoadedDocument;
+    diagnostics?: StorageDiagnostics;
   },
   action: (state: DocumentState) => Promise<T>,
 ) => {
   const { address } = input;
-  const { document, row } = await loadDocument(tx, address, input.owner, input.environmentId, input.cached);
+  const { document, row, initialize } = await loadDocument(
+    tx,
+    address,
+    input.owner,
+    input.environmentId,
+    input.cached,
+    input.diagnostics,
+  );
+  const projection =
+    address.document_id === "records" ? await trackRecordProjection(tx, address, document, !!initialize) : undefined;
+  const identities =
+    address.document_id === resourceNumbersDocumentId && address.extension_id === resourceNumbersOwnerId
+      ? await trackResourceIdentityProjection(tx, address, document, !!initialize)
+      : undefined;
   const operations = localOperations(tx, address);
   const key = JSON.stringify(address);
   const migration = dataMigrationContext.getStore();
@@ -140,14 +169,22 @@ export const runDocumentTransaction = async <T>(
       migrationHistory: migration?.histories.get(key),
       operation: operations.operation,
       remember: operations.remember,
+      rebuildProjection: projection?.rebuild ?? identities?.rebuild,
     });
+    identities?.prepare();
     await operations.persist();
     const revision = await appendUpdates(tx, address, row, document, updates);
+    const projected = await projection?.persist(revision);
+    await identities?.persist(revision);
+    if (projected !== undefined)
+      input.diagnostics?.({ phase: "records-projected", owner: input.owner, records: projected });
     return { value, revision, document, changed: updates.length > 0 };
   } catch (error) {
     if (document !== input.cached?.document) document.destroy();
     throw error;
   } finally {
     document.off("update", capture);
+    projection?.stop();
+    identities?.stop();
   }
 };

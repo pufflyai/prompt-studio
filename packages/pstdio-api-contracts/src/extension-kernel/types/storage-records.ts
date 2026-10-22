@@ -3,23 +3,32 @@ import type {
   StorageConflictInspection,
   StorageGroup,
   StorageRecord,
+  StorageRecordQueries,
   StorageResolution,
   StorageSaveOutcome,
 } from "pstdio-sync-contracts";
 
 export type {
   SharedEdit as SharedStorageEdit,
+  StorageAggregateQuery,
   StorageConflict,
   StorageConflictInspection,
   StorageGroup,
+  StorageIndexField,
+  StoragePredicate,
+  StorageQueryPage,
+  StorageQueryRecord,
   StorageRecord,
+  StorageRecordIndex,
+  StorageRecordQueries,
+  StorageRecordQuery,
   StorageResolution,
   StorageSaveOutcome,
   StorageSaveState,
 } from "pstdio-sync-contracts";
 
 /** One extension's shared content within the current workbench. All methods use complete record addresses. */
-export interface ExtensionRecordsApi {
+export interface ExtensionRecordsApi extends StorageRecordQueries {
   /** Stable complete record address for a key in the selected legacy storage scope. */
   id(key: string): string;
   /** @param branch Deprecated. Retained branches go away because edits merge. Call `read(recordId)`. */

@@ -10,7 +10,7 @@ using `storage.records`, the deprecated KV and collection methods, and the file 
 | Package | Responsibility |
 | --- | --- |
 | `pstdio-sync` | Shape-based edits, document reads, shared primitives, checkpoint staging and legacy namespaces. |
-| `pstdio-db` | Durable document state, incremental updates, local retry identities, migration versions and the one-time journal import. |
+| `pstdio-db` | Durable document state, atomic current-record projections, query indexes, incremental updates, local retry identities, migration versions and the one-time journal import. |
 | `pstdio-api` | Public storage adapters, verified assets, file projection and notifications after local commits. |
 | `@pstdio/sdk/testing` | The same document engine with an in-memory store. |
 | Extensions | Domain data and validation, without merge rules or relay code. |
@@ -21,6 +21,26 @@ the functions in `packages/pstdio-sync/src/encryption/` and keys from the accoun
 transport and latest-state uploads run in `pstdio-sync/src/relay/`. The runtime starts
 encrypted document sync for each enabled extension. Local reads and saves do not wait
 for the relay.
+
+## Indexed current records
+
+[ADR 0088](../../adrs/0088-durable-record-query-projections.md) separates reads from
+merge-state loading. Local commits and received document updates maintain affected
+current rows, content revisions, named-type ownership and the projection watermark
+inside the same durable transaction as CRDT bytes and operation identities. Only
+after that transaction commits does the service notify listeners.
+
+Explicit index installation or upgrade may rebuild an owner. Normal queries,
+aggregates and selected batch reads cannot hydrate or rebuild it. Predicates,
+stable sorting, cursor seeks, field selection and limits run in SQL. A cursor
+rejects a changed owner revision. The public methods and typed field semantics
+are in the [storage reference](../sdk/0004-storage.md#indexed-queries).
+
+The projection is derived from one CRDT owner, not an independent write store.
+The durable type-to-record map lets nested edits invalidate their record without
+enumerating every record. The document directories own inserts, deletes and
+explicit restores. Projection rows and ownership mappings are removed with their
+document or workbench and cleared with an owner purge.
 
 ## Scheduled automations
 

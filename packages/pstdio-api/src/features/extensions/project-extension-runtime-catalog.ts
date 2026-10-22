@@ -3,6 +3,7 @@ import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
 import type { createWorkspaceService } from "../../services/workspace-service";
+import { type ExtensionStorageIndexService, installExtensionStorageIndexes } from "./extension-storage-indexes";
 import {
   ExtensionRuntimeGenerationStaleError,
   ExtensionRuntimeLoadFailedError,
@@ -50,6 +51,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
   projectService: ReturnType<typeof createProjectService>;
   workspaceService: ReturnType<typeof createWorkspaceService>;
   loadSources?: typeof loadExtensionSources;
+  extensionStorageService?: ExtensionStorageIndexService;
   observer?: ProjectExtensionRuntimeCatalogObserver;
 }) => {
   const sources = createExtensionSourceCache({ loadSources: deps.loadSources });
@@ -90,6 +92,8 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       cachedSources.flatMap((cached) => cached.diagnostics),
       { projectFolder: workspace?.root_path ?? undefined },
     );
+
+    await installExtensionStorageIndexes(deps.extensionStorageService, projectId, runtime);
 
     return { enabledSources, project, runtime };
   };
