@@ -28,10 +28,11 @@ interface RunFormProps {
 const toggle = (list: string[], item: string) =>
   list.includes(item) ? list.filter((entry) => entry !== item) : [...list, item];
 
+// Suites run as parallel jobs, so the slowest chosen suite sets the length. Each commit builds once first.
 export const estimateMinutes = (request: RunRequest) => {
-  const perSample = SUITES.filter((suite) => request.suites.includes(suite.id)).reduce((sum, suite) => sum + suite.minutes, 0);
-  // Each commit builds once before sampling.
-  return request.commits.length * (10 + perSample * request.samples);
+  const chosen = SUITES.filter((suite) => request.suites.includes(suite.id));
+  const slowest = Math.max(0, ...chosen.map((suite) => suite.minutes));
+  return request.commits.length * (10 + slowest * request.samples);
 };
 
 const problemOf = (request: RunRequest) => {
@@ -84,7 +85,13 @@ export const RunForm = (props: RunFormProps) => {
               addCommit(draft);
             }}
           >
-            <Input size="sm" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="main, pstdio@0.45.0, or a pushed SHA" aria-label="Add a commit, branch, or tag" />
+            <Input
+              size="sm"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="main, pstdio@0.45.0, or a pushed SHA"
+              aria-label="Add a commit, branch, or tag"
+            />
             <Button size="sm" variant="outline" type="submit">
               Add
             </Button>
@@ -115,7 +122,7 @@ export const RunForm = (props: RunFormProps) => {
         </Fieldset.Root>
         <Fieldset.Root>
           <Fieldset.Legend textStyle="label/S/regular" color="fg.muted">
-            Platforms · each runs in parallel on GitHub Actions
+            Platforms
           </Fieldset.Legend>
           <HStack gap="md" wrap="wrap" pt="xs">
             {PLATFORMS.map((platform) => (
@@ -145,9 +152,9 @@ export const RunForm = (props: RunFormProps) => {
         </Stack>
         <HStack justify="space-between" gap="md" wrap="wrap" borderTopWidth="1px" borderColor="border.subtle" pt="md">
           <Stack gap="0">
-            <Text textStyle="label/S/medium">About {minutes} min per platform</Text>
+            <Text textStyle="label/S/medium">About {minutes} min</Text>
             <Text textStyle="label/XS" color="fg.muted">
-              {value.commits.length} commits × {value.suites.length} suites × {value.samples} samples, plus one build per commit
+              {value.suites.length * value.platforms.length} parallel jobs, one per suite and platform
             </Text>
           </Stack>
           <Button size="sm" onClick={onStart} disabled={Boolean(problem)} loading={pending}>

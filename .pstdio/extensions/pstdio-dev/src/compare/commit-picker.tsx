@@ -35,6 +35,8 @@ export const CommitPicker = (props: CommitPickerProps) => {
         setOpen(details.open);
         setQuery("");
       }}
+      lazyMount
+      unmountOnExit
       positioning={{ placement: "bottom-start", sameWidth: true }}
     >
       <Popover.Trigger asChild>

@@ -6,7 +6,7 @@ import { suiteIds } from "./suites";
 
 const usage = `Usage:
   bun src/cli.ts run --checkout <dir>=<sha>[=<ref>]... --suites <ids> --samples <n> --out <dir>
-  bun src/cli.ts describe
+  bun src/cli.ts describe [--platform <platform>]
   bun src/cli.ts prepare --suites <ids> --sha <sha> --cache <dir>
   bun src/cli.ts sample --suite <id> --sha <sha> --cache <dir> --out <file>`;
 
@@ -22,10 +22,12 @@ const { positionals, values } = parseArgs({
     sha: { type: "string", default: "" },
     cache: { type: "string", default: join(repoRoot, "__test-tmp__", "benchmarks") },
     out: { type: "string", default: "benchmark-results" },
+    platform: { type: "string", default: currentPlatform() },
   },
 });
 
-const platform = currentPlatform();
+// CI passes --platform only to describe, to plan the jobs of other runners from one machine.
+const platform = values.platform;
 const context = () => ({ root: repoRoot, cacheDir: resolve(values.cache), platform, sha: values.sha });
 const listOf = (value: string | undefined) => (value ?? "").split(",").filter(Boolean);
 

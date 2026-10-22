@@ -5,15 +5,15 @@ import { createMemoryRepoFiles, createMemoryStorage, makeCommandContext } from "
 import type { BenchmarkResultFile } from "./result-file";
 import { readResults, readRuns, syncAll } from "./store";
 
-const result = (sha: string, platform = "linux-x64"): BenchmarkResultFile => ({
+const result = (sha: string, suite = "storage"): BenchmarkResultFile => ({
   format: 1,
   commit: { sha },
-  platform,
+  platform: "linux-x64",
   runner: "ubuntu-24.04",
   startedAt: "2026-10-22T10:00:00.000Z",
   finishedAt: "2026-10-22T11:00:00.000Z",
-  suites: [{ id: "storage", label: "Storage", source: "packages/pstdio-db" }],
-  metrics: [{ suite: "storage", metric: "badge-query", label: "Session badges", unit: "ms", values: [9, 8.8, 8.9] }],
+  suites: [{ id: suite, label: suite, source: `packages/${suite}` }],
+  metrics: [{ suite, metric: `${suite}-metric`, label: suite, unit: "ms", values: [9, 8.8, 8.9] }],
 });
 
 // gh is the boundary to GitHub, so the test answers its commands the way GitHub does.
@@ -65,11 +65,17 @@ const github = () => {
         },
       ];
     if (command === "api" && path === "repos/{owner}/{repo}/actions/runs/7/artifacts")
-      return { artifacts: [{ id: 70, name: "benchmark-results-linux-x64", expired: false }] };
+      return {
+        artifacts: [
+          { id: 70, name: "benchmark-results-linux-x64-storage", expired: false },
+          { id: 71, name: "benchmark-results-linux-x64-runtime", expired: false },
+        ],
+      };
     if (command === "run" && path === "download") {
       const dir = args[args.indexOf("--dir") + 1];
-      await writeFile(join(dir, "base-linux-x64.json"), JSON.stringify(result("base")));
-      await writeFile(join(dir, "head-linux-x64.json"), JSON.stringify(result("head")));
+      const suite = args[args.indexOf("--name") + 1].split("-").at(-1);
+      await writeFile(join(dir, "base-linux-x64.json"), JSON.stringify(result("base", suite)));
+      await writeFile(join(dir, "head-linux-x64.json"), JSON.stringify(result("head", suite)));
       return "";
     }
     throw new Error(`Unexpected gh ${args.join(" ")}`);
@@ -107,6 +113,9 @@ describe("benchmark result cache", () => {
       [{ kind: "run", runId: "7" }, "base"],
       [{ kind: "run", runId: "7" }, "head"],
     ]);
+    // Each suite ran as its own job; a commit's files merge into one result.
+    expect(results[1].file.suites.map((suite) => suite.id).sort()).toEqual(["runtime", "storage"]);
+    expect(results[1].file.metrics.map((metric) => metric.metric).sort()).toEqual(["runtime-metric", "storage-metric"]);
     const runs = await readRuns(ctx);
     expect(runs.map((run) => [run.id, run.status, run.synced])).toEqual([
       ["8", "running", false],
@@ -118,9 +127,9 @@ describe("benchmark result cache", () => {
     const { ctx, gh } = setup();
     await syncAll(ctx);
     const downloads = () => gh.calls.filter((args) => args[0] === "run" && args[1] === "download").length;
-    expect(downloads()).toBe(1);
+    expect(downloads()).toBe(2);
     await syncAll(ctx);
-    expect(downloads()).toBe(1);
+    expect(downloads()).toBe(2);
     expect(gh.calls.filter((args) => args[1] === "repos/{owner}/{repo}/releases/assets/1")).toHaveLength(1);
   });
 });

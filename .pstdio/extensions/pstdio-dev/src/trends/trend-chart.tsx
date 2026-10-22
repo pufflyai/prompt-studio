@@ -19,11 +19,9 @@ interface TrendChartProps {
   onFocusPoint?: (point: TrendPoint | null) => void;
 }
 
-// The y axis starts at zero, so the size of a change reads honestly against the whole value.
 export const TrendChart = (props: TrendChartProps) => {
   const { metric, versions, height, compact = false, onFocusPoint } = props;
   const points = metric.points.filter((point): point is TrendPoint => point !== null);
-  const highest = Math.max(...points.map((point) => point.high), metric.budget ?? 0);
   const budget = metric.budget === undefined ? [] : [metric.budget];
   const definition = defineChart({
     marks: [
@@ -45,7 +43,8 @@ export const TrendChart = (props: TrendChartProps) => {
         axis: compact ? false : undefined,
       },
       y: {
-        scale: () => scaleLinear().domain([0, highest * 1.08]),
+        scale: scaleLinear,
+        nice: true,
         grid: !compact,
         axis: compact ? false : { ticks: { format: (value: number) => formatValue(value, metric.unit) } },
       },

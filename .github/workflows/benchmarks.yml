@@ -48,13 +48,17 @@ jobs:
     outputs:
       include: ${{ steps.plan.outputs.include }}
       checkouts: ${{ steps.plan.outputs.checkouts }}
-      suites: ${{ steps.plan.outputs.suites }}
       samples: ${{ steps.plan.outputs.samples }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Resolve commits and platforms
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      # One job per platform and suite: suites run in parallel, and one slow or broken suite
+      # cannot hold back or fail the others.
+      - name: Resolve commits, platforms, and suites
         id: plan
         env:
           # A pull request measures only its head: its base may predate the result format.
@@ -71,24 +75,29 @@ jobs:
             checkouts=$(jq -c --arg sha "$sha" --arg ref "$ref" '. + [{sha: $sha, ref: $ref}]' <<< "$checkouts")
           done
           RUNNERS='{"linux-x64":"ubuntu-latest","darwin-arm64":"macos-15","darwin-x64":"macos-15-intel","win32-x64":"windows-2025"}'
-          include=$(jq -cn --argjson runners "$RUNNERS" --arg platforms "$PLATFORMS" \
-            '$platforms | split(",") | map(select(length > 0) | {platform: ., os: $runners[.]})')
-          if jq -e 'any(.os == null)' <<< "$include" > /dev/null; then
-            echo "Unknown platform in $PLATFORMS" >&2
-            exit 1
-          fi
+          include='[]'
+          for platform in ${PLATFORMS//,/ }; do
+            os=$(jq -r --arg platform "$platform" '.[$platform] // empty' <<< "$RUNNERS")
+            if [ -z "$os" ]; then
+              echo "Unknown platform $platform" >&2
+              exit 1
+            fi
+            available=$(bun packages/benchmarks/src/cli.ts describe --platform "$platform")
+            include=$(jq -c --argjson available "$available" --arg suites "$SUITES" --arg platform "$platform" --arg os "$os" \
+              '. + [$available[] | select($suites == "" or (.id | IN($suites | split(",")[]))) | {platform: $platform, os: $os, suite: .id}]' \
+              <<< "$include")
+          done
           {
             echo "checkouts=$checkouts"
             echo "include=$include"
-            echo "suites=$SUITES"
             echo "samples=${SAMPLES:-10}"
           } >> "$GITHUB_OUTPUT"
 
   benchmark:
-    name: ${{ matrix.platform }}
+    name: ${{ matrix.platform }} · ${{ matrix.suite }}
     needs: plan
     runs-on: ${{ matrix.os }}
-    # Proposed allowance for ten samples of every suite on two commits; see PS-920 before raising it.
+    # Proposed allowance for twenty samples of the slowest suite on two commits; see PS-920 before raising it.
     timeout-minutes: 240
     strategy:
       fail-fast: false
@@ -140,12 +149,12 @@ jobs:
 
       - name: Run benchmarks
         env:
-          SUITES: ${{ needs.plan.outputs.suites }}
+          SUITE: ${{ matrix.suite }}
           SAMPLES: ${{ needs.plan.outputs.samples }}
         run: |
           set -euo pipefail
           bun packages/benchmarks/src/cli.ts run ${{ steps.checkouts.outputs.args }} \
-            ${SUITES:+--suites "$SUITES"} --samples "$SAMPLES" \
+            --suites "$SUITE" --samples "$SAMPLES" \
             --cache "$RUNNER_TEMP/benchmark-cache" --out "$RUNNER_TEMP/benchmark-results"
 
       # Failed samples keep the measurements they recorded, so the results upload either way.
@@ -153,6 +162,6 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-results-${{ matrix.platform }}
+          name: benchmark-results-${{ matrix.platform }}-${{ matrix.suite }}
           path: ${{ runner.temp }}/benchmark-results/*.json
           if-no-files-found: error

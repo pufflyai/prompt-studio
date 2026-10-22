@@ -8,7 +8,7 @@ import { metricId } from "../trends/trend-summary";
 import { shortSha } from "../webview/format";
 import { PageFrame } from "../webview/page-frame";
 import { PlatformControl } from "../webview/platform-control";
-import { CommitPicker, type CommitOptionView } from "./commit-picker";
+import { type CommitOptionView, CommitPicker } from "./commit-picker";
 import { BASE_COLOR, HEAD_COLOR, ResultsTable } from "./results-table";
 import { SampleDetail } from "./sample-detail";
 
@@ -69,8 +69,20 @@ export const CompareView = (props: CompareViewProps) => {
       }
     >
       <Flex gap="md" wrap="wrap">
-        <CommitPicker label="Base" color={BASE_COLOR} value={find(base)} options={commits} onChange={props.onBaseChange} />
-        <CommitPicker label="Head" color={HEAD_COLOR} value={find(head)} options={commits} onChange={props.onHeadChange} />
+        <CommitPicker
+          label="Base"
+          color={BASE_COLOR}
+          value={find(base)}
+          options={commits}
+          onChange={props.onBaseChange}
+        />
+        <CommitPicker
+          label="Head"
+          color={HEAD_COLOR}
+          value={find(head)}
+          options={commits}
+          onChange={props.onHeadChange}
+        />
       </Flex>
       {missing.length ? (
         <EmptyState
@@ -79,7 +91,12 @@ export const CompareView = (props: CompareViewProps) => {
         />
       ) : (
         <>
-          <Grid templateColumns="repeat(auto-fit, minmax(12rem, 1fr))" gap="md" role="group" aria-label="Filter by result">
+          <Grid
+            templateColumns="repeat(auto-fit, minmax(12rem, 1fr))"
+            gap="md"
+            role="group"
+            aria-label="Filter by result"
+          >
             {FILTERS.map((option) => (
               <SimpleCard
                 key={option.value}

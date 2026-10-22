@@ -8,7 +8,7 @@ import { useBenchmarks, useBenchmarksRefresh, useOpenLink } from "../webview/cli
 import { PageFrame } from "../webview/page-frame";
 import { SyncStatus } from "../webview/sync-status";
 import { useSyncOnOpen } from "../webview/use-sync";
-import { type RunRequest, RunForm } from "./run-form";
+import { RunForm, type RunRequest } from "./run-form";
 import { RunList } from "./run-list";
 
 const quickCommits = (commits: { ref: string }[] = []) => {

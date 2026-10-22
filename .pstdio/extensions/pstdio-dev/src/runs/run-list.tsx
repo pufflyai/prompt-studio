@@ -24,9 +24,7 @@ const when = (value: string) =>
 export const RunList = (props: RunListProps) => {
   const { runs, cancelling, onCancel, onOpen } = props;
   if (!runs.length)
-    return (
-      <EmptyState title="No benchmark runs yet" description="Start a run to measure commits on GitHub Actions." />
-    );
+    return <EmptyState title="No benchmark runs yet" description="Start a run to measure commits on GitHub Actions." />;
   return (
     <SimpleCard>
       {runs.map((run, index) => {
@@ -54,7 +52,12 @@ export const RunList = (props: RunListProps) => {
                 </Text>
               </HStack>
               {run.status === "running" ? (
-                <Progress.Root size="xs" value={Math.round((run.progress ?? 0) * 100)} maxW="sm" aria-label="Run progress">
+                <Progress.Root
+                  size="xs"
+                  value={Math.round((run.progress ?? 0) * 100)}
+                  maxW="sm"
+                  aria-label="Run progress"
+                >
                   <Progress.Track>
                     <Progress.Range />
                   </Progress.Track>

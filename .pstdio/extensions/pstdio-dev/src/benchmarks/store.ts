@@ -53,11 +53,33 @@ export interface CachedResult {
   file: BenchmarkResultFile;
 }
 
+const sourceKey = (result: CachedResult) =>
+  result.source.kind === "release" ? `release:${result.source.version}` : `run:${result.source.runId}`;
+
+// CI measures each suite in its own job, so one commit and platform can arrive as several files.
+export const mergeResults = (results: CachedResult[]) => {
+  const merged = new Map<string, CachedResult>();
+  for (const result of results) {
+    const key = `${sourceKey(result)}|${result.file.commit.sha}|${result.file.platform}`;
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, { source: result.source, file: { ...result.file } });
+      continue;
+    }
+    const suites = [...existing.file.suites, ...result.file.suites];
+    existing.file.suites = suites.filter(
+      (suite, index) => suites.findIndex((entry) => entry.id === suite.id) === index,
+    );
+    existing.file.metrics = [...existing.file.metrics, ...result.file.metrics];
+  }
+  return [...merged.values()];
+};
+
 export const readResults = async (ctx: Pick<ExtensionContextBase, "extensionFiles">) => {
   const files = filesOf(ctx);
   // Result files sit at benchmarks/<releases|runs>/<id>/<file>.json, beside the runs index.
   const entries = (await files.list("benchmarks/**/*.json")).filter((entry) => entry.path.split("/").length === 4);
-  return Promise.all(
+  const results = await Promise.all(
     entries.map(async (entry): Promise<CachedResult> => {
       const [, kind, id] = entry.path.split("/");
       const file = parseResultFile(await files.readText(entry.path));
@@ -65,6 +87,7 @@ export const readResults = async (ctx: Pick<ExtensionContextBase, "extensionFile
       return { source: { kind: "run", runId: id }, file };
     }),
   );
+  return mergeResults(results);
 };
 
 const syncReleases = async (ctx: StoreContext) => {
@@ -108,7 +131,7 @@ const cacheRunArtifacts = async (ctx: StoreContext, runId: string) => {
       for (const path of await jsonFilesIn(dir)) {
         const text = await readFile(path, "utf8");
         const result = parseResultFile(text);
-        await files.writeText(`benchmarks/runs/${runId}/${result.commit.sha}-${result.platform}.json`, text);
+        await files.writeText(`benchmarks/runs/${runId}/${artifact.name}-${result.commit.sha}.json`, text);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });

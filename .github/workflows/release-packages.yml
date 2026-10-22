@@ -440,8 +440,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p benchmark-assets
-          for file in benchmark-results/*/*.json; do
-            cp "$file" "benchmark-assets/benchmarks-$(jq -r .platform "$file").json"
+          # Each suite ran as its own job, so the files of one platform merge into one asset.
+          for platform in $(jq -r .platform benchmark-results/*/*.json | sort -u); do
+            jq -s --arg platform "$platform" \
+              'map(select(.platform == $platform)) | .[0] + {suites: (map(.suites[]) | unique_by(.id)), metrics: map(.metrics[])}' \
+              benchmark-results/*/*.json > "benchmark-assets/benchmarks-$platform.json"
           done
           gh release upload "$TAG" benchmark-assets/* --clobber
 

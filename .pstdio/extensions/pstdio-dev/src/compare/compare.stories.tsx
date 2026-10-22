@@ -1,0 +1,58 @@
+import { Box } from "@chakra-ui/react";
+import type { Meta, StoryObj } from "@storybook/react";
+import { useState } from "react";
+import { storyCommits, storyComparison } from "../webview/story-fixtures";
+import { CompareView, type ResultFilter, RunAction } from "./compare-view";
+
+interface InteractiveCompareProps {
+  base: string;
+  head: string;
+}
+
+const InteractiveCompare = (props: InteractiveCompareProps) => {
+  const [base, setBase] = useState(props.base);
+  const [head, setHead] = useState(props.head);
+  const [filter, setFilter] = useState<ResultFilter>("all");
+  const [selected, setSelected] = useState<string>();
+  const [platform, setPlatform] = useState("linux-x64");
+  const measured = storyCommits.filter((commit) => commit.measured).map((commit) => commit.sha);
+  const both = measured.includes(base) && measured.includes(head);
+  return (
+    <Box h="100dvh">
+      <CompareView
+        commits={storyCommits}
+        base={base}
+        head={head}
+        platform={platform}
+        rows={both ? storyComparison.rows : []}
+        filter={filter}
+        selected={selected}
+        runAction={
+          <RunAction
+            label={both ? "Run again" : "Run benchmarks"}
+            pending={false}
+            onRun={() => {}}
+            onOpenRuns={() => {}}
+          />
+        }
+        onBaseChange={setBase}
+        onHeadChange={setHead}
+        onPlatformChange={setPlatform}
+        onFilterChange={setFilter}
+        onSelect={setSelected}
+      />
+    </Box>
+  );
+};
+
+const meta: Meta<typeof InteractiveCompare> = {
+  title: "Extensions/Prompt Studio Dev/Compare commits",
+  component: InteractiveCompare,
+  parameters: { layout: "fullscreen" },
+  args: { base: "3d7f5766b0", head: "65d36f4490" },
+};
+export default meta;
+type Story = StoryObj<typeof InteractiveCompare>;
+
+export const BothMeasured: Story = {};
+export const HeadNotMeasured: Story = { args: { head: "f5c5c4b6e0" } };
