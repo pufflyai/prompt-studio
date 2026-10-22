@@ -24,7 +24,8 @@ The host decides what loads. It compares its own extension API version with `eng
 | --- | --- | --- |
 | 0.43.1 | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
 | 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
-| `main` | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
+| 0.45.0 | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
+| `main` | 0.2.2 | Adds project recovery methods and types on `/client` and `/api`. Existing `^0.2.0` ranges still load. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
@@ -263,3 +264,10 @@ Workspace/session read results and resource references may include `device: { ow
 ## Cloud account and sync status in API 0.2.1
 
 `ctx.account`, the `account.read` and `account.manage` webview capabilities, `client.account` on the typed webview client, and the `accountEvents.projectSyncChanged` host event are additive. They ship in the release after 0.44.0. The `/client` account methods add `cancelLogin` and `projectSyncStatus`. `AccountDevice` adds `online`, `AccountStatus` adds `cloudProjectsLoaded`, and `DeviceLogin` adds an optional `email`. `makeCommandContext` from `@pstdio/sdk/testing` provides a signed-out account whose projects are `local`. Publish the SDK and host before separately released extensions use these additions. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).
+
+## Project recovery in API 0.2.2
+
+The `/client` project methods add `snapshots(projectId)` and `restore(projectId, input)`.
+The `/api` entry exports `ProjectSnapshot` and `RestoreProjectInput`. These additions
+let agents use the same recovery points and restore command as project settings.
+Existing APIs remain available. See [Restore project data](../../guides/concepts/0006-restore-project-data.md).
