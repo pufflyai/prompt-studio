@@ -5,6 +5,7 @@ import { delimiter, join } from "node:path";
 import cmdShim from "cmd-shim";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { runPackagedAsync } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
@@ -54,10 +55,19 @@ export const registerSharedCodexSmokeTests = () => {
           return JSON.parse(content);
         };
         const sessions: Array<{ id: string; project_id: string; agent_session_id: string | null }> = [];
+        const listSessions = async (projectId: string, status?: string) =>
+          JSON.parse(
+            await runPackagedAsync(
+              ["sessions", "list", "--project-id", projectId, "--json", ...(status ? ["--status", status] : [])],
+              root,
+              { PSTDIO_API_URL: runtime!.baseUrl, PSTDIO_API_TOKEN: runtime!.descriptor.token, PSTDIO_HOME: root },
+            ),
+          );
         for (const name of ["first", "second"]) {
           const folder = join(root, name);
           mkdirSync(folder);
           const project = await request("/projects", "POST", folderProjectInput({ name }, folder));
+          expect(await listSessions(project.id)).toEqual([]);
           sessions.push(
             await request("/sessions", "POST", {
               project_id: project.id,
@@ -83,6 +93,10 @@ export const registerSharedCodexSmokeTests = () => {
         const starts = calls().filter((call) => call.method === "thread/start");
         expect(starts).toHaveLength(2);
         expect(new Set(starts.map((call) => call.pid)).size).toBe(1);
+        for (const session of sessions)
+          expect(await listSessions(session.project_id, "in_progress")).toMatchObject([
+            { id: session.id, title: expect.any(String), status: "in_progress", project_id: session.project_id },
+          ]);
         for (const [index, start] of starts.entries())
           expect(start.params.config?.["shell_environment_policy.set"]).toMatchObject({
             PSTDIO_SESSION_ID: sessions[index].id,
@@ -107,6 +121,10 @@ export const registerSharedCodexSmokeTests = () => {
         expect(calls().filter((call) => call.method === "turn/start")).toHaveLength(2);
         expect(calls().filter((call) => call.method === "turn/steer")).toHaveLength(1);
         await request(`/sessions/${sessions[0].id}/status`, "PATCH", { status: "cancelled" });
+        expect(await listSessions(sessions[0].project_id, "in_progress")).toEqual([]);
+        expect(await listSessions(sessions[0].project_id, "cancelled")).toMatchObject([
+          { id: sessions[0].id, status: "cancelled" },
+        ]);
         expect((await request(`/sessions/${sessions[1].id}`)).status).toBe("in_progress");
         expect(calls().filter((call) => call.method === "turn/interrupt")).toHaveLength(1);
         const exited = new Promise<number | null>((resolve) => runtime!.child.once("exit", resolve));

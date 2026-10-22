@@ -102,7 +102,7 @@ import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // The session query smoke also checks open-tab resource retention in the compiled host.
 // The fixed 1,000-session / 1,000-ticket compiled navigation gate lives in ../perf/subnav-benchmark.ts.
 // Packaged browser coverage also checks shared Session action groups and lazy title search in the tab menu.
-// Includes queued steering, cancellation and graceful shutdown with existing native goal turns.
+// Includes JSON session lists, queued steering, cancellation and shutdown with existing native goal turns.
 import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
 import { registerPackagedShowcaseSmokeTests } from "./packaged-showcase-smoke";
 import { registerStorageMigrationSmokeTests } from "./packaged-storage-migration-smoke";
