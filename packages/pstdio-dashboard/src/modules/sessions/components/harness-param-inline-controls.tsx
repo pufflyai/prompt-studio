@@ -24,17 +24,17 @@ interface HarnessParamInlineControlsProps {
 interface TriggerProps extends HTMLChakraProps<"button"> {
   displayLabel: string;
   ariaLabel: string;
-  description: string;
+  label: string;
   startIcon?: ReactNode;
   showChevron?: boolean;
   size?: ControlSize;
 }
 
 const Trigger = forwardRef<HTMLButtonElement, TriggerProps>((props, ref) => {
-  const { displayLabel, ariaLabel, description, startIcon, showChevron = false, size = "sm", ...rest } = props;
+  const { displayLabel, ariaLabel, label, startIcon, showChevron = false, size = "sm", ...rest } = props;
 
   return (
-    <Tooltip content={description ? `${ariaLabel}. ${description}` : ariaLabel} openDelay={300} closeDelay={150}>
+    <Tooltip content={label} closeDelay={150}>
       <Button ref={ref} variant="ghost" size={size} px="2" minW="0" flexShrink="0" aria-label={ariaLabel} {...rest}>
         {startIcon}
         <Text textStyle="label/XS/medium" color="fg" truncate>
@@ -67,7 +67,7 @@ const BooleanParamControl = (
     <Trigger
       displayLabel={`${label}: ${booleanValue ? "on" : "off"}`}
       ariaLabel={`${label}: ${booleanValue ? "on" : "off"}`}
-      description={resolveHarnessParamText("", descriptor.description)}
+      label={label}
       disabled={disabled}
       size={size}
       startIcon={
@@ -93,7 +93,7 @@ const SelectParamControl = (
         <Trigger
           displayLabel={selectedLabel}
           ariaLabel={`${label}: ${selectedLabel}`}
-          description={resolveHarnessParamText("", descriptor.description)}
+          label={label}
           disabled={disabled}
           size={size}
           startIcon={selectedOption?.icon ? <HarnessParamOptionIcon name={selectedOption.icon} /> : undefined}

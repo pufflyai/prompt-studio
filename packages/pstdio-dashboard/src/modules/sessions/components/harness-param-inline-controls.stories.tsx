@@ -74,7 +74,7 @@ export const BooleanControl: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Enabled: off" }));
     const enabled = canvas.getByRole("button", { name: "Enabled: on" });
     await userEvent.hover(enabled);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent("Enabled: on. Enable this harness option.");
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("Enabled");
     await userEvent.unhover(enabled);
   },
 };
@@ -84,12 +84,12 @@ export const Tooltips: Story = {
     const page = within(canvasElement.ownerDocument.body);
     const initial = canvas.getByRole("button", { name: "Reasoning effort: Medium" });
     await userEvent.hover(initial);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent("Reasoning effort: Medium");
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("Reasoning effort");
     await userEvent.click(initial);
     await userEvent.click(page.getByRole("menuitemradio", { name: "Extra high" }));
     const changed = canvas.getByRole("button", { name: "Reasoning effort: Extra high" });
     await userEvent.hover(changed);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent("Reasoning effort: Extra high");
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("Reasoning effort");
     await userEvent.unhover(changed);
   },
 };
