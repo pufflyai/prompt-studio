@@ -7,8 +7,9 @@ import {
   type ResourceAnchor,
 } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
-import { rollUpAttemptTicket } from "../data/attempt-rollup";
-import { appendAttemptEvent, putAttempt } from "../data/attempt-storage";
+import { legacyAttemptOutput } from "../data/attempt-compatibility";
+import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
+import { appendAttemptEvent, attemptSelectionsCollection, listAttempts, putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { attemptWaitMessage } from "../data/attempt-wait-message";
 import { findTicket } from "../data/resolve";
@@ -17,9 +18,11 @@ import type { HumanRequestReason } from "../data/review-request-types";
 import { renderOwnedTemplate } from "../data/template-store";
 import { withWriteGuard } from "../data/write-guard";
 import { ticketMenuSlots } from "../resource-kinds";
-import { loadAttemptReadiness } from "./attempt-readiness";
+import { loadAttemptReadiness, readImplementationCapacity } from "./attempt-readiness";
 import { adoptDraftWorkspace } from "./attempt-workspace";
+import { workspaceHead } from "./change-requests";
 import { prepareDependencyBase } from "./dependency-base";
+import { repairAttempt } from "./repair-attempt";
 import {
   createAnchoredWorkspace,
   harnessInput,
@@ -42,19 +45,80 @@ const humanReadinessReasons = new Set<HumanRequestReason>([
 
 const runAttemptParams = {
   ...ticketActionParams,
+  newVariant: params.boolean({ label: "Explore another implementation variant" }),
   // Attempts review and merge Git commits, so only a Git worktree can run one.
   workspace: params.workspace({ label: "Workspace", providers: ["pstdio.worktree"] }),
 };
 
+const reuseAttempt = async (
+  ctx: CommandContext,
+  ticketIdentity: { id: string; shorthand: string },
+  beforeDispatch: (() => Promise<void>) | undefined,
+) => {
+  const [attempts, selections, retired] = await Promise.all([
+    listAttempts(ctx.storage),
+    attemptSelectionsCollection(ctx.storage).list(),
+    readRetiredWorkspaceIds(ctx.storage),
+  ]);
+  const variants = attempts.filter(
+    (attempt) => attempt.ticketId === ticketIdentity.id && !retired.has(attempt.workspaceId),
+  );
+  const selection = selections.find((candidate) => candidate.ticketId === ticketIdentity.id);
+  const chosen = selection ? variants.filter((attempt) => attempt.workspaceId === selection.workspaceId) : variants;
+  if (variants.length && chosen.length !== 1)
+    throw new Error("Select the implementation variant to resume, or explicitly request a new variant.");
+  const existing = chosen[0];
+  if (existing) {
+    await beforeDispatch?.();
+    const session = await ctx.sessions.get(existing.implementationSessionId);
+    const capacity = await readImplementationCapacity(ctx);
+    if (
+      !session ||
+      (!["queued", "in_progress", "awaiting_input"].includes(session.status ?? "") &&
+        capacity.running >= capacity.limit)
+    )
+      throw new Error("No implementation capacity is available to resume this owner.");
+    await repairAttempt(ctx, {
+      workspaceId: existing.workspaceId,
+      expectedHeadSha: await workspaceHead(ctx, existing.workspaceId),
+      reason: `Continue implementation of ${existing.ticketShorthand} as requested. Reuse this workspace and conversation.`,
+    });
+    const workspace = (await ctx.workspaces.get(existing.workspaceId))!;
+    return {
+      decision: "started" as const,
+      mode: "existing",
+      ticket: ticketIdentity,
+      workspace,
+      attempt: await legacyAttemptOutput(ctx.storage, existing),
+      variant: existing,
+      session: { ...session, workspace_id: workspace.id },
+    };
+  }
+  return null;
+};
+interface StartAttemptOptions {
+  beforeDispatch?: (baseHeadSha?: string) => Promise<void>;
+  requireMergedDependencies?: boolean;
+  workspaceId?: string;
+  recovery?: WorkspaceRecovery;
+}
+
 export async function startAttempt(
   ctx: CommandContext,
   commandParams: ParamsOf<typeof runAttemptParams>,
-  options: {
-    beforeDispatch?: (baseHeadSha?: string) => Promise<void>;
-    dependencyReview?: "approved" | "submitted";
-    workspaceId?: string;
-    recovery?: WorkspaceRecovery;
-  } = {},
+  options: StartAttemptOptions = {},
+) {
+  // Corrections continue in the owned workspace and conversation. Recovery and draft adoption bring their own workspace.
+  const startsFresh = commandParams.newVariant || options.workspaceId || options.recovery;
+  const ticketIdentity = await resolveTicketIdentity(ctx, resolveTicket(ctx, commandParams));
+  const reused = startsFresh ? null : await reuseAttempt(ctx, ticketIdentity, options.beforeDispatch);
+  return reused ?? launchAttempt(ctx, commandParams, options);
+}
+
+async function launchAttempt(
+  ctx: CommandContext,
+  commandParams: ParamsOf<typeof runAttemptParams>,
+  options: StartAttemptOptions,
 ) {
   const { agent } = commandParams;
   const chosenBase = commandParams.workspace?.params?.base;
@@ -63,7 +127,7 @@ export async function startAttempt(
   const ownerRunId = ctx.invocationId ?? crypto.randomUUID();
   const { readiness, capacity } = await loadAttemptReadiness(ctx, ticketRef, {
     base: typeof chosenBase === "string" ? chosenBase : undefined,
-    dependencyReview: options.dependencyReview,
+    requireMergedDependencies: options.requireMergedDependencies,
   });
   if (readiness.decision === "wait") {
     const message = attemptWaitMessage(ticketIdentity.shorthand, readiness, capacity);
@@ -135,13 +199,12 @@ export async function startAttempt(
   });
   const timestamp = new Date().toISOString();
   const attempt: AttemptRecord = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     workspaceId: workspace.id,
     workspaceShorthand: workspace.workspace_shorthand ?? workspace.id,
     ticketId: ticket.id,
     ticketShorthand: anchor.label ?? ticketIdentity.shorthand,
     implementationSessionId: session.id,
-    state: "implementing",
     base: dependencyBase,
     revisions: [],
     implementationDisconnectRetries: 0,
@@ -168,14 +231,13 @@ export async function startAttempt(
       ...(options.recovery ? { recoveredFromWorkspaceId: options.recovery.previous.workspaceId } : {}),
     },
   });
-  // A short session can finish before its attempt is saved and miss the completion hook.
-  if ("title" in ticket) await rollUpAttemptTicket(ctx, ticket.id);
   return {
     decision: "started" as const,
     mode,
     ticket,
     workspace,
-    attempt,
+    attempt: await legacyAttemptOutput(ctx.storage, attempt),
+    variant: attempt,
     session: { ...session, workspace_id: workspace.id },
   };
 }

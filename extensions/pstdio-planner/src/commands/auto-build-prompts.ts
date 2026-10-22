@@ -10,7 +10,7 @@ export const supervisorWakePrompt = (input: SupervisorWakeInput) => {
     ? "No relevant progress has been observed for at least an hour."
     : "Relevant work may now run.";
   const configuration = input.refreshScope
-    ? "Read the current configuration with pst pstdio-planner auto-build read. Its prompt, ignore filters, and blockOnReview replace the earlier configuration. Resolve and save its work scope with pst pstdio-planner auto-build scope before choosing work."
+    ? "Read the current configuration with pst pstdio-planner auto-build read. Its prompt, eligible filters, and requireMergedDependencies replace the earlier configuration. Resolve and save its work scope with pst pstdio-planner auto-build scope before choosing work."
     : undefined;
   return [
     reason,
@@ -31,12 +31,14 @@ export const initialSupervisorPrompt = (mode: AutoBuildMode) =>
     "For each relevant returned ticket, launch or resume its managed attempt with:\npst pstdio-planner auto-build dispatch --ticket <ticket> --revision <revision-from-query>",
     "A recover-workspace action means the old workspace is unavailable. Dispatch it through Auto Build: it creates an informed continuation from surviving Git code and passes the old session, PR, revision and report references. The agent fetches previous code or restarts when it cannot recover it. Missing workspace availability alone is not a blocker. Keep real dependency, human-input, assignment and capacity rules.",
     "An update-stack action means the existing owner's workspace has newer unsubmitted work or outdated dependency ancestry. Dispatch it to that same owner; it integrates the required base, validates the result, and records a new revision. Never fabricate a review rejection or create an alternative workspace just to repair a stack.",
+    "A repair action means the owner's submitted work needs a correction: its PR conflicts, its CI failed, or its workspace HEAD moved past the submitted revision. Dispatch it to that same owner. It does not approve or merge work.",
     "Done status does not prove that dependency commits reached the delivery target. Planner chooses or combines submitted dependency bases; an implementation owner repairs its existing workspace with update-stack without approving work or merging the target. Keep ticket workflow status separate from Git integration. Before repeating a resume after human input, inspect the owner's last blocker and saved outcome. A confirmation alone does not repair Git. If the same evidence and missing code remain, explain the required stack repair instead of repeatedly dispatching unchanged work.",
     "Git conflicts are implementation work. Dispatch their reconciliation to the implementation owner; do not request human review for code conflicts. Human input is for conflicting features, concepts, requirements, plans, or architecture that the existing instructions cannot resolve. The owner preserves the required behavior from both sides, commits the resolution, validates, and submits.",
-    "Re-run tickets next after dispatching. Respect the user's prompt and the returned capacity. Waiting tickets are context, not permission to bypass blockers. The dispatch command enforces current ignore filters, assignments, dependencies, and capacity.",
+    "Re-run tickets next after dispatching. Respect the user's prompt and the returned capacity. Waiting tickets are context, not permission to bypass blockers. The dispatch command enforces current eligible filters, assignments, dependencies, and capacity.",
     "Do not call run-attempt directly, create implementation sessions yourself, or change Auto Build settings.",
-    mode.blockOnReview
-      ? "Children wait for dependency review approval."
-      : "Children may start while dependency revisions are in review. Dispatch creates their workspaces on the submitted dependency commit so their work stacks on top.",
+    mode.requireMergedDependencies
+      ? "Children wait until their dependency code is merged into the target."
+      : "Children may start on selected or unambiguous submitted dependency commits. Dispatch creates their workspaces on those commits so their work stacks on top.",
+    "A handoff does not request another reviewer. Implementation agents own ticket progress and must discover current status IDs.",
     "When there is no more relevant work you can dispatch now, end your turn. Do not poll or run a sleep process. Auto Build wakes this session for changed work, actionable work with no active implementations, or an hour without progress. A stalled-progress reminder does not allow you to exceed capacity or bypass blockers. If Auto Build is stopped, finish your turn without dispatching more work.",
   ].join("\n\n");

@@ -35,7 +35,6 @@ async function submitDependency(result: Awaited<ReturnType<typeof trackFixture>>
   const started = await runAttemptCommand.run(result.ctx, { ticket: parent.id });
   const attempt = await putAttempt(result.storage, {
     ...started.attempt,
-    state: "review_ready",
     revisions: [
       {
         revision: 1,
@@ -65,7 +64,7 @@ test.each([
   const old = await result.ticket("Historical work");
   const started = await runAttemptCommand.run(result.ctx, { ticket: old.id });
   const ready = await result.ticket("Available work");
-  const owner = { ...started.session, status: "completed" as const };
+  const owner = { ...started.session, status: "completed" as const } as never;
   result.ctx.sessions.get = async () => owner;
   result.ctx.sessions.query = sessionQuery(
     async () => [],
@@ -117,17 +116,17 @@ test("next tickets query selects a named track and explains its waiting dependen
   expect(result.capacity).toEqual({ running: 0, limit: 6 });
 });
 
-test("next tickets keeps submitted stacks available across track boundaries when review blocking is off", async () => {
+test("next tickets keeps submitted stacks available across track boundaries until merged dependencies are required", async () => {
   const result = await trackFixture();
   const { parent } = await submitDependency(result);
   await putTicket(result.storage, { ...parent, tagIds: ["planner"] });
   const child = await result.ticket("Panel controls", "workbench", [parent.id]);
-  await configureAutoBuildCommand.run(result.ctx, { enabled: false, blockOnReview: false });
+  await configureAutoBuildCommand.run(result.ctx, { enabled: false, requireMergedDependencies: false });
   expect(await nextTicketsCommand.run(result.ctx, { track: "Workbench" })).toMatchObject({
     enabled: false,
     tickets: [expect.objectContaining({ id: child.id, action: "start", baseHeadSha: "panel-rules-head" })],
   });
-  await configureAutoBuildCommand.run(result.ctx, { enabled: false, blockOnReview: true });
+  await configureAutoBuildCommand.run(result.ctx, { enabled: false, requireMergedDependencies: true });
   expect((await nextTicketsCommand.run(result.ctx, { track: "Workbench" })).tickets).toHaveLength(0);
 });
 
@@ -193,7 +192,7 @@ test("a changed dependency head prevents dispatching a stale combined base", asy
   expect((await listAttempts(result.storage)).filter(({ ticketId }) => ticketId === child.id)).toHaveLength(0);
 });
 
-test("next tickets respects saved ignore rules, draft state and live assignments", async () => {
+test("next tickets respects eligibility, draft state and live assignments", async () => {
   const { ctx, storage, ticket } = await trackFixture();
   const ignored = await ticket("Ignored");
   await putTicket(storage, { ...ignored, statusId: "backlog" });

@@ -1,11 +1,13 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { readAttempt } from "../data/attempt-storage";
-import { autoBuildDispatches } from "../data/auto-build-dispatches";
+import { autoBuildDispatches, autoBuildPullRequestNotifications } from "../data/auto-build-dispatches";
 import { type AutoBuildMode, pauseAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
 import { withWriteGuard } from "../data/write-guard";
 import { supervisorWakePrompt } from "./auto-build-prompts";
+import { acknowledgePullRequestNotifications, readPendingPullRequestRepair } from "./auto-build-pull-request-progress";
+import { isUnexpectedExit } from "./auto-build-resume";
 import { isLiveSession } from "./auto-build-sessions";
 
 const timestamp = (value: string | null | undefined) => (value ? Date.parse(value) : 0);
@@ -30,8 +32,9 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
       const dispatches = await autoBuildDispatches(ctx, session.id).list();
       const progress = await Promise.all(
         dispatches.map(async ({ workspaceId, dispatchedAt }) => {
+          // Only workspace recovery retires an attempt, and it dispatches the replacement for the same ticket.
           const attempt = await readAttempt(ctx.storage, workspaceId);
-          if (!attempt || attempt.state === "abandoned") return;
+          if (!attempt) return;
           const [ticket, worker] = await Promise.all([
             ticketsCollection(ctx.storage).get(attempt.ticketId),
             ctx.sessions.get(attempt.implementationSessionId),
@@ -42,9 +45,24 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
             timestamp(attempt.updatedAt),
             timestamp(worker?.updatedAt),
           );
+          const pendingRepair =
+            worker &&
+            !isLiveSession(worker) &&
+            worker.status !== "failed" &&
+            !isUnexpectedExit(worker) &&
+            worker.last_exit?.cause !== "user_stop"
+              ? await readPendingPullRequestRepair(ctx, ticket, attempt)
+              : undefined;
+          const notified = pendingRepair
+            ? await autoBuildPullRequestNotifications(ctx, session.id).get(workspaceId)
+            : undefined;
           return {
+            workspaceId,
+            pendingRepair,
             updatedAt: Math.max(updatedAt, timestamp(dispatchedAt)),
-            changed: updatedAt > Math.max(lastPromptAt, timestamp(dispatchedAt)),
+            changed:
+              Boolean(pendingRepair && pendingRepair !== notified?.evidenceKey) ||
+              updatedAt > Math.max(lastPromptAt, timestamp(dispatchedAt)),
             active: isLiveSession(worker),
           };
         }),
@@ -60,6 +78,7 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
           expectedRun,
           prompt: supervisorWakePrompt({ stalled, refreshScope: supervisor.scope?.revision !== mode.revision }),
         });
+        await acknowledgePullRequestNotifications(ctx, session.id, progress);
       } catch (error) {
         const latest = await ctx.sessions.get(session.id);
         if (
