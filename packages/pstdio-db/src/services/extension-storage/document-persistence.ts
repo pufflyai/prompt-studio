@@ -33,13 +33,7 @@ export const updatesWhere = (address: DocumentAddress) =>
   );
 export const foldEvery = 128;
 
-const loadDocument = async (
-  tx: Transaction,
-  address: DocumentAddress,
-  owner: StorageOwner,
-  environmentId: string,
-  cached?: LoadedDocument,
-) => {
+const readDocument = async (tx: Transaction, address: DocumentAddress, owner: StorageOwner, environmentId: string) => {
   const inserted = await tx
     .insert(storage_documents)
     .values({ ...address, state: new Uint8Array([0, 0]) })
@@ -50,7 +44,6 @@ const loadDocument = async (
     .from(storage_documents)
     .where(documentWhere(address))
     .for("update");
-  if (cached?.revision === row.revision) return { row, document: cached.document };
   const [saved] = await tx
     .select({ state: storage_documents.state })
     .from(storage_documents)
@@ -59,17 +52,33 @@ const loadDocument = async (
     saved.state = await importOwnerDocument(tx, owner, environmentId);
     await tx.update(storage_documents).set({ state: saved.state }).where(documentWhere(address));
   }
-  const document = new Y.Doc();
-  Y.applyUpdate(document, saved.state);
   const updates = await tx
     .select()
     .from(storage_document_updates)
     .where(updatesWhere(address))
     .orderBy(storage_document_updates.revision);
-  for (const update of updates) Y.applyUpdate(document, update.update);
-  trackDocumentBinary(document, [saved.state, ...updates.map(({ update }) => update)]);
-  return { row, document };
+  return { row, updates: [saved.state, ...updates.map(({ update }) => update)] };
 };
+
+export const prepareDocument = async (
+  db: DbClient,
+  input: { address: DocumentAddress; owner: StorageOwner; environmentId: string },
+) => {
+  const { row, updates } = await db.transaction((tx) =>
+    readDocument(tx, input.address, input.owner, input.environmentId),
+  );
+  const document = new Y.Doc();
+  try {
+    for (const update of updates) Y.applyUpdate(document, update);
+    trackDocumentBinary(document, updates);
+    return { revision: row.revision, document };
+  } catch (error) {
+    document.destroy();
+    throw error;
+  }
+};
+
+export class DocumentPreparationChanged extends Error {}
 
 const localOperations = (tx: Transaction, address: DocumentAddress) => {
   const pending = new Map<string, string>();
@@ -119,14 +128,18 @@ export const runDocumentTransaction = async <T>(
   tx: Transaction,
   input: {
     address: DocumentAddress;
-    owner: StorageOwner;
-    environmentId: string;
-    cached?: LoadedDocument;
+    prepared: LoadedDocument;
   },
   action: (state: DocumentState) => Promise<T>,
 ) => {
   const { address } = input;
-  const { document, row } = await loadDocument(tx, address, input.owner, input.environmentId, input.cached);
+  const [row] = await tx
+    .select({ revision: storage_documents.revision, folded_revision: storage_documents.folded_revision })
+    .from(storage_documents)
+    .where(documentWhere(address))
+    .for("update");
+  if (!row || row.revision !== input.prepared.revision) throw new DocumentPreparationChanged();
+  const { document } = input.prepared;
   const operations = localOperations(tx, address);
   const key = JSON.stringify(address);
   const migration = dataMigrationContext.getStore();
@@ -151,9 +164,6 @@ export const runDocumentTransaction = async <T>(
     await operations.persist();
     const revision = await appendUpdates(tx, address, row, updates);
     return { value, revision, document, changed: updates.length > 0, foldedRevision: row.folded_revision };
-  } catch (error) {
-    if (document !== input.cached?.document) document.destroy();
-    throw error;
   } finally {
     document.off("update", capture);
   }

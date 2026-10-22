@@ -1,4 +1,5 @@
 export { runBinaryTask } from "./binary-background";
+export { startBinaryWorker } from "./binary-worker-runtime";
 export { captureCheckpoint } from "./checkpoint-capture";
 export {
   acceptDocumentCheckpoint,

@@ -37,9 +37,11 @@ const failWorker = (instance: Worker, error: Error) => {
   }
 };
 const startWorker = () => {
-  // Compiled executables register entrypoints by their build input path.
+  // Keep the packaged worker beside the executable entry inside Bun's virtual root.
   const entry =
-    typeof PSTDIO_SYNC_WORKER_ENTRY === "string" ? PSTDIO_SYNC_WORKER_ENTRY : import.meta.resolve("./binary-worker.ts");
+    typeof PSTDIO_SYNC_WORKER_ENTRY === "string"
+      ? new URL(PSTDIO_SYNC_WORKER_ENTRY, import.meta.url).href
+      : import.meta.resolve("./binary-worker.ts");
   const instance = new Worker(entry);
   worker = instance;
   instance.onmessage = (event: MessageEvent<{ id: number; result?: BinaryTaskResult; error?: string }>) => {

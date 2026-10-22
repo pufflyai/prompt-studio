@@ -7,8 +7,8 @@ import { loadEmbedConfig, resolveEmbedFiles } from "./embed-manifest";
 process.chdir(join(import.meta.dirname, "..", ".."));
 
 const CLI_ENTRY = "./packages/pstdio/src/index.ts";
-const SYNC_WORKER_ENTRY = "./packages/pstdio-sync/src/binary-worker.ts";
-const syncWorkerDefine = `PSTDIO_SYNC_WORKER_ENTRY=${JSON.stringify(SYNC_WORKER_ENTRY)}`;
+const SYNC_WORKER_ENTRY = "./packages/pstdio/src/sync-worker.ts";
+const syncWorkerDefine = 'PSTDIO_SYNC_WORKER_ENTRY="./sync-worker.js"';
 const EMBED_MANIFEST = "./packages/pstdio/src/_embed-manifest.generated.ts";
 
 // 0. Vendor PGlite runtime assets locally so the embedded imports do not reach

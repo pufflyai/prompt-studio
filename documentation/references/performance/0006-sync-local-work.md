@@ -13,6 +13,7 @@ established for the PS-905 implementation yet.
 | Changed comparison | Capture binary state and its update tail; decode and compare in the background worker. |
 | Incoming page | Decrypt and stage at most 16 envelopes per worker job. Validate before local application; verify blobs before durable acceptance. |
 | Local save | Append the incremental update and local retry metadata. Return after database commit. |
+| Cold owner load | Capture persisted bytes in a short transaction, hydrate outside its lock, then recheck the revision before running the save or read. Concurrent writes force fresh preparation without rerunning the caller's action. Warm owners use the existing single transaction. |
 | Checkpoint | Capture the accepted revision, merge binary updates in the worker, then save with a folded-revision guard. Keep later updates and reject a baseline changed by purge or another checkpoint. |
 | Export | Read persisted binary state and its tail, then merge outside the transaction. |
 | Save-handler capture | Read persisted checkpoint bytes and the update tail, release the database transaction, and hydrate one staging fork. Encode only the resulting incremental update. |
@@ -22,6 +23,11 @@ pending. After each fold it drains that request if the remaining tail still
 crosses the threshold. Flush waits for the complete drain, including requests
 received during the first fold. Cached binary state advances only after the
 database accepts the checkpoint.
+
+Within each service, an owner document admits one operation at a time across cold
+preparation, durable commit and cache publication. This prevents duplicate cold
+hydration and prevents queued reads from using a document discarded after rollback.
+Different owner documents have separate admission queues.
 
 One shared worker bounds background CPU concurrency. An owner awaits each batch
 before submitting another. Already queued work runs first. This scheduling rule
@@ -36,7 +42,7 @@ all resulting asset bytes, then retry preparation if a local commit changed that
 revision before acceptance. Unrelated existing causal gaps can resolve separately.
 
 The existing extension-wide wire and document identities remain. First local
-writes after restart still hydrate that owner. Applying a validated incoming
+writes after restart still hydrate that owner, outside the database transaction. Applying a validated incoming
 batch still updates the local Yjs document within its durable transaction. Both
 costs must pass the cold/warm edit contract, including the single-owner
 100,000-row fixture and aggregate 0.5 CPU profiles. Moving preparation into a worker
@@ -50,7 +56,9 @@ Targeted tests cover revision invalidation, deletion-only repairs, quarantine,
 late offline clients, interrupted replacements, accepted causal gaps surviving
 restart/checkpoint, checkpoint races with later edits and purge, failed local
 transactions and worker queue drain across ten jobs. A compiled worker probe runs
-outside the repository to check embedded entrypoint resolution. The packaged
+outside the repository to check embedded entrypoint resolution. The worker's CLI
+entry lives beside the main entry so both resolve within the same compiled root
+without changing dashboard asset or migration paths. The packaged
 storage and encrypted-sync smoke tests remain required.
 
 Run the fixed rich and small fixtures from the diagnostic runbook in an

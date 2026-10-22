@@ -13,10 +13,12 @@ import { storage_documents } from "../../db/schemas.pg";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { createDocumentCheckpoints, readDocumentSnapshot } from "./document-checkpoints";
-import { foldEvery, runDocumentTransaction } from "./document-persistence";
+import { foldEvery } from "./document-persistence";
+import { createDocumentAdmission, transactPreparedDocument } from "./document-transaction";
 
 export const createDocumentStorageDBService = (db: DbClient, observer?: StorageObserver) => {
   const cache = createDocumentCache();
+  const admit = createDocumentAdmission();
   const checkpoints = createDocumentCheckpoints(db);
   const listeners = new Set<(owner: StorageOwner) => void>();
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
@@ -26,18 +28,13 @@ export const createDocumentStorageDBService = (db: DbClient, observer?: StorageO
       const { environmentId } = await getEnvironment();
       const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: documentId };
       const key = JSON.stringify(address);
-      try {
-        const result = await db.transaction((tx) =>
-          runDocumentTransaction(tx, { address, owner, environmentId, cached: cache.get(key) }, action),
-        );
+      return admit(key, async () => {
+        const result = await transactPreparedDocument(db, { address, owner, environmentId, cache }, action);
         cache.publish(key, result);
         if (result.changed) for (const listener of listeners) listener(owner);
         if (result.revision - result.foldedRevision >= foldEvery) checkpoints.schedule(address, result);
         return result.value;
-      } catch (error) {
-        cache.discard(key);
-        throw error;
-      }
+      });
     };
     return transaction;
   };

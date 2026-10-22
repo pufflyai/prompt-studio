@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { eq } from "drizzle-orm";
 import { createDocumentStorage } from "pstdio-sync";
 import { extension_storage_journal, storage_document_updates, storage_documents } from "../../db/schemas.pg";
@@ -20,6 +21,101 @@ const fixture = async () => {
   const storage = service.open({ owner });
   return { ...f, owner, service, storage };
 };
+
+test("first write after restart hydrates the owner outside the database transaction", async () => {
+  const { spyOn } = await import("bun:test");
+  const Y = await import("yjs");
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "initial", edits: [{ recordId: "note", replace: "before" }] });
+  const transactionContext = new AsyncLocalStorage<boolean>();
+  const transact = f.db.transaction.bind(f.db);
+  const transaction = spyOn(f.db, "transaction").mockImplementation((action, config) =>
+    transact((tx) => transactionContext.run(true, () => action(tx)), config),
+  );
+  const applyUpdate = Y.applyUpdate;
+  let hydrationCalls = 0;
+  const hydration = spyOn(Y, "applyUpdate").mockImplementation((...args) => {
+    if (transactionContext.getStore()) throw new Error("Owner hydration holds the database transaction");
+    hydrationCalls++;
+    return applyUpdate(...args);
+  });
+  try {
+    const restarted = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+    await restarted.records.commit({
+      operationId: "first-after-restart",
+      edits: [{ recordId: "note", replace: "after" }],
+    });
+    expect(hydrationCalls).toBeGreaterThan(0);
+    expect((await restarted.records.read("note")).value).toBe("after");
+  } finally {
+    hydration.mockRestore();
+    transaction.mockRestore();
+  }
+});
+
+test("concurrent cold writers retry preparation without losing either durable save", async () => {
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "initial", edits: [{ recordId: "note", replace: "before" }] });
+  const first = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  const second = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  await Promise.all([
+    first.records.commit({ operationId: "first", edits: [{ recordId: "first", replace: 1 }] }),
+    second.records.commit({ operationId: "second", edits: [{ recordId: "second", replace: 2 }] }),
+  ]);
+  const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  expect((await reopened.records.read("first")).value).toBe(1);
+  expect((await reopened.records.read("second")).value).toBe(2);
+  expect(await reopened.records.outcome("first")).toMatchObject({ status: "saved-locally" });
+  expect(await reopened.records.outcome("second")).toMatchObject({ status: "saved-locally" });
+});
+
+test("a queued warm read discards a document invalidated by an earlier failed transaction", async () => {
+  const f = await fixture();
+  await f.service.transaction(f.owner, async ({ document }) => document.getMap("test").set("value", "before"));
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const failed = f.service.transaction(f.owner, async ({ document }) => {
+    document.getMap("test").set("value", "uncommitted");
+    entered.resolve();
+    await release.promise;
+    throw new Error("Rejected save");
+  });
+  const rejection = failed.catch((error: unknown) => error);
+  await entered.promise;
+  const read = f.service.transaction(f.owner, async ({ document }) => document.getMap("test").get("value"));
+  await Promise.resolve();
+  release.resolve();
+  expect(await rejection).toMatchObject({ message: "Rejected save" });
+  expect(await read).toBe("before");
+});
+
+test("concurrent first saves on one service share the cold owner hydration", async () => {
+  const { spyOn } = await import("bun:test");
+  const Y = await import("yjs");
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "before" }] });
+  const restarted = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  const documents = new Set<InstanceType<typeof Y.Doc>>();
+  const applyUpdate = Y.applyUpdate;
+  const hydrate = spyOn(Y, "applyUpdate").mockImplementation((...args) => {
+    documents.add(args[0]);
+    return applyUpdate(...args);
+  });
+  try {
+    await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        restarted.records.commit({
+          operationId: `parallel-${index}`,
+          edits: [{ recordId: `parallel-${index}`, replace: index }],
+        }),
+      ),
+    );
+    expect(documents.size).toBe(1);
+    expect((await restarted.records.list()).length).toBe(9);
+  } finally {
+    hydrate.mockRestore();
+  }
+});
 
 test("save-handler capture reads the durable snapshot and releases the database before staging writes", async () => {
   const f = await fixture();

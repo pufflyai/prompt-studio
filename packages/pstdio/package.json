@@ -67,6 +67,7 @@
     "pstdio-extensions": "workspace:*",
     "pstdio-logging": "workspace:*",
     "pstdio-paths": "workspace:*",
+    "pstdio-sync": "workspace:*",
     "pstdio-wt": "workspace:*",
     "typescript": "6.0.2"
   }

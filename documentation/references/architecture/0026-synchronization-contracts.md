@@ -81,9 +81,16 @@ The document address is the project, extension and document ID. The extension's
 records use `records`; text files use a separate address based on their stable file ID.
 Foreign keys remove these rows when their project or document is removed.
 
-A database transaction locks the document row, checks its revision and loads the saved
-state plus its remaining updates when needed. A bounded cache reuses a matching loaded
-document. A save appends only its new update. After 128 updates, a background worker
+A bounded cache reuses a revision-matched loaded document. A cold load reads the saved
+state and remaining updates in a short database transaction, then hydrates the document
+outside that transaction. Before running the caller's action, another transaction locks
+the row and checks the captured revision. If a concurrent save changed it, preparation
+starts again; the caller's action has not run yet. Warm reads and writes use one transaction.
+Each service admits one operation per owner document through preparation, commit and
+cache publication. Waiting operations reuse the accepted document instead of hydrating
+the same cold state repeatedly. A failed operation releases admission and discards its
+uncommitted document before the next operation reads it.
+A save appends only its new update. After 128 updates, a background worker
 merges the captured binary checkpoint and update tail. A short transaction then saves
 that checkpoint and removes only its covered updates. Newer updates stay in the tail.
 A changed folded revision, including a purge, rejects a stale checkpoint. Normal saves and reads do not
