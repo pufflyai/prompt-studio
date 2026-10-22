@@ -230,7 +230,10 @@ test("a local run cannot use stale admission after becoming assigned during prep
   cleanup.push(scheduler.dispose);
   await scheduler.refresh();
   deps.workspaceService.getDefault = async () => {
-    await assignDeviceAutomation(deps, fixture.projectId, { scheduleId: fixture.scheduleId, deviceId: "other-device" });
+    await assignDeviceAutomation(deps, fixture.projectId, {
+      scheduleId: fixture.scheduleId,
+      deviceId: (await deps.environmentService.get()).environmentId,
+    });
     return null;
   };
   await cron.fireAll();
