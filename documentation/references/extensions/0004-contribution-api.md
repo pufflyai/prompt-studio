@@ -394,7 +394,7 @@ defineView({
 
 Data table columns can declare `type` (`"string"`, `"number"`, or `"date"`) and `groupable: true`. Without a type, a column whose values are all numbers is a number field and every other column is text. Columns are filterable by default. Declare `filterable: false` on a column to exclude it from Filter and reject saved rules for it. Query-returned columns use the same option and take precedence over declared columns. Disabling filtering keeps display, sorting, and grouping available. Only groupable columns appear under Grouping in the table's Display menu. Tables group by exact value; empty values form a last "No <column>" group.
 
-The query receives `filter`, `sorts`, and the display `settings`. Use them only to narrow what you load. The renderer always applies the full filter and sorts to the rows you return, so returning more rows than the view shows is always correct.
+The query receives `filter`, `sorts`, and the display `settings`. For default full-result providers, use them only to narrow what you load. The renderer applies the full filter and sorts to the returned rows, so returning more rows than the view shows is correct. Opt-in [paged providers](#paged-tables-and-boards) apply these controls before returning a bounded page.
 
 API 0.2.0 removes the fields deprecated in published package version 0.43.1. Migrate declarations and query handlers to the replacements below.
 
@@ -554,6 +554,12 @@ grouping fields. Badge-list displays also request their companion item field.
 Apply `params.filter`, `params.sorts`, and search to the complete indexed collection
 before selecting a page. Return the requested fields and only the bounded rows.
 Do not load every record to calculate a page, group count, badge, or total.
+
+Preserve the controls' filter semantics. Scalar string `is` and `is-not` use
+locale-independent JavaScript lowercase matching, as do `contains` and
+`does-not-contain`. Map them to the public `equalsIgnoreCase`, `contains`, and
+`not` storage predicates. An empty text rule is incomplete and does not filter
+rows; use `empty` and `notEmpty` for the explicit empty-value controls.
 
 Return `{ rows, page }`, where `page` contains:
 
