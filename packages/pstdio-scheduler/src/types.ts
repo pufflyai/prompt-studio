@@ -5,6 +5,8 @@ export type Job = {
   label?: string;
   description?: string;
   cron: string;
+  catchup?: "skip";
+  runId?: (scheduledFor: Date) => string;
   timeoutMs: number;
   meta?: Record<string, unknown>;
 };

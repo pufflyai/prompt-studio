@@ -36,6 +36,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 // Document sync checks the local, synced and needs-attention project states from the sync owners.
+import { registerDeviceAutomationSmokeTests } from "./packaged-device-automations-smoke";
 import { registerDocumentSyncSmokeTests } from "./packaged-document-sync-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 // Includes linked dependency loading and missing dependency diagnostics.
@@ -316,6 +317,7 @@ registerPageParamsSmokeTests();
 
 registerResourcePageSmokeTests();
 
+registerDeviceAutomationSmokeTests();
 registerDocumentSyncSmokeTests();
 registerPersonalHistorySmokeTests();
 registerTwoDeviceSyncSmokeTests();

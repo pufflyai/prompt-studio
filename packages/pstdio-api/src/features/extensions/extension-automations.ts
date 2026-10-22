@@ -1,5 +1,6 @@
 import type { RuntimeScheduleRecord } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "./deps";
+import { listDeviceAutomations } from "./device-automations";
 
 type AutomationPreferenceRow = { extension_instance_id: string; automation_id: string; enabled: boolean };
 
@@ -34,6 +35,9 @@ export const buildAutomationRecords = async (
   enabledSources: EnabledSourceLike[],
 ) => {
   const preferences = await loadAutomationPreferences(deps, projectId);
+  const assigned = new Map(
+    (await listDeviceAutomations(deps, projectId)).map((definition) => [definition.scheduleId, definition]),
+  );
   const instanceIds = instanceIdsByExtensionId(enabledSources);
 
   return runtime.schedules.map((schedule) => ({
@@ -44,6 +48,8 @@ export const buildAutomationRecords = async (
     title: schedule.title,
     cron: schedule.cron,
     commandId: schedule.commandId,
-    enabled: isAutomationEnabled(schedule, instanceIds.get(schedule.extensionId), preferences),
+    enabled:
+      assigned.get(schedule.id)?.enabled ??
+      isAutomationEnabled(schedule, instanceIds.get(schedule.extensionId), preferences),
   }));
 };
