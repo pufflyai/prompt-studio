@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import * as Y from "yjs";
 import {
   acceptDocumentCheckpoint,
@@ -6,6 +6,46 @@ import {
   snapshotDocumentBinary,
   trackDocumentBinary,
 } from "./document-binary";
+import { namedRootWireFixture } from "./document-binary.fixture";
+import originalWire from "./document-binary.fixture.json";
+
+test("named root updates preserve the original Yjs wire bytes and offline identities", () => {
+  expect(namedRootWireFixture()).toEqual(originalWire);
+});
+
+test("encoding named roots does not enumerate unrelated shared roots", () => {
+  const document = new Y.Doc();
+  const roots = Array.from({ length: 100 }, (_, index) => document.getMap(`record-${index}`));
+  const updates: Uint8Array[] = [];
+  document.on("update", (update: Uint8Array) => updates.push(update));
+  const scan = spyOn(document.share, "entries");
+  try {
+    document.transact(() => {
+      for (const [index, root] of roots.entries()) root.set("value", index);
+    });
+    const snapshot = Y.encodeStateAsUpdate(document);
+    expect(updates).toHaveLength(1);
+    expect(scan).not.toHaveBeenCalled();
+    const received = new Y.Doc();
+    try {
+      Y.applyUpdate(received, snapshot);
+      const decodedScan = spyOn(received.share, "entries");
+      try {
+        expect(Y.encodeStateAsUpdate(received)).toEqual(snapshot);
+        expect(received.getMap("record-99").get("value")).toBe(99);
+        expect(Y.encodeStateAsUpdate(received)).toEqual(snapshot);
+        expect(decodedScan).not.toHaveBeenCalled();
+      } finally {
+        decodedScan.mockRestore();
+      }
+    } finally {
+      received.destroy();
+    }
+  } finally {
+    scan.mockRestore();
+    document.destroy();
+  }
+});
 
 test("a prepared checkpoint retains edits accepted after its captured revision", () => {
   const document = new Y.Doc();

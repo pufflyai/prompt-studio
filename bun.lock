@@ -960,6 +960,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "yjs@13.6.29": "patches/yjs@13.6.29.patch",
+  },
   "overrides": {
     "@electron/node-gyp": "10.2.0-electron.2",
     "katex": "^0.19.0",

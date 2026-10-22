@@ -1,0 +1,145 @@
+diff --git a/dist/yjs.cjs b/dist/yjs.cjs
+index 53e0a8c4b198477d7a0ece713dc0add226083305..9253c938e5e1e4026dbd4e3714d7db160fc36104 100644
+--- a/dist/yjs.cjs
++++ b/dist/yjs.cjs
+@@ -419,6 +419,9 @@ const equalDeleteSets = (ds1, ds2) => {
+  */
+ 
+ 
++/** @type {WeakMap<AbstractType<any>, string>} */
++const rootTypeKeys = new WeakMap();
++
+ const generateNewClientId = random__namespace.uint32;
+ 
+ /**
+@@ -618,6 +621,7 @@ class Doc extends observable.ObservableV2 {
+       t._integrate(this, null);
+       return t
+     });
++    if (!rootTypeKeys.has(type)) rootTypeKeys.set(type, name);
+     const Constr = type.constructor;
+     if (TypeConstructor !== AbstractType && Constr !== TypeConstructor) {
+       if (Constr === AbstractType) {
+@@ -636,6 +640,7 @@ class Doc extends observable.ObservableV2 {
+         }
+         t._length = type._length;
+         this.share.set(name, t);
++        rootTypeKeys.set(t, name);
+         t._integrate(this, null);
+         return /** @type {InstanceType<Type>} */ (t)
+       } else {
+@@ -2098,9 +2103,14 @@ const readID = decoder =>
+  * @function
+  */
+ const findRootTypeKey = type => {
++  const known = rootTypeKeys.get(type)
++  // The shared-root map remains authoritative if a binding changed.
++  // @ts-ignore root types are integrated
++  if (known !== undefined && type.doc.share.get(known) === type) return known
+   // @ts-ignore _y must be defined, otherwise unexpected case
+   for (const [key, value] of type.doc.share.entries()) {
+     if (value === type) {
++      rootTypeKeys.set(type, key)
+       return key
+     }
+   }
+diff --git a/dist/yjs.mjs b/dist/yjs.mjs
+index d6f800cfc3bb4819c18c1783cb5f778e131432cc..efa14691646e8311153601ba237f9e8be07acbb9 100644
+--- a/dist/yjs.mjs
++++ b/dist/yjs.mjs
+@@ -382,6 +382,9 @@ const equalDeleteSets = (ds1, ds2) => {
+  */
+ 
+ 
++/** @type {WeakMap<AbstractType<any>, string>} */
++const rootTypeKeys = new WeakMap();
++
+ const generateNewClientId = random.uint32;
+ 
+ /**
+@@ -581,6 +584,7 @@ class Doc extends ObservableV2 {
+       t._integrate(this, null);
+       return t
+     });
++    if (!rootTypeKeys.has(type)) rootTypeKeys.set(type, name);
+     const Constr = type.constructor;
+     if (TypeConstructor !== AbstractType && Constr !== TypeConstructor) {
+       if (Constr === AbstractType) {
+@@ -599,6 +603,7 @@ class Doc extends ObservableV2 {
+         }
+         t._length = type._length;
+         this.share.set(name, t);
++        rootTypeKeys.set(t, name);
+         t._integrate(this, null);
+         return /** @type {InstanceType<Type>} */ (t)
+       } else {
+@@ -2061,9 +2066,14 @@ const readID = decoder =>
+  * @function
+  */
+ const findRootTypeKey = type => {
++  const known = rootTypeKeys.get(type)
++  // The shared-root map remains authoritative if a binding changed.
++  // @ts-ignore root types are integrated
++  if (known !== undefined && type.doc.share.get(known) === type) return known
+   // @ts-ignore _y must be defined, otherwise unexpected case
+   for (const [key, value] of type.doc.share.entries()) {
+     if (value === type) {
++      rootTypeKeys.set(type, key)
+       return key
+     }
+   }
+diff --git a/src/utils/Doc.js b/src/utils/Doc.js
+index 317f8c213b8d27e975f3a6677544ead5bebcae4a..769743cc833b777ba488fd2d1e5770d77a0c595f 100644
+--- a/src/utils/Doc.js
++++ b/src/utils/Doc.js
+@@ -20,6 +20,9 @@ import * as map from 'lib0/map'
+ import * as array from 'lib0/array'
+ import * as promise from 'lib0/promise'
+ 
++/** @type {WeakMap<AbstractType<any>, string>} */
++export const rootTypeKeys = new WeakMap()
++
+ export const generateNewClientId = random.uint32
+ 
+ /**
+@@ -219,6 +222,7 @@ export class Doc extends ObservableV2 {
+       t._integrate(this, null)
+       return t
+     })
++    if (!rootTypeKeys.has(type)) rootTypeKeys.set(type, name)
+     const Constr = type.constructor
+     if (TypeConstructor !== AbstractType && Constr !== TypeConstructor) {
+       if (Constr === AbstractType) {
+@@ -237,6 +241,7 @@ export class Doc extends ObservableV2 {
+         }
+         t._length = type._length
+         this.share.set(name, t)
++        rootTypeKeys.set(t, name)
+         t._integrate(this, null)
+         return /** @type {InstanceType<Type>} */ (t)
+       } else {
+diff --git a/src/utils/ID.js b/src/utils/ID.js
+index b0cabd8f36dc656e37d7d780fca74f40e9ee8860..fdfe8df5675ca372dc5c240ba34bdb20ede63984 100644
+--- a/src/utils/ID.js
++++ b/src/utils/ID.js
+@@ -1,4 +1,4 @@
+-import { AbstractType } from '../internals.js' // eslint-disable-line
++import { AbstractType, rootTypeKeys } from '../internals.js' // eslint-disable-line
+ 
+ import * as decoding from 'lib0/decoding'
+ import * as encoding from 'lib0/encoding'
+@@ -79,9 +79,14 @@ export const readID = decoder =>
+  * @function
+  */
+ export const findRootTypeKey = type => {
++  const known = rootTypeKeys.get(type)
++  // The shared-root map remains authoritative if a binding changed.
++  // @ts-ignore root types are integrated
++  if (known !== undefined && type.doc.share.get(known) === type) return known
+   // @ts-ignore _y must be defined, otherwise unexpected case
+   for (const [key, value] of type.doc.share.entries()) {
+     if (value === type) {
++      rootTypeKeys.set(type, key)
+       return key
+     }
+   }
