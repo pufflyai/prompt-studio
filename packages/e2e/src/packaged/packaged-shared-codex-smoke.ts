@@ -15,7 +15,7 @@ interface NativeCall {
 }
 export const registerSharedCodexSmokeTests = () => {
   test.each([false, true])(
-    "packaged Codex sessions stop independently and quit (existing goal turn=%s)",
+    "packaged Codex sessions steer and stop independently (existing goal turn=%s)",
     async (existingGoalTurn) => {
       const root = mkdtempSync(join(tmpdir(), "packaged-shared-codex-"));
       let runtime: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
@@ -88,6 +88,24 @@ export const registerSharedCodexSmokeTests = () => {
             PSTDIO_SESSION_ID: sessions[index].id,
             PSTDIO_PROJECT_ID: sessions[index].project_id,
           });
+        const steeredSession = sessions[1];
+        await request(`/sessions/${steeredSession.id}/follow-up`, "POST", { prompt: "Focus on the tests" });
+        const queuePath = `/sessions/${steeredSession.id}/queued-follow-ups`;
+        const queue = await request(queuePath);
+        expect(queue.steeringAvailable).toBe(true);
+        expect(queue.requests).toHaveLength(1);
+        const queued = queue.requests[0];
+        const delivery = await request(`${queuePath}/${queued.queuePosition}/steer`, "POST", {
+          expectedRevision: queued.revision,
+          expectedRunStartedAt: queue.activeRunStartedAt,
+        });
+        expect(delivery.status).toBe("accepted");
+        expect((await request(queuePath)).requests).toHaveLength(0);
+        const active = await request(`/sessions/${steeredSession.id}`);
+        expect(active.status).toBe("in_progress");
+        expect(active.last_request_started).toBe(queue.activeRunStartedAt);
+        expect(calls().filter((call) => call.method === "turn/start")).toHaveLength(2);
+        expect(calls().filter((call) => call.method === "turn/steer")).toHaveLength(1);
         await request(`/sessions/${sessions[0].id}/status`, "PATCH", { status: "cancelled" });
         expect((await request(`/sessions/${sessions[1].id}`)).status).toBe("in_progress");
         expect(calls().filter((call) => call.method === "turn/interrupt")).toHaveLength(1);
