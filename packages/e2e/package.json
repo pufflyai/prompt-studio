@@ -18,7 +18,9 @@
     "test:planner-stress": "bun src/perf/planner-stress.ts",
     "perf:subnav": "bun src/perf/subnav-benchmark.ts",
     "report": "playwright show-report",
-    "perf:planner-board-cold-open": "bun src/perf/planner-board-cold-open.ts"
+    "perf:planner-board-cold-open": "bun src/perf/planner-board-cold-open.ts",
+    "perf:storage-scale": "bun src/perf/storage-scale.ts",
+    "perf:timing-window": "bun src/perf/storage-timing-window.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
@@ -47,6 +49,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remote-workspaces": "workspace:*",
-    "workbench-fixture": "workspace:*"
+    "workbench-fixture": "workspace:*",
+    "storage-scale-fixture": "workspace:*"
   }
 }

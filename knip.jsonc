@@ -63,6 +63,7 @@
         "src/**/*.integration.ts",
         // Tests spawn fixtures by path, so nothing imports them.
         "src/**/*.fixture.ts",
+        "src/**/*.bench.ts",
         "src/**/*.typecheck.ts",
         "*.test.ts",
         "scripts/**/*.ts",
@@ -79,6 +80,10 @@
         "src/**/*.perf.ts",
         "src/perf/planner-moves.stress.ts",
         "src/perf/planner-moves.validation.ts",
+        // These diagnostics compile or launch fixture modules by path.
+        "src/perf/storage-scale-container-setup.ts",
+        "src/perf/storage-scale-container-entry.ts",
+        "src/perf/storage-scale-extension.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",
         "src/**/*.fixture.tsx",
@@ -139,6 +144,7 @@
         "src/index.ts",
         "src/services/sessions/session-query.bench.ts",
         "src/services/extension-storage/document-storage.bench.ts",
+        "src/services/extension-storage/document-scale.bench.ts",
         "src/**/*.test.ts",
         // The isolated conformance runner and durability tests launch these by path.
         "src/**/*.integration.ts",
