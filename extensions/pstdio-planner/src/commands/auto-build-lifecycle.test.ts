@@ -147,3 +147,37 @@ test("resume preserves scope written by an in-flight wake before refreshing the 
     scope: { revision: mode.revision, queries: [{ track: "Tools" }] },
   });
 });
+
+test("resume survives a wake consumed while the supervisor is finishing its paused turn", async () => {
+  const { ctx, task, sessions, prompts } = await started();
+  const { autoBuildSessionCompletedHook, checkAutoBuildCommand } = await import("../hooks/auto-build");
+  const owner = await readAutoBuildSupervisor(ctx);
+  const supervisor = sessions.get(owner.sessionId!)!;
+  const enqueued: unknown[] = [];
+  ctx.automation.enqueue = async (input) => {
+    enqueued.push(input);
+    return {} as never;
+  };
+  await pauseAutoBuildCommand.run(ctx, {});
+  expect(
+    await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: (await readAutoBuildMode(ctx)).revision }),
+  ).toMatchObject({ decision: "wait" });
+  await resumeAutoBuildCommand.run(ctx, {});
+  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
+  expect(prompts).toHaveLength(1);
+  supervisor.status = "completed";
+  await autoBuildSessionCompletedHook.run(
+    { ...ctx, eventId: "pstdio.event.session.completed", deliveryId: "completion" },
+    {
+      sessionId: supervisor.id,
+      projectId: "proj-1",
+      sessionStatus: "completed",
+    },
+  );
+  expect(enqueued).toHaveLength(2);
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(2);
+  supervisor.status = "completed";
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(2);
+});

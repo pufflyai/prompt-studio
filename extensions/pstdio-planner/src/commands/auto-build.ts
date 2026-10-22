@@ -68,7 +68,8 @@ async function wakeSupervisor(ctx: CommandContext) {
       });
       supervisorId = created.id;
     }
-    await saveAutoBuildSupervisor(ctx, { ...supervisor, sessionId: supervisorId, lastWake: snapshot });
+    const { pendingWakeRevision: _pending, ...acknowledged } = supervisor;
+    await saveAutoBuildSupervisor(ctx, { ...acknowledged, sessionId: supervisorId, lastWake: snapshot });
     return { prompted: true, sessionId: supervisorId };
   } catch (error) {
     await pauseAutoBuildMode(ctx, mode);

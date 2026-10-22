@@ -37,6 +37,7 @@ export const resumeAutoBuildCommand = defineCommand({
               replace: JSON.parse(
                 JSON.stringify({
                   ...owner,
+                  pendingWakeRevision: revision,
                   ...(owner.scope ? { scope: { ...owner.scope, revision } } : {}),
                 }),
               ),
