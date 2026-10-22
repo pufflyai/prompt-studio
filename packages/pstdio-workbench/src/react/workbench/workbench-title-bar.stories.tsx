@@ -1,10 +1,11 @@
 import { Box, Text } from "@chakra-ui/react";
 import { WindowTitleBar } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { createPolicyWorkbench } from "../region/panel-policy.fixture";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
+import { FullscreenControls } from "./fullscreen-controls";
 import { Workbench } from "./workbench";
 import { WorkbenchPanelToggles } from "./workbench-panel-toggles";
 
@@ -51,7 +52,15 @@ export const HostPanelControls: Story = {
       workbench,
       panelControlsPlacement: "host" as const,
       titleBar: (
-        <WindowTitleBar platform="darwin" actions={<WorkbenchPanelToggles workbench={workbench} />}>
+        <WindowTitleBar
+          platform="darwin"
+          actions={
+            <>
+              <WorkbenchPanelToggles workbench={workbench} />
+              <FullscreenControls workbench={workbench} />
+            </>
+          }
+        >
           <Text textStyle="label/S/medium">Project tabs</Text>
         </WindowTitleBar>
       ),
@@ -59,12 +68,24 @@ export const HostPanelControls: Story = {
   })(),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const controls = canvas.getByRole("group", { name: "Panel controls" });
     const titleBar = canvasElement.querySelector("[data-window-title-bar]")!;
-    await expect(titleBar.getBoundingClientRect().right - controls.getBoundingClientRect().right).toBeLessThanOrEqual(
+    const title = within(titleBar as HTMLElement);
+    const maximize = canvas.getByRole("button", { name: "Enter Main fullscreen" });
+    await expect(title.getByRole("button", { name: "Enter Main fullscreen" })).toBe(maximize);
+    const controls = title.getByRole("group", { name: "Panel controls" });
+    await expect(controls.getBoundingClientRect().right).toBeLessThanOrEqual(maximize.getBoundingClientRect().left);
+    await expect(titleBar.getBoundingClientRect().right - maximize.getBoundingClientRect().right).toBeLessThanOrEqual(
       10,
     );
     await userEvent.click(canvas.getByRole("button", { name: "Hide Side Panel" }));
     await expect(canvas.getByRole("button", { name: "Show Side Panel" })).toBeVisible();
+    await userEvent.click(maximize);
+    await expect(titleBar).not.toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Exit Main fullscreen" }));
+    await expect(titleBar).toBeVisible();
+    await waitFor(() => expect(maximize).toHaveFocus());
+    await userEvent.click(maximize);
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(maximize).toHaveFocus());
   },
 };

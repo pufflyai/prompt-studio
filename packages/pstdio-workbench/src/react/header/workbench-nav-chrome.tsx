@@ -104,7 +104,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
       </Box>
       {fullscreen || chrome === false ? <Box flex="1" minW="0" /> : null}
       {panelControls && !fullscreen ? <WorkbenchPanelToggles workbench={workbench} /> : null}
-      <FullscreenControls workbench={workbench} />
+      {panelControls || fullscreen ? <FullscreenControls workbench={workbench} /> : null}
     </Header>
   );
 };
