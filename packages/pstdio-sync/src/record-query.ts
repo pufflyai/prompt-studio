@@ -54,7 +54,17 @@ export const queryField = (index: StorageRecordIndex, name: string) => {
   return index.fields[name];
 };
 
+const validateOperator = (field: StorageIndexField, predicate: Extract<StoragePredicate, { value: Json }>) => {
+  if (predicate.op === "contains" && field.type !== "string" && field.type !== "array")
+    throw new Error("Contains requires a string or array field");
+  if (field.type === "array" && ["gt", "gte", "lt", "lte"].includes(predicate.op))
+    throw new Error("Array fields do not support ordering predicates");
+  if (!["eq", "ne", "gt", "gte", "lt", "lte", "contains", "in", "notIn"].includes(predicate.op))
+    throw new Error("Unsupported query predicate");
+};
+
 const validatePredicateValues = (field: StorageIndexField, predicate: Extract<StoragePredicate, { value: Json }>) => {
+  validateOperator(field, predicate);
   const values = predicate.op === "in" || predicate.op === "notIn" ? predicate.value : [predicate.value];
   for (const value of values) {
     if (value === null && predicate.op !== "contains") continue;
@@ -65,8 +75,6 @@ const validatePredicateValues = (field: StorageIndexField, predicate: Extract<St
       throw new Error("Query arrays contain strings");
     if (typeof value === "number" && !Number.isFinite(value)) throw new Error("Query number must be finite");
   }
-  if (!["eq", "ne", "gt", "gte", "lt", "lte", "contains", "in", "notIn"].includes(predicate.op))
-    throw new Error("Unsupported query predicate");
 };
 
 export const validatePredicate = (index: StorageRecordIndex, predicate?: StoragePredicate, depth = 0) => {
@@ -84,10 +92,27 @@ export const validatePredicate = (index: StorageRecordIndex, predicate?: Storage
   validatePredicateValues(field, predicate);
 };
 
+const compareStrings = (left: string, right: string) => {
+  const a = Array.from(left, (character) => character.codePointAt(0)!);
+  const b = Array.from(right, (character) => character.codePointAt(0)!);
+  for (let position = 0; position < Math.min(a.length, b.length); position++)
+    if (a[position] !== b[position]) return a[position] - b[position];
+  return a.length - b.length;
+};
+
 export const compareQueryValues = (left: Json | undefined, right: Json | undefined) => {
   if (left === right || (left == null && right == null)) return 0;
   if (left == null) return 1;
   if (right == null) return -1;
+  if (typeof left === "string" && typeof right === "string") return compareStrings(left, right);
+  if (Array.isArray(left) && Array.isArray(right)) {
+    if (left.length !== right.length) return left.length - right.length;
+    for (let position = 0; position < left.length; position++) {
+      const order = compareStrings(String(left[position]), String(right[position]));
+      if (order) return order;
+    }
+    return 0;
+  }
   return left < right ? -1 : 1;
 };
 
@@ -101,6 +126,14 @@ export const matchesPredicate = (index: StorageRecordIndex, value: Json, predica
     for (const child of predicate.any) if (matchesPredicate(index, value, child)) return true;
     return false;
   }
+  return matchesFieldPredicate(index, value, predicate);
+};
+
+const matchesFieldPredicate = (
+  index: StorageRecordIndex,
+  value: Json,
+  predicate: Extract<StoragePredicate, { field: string }>,
+) => {
   const actual = typedFieldValue(value, queryField(index, predicate.field));
   const empty = actual == null || actual === "" || (Array.isArray(actual) && !actual.length);
   switch (predicate.op) {

@@ -41,7 +41,7 @@ const compareRecords = (index: StorageRecordIndex, left: OrderedRecord, right: O
     return -order;
   }
   if (left.recordId === right.recordId) return 0;
-  return left.recordId < right.recordId ? -1 : 1;
+  return compareQueryValues(left.recordId, right.recordId);
 };
 
 export const createMemoryRecordQueries = (owner: StorageOwner, store: DocumentStore) => {

@@ -4,6 +4,7 @@ import type * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records, storage_record_projections, storage_record_types } from "../../db/schemas.pg";
 import type { DocumentAddress } from "./document-persistence";
+import { encodeProjectionValue } from "./record-projection-codec";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 type Root = Y.AbstractType<unknown>;
@@ -83,9 +84,9 @@ export const trackRecordProjection = async (
             ...owner,
             record_id: record.recordId,
             deleted: record.deleted,
-            value: record.value,
-            asset: record.asset,
-            shared: record.shared,
+            value: encodeProjectionValue(record.value),
+            asset: encodeProjectionValue(record.asset) as typeof record.asset,
+            shared: encodeProjectionValue(record.shared) as typeof record.shared,
             revision: record.revision,
           }));
         if (!rows.length) continue;

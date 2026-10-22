@@ -56,6 +56,24 @@ export const registerGroupedStorageSmokeTests = () => {
         expect(created.status).toBe(201);
         const project = (await created.json()) as { id: string };
         const initial = await read(project.id);
+        await command(project.id, "seed-query-records");
+        const expectSelected = async () => {
+          const selected = await command<{
+            page: { records: { fields: { rank: number } }[] };
+            next: { records: { fields: { rank: number } }[]; cursor: string | null };
+            rows: StorageRecord[];
+            count: { count: number };
+          }>(project.id, "query-records");
+          expect(selected.page.records.map((row) => row.fields.rank)).toEqual([1, 2]);
+          expect(selected.next.records.map((row) => row.fields.rank)).toEqual([3]);
+          expect(selected.next.cursor).toBeNull();
+          expect(selected.rows.map((row) => row.value)).toEqual([
+            { state: "ready", rank: 1, body: "full value" },
+            { state: "ready", rank: 2, body: "full value" },
+          ]);
+          expect(selected.count.count).toBe(3);
+        };
+        await expectSelected();
         const allocated = await command<{ id: string; shorthand: string }>(project.id, "allocate");
         const identity: ResourceIdentity = { ...allocated, kind: "note", aliases: [] };
         expect(await command(project.id, "identity", { id: allocated.id })).toEqual(identity);
@@ -124,6 +142,7 @@ export const registerGroupedStorageSmokeTests = () => {
         expect((await read(project.id)).caption.value).toBe("Second caption");
         await stopProcess(host.child);
         host = await startPackagedServe(root, env);
+        await expectSelected();
         expect((await command<StorageSaveOutcome>(project.id, "outcome", { operationId: "second-caller" })).state).toBe(
           "saved-locally",
         );

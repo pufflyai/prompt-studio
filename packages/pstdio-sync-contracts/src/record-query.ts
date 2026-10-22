@@ -9,8 +9,9 @@ export interface StorageIndexField {
 
 export interface StorageRecordIndex {
   name: string;
+  /** Selectable fields. Declaring a field does not make it an equality key. */
   fields: Record<string, StorageIndexField>;
-  /** Equality fields come before these sort fields in the database index. */
+  /** Explicit equality keys preceding the sort keys. Defaults to no equality keys. */
   equality?: string[];
   orderBy?: { field: string; direction: "asc" | "desc" }[];
   /** Restrict this index to complete record addresses with this prefix. */

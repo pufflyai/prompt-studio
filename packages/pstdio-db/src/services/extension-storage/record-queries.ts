@@ -1,5 +1,6 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import {
+  compareQueryValues,
   encodeQueryCursor,
   prepareRecordQuery,
   type StorageOwner,
@@ -20,15 +21,16 @@ import {
   storage_record_projections as projections,
   storage_documents,
 } from "../../db/schemas.pg";
+import { dropRecordIndexes } from "./record-index-lifecycle";
+import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
 import {
   arrayIndexFields,
   pageAfterSql,
-  pageOrderSql,
   predicateSql,
   recordFieldSql,
   recordIndexKeys,
-  sortFieldSql,
-  sqlLiteral,
+  recordPageSql,
+  recordScopeSql,
 } from "./record-query-sql";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
@@ -48,9 +50,9 @@ const asRecord = (row: Current) =>
     recordId: row.record_id,
     exists: true,
     deleted: row.deleted,
-    value: row.value ?? null,
-    asset: row.asset,
-    shared: row.shared,
+    value: decodeProjectionValue(row.value ?? null),
+    asset: decodeProjectionValue(row.asset) as StorageRecord["asset"],
+    shared: decodeProjectionValue(row.shared) as StorageRecord["shared"],
     revision: row.revision,
   }) satisfies StorageRecord;
 
@@ -63,16 +65,14 @@ export const createRecordQueries = (
   const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
   const ownerWhere = (table: typeof current | typeof indexes | typeof projections) =>
     and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
-  const ownerSql = sql`workbench_id = ${sqlLiteral(owner.workbenchId)} AND extension_id = ${sqlLiteral(owner.extensionId)}`;
-  const visible = (index: StorageRecordIndex) =>
-    sql`${ownerSql} AND NOT deleted ${index.prefix === undefined ? sql`` : sql`AND starts_with(record_id, ${sqlLiteral(index.prefix)})`}`;
+  const visible = (index: StorageRecordIndex) => recordScopeSql(owner, index);
   const getIndex = async (connection: Pick<DbClient, "select">, name: string) => {
     const [index] = await connection
       .select()
       .from(indexes)
       .where(and(ownerWhere(indexes), eq(indexes.name, name)));
     if (!index) throw new Error(`Storage index not installed: ${name}`);
-    return index.definition;
+    return decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex;
   };
   const getRevision = async (connection: Pick<DbClient, "select">) => {
     const [projection] = await connection.select().from(projections).where(ownerWhere(projections));
@@ -97,21 +97,16 @@ export const createRecordQueries = (
       validateIndexes(definitions);
       const desired = structuredClone(definitions).sort((a, b) => (a.name < b.name ? -1 : Number(a.name > b.name)));
       const previous = await db.select().from(indexes).where(ownerWhere(indexes)).orderBy(indexes.name);
-      if (!desired.length && !previous.length) return;
       const [ready] = await db.select().from(projections).where(ownerWhere(projections));
       if (
         ready &&
-        (await fingerprint(previous.map((row) => row.definition) as unknown as Json)) ===
+        (await fingerprint(decodeProjectionValue(previous.map((row) => row.definition) as unknown as Json))) ===
           (await fingerprint(desired as unknown as Json))
       )
         return;
       await rebuild();
       await db.transaction(async (tx) => {
-        for (const index of previous) {
-          await tx.execute(sql`DROP INDEX IF EXISTS ${sql.identifier(index.database_name)}`);
-          for (const [position] of arrayIndexFields(index.definition).entries())
-            await tx.execute(sql`DROP INDEX IF EXISTS ${sql.identifier(`${index.database_name}_g${position}`)}`);
-        }
+        await dropRecordIndexes(tx, ownerWhere(indexes)!);
         await tx.delete(indexes).where(ownerWhere(indexes));
         for (const index of desired) {
           const name = `storage_query_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json })).slice(0, 32)}`;
@@ -123,7 +118,12 @@ export const createRecordQueries = (
             await tx.execute(
               sql`CREATE INDEX ${sql.identifier(`${name}_g${position}`)} ON storage_current_records USING gin ((${recordFieldSql(index, field)})) WHERE ${visible(index)}`,
             );
-          await tx.insert(indexes).values({ ...address, name: index.name, database_name: name, definition: index });
+          await tx.insert(indexes).values({
+            ...address,
+            name: index.name,
+            database_name: name,
+            definition: encodeProjectionValue(index as unknown as Json) as unknown as StorageRecordIndex,
+          });
         }
       });
     },
@@ -132,24 +132,18 @@ export const createRecordQueries = (
         const index = await getIndex(tx, query.index);
         const revision = await getRevision(tx);
         const page = await prepareRecordQuery(owner, index, query, revision);
-        const selected = page.fields.flatMap((name) => [
-          sqlLiteral(name),
-          sql`coalesce(${recordFieldSql(index, name)}, 'null'::jsonb)`,
-        ]);
-        const sort = (index.orderBy ?? []).map(
-          (sort) => sql`coalesce(${sortFieldSql(index, sort.field)}, 'null'::jsonb)`,
+        const result = await tx.execute<QueryRow>(
+          recordPageSql(
+            index,
+            page.fields,
+            sql`${visible(index)} AND ${predicateSql(index, query.where)} AND ${pageAfterSql(index, page.after)}`,
+            page.limit,
+          ),
         );
-        const result = await tx.execute<QueryRow>(sql`
-        SELECT record_id, revision,
-          jsonb_build_object(${sql.join(selected, sql`, `)}) AS fields,
-          jsonb_build_array(${sql.join(sort, sql`, `)}) AS sort_values
-        FROM storage_current_records
-        WHERE ${visible(index)} AND ${predicateSql(index, query.where)} AND ${pageAfterSql(index, page.after)}
-        ORDER BY ${pageOrderSql(index)} LIMIT ${page.limit}`);
         const last = result.rows.at(-1);
         let cursor: string | null = null;
         if (last && result.rows.length === page.limit) {
-          const after = { recordId: last.record_id, values: last.sort_values };
+          const after = { recordId: last.record_id, values: last.sort_values.map(decodeProjectionValue) };
           const next = await tx.execute(
             sql`SELECT 1 FROM storage_current_records WHERE ${visible(index)} AND ${predicateSql(index, query.where)} AND ${pageAfterSql(index, after)} LIMIT 1`,
           );
@@ -159,7 +153,11 @@ export const createRecordQueries = (
         return {
           revision,
           cursor,
-          records: result.rows.map((row) => ({ recordId: row.record_id, revision: row.revision, fields: row.fields })),
+          records: result.rows.map((row) => ({
+            recordId: row.record_id,
+            revision: row.revision,
+            fields: decodeProjectionValue(row.fields) as Record<string, Json>,
+          })),
         };
       }),
     aggregate: (query) =>
@@ -172,7 +170,7 @@ export const createRecordQueries = (
             ? sql`NULL::jsonb`
             : sql`coalesce(${recordFieldSql(index, query.groupBy)}, 'null'::jsonb)`;
         const result = await tx.execute<{ value: Json; count: string }>(
-          sql`SELECT ${group} AS value, count(*)::text AS count FROM storage_current_records WHERE ${visible(index)} AND ${predicateSql(index, query.where)} GROUP BY 1 ORDER BY 1 NULLS LAST`,
+          sql`SELECT ${group} AS value, count(*)::text AS count FROM storage_current_records WHERE ${visible(index)} AND ${predicateSql(index, query.where)} GROUP BY 1`,
         );
         return {
           revision,
@@ -180,7 +178,9 @@ export const createRecordQueries = (
           groups:
             query.groupBy === undefined
               ? []
-              : result.rows.map((row) => ({ value: row.value ?? null, count: Number(row.count) })),
+              : result.rows
+                  .map((row) => ({ value: decodeProjectionValue(row.value ?? null), count: Number(row.count) }))
+                  .sort((a, b) => compareQueryValues(a.value, b.value)),
         };
       }),
     readMany: async (ids) => {

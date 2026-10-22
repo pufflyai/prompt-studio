@@ -136,6 +136,7 @@ test("indexed pages filter before limiting and retain stable record order after 
     {
       name: "by-status",
       fields: { status: { path: ["status"], type: "string" }, rank: { path: ["rank"], type: "number" } },
+      equality: ["status"],
       orderBy: [{ field: "rank", direction: "asc" }],
     },
   ]);

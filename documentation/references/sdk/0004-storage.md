@@ -113,6 +113,7 @@ local indexes. Memory fixtures accept `createMemoryStorage({ indexes })`.
 Each definition names fields by paths within `record.value`, optional leading
 `equality` fields and a fixed `orderBy`. Field types are `string`, `number`,
 `boolean` and `array` (strings only). Timestamps use consistently formatted strings.
+Selectable fields are not implicitly equality keys. Omitted `equality` means none.
 An optional complete-address `prefix` restricts the index to a namespace or
 collection. Record methods otherwise cover the whole extension owner across scopes.
 The host supplies the owner; callers cannot query another extension or workbench.
@@ -124,6 +125,7 @@ substring. `%` and `_` have no wildcard meaning. `empty`, `notEmpty`, `exists` a
 `missing` do not take a value. Empty means missing, null, empty string or empty
 array. Equality and grouping combine missing with null; existence predicates
 distinguish them. Values with a different declared type are treated as missing.
+Ordering predicates reject arrays. `contains` rejects number and boolean fields.
 
 `fields` selects declared field names. Each result has `recordId`, the record's
 content `revision`, and a `fields` object; it does not include the complete body,
@@ -133,6 +135,10 @@ all declared fields. Use `readMany` when complete selected records are needed.
 The page limit is 1–100 and defaults to 100. SQL filters and sorts before the
 limit and field materialization. Sorting uses the definition's order, with nulls
 last in either direction and a final ascending complete-record-ID tie breaker.
+Strings use Unicode code point order, independent of locale. Equality keys use
+digests with full-value rechecking. Long-string ordering uses bounded prefixes
+and complete comparisons within ties; large equal-prefix groups can still scan
+or sort many rows. See [the temporary index limitation](../../adrs/0089-temporary-bounded-query-index-keys.md).
 Store the returned opaque cursor unchanged. It binds the owner, index definition,
 filter, field selection and owner revision. A changed revision rejects the cursor;
 restart at page one instead of combining results from different revisions. Counts

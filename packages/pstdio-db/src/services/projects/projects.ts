@@ -1,6 +1,7 @@
 import { and, asc, eq, gt, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { extension_instances, projects } from "../../db/schemas.pg";
+import { extension_instances, projects, storage_record_indexes } from "../../db/schemas.pg";
+import { dropRecordIndexes } from "../extension-storage/record-index-lifecycle";
 import { type PageQuery, pageBoundary, pageLimit, queryPage } from "../query-page";
 import { deriveShorthand } from "./derive-shorthand";
 
@@ -99,6 +100,7 @@ export const createProjectsDBService = (db: DbClient) => {
   // foreign key cascades them. The caller receives them to publish their removal.
   const hardDelete = async (id: string) =>
     db.transaction(async (tx) => {
+      await dropRecordIndexes(tx, eq(storage_record_indexes.workbench_id, id));
       const [deleted] = await tx.delete(projects).where(eq(projects.id, id)).returning({ id: projects.id });
       if (!deleted) return null;
       const extensionInstances = await tx
