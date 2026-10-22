@@ -1,5 +1,26 @@
 # pstdio-planner
 
+## 0.45.0
+
+_2026-10-22_
+
+### Minor Changes
+
+- 7f07c31: Open the latest linked session as an unpinned Side tab when a ticket opens.
+- 51d5449: Shorten ticket planning, preserve screenshots, and answer or revise review requests in Needs attention with linked counts and file breadcrumbs.
+
+### Patch Changes
+
+- eb272ba: Run Planner storage cleanups once so opening large boards does not repeat writes.
+- c649ff3: Save Planner drops once and update only changed ticket positions.
+- 037e267: Start review conversations only when the person chooses Open session.
+- 6e8b719: Open ticket draft and saved document paths in Planner through resource-owned handlers.
+- e98ea94: Fix filtered milestone forecasts and review counts, recover interrupted Planner writes automatically, and reduce Auto Build startup checks.
+- 1f3d64e: Let Planner and Reports migrate their own legacy templates with public storage helpers, and remove the template migration from core.
+- 2b4c5ae: Exit inactive Auto Build checks early and limit scheduled wakes to the current supervisor's dispatched work.
+- c2807ac: Load tickets by ID without waiting for editor modules or reloading hidden boards.
+- 2f7efac: Bound concurrent workspace deletion and session writes, and fetch only the session summaries needed by Planner badges to reduce bulk archive CPU spikes.
+
 ## 0.44.0
 
 _2026-10-18_

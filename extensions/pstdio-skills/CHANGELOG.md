@@ -1,5 +1,13 @@
 # Prompt Studio Skills
 
+## 0.45.0
+
+_2026-10-22_
+
+### Patch Changes
+
+- d91aa48: Document typed page params and shared webview preferences for extension authors.
+
 ## 0.44.0
 
 _2026-10-18_
