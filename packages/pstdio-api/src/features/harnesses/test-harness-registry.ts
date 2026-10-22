@@ -1,7 +1,11 @@
 import type { AgentAvailabilityType } from "pstdio-api-contracts";
 import { reconcileMessageHistory } from "pstdio-api-contracts";
 import type { HarnessProvider } from "pstdio-api-contracts/extension-kernel";
-import { createHarnessRegistry } from "pstdio-api-runtime-host";
+import {
+  createHarnessRegistry,
+  createHarnessSessionResources,
+  type HarnessSessionResources,
+} from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import type { HarnessRegistryService } from "./harness-registry-service";
 
@@ -43,34 +47,40 @@ export const createTestHarnessRecord = (
 
 export const createTestHarnessRegistry = (
   records: RuntimeHarnessRecord[],
-  options?: { disabledByProject?: Record<string, string[]> },
+  options?: { disabledByProject?: Record<string, string[]>; sessionResources?: HarnessSessionResources },
 ): HarnessRegistryService => {
-  const registry = createHarnessRegistry(records, (record, options) => ({
-    projectId: options?.projectId,
-    extensionId: record.extensionId,
-    name: record.name,
-    process: {
-      run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
-      runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
-      spawnDetached: async () => ({}),
-    },
-    net: { findFreePort: async () => 0 },
-    connections: {
-      request: async () => {
-        throw new Error("No test connection configured.");
+  const resources = options?.sessionResources ?? createHarnessSessionResources();
+  const registry = createHarnessRegistry(
+    records,
+    (record, options) => ({
+      projectId: options?.projectId,
+      extensionId: record.extensionId,
+      name: record.name,
+      process: {
+        run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+        runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+        spawnDetached: async () => ({}),
       },
-      stream: async function* () {
-        yield await Promise.reject(new Error("No test connection configured."));
+      net: { findFreePort: async () => 0 },
+      connections: {
+        request: async () => {
+          throw new Error("No test connection configured.");
+        },
+        stream: async function* () {
+          yield await Promise.reject(new Error("No test connection configured."));
+        },
       },
-    },
-    logger: { info: () => {}, warn: () => {}, error: () => {} },
-    state: { get: async () => undefined, set: async () => {}, delete: async () => {} },
-  }));
+      logger: { info: () => {}, warn: () => {}, error: () => {} },
+      state: { get: async () => undefined, set: async () => {}, delete: async () => {} },
+    }),
+    resources,
+  );
 
   const isDisabled = (id: string, projectId?: string) =>
     Boolean(projectId && options?.disabledByProject?.[projectId]?.includes(id));
 
   return {
+    retainSession: resources.retain,
     list: async (scope) => registry.list().filter((handle) => !isDisabled(handle.id, scope?.projectId)),
     get: async (id, scope) => (isDisabled(id, scope?.projectId) ? null : registry.get(id)),
     invalidate: () => {},

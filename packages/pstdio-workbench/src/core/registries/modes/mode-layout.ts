@@ -8,6 +8,7 @@ import {
   type WorkbenchWidgetPlacement,
   workbenchPanelRegions,
 } from "../layout/layout-model";
+import { defaultArrangement, resolveArrangement } from "../layout/panel-positions";
 import type { WorkbenchModeActivationContext, WorkbenchModeContribution } from "./mode-registry-types";
 
 const modePanelRegions = {
@@ -110,7 +111,16 @@ export const applyModePanelPolicy = (
       next = { ...next, regions: { ...next.regions, [region]: { ...next.regions[region], visible: true } } };
     }
   }
-  return next;
+  if (!next.arrangement) return next;
+  const arrangement = resolveArrangement(next.arrangement);
+  for (const region of ["side", "sidenav", "secondary", "activity"] as const) {
+    if (getSettings(region)?.movable === false || (region === "secondary" && getSettings("main")?.movable === false))
+      Object.assign(arrangement, { [region]: defaultArrangement[region] });
+  }
+  const unchanged = (Object.keys(arrangement) as (keyof typeof arrangement)[]).every(
+    (region) => arrangement[region] === next.arrangement?.[region],
+  );
+  return unchanged ? next : { ...next, arrangement };
 };
 
 export const restoreUnscopedModeLayout = (
@@ -123,12 +133,12 @@ export const restoreUnscopedModeLayout = (
     const cleared = clearRegions(current, allModeRegions);
     const regions = { ...cleared.regions };
     for (const regionId of allModeRegions) regions[regionId] = defaults.regions[regionId];
-    return applyModePanelAvailability({ ...cleared, regions }, panels);
+    return applyModePanelAvailability({ ...cleared, arrangement: defaults.arrangement, regions }, panels);
   }
 
   const regions = { ...current.regions };
   for (const regionId of allModeRegions) regions[regionId] = saved.regions[regionId];
-  const merged = applyModePanelAvailability({ ...current, regions }, panels);
+  const merged = applyModePanelAvailability({ ...current, arrangement: saved.arrangement, regions }, panels);
   const savedActive = placementById(merged, saved.activeWidgetId);
   const currentActive = placementById(merged, current.activeWidgetId);
   return {

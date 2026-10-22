@@ -42,6 +42,8 @@ export interface ExtensionSessionUsage {
 }
 
 export interface ExtensionSession {
+  /** The device that owns execution. Present on synced personal sessions. */
+  device?: { ownerId: string; id: string; name: string };
   id: string;
   title: string;
   status: SessionStatus;

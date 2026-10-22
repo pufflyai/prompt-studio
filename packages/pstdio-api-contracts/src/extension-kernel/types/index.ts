@@ -1,3 +1,4 @@
+export type * from "./account";
 export type * from "./assets";
 export type * from "./automation";
 export type * from "./collection-view";
@@ -31,5 +32,6 @@ export type * from "./tree-renderer";
 export type * from "./view-toolbar-action";
 export type * from "./views";
 export * from "./webview-capabilities";
+export type * from "./webview-editing";
 export type * from "./webview-host-props";
 export type * from "./workspaces";

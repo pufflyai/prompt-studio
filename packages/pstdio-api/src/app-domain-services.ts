@@ -1,4 +1,4 @@
-import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
+import { resourceEvents, workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import { createAssetBytesStorage, createFilesStorageService } from "pstdio-storage";
 import type { createAppDatabaseServices } from "./app-database";
 import type { RouteDeps } from "./features/deps";
@@ -29,10 +29,16 @@ export const createCoreDomainServices = (input: {
   storageRoot: string;
 }) => {
   const { db, dbs, eventBus, storageRoot } = input;
+  dbs.extensionResourceSequencesDBService.watch(({ projectId, ...payload }) =>
+    fireExtensionEventAsync(input.getCommandDeps(), projectId, resourceEvents.renumbered, payload),
+  );
   const filesStorageService = createFilesStorageService(storageRoot);
   const fileService = createFileService({ filesDBService: dbs.filesDBService, filesStorageService, eventBus });
 
-  const syncService = createSyncService({ db });
+  const syncService = createSyncService({
+    db,
+    personalState: () => input.getCommandDeps().personalHistoryService.fullState(),
+  });
   const assetTransferService = createAssetTransferService({
     transfers: dbs.assetTransfersDBService,
     bytes: createAssetBytesStorage(storageRoot),

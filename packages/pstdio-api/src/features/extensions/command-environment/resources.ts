@@ -27,6 +27,18 @@ export const createResourcesApi = (
       resource: { ...resource, extensionId: input.extensionId, projectId: input.projectId },
     });
   },
+  identity: async ({ kind, id }) => {
+    const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
+    if (!runtime.resourceKinds.some((record) => record.extensionId === input.extensionId && record.localId === kind))
+      throw new Error(`Resource kind "${kind}" is not owned by ${input.extensionId}.`);
+    return deps.extensionResourceSequencesService.identity({ ...input, kind, id });
+  },
+  findByShorthand: async ({ kind, shorthand }) => {
+    const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
+    if (!runtime.resourceKinds.some((record) => record.extensionId === input.extensionId && record.localId === kind))
+      throw new Error(`Resource kind "${kind}" is not owned by ${input.extensionId}.`);
+    return deps.extensionResourceSequencesService.findByShorthand({ ...input, kind, shorthand });
+  },
   allocate: async ({ kind, idPrefix }) => {
     const { runtime, project } = await deps.extensionRuntimeCatalog.get(input.projectId);
     const declaration = runtime.resourceKinds.find(

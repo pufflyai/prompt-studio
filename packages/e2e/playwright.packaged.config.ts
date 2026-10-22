@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: "./src/packaged",
   testMatch: [
     "packaged-empty-panels.spec.ts",
+    "packaged-editing-sessions.spec.ts",
     "packaged-extension-startup.spec.ts",
     "packaged-webview-browsers.spec.ts",
     "packaged-statistics-loading.spec.ts",
@@ -13,6 +14,7 @@ export default defineConfig({
     "packaged-settings-reset.spec.ts",
     "packaged-command-query.spec.ts",
     "packaged-command-palette.spec.ts",
+    "packaged-main-fullscreen.spec.ts",
   ],
   timeout: 120_000,
   workers: 1,

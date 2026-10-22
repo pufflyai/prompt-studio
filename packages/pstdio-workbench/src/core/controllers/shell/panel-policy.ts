@@ -28,6 +28,7 @@ export const resolvePanelPolicy = (input: {
     canClose,
     canToggle: canOpen && canClose,
     acceptsTabs: provided && settings.acceptsTabs !== false,
+    movable: provided && settings.movable !== false,
     resizable: provided && !fixedSize && settings.resizable !== false,
     floatable: provided && region === "side" && (settings.floatable ?? input.legacyFloatable ?? true),
     headerExplicit: state.headerVisible !== undefined || settings.showHeader !== undefined,

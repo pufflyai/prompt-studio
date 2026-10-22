@@ -7,12 +7,13 @@ const fixture = createAuthorityFixture(implementation);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
-const setup = () => {
-  const authentication = createAuthenticationFixture(fixture.databaseUrl);
+const setup = (addresses?: Parameters<typeof createAuthenticationFixture>[1]) => {
+  const authentication = createAuthenticationFixture(fixture.databaseUrl, addresses);
   const handler = implementation.createManagerHandler(authentication.auth, `${authentication.config.origin}/`);
+  // A proxy in front of a manager under a path removes the path before forwarding.
   const request = (path: string, body?: unknown, headers?: HeadersInit) =>
     handler(
-      new Request(`${authentication.config.origin}${path}`, {
+      new Request(`${new URL(authentication.config.origin).origin}${path}`, {
         method: body ? "POST" : "GET",
         headers: { "content-type": "application/json", ...Object.fromEntries(new Headers(headers)) },
         ...(body ? { body: JSON.stringify(body) } : {}),
@@ -131,5 +132,26 @@ test("login finds the account an operator provisioned for the same Google user",
     expect(((await response.json()) as { accountId: string }).accountId).toBe(accountId);
   } finally {
     await Promise.all([manager.close(), authentication.close()]);
+  }
+});
+
+test("renewal under a path signs access for the full manager and relay addresses", async () => {
+  const manager = fixture.owner();
+  const addresses = { origin: "https://shared.fixture.test/accounts", audience: "https://shared.fixture.test/relay" };
+  const { authentication, renew } = setup(addresses);
+  try {
+    const accountId = await provisionAccount(manager);
+    const grant = await connectDevice(manager, accountId);
+    const issued = await renew(grant.token, grant.workbenchId);
+    expect(issued.status).toBe(200);
+    const access = (await issued.json()) as { token: string };
+    const verify = implementation.createEnvironmentAccessVerifier({
+      issuer: addresses.origin,
+      audience: addresses.audience,
+      jwks: await authentication.auth.jwks(),
+    });
+    expect(await verify(access.token)).toMatchObject({ accountId, environmentId: grant.deviceId });
+  } finally {
+    await authentication.close();
   }
 });

@@ -3,6 +3,7 @@ import type { WorkbenchBreadcrumbController } from "./controllers/breadcrumbs/br
 import type { WorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
 import type { WorkbenchCompositionController } from "./controllers/composition/composition-controller";
 import type { WorkbenchFocusController } from "./controllers/focus/focus-controller";
+import type { MainFullscreenController } from "./controllers/fullscreen/main-fullscreen";
 import type {
   WorkbenchPageLocationBrowser,
   WorkbenchPageLocationController,
@@ -101,6 +102,7 @@ export interface WorkbenchCoreContributionContext {
   composition: WorkbenchCompositionController;
   context: ContextKeyService;
   focus: WorkbenchFocusController;
+  fullscreen: MainFullscreenController;
   keybindings: KeybindingRegistry;
   layout: WorkbenchModuleLayoutModel;
   modes: WorkbenchModeRegistry;
@@ -128,6 +130,8 @@ export interface WorkbenchCoreContributionContext {
   themes: ThemeRegistry;
   fileIconThemes: FileIconThemeRegistry;
   getPrimaryResource(): ResourceRef | undefined;
+  /** Resources in open tabs, including saved inactive pages and modes when persistence supports enumeration. */
+  getOpenResources(): ResourceRef[];
   onDidChangePrimaryResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
   getActiveResource(): ResourceRef | undefined;
   onDidChangeActiveResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
@@ -141,11 +145,17 @@ export interface WorkbenchSnapshot {
 export interface WorkbenchPersistenceAdapter {
   getSnapshot(scope?: string): WorkbenchSnapshot | undefined;
   setSnapshot(snapshot: WorkbenchSnapshot, scope?: string): void;
+  /** Remove a saved scope and cancel its pending writes. */
+  removeSnapshot?(scope?: string): void;
+  listLayouts?(): { scope?: string; layout: WorkbenchLayout }[];
+  onDidChangeLayout?(listener: (scope: string | undefined, layout: WorkbenchLayout | undefined) => void): () => void;
   flush?(): void;
   dispose?(): void;
 }
 
 export interface WorkbenchHost {
+  getOpenPlacements(): WorkbenchWidgetPlacement[];
+  getOpenPlacementIds(): ReadonlySet<string>;
   getSnapshot(): WorkbenchSnapshot;
   restoreSnapshot(snapshot: WorkbenchSnapshot): void;
   setPersistenceScope(scope: string | undefined, input?: { carryRegions?: readonly WorkbenchRegion[] }): void;

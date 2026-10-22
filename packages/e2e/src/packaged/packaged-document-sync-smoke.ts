@@ -83,7 +83,7 @@ export const registerDocumentSyncSmokeTests = () =>
           expect(body.outcome.ok).toBe(true);
           return body.outcome.value;
         };
-        const login = await client.account.login(peer.server.url.origin);
+        const login = await client.account.login(peer.origin);
         const url = new URL(login.url);
         const callback = new URL(url.searchParams.get("callback")!);
         callback.searchParams.set("state", url.searchParams.get("state")!);
@@ -97,8 +97,12 @@ export const registerDocumentSyncSmokeTests = () =>
             edits: [{ recordId: note.recordId, replace: `packaged-secret${"x".repeat(1_048_576)}`, asset }],
           },
         });
+        const syncState = async () => (await client.account.projectSyncStatus(project.id)).state;
+        expect(await syncState()).toBe("local");
         await client.account.syncProject(project.id);
         await waitFor(() => peer.states() > 0);
+        await waitFor(async () => (await syncState()) === "synced");
+        expect(await client.account.projectSyncStatus(project.id)).toEqual({ state: "synced", offlineReady: true });
         await waitFor(async () => (await client.projects.snapshots(project.id)).length === 3);
         const listed = await promisify(execFile)(PACKAGED_BINARY_PATH, ["projects", "snapshots", project.id], {
           cwd: root,
@@ -142,6 +146,7 @@ export const registerDocumentSyncSmokeTests = () =>
         peer.corrupt();
         const quarantine = join(root, "state", "sync-quarantine");
         await waitFor(async () => (await readdir(quarantine).catch(() => [])).some((file) => file.endsWith(".json")));
+        await waitFor(async () => (await syncState()) === "needs-attention");
         await command("commit", {
           group: {
             operationId: "healthy-after-corrupt",
@@ -155,7 +160,7 @@ export const registerDocumentSyncSmokeTests = () =>
         expect(saved).not.toContain("packaged-secret");
       } finally {
         await stopProcess(host.child);
-        await peer.server.stop(true);
+        await peer.stop();
         await rm(root, { recursive: true, force: true });
       }
     },

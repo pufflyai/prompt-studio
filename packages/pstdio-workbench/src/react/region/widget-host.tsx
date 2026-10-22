@@ -116,7 +116,8 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
           <WorkbenchWidgetContents
             renderer={renderer}
             input={{ workbench, panel, instance, refresh }}
-            defer={["main", "side", "bottom"].includes(panel.region)}
+            // File views start an async read; their heavy editors load separately.
+            defer={view?.body.kind !== "file" && ["main", "side", "bottom"].includes(panel.region)}
           />
         </WorkbenchRenderedWidgetFrame>
       ) : (

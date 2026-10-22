@@ -1,6 +1,6 @@
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { createDashboardSessions, type DashboardSession } from "../data/dashboard-sessions";
+import { type DashboardSession, findDashboardSession } from "../data/dashboard-sessions";
 export const dashboardSelectedSessionIdContextKey = "dashboard.session.id";
 type DashboardSessionSelectionContext = Pick<WorkbenchModuleContext, "context">;
 export const rememberDashboardSession = (ctx: DashboardSessionSelectionContext, session: DashboardSession) => {
@@ -23,5 +23,5 @@ export const getDashboardSelectedSessionId = (ctx: DashboardSessionSelectionCont
 export const getDashboardSelectedSession = (ctx: DashboardSessionSelectionContext) => {
   const sessionId = getDashboardSelectedSessionId(ctx);
   if (!sessionId) return undefined;
-  return createDashboardSessions(getDashboardSelectedProjectId(ctx)).find((session) => session.id === sessionId);
+  return findDashboardSession(sessionId, getDashboardSelectedProjectId(ctx));
 };

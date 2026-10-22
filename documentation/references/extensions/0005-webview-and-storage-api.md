@@ -156,6 +156,19 @@ On `main`, extension API 0.2.1 adds two declared webview capabilities. Use `harn
 
 Use `resources.actions` with `{ operation: "list", resource }` to read the same current menu actions as a native resource card. Pass the resource's own `extensionId` for extension resource kinds; the host does not fill it in with the calling extension. Each action has a `label`, a workbench `icon` name or an `iconSrc` image URL, `isDisabled`, and a `description` that explains a disabled action. Render those actions with `ResourceContextMenu`. Invoke one with `{ operation: "execute", resource, key }`. The host resolves the menu again before execution, applies its availability rules, and opens the normal parameter form when an action needs input. The call rejects when the action is no longer available or its command fails, so the webview reports the error. A listed snapshot does not update by itself. After the first list, the host sends `{ type: "changed" }` on the `resources.actions` event scope whenever the actions may have changed. Listen with `host.onEvent("resources.actions", ...)` and list again. Declare each named capability on the view.
 
+### Cloud account and sync status
+
+On `main`, extension API 0.2.1 also adds `account.read` and `account.manage`. `client.account` has the same methods as [`ctx.account`](0003-command-and-process-api.md#cloud-account-and-sync-status). Declare `account.read` for `client.account.status`, `loginStatus`, `devices`, and `projectSyncStatus`. Declare `account.manage` for `client.account.login`, `cancelLogin`, `logout`, `renameDevice`, `removeDevice`, `syncProject`, and `stopProjectSync`. Without a project ID, a call uses the webview's project.
+
+```ts
+const client = createWebviewClient<typeof commands>(host);
+const refresh = async () => render(await client.account.projectSyncStatus());
+await refresh();
+const stop = client.events.subscribe(accountEvents.projectSyncChanged, refresh);
+```
+
+The dashboard delivers `accountEvents.projectSyncChanged` only to webviews of the project that changed. The extension testbench does not provide an account; both capabilities answer `unsupported` there.
+
 ### Navigate from a webview
 
 Add `navigation.open` to the view and pass an explicit page or panel target:
@@ -334,6 +347,73 @@ HTTP SDK callers use `client.extensions.streamCommand(projectId, commandId, inpu
 The host allows 16 live streams per frame and 8 MiB of unread JSON per stream. Overflow ends the stream with `command_stream_overflow`. All command streams and session readers share one connection. Events remain invalidation signals; chunks go only to their caller.
 
 The low-level `commands.stream` bridge accepts `start`, `cancel`, and `ack` operations. `createWebviewClient` handles IDs, consumed-byte acknowledgements, and scoped `data`/`end` events for you.
+
+## Local editing sessions
+
+To try the API, run `bun run --cwd packages/pstdio-workbench storybook` and open
+**Reference → Extension API → Shared editing sessions → Playground**. Hold and release saves,
+edit either shared view, preview or cancel a move, and fail a held save to test retrying.
+The story uses the real SDK and host session with in-memory transport and persistence.
+
+On `main` (extension API 0.2.1, after release 0.44.0), declare `editing.session` and use
+`client.editing.open` when several webviews edit the same document. The host keeps one local
+session for the calling project, extension and key. Views receive edits before a backend save
+finishes. The session keeps one save queue and combines pending field changes while a write
+is in flight. This is local workbench state; it is not cross-device synchronization or durable storage.
+
+```ts
+const session = await client.editing.open({
+  key: documentId,
+  initial: await client.commands["document.read"]({ documentId }),
+  save: {
+    commandId: `${host.extensionId}.command.document.save`,
+    params: { documentId },
+  },
+});
+const unsubscribe = session.subscribe(() => showDocument(session.getSnapshot().value));
+await session.commit([{ path: ["title"], value: "New title" }]);
+```
+
+The save command receives its fixed `params` plus a `changes` array. It must belong to the
+calling extension, apply the complete batch before announcing success, and return only after saving. Use
+`applyEditingChanges` in that command and `diffEditingState` to compare JSON objects. Both
+helpers are exported from `@pstdio/sdk/extensions`. Paths traverse objects and set fields; an empty path replaces
+the root object. Replace arrays as a whole. Changes can replace arrays or objects, including removing old properties.
+Prototype paths and non-object roots are rejected.
+
+`session.getSnapshot()` returns `value`, `version`, `revision` and `savedRevision`. `version`
+orders every local update. `revision` counts committed edits; `savedRevision` advances only
+after a successful write. A save failure retains the edit. `session.save()` retries or awaits
+the shared queue. A commit promise waits for the queue, while subscriptions update immediately.
+Keep errors beside the initiating control.
+
+Use `session.preview(changes)` during a gesture. Successive previews add to that view's draft
+and appear in every participating view without saving. `session.commit()` commits that draft
+once; `session.cancel()` removes it without a write. Other views' drafts remain separate.
+Keep view-only selection, active tool, scroll and zoom outside the durable document.
+`diffEditingState` builds patches and `applyEditingChanges` applies a batch atomically to a JSON object.
+`rebaseEditingChanges(value, drafts)` composes a map of independent patch batches and drops
+batches whose paths no longer apply. Extension-owned persisted patch stores can use that
+same rule to keep parent replacements readable when concurrent child patches arrive.
+
+Subscribe to the extension's saved-change event and call
+`session.refresh(() => client.commands["document.read"]({ documentId }))` for backend or agent
+edits. Refresh waits for pending saves and repeats the backend read if shared state changed while reading.
+Events remain invalidation signals. Do not publish document data through `lastCommand`.
+
+A structural commit or refresh cancels drafts whose paths no longer apply.
+On disposal, unsubscribe and call `session.close()`. Closing a view cancels its preview and
+revokes its connection. Pending saves belong to the document and continue after a view closes.
+The host drops a clean session after its final view closes; reopening reads durable state.
+Unsaved state remains local to the live workbench after a failure and is lost if that workbench
+is destroyed. A late view joins the current session instead of replacing it with its older read.
+
+The low-level `editing.session` bridge accepts `open`, `commit`, `preview`, `cancel`, `refresh`,
+`save` and `close`. The SDK manages connection IDs, edit sequences, subscriptions and stale replies.
+A stale low-level `refresh` returns no snapshot; the SDK retries the backend read.
+Sessions cannot choose another project or extension, and an open key must use the same save command.
+Global views without a project do not provide this capability. Publish SDK and host support before
+adopting it in separately released extensions.
 
 ## Page params
 

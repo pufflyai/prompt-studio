@@ -42,14 +42,14 @@ anything.
 | Update | An encrypted change to one document, produced by a client. |
 | Latest state | An encrypted copy of one document's full current state, uploaded by a client. |
 | Blob | An encrypted file stored by the relay, such as an image or an extension package. |
-| Personal space | The documents that belong to one user inside one cloud project, such as their sessions. Only that user's devices get them. |
+| Private project data | The documents that belong to one user inside one cloud project: their workspaces, sessions and transcripts. Only that user's devices get them. The code calls this the personal space. |
 
 ## Requirements
 
 ### Data lives on the clients
 
 - R1. Every device keeps a full local copy of every cloud project it can access and of
-  its user's personal spaces, including file contents. It works fully offline.
+  its user's private project data, including file contents. It works fully offline.
 - R2. Clients merge changes with the CRDT, following the shape of the data. Extensions
   do not declare merge rules, and a save does not need to say what changed: the client
   compares the saved value with the current one.
@@ -78,7 +78,8 @@ anything.
   under this rule: core provides them (R49 to R51).
 - R6. A save is durable on the local device before the product reports it as saved.
 - R7. The product shows the sync state of a cloud project: saved locally, waiting to
-  sync, synced, offline, or a problem that needs attention.
+  sync, synced, offline, or a problem that needs attention. Offline means the device has
+  lost its connection. A project that does not sync is called Local, not Offline.
 
 ### Core provides what merging cannot
 
@@ -105,7 +106,7 @@ anything.
 - R8. Clients encrypt every update, latest state, blob, live message and remote command
   before it leaves the device.
 - R9. The relay sees only what it needs to route and store data: project ID, document
-  ID, personal space owner, sending device, sizes, times, update IDs, sequence numbers
+  ID, owner of private project data, sending device, sizes, times, update IDs, sequence numbers
   and blob IDs. Document and blob IDs are random and do not reveal names or content.
 - R10. The relay does not merge, read content, resolve conflicts, run extension code or
   index anything.
@@ -118,8 +119,8 @@ anything.
   never holds keys. The account manager and the relay are separate services with
   separate storage. Known limit: someone who controls both services can read data. A
   stronger key design, for example with passkeys, may replace this later.
-- R13. Each cloud project has a project key that all members' devices get. Each personal
-  space has its own key that only that user's devices get.
+- R13. Each cloud project has a project key that all members' devices get. Each user's private
+  project data has its own key that only that user's devices get.
 - R14. The account manager backs up keys separately from relay data. Losing the key
   store must not make relay data unreadable.
 - R15. Removing a member or device creates a new key for future data. Remaining devices
@@ -158,7 +159,7 @@ anything.
 ### What the relay enforces
 
 - R26. Only devices of a project's members can read or write its documents and blobs.
-  Only a user's own devices can read or write that user's personal spaces.
+  Only a user's own devices can read or write that user's private project data.
 - R27. The relay ignores an update it has already stored, using the update ID.
 - R28. The relay limits update size, blob size, storage per account and request rate.
 - R29. A client and the relay agree on a protocol version when they connect. A client
@@ -180,17 +181,35 @@ anything.
 
 - R34. Logging in on a client makes it a device, connects it to every cloud project the
   user is a member of, and shows it on the user's other devices. There is no step to
-  connect each project.
-- R35. A user can make a local project a cloud project, and stop syncing it.
+  connect each project. Cloud projects show in the project picker right after login,
+  before the device has a folder for them.
+- R35. A user can make a local project a cloud project, and make a cloud project local
+  again. Making a project local applies to the whole account, not to one device. It is
+  done in Cloud settings, after a warning and a confirmation. Every device keeps its
+  copy. If the project syncs again later, the copies merge by R2.
 - R36. A team account owns cloud projects. Members see only the projects they are added
   to.
 - R37. Removing a device or a member stops their future access. Data already on their
   machines stays there.
+- R54. During early access, the account manager turns Cloud on per account. An operator
+  turns it on by the account's email. Only those accounts get cloud projects, keys and
+  relay access. Every other user can still log in and sees Cloud sync as coming soon.
+  The relay only checks the account manager's access tokens. Plans and billing come
+  later.
+
+### Who owns the Cloud UI
+
+- R55. A bundled Prompt Studio Cloud extension owns the Cloud UI: the status bar item,
+  its popover and Cloud settings. Core keeps credentials, login, the relay connection,
+  sync, presence and the R7 sync state, and gives extensions the account, devices and
+  sync state through the public SDK. The dashboard has no Cloud UI of its own.
+- R56. Bundled extensions can add surfaces that appear in every project, and keep
+  settings that stay on one device and never sync.
 
 ### Sessions and remote work
 
-- R38. Each device writes its workspaces, sessions and transcripts to the user's
-  personal space in that project. Each session transcript is its own document, so one
+- R38. Each device writes its workspaces, sessions and transcripts as the user's
+  private project data in that project. Each session transcript is its own document, so one
   long session does not make other documents large. Every device of that user can read
   them, even when the device that ran them is offline.
 - R39. From any of their devices, a user can create a workspace, start a session, send a
@@ -217,8 +236,9 @@ anything.
 
 ### Recovery
 
-- R46. After resetting or replacing a device, a user logs in with Google and gets every
-  cloud project and personal space back.
+- R46. After resetting or replacing a device, or installing Prompt Studio on a new one, a
+  user logs in with Google and gets every cloud project back. Their private project data
+  comes back too once it syncs in phase 2.
 - R53. Each device keeps at most three recovery snapshots of every cloud document:
   one captured hourly, one every 12 hours, and one daily. Show their actual capture
   times. Use the disk capacity the device supports, with no fixed snapshot byte
@@ -238,13 +258,13 @@ anything.
 
 | Phase | Includes | Requirements |
 | --- | --- | --- |
-| 1. One user, many devices | Encrypted CRDT sync of project data and files, latest state backup, Google login connects everything, device list, sync state, extension and automation sync, reset recovery | R1 to R31, R34, R35, R37 (devices), R43 to R53 |
-| 2. Sessions follow you | Personal spaces, session and transcript sync, remote commands, cloud devices | R32, R33, R38 to R42 |
+| 1. One user, many devices | Encrypted CRDT sync of project data and files, latest state backup, Google login connects everything, early access, device list, sync state, Cloud UI as an extension, extension and automation sync, reset recovery | R1 to R31, R34, R35, R37 (devices), R43 to R56 |
+| 2. Sessions follow you | Private project data (workspace, session and transcript sync), remote commands, cloud devices | R32, R33, R38 to R42 |
 | 3. Teams | Team accounts, members, per-project membership, member removal | R36, R37 (members) |
 
 Phase 1 replaces the v0.1 release defined in PS-736. It starts from the current code
 on `main`, not from scratch. See [Impact on current code](#impact-on-current-code).
-Phase 1 builds the project and personal key split (R13) from the start, so phases 2 and
+Phase 1 builds the split between project keys and private-data keys (R13) from the start, so phases 2 and
 3 do not change the storage format.
 
 ## Non-goals
@@ -262,7 +282,8 @@ Phase 1 builds the project and personal key split (R13) from the start, so phase
 
 | Area | Today on `main` | Decision |
 | --- | --- | --- |
-| Account manager (`services/account-manager`) | Better Auth, Google login, accounts, grants and finite access tokens | Keep. Add devices, team members, key storage and key backup. Replace per-project enrollment with one login per device. |
+| Account manager (`services/account-manager`) | Better Auth, Google login, accounts, grants and finite access tokens | Keep. Add devices, team members, key storage, key backup and the per-account early-access switch (R54). Replace per-project enrollment with one login per device. |
+| Cloud UI | None on `main`. Draft PR #1291 built it in the dashboard. | Build it in the bundled Prompt Studio Cloud extension on the public SDK (R55). Core exposes the account, devices and sync state. |
 | Relay storage (`services/relay/src/storage`) | PostgreSQL groups, candidate evaluation, receipts, conflict alternatives, restore | Replace with encrypted updates and latest states per document. |
 | Relay blobs (`services/relay/src/assets`) | S3 asset storage with integrity checks | Keep and simplify. Content is encrypted and IDs are random. |
 | Relay transport | Authenticated HTTP and WebSocket subscriptions | Keep and simplify for encrypted updates and live messages. |
@@ -331,6 +352,12 @@ Phase 1 is done when:
 - A test dump of the relay database and object storage, searched for known titles, file
   names, record text and file bytes from the test project, finds none of them.
 - A reset device recovers every cloud project after Google login.
+- An account without early access can log in, gets no cloud projects and sees Cloud
+  sync as coming soon. An account with early access gets the full Cloud UI.
+- A project made local is edited on two devices and then synced again. Both devices end
+  with the same merged content.
+- The Cloud status bar item, popover and Cloud settings come from the Prompt Studio
+  Cloud extension. The dashboard ships no Cloud UI.
 - After 10,000 edits to one project, relay storage for each document is below twice its
   latest state size plus the grace-period copy.
 - A blob referenced by an offline edit is still available when that edit syncs within
@@ -351,3 +378,16 @@ These defaults were chosen on 2026-10-19 so the phase tickets could be refined. 
 - A device uploads a new latest state when the updates after the current one exceed 1 MiB or 1,000 updates.
 - A cloud project's data downloads without a local folder. The device asks for a folder, and offers to clone the project's git remote, the first time something needs files.
 - Cloud devices run in the user's own cloud account from the released runtime image. Prompt Studio does not host or bill them in phase 2.
+
+## Decisions made on 2026-10-21
+
+These came from the Cloud and Workspaces design review. The designs are in PR #1298 (`design/prompt-studio-design-system.pen`).
+
+- The Cloud UI moves out of core into a bundled Prompt Studio Cloud extension (R55, R56). PS-784 now covers only the SDK and host side; PS-875 builds the extension.
+- Early access comes before plans and billing (R54, PS-871).
+- Offline means the connection is lost. Local means the project does not sync (R7).
+- The Cloud popover has no sync switch. Making a project local is account-wide and lives in Cloud settings (R35).
+- The popover lists devices only while the project syncs and the device is online.
+- A project records its git remote when it becomes a cloud project, so a new device can offer to clone it when it first needs files (R34, PS-825).
+- A bundled Workspaces extension shows the user's workspaces grouped by the device they live on, using the private project data from R38 (PS-876).
+- "Personal space" is now called "private project data" in the product, docs and tickets. A new machine gets its cloud projects back in phase 1 (PS-825); private project data comes back in phase 2 (PS-826).

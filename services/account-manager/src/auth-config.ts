@@ -1,14 +1,13 @@
 import { z } from "zod";
 
+// A service address may include a path, such as https://base.prompt.studio/accounts.
 const origin = z
   .url()
   .refine((value) => {
     const url = new URL(value);
-    return (
-      url.protocol === "https:" && !url.username && !url.password && url.pathname === "/" && !url.search && !url.hash
-    );
+    return url.protocol === "https:" && !url.username && !url.password && !url.search && !url.hash;
   })
-  .transform((value) => new URL(value).origin);
+  .transform((value) => new URL(value).href.replace(/\/+$/, ""));
 const seconds = z
   .number()
   .int()

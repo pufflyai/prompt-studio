@@ -53,6 +53,32 @@ export const layerStyles = defineLayerStyles({
       },
     },
   },
+  panelDropZone: {
+    value: {
+      _after: {
+        content: '""',
+        position: "absolute",
+        inset: "3xs",
+        borderWidth: "1px",
+        borderColor: "bg.accent-primary.default",
+        borderRadius: "compact",
+        pointerEvents: "none",
+      },
+      "&[data-drop-active]::after": { bg: "bg.accent-primary.default/20" },
+    },
+  },
+  panelDragSurface: {
+    value: {
+      "&[data-panel-draggable]": { cursor: "grab" },
+      "&[data-panel-draggable]:has(:is(button, a, input, textarea, select, iframe, [role=tab], [role=treeitem], [role=button], [role=menuitem], [contenteditable=true]):hover)":
+        {
+          cursor: "auto",
+        },
+      "&[data-panel-dragging]": { cursor: "grabbing" },
+    },
+  },
+  panelDragging: { value: { cursor: "grabbing" } },
+  mirroredIcon: { value: { transform: "scaleX(-1)" } },
   filterPicker: {
     value: {
       height: "min({sizes.filter-picker-height}, calc(100dvh - {spacing.xl}))",

@@ -4,6 +4,7 @@ import {
   createMemoryDocumentStore,
   type DocumentStore,
   scopeRecordStorage,
+  snapshotDocumentRecords,
 } from "pstdio-sync";
 import type { createMemoryAssets } from "./memory-assets";
 
@@ -49,6 +50,9 @@ export const createMemoryRecordOwner = (
     extensionId: owner.extensionId,
     dataVersion: storage.dataVersion,
     setDataVersion: storage.setDataVersion,
+    exportUpdate: storage.exportUpdate,
+    applyUpdate: storage.applyUpdate,
+    snapshot: () => store.transaction(owner, async ({ document }) => snapshotDocumentRecords(document)),
     duringMigration: async <T>(key: string, run: () => Promise<T>) => {
       await initialized;
       return baseStore.duringMigration(key, run);

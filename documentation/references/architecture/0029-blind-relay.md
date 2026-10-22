@@ -21,8 +21,8 @@ identity and SHA-256 schemas.
 | Blob | `sha256` and `byteLength` of the encrypted bytes, uploaded in numbered parts |
 | Live message | `spaceOwner` and encrypted `payload` |
 
-Every other value the relay keeps is routing metadata (R9): project ID, document ID, personal
-space owner, sending device, sizes, times, update IDs, sequence numbers and blob IDs. IDs are
+Every other value the relay keeps is routing metadata (R9): project ID, document ID, owner
+of private project data, sending device, sizes, times, update IDs, sequence numbers and blob IDs. IDs are
 strings of 16 to 128 letters, digits, `_` or `-`. Blob, update and state IDs are random. A
 document ID is a keyed hash of the document name, so devices of a space find the same document
 while the relay learns nothing about the name. See [Encryption](#encryption).
@@ -30,8 +30,8 @@ while the relay learns nothing about the name. See [Encryption](#encryption).
 Every request sends `pstdio-sync-protocol: 1` and `Authorization: Bearer <access token>`. A
 different version gets HTTP 426 with `error: "protocol-unsupported"`, the supported versions and
 a message that tells the person to update (R29). The token's workbench must be the project in
-the path. A personal-space path must name the token's account. Blob ID lists hold at most
-100,000 IDs.
+the path. A path for private project data (a `personal` space in the code) must name the
+token's account. Blob ID lists hold at most 100,000 IDs.
 
 | Route under `/sync/projects/~<project>[/spaces/~<owner>]` | Method | Result |
 | --- | --- | --- |
@@ -54,7 +54,7 @@ Clients seal every payload with keys from the account manager before it leaves t
 R12). The relay never holds keys. [ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md)
 records the key model and its known limit.
 
-- `fetchSyncSpaces` (`pstdio-sync/relay`) reads the project key and the user's personal-space key
+- `fetchSyncSpaces` (`pstdio-sync/relay`) reads the project key and the user's private-data key
   from `GET /v1/workbenches/:id/keys` with the device credential. It returns one sync space each.
   The document transport calls it on every synchronization pass, including after access renewal,
   so remaining devices pick up a rotation.
@@ -140,8 +140,8 @@ Over a size limit returns 413, over the quota 507 and over the rate 429.
 
 Project IDs are unique only within one account. The relay keys every project by a hash of the
 token's account and project IDs, so two accounts that use the same project ID never share
-documents, blobs or live traffic. Phase 1 has one user per account, so a personal space owner
-is an account ID. Team accounts (PS-829) add a user claim to access tokens.
+documents, blobs or live traffic. Phase 1 has one user per account, so the owner of private
+project data is an account ID. Team accounts (PS-829) add a user claim to access tokens.
 
 ## Live traffic
 

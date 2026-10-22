@@ -48,6 +48,72 @@ const createFakeStreamServer = ({ holdSubscribes = false } = {}) => {
 };
 
 describe("session stream client", () => {
+  it("retries tab-interest removal without disconnecting other work", async () => {
+    const server = createFakeStreamServer();
+    let removals = 0;
+    const client = createClient({
+      baseUrl: "http://session-api.test",
+      fetch: (async (url, options) => {
+        if (options?.method === "DELETE" && ++removals === 1) return new Response(null, { status: 503 });
+        return server.fetchFn(url, options);
+      }) as typeof fetch,
+    });
+    const retained = client.sessions.retainResources("idle");
+    const live = client.sessions.connectStream("working", {});
+    try {
+      await tick();
+      server.send("connected", { connection_id: "connection" });
+      await tick();
+      retained.close();
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      expect(removals).toBe(2);
+      expect(server.calls("GET")[0]?.signal?.aborted).toBe(false);
+    } finally {
+      retained.close();
+      live.close();
+    }
+  });
+  it("retains idle session resources on the shared stream and releases only the closed tab", async () => {
+    const server = createFakeStreamServer();
+    const client = createClient({ baseUrl: "http://session-api.test", fetch: server.fetchFn });
+    const retained = client.sessions.retainResources("idle");
+    const live = client.sessions.connectStream("working", {});
+    try {
+      await tick();
+      server.send("connected", { connection_id: "connection" });
+      await tick();
+      expect(server.calls("GET")).toHaveLength(1);
+      const interest = server.calls("POST").find((call) => call.body?.retain_session_id === "idle")!;
+      expect(interest.body?.subscription_id).toBeString();
+      retained.close();
+      await tick();
+      expect(server.calls("DELETE")[0]?.url).toEndWith(`/subscriptions/${interest.body!.subscription_id}`);
+      expect(server.calls("GET")[0]?.signal?.aborted).toBe(false);
+    } finally {
+      retained.close();
+      live.close();
+    }
+    expect(server.calls("GET")[0]?.signal?.aborted).toBe(true);
+  });
+
+  it("restores tab interest after the shared connection drops", async () => {
+    const server = createFakeStreamServer();
+    const client = createClient({ baseUrl: "http://session-api.test", fetch: server.fetchFn });
+    const retained = client.sessions.retainResources("idle");
+    try {
+      await tick();
+      server.send("connected", { connection_id: "first" });
+      await tick();
+      server.end();
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      expect(server.calls("GET")).toHaveLength(2);
+      server.send("connected", { connection_id: "second" });
+      await tick();
+      expect(server.calls("POST").map((call) => call.body?.retain_session_id)).toEqual(["idle", "idle"]);
+    } finally {
+      retained.close();
+    }
+  });
   it("deletes a saved session through the public client", async () => {
     const requests: Array<{ url: string; method: string }> = [];
     const client = createClient({
@@ -279,4 +345,38 @@ it("session list sends time and anchor filters through the public client", async
   expect(query.get("updated_from")).toBe("2026-10-01T01:00:00Z");
   expect(query.get("anchor_type")).toBe("ticket");
   expect(query.get("anchor_id")).toBe("T");
+});
+
+it("removes an accepted tab-interest claim when its POST response is lost", async () => {
+  const server = createFakeStreamServer();
+  let lost = false;
+  const client = createClient({
+    baseUrl: "http://session-api.test",
+    fetch: (async (url, options) => {
+      const response = await server.fetchFn(url, options);
+      if (options?.method === "POST" && String(options.body).includes("retain_session_id") && !lost) {
+        lost = true;
+        throw new Error("Accepted response lost");
+      }
+      return response;
+    }) as typeof fetch,
+  });
+  const live = client.sessions.connectStream("working", {});
+  const retained = client.sessions.retainResources("idle");
+  try {
+    await tick();
+    server.send("connected", { connection_id: "connection" });
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    const claims = server.calls("POST").filter((call) => call.body?.retain_session_id === "idle");
+    expect(claims).toHaveLength(2);
+    retained.close();
+    await tick();
+    expect(server.calls("DELETE").map((call) => call.url.split("/").at(-1))).toEqual(
+      claims.map((call) => call.body!.subscription_id),
+    );
+    expect(server.calls("GET")[0]?.signal?.aborted).toBe(false);
+  } finally {
+    retained.close();
+    live.close();
+  }
 });

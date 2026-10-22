@@ -1,6 +1,67 @@
 import { expect, test } from "bun:test";
 import { createDefaultWorkbenchLayout } from "../core";
 import { createLocalStorageLayoutPersistence } from "./local-storage-layout-persistence";
+import { createLocalStorageWorkbenchPersistence } from "./local-storage-persistence";
+
+test("removing a layout cancels its pending write without removing other scopes", () => {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+    removeItem: (key: string) => {
+      values.delete(key);
+    },
+  };
+  const persistence = createLocalStorageLayoutPersistence({ namespace: "remove", storage });
+  const layout = createDefaultWorkbenchLayout();
+  try {
+    persistence.setLayout(layout, "first");
+    persistence.setLayout(layout, "second");
+    persistence.flush?.();
+    persistence.setLayout(layout, "first");
+    persistence.removeLayout?.("first");
+    persistence.flush?.();
+    expect(persistence.getLayout("first")).toBeUndefined();
+    expect(persistence.getLayout("second")).toEqual(layout);
+  } finally {
+    persistence.dispose?.();
+  }
+});
+
+test("enumerates pending and persisted inactive layouts through snapshot persistence", () => {
+  const values = new Map<string, string>();
+  const storage = {
+    get length() {
+      return values.size;
+    },
+    key: (index: number) => [...values.keys()][index] ?? null,
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+  };
+  const first = createLocalStorageWorkbenchPersistence({ namespace: "tabs", storage });
+  const layout = createDefaultWorkbenchLayout();
+  layout.regions.side.widgets.push({
+    widgetId: "session",
+    contributionId: "session",
+    resource: { type: "session", id: "saved" },
+  });
+  first.snapshotPersistence.setSnapshot({ layout }, 'workbench-mode:["project","alpha"]');
+  expect(first.snapshotPersistence.listLayouts?.().map((entry) => entry.layout)).toEqual([layout]);
+  first.snapshotPersistence.dispose?.();
+  const reloaded = createLocalStorageWorkbenchPersistence({ namespace: "tabs", storage });
+  try {
+    expect(reloaded.snapshotPersistence.listLayouts?.().map((entry) => entry.layout)).toEqual([layout]);
+    layout.regions.side.widgets = [];
+    reloaded.snapshotPersistence.setSnapshot({ layout }, 'workbench-mode:["project","alpha"]');
+    expect(reloaded.snapshotPersistence.listLayouts?.()[0].layout.regions.side.widgets).toEqual([]);
+  } finally {
+    reloaded.snapshotPersistence.dispose?.();
+  }
+});
 
 test("persists layouts and their scope before returning when debouncing is disabled", () => {
   const values = new Map<string, string>();

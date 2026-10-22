@@ -59,3 +59,20 @@ test("waits for folder initialization before starting extension watchers", () =>
   state.eventBus.emit("sessions", "set", { id: "session" });
   expect(state.refreshes()).toBe(0);
 });
+
+test("ignores folders that belong to another device", () => {
+  const state = setup();
+  state.eventBus.emit("workspaces", "set", {
+    id: "other-home",
+    project_id: "project-1",
+    is_default: true,
+    execution_kind: "local",
+    root_path: "/other-device/folder",
+    initializing: false,
+    setup_error: null,
+    provider_state: "ready",
+    device: { ownerId: "owner", id: "other-device", name: "Laptop" },
+  });
+  expect(state.refreshes()).toBe(0);
+  expect(state.invalidations).toEqual([]);
+});

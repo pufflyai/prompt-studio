@@ -17,6 +17,11 @@ describe("command environment project scope", () => {
   test("does not expose workspace or session ids owned by another project", async () => {
     const deleteProviderBackedWorkspace = mock(async () => false);
     const deps = {
+      personalHistoryService: {
+        getSession: async () => null,
+        getWorkspace: async () => null,
+        getWorkspaceByShorthand: async () => null,
+      },
       workspaceService: {
         get: async () => otherWorkspace,
         getByShorthand: async () => null,

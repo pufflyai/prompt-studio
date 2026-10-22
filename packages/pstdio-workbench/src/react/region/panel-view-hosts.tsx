@@ -124,7 +124,7 @@ export const WorkbenchPanelViewHosts = (props: { workbench: WorkbenchCore; child
     const selected = eligible.find((p) => p.widgetId === state.activeWidgetId) ?? eligible[0];
     return eligible.filter((p) => p.widgetId === selected?.widgetId || p.mountStrategy === "keep-mounted");
   });
-  const retained = useRetainedViewPlacements(workbench, current);
+  const retained = useRetainedViewPlacements(workbench, current, workbench.host.getOpenPlacementIds());
   return (
     <PanelViewContext value={registry}>
       {children}

@@ -120,7 +120,7 @@ const serializeRequestBody = (body: unknown) => {
   return JSON.stringify(body);
 };
 
-const responseError = async (response: Response) => {
+export const responseError = async (response: Response) => {
   const errorBody: unknown = await response.json().catch(() => null);
   const message = readErrorMessage(errorBody, response.status);
   const code =

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { fixture } from "./auto-build.fixture";
-import { requestHumanCommand } from "./review-requests";
+import { openReviewRequestCommand, readReviewRequestCommand, requestHumanCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
 import { sessionRecord } from "./session-record.fixture";
 
@@ -34,10 +34,15 @@ async function ownedWork() {
   return { ...f, input, followups };
 }
 
-test("a phase-free human handoff reuses the workspace owner", async () => {
+test("a phase-free human handoff resumes the workspace owner only when opened", async () => {
   const f = await ownedWork();
   const request = await requestHumanCommand.run(f.ctx, f.input);
-  expect(request.context.sessionId).toBe(f.input.sessionId);
+  expect(request.context.sessionId).toBeNull();
+  expect(f.followups).toEqual([]);
+
+  await openReviewRequestCommand.run(f.ctx, { requestId: request.id });
+  const opened = await readReviewRequestCommand.run(f.ctx, { requestId: request.id });
+  expect(opened.context.sessionId).toBe(f.input.sessionId);
   expect(f.followups).toEqual([f.input.sessionId]);
 });
 

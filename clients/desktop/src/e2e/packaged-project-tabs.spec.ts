@@ -36,6 +36,14 @@ test(
       // workbench covers the lifecycle page. Chromium clicks bypass that hit test.
       await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
 
+      const titleBar = app.page.locator("[data-window-title-bar]");
+      const maximize = titleBar.getByRole("button", { name: "Enter Main fullscreen", exact: true });
+      await expect(maximize).toBeVisible();
+      await maximize.click();
+      await expect(titleBar).toBeHidden();
+      await app.page.getByRole("button", { name: "Exit Main fullscreen", exact: true }).click();
+      await expect(maximize).toBeFocused();
+
       const secondary = app.page.getByRole("button", { name: "Show Bottom Panel", exact: true });
       if (await secondary.isVisible()) await secondary.click();
       await app.page

@@ -29,6 +29,7 @@ import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createAppAccount } from "./services/account/app-account";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
+import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
@@ -201,6 +202,12 @@ const buildApp = async (
   const account = createAppAccount(input.config, dbs.environmentDBService, projectService);
 
   deps = {
+    personalHistoryService: createPersonalHistoryService({
+      eventBus,
+      documents: extensionStorageDBService.documents,
+      account: account.accountService,
+      projects: projectService,
+    }),
     accountService: account.accountService,
     assetTransferService,
     environmentService: dbs.environmentDBService,
