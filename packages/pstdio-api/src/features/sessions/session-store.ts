@@ -17,6 +17,7 @@ export type ActiveSession = {
   cancellationRequested: boolean;
   submittedAttachmentFileIds: Set<string>;
   conversationReady: Promise<SessionConversation>;
+  conversation?: SessionConversation;
   controlInvocations: Set<{ done: Promise<void>; abort: AbortController }>;
   executionSettings?: { model: string | null; params: Record<string, string | boolean> };
   checkpointPromise?: Promise<SessionMessage[] | null>;
@@ -64,6 +65,10 @@ export const createSessionStore = () => {
       conversationReady: ready.promise,
       controlInvocations: new Set(),
     };
+    const initializeConversation = (messages: SessionMessage[]) => {
+      entry.conversation = createSessionConversation(eventStore, messages, () => changed(sessionId));
+      ready.resolve(entry.conversation);
+    };
     sessions.set(sessionId, entry);
     if (initialize) {
       void Promise.resolve()
@@ -71,7 +76,7 @@ export const createSessionStore = () => {
         .then((messages) => {
           if (sessions.get(sessionId) !== entry || entry.cancellationRequested)
             throw new DOMException("Session was cancelled", "AbortError");
-          ready.resolve(createSessionConversation(eventStore, messages, () => changed(sessionId)));
+          initializeConversation(messages);
           changed(sessionId);
         })
         .catch((error) => {
@@ -84,7 +89,7 @@ export const createSessionStore = () => {
           questionService.dispose();
           ready.reject(error);
         });
-    } else ready.resolve(createSessionConversation(eventStore, [], () => changed(sessionId)));
+    } else initializeConversation([]);
     // Initialization also has readers that arrive after a failed launch.
     void ready.promise.catch(() => undefined);
 
@@ -116,14 +121,13 @@ export const createSessionStore = () => {
   };
 
   return {
-    diagnostics: async () => {
+    diagnostics: () => {
       let retainedMessages = 0;
       let subscribers = 0;
       let queuedEvents = 0;
       let queuedBytes = 0;
       for (const entry of sessions.values()) {
-        const conversation = await entry.conversationReady.catch(() => null);
-        retainedMessages += conversation?.messageCount ?? 0;
+        retainedMessages += entry.conversation?.messageCount ?? 0;
         const events = entry.eventStore.diagnostics();
         subscribers += events.subscribers;
         queuedEvents += events.queuedEvents;
