@@ -36,6 +36,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 // Document sync checks the local, synced and needs-attention project states from the sync owners.
+import { registerDeviceAutomationSmokeTests } from "./packaged-device-automations-smoke";
 import { registerDocumentSyncSmokeTests } from "./packaged-document-sync-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 // Includes linked dependency loading and missing dependency diagnostics.
@@ -74,7 +75,7 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Private history stays readable offline and appears in the initial live-sync snapshot after restart.
 import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
-// Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
+// Planner covers supervisor choices and Resume wakes, idle/startup waiting reasons, timeline review indicators, board moves, missing folders/Git metadata, and dependency recovery.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
 // Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
 // Review requests start conversations only when opened and reuse them on later visits.
@@ -115,6 +116,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // A context-menu deletion resolves its hidden note identifier without opening a parameter form.
 // packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
+// Group dragging keeps panel dropzones hidden.
 // The paired session-menu browser check restores focus to its tab after Escape.
 // Its floating launcher hides while open, returns on close, and reopens with the keyboard.
 // It also opens a workspace's related session through the default-on preview policy and checks that it is unpinned.
@@ -316,6 +318,7 @@ registerPageParamsSmokeTests();
 
 registerResourcePageSmokeTests();
 
+registerDeviceAutomationSmokeTests();
 registerDocumentSyncSmokeTests();
 registerPersonalHistorySmokeTests();
 registerTwoDeviceSyncSmokeTests();

@@ -17,7 +17,7 @@ export function registerPackagedPlannerSmokeTests() {
     PACKAGED_TEST_TIMEOUT,
   );
   test(
-    "packaged Planner keeps idle and scoped Auto Build dispatch and dependency blockers",
+    "packaged Planner keeps supervisor model choices, scoped Auto Build dispatch, and dependency blockers",
     () => withPackagedPlanner(expectPackagedPlannerAutoBuild),
     PACKAGED_TEST_TIMEOUT,
   );

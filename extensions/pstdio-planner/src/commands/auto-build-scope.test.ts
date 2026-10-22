@@ -61,5 +61,5 @@ test("a mode change during scope resolution cannot save a scope for the old prom
     return { exitCode: 0, stdout: "main-sha\n", stderr: "" };
   };
   await expect(autoBuildScopeCommand.run(ctx, { revision: "test", queries: [{}] })).rejects.toThrow("stopped");
-  expect(await readAutoBuildSupervisor(ctx)).toEqual({});
+  expect(await readAutoBuildSupervisor(ctx)).toEqual({ sessionId: "fixture-supervisor" });
 });

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+bun ./scripts/release/align-release-baseline.ts
 # `--nightly` versions main as a snapshot prerelease; the remaining steps are shared.
 if [ "${1:-}" = "--nightly" ]; then
   bun ./scripts/release/version-nightly.ts

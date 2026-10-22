@@ -5,10 +5,11 @@ import { autoBuildDispatches } from "../data/auto-build-dispatches";
 import { saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
 import { withWriteGuard } from "../data/write-guard";
-import { attemptStatusSessionHooks } from "../hooks/attempt-status";
 import { checkAutoBuildCommand } from "../hooks/auto-build";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
+import { pullRequestRepairKey } from "./pull-request-evidence";
+import { repairAttempt } from "./repair-attempt";
 import { sessionRecord } from "./session-record.fixture";
 
 const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
@@ -105,26 +106,6 @@ test("scheduled wakes read only the current supervisor's dispatched work and nev
   expect(followups).toEqual(["supervisor"]);
 });
 
-test("scheduled supervisor lifecycle hooks do not read project collections", async () => {
-  const { ctx, followups } = await monitorFixture();
-  const followup = ctx.sessions.followup;
-  ctx.sessions.followup = async (input) => {
-    await followup(input);
-    for (const hook of attemptStatusSessionHooks) {
-      await hook.run(
-        { ...ctx, eventId: hook.event.id, deliveryId: "scheduled" },
-        {
-          sessionId: "supervisor",
-          projectId: ctx.projectId,
-          sessionStatus: "completed",
-        },
-      );
-    }
-  };
-  await checkAutoBuildCommand.run(ctx, {});
-  expect(followups).toEqual(["supervisor"]);
-});
-
 test("an active supervisor returns before reading dispatched work", async () => {
   const { ctx, supervisor, fetched, followups } = await monitorFixture();
   supervisor.status = "in_progress";
@@ -211,7 +192,7 @@ test("failed scheduled followups pause Auto Build", async () => {
     throw new Error("Agent unavailable");
   };
   await expect(checkAutoBuildCommand.run(ctx, {})).rejects.toThrow("Agent unavailable");
-  expect(await ctx.storage.get("auto-build")).toMatchObject({ enabled: false });
+  expect(await ctx.storage.get("auto-build")).toMatchObject({ state: "paused" });
 });
 
 test("a failed supervisor can resume before it has dispatched any work", async () => {
@@ -245,5 +226,160 @@ test("a supervisor startup failure pauses Auto Build after the run state changes
     throw new Error("Agent startup failed");
   };
   await expect(checkAutoBuildCommand.run(ctx, {})).rejects.toThrow("Agent startup failed");
-  expect(await ctx.storage.get("auto-build")).toMatchObject({ enabled: false });
+  expect(await ctx.storage.get("auto-build")).toMatchObject({ state: "paused" });
+});
+
+test.each([
+  { change: "failed check", status: "completed", wakes: true },
+  { change: "merge conflict", status: "completed", wakes: true },
+  { change: "failed check", status: "failed", wakes: false },
+  { change: "failed check", status: "disconnected", wakes: false },
+])("a later PR $change only wakes repairable $status owners", async ({ change, status, wakes }) => {
+  const { ctx, task, dispatched, collection, supervisor, worker, followups } = await monitorFixture();
+  worker.status = status;
+  const attempt = (await collection<AttemptRecord>("planner-attempts").get(dispatched.workspaceId))!;
+  await putAttempt(ctx.storage, {
+    ...attempt,
+    revisions: [
+      {
+        revision: 1,
+        baseSha: "main-sha",
+        headSha: "submitted-head",
+        changeRequestReportId: "report",
+        submittedAt: ago(5),
+        submittedBy: { type: "agent", id: "owner", displayName: "Owner" },
+        reviews: [],
+      },
+    ],
+  });
+  await ticketsCollection(ctx.storage).put(task.id, {
+    ...task,
+    reviewLinks: [
+      {
+        id: "pr",
+        provider: "github",
+        kind: "pull_request",
+        url: "https://github.com/example/project/pull/1",
+        externalId: "1",
+        title: null,
+        createdAt: ago(5),
+        updatedAt: ago(5),
+      },
+    ],
+  });
+  const process = ctx.process.run;
+  let changed = false;
+  const evidence = () => ({
+    headRefOid: "submitted-head",
+    state: "OPEN",
+    mergeable: changed && change === "merge conflict" ? "CONFLICTING" : "MERGEABLE",
+    statusCheckRollup: [{ conclusion: changed && change === "failed check" ? "FAILURE" : "" }],
+  });
+  ctx.process.run = async (input) =>
+    input.command[0] === "gh" ? { exitCode: 0, stdout: JSON.stringify(evidence()), stderr: "" } : process(input);
+  supervisor.lastRequestStarted = new Date(Date.now() + 1000).toISOString();
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual([]);
+  changed = true;
+  await checkAutoBuildCommand.run(ctx, {});
+  if (!wakes) {
+    expect(followups).toEqual([]);
+    await checkAutoBuildCommand.run(ctx, {});
+    expect(followups).toEqual([]);
+    return;
+  }
+  expect(followups).toEqual(["supervisor"]);
+  const guardedCollection = ctx.storage.collection;
+  const guardedQuery = ctx.sessions.query;
+  ctx.storage.collection = collection;
+  ctx.sessions.query = async () => ({ items: [], nextCursor: null });
+  await repairAttempt(ctx, {
+    workspaceId: dispatched.workspaceId,
+    expectedHeadSha: "submitted-head",
+    reason: "Repair current PR evidence",
+    evidenceKey: pullRequestRepairKey(dispatched.workspaceId, "submitted-head", evidence()),
+  });
+  ctx.storage.collection = guardedCollection;
+  ctx.sessions.query = guardedQuery;
+  supervisor.status = "completed";
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual(["supervisor", dispatched.sessionId]);
+});
+
+test("unchanged PR evidence wakes once while a human request prevents repair, then new evidence wakes again", async () => {
+  const { ctx, task, dispatched, collection, supervisor, followups } = await monitorFixture();
+  const attempt = (await collection<AttemptRecord>("planner-attempts").get(dispatched.workspaceId))!;
+  await putAttempt(ctx.storage, {
+    ...attempt,
+    revisions: [
+      {
+        revision: 1,
+        baseSha: "main-sha",
+        headSha: "submitted-head",
+        changeRequestReportId: "report",
+        submittedAt: ago(5),
+        submittedBy: { type: "agent", id: "owner", displayName: "Owner" },
+        reviews: [],
+      },
+    ],
+  });
+  await ticketsCollection(ctx.storage).put(task.id, {
+    ...task,
+    reviewLinks: [
+      {
+        id: "pr",
+        provider: "github",
+        kind: "pull_request",
+        url: "https://github.com/example/project/pull/1",
+        externalId: "1",
+        title: null,
+        createdAt: ago(5),
+        updatedAt: ago(5),
+      },
+    ],
+  });
+  const request = {
+    id: "input",
+    ticketId: task.id,
+    title: "Provide access",
+    instructions: "Configure access.",
+    request: { kind: "task" },
+    requestedAt: ago(2),
+    requestedBy: { type: "human", id: "user", displayName: "User" },
+    context: {
+      reason: null,
+      workspaceId: attempt.workspaceId,
+      attemptRevision: 1,
+      sessionId: null,
+      relatedSessionId: null,
+    },
+  };
+  await collection("planner-review-requests").put(request.id, request);
+  const process = ctx.process.run;
+  let conflict = false;
+  ctx.process.run = async (input) =>
+    input.command[0] === "gh"
+      ? {
+          exitCode: 0,
+          stderr: "",
+          stdout: JSON.stringify({
+            headRefOid: "submitted-head",
+            state: "OPEN",
+            mergeable: conflict ? "CONFLICTING" : "MERGEABLE",
+            statusCheckRollup: [{ conclusion: "FAILURE" }],
+          }),
+        }
+      : process(input);
+  supervisor.lastRequestStarted = new Date(Date.now() + 1000).toISOString();
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual(["supervisor"]);
+  supervisor.status = "completed";
+  for (let check = 0; check < 2; check++) await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual(["supervisor"]);
+  expect(await collection("planner-attempt-events").list()).not.toContainEqual(
+    expect.objectContaining({ type: "implementation_resumed" }),
+  );
+  conflict = true;
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual(["supervisor", "supervisor"]);
 });

@@ -15,6 +15,7 @@ interface StableReleaseInput {
   // Every package a release publishes: public workspace packages and the CLI platform packages.
   packages: PublishedPackage[];
   tagCommit: string | null;
+  patchBaseTag: string | null;
   headCommit: string;
   mainCommit: string;
 }
@@ -23,12 +24,16 @@ export const planStableRelease = ({
   releaseState,
   packages,
   tagCommit,
+  patchBaseTag,
   headCommit,
   mainCommit,
 }: StableReleaseInput) => {
   // The publish job publishes the GitHub release last, so only a published release proves that
   // npm and every desktop asset shipped. npm alone can hold a version whose desktop apps never did.
   if (releaseState === "published") return { release: false as const };
+
+  // A verification-only patch must never be published by a later push to main.
+  if (patchBaseTag) return { release: false as const };
 
   const problems: string[] = [];
   for (const pkg of packages)
@@ -65,7 +70,7 @@ const npmVersions = async (name: string) => {
 
 // Public workspace packages and the CLI platform packages that pstdio pins exactly. The publish
 // job publishes the platform packages first.
-const publishedPackages = async () => {
+export const publishedPackages = async () => {
   const root = (await Bun.file("package.json").json()) as { workspaces: string[] };
   const manifests: Array<{ name: string; version: string }> = [];
   for (const workspace of root.workspaces) {
@@ -86,7 +91,7 @@ const publishedPackages = async () => {
 };
 
 // Lightweight tags list the commit. Annotated tags also list the peeled commit as `<tag>^{}`.
-const readTagCommit = (tag: string) => {
+export const readTagCommit = (tag: string) => {
   const result = Bun.spawnSync(["git", "ls-remote", "origin", `refs/tags/${tag}`, `refs/tags/${tag}^{}`]);
   if (result.exitCode !== 0) throw new Error(`git ls-remote failed: ${result.stderr.toString().trim()}`);
   const refs = new Map(
@@ -100,14 +105,20 @@ const readTagCommit = (tag: string) => {
   return refs.get(`refs/tags/${tag}^{}`) ?? refs.get(`refs/tags/${tag}`) ?? null;
 };
 
-const readReleaseState = async (tag: string): Promise<ReleaseState> => {
+export const readPatchBaseTag = (commit: string) => {
+  const result = Bun.spawnSync(["git", "show", "-s", "--format=%B", commit]);
+  if (result.exitCode !== 0) throw new Error(result.stderr.toString().trim());
+  return /^Patch-Base: (pstdio@\d+\.\d+\.\d+)$/m.exec(result.stdout.toString())?.[1] ?? null;
+};
+
+export const readReleaseState = async (tag: string): Promise<ReleaseState> => {
   const result = await $`gh release view ${tag} --json isDraft --jq .isDraft`.quiet().nothrow();
   if (result.exitCode === 0) return result.text().trim() === "true" ? "draft" : "published";
   if (result.stderr.toString().includes("release not found")) return "missing";
   throw new Error(`gh release view ${tag} failed: ${result.stderr.toString().trim()}`);
 };
 
-const writeOutputs = (outputs: Record<string, string>) => {
+export const writeOutputs = (outputs: Record<string, string>) => {
   const lines = Object.entries(outputs).map(([key, value]) => `${key}=${value}`);
   console.log(lines.join("\n"));
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `${lines.join("\n")}\n`);
@@ -117,10 +128,12 @@ if (import.meta.main) {
   const { version } = (await Bun.file("packages/pstdio/package.json").json()) as { version: string };
   const tag = `pstdio@${version}`;
   const packages = await publishedPackages();
+  const tagCommit = readTagCommit(tag);
   const plan = planStableRelease({
     releaseState: await readReleaseState(tag),
     packages,
-    tagCommit: readTagCommit(tag),
+    tagCommit,
+    patchBaseTag: tagCommit ? readPatchBaseTag(tagCommit) : null,
     headCommit: (await $`git rev-parse HEAD`.text()).trim(),
     mainCommit: (await $`git ls-remote origin refs/heads/main`.text()).split("\t")[0] ?? "",
   });

@@ -39,6 +39,7 @@ export interface ReviewRequest {
   requestedAt: string;
   requestedBy: ActorRef;
   context: {
+    affectedAction?: "implementation" | "merge";
     reason: HumanRequestReason | null;
     workspaceId: string | null;
     attemptRevision: number | null;
