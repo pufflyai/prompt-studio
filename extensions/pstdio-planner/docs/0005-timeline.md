@@ -38,7 +38,7 @@ Saved view filters and search update each milestone's ETA, progress, and review-
 
 Auto Build uses your prompt and eligibility filters to assign valid, unassigned tickets across the project. Its modal lets you choose the supervisor model. A supervisor sleeps between checks and resumes when more work can run. The selected view, search, and display filters only affect what you see.
 
-Open **Auto Build** in the header to start it or inspect its supervisor, running ticket sessions, and capacity. Stopping prevents future assignments while running sessions continue. See [Auto Build](0007-auto-build.md) for review blocking, dependency stacking, and the full workflow.
+Open **Auto Build** in the header to start it or inspect its supervisor, running ticket sessions, and capacity. Pause suspends new assignments while running sessions continue. Resume continues the same supervisor and scope. See [Auto Build](0007-auto-build.md) for review blocking, dependency stacking, and the full workflow.
 
 ## CLI
 
