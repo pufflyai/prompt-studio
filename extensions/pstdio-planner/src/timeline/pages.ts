@@ -6,6 +6,7 @@ import {
   packageAsset,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
+import { attentionPanel } from "../attention-panel";
 
 export const timelineView = defineView({
   id: "timeline",
@@ -34,7 +35,7 @@ export const timelinePage = definePage({
   icon: "chart-no-axes-gantt",
   mode: workbenchModes.project,
   main: { kind: "view", presentation: "page", view: timelineView.ref, cardinality: "one" },
-  slots: [],
+  slots: [attentionPanel],
 });
 
 export const timelineNavigation = defineNavigationItem({
