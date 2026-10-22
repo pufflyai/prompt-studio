@@ -78,6 +78,7 @@ import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-s
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
 // Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
 // Review requests start conversations only when opened and reuse them on later visits.
+// Auto Build saves and restarts retain settings while clearing the old supervisor scope.
 // Ticket document loads observe only the selected ticket's storage version.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";

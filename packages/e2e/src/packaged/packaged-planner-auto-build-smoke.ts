@@ -34,6 +34,12 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
     enabled: false,
   });
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
+  const stopped = await execute("auto-build.read", {});
+  const restarted = await execute("auto-build.configure", { enabled: true });
+  expect(restarted).toMatchObject({ enabled: true, prompt: "Choose valid tasks.", blockOnReview: false });
+  expect(restarted.revision).not.toBe(stopped.revision);
+  expect(await execute("auto-build.read", {})).toMatchObject({ supervisor: null });
+  await execute("auto-build.configure", { enabled: false });
   await expectPackagedDependencyBlockers({ ...input, execute });
 }
 
