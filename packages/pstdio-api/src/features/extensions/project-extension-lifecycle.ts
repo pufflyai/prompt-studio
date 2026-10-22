@@ -9,6 +9,7 @@ import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgra
 import type { RouteDeps } from "../deps";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "./deps";
+import { setDeviceAutomationEnabled } from "./device-automations";
 import { extensionChangesWorkspaceProvisioning } from "./extension-skill-cleanup";
 import { toExtensionEnableInput } from "./install-extension-source";
 import { toProjectExtensionInstance } from "./project-extension-instance";
@@ -87,12 +88,14 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     );
     if (!schedule) return null;
 
-    await deps.extensionAutomationPreferencesService.set({
-      project_id: projectId,
-      extension_instance_id: instanceId,
-      automation_id: automationId,
-      enabled,
-    });
+    const assigned = await setDeviceAutomationEnabled(deps, projectId, automationId, enabled);
+    if (!assigned)
+      await deps.extensionAutomationPreferencesService.set({
+        project_id: projectId,
+        extension_instance_id: instanceId,
+        automation_id: automationId,
+        enabled,
+      });
 
     return {
       id: schedule.id,

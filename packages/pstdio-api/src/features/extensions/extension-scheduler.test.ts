@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
+import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
 import { createExtensionScheduler } from "./extension-scheduler";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
@@ -83,6 +84,7 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean; workspac
 type AutomationPreferenceRow = { extension_instance_id: string; automation_id: string; enabled: boolean };
 
 const createDeps = (sourcePath: string, automationPreferences: AutomationPreferenceRow[] = []) => {
+  const store = createMemoryDocumentStore();
   const extensionService = {
     listEnabledSourcesForProject: async () => [
       {
@@ -102,6 +104,8 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
   };
   return {
+    accountService: { projectSyncStatus: async () => ({ state: "local" }) },
+    environmentService: { get: async () => ({ environmentId: "local" }) },
     extensionAutomationPreferencesService: {
       list: async () => automationPreferences,
       get: async (_projectId: string, instanceId: string, automationId: string) =>
@@ -117,6 +121,8 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     extensionService,
     projectService,
     extensionStorageService: {
+      open: async (input: { owner: { workbenchId: string; extensionId: string } }) =>
+        createDocumentStorage({ ...input, store }),
       getKv: async () => null,
       setKv: async () => {},
       deleteKv: async () => {},
@@ -251,4 +257,23 @@ test("a schedule never runs in the project folder when its explicit workspace is
   await waitFor(() => cron.size() === 1);
   await cron.fireAll();
   expect(state.calls).toEqual([]);
+});
+
+test("a cloud schedule without a device assignment stays idle", async () => {
+  const sourcePath = writeScheduledExtension();
+  const deps = {
+    ...(createDeps(sourcePath) as unknown as Record<string, unknown>),
+    accountService: { projectSyncStatus: async () => ({ state: "synced", offlineReady: true }) },
+  };
+  const cron = createTestCronDriver();
+  const scheduler = createExtensionScheduler({
+    deps: deps as never,
+    listProjectIds: async () => ["project-1"],
+    watermarkPath: join(createTempRoot(), "watermarks.json"),
+    now: () => new Date("2026-05-18T07:56:15.000Z"),
+    cron: cron.factory,
+  });
+  schedulers.push(scheduler);
+  await scheduler.refresh();
+  expect(cron.size()).toBe(0);
 });
