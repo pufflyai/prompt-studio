@@ -31,6 +31,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // packaged-command-palette.spec.ts checks theme selection from the palette and persistence after reload.
 // packaged-main-fullscreen.spec.ts checks Main fullscreen, its minimized Side bubble, keyboard exit and reload state.
+// Desktop packaged-project-tabs.spec.ts checks the title-bar maximize control and focus after fullscreen exit.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
@@ -66,9 +67,12 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
 // The browser suite checks typed host props, page updates, structured capability errors and saved settings.
+// packaged-editing-sessions.spec.ts checks shared local edits, coalesced writes and cancelled previews across opaque views.
 // Real React Query subscriptions cover matching events, reconnect deduplication and unmount cleanup.
 // Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
+// Private history stays readable offline and appears in the initial live-sync snapshot after restart.
+import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
 // Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
@@ -311,4 +315,5 @@ registerPageParamsSmokeTests();
 registerResourcePageSmokeTests();
 
 registerDocumentSyncSmokeTests();
+registerPersonalHistorySmokeTests();
 registerTwoDeviceSyncSmokeTests();

@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: "./src/packaged",
   testMatch: [
     "packaged-empty-panels.spec.ts",
+    "packaged-editing-sessions.spec.ts",
     "packaged-extension-startup.spec.ts",
     "packaged-webview-browsers.spec.ts",
     "packaged-statistics-loading.spec.ts",

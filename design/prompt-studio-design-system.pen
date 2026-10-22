@@ -31184,6 +31184,25 @@
                               }
                             }
                           ]
+                        },
+                        {
+                          "id": "aLd9o",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Enter Main fullscreen",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "maximize",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
                         }
                       ]
                     },
@@ -31435,6 +31454,25 @@
                               }
                             }
                           ]
+                        },
+                        {
+                          "id": "z0gAu",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Enter Main fullscreen",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "maximize",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
                         },
                         {
                           "type": "rectangle",

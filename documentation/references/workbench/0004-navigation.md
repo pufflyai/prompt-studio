@@ -36,7 +36,7 @@ The routed page owns its breadcrumb and page actions. A collection page uses Mai
 
 ### Main fullscreen
 
-The fullscreen control at the end of the navigation header expands Main over the workbench. It stays reachable when panel headers or mode navigation chrome are hidden. Fullscreen hides the title bar, activity bar, Sidenav, Bottom, Main's tab header, and status bar as presentation. It does not replace or save the global layout, change the page URL, or create page panels.
+The fullscreen control expands Main over the workbench. In the browser it sits at the end of the navigation header. Desktop places it beside the panel controls in the top bar. It stays reachable when panel headers or mode navigation chrome are hidden. Fullscreen hides the title bar, activity bar, Sidenav, Bottom, Main's tab header, and status bar as presentation. It does not replace or save the global layout, change the page URL, or create page panels.
 
 An open attached or floating Side becomes a temporary floating overlay when the mode allows floating. A closed Side stays closed. While Side is minimized, its bubble remains available in fullscreen and reopens the temporary overlay. The bubble hides beneath the open overlay. A mode without Side, or with a nonfloating Side, hides it. The fullscreen header keeps only the exit control. The bubble and overlay close action change only the temporary presentation. They follow the mode's open and close permissions. Dismissing Side returns focus to the bubble; exiting returns focus to the fullscreen entry control. Escape first lets nested menus and dialogs handle the key, then dismisses Side, then exits fullscreen.
 
@@ -96,7 +96,7 @@ The legacy public `onOpenFile` callback remains available and is deprecated in f
 
 ## Shared panel commands
 
-Global panel controls render in the web navigation header: closed Sidenav recovery before history, and Bottom/Side controls after breadcrumbs. Desktop hosts use the exported `WorkbenchPanelToggles` beside project tabs and set `Workbench.panelControlsPlacement="host"`. Custom mode navigation chrome keeps these host controls. Session panels are available in each mode that allows Side or Bottom and retain that project/mode’s own tabs. Project navigation stays above the shared Main and Bottom layout. The Sidenav control icon mirrors when Navigation is on the right, including while Navigation is closed.
+Global panel controls render in the web navigation header: closed Sidenav recovery before history, and Bottom/Side controls after breadcrumbs. Desktop hosts use the exported `WorkbenchPanelToggles` and `WorkbenchFullscreenToggle` beside project tabs and set `Workbench.panelControlsPlacement="host"`. The navigation header keeps the exit control available while fullscreen hides the top bar. Custom mode navigation chrome keeps these host controls. Session panels are available in each mode that allows Side or Bottom and retain that project/mode’s own tabs. Project navigation stays above the shared Main and Bottom layout. The Sidenav control icon mirrors when Navigation is on the right, including while Navigation is closed.
 
 `shell.getPanelPolicy(region)` resolves availability, visibility, opening, closing, tab acceptance, resizing, floating and header visibility. UI controls, tab destinations, public commands and restoration use this policy. `workbench.movePanel` moves a tab; whole-panel docking is separate work.
 

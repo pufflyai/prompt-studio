@@ -120,6 +120,9 @@ export const createCodexWorker = (
         if (acknowledged && thread.id()) void cleanupProtocol(thread.id()!).catch(lost);
         operation.finish({ status: "failed" });
       },
+      // Codex pins its login to the process and rejects a later `codex login`. The refresh failure
+      // leaves every thread on this process without credentials, so only a new process can continue.
+      onLoginRejected: () => void rpc.dispose(),
       onFinish: () => {
         if (active === operation) active = undefined;
         runInput.signal?.removeEventListener("abort", abort);

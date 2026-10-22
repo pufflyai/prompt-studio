@@ -53,6 +53,7 @@ test("testbench webviews keep workspace, placement resource, metadata, and slot"
     "harnesses.read",
     "resources.actions",
     "commands.execute",
+    "editing.session",
     "navigation.open",
     "page.params.update",
     "notification.show",

@@ -1,5 +1,32 @@
 # @pstdio/sdk
 
+## 0.45.0
+
+_2026-10-22_
+
+### Minor Changes
+
+- 9a6b0d2: Merge extension data locally with durable CRDT documents and history-independent saves.
+- 57ac840: Let extensions read the Cloud account, devices and each project's sync status, and sign in, sign out or change which projects sync.
+- c29a2bf: Release unused session resources after thirty minutes while preserving open tabs and active work.
+- a4145c6: Read workspaces, sessions, and full transcripts from your other devices through encrypted private project data, and preserve updates while sync streams initialize.
+- c1c9533: Log in once with Google to make a computer a device that syncs every cloud project, and manage devices with `pst devices`.
+- d15c674: Allow navigation section structure to render before fetching contents and Kanban rows to navigate through declared page targets.
+- 107c9e0: Add Windows drive selection to the folder picker and expose runtime drive discovery through the SDK.
+- 9286f4a: Share harness controls and native resource actions with webviews and preserve popover keyboard focus.
+- e7f8c90: Enforce independent mode panel permissions and share accessible panel controls across hosts.
+- da5f884: Add a two-device storage test helper with automatic merging and replaced-value reports.
+
+### Patch Changes
+
+- d63201a: Allow panel placement changes with valid move actions and clear insertion targets, and pin tabs dropped onto closed panels.
+- 77fb351: Add `client.linkIcons.get(url)` to read a web page's site icon.
+- b7a29c2: Share open-tab inventory without retaining replaced default pages, save only customized layouts, index idle deadlines, cache session lists by their source tables, and stop retrying rejected retention claims while cleaning up lost responses.
+- 00d29f9: Keep offline resource numbers unique and preserve earlier numbers as aliases.
+- 2e021e3: Share local document edits across extension views before saving finishes.
+- dff61b6: Report each storage save's sync `state`, make `expectedRevision` optional on `records.commit`, and deprecate the storage conflict members.
+- a2df0cb: Add shared compact prefixed IDs, stable migration IDs, and device-unique order positions.
+
 ## 0.44.0
 
 _2026-10-18_
