@@ -2,6 +2,7 @@ import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createDocumentStorage, createMemoryDocumentStore, type StorageOwner } from "pstdio-sync";
 import { makeWorkspace } from "../workspaces/workspace-provider.test-fixture";
 import type { ExtensionsRouteDeps } from "./deps";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
@@ -71,6 +72,7 @@ export const createWorkspaceContextFixture = async () => {
     },
   });
   const values = new Map<string, unknown>();
+  const documents = createMemoryDocumentStore();
   const source = {
     instance: { id: "instance" },
     installedSource: {
@@ -87,6 +89,7 @@ export const createWorkspaceContextFixture = async () => {
     projectService: { get: async () => ({ id: "project-1", name: "Project", shorthand: "P" }) },
     extensionService: { listEnabledSourcesForProject: async () => [source] },
     extensionStorageService: {
+      open: async ({ owner }: { owner: StorageOwner }) => createDocumentStorage({ owner, store: documents }),
       getKv: async () => null,
       setKv: async (input: { key: string; value_json: unknown }) => {
         values.set(input.key, input.value_json);
