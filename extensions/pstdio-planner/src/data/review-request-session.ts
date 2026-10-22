@@ -109,10 +109,18 @@ const startReviewRequestSession = async (ctx: CommandContext, requestId: string)
   return session;
 };
 
-const openingSessions = new Map<string, ReturnType<typeof startReviewRequestSession>>();
+// Reloaded handlers share pending openers so Stop can wait for their saved links.
+const registryKey = Symbol.for("pstdio.pstdio-planner.opening-request-sessions");
+const runtime = globalThis as typeof globalThis & {
+  [registryKey]?: Map<string, ReturnType<typeof startReviewRequestSession>>;
+};
+runtime[registryKey] ??= new Map();
+const openingSessions = runtime[registryKey];
+const openingKey = (ctx: CommandContext, requestId: string) =>
+  JSON.stringify([ctx.projectId, ctx.extensionId, requestId]);
 
 export const getReviewRequestSession = async (ctx: CommandContext, requestId: string) => {
-  const key = `${ctx.projectId}:${requestId}`;
+  const key = openingKey(ctx, requestId);
   const pending = openingSessions.get(key);
   if (pending) return pending;
   const opening = startReviewRequestSession(ctx, requestId);
@@ -122,4 +130,9 @@ export const getReviewRequestSession = async (ctx: CommandContext, requestId: st
   } finally {
     openingSessions.delete(key);
   }
+};
+
+// Auto Build Stop waits for a conversation already opening before reading its saved link.
+export const waitForReviewRequestSession = async (ctx: CommandContext, requestId: string) => {
+  await openingSessions.get(openingKey(ctx, requestId));
 };

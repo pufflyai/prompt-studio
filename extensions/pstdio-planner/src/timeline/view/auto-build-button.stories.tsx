@@ -13,6 +13,7 @@ const meta: Meta<typeof AutoBuildButton> = {
     configuration: autoBuildStoryConfiguration,
     onPause: async () => true,
     onResume: async () => true,
+    onStop: async () => true,
     onOpenSession: () => {},
     t: (_key, fallback) => fallback ?? _key,
   },

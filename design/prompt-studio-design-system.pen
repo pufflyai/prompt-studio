@@ -216821,6 +216821,7 @@
                   "strokeWidth": {
                     "top": 1
                   },
+                  "gap": 8,
                   "padding": [
                     8,
                     0,
@@ -216855,6 +216856,35 @@
                             "size": "md"
                           },
                           "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "I2vPoQ",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Stop Auto Build",
+                      "theme": {
+                        "btn": "destructive",
+                        "size": "sm"
+                      },
+                      "height": 32,
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": true,
+                          "icon": "square",
+                          "width": 16,
+                          "height": 16
+                        },
+                        "Hf4GT": {
+                          "content": "Stop Auto Build"
+                        },
+                        "khvEs": {
+                          "enabled": false,
+                          "theme": {
+                            "kbd": "raised",
+                            "size": "md"
+                          }
                         }
                       }
                     }

@@ -18,6 +18,8 @@ Submission and optional review commands share a workspace write guard. They vali
 
 Auto Build observes relevant execution, requests, submitted heads, dependency heads, and PR/check evidence. It resumes the current owner for unfinished work, stack repair, and PR or CI repair. A queued message preserves ownership. No command transfers a live branch to a competing writer. A known unexpected exit permits one recovery in the same conversation. An explicit user stop stays stopped.
 
+Auto Build stores one run state: running, paused, or stopped. Pause gates dispatch and wake-ups while current agents finish. Resume retains the same supervisor and scope with a fresh revision. Stop is available while paused and waits for in-flight ownership records before cancelling linked supervisor, implementation, review, repair, and request conversations. A cancellation failure leaves the run paused for retry. Unrelated manual sessions are not cancelled.
+
 Core persists actual execution exits in the existing activity table in the terminal status transaction. The SDK exposes latest-run evidence. No database schema change is needed. Planner consumes these facts without owning generic execution.
 
 ## Upgrade and public contracts
