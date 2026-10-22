@@ -21,7 +21,8 @@ export interface StorageRecordIndex {
 export type StoragePredicate =
   | { all: StoragePredicate[] }
   | { any: StoragePredicate[] }
-  | { field: string; op: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains"; value: Json }
+  | { not: StoragePredicate }
+  | { field: string; op: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "equalsIgnoreCase"; value: Json }
   | { field: string; op: "in" | "notIn"; value: Json[] }
   | { field: string; op: "empty" | "notEmpty" | "exists" | "missing" };
 

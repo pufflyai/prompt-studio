@@ -55,11 +55,13 @@ export const queryField = (index: StorageRecordIndex, name: string) => {
 };
 
 const validateOperator = (field: StorageIndexField, predicate: Extract<StoragePredicate, { value: Json }>) => {
+  if (predicate.op === "equalsIgnoreCase" && field.type !== "string")
+    throw new Error("Case-insensitive equality requires a string field");
   if (predicate.op === "contains" && field.type !== "string" && field.type !== "array")
     throw new Error("Contains requires a string or array field");
   if (field.type === "array" && ["gt", "gte", "lt", "lte"].includes(predicate.op))
     throw new Error("Array fields do not support ordering predicates");
-  if (!["eq", "ne", "gt", "gte", "lt", "lte", "contains", "in", "notIn"].includes(predicate.op))
+  if (!["eq", "ne", "gt", "gte", "lt", "lte", "contains", "equalsIgnoreCase", "in", "notIn"].includes(predicate.op))
     throw new Error("Unsupported query predicate");
 };
 
@@ -67,7 +69,7 @@ const validatePredicateValues = (field: StorageIndexField, predicate: Extract<St
   validateOperator(field, predicate);
   const values = predicate.op === "in" || predicate.op === "notIn" ? predicate.value : [predicate.value];
   for (const value of values) {
-    if (value === null && predicate.op !== "contains") continue;
+    if (value === null && predicate.op !== "contains" && predicate.op !== "equalsIgnoreCase") continue;
     const type = Array.isArray(value) ? "array" : typeof value;
     const expected = predicate.op === "contains" && field.type === "array" ? "string" : field.type;
     if (type !== expected) throw new Error(`Query value must be ${expected}`);
@@ -80,6 +82,10 @@ const validatePredicateValues = (field: StorageIndexField, predicate: Extract<St
 export const validatePredicate = (index: StorageRecordIndex, predicate?: StoragePredicate, depth = 0) => {
   if (!predicate) return;
   if (depth > 8) throw new Error("Query predicate is too deep");
+  if ("not" in predicate) {
+    validatePredicate(index, predicate.not, depth + 1);
+    return;
+  }
   if ("all" in predicate || "any" in predicate) {
     const children = "all" in predicate ? predicate.all : predicate.any;
     if (children.length > 100) throw new Error("Too many query predicates");
@@ -118,6 +124,10 @@ export const compareQueryValues = (left: Json | undefined, right: Json | undefin
 
 export const matchesPredicate = (index: StorageRecordIndex, value: Json, predicate?: StoragePredicate) => {
   if (!predicate) return true;
+  if ("not" in predicate) {
+    if (matchesPredicate(index, value, predicate.not)) return false;
+    return true;
+  }
   if ("all" in predicate) {
     for (const child of predicate.all) if (!matchesPredicate(index, value, child)) return false;
     return true;
@@ -149,6 +159,8 @@ const matchesFieldPredicate = (
       return canonicalJson(actual ?? null) === canonicalJson(predicate.value);
     case "ne":
       return canonicalJson(actual ?? null) !== canonicalJson(predicate.value);
+    case "equalsIgnoreCase":
+      return typeof actual === "string" && actual.toLowerCase() === String(predicate.value).toLowerCase();
     case "in":
       return predicate.value.some((item) => canonicalJson(actual ?? null) === canonicalJson(item));
     case "notIn":

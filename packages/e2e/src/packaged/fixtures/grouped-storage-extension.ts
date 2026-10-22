@@ -122,7 +122,16 @@ const queryRecords = defineCommand({
   title: "Read selected records",
   async run(ctx) {
     const records = ctx.storage.records;
-    const request = { index: "ready", where: { field: "state", op: "eq" as const, value: "ready" }, limit: 2 };
+    const request = {
+      index: "ready",
+      where: {
+        all: [
+          { field: "state", op: "equalsIgnoreCase" as const, value: "READY" },
+          { not: { field: "rank", op: "lt" as const, value: 1 } },
+        ],
+      },
+      limit: 2,
+    };
     const page = await records.query(request);
     return {
       page,

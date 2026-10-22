@@ -74,6 +74,11 @@ export const recordIndexKeys = (index: StorageRecordIndex) => {
 
 export const predicateSql = (index: StorageRecordIndex, predicate?: StoragePredicate) => {
   if (!predicate) return sql`true`;
+  // Missing typed values fail comparisons; negation must complement that false result.
+  if ("not" in predicate) {
+    const child: SQL = predicateSql(index, predicate.not);
+    return sql`NOT coalesce(${child}, false)`;
+  }
   if ("all" in predicate) {
     const parts: SQL[] = [];
     for (const child of predicate.all) parts.push(predicateSql(index, child));
@@ -84,6 +89,10 @@ export const predicateSql = (index: StorageRecordIndex, predicate?: StoragePredi
     for (const child of predicate.any) parts.push(predicateSql(index, child));
     return parts.length ? sql`(${sql.join(parts, sql` OR `)})` : sql`false`;
   }
+  return fieldPredicateSql(index, predicate);
+};
+
+const fieldPredicateSql = (index: StorageRecordIndex, predicate: Extract<StoragePredicate, { field: string }>) => {
   const field = recordFieldSql(index, predicate.field);
   const comparable = sql`coalesce(${field}, 'null'::jsonb)`;
   const empty = sql`(${field} IS NULL OR ${field} IN ('null'::jsonb, '""'::jsonb, '[]'::jsonb))`;
@@ -100,6 +109,8 @@ export const predicateSql = (index: StorageRecordIndex, predicate?: StoragePredi
       return equalityPredicate(index, predicate.field, comparable, predicate.value);
     case "ne":
       return sql`${comparable} <> ${json(predicate.value)}`;
+    case "equalsIgnoreCase":
+      return sql`${stringBytesSql(field, true)} = decode(${projectionSubstringBytes(String(predicate.value).toLowerCase())}, 'hex')`;
     case "in":
       return predicate.value.length
         ? sql`(${sql.join(

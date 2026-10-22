@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
-import type { StorageRecordIndex } from "pstdio-sync-contracts";
+import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
 import { storage_record_projections } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";
@@ -49,6 +49,77 @@ test("direct indexed page jumps match memory ordering and reject changed revisio
     await expect(records.query({ index: "pages", offset: 1, cursor: first.cursor! })).rejects.toThrow("offset");
     await records.commit({ operationId: "move-page", edits: [{ recordId: "item-8", replace: { rank: -1 } }] });
     await expect(records.query({ index: "pages", offset: 6, revision: first.revision })).rejects.toThrow("revision");
+  }
+});
+
+test("case-insensitive equality and negation preserve selected-page and aggregate semantics", async () => {
+  const f = await fixture();
+  const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;
+  const values = ["Alpha", "alpha", "ALPHA beta", "ÉİẞΣ", "A\u0000B", null, undefined, "", 7, "A😀", "𐐀"];
+  const cases: [StoragePredicate, string[]][] = [
+    [{ field: "title", op: "equalsIgnoreCase", value: "ALPHA" }, ["0", "1"]],
+    [
+      { not: { field: "title", op: "equalsIgnoreCase", value: "ALPHA" } },
+      ["10", "2", "3", "4", "5", "6", "7", "8", "9"],
+    ],
+    [{ not: { field: "title", op: "contains", value: "alpha" } }, ["10", "3", "4", "5", "6", "7", "8", "9"]],
+    [{ not: { not: { field: "title", op: "contains", value: "alpha" } } }, ["0", "1", "2"]],
+    [{ field: "title", op: "equalsIgnoreCase", value: "éi\u0307ßς" }, ["3"]],
+    [{ field: "title", op: "equalsIgnoreCase", value: "a\u0000b" }, ["4"]],
+    [{ field: "title", op: "equalsIgnoreCase", value: "a😀" }, ["9"]],
+    [{ field: "title", op: "equalsIgnoreCase", value: "𐐨" }, ["10"]],
+    [{ field: "title", op: "equalsIgnoreCase", value: "" }, ["7"]],
+    [{ field: "title", op: "eq", value: "alpha" }, ["1"]],
+    [{ not: { field: "rank", op: "gt", value: 0 } }, values.map((_, index) => String(index)).sort()],
+  ];
+  for (const records of [f.records, memory]) {
+    await records.defineIndexes([
+      {
+        name: "titles",
+        fields: {
+          title: { path: ["title"], type: "string" },
+          rank: { path: ["rank"], type: "number" },
+        },
+      },
+    ]);
+    await records.commit({
+      operationId: "text-filters",
+      edits: values.map((title, index) => {
+        const replace: Json = title === undefined ? {} : { title };
+        return { recordId: String(index), replace };
+      }),
+    });
+    for (const [where, ids] of cases) {
+      const found: string[] = [];
+      let cursor: string | undefined;
+      do {
+        const page = await records.query({ index: "titles", fields: ["title"], where, limit: 2, cursor });
+        found.push(...page.records.map((row) => row.recordId));
+        cursor = page.cursor ?? undefined;
+      } while (cursor);
+      expect(found).toEqual(ids);
+      expect((await records.aggregate({ index: "titles", where })).count).toBe(ids.length);
+    }
+    await expect(
+      records.query({
+        index: "titles",
+        where: {
+          field: "rank",
+          op: "equalsIgnoreCase",
+          value: "7",
+        },
+      }),
+    ).rejects.toThrow("string");
+    await expect(
+      records.query({
+        index: "titles",
+        where: {
+          field: "title",
+          op: "equalsIgnoreCase",
+          value: null,
+        },
+      }),
+    ).rejects.toThrow("string");
   }
 });
 
