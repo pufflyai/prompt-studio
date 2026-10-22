@@ -42,13 +42,13 @@ A new project starts with these tags:
 | Priority   | single-select | Low, Medium, High, Urgent         |
 | Type       | single-select | Bug, Feature, Chore               |
 | Complexity | single-select | Simple, Moderate, Complex         |
-| Flags      | multi-select  | Review Needed                     |
+| Flags      | multi-select  | Needs attention                     |
 
 Open **Settings → Project Planner → Ticket tags** to add, rename, reorder, or delete tags and their options. From a terminal, use [`pst tags`](0004-cli.md#tags). When you delete a tag, Planner removes its options from every ticket.
 
 A single-select tag holds at most one option on every ticket. Planner rejects a ticket change that would give it a second option. To change a multi-select tag to single-select, every ticket must hold at most one of its options first, including archived tickets and drafts. If some tickets hold several, the change fails, changes nothing, and lists those tickets. Choose one option on each of them, for example in the ticket's Properties panel or with `pst pstdio-planner set-ticket-attribute`, then change the type again. Planner never picks an option for you.
 
-The Review Needed flag is derived from open or unreadable review requests. Open a flagged board card to answer its requests. Generic tag edits cannot request input or hide an open request. Planner keeps the Flags tag and its Review Needed option; you can rename them. See [Review requests](0006-review-requests.md) for legacy reconciliation.
+The Needs attention flag is derived from open or unreadable review requests. Open a flagged board card to answer its requests. Generic tag edits cannot request input or hide an open request. Planner keeps the Flags tag and its Needs attention option; you can rename them. See [Review requests](0006-review-requests.md) for legacy reconciliation.
 
 ## Colors
 

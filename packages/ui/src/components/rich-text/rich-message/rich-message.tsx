@@ -14,9 +14,14 @@ import { $addUpdateTag, $getRoot } from "lexical";
 import { useRef } from "react";
 import { ChatCodeLinkNode } from "@/components/chat-ui/links/chat-code-link-node";
 import type { ChatLinkProps } from "@/components/chat-ui/links/chat-link";
-import { ChatLinkProvider, useChatLinkHandler } from "@/components/chat-ui/links/chat-link-context";
+import {
+  ChatLinkProvider,
+  ChatLinkStreamingContext,
+  useChatLinkHandler,
+} from "@/components/chat-ui/links/chat-link-context";
 import { ChatLinkPlugin } from "@/components/chat-ui/links/chat-link-plugin";
 import { ChatResourceLinkNode } from "@/components/chat-ui/links/chat-resource-link-node";
+import { ChatWebLinkNode } from "@/components/chat-ui/links/chat-web-link-node";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme } from "../shared/editor-config";
 import { importMarkdownToLexical } from "../shared/markdown-import";
@@ -49,7 +54,9 @@ export function RichMessage(props: RichMessageProps) {
   const inherited = useChatLinkHandler();
   return (
     <ChatLinkProvider handler={props.linkHandler ?? inherited}>
-      <RichMessageContent {...props} />
+      <ChatLinkStreamingContext value={props.streaming ?? false}>
+        <RichMessageContent {...props} />
+      </ChatLinkStreamingContext>
     </ChatLinkProvider>
   );
 }
@@ -72,7 +79,7 @@ function RichMessageContent(props: RichMessageProps) {
 
   const initialConfig = {
     namespace: "RICH_MESSAGE",
-    nodes: [...editorNodes, ChatCodeLinkNode, ChatResourceLinkNode],
+    nodes: [...editorNodes, ChatCodeLinkNode, ChatResourceLinkNode, ChatWebLinkNode],
     editorState: () => {
       $addUpdateTag(SOURCE_IMPORT_TAG);
       if (isEditable) {

@@ -3,6 +3,7 @@ import { ticketsCollection } from "../data/collections";
 import { requireTicketDraftFiles, ticketFilesDir, ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
 import { findTicket } from "../data/resolve";
 import { validateTicketFileName } from "../data/ticket-file-name";
+import { pullTicketImages } from "../data/ticket-images";
 import type { StoredTicket } from "../data/types";
 
 const pullTicket = async (input: {
@@ -22,6 +23,7 @@ const pullTicket = async (input: {
   for (const file of ticket.files ?? []) {
     await projectFiles.writeText(`${ticketFilesDir(ticket.shorthand)}/${file.name}`, file.content);
   }
+  await pullTicketImages(input.storage, projectFiles, ticket);
 
   return { shorthand: ticket.shorthand, skipped: false, files: (ticket.files ?? []).length };
 };

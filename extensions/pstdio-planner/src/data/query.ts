@@ -9,8 +9,6 @@ import { buildPlan } from "../timeline/model/build-plan";
 import { resolvePlan } from "../timeline/model/resolve-plan";
 import { timelineTicketProperties } from "../timeline/model/ticket-properties";
 import { sortedBySortOrder } from "../utils/sort";
-import { cleanupLegacyTicketFields } from "./cleanup-legacy-ticket-fields";
-import { cleanupLegacyWorkspaceStatus } from "./cleanup-legacy-workspace-status";
 import { ticketsCollection } from "./collections";
 import {
   buildTicketAttributes,
@@ -23,6 +21,7 @@ import {
   TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
 } from "./mappers";
 import { readTicketReviewRequests, withReviewNeededFlag } from "./review-request-storage";
+import { REVIEW_REQUEST_ITEMS_ATTRIBUTE, reviewRequestBadgeItems } from "./review-request-summary";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
@@ -43,8 +42,6 @@ export const runTicketsQuery = async ({
   workspaces = [],
   workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
-  await cleanupLegacyWorkspaceStatus(storage);
-  await cleanupLegacyTicketFields(storage);
   const [storedTickets, tags, statuses, storedPlan, requests] = await Promise.all([
     ticketsCollection(storage).list(),
     seedDefaultTags(storage),
@@ -101,6 +98,10 @@ export const runTicketsQuery = async ({
           milestoneState: "unscheduled",
           needsAttention: "no",
         }),
+        [REVIEW_REQUEST_ITEMS_ATTRIBUTE]: reviewRequestBadgeItems(
+          requests.get(ticket.id) ?? { requests: [], errors: [] },
+          row.resource,
+        ),
       },
     };
   });

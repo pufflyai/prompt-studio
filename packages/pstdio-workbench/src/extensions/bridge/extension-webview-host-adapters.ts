@@ -2,15 +2,19 @@ import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import type { CommandStreamClientEvent } from "@pstdio/sdk/client";
 import type {
   CommandNotice,
+  ExtensionAccountApi,
   MaybePromise,
   NavigationTarget,
   PageLocation,
   WebviewArtifactsReadParams,
   WebviewCommandsExecuteParams,
+  WebviewEditingSessionParams,
+  WebviewEditingSnapshot,
   WebviewExtensionSettingSetParams,
   WebviewFilesDeleteParams,
   WebviewFilesListParams,
   WebviewFilesUploadParams,
+  WebviewHostCapabilityParams,
   WebviewHostCapabilityResults,
   WebviewNotificationActionParams,
   WebviewNotificationResolveParams,
@@ -53,10 +57,22 @@ export interface ExtensionWebviewFilesAdapter {
 }
 
 export interface ExtensionWebviewHostAdapters {
+  harnesses?: {
+    read(input: { harnessId?: string; model?: string }): MaybePromise<WebviewHostCapabilityResults["harnesses.read"]>;
+  };
+  resourceActions?: (
+    input: WebviewHostCapabilityParams["resources.actions"],
+  ) => MaybePromise<WebviewHostCapabilityResults["resources.actions"]>;
   executeCommand?(input: WebviewCommandsExecuteParams, signal?: AbortSignal): MaybePromise<unknown>;
   streamCommand?(input: WebviewCommandsExecuteParams, signal: AbortSignal): AsyncIterable<CommandStreamClientEvent>;
   commandCompleted?(response: CommandExecutionResult): void;
   hostEvents?: HostEventPublisher;
+  editing?: {
+    request(
+      input: WebviewEditingSessionParams,
+      execute: (input: WebviewCommandsExecuteParams) => Promise<unknown>,
+    ): Promise<WebviewEditingSnapshot | undefined>;
+  };
   navigation?: { open(target: NavigationTarget): MaybePromise<unknown> };
   pageParams?: { update(params: WebviewPageParamsUpdateParams["params"]): MaybePromise<PageLocation> };
   placement?: { close(): MaybePromise<void> };
@@ -65,5 +81,7 @@ export interface ExtensionWebviewHostAdapters {
   preferences?: ExtensionWebviewPreferencesAdapter;
   files?: ExtensionWebviewFilesAdapter;
   artifacts?: { read(input: WebviewArtifactsReadParams): MaybePromise<WebviewHostCapabilityResults["artifacts.read"]> };
+  /** The host's Cloud account. Methods without a project id use the webview's project. */
+  account?: ExtensionAccountApi;
   terminal?: WorkbenchTerminalController;
 }

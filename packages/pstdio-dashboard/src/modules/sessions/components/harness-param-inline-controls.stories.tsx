@@ -1,9 +1,9 @@
 import { Flex } from "@chakra-ui/react";
+import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { HarnessParamInlineControls } from "./harness-param-inline-controls";
-import type { HarnessParamValues } from "./harness-param-values";
 
 const meta = {
   title: "Sessions/Harness Inline Controls",

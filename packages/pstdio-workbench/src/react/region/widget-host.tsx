@@ -11,8 +11,10 @@ import type {
 } from "../../core";
 import { getWorkbenchRenderers } from "../../core";
 import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
+import { WorkbenchActionErrors } from "../notifications/action-errors";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { WorkbenchWidgetContents } from "./widget-contents";
 
 interface WorkbenchWidgetHostProps {
   workbench: WorkbenchCore;
@@ -31,11 +33,20 @@ const WorkbenchWidgetFallback = (props: { label: string }) => {
   );
 };
 
-const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode }) => {
+const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode; status: boolean }) => {
   const { children } = props;
 
   return (
-    <Box flex="1" minW="0" minH="0" w="full" h="full" overflow="hidden">
+    <Box
+      flex="1"
+      minW="0"
+      minH="0"
+      w="full"
+      h="full"
+      overflow="hidden"
+      display={props.status ? "flex" : undefined}
+      alignItems={props.status ? "center" : undefined}
+    >
       {children}
     </Box>
   );
@@ -92,15 +103,22 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       data-workbench-view={view?.id ?? placement.contributionId}
       data-workbench-renderer={renderer ? "mounted" : "missing"}
       display="flex"
+      flexDirection="column"
       flex="1 0 auto"
       minW="0"
       minH="0"
       w="full"
       overflow="hidden"
     >
+      <WorkbenchActionErrors workbench={workbench} target={placement.widgetId} />
       {renderer ? (
-        <WorkbenchRenderedWidgetFrame>
-          {renderer.render({ workbench, panel, instance, refresh }) as ReactNode}
+        <WorkbenchRenderedWidgetFrame status={props.region === "status"}>
+          <WorkbenchWidgetContents
+            renderer={renderer}
+            input={{ workbench, panel, instance, refresh }}
+            // File views start an async read; their heavy editors load separately.
+            defer={view?.body.kind !== "file" && ["main", "side", "bottom"].includes(panel.region)}
+          />
         </WorkbenchRenderedWidgetFrame>
       ) : (
         <WorkbenchWidgetFallback label={`No renderer registered for ${rendererId}.`} />

@@ -27,3 +27,6 @@ Use it for tickets, approval queues, publishing pipelines, leads, or other work 
 
 The renderer stores each user's view settings. The extension stores domain data. Do not copy board grouping or filter
 state into the extension unless it changes the query result.
+
+Card and list property edits appear immediately while `onAttributeChange` saves in the background. Saves run in order.
+If a save fails, the renderer restores that edit's saved value, keeps later edits visible, and reports the error.

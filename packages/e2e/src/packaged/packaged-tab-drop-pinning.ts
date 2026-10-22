@@ -23,13 +23,13 @@ export const verifyRetainedTerminalDrop = async (page: Page, terminal: Locator) 
   await input.pressSequentially('printf "__main_%s__\\n" "$PSTDIO_NAVIGATION_STATE"');
   await input.press("Enter");
   await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__main_retained__");
-  const showBottom = page.getByRole("button", { name: "Show Secondary Panel", exact: true });
+  const showBottom = page.getByRole("button", { name: "Show Bottom Panel", exact: true });
   if (await showBottom.isVisible()) await showBottom.click();
   await dragTab(page, terminal, page.locator('[data-workbench-panel="secondary"]:visible'), "secondary");
 };
 
 export const verifyTabDropPinning = async (page: Page, preview: Locator) => {
-  const showBottom = page.getByRole("button", { name: "Show Secondary Panel", exact: true });
+  const showBottom = page.getByRole("button", { name: "Show Bottom Panel", exact: true });
   if (await showBottom.isVisible()) await showBottom.click();
   await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
   await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();

@@ -1,5 +1,6 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { type ArtifactRevision, createArtifactService } from "./artifacts";
+import { sites } from "./mounts";
 
 export const serviceFor = (ctx: ExtensionContextBase) =>
   createArtifactService({
@@ -7,5 +8,5 @@ export const serviceFor = (ctx: ExtensionContextBase) =>
     artifacts: ctx.storage.collection<{ id: string }>("artifacts"),
     revisions: ctx.storage.collection<ArtifactRevision>("revisions"),
     names: ctx.storage.collection<{ title: string }>("names"),
-    snapshots: ctx.artifacts.mount("sites"),
+    snapshots: ctx.artifacts.mount(sites.id),
   });

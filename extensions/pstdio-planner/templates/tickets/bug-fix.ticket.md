@@ -9,51 +9,36 @@ blocked_reason: ""
 
 # {{TICKET_TITLE}}
 
-<!-- before writing this ticket, reproduce the bug as a user would -->
+**Reproduced**: [Yes / No]
 
-[One paragraph describing the bug, who is affected, and the expected outcome after the fix ships.]
+[One sentence: what goes wrong and who it affects.]
 
-## Reproduction summary
+## Reproduction
 
-- **Status**: [Reproduced / Intermittent / Could not reproduce]
-- **Environment**: [OS, browser/app version, branch/commit, local/prod/staging / Unknown]
-- **Frequency**: [Always / Sometimes / Once / Unknown]
-- **First observed**: [Date or approximate time / Unknown]
-- **Affected area**: [Feature, page, command, integration, or workflow / Unknown]
+**Environment**: [OS, app version, commit, local or production]
 
-## Steps to reproduce
+1. [Step, starting from a clean state]
 
-[List the exact reproduction steps in order.]
+**Expected**: [What should happen]
 
-## Expected behavior
+**Actual**: [What happens instead, with the exact error text]
 
-[What should happen.]
+## Proof
 
-## Actual behavior
+- [Error output, log lines, failing test output, or a screenshot in this ticket's files]
 
-[What happens instead. Include exact error messages when available.]
+## Cause
 
-## Evidence
+**[Confirmed / Hypothesis]**: [What causes the bug, with code references]
 
-Attach bug-reproduction planning files under this ticket's files, then link them here. Put validation output from implementation or review in a workspace report under `.pstdio/extension-storage/pstdio-reports/reports/<name>/`.
+## Fix
 
-- Screenshot: [file name or link]
-- Screen recording: [file name or link]
-- Logs/trace: [file name or link]
+[The proposed fix in a few sentences.]
 
-## Impact
+| Option     | Fixes the cause | Trade-off |
+| ---------- | --------------- | --------- |
+| [Proposed] | [Yes / No]      | [...]     |
 
-- **Severity**: [Low / Medium / High / Critical / Unknown]
-- **Users affected**: [Who or how many / Unknown]
-- **Workaround**: [Available workaround / Unknown]
+**Temporary fix**: [No / Yes, see files/adr.md]
 
-## Technical notes
-
-[Relevant code paths, recent changes, suspected cause, related tickets, or debugging notes.]
-
-## Acceptance criteria
-
-- [ ] The bug is reproduced by an automated regression test where applicable.
-- [ ] The issue no longer occurs using the reproduction steps above.
-- [ ] Existing behavior outside the reported bug remains unchanged.
-- [ ] Documentation or release notes are updated if user-facing behavior changes.
+**Regression test**: [The test that fails today and passes after the fix]

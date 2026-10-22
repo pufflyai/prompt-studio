@@ -152,7 +152,7 @@ Choose the smallest test scope that covers the changed behavior. Include affecte
 - Delete unused or legacy code
 - Add or update end-to-end tests for new features
 - Keep the project structure clean
-- Split growing files before they exceed 350 lines
+- Split growing source files before they exceed 350 lines
 - Update the documentation
 - Remove tests that cover only implementation details
 
@@ -209,7 +209,7 @@ A pull request may contain only one migration entry. If the tools create more th
 ## Coding style rules
 
 - Put content that may grow, such as endpoints and schemas, in separate files
-- Every file must stay below about **350 lines**
+- Every source file must stay below about **350 lines**. Documentation and test code, including fixtures, test helpers, mocks, benchmarks and the e2e packages, have no line limit. `biome.json` lists the exempt paths.
 - Use pure functions when possible
 - Use comments to explain **why**, not what the code does
 - Let TypeScript infer return types; do not write them yourself

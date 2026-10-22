@@ -29,7 +29,14 @@ async function wakeSupervisor(ctx: CommandContext) {
     const supervisor = await readAutoBuildSupervisor(ctx);
     const session = supervisor.sessionId ? await ctx.sessions.get(supervisor.sessionId) : null;
     if (isLiveSession(session)) return { prompted: false, sessionId: session!.id };
-    const { tickets: candidates, capacity, snapshot, progressAt, active } = await readNextTickets(ctx, mode);
+    // A first wake needs one viable ticket. The supervisor queries the full scope before dispatching.
+    const {
+      tickets: candidates,
+      capacity,
+      snapshot,
+      progressAt,
+      active,
+    } = await readNextTickets(ctx, mode, session ? {} : { limit: 1 });
     const history = session ? (await readSessionHistory(ctx.sessions)).find(({ id }) => id === session.id) : undefined;
     const lastPromptAt = Date.parse(history?.last_request_started ?? "1970-01-01T00:00:00Z");
     const stalled = Boolean(session && Date.now() - Math.max(progressAt, lastPromptAt) >= 60 * 60 * 1000);

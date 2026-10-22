@@ -299,6 +299,49 @@ These are in 0.43.x and `main`:
 | `ctx.logger.info`, `ctx.logger.warn`, `ctx.logger.error` | Write `(message, metadata?)` to the runtime log with event `extension.log`. The default log level, `error`, drops `info` and `warn`. |
 | `ctx.settings.delete(key)` | Removes the stored value of a setting. |
 
+On `main`, `ctx.resources.allocate({ kind, idPrefix: "tk" })` opts into a compact,
+case-sensitive ID while keeping the human shorthand unchanged. This additive option
+ships in the release after 0.44.0. It shares the core generator with
+`ctx.storage.ids.create("tk")`; omitting `idPrefix` keeps UUID output. See
+[Resource identities](../sdk/0002-resources.md#resource-identities).
+
+### Cloud account and sync status
+
+On `main`, `ctx.account` reads this device's Cloud account, the account's devices, and each project's sync status. It is an additive part of extension API 0.2.1 and ships in the release after 0.44.0. The native host owns the device credential; extensions never see it. Methods that take a `projectId` use the current project when it is omitted.
+
+| Method | What it does |
+| --- | --- |
+| `ctx.account.status()` | Returns `{ login, cloudProjects, cloudProjectsLoaded }`. `login` is `null` when this device is signed out; otherwise it has the account and device IDs, the service addresses, and the signed-in `email`. `cloudProjectsLoaded` stays `false` until the account service answered for this login. |
+| `ctx.account.login(managerOrigin)` | Starts a native browser sign-in with the given account service and returns `{ id, url }`. Open `url` in a browser on the computer that runs Prompt Studio. |
+| `ctx.account.loginStatus(id)` | Returns `pending`, `complete`, or `failed`. |
+| `ctx.account.cancelLogin(id)` | Cancels a pending sign-in and returns `failed`. A sign-in that already finished returns `complete`. |
+| `ctx.account.logout()` | Signs this device out and keeps local data. Returns `{ removed }`; `removed` is `false` when the account service could not be reached. |
+| `ctx.account.devices()` | Lists the account's devices with `name`, `platform`, `lastSeenAt`, `online`, and `current` for this device. |
+| `ctx.account.renameDevice(id, name)` | Renames a device. |
+| `ctx.account.removeDevice(id)` | Stops a device from renewing Cloud access. Removing the current device signs it out. |
+| `ctx.account.projectSyncStatus(projectId?)` | Returns `{ state, offlineReady }` for a project. |
+| `ctx.account.syncProject(projectId?)` | Syncs the project on every device of the account that has it. |
+| `ctx.account.stopProjectSync(projectId?)` | Makes the project local on every device. |
+
+`state` is one of these values. The host derives it on each read from the local documents, the record assets and the relay connections. It never stores a second status.
+
+| `state` | Meaning |
+| --- | --- |
+| `local` | The project does not sync. |
+| `waiting-to-sync` | Saved local changes have not reached Cloud yet, or a sync run is still working. |
+| `synced` | Every known document and required file is on this device, and saved changes have reached Cloud. |
+| `offline` | The Cloud connection is lost, or the account service has not confirmed which projects sync. Work continues locally. |
+| `first-download-incomplete` | The first download since the relay connection started has not finished, so some documents or files may not be on this device yet. |
+| `needs-attention` | Some encrypted data could not be read. Healthy updates continue. |
+
+`offlineReady` is `true` only when every known document and required file was verified on this device. The host never reports `synced` or `offlineReady` while content is missing. An incomplete first download stays `first-download-incomplete` when the connection drops. Later downloads, such as catching up after a reconnect, report `waiting-to-sync` with `offlineReady` set to `false` until they finish. The first download starts again when the runtime restarts or a project starts syncing again.
+
+Stopping and restarting sync are account-wide. Stopping keeps the project keys, the encrypted Cloud data, and each device's local copy. Edits made on several devices while the project is local merge when it syncs again.
+
+Listen to `accountEvents.projectSyncChanged` from `@pstdio/sdk/extensions` for changes. The host sends it for one project only when that project's `state` or `offlineReady` changes. Read the status once when the extension starts; the first value is not announced. The payload is `{ projectId, state, offlineReady }`. Webviews receive only the event ID, so read the status again.
+
+Account service failures reach the extension as a generic message, so private service details stay in the host. Device presence comes from the account service: a signed-in runtime sends a heartbeat every 15 seconds, and `online` means the service heard from the device within the last 45 seconds.
+
 ### Agent skill folders
 
 Harness extensions call `ctx.workspaceFiles.syncDir(dir, files)` during workspace setup to copy the skill catalog into an agent folder such as `.claude/skills`. The host records each file it writes, with a hash of its content, outside the workspace. A later sync updates or removes a file only while it still has the recorded content. It adopts an existing file that already has the wanted content. It keeps a file it did not write or that someone edited, and logs a warning with event `extension.workspace_sync.kept_file`. The host log (`logs.jsonl` in the Prompt Studio home folder) records warnings when `PSTDIO_LOG_LEVEL` is `warn`, `info`, or `debug`. The default level, `error`, does not. Deleting a kept file lets the next sync write the current version. `syncDir` does not report kept files to the extension.
@@ -342,6 +385,8 @@ A sibling with `resolvedFrom: "resource"` stays hidden in the dialog, but
 `params.valueOf` can still reference it. Choices and submission use the same
 value: an explicit action argument takes priority over the active resource.
 Opening the dialog for another resource loads choices for that resource.
+Dashboard commands also resolve these hidden values before dispatch when no
+parameter form is needed. Explicit action arguments still take priority.
 
 Workspace provider `params` support the same command-backed choices in Create
 workspace and in nested `workspace` command fields. Changing the provider cancels

@@ -40,6 +40,7 @@ beforeEach(async () => {
   extensionInstancesService = createExtensionInstancesDBService(result.db);
   extensionUserDataService = createExtensionUserDataDBService(result.db);
   service = createExtensionService({
+    sourceExists: () => true,
     extensionInstancesService,
     installedExtensionSourcesService,
     extensionUserDataService,
@@ -98,8 +99,8 @@ test("concurrent ownership claims leave one provider enabled", async () => {
   });
 
   await Promise.all([
-    concurrentService.setProjectExtensionEnabled(first.instance.id, true),
-    concurrentService.setProjectExtensionEnabled(second.instance.id, true),
+    concurrentService.setProjectExtensionEnabled(first!.instance.id, true),
+    concurrentService.setProjectExtensionEnabled(second!.instance.id, true),
   ]);
 
   const enabled = await service.listEnabledSourcesForProject(project.id);

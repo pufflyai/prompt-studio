@@ -97,6 +97,7 @@ export const buttonRecipe = defineRecipe({
         color: "fg",
         bg: "bg",
         border: "border",
+        borderColor: "border",
         _hover: { bg: "bg.hover" },
         _active: { bg: "bg.active" },
         _expanded: { bg: "bg.active" },

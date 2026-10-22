@@ -1,6 +1,6 @@
 import { Link } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-import { type ChatLinkCandidate, parseChatLink } from "./chat-link";
+import { type ChatLinkCandidate, isGuessedChatLink, parseChatLink } from "./chat-link";
 import { useChatLinkHandler } from "./chat-link-context";
 import { useChatResource } from "./use-chat-resource";
 
@@ -13,6 +13,7 @@ export const ChatLinkAnchor = (props: {
   const handler = useChatLinkHandler();
   const resource = useChatResource(candidate, resolvedHref === undefined);
   const parsed = parseChatLink(candidate, typeof window === "undefined" ? undefined : window.location.origin);
+  if (resolvedHref === undefined && !resource && isGuessedChatLink(candidate)) return children;
   let href = resolvedHref;
   if (href === undefined) href = resource ? resource.href : handler?.resolveHref(candidate);
   if (!handler || !parsed || (parsed.kind === "external" && !href)) return children;

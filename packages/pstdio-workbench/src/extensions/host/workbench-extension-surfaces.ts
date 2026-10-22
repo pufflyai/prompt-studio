@@ -53,6 +53,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
             return (
               input.renderWebview?.(renderInput) ??
               renderBridgeWebviewFrame({
+                sizing: renderInput.panel.region === "status" ? "content-width" : undefined,
                 context: {
                   workbench: renderInput.workbench,
                   webviewId: panel.id,

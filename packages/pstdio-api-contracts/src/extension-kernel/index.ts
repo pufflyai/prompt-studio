@@ -27,6 +27,7 @@ export {
   localContributionIdPattern,
 } from "./contribution-id";
 export { resolveDataTableComparableValue, resolveDataTableFieldKind } from "./data-table-values";
+export { applyEditingChanges, diffEditingState, rebaseEditingChanges } from "./editing-state";
 export * from "./event-reference";
 export type {
   CommitPayload,
@@ -39,9 +40,11 @@ export type {
   WorktreeRemovedPayload,
 } from "./kernel-slots";
 export {
+  accountEvents,
   gitEvents,
   projectEvents,
   projectSlots,
+  resourceEvents,
   sessionEvents,
   sessionSlots,
   viewDataEvents,
@@ -77,4 +80,4 @@ export {
   WEBVIEW_HOST_CAPABILITY_VERSION,
   WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
 } from "./types/webview-capabilities";
-export { artifactMountId, EXTENSION_EVENTS_SCOPE } from "./webview-protocol";
+export { artifactMountId, EXTENSION_EVENTS_SCOPE, RESOURCE_ACTIONS_EVENTS_SCOPE } from "./webview-protocol";

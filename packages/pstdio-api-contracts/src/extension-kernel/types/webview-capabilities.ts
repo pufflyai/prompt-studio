@@ -1,11 +1,15 @@
+import type { AgentInfo, AgentModel, HarnessParamsInfo } from "../../agents";
 import type { TerminalSessionOperation, TerminalSessionResult } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
+import type { ExtensionAccountApi } from "./account";
 import type { CommandNotice, CommandOutcome } from "./commands";
 import type { ExtensionBlobRef } from "./context";
 import type { JsonObject, JsonValue } from "./json";
 import type { NavigationTarget } from "./navigation-target";
 import type { PageLocation, PageParamValue } from "./pages";
 import type { ResourceRef } from "./resources";
+import type { ExtensionHarnessInput } from "./sessions";
+import type { WebviewEditingSessionParams, WebviewEditingSnapshot } from "./webview-editing";
 
 export type { ExtensionBlobRef } from "./context";
 
@@ -16,6 +20,9 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "clipboard.write",
   "commands.execute",
   "commands.stream",
+  "editing.session",
+  "harnesses.read",
+  "resources.actions",
   "navigation.open",
   "page.params.update",
   "placement.close",
@@ -33,6 +40,8 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "files.upload",
   "files.list",
   "files.delete",
+  "account.read",
+  "account.manage",
 ] as const;
 
 // Capabilities that must be declared with a scope suffix (`name:scope`). Each
@@ -155,6 +164,27 @@ export interface WebviewArtifactFile {
   mediaType: string;
 }
 
+/** Reads mirror `ctx.account`. A missing project id means the webview's project. */
+export type WebviewAccountReadParams =
+  | { op: "status" }
+  | { op: "loginStatus"; id: string }
+  | { op: "devices" }
+  | { op: "projectSyncStatus"; projectId?: string };
+
+/** Changes mirror `ctx.account`. A missing project id means the webview's project. */
+export type WebviewAccountManageParams =
+  | { op: "login"; managerOrigin: string }
+  | { op: "cancelLogin"; id: string }
+  | { op: "logout" }
+  | { op: "renameDevice"; id: string; name: string }
+  | { op: "removeDevice"; id: string }
+  | { op: "syncProject"; projectId?: string }
+  | { op: "stopProjectSync"; projectId?: string };
+
+export type WebviewAccountResult<Params extends { op: keyof ExtensionAccountApi }> = Awaited<
+  ReturnType<ExtensionAccountApi[Params["op"]]>
+>;
+
 export interface WebviewKeyboardEventParams {
   key?: string;
   code?: string;
@@ -166,8 +196,13 @@ export interface WebviewKeyboardEventParams {
 }
 
 export interface WebviewHostCapabilityParams {
+  "harnesses.read": { harnessId?: string; model?: string };
+  "resources.actions":
+    | { operation: "list"; resource: ResourceRef }
+    | { operation: "execute"; resource: ResourceRef; key: string };
   "commands.execute": WebviewCommandsExecuteParams;
   "commands.stream": WebviewCommandsStreamParams;
+  "editing.session": WebviewEditingSessionParams;
   "page.params.update": WebviewPageParamsUpdateParams;
   "navigation.open": WebviewNavigationOpenParams;
   "placement.close": Record<string, never>;
@@ -192,12 +227,23 @@ export interface WebviewHostCapabilityParams {
   /** @deprecated Use extension commands and owned storage. */
   "files.delete": WebviewFilesDeleteParams;
   "artifacts.read": WebviewArtifactsReadParams;
+  "account.read": WebviewAccountReadParams;
+  "account.manage": WebviewAccountManageParams;
   "host.dispatchKeyboardEvent": WebviewKeyboardEventParams;
 }
 
 export interface WebviewHostCapabilityResults {
+  "harnesses.read": {
+    harnesses: AgentInfo[];
+    models: AgentModel[];
+    schema?: HarnessParamsInfo;
+    defaults?: Record<string, string | boolean>;
+    selection?: ExtensionHarnessInput;
+  };
+  "resources.actions": WebviewResourceAction[];
   "commands.execute": { outcome: CommandOutcome };
   "commands.stream": { operation: "start" | "cancel" | "ack"; accepted: true };
+  "editing.session": WebviewEditingSnapshot | undefined;
   "page.params.update": { location: PageLocation };
   "navigation.open": void;
   "placement.close": void;
@@ -222,22 +268,43 @@ export interface WebviewHostCapabilityResults {
   /** @deprecated Use extension commands and owned storage. */
   "files.delete": void;
   "artifacts.read": WebviewArtifactFile[] | string;
+  "account.read": WebviewAccountResult<WebviewAccountReadParams>;
+  "account.manage": WebviewAccountResult<WebviewAccountManageParams>;
   "host.dispatchKeyboardEvent": void;
+}
+
+export interface WebviewResourceAction {
+  key: string;
+  label: string;
+  commandId?: string;
+  /** Workbench icon name. */
+  icon?: string;
+  /** Image URL that replaces `icon` when present. */
+  iconSrc?: string;
+  /** Help text, or the reason the action is disabled. */
+  description?: string;
+  isDisabled?: boolean;
+  separatorBefore?: boolean;
+  group?: { id: string; label?: string };
 }
 
 export type WebviewHostCapabilityResult<
   Capability extends WebviewHostCapability,
   Params extends WebviewHostCapabilityParams[Capability] = WebviewHostCapabilityParams[Capability],
-> = Capability extends "artifacts.read"
-  ? Params extends { op: "list" }
-    ? WebviewArtifactFile[]
-    : Params extends { op: "readText" | "imageUrl" }
-      ? string
-      : WebviewHostCapabilityResults[Capability]
-  : Capability extends "terminal.session"
-    ? Params extends { operation: "open" }
-      ? Extract<TerminalSessionResult, { operation: "open" }>
-      : Params extends { operation: "write" | "resize" | "kill" | "subscribe" }
-        ? Exclude<TerminalSessionResult, { operation: "open" }>
-        : TerminalSessionResult
-    : WebviewHostCapabilityResults[Capability];
+> = Capability extends "account.read" | "account.manage"
+  ? Params extends { op: keyof ExtensionAccountApi }
+    ? WebviewAccountResult<Params>
+    : WebviewHostCapabilityResults[Capability]
+  : Capability extends "artifacts.read"
+    ? Params extends { op: "list" }
+      ? WebviewArtifactFile[]
+      : Params extends { op: "readText" | "imageUrl" }
+        ? string
+        : WebviewHostCapabilityResults[Capability]
+    : Capability extends "terminal.session"
+      ? Params extends { operation: "open" }
+        ? Extract<TerminalSessionResult, { operation: "open" }>
+        : Params extends { operation: "write" | "resize" | "kill" | "subscribe" }
+          ? Exclude<TerminalSessionResult, { operation: "open" }>
+          : TerminalSessionResult
+      : WebviewHostCapabilityResults[Capability];

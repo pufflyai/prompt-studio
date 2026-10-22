@@ -8,7 +8,7 @@ export const watchWorkbenchPage = (lifecyclePage: Page, origin: string) => {
     if (page === lifecyclePage) return;
     const check = () => {
       const url = new URL(page.url());
-      if (url.origin === origin && url.pathname === "/") ready.resolve(page);
+      if (url.origin === origin) ready.resolve(page);
     };
     pages.set(page, check);
     page.on("framenavigated", check);

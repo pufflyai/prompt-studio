@@ -1,14 +1,16 @@
 import { Box, Center, Flex, Image, Text } from "@chakra-ui/react";
 import type { FileSourcePosition } from "@pstdio/sdk/extensions";
 import { AlertMessage, EmptyState } from "@pstdio/ui";
-import { CodeEditor } from "@pstdio/ui/diff";
-import { MarkdownEditor } from "@pstdio/ui/rich-text";
-import type { ReactNode, RefObject } from "react";
+import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
+import { lazy, type ReactNode, type RefObject, Suspense, useLayoutEffect } from "react";
 import type { FileRendererContent } from "../../../core";
+import { FileRendererLoading } from "./file-renderer-loading";
 import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 
+const CodeEditor = lazy(() => import("@pstdio/ui/diff").then((module) => ({ default: module.CodeEditor })));
+
 interface FileRendererContentViewProps {
-  content: FileRendererContent;
+  content: FileRendererContent | null;
   position?: FileSourcePosition;
   editorKey: string;
   errorNotice: ReactNode;
@@ -36,6 +38,22 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     sectionNavigation,
     title,
   } = props;
+  useLayoutEffect(() => {
+    if (!editorKey || sectionNavigation) return;
+    const node = rendererRef.current;
+    if (!node) return;
+    requestAnimationFrame(() => {
+      let current = node.parentElement;
+      while (current) {
+        const overflowY = getComputedStyle(current).overflowY;
+        if (["auto", "scroll", "overlay"].includes(overflowY) && current.scrollHeight > current.clientHeight) {
+          current.scrollTop = 0;
+        }
+        current = current.parentElement;
+      }
+    });
+  }, [editorKey, sectionNavigation, rendererRef]);
+  if (!content) return <FileRendererLoading />;
   const presentation = resolveFileRendererPresentation(content, contributionCanSave);
   const positionNotice =
     position && presentation.kind !== "code" && presentation.kind !== "empty" ? (
@@ -84,16 +102,18 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
         {errorNotice}
         {positionNotice}
         <Box flex="1" minH="0">
-          <CodeEditor
-            key={editorKey}
-            language={presentation.language}
-            position={position}
-            fileName={content.fileName}
-            defaultCode={content.content ?? ""}
-            isEditable={presentation.isEditable}
-            showLineNumbers
-            onChange={presentation.isEditable ? onChange : undefined}
-          />
+          <Suspense fallback={<FileRendererLoading />}>
+            <CodeEditor
+              key={editorKey}
+              language={presentation.language}
+              position={position}
+              fileName={content.fileName}
+              defaultCode={content.content ?? ""}
+              isEditable={presentation.isEditable}
+              showLineNumbers
+              onChange={presentation.isEditable ? onChange : undefined}
+            />
+          </Suspense>
         </Box>
       </Flex>
     );
@@ -104,7 +124,7 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
       {errorNotice}
       {positionNotice}
       <Box flex="1" minH="0" overflowY="auto">
-        <MarkdownEditor
+        <LazyMarkdownEditor
           key={editorKey}
           defaultState={content.content ?? ""}
           isEditable={presentation.isEditable}

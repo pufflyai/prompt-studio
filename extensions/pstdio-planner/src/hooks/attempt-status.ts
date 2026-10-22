@@ -1,5 +1,6 @@
 import { defineHook, projectEvents, sessionEvents } from "@pstdio/sdk/extensions";
 import { refreshAttemptTickets } from "../data/attempt-rollup";
+import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { plannerTicketsChanged } from "../events";
 
 export const attemptStatusSessionHooks = [
@@ -12,6 +13,7 @@ export const attemptStatusSessionHooks = [
     id: `attempt-status.${event.id.split(".").at(-1)!.toLowerCase()}`,
     event,
     async run(ctx, { sessionId }) {
+      if ((await readAutoBuildSupervisor(ctx)).sessionId === sessionId) return;
       await refreshAttemptTickets(ctx, sessionId);
     },
   }),

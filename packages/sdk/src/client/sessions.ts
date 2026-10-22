@@ -30,6 +30,7 @@ import type {
 import type { Session } from "../resources";
 import type { ClientOptions, RequestFn } from "./request";
 import { createSessionQueryClient } from "./session-query";
+import { retainSessionResources } from "./session-resource-retention";
 import { createSessionStreamTransport } from "./session-stream";
 import type { SseEvent } from "./sse";
 
@@ -113,6 +114,8 @@ export type SessionClient = ReturnType<typeof createSessionQueryClient> & {
   ): Promise<ListSessionActivityResponse & ActivityPage>;
   stream(sessionId: string, onEvent: (event: SseEvent) => void, options?: { signal?: AbortSignal }): Promise<void>;
   connectStream(sessionId: string, handlers: SessionStreamHandlers): SessionStreamConnection;
+  /** Keep a session's idle tool resources while a tab or other consumer is open. Close to release interest. */
+  retainResources(sessionId: string): SessionStreamConnection;
 };
 
 export type SessionStreamHandlers = {
@@ -175,6 +178,7 @@ export const createSessionClient = (
 ): SessionClient => {
   return {
     ...createSessionQueryClient(request),
+    retainResources: (sessionId) => retainSessionResources(streams, sessionId),
     getDraftHarnessCommands: (input, signal) =>
       request("/v1/sessions/harness-command-state", { method: "POST", body: input, signal }),
     listActivity: (sessionId, input = {}) => {

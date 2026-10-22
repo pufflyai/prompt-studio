@@ -1,8 +1,10 @@
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { Checkbox, DeleteConfirmationModal, toaster } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
+import type { AgentInfo } from "pstdio-api-contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useActionError } from "@/shared/components/use-action-error";
 import { executeExtensionCommandValue } from "@/shared/extensions/api";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import {
@@ -16,18 +18,21 @@ import {
   useUpgradeProjectExtension,
 } from "@/shared/extensions/use-project-extensions";
 import { ExtensionDetail } from "./extension-detail";
+import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionSettingsViews } from "./extension-settings-views";
 
 interface ExtensionDetailContainerProps {
   projectId: string | undefined;
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
+  agents?: AgentInfo[];
   onBack: () => void;
   settingsInput?: WorkbenchPanelRenderInput;
 }
 
 export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) => {
-  const { projectId, extension, metadata, onBack, settingsInput } = props;
+  const { projectId, extension, metadata, agents, onBack, settingsInput } = props;
+  const { showError, errorNotice, clearError } = useActionError();
   const settingsPanels =
     metadata?.settingsPanels.filter(
       (panel) => panel.extensionId === extension.extensionId && panel.slot.id === "extension.settings",
@@ -56,21 +61,23 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
 
   // Reloading validates the source waiting on disk, then adopts it.
   const handleReload = () => {
+    clearError();
     reload.mutate(
       { instanceId: extension.id },
       {
         onSuccess: (updated) => {
-          toaster.create(
-            updated.status === "loaded"
-              ? { type: "success", title: t("projectSettings.extensionsPanel.reload.succeeded") }
-              : { type: "error", title: t("projectSettings.extensionsPanel.reload.failed") },
-          );
+          if (updated.status === "loaded")
+            toaster.create({ type: "success", title: t("projectSettings.extensionsPanel.reload.succeeded") });
+          else showError({ title: t("projectSettings.extensionsPanel.reload.failed") });
         },
+        onError: (error) =>
+          showError({ title: t("projectSettings.extensionsPanel.reload.failed"), description: error.message }),
       },
     );
   };
 
   const handleUpgrade = () => {
+    clearError();
     upgrade.mutate(
       { instanceId: extension.id },
       {
@@ -85,8 +92,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
           });
         },
         onError: (error) => {
-          toaster.create({
-            type: "error",
+          showError({
             title: t("projectSettings.extensionsPanel.upgrade.failed"),
             description: error instanceof Error ? error.message : undefined,
           });
@@ -96,12 +102,12 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   };
 
   const handleUninstall = async () => {
+    clearError();
     try {
       await uninstall.mutateAsync({ instanceId: extension.id, deleteUserData });
       onBack();
     } catch (error) {
-      toaster.create({
-        type: "error",
+      showError({
         title: t("projectSettings.extensionsPanel.deleteErrorTitle"),
         description: error instanceof Error ? error.message : t("projectSettings.extensionsPanel.deleteError"),
       });
@@ -111,10 +117,16 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
 
   return (
     <>
+      {!confirmingUninstall && errorNotice}
       <ExtensionDetail
         projectId={projectId}
         extension={extension}
         metadata={contributions}
+        unavailableHarnesses={unavailableExtensionHarnesses(
+          extension,
+          contributionsQuery.isSuccess ? contributions?.harnesses : undefined,
+          agents,
+        )}
         automations={automations}
         diagnostics={diagnostics}
         settings={settingsQuery.data?.settings ?? []}
@@ -131,18 +143,36 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
           setAutomationEnabled.isPending ? (setAutomationEnabled.variables?.automationId ?? undefined) : undefined
         }
         onBack={onBack}
-        onToggle={(enabled) => setEnabled.mutate({ instanceId: extension.id, enabled })}
+        onToggle={(enabled) => {
+          clearError();
+          setEnabled.mutate(
+            { instanceId: extension.id, enabled },
+            { onError: (error) => showError({ title: error.message }) },
+          );
+        }}
         onToggleAutomation={(automation, enabled) =>
-          setAutomationEnabled.mutate({ instanceId: extension.id, automationId: automation.id, enabled })
+          setAutomationEnabled.mutate(
+            { instanceId: extension.id, automationId: automation.id, enabled },
+            { onError: (error) => showError({ title: error.message }) },
+          )
         }
         executeOptionCommand={(commandId, params, signal) => {
           if (!projectId) return Promise.reject(new Error("Setting options need a project."));
           return executeExtensionCommandValue(projectId, commandId, params, signal);
         }}
-        onChangeSetting={(key, value) => updateSetting.mutate({ instanceId: extension.id, key, value })}
+        onChangeSetting={(key, value) => {
+          clearError();
+          updateSetting.mutate(
+            { instanceId: extension.id, key, value },
+            { onError: (error) => showError({ title: error.message }) },
+          );
+        }}
         onReload={handleReload}
         onUpgrade={handleUpgrade}
-        onUninstall={() => setConfirmingUninstall(true)}
+        onUninstall={() => {
+          clearError();
+          setConfirmingUninstall(true);
+        }}
       />
       <DeleteConfirmationModal
         open={confirmingUninstall}
@@ -160,6 +190,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         )}
         buttonText={t("projectSettings.extensionsPanel.deleteConfirm.button")}
       >
+        {errorNotice}
         <Checkbox checked={deleteUserData} onCheckedChange={(details) => setDeleteUserData(details.checked === true)}>
           {t("projectSettings.extensionsPanel.deleteConfirm.deleteDataLabel")}
         </Checkbox>

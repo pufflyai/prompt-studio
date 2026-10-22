@@ -39,7 +39,7 @@ describe("session attachment failure cleanup", () => {
       expect(createRes.status).toBe(201);
       const created = (await createRes.json()) as { id: string };
 
-      await waitForSessionStatus(isolated.app, created.id, "failed");
+      await waitForSessionStatus(isolated, created.id, "failed");
       expect(await isolated.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);
 
       const deleteRes = await isolated.app.request(
@@ -85,7 +85,7 @@ describe("session attachment failure cleanup", () => {
       expect(createRes.status).toBe(201);
       const created = (await createRes.json()) as { id: string };
 
-      await waitForSessionStatus(isolated.app, created.id, "completed");
+      await waitForSessionStatus(isolated, created.id, "completed");
       isolated.deps.fileService.upload = originalUpload;
       expect(await isolated.deps.sessionQueueEntriesService.listDispatchStarted()).toHaveLength(1);
 
@@ -130,7 +130,7 @@ describe("session attachment failure cleanup", () => {
       });
       expect(followUpRes.status).toBe(200);
 
-      await waitForSessionStatus(isolated.app, session.id, "failed");
+      await waitForSessionStatus(isolated, session.id, "failed");
       expect(await isolated.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);
 
       const deleteRes = await isolated.app.request(

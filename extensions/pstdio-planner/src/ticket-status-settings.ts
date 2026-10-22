@@ -10,12 +10,11 @@ export interface TicketStatusDraft {
   actions?: string[];
 }
 
-import { cleanupLegacyTicketFields } from "./data/cleanup-legacy-ticket-fields";
-import { cleanupLegacyWorkspaceStatus } from "./data/cleanup-legacy-workspace-status";
 import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./data/collections";
+import { migratePlannerStorage } from "./data/migrate-storage";
 import { seedDefaultStatuses } from "./data/seed";
 import type { StoredStatus } from "./data/types";
-import { plannerTicketsChanged } from "./events";
+import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { sortedBySortOrder } from "./utils/sort";
 
 // Creating a ticket in a column is a command on the status, so it travels in the
@@ -60,8 +59,7 @@ export const readStatusSettings = defineCommand({
   id: "ticket-status.read-settings",
   title: "Ticket status",
   async run(ctx) {
-    await cleanupLegacyWorkspaceStatus(ctx.storage);
-    await cleanupLegacyTicketFields(ctx.storage);
+    await migratePlannerStorage(ctx);
     return { statuses: sortedBySortOrder(await seedDefaultStatuses(ctx.storage)).map(toTicketStatusDraft) };
   },
 });
@@ -90,6 +88,7 @@ export const saveStatusSettings = defineCommand({
       ),
     ]);
     await ctx.events.emit(plannerTicketsChanged, {});
+    await ctx.events.emit(plannerSchemaChanged, {});
 
     return { statuses: sortedBySortOrder(next).map(toTicketStatusDraft) };
   },

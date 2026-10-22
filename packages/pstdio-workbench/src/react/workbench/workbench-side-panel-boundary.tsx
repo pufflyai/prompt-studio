@@ -23,6 +23,7 @@ const interactivePointerTargetSelector = [
   "input",
   "select",
   "textarea",
+  "iframe",
   "[contenteditable='true']",
   "[role='button']",
   "[role='checkbox']",
@@ -86,7 +87,7 @@ export const WorkbenchSidePanelBoundary = (props: WorkbenchSidePanelBoundaryProp
         contentMinSizePx={contentMinSizePx}
         header={sideHeader}
         onAttachedSlotChange={onAttachedSlotChange}
-        onCollapse={() => workbench.sidePanel.setMode("closed")}
+        onCollapse={() => workbench.shell.setRegionOpen("side", false)}
       />
     </WorkbenchKeyboardFrame>
   );

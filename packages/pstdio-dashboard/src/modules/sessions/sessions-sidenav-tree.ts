@@ -93,13 +93,15 @@ const createSessionGroupAction = (workspace: ResourceRef | undefined) => ({
   ...(workspace ? { args: { workspace } } : {}),
 });
 // The Sessions level owns the whole sidenav body, so its rows sit directly in one fixed section.
-export const buildSessionsLevelSections = (sessions: DashboardSession[]): TreeViewSection[] => [
+// Without sessions it returns the same section in its loading state, so the layout can render first.
+export const buildSessionsLevelSections = (sessions?: DashboardSession[]): TreeViewSection[] => [
   {
     id: "session-list",
     label: "Sessions",
     collapsible: false,
+    loading: !sessions,
     actions: [createSessionGroupAction(undefined)],
-    nodes: buildSessionRows(sessions, "resource"),
+    nodes: sessions ? buildSessionRows(sessions, "resource") : [],
   },
 ];
 // Inside project navigation, a workspace's sessions stay one collapsible group next to other sections.

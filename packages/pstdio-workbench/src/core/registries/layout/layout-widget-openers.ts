@@ -19,6 +19,7 @@ import type {
 
 interface CreateWidgetOpenersInput {
   getLayout(): WorkbenchLayout;
+  validateOpen?(region: WorkbenchRegion, existing: WorkbenchWidgetPlacement | undefined, target: OpenWidgetInput): void;
   requireWidget(id: string): RegisteredWidgetContribution;
   applyAndActivate(
     layout: WorkbenchLayout,
@@ -232,6 +233,11 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
         : undefined;
     const existing =
       placementInput.replaceWidgetId && replacement ? undefined : findReusablePlacement(widget, layout, placementInput);
+    input.validateOpen?.(
+      regionId,
+      previewContent?.placement ?? (existing?.regionId === regionId ? existing.placement : undefined),
+      placementInput,
+    );
     let placement: WorkbenchWidgetPlacement;
     if (previewContent) {
       placement = applyAndActivate(layout, previewContent.regionId, previewContent.placement);

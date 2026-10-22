@@ -1,16 +1,15 @@
+import { existsSync } from "node:fs";
 import type {
   createExtensionInstancesDBService,
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
-import { automationRunsId, automationsId, publishedExtensionsId } from "pstdio-sync-contracts";
 import type {
   checkExtensionSource,
   hashExtensionSource,
   LoadedExtensionSnapshot,
 } from "../features/extensions/extension-runtime";
 import type { EventBus } from "../features/sync/event-bus";
-import { activatePublishedExtension } from "./activate-published-extension";
 import {
   type PruneProjectExtensionInstancesInput,
   pruneProjectExtensionInstances as pruneProjectExtensionInstancesImpl,
@@ -20,6 +19,7 @@ import {
   reportWebviewBuildFailure as reportWebviewBuildFailureImpl,
   reportWebviewBuildSuccess as reportWebviewBuildSuccessImpl,
 } from "./extension-reload";
+import { createExtensionSourceMutations } from "./extension-source-mutations";
 import {
   findInstalledSourceForRegistration,
   hasUnchangedInstalledSourceRegistration,
@@ -82,6 +82,7 @@ type ExtensionServiceDeps = {
   hashExtension?: typeof hashExtensionSource;
   onInstalledSourcesChanged?: (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void> | void;
   checkExtension?: typeof checkExtensionSource;
+  sourceExists?: typeof existsSync;
   projectService: ReturnType<typeof createProjectService>;
   validateResourcePrefixes?: (
     projectId: string,
@@ -90,6 +91,7 @@ type ExtensionServiceDeps = {
 };
 
 export const createExtensionService = (deps: ExtensionServiceDeps) => {
+  const mutateSource = createExtensionSourceMutations();
   const emitInstalledSource = (source: unknown) => {
     deps.eventBus?.emit("installed_extension_sources", "set", source);
   };
@@ -111,8 +113,6 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   const registerInstalledSource = async (input: RegisterInstalledSourceInput) => {
-    if ([publishedExtensionsId, automationsId, automationRunsId].includes(input.extensionId))
-      throw new Error("Reserved platform extension identity");
     const existing = await findInstalledSourceForRegistration(deps.installedExtensionSourcesService, input);
     const values = registrationValues(input, existing);
 
@@ -216,17 +216,19 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return { installedSource, instance };
   };
 
-  const syncInstalledSourceForProject = async (input: SyncInstalledSourceInput) => {
-    const { existing, installedSource } = await resolveProjectInstalledSource(input, attachInstalledSource);
-    if (existing) return { installedSource, instance: existing };
+  const syncInstalledSourceForProject = (input: SyncInstalledSourceInput) =>
+    mutateSource(input.sourcePath, async () => {
+      if (!(deps.sourceExists ?? existsSync)(input.sourcePath)) return null;
+      const { existing, installedSource } = await resolveProjectInstalledSource(input, attachInstalledSource);
+      if (existing) return { installedSource, instance: existing };
 
-    const instance = await createProjectInstance(input, installedSource);
+      const instance = await createProjectInstance(input, installedSource);
 
-    if (!instance) throw new Error(`Failed to sync extension: ${input.name}`);
+      if (!instance) throw new Error(`Failed to sync extension: ${input.name}`);
 
-    emitExtensionInstance(instance);
-    return { installedSource, instance };
-  };
+      emitExtensionInstance(instance);
+      return { installedSource, instance };
+    });
 
   // Every path that turns a project instance on runs the same ownership rule, so the extension
   // panel, project creation, and the CLI cannot leave two sources claiming one extension id.
@@ -309,21 +311,6 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   return {
-    activatePublishedExtension: (
-      input: Omit<
-        Parameters<typeof activatePublishedExtension>[0],
-        "sources" | "instances" | "refresh" | "emit" | "emitRemoved" | "emitInstance"
-      >,
-    ) =>
-      activatePublishedExtension({
-        ...input,
-        sources: deps.installedExtensionSourcesService,
-        instances: deps.extensionInstancesService,
-        emitRemoved: (row) => deps.eventBus?.emit("installed_extension_sources", "delete", row),
-        emitInstance: emitExtensionInstance,
-        refresh: notifyInstalledSourcesChanged,
-        emit: emitInstalledSource,
-      }),
     enableInstalledSourceForProject,
     getInstalledSource,
     getInstalledSourceById: deps.installedExtensionSourcesService.get,
@@ -339,7 +326,12 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     registerInstalledSource,
     setProjectExtensionEnabled,
     syncInstalledSourceForProject,
-    uninstallProjectExtension: (input: { instanceId: string; projectId: string; deleteUserData?: boolean }) =>
-      uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged }, input),
+    uninstallProjectExtension: async (input: { instanceId: string; projectId: string; deleteUserData?: boolean }) => {
+      const record = await getProjectExtensionInstance(input.projectId, input.instanceId);
+      if (!record) return null;
+      return mutateSource(record.installedSource.source_path, () =>
+        uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged }, input),
+      );
+    },
   };
 };

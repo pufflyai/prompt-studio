@@ -1,146 +1,167 @@
-import type { ExtensionLoggerApi } from "pstdio-api-contracts/extension-kernel";
-import { type CronFactory, createFileWatermarkStore, createScheduler, type Job } from "pstdio-scheduler";
-import { automationRunId, automationsId, publishedExtensionsId } from "pstdio-sync-contracts";
+import type { ExtensionLoggerApi, JsonObject, Localizable } from "pstdio-api-contracts/extension-kernel";
+import { createCommandRunner } from "pstdio-extensions";
+import {
+  type CronFactory,
+  createFileWatermarkStore,
+  createScheduler,
+  type Job,
+  type RunContext,
+} from "pstdio-scheduler";
 import { apiLogger } from "../../lib/logger";
-import { createScheduleAdmission } from "./extension-schedule-admission";
-import { executeScheduledCommand } from "./extension-schedule-execution";
-import type { AutomationDeps } from "./synchronized-automations/catalog";
-import { createAutomationRunJournal } from "./synchronized-automations/runs";
-import { acknowledgeAutomations } from "./synchronized-automations/state";
+import { createCommandEnvironment } from "./command-environment";
+import type { ExtensionsRouteDeps } from "./deps";
+import { instanceIdsByExtensionId, isAutomationEnabled, loadAutomationPreferences } from "./extension-automations";
+import { createExtensionLogger } from "./extension-logger";
+import type { ProjectExtensionRuntimeSnapshot } from "./project-extension-runtime-snapshot";
 
 const EXTENSION_SCHEDULE_TIMEOUT_MS = 15_000;
-interface Input {
-  deps: AutomationDeps;
+
+type Input = {
+  deps: ExtensionsRouteDeps;
   listProjectIds: () => Promise<string[]>;
   watermarkPath: string;
   now?: () => Date;
   cron?: CronFactory;
   extensionLogger?: ExtensionLoggerApi;
-}
-interface ScheduleJobMeta {
+};
+
+type ScheduleJobMeta = {
   projectId: string;
   scheduleId: string;
-  targeted: boolean;
-}
+  commandId: string;
+  extensionId: string;
+  extensionName: string;
+};
+
+const isExtensionChangeEvent = (event: { table: string }) =>
+  event.table === "extension_instances" ||
+  event.table === "installed_extension_sources" ||
+  event.table === "extension_automation_preferences" ||
+  event.table === "projects";
+
+const scheduleTitle = (title: Localizable<string>) =>
+  typeof title === "string" ? title : (title.default ?? title.$l10n);
+
+const scheduleMetadata = (schedule: { id: string; title: Localizable<string> }, ctx: RunContext) => ({
+  reason: ctx.reason,
+  runId: ctx.runId,
+  scheduleId: schedule.id,
+  scheduleTitle: scheduleTitle(schedule.title),
+  scheduledFor: ctx.scheduledFor.toISOString(),
+});
+
+const outcomeError = (input: { commandId: string; reason?: string; status?: string }) =>
+  new Error(
+    `Extension schedule command "${input.commandId}" failed: ${input.reason ?? input.status ?? "unknown error"}`,
+  );
 
 export const createExtensionScheduler = (input: Input) => {
-  const initialized = new Set<string>();
-  let admissionGeneration = 0;
-  const journalFor = (projectId: string) => createAutomationRunJournal(input.deps, projectId);
-  const projectJobs = async (projectId: string, seen: Set<string>) => {
-    const snapshot = await input.deps.extensionRuntimeCatalog.get(projectId);
-    const { admit, state } = await createScheduleAdmission(input.deps, projectId, snapshot);
-    await acknowledgeAutomations(input.deps, state);
-    const jobs: Job[] = [];
-    for (const schedule of snapshot.runtime.schedules) {
-      const admission = await admit(schedule);
-      if (!admission) continue;
-      const key = `${projectId}/${schedule.id}`;
-      if (admission.targeted) {
-        seen.add(key);
-        if (!initialized.has(key)) {
-          await journalFor(projectId).skipThrough(admission.definition, schedule.cron, input.now?.() ?? new Date());
-          initialized.add(key);
-        }
-      }
-      jobs.push({
-        key,
-        runId: (scheduledFor) => automationRunId(projectId, schedule.id, scheduledFor.toISOString()),
-        cron: schedule.cron,
-        catchup: admission.targeted ? "skip" : undefined,
-        timeoutMs: EXTENSION_SCHEDULE_TIMEOUT_MS,
-        meta: { projectId, scheduleId: schedule.id, targeted: admission.targeted } satisfies ScheduleJobMeta,
-      });
-    }
-    return jobs;
-  };
   const scheduler = createScheduler({
     now: input.now,
     cron: input.cron,
     logger: apiLogger,
     watermarks: createFileWatermarkStore(input.watermarkPath),
+
     listJobs: async () => {
       const jobs: Job[] = [];
-      const seen = new Set<string>();
+
       for (const projectId of await input.listProjectIds()) {
+        let snapshot: ProjectExtensionRuntimeSnapshot;
+        let instanceIds: Map<string, string>;
         try {
-          jobs.push(...(await projectJobs(projectId, seen)));
+          snapshot = await input.deps.extensionRuntimeCatalog.get(projectId);
+          instanceIds = instanceIdsByExtensionId(snapshot.enabledSources);
         } catch (err) {
           apiLogger.error(
             { err, event: "extension.schedule.project.load.error", projectId },
             "Failed to load project extension runtime for scheduler",
           );
+          continue;
+        }
+
+        const preferences = await loadAutomationPreferences(input.deps, projectId);
+
+        for (const schedule of snapshot.runtime.schedules) {
+          if (!isAutomationEnabled(schedule, instanceIds.get(schedule.extensionId), preferences)) continue;
+
+          jobs.push({
+            key: `${projectId}/${schedule.id}`,
+            label: scheduleTitle(schedule.title),
+            description: snapshot.project.name,
+            cron: schedule.cron,
+            timeoutMs: EXTENSION_SCHEDULE_TIMEOUT_MS,
+            meta: {
+              projectId,
+              scheduleId: schedule.id,
+              commandId: schedule.commandId,
+              extensionId: schedule.extensionId,
+              extensionName: schedule.name,
+            } satisfies ScheduleJobMeta,
+          });
         }
       }
-      for (const key of initialized) if (!seen.has(key)) initialized.delete(key);
+
       return jobs;
     },
+
     runJob: async (job, ctx) => {
-      const meta = job.meta as unknown as ScheduleJobMeta;
-      // One snapshot serves the run; invalidation never swaps command code mid-run.
+      const meta = job.meta as ScheduleJobMeta;
+      // One snapshot capture serves the whole run; an invalidation mid-run never swaps it.
       const snapshot = await input.deps.extensionRuntimeCatalog.get(meta.projectId);
       const schedule = snapshot.runtime.schedules.find((candidate) => candidate.id === meta.scheduleId);
       if (!schedule) return;
-      const { admit } = await createScheduleAdmission(input.deps, meta.projectId, snapshot);
-      const admission = await admit(schedule);
-      if (!admission || (meta.targeted && !admission.targeted)) return;
-      const journal = journalFor(meta.projectId);
-      const runId = admission.targeted
-        ? await journal.claim(admission.definition, schedule.cron, ctx.scheduledFor)
-        : null;
-      if (admission.targeted && !runId) return;
-      try {
-        const dispatched = await executeScheduledCommand({
-          ...input,
-          snapshot,
-          schedule,
-          workspaceId: admission.workspaceId,
-          ctx,
-          beforeDispatch: async () => {
-            const generation = admissionGeneration;
-            const { admit: recheck } = await createScheduleAdmission(input.deps, meta.projectId, snapshot);
-            const allowed = await recheck(schedule);
-            return () =>
-              Boolean(
-                allowed && allowed.targeted === admission.targeted && allowed.workspaceId === admission.workspaceId,
-              ) && generation === admissionGeneration;
-          },
-        });
-        await journal.finish(runId, dispatched ? "completed" : "skipped");
-      } catch (error) {
-        await journal.finish(runId, "failed");
-        throw error;
+
+      const preferences = await loadAutomationPreferences(input.deps, meta.projectId);
+      const instanceId = instanceIdsByExtensionId(snapshot.enabledSources).get(schedule.extensionId);
+      if (!isAutomationEnabled(schedule, instanceId, preferences)) return;
+
+      const runner = createCommandRunner(snapshot.runtime, {
+        logger: input.extensionLogger,
+        createLogger: input.extensionLogger ? () => input.extensionLogger! : createExtensionLogger,
+        buildEnvironment: (ids) =>
+          createCommandEnvironment(input.deps, snapshot.enabledSources, {
+            artifactMounts: snapshot.runtime.artifactMounts,
+            extensionId: ids.extensionId,
+            name: ids.name,
+            project: snapshot.project,
+            projectId: ids.projectId,
+            workspaceDir: ids.workspaceDir,
+            workspaceId: ids.workspaceId,
+            settings: snapshot.runtime.settings,
+          }),
+      });
+
+      const workspace = schedule.workspaceId
+        ? await input.deps.workspaceService.get(schedule.workspaceId)
+        : await input.deps.workspaceService.getDefault(meta.projectId);
+      if (schedule.workspaceId && !workspace) throw new Error("Scheduled workspace no longer exists.");
+      if (workspace && workspace.project_id !== meta.projectId)
+        throw new Error("Workspace does not belong to this project.");
+      const outcome = await runner.execute({
+        commandId: schedule.commandId,
+        projectId: meta.projectId,
+        params: (schedule.params ?? {}) as JsonObject,
+        workspaceId: workspace?.id,
+        workspaceDir: workspace?.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
+        source: "schedule",
+        metadata: scheduleMetadata(schedule, ctx),
+      });
+
+      if (!outcome.ok) {
+        throw outcomeError({ commandId: schedule.commandId, reason: outcome.reason, status: outcome.status });
       }
     },
   });
-  const refresh = () => {
-    admissionGeneration++;
-    return scheduler.refresh();
-  };
+
   const unsubscribe = input.deps.eventBus?.subscribe((event) => {
-    if (
-      [
-        "extension_instances",
-        "installed_extension_sources",
-        "extension_automation_preferences",
-        "projects",
-        "workspaces",
-        "automation_definitions",
-      ].includes(event.table)
-    )
-      void refresh();
+    if (isExtensionChangeEvent(event)) void scheduler.refresh();
   });
-  const stopStorage = input.deps.extensionStorageService.watch?.((owner) => {
-    if ([automationsId, publishedExtensionsId].includes(owner.extensionId)) void refresh();
-  });
-  const stopCatalog = input.deps.extensionRuntimeCatalog.subscribeInvalidation(() => void refresh());
+
   return {
     activity: scheduler.activity,
-    refresh,
+    refresh: scheduler.refresh,
     async dispose() {
       unsubscribe?.();
-      stopStorage?.();
-      stopCatalog();
       await scheduler.dispose();
     },
   };

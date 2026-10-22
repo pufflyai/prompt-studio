@@ -1,13 +1,11 @@
 import { createReadBoundary, resolveArtifactMountRoot } from "pstdio-extensions";
-import { createRelayAdapter, createRelayConnection } from "pstdio-sync/relay";
-import { canonicalJson } from "pstdio-sync-contracts";
+import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import { watchArtifactMount } from "../../features/extensions/artifact-mount-watch/mount-watcher";
-import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import { resolveWorkspaceFilesPath } from "../../features/extensions/command-environment/workspace-files";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
-import { hashExtensionSource } from "../../features/extensions/extension-runtime";
 import { apiLogger } from "../../lib/logger";
 import { createSharedArtifactMount } from "../shared-files/artifact-mount";
+import { createExtensionDocumentSync } from "./documents";
 import type { RelayWorkbench } from "./runtime";
 
 export const startRelayExtension = async (input: {
@@ -16,6 +14,7 @@ export const startRelayExtension = async (input: {
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
   notify: () => void;
+  statusChanged: () => void;
   contextKey: string;
   snapshot: Awaited<ReturnType<ExtensionsRouteDeps["extensionRuntimeCatalog"]["get"]>>;
   access: () => Promise<{ token: string; expiresAt: string }>;
@@ -25,26 +24,8 @@ export const startRelayExtension = async (input: {
   const owner = { workbenchId: config.workbenchId, extensionId };
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
-  const local = await deps.extensionStorageService.open({
-    owner,
-    assets: createRecordAssets(deps.assetTransferService, owner, signal),
-  });
   const access = () => createReadBoundary(signal)(input.access);
-  const adapterFor = (signal: AbortSignal) =>
-    createRelayAdapter({
-      origin: config.relayOrigin,
-      scope: { ...owner, accountId: config.accountId },
-      token: async () => (await access()).token,
-      signal,
-    });
-  const adapter = adapterFor(signal);
-  const revision =
-    (input.source.installedSource.source_ref?.startsWith("pstdio-published:")
-      ? input.source.installedSource.source_ref.slice("pstdio-published:".length)
-      : null) ??
-    input.source.installedSource.loaded_revision ??
-    input.source.installedSource.source_hash ??
-    (await hashExtensionSource(input.source.installedSource.source_path));
+  const documents = createExtensionDocumentSync({ config, owner, deps, access });
   const snapshot = input.snapshot;
   const repoRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "read").catch(() => null);
   const mounts = repoRoot
@@ -67,7 +48,7 @@ export const startRelayExtension = async (input: {
           }),
         }))
     : [];
-  let connection: ReturnType<typeof createRelayConnection> | undefined;
+  let connection: ReturnType<typeof createDocumentRelayConnection> | undefined;
   const watches: ReturnType<typeof watchArtifactMount>[] = [];
   const refreshFiles = async () => {
     const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(
@@ -89,33 +70,31 @@ export const startRelayExtension = async (input: {
           onFolderLimit: () => connection?.wake(),
         }),
       );
-    connection = createRelayConnection({
+    connection = createDocumentRelayConnection({
       origin: config.relayOrigin,
-      scope: adapter.scope,
+      projectId: config.workbenchId,
       signal,
-      access: async () => {
-        const issued = await access();
-        await adapter.initialize(revision);
-        return issued;
-      },
+      access,
       synchronize: async (attemptSignal) => {
         await refreshFiles();
-        const before = await local.readState();
-        await local.synchronize(adapterFor(attemptSignal));
+        await documents.synchronize(attemptSignal);
         await refreshFiles();
-        if (canonicalJson(before.accepted) !== canonicalJson((await local.readState()).accepted)) input.notify();
+        input.notify();
       },
       onError: () =>
         apiLogger.warn(
           { event: "relay.reconnecting", workbenchId: owner.workbenchId, extensionId },
           "Relay connection will retry",
         ),
+      onStatusChange: input.statusChanged,
     });
+    const active = connection;
     return {
       owner,
       contextKey: input.contextKey,
       wake: connection.wake,
-      done: connection.done,
+      done: connection.done.finally(documents.close),
+      status: async () => ({ ...(await documents.status()), ...active.status() }),
       close: () => {
         for (const watch of watches) watch.close();
         controller.abort();
@@ -124,6 +103,7 @@ export const startRelayExtension = async (input: {
   } catch (error) {
     for (const watch of watches) watch.close();
     controller.abort();
+    documents.close();
     throw error;
   }
 };

@@ -1,4 +1,9 @@
-import { createDataMigrationRunner } from "pstdio-api-contracts";
+import {
+  createDataMigrationRunner,
+  createStorageId,
+  createStorageMigration,
+  createStoragePositions,
+} from "pstdio-api-contracts";
 import type {
   ExtensionBlobRef,
   ExtensionBlobsApi,
@@ -12,24 +17,31 @@ import { createMemoryRecordOwner, type MemoryStorageSeed } from "./memory-record
 
 export type { MemoryStorageSeed } from "./memory-record-owner";
 
-interface MemoryStorageOptions extends MemoryStorageSeed {
+export interface MemoryStorageOptions extends MemoryStorageSeed {
+  /** Reuse these owner IDs to simulate the same extension and workbench on two devices. */
+  workbenchId?: string;
+  extensionId?: string;
+  deviceId?: string;
   legacyData?: Record<string, { version: string; records: JsonObject[] }>;
 }
 
-export const createMemoryStorage = (options: MemoryStorageOptions = {}): ExtensionStorageApi => {
+export const createMemoryStorage = (options: MemoryStorageOptions = {}) => createMemoryStorageDevice(options).storage;
+
+export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) => {
   const assets = createMemoryAssets();
-  const owner = createMemoryRecordOwner(assets, options);
+  const owner = createMemoryRecordOwner(assets, options, {
+    workbenchId: options.workbenchId ?? crypto.randomUUID(),
+    extensionId: options.extensionId ?? "test-extension",
+  });
+  const positions = createStoragePositions(options.deviceId ?? crypto.randomUUID());
   const blobStores = new Map<string, Map<string, ExtensionBlobRef & { data: Uint8Array }>>();
   const migrations = new Map<string, ReturnType<typeof createDataMigrationRunner>>();
   const migrateFor = (scope: string) => {
     const existing = migrations.get(scope);
     if (existing) return existing;
-    let version = 0;
     const migrate = createDataMigrationRunner({
-      readVersion: async () => version,
-      writeVersion: async (next) => {
-        version = next;
-      },
+      readVersion: () => owner.dataVersion(scope),
+      writeVersion: (next) => owner.setDataVersion(scope, next),
     });
     migrations.set(scope, migrate);
     return migrate;
@@ -89,7 +101,14 @@ export const createMemoryStorage = (options: MemoryStorageOptions = {}): Extensi
     const { records, legacy } = owner.scope(scopeType, scopeId);
     const blobKey = JSON.stringify([scopeType, scopeId]);
     const api: ExtensionStorageApi = {
-      migrate: migrateFor(blobKey),
+      migrate: (version, run) =>
+        migrateFor(blobKey)(version, (previous) =>
+          owner.duringMigration(JSON.stringify([owner.extensionId, scopeType, scopeId, version]), () =>
+            run(previous, createStorageMigration([owner.extensionId, owner.workbenchId, scopeType, scopeId, version])),
+          ),
+        ),
+      ids: { create: createStorageId },
+      positions,
       readLegacy: async (source) => structuredClone(options.legacyData?.[source]),
       records,
       assets,
@@ -147,5 +166,11 @@ export const createMemoryStorage = (options: MemoryStorageOptions = {}): Extensi
     return api;
   };
 
-  return scopedApi("project", owner.workbenchId);
+  return {
+    storage: scopedApi("project", owner.workbenchId),
+    workbenchId: owner.workbenchId,
+    exportUpdate: owner.exportUpdate,
+    applyUpdate: owner.applyUpdate,
+    snapshot: owner.snapshot,
+  };
 };

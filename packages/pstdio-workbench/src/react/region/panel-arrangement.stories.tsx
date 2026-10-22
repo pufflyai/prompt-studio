@@ -10,14 +10,21 @@ export const createArrangementWorkbench = (
   crowded = false,
   pageContent: ReactNode = <Text p="md">Page without a header</Text>,
   movableTo?: WorkbenchPanelRegion[],
+  bottomInitiallyOpen = true,
+  sourceRegion: WorkbenchPanelRegion = "side",
 ) => {
   const page = { kind: "page", extensionId: "storybook", id: "arrangement" } as const;
   const w = createWorkbench({
     startPage: page,
-    initialSidePanelMode: "attached",
-    defaultPanelOpenByRegionId: { secondary: true },
+    initialSidePanelMode: sourceRegion === "side" ? "attached" : "closed",
+    defaultPanelOpenByRegionId: { secondary: bottomInitiallyOpen },
   });
-  w.modes.registerMode({ id: "arrangement", label: "Arrange tabs", activate() {} });
+  w.modes.registerMode({
+    id: "arrangement",
+    label: "Arrange tabs",
+    regionSettings: { main: { showHeader: false } },
+    activate() {},
+  });
   w.views.registerView({
     id: "page",
     title: "Page",
@@ -113,6 +120,7 @@ export const createArrangementWorkbench = (
         id: String(i),
         label: i === 0 ? "Review session" : `Session with a longer name ${i}`,
       },
+      region: sourceRegion,
       open: i === (crowded ? 7 : 1) ? "preview" : "pin",
     });
   return w;
@@ -161,6 +169,14 @@ const secondarySession = secondaryWorkbench.layout
   .regions.side.widgets.find((widget) => widget.tabRetention === "preview")!;
 secondaryWorkbench.movePanel(secondarySession.widgetId, "secondary");
 export const SecondarySession: Story = { args: { workbench: secondaryWorkbench } };
+const shortDestination = createArrangementWorkbench();
+const shortTab = shortDestination.layout.getLayout().regions.side.widgets[0]!;
+shortDestination.movePanel(shortTab.widgetId, "secondary");
+shortDestination.layout.updateWidgetPlacement(shortTab.widgetId, {
+  title: "T",
+  resource: { ...shortTab.resource!, label: "T" },
+});
+export const ShortDestinationTab: Story = { args: { workbench: shortDestination } };
 const movedPageWorkbench = createArrangementWorkbench();
 for (const session of movedPageWorkbench.layout.getLayout().regions.side.widgets)
   movedPageWorkbench.closePlacement(session.placementIdentity!);
@@ -192,3 +208,43 @@ void previewInsertionWorkbench.navigation.openTarget({
   open: "preview",
 });
 export const PreviewInsertion: Story = { args: { workbench: previewInsertionWorkbench } };
+
+const neverOpenedBottom = createArrangementWorkbench(false, undefined, undefined, false);
+export const ClosedBottom: Story = { args: { workbench: neverOpenedBottom } };
+const closedSide = createArrangementWorkbench(false, undefined, undefined, false, "main");
+closedSide.shell.setHeaderVisible("main", true);
+export const ClosedSide: Story = { args: { workbench: closedSide } };
+const closedReversed = createArrangementWorkbench(false, undefined, undefined, false, "main");
+closedReversed.shell.setHeaderVisible("main", true);
+closedReversed.shell.repositionPanel("side", "left");
+closedReversed.shell.repositionPanel("secondary", "top");
+export const ClosedReversed: Story = { args: { workbench: closedReversed } };
+const positioned = createArrangementWorkbench();
+positioned.shell.repositionPanel("side", "left");
+positioned.shell.repositionPanel("secondary", "top");
+export const Repositioned: Story = { args: { workbench: positioned } };
+const closedLeftSide = createArrangementWorkbench(false, undefined, undefined, false, "main");
+closedLeftSide.shell.setHeaderVisible("main", true);
+closedLeftSide.shell.repositionPanel("side", "left");
+export const ClosedLeftSide: Story = { args: { workbench: closedLeftSide } };
+const closedTopBottom = createArrangementWorkbench(false, undefined, undefined, false);
+closedTopBottom.shell.repositionPanel("secondary", "top");
+export const ClosedTopBottom: Story = { args: { workbench: closedTopBottom } };
+
+const createLastTabWorkbench = (region: "side" | "secondary", movable = true) => {
+  // Keep a live unpinned editor as the only tab, so its drag can move the panel.
+  const workbench = createArrangementWorkbench(false, undefined, undefined, false, region);
+  const pinned = workbench.layout
+    .getLayout()
+    .regions[region].widgets.find((widget) => widget.tabRetention === "persistent")!;
+  workbench.closePlacement(pinned.placementIdentity!);
+  workbench.modes.getMode("arrangement")!.regionSettings![region] = { movable };
+  return workbench;
+};
+export const LastSideTab: Story = { args: { workbench: createLastTabWorkbench("side") } };
+export const LastBottomTab: Story = { args: { workbench: createLastTabWorkbench("secondary") } };
+export const FixedLastSideTab: Story = { args: { workbench: createLastTabWorkbench("side", false) } };
+export const FixedLastBottomTab: Story = { args: { workbench: createLastTabWorkbench("secondary", false) } };
+export const BottomTabs: Story = {
+  args: { workbench: createArrangementWorkbench(false, undefined, undefined, false, "secondary") },
+};

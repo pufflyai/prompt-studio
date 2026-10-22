@@ -9,7 +9,9 @@ const renderShortcut = (binding: string | string[]) =>
     <ChakraProvider value={psTheme}>
       <PaletteShortcut binding={binding} />
     </ChakraProvider>,
-  );
+  )
+    // Theme CSS can contain arithmetic unrelated to shortcut labels.
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, "");
 
 describe("PaletteShortcut", () => {
   it("resolves user-facing modifier labels for non-mac platforms", () => {

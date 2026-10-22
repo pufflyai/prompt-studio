@@ -20,8 +20,11 @@ test.afterAll(async () => {
 });
 
 for (const [story, label] of [
-  ["forecast", "ETA ~6h"],
+  ["forecast", "ETA ~8h"],
   ["filtered", "ETA ~6h"],
+  ["remaining", "ETA ~6h"],
+  ["completed-only", "Done"],
+  ["unstarted", "ETA ~8h"],
   ["learning", "ETA —"],
   ["complete", "Done"],
 ]) {

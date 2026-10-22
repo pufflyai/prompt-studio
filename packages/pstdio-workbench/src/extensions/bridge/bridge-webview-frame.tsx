@@ -22,7 +22,14 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
   const diagnostics = createWebviewDiagnostics(view);
 
   return (
-    <Box position="relative" width="100%" height="100%" minH="0" display="flex" flexDirection="column">
+    <Box
+      position="relative"
+      width={props.sizing ? "max-content" : "full"}
+      height="full"
+      minH="0"
+      display="flex"
+      flexDirection="column"
+    >
       {error ? (
         <Center position="absolute" inset="0" px="md" zIndex={1} bg="bg">
           <Stack gap="xs" maxW="md" textAlign="center">

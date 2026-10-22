@@ -41,7 +41,7 @@ test("publishing from a selected workspace reads its working files", async () =>
       overrides: {
         workspaceId: "local-workspace",
         projectFiles,
-        workspaceFiles,
+        workspaceFiles: { ...workspaceFiles, syncDir: async () => undefined },
         artifacts: { mount: () => snapshots },
       },
     }),

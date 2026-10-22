@@ -1,4 +1,4 @@
-import type { ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel";
+import type { ExtensionStoragePositionsApi, ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel";
 import type {
   createActivityEventsDBService,
   createBoardViewsDBService,
@@ -11,6 +11,7 @@ import type {
   createSessionQueueEntriesDBService,
   createWebviewPreferencesDBService,
 } from "pstdio-db";
+import type { createNativeAccount } from "../services/account/native-account";
 import type { createAssetTransferService } from "../services/asset-transfer-service";
 import type { createExtensionAutomationPreferencesService } from "../services/extension-automation-preferences-service";
 import type { createExtensionFileService } from "../services/extension-file-service";
@@ -18,6 +19,7 @@ import type { createExtensionService } from "../services/extension-service";
 import type { createExtensionUpgradeService } from "../services/extension-upgrade-service";
 import type { createFileService } from "../services/file-service";
 import type { createNotificationService } from "../services/notification-service";
+import type { createPersonalHistoryService } from "../services/personal-history/service";
 import type { createProjectService } from "../services/project-service";
 import type { createSessionService } from "../services/session-service";
 import type { createSettingsService } from "../services/settings-service";
@@ -46,8 +48,11 @@ export interface ReadinessChecks {
 // and handlers should accept the narrow per-feature deps so adding a service
 // here does not silently widen every feature's surface.
 export interface RouteDeps {
+  accountService: ReturnType<typeof createNativeAccount>;
+  personalHistoryService: ReturnType<typeof createPersonalHistoryService>;
   assetTransferService: ReturnType<typeof createAssetTransferService>;
   environmentService: ReturnType<typeof createEnvironmentDBService>;
+  storagePositions: ExtensionStoragePositionsApi;
   boardViewsService: ReturnType<typeof createBoardViewsDBService>;
   extensionWebviewAccess: ExtensionWebviewAccess;
   readiness: ReadinessChecks;

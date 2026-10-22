@@ -141,8 +141,8 @@ const pushMessages = (events: HarnessEventSink, startIndex: number, messages: Se
 
 const delay = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
-const waitForRelease = async (cwd: string | undefined, signal: AbortSignal) => {
-  while (!signal.aborted && !(cwd && existsSync(join(cwd, HOLD_RELEASE_FILE)))) await delay(EXIT_DELAY_MS);
+const waitForRelease = async (cwd: string | undefined, signal: AbortSignal, releaseFile = HOLD_RELEASE_FILE) => {
+  while (!signal.aborted && !(cwd && existsSync(join(cwd, releaseFile)))) await delay(EXIT_DELAY_MS);
 };
 
 // The session runs until its work finishes, or until it is stopped.
@@ -195,6 +195,12 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
             startIndex: 1,
             shape: longStream,
             signal,
+            afterTurnStart: input.prompt.includes(HOLD_PROMPT_TRIGGER)
+              ? async (turn) => {
+                  // Let browser checks observe the first two responses before the replay advances.
+                  if (turn < 2) await waitForRelease(input.cwd, signal, `${HOLD_RELEASE_FILE}-${turn + 1}`);
+                }
+              : undefined,
             push: (patch) => {
               messages[Number(patch.path.slice("/messages/".length))] = patch.value as SessionMessage;
               input.events.push(patch);

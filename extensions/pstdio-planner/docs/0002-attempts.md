@@ -44,7 +44,7 @@ Planner then does the following:
 4. A review starts when someone chooses **Run review** from the workspace's actions menu, or runs `pst pstdio-planner run-review --workspace-id <workspace>`. An agent or an automation can run the same command. Each revision gets at most one review.
 5. The reviewing agent saves a review report and submits a verdict: passed, or changes requested.
 6. If the reviewer requests changes, Planner sends the findings back to the same implementation session, and the cycle repeats from step 3.
-7. If the review passes, Planner sets the ticket's Review Needed flag and asks a person to choose, merge, or otherwise handle the approved work.
+7. If the review passes, Planner sets the ticket's Needs attention flag and asks a person to choose, merge, or otherwise handle the approved work.
 
 Planner does not merge work. Merging, delivering, and moving the ticket to Done are your decisions.
 
@@ -128,7 +128,7 @@ Extensions and agents drive attempts through Planner's commands. Each ID below i
 | `list-attempts`         | Lists the project's attempts.                                                    |
 | `reconcile-attempt`     | Recovers an attempt whose session disconnected.                                  |
 | `select-attempt`        | Chooses which attempt of a ticket later tickets build on. Not for automations.   |
-| `request-human`         | Asks a person for a task confirmation or a decision and sets Review Needed.      |
+| `request-human`         | Asks a person for a task confirmation or a decision and sets Needs attention.      |
 | `review`                | Answers a review request. Only a person or an agent can do this.                 |
 | `workspace-activity`    | Returns a workspace's sessions and whether any of them is still running.         |
 

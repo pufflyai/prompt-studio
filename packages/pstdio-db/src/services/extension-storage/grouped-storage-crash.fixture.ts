@@ -1,6 +1,6 @@
 import { createDb } from "../../db/connection.pglite";
 import { projects } from "../../db/schemas.pg";
-import { createGroupedStorageDBService } from "./grouped-storage";
+import { createDocumentStorageDBService } from "./document-storage";
 
 const database = await createDb({ path: Bun.argv[2]! });
 const owner = { workbenchId: "crash-workbench", extensionId: "example.notes" };
@@ -12,7 +12,7 @@ await database.db.insert(projects).values({
   created_at: timestamp,
   updated_at: timestamp,
 });
-const { records } = createGroupedStorageDBService(database.db).open({ owner, environmentId: "crash-environment" });
+const { records } = createDocumentStorageDBService(database.db).open({ owner });
 const outcome = await records.commit({
   operationId: "crash-group",
   edits: [

@@ -17,7 +17,7 @@ test("opens one Panel tab within the interaction budget", async ({ page, request
   await preparePerfPage(page, project.id);
   await page.goto(`/projects/${project.id}/tickets`);
 
-  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
   const header = page.locator(headerSelector);
   await header.getByRole("button", { name: "Add panel", exact: true }).click();
   const terminalItem = page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "Terminal" });

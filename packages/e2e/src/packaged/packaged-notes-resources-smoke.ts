@@ -99,7 +99,12 @@ export const expectNotesResources = async (input: {
   const tab = page.slots[0]!.tab!;
   expect(await execute(tab.queryHandlerId, { renderer: editorRenderer })).toMatchObject({
     label: "First title",
-    menu: [{ rows: [{ id: "rename" }, { id: "delete" }] }],
+  });
+  expect(await execute("pstdio.pstdio-notes.command.notes.resolve", { noteId: next.id })).toMatchObject({
+    type: "note",
+    id: next.id,
+    label: "First title",
+    metadata: { writable: true },
   });
   await execute(tree.body.moveHandlerId!, {
     renderer,

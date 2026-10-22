@@ -1,5 +1,4 @@
 import { Box, Flex } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
 import type {
   RegisteredPlaceholderContribution,
   WorkbenchCore,
@@ -22,7 +21,8 @@ import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../share
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
 import { ModeChromeView, useModeChrome } from "./mode-chrome";
-import { usePanelViewSlot } from "./panel-view-hosts";
+import { usePanelViewSlot, WorkbenchPanelViewSlot } from "./panel-view-hosts";
+import { RegionScrollArea } from "./region-scroll-area";
 import { useRetainedViewPlacements } from "./use-retained-view-placements";
 import { WorkbenchWidgetHost } from "./widget-host";
 
@@ -48,20 +48,6 @@ const panelMenuRegionIds = new Set<WorkbenchRegionId>(
   Object.values(workbenchPanelMenuRegions).flatMap((regions) => Object.values(regions)),
 );
 const sidePanelRegionIds = new Set<WorkbenchRegionId>(["side", "side-header", "side-left-menu", "side-right-menu"]);
-
-// A flex column at least as tall as the viewport lets a widget fill the region
-// (e.g. a tree with a pinned footer) while still growing and scrolling.
-const verticalContentProps = { display: "flex", flexDirection: "column", minH: "100%", position: "relative" } as const;
-
-// Horizontal header regions need a definite content height so full-height
-// controls can stretch through the ScrollArea's content wrapper.
-const horizontalContentProps = {
-  display: "flex",
-  alignItems: "stretch",
-  h: "full",
-  minH: "100%",
-  position: "relative",
-} as const;
 
 const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
   widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
@@ -198,6 +184,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const retainedPlacements = useRetainedViewPlacements(
     workbench,
     chrome !== undefined || sharedViews ? [] : renderedPlacements,
+    workbench.host.getOpenPlacementIds(),
   );
   const visibleIds = new Set(renderedPlacements.map((entry) => entry.widgetId));
 
@@ -213,6 +200,10 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
     }
   };
   const additive = region === "sidenav";
+  const placeholderView =
+    placeholder && placement ? (
+      <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
+    ) : null;
 
   return (
     <Flex
@@ -230,44 +221,26 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
       onPointerDown={additive ? undefined : () => activatePlacement(activePlacement)}
       onFocusCapture={additive ? undefined : () => activatePlacement(activePlacement)}
     >
-      {/* The region owns scrolling: overflowing widget content scrolls here
-          with the same narrow overlay scrollbar used across the workbench. */}
       <ModeChromeView workbench={workbench} region={region} viewId={chrome || undefined} />
-      <ScrollArea
-        display={chrome ? "none" : "flex"}
-        flex="1"
-        minH="0"
-        minW="0"
-        w="full"
-        size="xs"
-        showVerticalScrollbar={!scrollsHorizontally}
-        showHorizontalScrollbar={scrollsHorizontally}
-        // Horizontal bars hold a single row that should stay vertically
-        // centered; the ScrollArea otherwise top-aligns its flowing content.
-        viewportProps={scrollsHorizontally ? { justifyContent: "center" } : undefined}
-        // Vertical regions host a flex column so a widget can fill the region
-        // (e.g. a tree with a pinned footer) yet still grow and scroll.
-        contentProps={scrollsHorizontally ? horizontalContentProps : verticalContentProps}
-      >
-        {placeholder && placement ? (
-          <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
-        ) : null}
-        {sharedViews ? (
-          <Box ref={panelSlot.ref} display="flex" flexDirection="column" minH="full" w="full" minW="0" />
-        ) : null}
-        {retainedPlacements.map((renderedPlacement) => (
-          <WorkbenchRegionPlacement
-            key={renderedPlacement.widgetId}
-            visible={!chrome && visibleIds.has(renderedPlacement.widgetId)}
-            order={renderedPlacements.findIndex((entry) => entry.widgetId === renderedPlacement.widgetId)}
-            workbench={workbench}
-            placement={renderedPlacement}
-            activeWidgetId={activePlacement?.widgetId}
-            globalActiveWidgetId={globalActiveWidgetId}
-            region={region}
-          />
-        ))}
-      </ScrollArea>
+      {sharedViews ? (
+        <WorkbenchPanelViewSlot slotRef={panelSlot.ref} hidden={Boolean(chrome)} placeholder={placeholderView} />
+      ) : (
+        <RegionScrollArea hidden={Boolean(chrome)} horizontal={scrollsHorizontally}>
+          {placeholderView}
+          {retainedPlacements.map((renderedPlacement) => (
+            <WorkbenchRegionPlacement
+              key={renderedPlacement.widgetId}
+              visible={!chrome && visibleIds.has(renderedPlacement.widgetId)}
+              order={renderedPlacements.findIndex((entry) => entry.widgetId === renderedPlacement.widgetId)}
+              workbench={workbench}
+              placement={renderedPlacement}
+              activeWidgetId={activePlacement?.widgetId}
+              globalActiveWidgetId={globalActiveWidgetId}
+              region={region}
+            />
+          ))}
+        </RegionScrollArea>
+      )}
     </Flex>
   );
 };

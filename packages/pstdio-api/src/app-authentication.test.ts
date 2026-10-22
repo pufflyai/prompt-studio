@@ -62,6 +62,14 @@ describe("api authentication", () => {
     expect(res.status).toBe(200);
   });
 
+  test("link icons need the runtime token", async () => {
+    const path = `/v1/link-icons?url=${encodeURIComponent("http://127.0.0.1:9/")}`;
+
+    expect((await handle.app.request(path)).status).toBe(401);
+    const res = await handle.app.request(path, { headers: { Authorization: "Bearer test-token" } });
+    expect(res.status).toBe(404);
+  });
+
   test("keeps health endpoints public", async () => {
     const res = await handle.app.request("/healthz");
 

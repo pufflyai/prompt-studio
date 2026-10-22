@@ -37,6 +37,11 @@ export const getSessionConversationHandler = (deps: SessionsRouteDeps) => {
     const session = await deps.sessionService.get(id);
 
     if (!session) {
+      const remote = await deps.personalHistoryService.getSession(id);
+      if (remote?.project_id) {
+        const messages = await deps.personalHistoryService.messages(id, remote.project_id);
+        if (messages) return c.json({ session: remote, messages }, 200);
+      }
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 

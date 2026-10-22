@@ -22,6 +22,7 @@ interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResi
   contentMinSizePx?: number;
   collapsed?: boolean;
   collapsible?: boolean;
+  resizable?: boolean;
   resizeLabel?: string;
   separator?: ResizableSplitSeparator;
   layout?: ConditionalValue<"split" | "stacked" | "stacked-reverse" | "content">;
@@ -45,6 +46,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     contentMinSizePx = 0,
     collapsed: controlledCollapsed,
     collapsible = true,
+    resizable = true,
     resizeLabel = "Resize panel",
     separator = "gap",
     layout = "split",
@@ -168,6 +170,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
       data-dragging={dragging}
     >
       <ResizableSplitPanels
+        resizable={resizable}
         styles={styles}
         axis={axis}
         bounds={bounds}

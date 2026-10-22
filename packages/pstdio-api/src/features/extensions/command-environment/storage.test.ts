@@ -6,7 +6,7 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createStorageApi } from "./storage";
 
-test("host storage exposes guarded groups, verified assets, legacy access, and isolated workbench scopes", async () => {
+test("host storage exposes document groups, verified assets, legacy access, and isolated workbench scopes", async () => {
   const root = await mkdtemp(join(tmpdir(), "storage-context-"));
   const previousHome = process.env.PSTDIO_HOME;
   const previousDefaults = process.env.PSTDIO_DEFAULT_EXTENSIONS;
@@ -46,6 +46,24 @@ test("host storage exposes guarded groups, verified assets, legacy access, and i
       });
     };
     const [first, other] = await Promise.all([context("First"), context("Other")]);
+    expect(first.ids.create()).toMatch(/^[0-9a-f-]{14}7[0-9a-f-]{21}$/);
+    expect(first.ids.create("nt")).toMatch(/^nt_[0-9A-Za-z]{22}$/);
+    const firstPosition = first.positions.between();
+    const nextPosition = first.positions.between(firstPosition);
+    expect(firstPosition < nextPosition).toBe(true);
+    const { environmentId } = await handle.deps.environmentService.get();
+    expect(firstPosition).toContain(Buffer.from(environmentId).toString("hex"));
+    await first.migrate(1, async (previous, migration) => {
+      expect(previous).toBe(0);
+      const id = migration.id("source");
+      expect(migration.id("source")).toBe(id);
+      expect(migration.id("source", "nt")).toMatch(/^nt_[0-9A-Za-z]{22}$/);
+      await first.records.commit({ operationId: id, edits: [{ recordId: id, replace: { imported: true } }] });
+      expect((await first.records.read(id)).value).toEqual({ imported: true });
+      await other.migrate(1, async (_, otherMigration) => {
+        expect(otherMigration.id("source")).not.toBe(id);
+      });
+    });
     await first.set("setting", "old API");
     const observed = await first.records.read(first.records.id("setting"));
     expect(observed.value).toBe("old API");
@@ -83,14 +101,14 @@ test("host storage exposes guarded groups, verified assets, legacy access, and i
           edits: [{ recordId: first.records.id("setting"), expectedRevision: observed.revision, replace: "retained" }],
         })
       ).status,
-    ).toBe("conflict");
-    expect((await first.records.inspect("open-caller")).alternatives[0].records[0].value).toBe("retained");
+    ).toBe("saved-locally");
+    expect(await first.get<string>("setting")).toBe("retained");
     const scoped = first.scope({ type: "resource", resource: { type: "example.note", id: "note" } });
     await scoped.set("setting", "scoped");
     expect((await scoped.records.read(scoped.records.id("setting"))).value).toBe("scoped");
     const projectAgain = scoped.scope({ type: "project" });
     expect(projectAgain.records.id("setting")).toBe(first.records.id("setting"));
-    expect((await projectAgain.records.read(projectAgain.records.id("setting"))).value).toBe("new API");
+    expect((await projectAgain.records.read(projectAgain.records.id("setting"))).value).toBe("retained");
   } finally {
     await handle.close();
     if (previousHome === undefined) delete process.env.PSTDIO_HOME;

@@ -31,12 +31,12 @@ test("does not delegate resource moves from another workbench registry", async (
 });
 
 describe("navigation tree registry", () => {
-  test("cancelling composed navigation prevents later contribution reads", async () => {
+  test("cancelling composed navigation stops publishing pending contributions", async () => {
     const controller = new AbortController();
     const entered = Promise.withResolvers<void>();
     const released = Promise.withResolvers<void>();
     const registry = createNavigationTreeRegistry();
-    let laterReads = 0;
+    const published: unknown[] = [];
     registry.registerContribution({
       id: "first",
       owner: project,
@@ -53,17 +53,19 @@ describe("navigation tree registry", () => {
       owner: project,
       sourceExtensionId: "pstdio",
       declarationIndex: 1,
-      getSections: () => {
-        laterReads++;
-        return [];
-      },
+      getSections: () => [{ id: "ready", nodes: [] }],
     });
-    const result = registry.getSections(project, "content", { signal: controller.signal });
+    const result = registry.getSections(project, "content", {
+      signal: controller.signal,
+      onProgress: (sections) => published.push(sections),
+    });
     await entered.promise;
+    await Bun.sleep(0);
     controller.abort();
+    const beforeAbort = published.length;
     released.resolve();
     await expect(result).rejects.toThrow();
-    expect(laterReads).toBe(0);
+    expect(published.length).toBe(beforeAbort);
   });
   test("keeps owner declarations first and sorts foreign extensions by fully qualified id", async () => {
     const registry = createNavigationTreeRegistry();

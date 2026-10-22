@@ -29,6 +29,8 @@ import type {
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { detectHarness } from "./harness-detection";
 import { HarnessDisposedError } from "./harness-disposed-error";
+import { createHarnessSessionResources, type HarnessSessionResources } from "./harness-session-resources";
+import { createRetainedHarnessCalls } from "./harness-session-retention";
 
 export type HarnessCallOptions = {
   /** Project the call runs on behalf of, when there is one (session dispatch). */
@@ -156,7 +158,11 @@ const validateDeclaredHarnessParams = (schema: HarnessParamsSchema, params: Harn
   }
 };
 
-const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFactory): HarnessHandle => {
+const toHandle = (
+  record: RuntimeHarnessRecord,
+  buildContext: HarnessContextFactory,
+  resources: HarnessSessionResources,
+): HarnessHandle => {
   const contexts = new Map<string | undefined, Promise<HarnessContext>>();
   let closing: Promise<void> | undefined;
   let disposed = false;
@@ -176,6 +182,7 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
     return context;
   };
   const provider = record.provider;
+  const retained = createRetainedHarnessCalls(provider, ctx, resources);
   if (provider.getMessages && !provider.recoverMessages) {
     throw new Error(`Harness with native history must provide recoverMessages: ${record.id}`);
   }
@@ -208,15 +215,30 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
     listModels: async (options) => (provider.listModels ? provider.listModels(await ctx(options)) : []),
     start: async (input, options) => {
       await validateInputParams(input, options);
-      return adaptSession(await provider.start(await ctx(options), input));
+      return retained.invoke(
+        input,
+        options,
+        async () => adaptSession(await provider.start(await ctx(options), input)),
+        (run) => run.done,
+      );
     },
     resume: async (input, options) => {
       await validateInputParams(input, options);
-      return adaptSession(await provider.resume(await ctx(options), input));
+      return retained.invoke(
+        input,
+        options,
+        async () => adaptSession(await provider.resume(await ctx(options), input)),
+        (run) => run.done,
+      );
     },
     reattach: async (input, options) => {
       if (!provider.reattach) throw new Error(`Harness does not support reattach: ${record.id}`);
-      return adaptSession(await provider.reattach(await ctx(options), input));
+      return retained.invoke(
+        input,
+        options,
+        async () => adaptSession(await provider.reattach!(await ctx(options), input)),
+        (run) => run.done,
+      );
     },
     getMessages: async (input, options) =>
       provider.getMessages ? provider.getMessages(await ctx(options), input) : [],
@@ -225,25 +247,34 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
         ? provider.recoverMessages(await ctx(options), input)
         : { kind: "recovered", messages: [...input.knownMessages] },
     getCommandState: async (input, options) =>
-      provider.getCommandState
-        ? provider.getCommandState(await ctx(options), input)
-        : { commands: [], modes: [], slashCommands: false },
+      retained.invoke(input, options, async () =>
+        provider.getCommandState
+          ? provider.getCommandState(await ctx(options), input)
+          : { commands: [], modes: [], slashCommands: false },
+      ),
     prepareOperation: async (input, operation, options) => {
       if (!provider.prepareOperation) throw new Error("This harness does not support native commands.");
       const context = await ctx(options);
-      if (operation.kind === "command" && provider.getCommandState) {
-        const state = await provider.getCommandState(context, input);
-        const name = /^\/\S+/.exec(operation.text)?.[0];
-        const command = state.commands.find((entry) => entry.name === name);
-        if (command?.disabledReason) throw new Error(command.disabledReason);
-      }
-      const prepared = await provider.prepareOperation(context, input, operation);
+      const prepared = await retained.invoke(input, options, async () => {
+        if (operation.kind === "command" && provider.getCommandState) {
+          const state = await provider.getCommandState(context, input);
+          const name = /^\/\S+/.exec(operation.text)?.[0];
+          const command = state.commands.find((entry) => entry.name === name);
+          if (command?.disabledReason) throw new Error(command.disabledReason);
+        }
+        return provider.prepareOperation!(context, input, operation);
+      });
       ensureActive();
       return {
         execution: prepared.execution,
         invoke: async (invocation) => {
           ensureActive();
-          const result = await prepared.invoke(invocation);
+          const result = await retained.invoke(
+            input,
+            options,
+            async () => prepared.invoke(invocation),
+            (result) => (result.kind === "started" ? result.session.done : Promise.resolve()),
+          );
           if (result.kind === "started") {
             if (disposed) {
               await result.session.stop();
@@ -258,6 +289,7 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
     dispose: () => {
       disposed = true;
       closing ??= (async () => {
+        await retained.retire();
         const results = await Promise.allSettled(
           [...contexts.values()].map((context) =>
             context.then(
@@ -277,13 +309,14 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
 export const createHarnessRegistry = (
   records: RuntimeHarnessRecord[],
   buildContext: HarnessContextFactory,
+  resources: HarnessSessionResources = createHarnessSessionResources(),
 ): HarnessRegistry => {
   const handles = new Map<string, HarnessHandle>();
   const duplicates: string[] = [];
 
   for (const record of records) {
     if (handles.has(record.id)) duplicates.push(record.id);
-    handles.set(record.id, toHandle(record, buildContext));
+    handles.set(record.id, toHandle(record, buildContext, resources));
   }
 
   return {

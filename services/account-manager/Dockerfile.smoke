@@ -1,0 +1,25 @@
+FROM oven/bun:1.4.2 AS build
+WORKDIR /build
+COPY package.json bun.lock bunfig.toml ./
+COPY services/telemetry/package.json ./services/telemetry/package.json
+COPY services/account-manager/package.json ./services/account-manager/package.json
+COPY packages/pstdio-sync-contracts/package.json ./packages/pstdio-sync-contracts/package.json
+RUN bun install --frozen-lockfile --production --filter pstdio-account-manager
+COPY services/account-manager/src ./services/account-manager/src
+COPY services/telemetry/src ./services/telemetry/src
+COPY services/account-manager/scripts ./services/account-manager/scripts
+COPY packages/pstdio-sync-contracts/src ./packages/pstdio-sync-contracts/src
+RUN bun build services/account-manager/src/index.ts services/account-manager/src/server.ts services/account-manager/scripts/smoke.ts services/account-manager/scripts/environment-verifier-smoke.ts --target bun --outdir dist
+
+RUN bun build services/telemetry/src/telemetry.test.ts --target bun --outfile dist/telemetry.test.js
+
+FROM oven/bun:1.4.2
+WORKDIR /app
+COPY --from=build --chown=bun:bun /build/dist/telemetry.test.js ./telemetry.test.js
+COPY --from=build --chown=bun:bun /build/dist/src/index.js ./authority.js
+COPY --from=build --chown=bun:bun /build/dist/scripts/smoke.js ./smoke.js
+COPY --from=build --chown=bun:bun /build/dist/src/server.js ./server.js
+COPY --from=build --chown=bun:bun /build/dist/scripts/environment-verifier-smoke.js ./environment-verifier-smoke.js
+COPY --chown=bun:bun services/account-manager/drizzle ./drizzle
+USER bun
+CMD ["bun", "smoke.js"]

@@ -2,12 +2,7 @@ import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { readPackageManifestMetadata } from "pstdio-extensions";
 import { resolveIsolatedHome } from "./dev-isolated";
-import {
-  type LocalRelayConnection,
-  localGrantNeedsEnrollment,
-  sameRelayOwner,
-  upsertLocalRelayConnection,
-} from "./relay-local-config";
+import { type LocalAccountFile, localLoginNeedsEnrollment, savedFixtureLogin } from "./relay-local-config";
 
 const root = resolve(import.meta.dir, "../..");
 const name = process.argv.find((value) => value.startsWith("--name="))?.slice(7) ?? "relay-local";
@@ -126,10 +121,8 @@ if (process.argv.includes("--down")) {
     });
   for (const app of apps) {
     const home = resolveIsolatedHome(root, app);
-    const configPath = join(home, "relay.json");
-    await mkdir(home, { recursive: true });
-    if (!(await Bun.file(configPath).exists()))
-      await writeFile(configPath, JSON.stringify({ connections: [] }), { mode: 0o600 });
+    // Matches PSTDIO_ACCOUNT_FILE in infra/local/compose.relay.yaml.
+    const accountPath = join(home, "account.json");
     await studio(app);
     const connection = JSON.parse(await readFile(join(home, "..", "connection.json"), "utf8")) as {
       apiPort: number;
@@ -179,10 +172,11 @@ if (process.argv.includes("--down")) {
         version: manifest.version,
       });
     }
-    const existing = JSON.parse(await readFile(configPath, "utf8")) as { connections: LocalRelayConnection[] };
-    const saved = existing.connections.find((item) =>
-      sameRelayOwner(item, { ...scope, environmentId: identity.environmentId }),
+    const file = await readFile(accountPath, "utf8").then(
+      (text) => JSON.parse(text) as LocalAccountFile,
+      () => ({ login: null }),
     );
+    const saved = savedFixtureLogin(file, { accountId: scope.accountId, deviceId: identity.environmentId });
     let enroll = !saved;
     if (saved) {
       const probe = JSON.parse(
@@ -194,38 +188,25 @@ if (process.argv.includes("--down")) {
             "authority",
             "bun",
             "-e",
-            "const input=await Bun.stdin.json(); const response=await fetch('https://authority:8443/v1/environment-access',{method:'POST',tls:{ca:await Bun.file('/tls-public/trust.pem').text()},headers:{authorization:'Bearer '+input.grant,'content-type':'application/json'},body:JSON.stringify({workbenchId:input.workbenchId})}); await response.body?.cancel(); console.log(JSON.stringify({status:response.status}));",
+            "const input=await Bun.stdin.json(); const response=await fetch('https://authority:8443/v1/environment-access',{method:'POST',tls:{ca:await Bun.file('/tls-public/trust.pem').text()},headers:{authorization:'Bearer '+input.token,'content-type':'application/json'},body:JSON.stringify({workbenchId:input.workbenchId})}); await response.body?.cancel(); console.log(JSON.stringify({status:response.status}));",
           ],
-          { capture: true, input: JSON.stringify({ grant: saved.renewalGrant, workbenchId: saved.workbenchId }) },
+          { capture: true, input: JSON.stringify({ token: saved.token, workbenchId: scope.workbenchId }) },
         ),
       ) as { status: number };
-      enroll = localGrantNeedsEnrollment(probe.status);
+      enroll = localLoginNeedsEnrollment(probe.status);
     }
     if (enroll) {
-      const enrolled = JSON.parse(
+      const device = JSON.parse(
         await run([...compose, "exec", "-T", "authority", "bun", "/app/enroll-local.js"], {
           capture: true,
-          input: JSON.stringify({ environmentId: identity.environmentId, workbenchId: scope.workbenchId }),
+          input: JSON.stringify({ deviceId: identity.environmentId, name: app, workbenchId: scope.workbenchId }),
         }),
-      ) as { token: string };
-      await writeFile(
-        configPath,
-        JSON.stringify(
-          {
-            connections: upsertLocalRelayConnection(existing.connections, {
-              ...scope,
-              environmentId: identity.environmentId,
-              managerOrigin: "https://authority:8443",
-              relayOrigin: "https://relay:8080",
-              renewalGrant: enrolled.token,
-            }),
-          },
-          null,
-          2,
-        ),
-        { mode: 0o600 },
-      );
-      await chmod(configPath, 0o600);
+      ) as { accountId: string; deviceId: string; token: string };
+      const account: LocalAccountFile = {
+        login: { managerOrigin: "https://authority:8443", relayOrigin: "https://relay:8080", ...device },
+      };
+      await writeFile(accountPath, JSON.stringify(account, null, 2), { mode: 0o600 });
+      await chmod(accountPath, 0o600);
     }
     if (enroll || trustChanged) await run(["docker", "restart", `${app}-prompt-studio-1`]);
     const url = `${connection.dashboardUrl}projects/${scope.workbenchId}/extensions/pstdio.pstdio-notes/notes`;

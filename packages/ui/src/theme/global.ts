@@ -16,6 +16,11 @@ export const globalCss = {
     "--separator-border": "transparent !important",
   },
 
+  ":root:has([data-window-title-bar])": {
+    // Portalled toasts must clear the native window's draggable title bar.
+    "--pstdio-toast-top-offset": "calc({sizes.window-title-bar} + {spacing.md})",
+  },
+
   html: {
     height: "100%",
     width: "100%",

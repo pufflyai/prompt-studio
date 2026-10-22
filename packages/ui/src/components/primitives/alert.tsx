@@ -1,40 +1,43 @@
-import { Alert as ChakraAlert, HStack, IconButton } from "@chakra-ui/react";
+import { ButtonPropsProvider, Alert as ChakraAlert, HStack, IconButton } from "@chakra-ui/react";
 import { X } from "lucide-react";
 import * as React from "react";
 
 export interface AlertProps extends Omit<ChakraAlert.RootProps, "title"> {
   startElement?: React.ReactNode;
-  // An action that recovers from the alert, such as Retry for a temporary failure.
+  // Recovery controls in the bottom-right footer. Buttons inherit compact, themed ghost defaults.
   endElement?: React.ReactNode;
   title?: React.ReactNode;
   icon?: React.ReactElement;
   // Shows a close button that dismisses the alert.
   onClose?: () => void;
+  closeLabel?: string;
 }
 
 export const AlertMessage = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
-  const { title, children, icon, startElement, endElement, onClose, ...rest } = props;
+  const { title, children, icon, startElement, endElement, onClose, closeLabel = "Dismiss", ...rest } = props;
   return (
-    <ChakraAlert.Root ref={ref} px="xs" py="2xs" gap="2xs" minH="auto" {...rest}>
+    <ChakraAlert.Root ref={ref} {...rest}>
       {startElement || <ChakraAlert.Indicator>{icon}</ChakraAlert.Indicator>}
-      {children ? (
+      <ButtonPropsProvider value={{ variant: "ghost", size: "2xs" }}>
         <ChakraAlert.Content>
-          <ChakraAlert.Title>{title}</ChakraAlert.Title>
-          <ChakraAlert.Description>{children}</ChakraAlert.Description>
-        </ChakraAlert.Content>
-      ) : (
-        <ChakraAlert.Title flex="1">{title}</ChakraAlert.Title>
-      )}
-      {endElement || onClose ? (
-        <HStack gap="2xs" alignSelf="center">
-          {endElement}
-          {onClose ? (
-            <IconButton aria-label="Dismiss" size="2xs" variant="ghost" onClick={onClose}>
-              <X />
-            </IconButton>
+          <HStack gap="2xs" alignItems="flex-start" minW="0">
+            <ChakraAlert.Title flex="1" minW="0">
+              {title}
+            </ChakraAlert.Title>
+            {onClose ? (
+              <IconButton aria-label={closeLabel} flexShrink="0" onClick={onClose}>
+                <X />
+              </IconButton>
+            ) : null}
+          </HStack>
+          {children ? <ChakraAlert.Description>{children}</ChakraAlert.Description> : null}
+          {endElement ? (
+            <HStack gap="2xs" pt="xs" justifyContent="flex-end" alignItems="flex-end" flexWrap="wrap" minW="0">
+              {endElement}
+            </HStack>
           ) : null}
-        </HStack>
-      ) : null}
+        </ChakraAlert.Content>
+      </ButtonPropsProvider>
     </ChakraAlert.Root>
   );
 });

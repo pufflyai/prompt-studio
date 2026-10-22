@@ -1,4 +1,4 @@
-import { type HarnessParamValues, harnessParamValuesEqual } from "../components/harness-param-values";
+import { type HarnessParamValues, harnessParamValuesEqual } from "@pstdio/ui/param-editor";
 
 interface RuntimeAgentOption {
   value: string;

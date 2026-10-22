@@ -1,5 +1,6 @@
 import { createWorkbenchCompositionController } from "./controllers/composition/composition-controller";
 import { createOwnedAddablePanels } from "./controllers/composition/owned-addable-panels";
+import { isFullscreenRegionFocusable } from "./controllers/fullscreen/main-fullscreen";
 import { createPrimaryCoordinator, createScopedIsInScope } from "./controllers/primary-coordinator/primary-coordinator";
 import { workbenchViewIdContextKey } from "./registries/views/view-registry";
 import { registerWorkbenchBuiltIns } from "./workbench-built-ins";
@@ -24,7 +25,11 @@ export const createCoreCompositionController = (resolveCore: () => WorkbenchCore
 export const connectWorkbenchCoreState = (core: WorkbenchCore, input: createWorkbenchInput) => {
   core.layout.store.subscribe((state) => {
     const activeRegion = core.focus.getActiveRegion();
-    if (activeRegion && !state.layout.regions[activeRegion].visible) core.focus.clearFocus();
+    if (
+      activeRegion &&
+      !(isFullscreenRegionFocusable(core, activeRegion) ?? state.layout.regions[activeRegion].visible)
+    )
+      core.focus.clearFocus();
   });
   core.layout.store.subscribeSelector(
     (state) => {

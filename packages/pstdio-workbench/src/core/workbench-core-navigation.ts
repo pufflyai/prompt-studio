@@ -1,11 +1,6 @@
-import { activateModePlacementInstance } from "./controllers/composition/owned-addable-panels";
-import { panelModeId, prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
+import { prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
-import {
-  createNavigationRegistry,
-  type NavigationTargetPanel,
-  type NavigationTargetShellPanel,
-} from "./registries/navigation/navigation-registry";
+import { createNavigationRegistry, type NavigationTargetPanel } from "./registries/navigation/navigation-registry";
 import type { WorkbenchCore } from "./workbench-core-types";
 
 type PageSlotPanelRef = Extract<NavigationTargetPanel["panel"], { kind: "page-slot" }>;
@@ -29,75 +24,8 @@ export const revealPanelRegion = (core: WorkbenchCore, region: WorkbenchRegion) 
   if (region === "side" && core.sidePanel.getMode() === "closed") core.sidePanel.setMode("attached");
 };
 
-const openPageSlotTarget = (core: WorkbenchCore, target: NavigationTargetPanel, panel: PageSlotPanelRef) => {
-  const page = findPagePanelOwner(core, panel);
-  if (!page || core.pages.store.getState().activePageId !== page.id) {
-    throw new Error(`Page panel "${panel.id}" is not owned by the active page`);
-  }
-  const slot = page.slots.find((candidate) => candidate.id === panel.id);
-  if (!slot) throw new Error(`Page panel "${panel.id}" is not an auxiliary slot`);
-  core.pages.openSlot({
-    pageId: page.id,
-    slotId: panel.id,
-    region: target.region,
-    ...(target.resource ? { resource: target.resource } : {}),
-    ...(target.open ? { open: target.open } : {}),
-  });
-  revealActivePanelRegion(core, slot.region);
-};
-
-const revealActivePanelRegion = (core: WorkbenchCore, fallback: WorkbenchRegion) => {
-  const layout = core.layout.getLayout();
-  const actual = Object.values(layout.regions).find((region) =>
-    region.widgets.some((widget) => widget.widgetId === layout.activeWidgetId),
-  );
-  revealPanelRegion(core, actual?.id ?? fallback);
-};
-
-const openModePlacementTarget = (core: WorkbenchCore, target: NavigationTargetPanel) => {
-  const panel = target.panel;
-  if (panel.kind !== "placement") throw new Error(`Expected a mode placement panel: ${panel.id}`);
-  const placement = core.modePlacements.getPlacement(panel);
-  if (!placement || placement.modeId !== core.modes.getActiveModeId()) {
-    throw new Error(`Mode panel "${panel.id}" is not owned by the active mode`);
-  }
-  const identity = core.modePlacements.openPlacement({
-    panel,
-    region: target.region,
-    ...(target.resource ? { resource: target.resource } : {}),
-    ...(target.open ? { open: target.open } : {}),
-  });
-  activateModePlacementInstance(core, identity);
-  revealActivePanelRegion(core, placement.region);
-};
-
-const openShellPlacementTarget = (core: WorkbenchCore, target: NavigationTargetShellPanel) => {
-  const placement = core.shellPlacements.getPlacement(target.panel.id);
-  if (!placement) throw new Error(`Unknown shell placement: ${target.panel.id}`);
-  const identity = core.shellPlacements.openPlacement({
-    placementId: target.panel.id,
-    region: target.region,
-    ...(target.resource ? { resource: target.resource } : {}),
-    ...(target.open ? { open: target.open } : {}),
-    ...(target.title ? { title: target.title } : {}),
-  });
-  activateModePlacementInstance(core, identity);
-  revealActivePanelRegion(core, placement.region);
-};
-
-const openCorePanelTarget = (core: WorkbenchCore, target: NavigationTargetPanel) => {
-  panelModeId(core, target);
-  const panel = target.panel;
-  if (panel.kind === "shell-placement") {
-    openShellPlacementTarget(core, { ...target, panel });
-    return;
-  }
-  if (panel.kind === "page-slot") {
-    openPageSlotTarget(core, target, panel);
-    return;
-  }
-  openModePlacementTarget(core, target);
-};
+const openCorePanelTarget = (core: WorkbenchCore, target: NavigationTargetPanel) =>
+  prepareWorkbenchNavigation(core, [target]).commit();
 
 export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =>
   createNavigationRegistry({

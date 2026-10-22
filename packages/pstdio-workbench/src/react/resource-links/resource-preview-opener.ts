@@ -32,8 +32,9 @@ const pagePreviewView = (ctx: WorkbenchModuleContext, pageRef: PageRef, resource
 export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
   const panels = createRelatedPanelLifetime(ctx);
   const reveal = (region: WorkbenchRegion) => {
-    if (region === "side" || region === "secondary") ctx.shell.setRegionOpen(region, true);
-    else ctx.layout.setRegionVisible(region, true);
+    if (region === "side" || region === "secondary") {
+      if (!ctx.shell.getRegionState(region).open) ctx.shell.setRegionOpen(region, true);
+    } else ctx.layout.setRegionVisible(region, true);
   };
   const projections = new Map<string, { viewId: string; dispose(): void }>();
   const replacesSource = (region: RelatedResourceOpening["region"], source: ResourceRef) =>
@@ -121,7 +122,8 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
   };
   const updateVisibility = (region: WorkbenchRegion, show: boolean, closed: boolean, resource: ResourceRef) => {
     if (!show) {
-      if (region === "side" || region === "secondary") ctx.shell.setRegionOpen(region, false);
+      if ((region === "side" || region === "secondary") && ctx.shell.getPanelPolicy(region).canClose)
+        ctx.shell.setRegionOpen(region, false);
       return;
     }
     if (closed) {
@@ -149,6 +151,9 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
       )
     )
       return false;
+    const policy = ctx.shell.getPanelPolicy(region);
+    if (!policy.provided || (!existing && !policy.acceptsTabs)) return false;
+    show = show && (policy.open || policy.canOpen);
     // Capture visibility before placement reconciliation can reveal the panel.
     const closed = (region === "side" || region === "secondary") && !ctx.shell.getRegionState(region).open;
     if (!existing && !present(target, resource, source, options)) return false;

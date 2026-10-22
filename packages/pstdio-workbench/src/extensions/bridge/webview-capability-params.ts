@@ -2,6 +2,7 @@ import { extensionResourceRefSchema, jsonObjectSchema, pageParamValueSchema } fr
 import type { WebviewHostCapability, WebviewHostCapabilityParams } from "pstdio-api-contracts/extension-kernel";
 import { isNavigationTarget, type NavigationTarget } from "pstdio-api-contracts/extension-kernel";
 import { z } from "zod";
+import { webviewEditingSessionParamsSchema } from "./webview-editing-params";
 import { webviewNotificationActionParamsSchema } from "./webview-notification-params";
 
 export class WebviewHostCapabilityError extends Error {
@@ -51,8 +52,16 @@ const terminalRequest = z.object({
   env: z.record(z.string(), z.string()).optional(),
 });
 
+const projectId = { projectId: identifier.optional() };
+
 const schemas = {
+  "harnesses.read": z.object({ harnessId: identifier.optional(), model: z.string().optional() }),
+  "resources.actions": z.discriminatedUnion("operation", [
+    z.object({ operation: z.literal("list"), resource: extensionResourceRefSchema }),
+    z.object({ operation: z.literal("execute"), resource: extensionResourceRefSchema, key: identifier }),
+  ]),
   "commands.execute": command,
+  "editing.session": webviewEditingSessionParamsSchema,
   "commands.stream": z.discriminatedUnion("operation", [
     command.extend({ ...streamId, operation: z.literal("start") }),
     z.object({ ...streamId, operation: z.literal("cancel") }),
@@ -117,6 +126,21 @@ const schemas = {
     z.object({ op: z.literal("list"), mount: identifier, prefix: z.string().optional() }),
     z.object({ op: z.literal("readText"), mount: identifier, path: z.string() }),
     z.object({ op: z.literal("imageUrl"), mount: identifier, path: z.string() }),
+  ]),
+  "account.read": z.discriminatedUnion("op", [
+    z.object({ op: z.literal("status") }),
+    z.object({ op: z.literal("loginStatus"), id: identifier }),
+    z.object({ op: z.literal("devices") }),
+    z.object({ op: z.literal("projectSyncStatus"), ...projectId }),
+  ]),
+  "account.manage": z.discriminatedUnion("op", [
+    z.object({ op: z.literal("login"), managerOrigin: identifier }),
+    z.object({ op: z.literal("cancelLogin"), id: identifier }),
+    z.object({ op: z.literal("logout") }),
+    z.object({ op: z.literal("renameDevice"), id: identifier, name: z.string() }),
+    z.object({ op: z.literal("removeDevice"), id: identifier }),
+    z.object({ op: z.literal("syncProject"), ...projectId }),
+    z.object({ op: z.literal("stopProjectSync"), ...projectId }),
   ]),
 } satisfies Record<WebviewHostCapability, z.ZodType>;
 

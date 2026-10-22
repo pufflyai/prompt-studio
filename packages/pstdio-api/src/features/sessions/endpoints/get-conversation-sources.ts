@@ -23,6 +23,19 @@ export const getConversationSourcesRoute = createRoute({
 
 export const getConversationSourcesHandler = (deps: SessionsRouteDeps) => async (c: Context<AppBindings>) => {
   const id = c.req.param("id")!;
-  if (!(await deps.sessionService.get(id))) return c.json({ error: "Session not found" }, 404);
+  if (!(await deps.sessionService.get(id))) {
+    const personal = await deps.personalHistoryService.getSession(id);
+    if (personal?.project_id)
+      return c.json(
+        {
+          checkpoint: await deps.personalHistoryService.messages(id, personal.project_id),
+          native: null,
+          checkpointError: null,
+          nativeError: null,
+        },
+        200,
+      );
+    return c.json({ error: "Session not found" }, 404);
+  }
   return c.json((await readSessionHistorySources(id, deps)).sources, 200);
 };

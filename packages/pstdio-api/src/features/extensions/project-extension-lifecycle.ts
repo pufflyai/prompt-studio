@@ -12,7 +12,6 @@ import type { ExtensionsRouteDeps } from "./deps";
 import { extensionChangesWorkspaceProvisioning } from "./extension-skill-cleanup";
 import { toExtensionEnableInput } from "./install-extension-source";
 import { toProjectExtensionInstance } from "./project-extension-instance";
-import { SharedExtensionEnablementError, sharedAutomationIds } from "./publication/enablement";
 
 type LifecycleDeps = ExtensionsRouteDeps & {
   installedExtensionSourcesService: RouteDeps["installedExtensionSourcesService"];
@@ -64,8 +63,6 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
   const setEnabled = async (projectId: string, instanceId: string, enabled: boolean) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return null;
-    if ((await sharedAutomationIds(deps, projectId)).has(existing.installedSource.extension_id))
-      throw new SharedExtensionEnablementError();
     const requiresProvisioning = await changesWorkspaceProvisioning(existing.installedSource);
 
     const updated = await deps.extensionService.setProjectExtensionEnabled(instanceId, enabled);
@@ -84,8 +81,6 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return null;
 
-    if ((await sharedAutomationIds(deps, projectId)).has(existing.installedSource.extension_id))
-      throw new SharedExtensionEnablementError();
     const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
     const schedule = snapshot.runtime.schedules.find(
       (candidate) => candidate.id === automationId && candidate.extensionId === existing.installedSource.extension_id,

@@ -120,9 +120,11 @@ const runProviderMutation = async (
 
 export const finalizeWorkspaceDelete = async (deps: WorkspaceProviderLifecycleDeps, workspace: WorkspaceRecord) => {
   const sessions = await deps.workspaceSessionService.listByWorkspace(workspace.id);
-  await Promise.all(
-    sessions.filter((session) => !session.archived).map((session) => deps.sessionService.archive(session.id)),
-  );
+  // Session writes share one database. Parallel workspaces must not multiply
+  // into an unbounded queue of writes and sync events for long session histories.
+  for (const session of sessions) {
+    if (!session.archived) await deps.sessionService.archive(session.id);
+  }
   await deps.workspaceService.softDelete(workspace.id);
 };
 

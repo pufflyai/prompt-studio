@@ -13,6 +13,7 @@ const handle = (overrides: Record<string, unknown>) =>
   }) as never;
 
 const registryOf = (handles: unknown[]): HarnessRegistryService => ({
+  retainSession: () => () => {},
   list: async () => handles as never,
   get: async () => null,
   invalidate: () => {},
@@ -48,6 +49,7 @@ describe("listSkillAgents", () => {
         return [];
       },
       get: async () => null,
+      retainSession: () => () => {},
       invalidate: () => {},
       dispose: async () => {},
     };

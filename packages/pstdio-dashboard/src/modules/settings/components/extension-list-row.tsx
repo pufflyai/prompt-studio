@@ -6,6 +6,7 @@ import type {
 } from "@pstdio/sdk/api";
 import { Switch, type SwitchProps, Tooltip } from "@pstdio/ui";
 import { ArrowUpCircle, ChevronRight, Folder, Globe, Puzzle } from "lucide-react";
+import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
 import { ExtensionHealthPopover } from "./extension-health-popover";
@@ -14,6 +15,7 @@ export interface ExtensionListRowProps {
   extension: ProjectExtensionInstance;
   diagnostics: ExtensionDiagnostic[];
   automations: WorkbenchExtensionAutomationRecord[];
+  unavailableHarnesses?: AgentInfo[];
   toggling: boolean;
   upgrading: boolean;
   onToggle: (enabled: boolean) => void;
@@ -24,7 +26,17 @@ export interface ExtensionListRowProps {
 const stopRowClick = (event: { stopPropagation: () => void }) => event.stopPropagation();
 
 export const ExtensionListRow = (props: ExtensionListRowProps) => {
-  const { extension, diagnostics, automations, toggling, upgrading, onToggle, onUpgrade, onOpen } = props;
+  const {
+    extension,
+    diagnostics,
+    automations,
+    unavailableHarnesses = [],
+    toggling,
+    upgrading,
+    onToggle,
+    onUpgrade,
+    onOpen,
+  } = props;
   const { t } = useTranslation("projects");
   const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
     onToggle(details.checked);
@@ -94,10 +106,18 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <ExtensionAutomationsPopover extensionName={extension.displayName} automations={automations} />
       </Box>
 
-      <Box w="52px" flexShrink="0" display="flex" justifyContent="flex-end" onClick={stopRowClick}>
+      <Box
+        w="52px"
+        flexShrink="0"
+        display="flex"
+        justifyContent="flex-end"
+        onClick={stopRowClick}
+        onKeyDown={stopRowClick}
+      >
         <ExtensionHealthPopover
           extension={extension}
           diagnostics={diagnostics}
+          unavailableHarnesses={unavailableHarnesses}
           upgrading={upgrading}
           onUpgrade={onUpgrade}
         />

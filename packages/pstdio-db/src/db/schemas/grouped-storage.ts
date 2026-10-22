@@ -1,4 +1,4 @@
-import { bigint, foreignKey, index, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { bigint, foreignKey, index, jsonb, pgTable, primaryKey, text, uuid } from "drizzle-orm/pg-core";
 import type { Acceptance, LocalOperation } from "pstdio-sync";
 import type { AcceptedHeader } from "./grouped-storage-types";
 import { projects } from "./projects";
@@ -11,6 +11,7 @@ export const extension_storage_owners = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     extension_id: text("extension_id").notNull(),
     accepted_json: jsonb("accepted_json").$type<AcceptedHeader>(),
+    revision: uuid("revision").notNull().defaultRandom(),
   },
   (table) => [primaryKey({ columns: [table.workbench_id, table.extension_id] })],
 );

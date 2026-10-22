@@ -2,6 +2,30 @@ import { expect, test } from "bun:test";
 import { createWorkbench, resourceContextMenuPath } from "../../core";
 import { createWorkbenchResourceMenu } from "./resource-menu";
 
+test.each([
+  { args: undefined, expected: { noteId: "note-1" } },
+  { args: { permanent: true }, expected: { noteId: "note-1", permanent: true } },
+  { args: { noteId: "explicit" }, expected: { noteId: "explicit" } },
+])("direct resource actions resolve bound parameters and preserve explicit arguments: $args", async ({
+  args,
+  expected,
+}) => {
+  const workbench = createWorkbench();
+  let received: unknown;
+  workbench.commands.registerCommand(
+    { id: "delete", label: "Delete", params: { noteId: { type: "text", resolvedFrom: "resource" } } },
+    {
+      execute: (args) => {
+        received = args;
+      },
+    },
+  );
+  workbench.layout.registerMenuItem(resourceContextMenuPath("note"), { commandId: "delete", args });
+  const actions = createWorkbenchResourceMenu(workbench, { type: "note", id: "note-1" }, {});
+  await actions[0]?.onClick?.();
+  expect(received).toEqual(expected);
+});
+
 test("resource menus include the subject's actions before independent custom sections", async () => {
   const workbench = createWorkbench();
   const subject = { type: "document", id: "b", extensionId: "notes", label: "B" };

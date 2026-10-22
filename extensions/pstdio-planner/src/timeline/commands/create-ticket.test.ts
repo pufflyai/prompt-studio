@@ -42,23 +42,16 @@ test("refuses an unknown milestone before creating a ticket", async () => {
   expect(await ticketsCollection(storage).list()).toHaveLength(0);
 });
 
-test("returns the created ticket when releasing the write claim fails", async () => {
+test("keeps the saved ticket when placement event delivery fails", async () => {
   const storage = createMemoryStorage();
   const [ctx] = makeCommandArgs({ storage, params: {} });
-  const collection = storage.collection.bind(storage);
-  // Fault injection keeps real storage and ticket creation; only the failing write is replaced.
-  storage.collection = ((name: string) => {
-    const real = collection(name);
-    if (name !== "timeline.write-claims") return real;
-    return {
-      ...real,
-      deleteIfValue: async () => {
-        throw new Error("Storage unavailable");
-      },
-    };
-  }) as typeof storage.collection;
+  const emit = ctx.events.emit;
+  ctx.events.emit = async (event, payload) => {
+    if (typeof event === "object" && event.id === "timeline.plan.changed") throw new Error("Event delivery failed");
+    return emit(event, payload);
+  };
   const result = await createTicketCommand.run(ctx, { content: "# Saved ticket" });
   expect(result.ticket.title).toBe("Saved ticket");
-  expect(result.placementError).toContain("Write claim release failed");
+  expect(result.placementError).toContain("Event delivery failed");
   expect(await ticketsCollection(storage).list()).toHaveLength(1);
 });

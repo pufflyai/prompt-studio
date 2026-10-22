@@ -43,7 +43,6 @@ test("existing local attachments import once with their scope, then a tombstone 
     );
     const files = await f.service.list({ ...f.scope, scope_type: "resource", scope_id: "note" });
     expect(files?.map((file) => file.id)).toEqual([file.id]);
-    expect((await f.storage.readState()).pending).toHaveLength(1);
     const found = (await f.service.getOwnedFile({ ...f.scope, file_id: file.id }))!;
     expect(await new Response(await f.service.read(found)).text()).toBe("existing local bytes");
     expect(await f.service.list(f.scope)).toEqual([]);
@@ -65,7 +64,7 @@ test("uploads reject instances outside their workbench before writing bytes", as
         data: Buffer.from("private"),
       }),
     ).toBeNull();
-    expect((await f.storage.readState()).journal).toEqual([]);
+    expect(await f.storage.records.list()).toEqual([]);
   } finally {
     await f.close();
   }
@@ -98,7 +97,6 @@ test("interrupted legacy cleanup keeps ownership until the durable replacement c
     expect(await f.extensionFilesDBService.getOwnedFile({ ...f.scope, file_id: file.id })).not.toBeNull();
     expect((await f.service.list(f.scope))?.map((file) => file.id)).toEqual([file.id]);
     expect(await f.extensionFilesDBService.getOwnedFile({ ...f.scope, file_id: file.id })).toBeNull();
-    expect((await f.storage.readState()).pending).toHaveLength(1);
     const saved = (await f.service.getOwnedFile({ ...f.scope, file_id: file.id }))!;
     expect(await new Response(await f.service.read(saved)).text()).toBe("durable bytes");
   } finally {

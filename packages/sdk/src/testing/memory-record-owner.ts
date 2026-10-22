@@ -1,9 +1,10 @@
 import {
+  createDocumentStorage,
   createLegacyRecordStorage,
-  createRecordStorage,
-  type GroupedState,
-  type GroupedStore,
+  createMemoryDocumentStore,
+  type DocumentStore,
   scopeRecordStorage,
+  snapshotDocumentRecords,
 } from "pstdio-sync";
 import type { createMemoryAssets } from "./memory-assets";
 
@@ -15,49 +16,26 @@ export interface MemoryStorageSeed {
 export const createMemoryRecordOwner = (
   assets: ReturnType<typeof createMemoryAssets>,
   seed: MemoryStorageSeed = {},
+  identity: { workbenchId?: string; extensionId?: string } = {},
 ) => {
-  const owner = { workbenchId: crypto.randomUUID(), extensionId: "test-extension" };
-  const environmentId = crypto.randomUUID();
-  let state: GroupedState = { owner, accepted: null, journal: [] };
-  let previous = Promise.resolve();
-  const baseStore: GroupedStore = {
-    transaction: async (_owner, action) => {
-      const pending = previous;
-      let release = () => {};
-      previous = new Promise<void>((resolve) => {
-        release = resolve;
-      });
-      await pending;
-      try {
-        const draft = structuredClone(state);
-        const result = await action(draft);
-        state = draft;
-        return result;
-      } finally {
-        release();
-      }
-    },
-  };
-  const seedStorage = createLegacyRecordStorage({ store: baseStore, owner, environmentId }).scope(
-    "project",
-    owner.workbenchId,
-  );
+  const owner = { workbenchId: crypto.randomUUID(), extensionId: "test-extension", ...identity };
+  const baseStore = createMemoryDocumentStore();
+  const seedStorage = createLegacyRecordStorage({ store: baseStore, owner }).scope("project", owner.workbenchId);
   const initialized = Promise.all([
     ...Object.entries(seed.kv ?? {}).map(([key, value]) => seedStorage.kv.set(key, value as never)),
     ...Object.entries(seed.collections ?? {}).flatMap(([name, items]) =>
       Object.entries(items).map(([id, value]) => seedStorage.collection(name).set(id, value as never)),
     ),
   ]);
-  const store: GroupedStore = {
+  const store: DocumentStore = {
     transaction: async (target, action) => {
       await initialized;
       return baseStore.transaction(target, action);
     },
   };
-  const storage = createRecordStorage({
+  const storage = createDocumentStorage({
     store,
     owner,
-    environmentId,
     assets: {
       verifyComplete: assets.verifyComplete,
       read: assets.read,
@@ -66,9 +44,19 @@ export const createMemoryRecordOwner = (
       },
     },
   });
-  const legacy = createLegacyRecordStorage({ store, owner, environmentId });
+  const legacy = createLegacyRecordStorage({ store, owner });
   return {
     workbenchId: owner.workbenchId,
+    extensionId: owner.extensionId,
+    dataVersion: storage.dataVersion,
+    setDataVersion: storage.setDataVersion,
+    exportUpdate: storage.exportUpdate,
+    applyUpdate: storage.applyUpdate,
+    snapshot: () => store.transaction(owner, async ({ document }) => snapshotDocumentRecords(document)),
+    duringMigration: async <T>(key: string, run: () => Promise<T>) => {
+      await initialized;
+      return baseStore.duringMigration(key, run);
+    },
     scope: (type: string, id: string) => ({
       records: scopeRecordStorage(storage.records, [type, id, "kv"]),
       legacy: legacy.scope(type, id),

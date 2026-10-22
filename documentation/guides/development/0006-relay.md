@@ -1,6 +1,22 @@
 # Relay development
 
-The private `pstdio-relay` workspace under `infra/relay/` owns transactional PostgreSQL storage and verified S3 assets for shared extension groups. It serves authenticated HTTP and finite native WebSocket subscriptions. The native runtime adapter and two-dashboard launcher are described in [the local relay guide](0008-two-dashboard-relay.md). Public browser onboarding, live provider validation and deployment remain separate work.
+The private `pstdio-relay` workspace under `services/relay/` owns transactional PostgreSQL storage and verified S3 assets for shared extension groups. It serves authenticated HTTP and finite native WebSocket subscriptions. The native runtime adapter and two-dashboard launcher are described in [the local relay guide](0008-two-dashboard-relay.md). Public browser onboarding, live provider validation and deployment remain separate work.
+
+## Blind sync store
+
+The relay also serves the blind sync protocol from [PRD 0014](../../requirements/platform/0014-local-first-sync.md) under `/sync/`. It stores encrypted updates, latest states and blobs per document and cannot read them. The [blind relay reference](../../references/architecture/0029-blind-relay.md) describes the protocol, cleanup and limits. The grouped storage described below keeps working until clients move to the new protocol; PS-824 removes it.
+
+`createSyncOwners` in `src/transport/owners.ts` builds the document store, the live connection hub and the rate limit. The runtime reads operator limits with `readRelayLimits(env)` and runs cleanup every hour. Schema changes start in `src/storage/document-schema.ts` and use the same `db:generate` command.
+
+Run the real PostgreSQL and object storage checks:
+
+```sh
+bun run --cwd services/relay test:sync
+```
+
+They cover duplicate updates, rejected stale latest states, blobs kept for the grace period, a storage dump with no plaintext from a seeded project, the storage bound across ten compaction cycles, protocol version errors, access to private project data, live forwarding and rate limits.
+
+The full 10,000-update storage check is a manual benchmark: `bun run --cwd services/relay bench:storage-bound`. See [relay storage bound](../../references/performance/0003-relay-storage-bound.md).
 
 ## Build and check
 
@@ -24,10 +40,10 @@ The grouped-record schema has four tables: scoped stream metadata, current recor
 
 Snapshots and replay use repeatable-read transactions. Replay contains complete accepted groups. Invalid cursors, gaps, and old epochs require snapshots. Restore checks the scope, sealed receipt bodies, and assets needed by both current records and retained non-pending receipts. It replaces content atomically and creates a new epoch. Historical receipts retain their original acknowledgments; new replay starts at the restored boundary. Grants are outside content restore.
 
-Schema changes start in `infra/relay/src/storage/schema.ts` or `src/assets/schema.ts`. Generate migrations with:
+Schema changes start in `services/relay/src/storage/schema.ts` or `src/assets/schema.ts`. Generate migrations with:
 
 ```sh
-bun run --cwd infra/relay db:generate
+bun run --cwd services/relay db:generate
 ```
 
 Never edit generated SQL by hand. Operators call `migrateRelayStorage(databaseUrl, migrationsFolder)` before opening storage; the runtime image includes the generated `drizzle/` directory. The service does not run migrations or claim storage readiness through liveness.
@@ -35,7 +51,7 @@ Never edit generated SQL by hand. Operators call `migrateRelayStorage(databaseUr
 Run the focused real PostgreSQL checks and the shared cases with real local stores:
 
 ```sh
-bun run --cwd infra/relay test:storage
+bun run --cwd services/relay test:storage
 cd packages/pstdio-sync-contracts
 SYNC_TEST_ENTRY=../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts bun scripts/isolated.ts
 ```
@@ -80,7 +96,7 @@ can repeat cancellation to finish cleanup from the durable cancelled row.
 Run real-store coverage with the existing test allowances:
 
 ```sh
-bun run --cwd infra/relay test:assets
+bun run --cwd services/relay test:assets
 ```
 
 This starts disposable PostgreSQL and RustFS. It checks scoped reads, multipart resume, process kills, lost acknowledgments, corrupt and truncated bytes, denied credentials, cancellation, mixed group publication, restore checks and incremental transfer. Resource observations are diagnostic; this is not the parent's 10,000-record/5 GiB acceptance workload or a performance budget.
@@ -94,7 +110,7 @@ Probe cleanup discovers uploads for every owned key, including lost creation res
 For a later authorized Spaces or other provider check, supply an existing disposable bucket through environment variables and run:
 
 ```sh
-bun run --cwd infra/relay test:objects
+bun run --cwd services/relay test:objects
 ```
 
 Required variables are `RELAY_CONTRACT_ENDPOINT`, `RELAY_CONTRACT_BUCKET`, `RELAY_CONTRACT_REGION`, `RELAY_CONTRACT_ACCESS_KEY_ID`, and `RELAY_CONTRACT_SECRET_ACCESS_KEY`. Supply secrets through the environment, not command arguments or committed files. The probe does not create a bucket or change policy. The service needs object read/write/delete, multipart list/abort/part-list access, and bucket listing so missing objects can return 404. Provider access rules must be validated separately.
@@ -137,12 +153,12 @@ Subscriptions retain the verified access expiry and close with1008 at that deadl
 
 Responses use no-store and sanitized errors. Missing/invalid credentials return 401 with a generic Bearer challenge; identity mismatch returns 403, malformed input 400, method mismatch 405 with Allow, unavailable subscription 503, and rejected content operations 409. Missing assets return 404. Unsupported routes return 404.
 
-Run `bun run --cwd infra/relay test:transport` for real HTTP, native WebSockets, separate authority/content roles, overlapping account identities, multipart disconnect/resume/cancel, committed hints, idle expiry under content locks, manager outage, restore and failure coverage. It uses the existing conformance runner's disposable PostgreSQL/RustFS stack on default subnet 10.254.236.0/24. Run these fixtures sequentially. It adds no test allowance or reduced workload.
+Run `bun run --cwd services/relay test:transport` for real HTTP, native WebSockets, separate authority/content roles, overlapping account identities, multipart disconnect/resume/cancel, committed hints, idle expiry under content locks, manager outage, restore and failure coverage. It uses the existing conformance runner's disposable PostgreSQL/RustFS stack on default subnet 10.254.236.0/24. Run these fixtures sequentially. It adds no test allowance or reduced workload.
 
 ## Run the isolated smoke check
 
 ```sh
-bun run --cwd infra/relay test:isolated
+bun run --cwd services/relay test:isolated
 ```
 
 This command builds the Docker runtime and smoke images, starts PostgreSQL and RustFS, creates a test bucket, and checks:
@@ -152,7 +168,7 @@ This command builds the Docker runtime and smoke images, starts PostgreSQL and R
 - The production S3 adapter streams the completed asset back with matching metadata, digest and length, and retains completed bytes when cancellation is repeated.
 - Docker stop sends SIGTERM and the relay exits with code 0.
 
-The same run initializes separate manager and relay roles and serves the actual bundled Better Auth manager over owned fixture HTTPS. Its initializer writes public signing trust to a separate read-only relay volume. A separately bundled client receives only the relay URL, scope and issued access token. It exercises HTTP uploads, verified offset reads, grouped submit/retry/replay, metadata-only WebSocket hints, idle access expiry and subsequent request denial. An operator process revokes the renewal grant and proves renewal denial. The original storage workload and12-reader/10-backend shutdown workload remain intact. No source mount or runtime install is used. These checks do not prove live provider compatibility, public onboarding, the complete local replication adapter, backups, or the parent's fixed workload and cost gates.
+The same run initializes separate manager and relay roles and serves the actual bundled Better Auth manager over owned fixture HTTPS. Its initializer writes public signing trust to a separate read-only relay volume. A separately bundled client receives only the relay URL, scope and issued access token. It exercises HTTP uploads, verified offset reads, grouped submit/retry/replay, metadata-only WebSocket hints, idle access expiry and subsequent request denial. An operator process removes the device and proves renewal denial. The original storage workload and12-reader/10-backend shutdown workload remain intact. No source mount or runtime install is used. These checks do not prove live provider compatibility, public onboarding, the complete local replication adapter, backups, or the parent's fixed workload and cost gates.
 
 Each run prints a unique `pstdio-relay-test-<uuid>` Compose project name. Its containers, network, and owned data/log and fixture volumes belong only to that run. The stack uses fixed test credentials, an internal network, no published host ports, and no host or home-directory mounts. It cannot use the local Prompt Studio database. `infra/local/` remains the separate local application stack.
 
@@ -172,9 +188,9 @@ Build from the repository root:
 docker build -f infra/relay/Dockerfile -t pstdio-relay:local .
 ```
 
-The final runtime target contains Bun, the built service/storage library and generated relay migrations. It runs as the unprivileged bun user, without a source checkout or runtime install. Operator tooling must apply migrations before use. An enrolled native host initializes enabled extension scopes through the authenticated transport. The default build remains this production target; test-only authority code, private keys and fixture initialization exist only in separate smoke stages.
+The final runtime target contains Bun, the built service/storage library and generated relay migrations. It runs as the unprivileged bun user, without a source checkout or runtime install. Operator tooling must apply migrations before use. A logged-in native host initializes enabled extension scopes through the authenticated transport. The default build remains this production target; test-only authority code, private keys and fixture initialization exist only in separate smoke stages.
 
-Trusted deployment settings supply `DATABASE_URL` for the relay role; `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`; and `RELAY_ACCESS_TRUST_FILE`, a JSON file with manager `issuer`, relay `audience` and public Ed25519 `jwks`. Keys come from the manager's `/api/auth/jwks` endpoint through an operator-controlled update. Key rotation must distribute new public keys before issuing access with them and retain old public keys through their tokens' expiry. Relay receives no manager database, signing secret, renewal grant or private service credential. Configuration errors discard sensitive original errors and causes.
+Trusted deployment settings supply `DATABASE_URL` for the relay role; `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`; and `RELAY_ACCESS_TRUST_FILE`, a JSON file with manager `issuer`, relay `audience` and public Ed25519 `jwks`. Keys come from the manager's `/api/auth/jwks` endpoint through an operator-controlled update. Key rotation must distribute new public keys before issuing access with them and retain old public keys through their tokens' expiry. Relay receives no manager database, signing secret, device credential or private service credential. Configuration errors discard sensitive original errors and causes.
 
 `RELAY_RECOVERY_KEY_FILE` supplies a separate immutable 32-byte recovery key shared by relay replicas. Preserve and back it up outside content snapshots; content restore must not replace it. The service refuses a missing or malformed key and never generates one on startup. Losing or changing it leaves older recovery incomplete. The Docker fixture initializes one key atomically in its owned private volume, independently of public signing trust. No key bytes enter receipt bodies or clients.
 
@@ -184,6 +200,10 @@ The smoke generates HTTPS trust inside each run's owned volumes, so cached image
 
 ## Infrastructure boundary
 
-Future Terraform configuration belongs under `infra/relay/terraform/`, separate from `src/`. This scaffold defines no resources, backend, remote state, provider credentials, or deployment workflow. Terraform state, local variable files, and working data are ignored by Git; the Terraform directory and relay environment files are excluded from Docker build contexts. Never commit application secrets or generated runtime data.
+The portable Compose deployment is described in the
+[deployment guide](0012-portable-cloud-deployment.md). Deployment files live under
+`infra/`, separate from the service source. The DigitalOcean module lives in
+`infra/terraform/`; Prompt Studio's own environments and secrets live in a separate
+repository.
 
 CI runs the relay's ordinary package checks through Lerna and an isolated Docker smoke job when the relay or shared tooling changes. See [package boundaries](../../references/architecture/0013-package-boundaries.md) for dependency rules. The relay stays private and is excluded from Changesets publication. Shared model changes also require the packaged CLI checks because local storage and the SDK test adapter bundle that model.

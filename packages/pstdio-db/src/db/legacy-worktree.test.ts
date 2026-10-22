@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { createDb } from "./connection.pglite";
@@ -10,6 +11,8 @@ import { resolveLegacyGitWorkspace } from "./legacy-worktree";
 import { migrateThrough } from "./migrate-through";
 import * as schema from "./schemas.pg";
 import { prepareWorkspaceLocations } from "./workspace-location-migration";
+
+const runGit = promisify(execFile);
 
 test("recovers the actual managed Git worktree source among multiple linked folders", async () => {
   const started = performance.now();
@@ -21,24 +24,29 @@ test("recovers the actual managed Git worktree source among multiple linked fold
   const root = await realpath(await mkdtemp(join(tmpdir(), "legacy-worktree-")));
   const previous = process.env.PSTDIO_HOME;
   process.env.PSTDIO_HOME = join(root, "home");
-  const git = (path: string, args: string[]) => {
+  const git = async (path: string, args: string[]) => {
     phase(`git ${args[0]} started`);
-    const result = execFileSync("git", ["-C", path, ...args], { stdio: "pipe" });
+    const result = await runGit("git", ["-C", path, ...args]);
     phase(`git ${args[0]} finished`);
     return result;
   };
   try {
-    for (const name of ["first", "actual"]) {
-      const repo = join(root, name);
-      await mkdir(repo);
-      git(repo, ["init", "-b", "main"]);
-    }
     const actual = join(root, "actual");
-    await writeFile(join(actual, "file.txt"), "actual");
-    git(actual, ["add", "."]);
-    git(actual, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "Base"]);
     const worktree = join(root, "home", "workspaces", "WS-1");
-    git(join(root, "actual"), ["worktree", "add", "-b", "workspace/WS-1", worktree]);
+    const prepareGit = async () => {
+      const initialized = await Promise.allSettled(
+        ["first", "actual"].map(async (name) => {
+          const repo = join(root, name);
+          await mkdir(repo);
+          await git(repo, ["init", "-b", "main"]);
+        }),
+      );
+      for (const result of initialized) if (result.status === "rejected") throw result.reason;
+      await writeFile(join(actual, "file.txt"), "actual");
+      await git(actual, ["add", "."]);
+      await git(actual, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "Base"]);
+      await git(actual, ["worktree", "add", "-b", "workspace/WS-1", worktree]);
+    };
     const workspace = {
       provider_id: "pstdio.root",
       is_default: false,
@@ -47,18 +55,20 @@ test("recovers the actual managed Git worktree source among multiple linked fold
       worktree_path: worktree,
     };
     const folders = [{ path: join(root, "first") }, { path: join(root, "actual") }];
-    phase("resolve managed worktree source");
-    expect(await resolveLegacyGitWorkspace(workspace, folders)).toEqual({
-      version: 1,
-      data: { sourceRoot: join(root, "actual"), worktreeRoot: worktree, relativePath: "" },
-    });
-    expect(await resolveLegacyGitWorkspace({ ...workspace, branch: null }, folders)).toBeNull();
     const databasePath = join(root, "database");
     phase("open legacy database");
     const old = new PGlite(databasePath);
-    await old.waitReady;
-    phase("legacy database ready");
     try {
+      // Neither cold database startup nor real Git fixture creation depends on the other.
+      // Await both before migration, without blocking the event loop on Git subprocesses.
+      const setup = await Promise.allSettled([prepareGit(), old.waitReady.then(() => phase("legacy database ready"))]);
+      for (const result of setup) if (result.status === "rejected") throw result.reason;
+      phase("resolve managed worktree source");
+      expect(await resolveLegacyGitWorkspace(workspace, folders)).toEqual({
+        version: 1,
+        data: { sourceRoot: join(root, "actual"), worktreeRoot: worktree, relativePath: "" },
+      });
+      expect(await resolveLegacyGitWorkspace({ ...workspace, branch: null }, folders)).toBeNull();
       phase("migrate through entry 25");
       await migrateThrough(drizzle(old, { schema }), join(import.meta.dir, "../../drizzle"), 25);
       phase("insert legacy project and workspace records");

@@ -1,20 +1,16 @@
-import {
-  type CreateExtensionWorkspaceInput,
-  type ExtensionWorkspaceCreateInput,
-  type WorkspaceProviderRef,
-  worktreeEvents,
+import type {
+  CreateExtensionWorkspaceInput,
+  ExtensionWorkspaceCreateInput,
+  WorkspaceProviderRef,
 } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
+import { readableWorkspaces } from "../../../services/personal-history/queries";
 import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
+import { deleteWorkspace } from "../../workspaces/workspace-deletion";
 import { listWorkspaceProviders } from "../../workspaces/workspace-provider-catalog";
-import {
-  assertWorkspaceDeleteAllowed,
-  cancelProviderBackedWorkspace,
-  deleteProviderBackedWorkspace,
-  finalizeWorkspaceDelete,
-} from "../../workspaces/workspace-provider-lifecycle";
+import { cancelProviderBackedWorkspace } from "../../workspaces/workspace-provider-lifecycle";
 import {
   createProviderBackedWorkspace,
   resolveWorkspaceExecutionTarget,
@@ -110,24 +106,6 @@ export const createWorkspacesApi = (
   const projectOptionalWorkspace = async (workspace: WorkspaceRecord | null) =>
     workspace ? projectWorkspace(workspace) : null;
 
-  const deleteWorkspace = async (id: string) => {
-    const workspace = await requireScopedWorkspace(id);
-    assertWorkspaceDeleteAllowed(workspace);
-    const remove = runtimeDeps.deleteProviderBackedWorkspace ?? deleteProviderBackedWorkspace;
-    const removed = await remove(deps, workspace);
-    await finalizeWorkspaceDelete(deps, workspace);
-    if (removed && workspace.root_path) {
-      const { anchors_json: _anchors, ...eventWorkspace } = toExtensionWorkspace(workspace);
-      const fireRemoved = runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync;
-      fireRemoved(deps, workspace.project_id, worktreeEvents.removed, {
-        projectId: workspace.project_id,
-        worktreePath: workspace.root_path,
-        workspace: eventWorkspace,
-        workspaceId: workspace.id,
-      });
-    }
-  };
-
   return {
     listProviders: () => read(() => listWorkspaceProviders(deps, input.projectId)),
     getDefault: async () =>
@@ -135,15 +113,22 @@ export const createWorkspacesApi = (
     list: async () =>
       read(async () =>
         Promise.all(
-          (await read(() => deps.workspaceService.list(input.projectId))).map((workspace) =>
-            projectWorkspace(workspace),
-          ),
+          (await read(() => readableWorkspaces(deps, input.projectId))).map((workspace) => projectWorkspace(workspace)),
         ),
       ),
-    get: async (id) => read(async () => projectOptionalWorkspace(await read(() => getScopedWorkspace(id)))),
+    get: async (id) =>
+      read(async () =>
+        projectOptionalWorkspace(
+          (await read(() => getScopedWorkspace(id))) ??
+            (await deps.personalHistoryService.getWorkspace(id, input.projectId)),
+        ),
+      ),
     getByShorthand: async (shorthand) =>
       read(async () =>
-        projectOptionalWorkspace(await read(() => deps.workspaceService.getByShorthand(input.projectId, shorthand))),
+        projectOptionalWorkspace(
+          (await read(() => deps.workspaceService.getByShorthand(input.projectId, shorthand))) ??
+            (await deps.personalHistoryService.getWorkspaceByShorthand(input.projectId, shorthand)),
+        ),
       ),
     create: async (workspaceInput) => {
       input.signal?.throwIfAborted();
@@ -210,6 +195,6 @@ export const createWorkspacesApi = (
       });
       return { removed };
     },
-    delete: deleteWorkspace,
+    delete: async (id) => deleteWorkspace(deps, await requireScopedWorkspace(id), runtimeDeps),
   };
 };

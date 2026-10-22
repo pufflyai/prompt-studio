@@ -14,11 +14,11 @@ function estimateLabel(eta: PlanSection["eta"]) {
 
 export function MilestoneEta(props: { eta: PlanSection["eta"] }) {
   const { eta } = props;
-  let explanation = "An estimate needs a completed ticket and a recorded work start in this milestone.";
+  let explanation = "An estimate needs a completed ticket and a recorded work start in the project.";
   if (eta) {
     explanation = `${eta.completedComplexity} of ${eta.totalComplexity} complexity points complete.`;
     if (eta.startedAt && eta.remainingMs) {
-      explanation += ` Estimated time remaining at this milestone's pace since ${new Date(eta.startedAt).toLocaleString()}. Includes all milestone tickets and time spent waiting.`;
+      explanation += ` Estimated time remaining for matching milestone tickets at the project's pace since ${new Date(eta.startedAt).toLocaleString()}. Includes time spent waiting.`;
     }
   }
   return (

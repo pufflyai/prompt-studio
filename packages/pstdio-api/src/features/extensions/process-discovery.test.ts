@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import cmdShim from "cmd-shim";
@@ -145,10 +145,21 @@ test.skipIf(process.platform !== "win32")(
 test.skipIf(process.platform !== "win32")("runs a standalone PowerShell script", async () => {
   const { prefix } = fixture("PowerShell Å tools");
   const script = join(prefix, "only.ps1");
-  writeFileSync(script, 'Write-Output "1.2.3"');
-  const result = await createProcessApi().run({ command: [script], timeoutMs: 3000 });
-  expect(result.exitCode, result.stderr).toBe(0);
-  expect(result.stdout.trim()).toBe("1.2.3");
+  const started = join(prefix, "started");
+  writeFileSync(
+    script,
+    `[System.IO.File]::WriteAllText([System.IO.Path]::Combine($PSScriptRoot, 'started'), 'started')\nWrite-Output "1.2.3"`,
+  );
+  const startedAt = performance.now();
+  try {
+    const result = await createProcessApi().run({ command: [script], timeoutMs: 3000 });
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(result.stdout.trim()).toBe("1.2.3");
+  } finally {
+    console.error(
+      `[PowerShell probe] elapsed=${Math.round(performance.now() - startedAt)}ms scriptStarted=${existsSync(started)}`,
+    );
+  }
 });
 
 test("stops a timed-out wrapper and the child it started", async () => {

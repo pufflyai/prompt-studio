@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { scopeRecordStorage } from "pstdio-sync";
-import { extension_kv, extension_storage_journal } from "../../db/schemas.pg";
+import { extension_kv } from "../../db/schemas.pg";
 import type { createExtensionStorageDBService } from "./extension-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 
@@ -24,7 +24,7 @@ afterEach(async () => {
   await close?.();
 });
 
-test("legacy writes and guarded records use one journal and retain the caller's original revision", async () => {
+test("legacy writes and records share one document and accept an earlier caller revision", async () => {
   const scope = { extension_instance_id: instanceAId, scope_type: "project", scope_id: projectAId };
   await svc.setKv({ ...scope, key: "setting", value_json: "legacy", project_id: projectAId });
   const storage = await svc.open({ owner: { workbenchId: projectAId, extensionId: "ext.example" } });
@@ -39,13 +39,12 @@ test("legacy writes and guarded records use one journal and retain the caller's 
         edits: [{ recordId: observed.recordId, expectedRevision: observed.revision, replace: "open caller" }],
       })
     ).status,
-  ).toBe("conflict");
-  expect((await svc.getKv(scope, "setting"))?.value_json).toBe("newer");
-  expect(await db.select().from(extension_storage_journal)).toHaveLength(3);
+  ).toBe("saved-locally");
+  expect((await svc.getKv(scope, "setting"))?.value_json).toBe("open caller");
   expect(await db.select().from(extension_kv)).toHaveLength(0);
 });
 
-test("existing KV rows move atomically into the owner journal without a second writable copy", async () => {
+test("existing KV rows move atomically into the owner document without a second writable copy", async () => {
   const scope = { extension_instance_id: instanceAId, scope_type: "project", scope_id: projectAId };
   const timestamp = nowTimestamp();
   await db.insert(extension_kv).values({
@@ -61,7 +60,6 @@ test("existing KV rows move atomically into the owner journal without a second w
   expect((await records.read(records.id("existing"))).value).toEqual({ saved: true });
   expect((await svc.getKv(scope, "existing"))?.value_json).toEqual({ saved: true });
   expect(await db.select().from(extension_kv)).toHaveLength(0);
-  expect(await db.select().from(extension_storage_journal)).toHaveLength(1);
 });
 
 test("legacy structured writes preserve JSON serialization of optional object and array values", async () => {

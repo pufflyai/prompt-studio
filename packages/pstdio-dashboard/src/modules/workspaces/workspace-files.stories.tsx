@@ -10,12 +10,8 @@ import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
-import { workspaceFileQueryKey } from "@/shared/workspaces/workspace-file-query";
-import {
-  workspaceDiffFileQueryKey,
-  workspaceDiffFilesQueryKey,
-  workspaceFilesQueryKey,
-} from "./data/workspace-queries";
+import { workspaceFileQueryKey, workspaceFilesQueryKey } from "@/shared/workspaces/workspace-file-query";
+import { workspaceDiffFileQueryKey, workspaceDiffFilesQueryKey } from "./data/workspace-queries";
 import { createWorkspacesModule } from "./module";
 
 const WORKSPACE_ID = "PS-118_A5";

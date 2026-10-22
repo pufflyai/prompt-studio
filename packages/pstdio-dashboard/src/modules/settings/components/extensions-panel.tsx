@@ -5,13 +5,14 @@ import { toaster } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useAgents } from "@/shared/agents/use-agents";
+import { useActionError } from "@/shared/components/use-action-error";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import {
   useAddLocalExtensionFolder,
   useInstallMarketplaceExtension,
   useMarketplaceExtensionContributions,
   useProjectExtensionMetadata,
-  useProjectExtensionSync,
   useProjectExtensions,
   useSetProjectExtensionEnabled,
   useUpgradeProjectExtension,
@@ -28,10 +29,12 @@ interface ExtensionsPanelProps {
 
 export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const { projectId, settingsInput } = props;
+  const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
-  useProjectExtensionSync(projectId);
   const extensionsQuery = useProjectExtensions(projectId);
   const metadataQuery = useProjectExtensionMetadata(projectId);
+  const agentsQuery = useAgents(projectId);
+  const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;
   const setEnabled = useSetProjectExtensionEnabled(projectId);
   const upgrade = useUpgradeProjectExtension(projectId);
   const installMarketplace = useInstallMarketplaceExtension(projectId);
@@ -77,6 +80,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   );
 
   const handleInstallMarketplace = async (extension: MarketplaceExtension, force = false) => {
+    clearError();
     setInstallingMarketplaceNames((current) => [...new Set([...current, extension.installName])]);
     try {
       await installMarketplace.mutateAsync({ installName: extension.installName, force });
@@ -90,8 +94,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         setReplacement({ name: extension.displayName, retry: () => handleInstallMarketplace(extension, true) });
         return;
       }
-      toaster.create({
-        type: "error",
+      showError({
         title: t("projectSettings.extensionsPanel.marketplace.installFailed"),
         description: error instanceof Error ? error.message : undefined,
       });
@@ -106,6 +109,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         projectId={projectId}
         extension={selected}
         metadata={metadataQuery.data}
+        agents={agents}
         settingsInput={settingsInput}
         onBack={() => setSelectedInstanceId(null)}
       />
@@ -116,6 +120,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
     return (
       <>
         {replacementDialog}
+        {errorNotice}
         <AvailableExtensionDetail
           extension={selectedMarketplace}
           metadata={marketplaceContributions.data}
@@ -132,12 +137,12 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   }
 
   const handleToggle = (extension: ProjectExtensionInstance, enabled: boolean) => {
+    clearError();
     setEnabled.mutate(
       { instanceId: extension.id, enabled },
       {
         onError: (error) => {
-          toaster.create({
-            type: "error",
+          showError({
             title: t("projectSettings.extensionsPanel.toggleErrorTitle"),
             description: error instanceof Error ? error.message : t("projectSettings.extensionsPanel.toggleError"),
           });
@@ -149,6 +154,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   // Every target is marked up front so each row shows it is queued. The upgrades then run one at a
   // time: each fetches and installs a release, and one failure must not stop the rest.
   const handleUpgradeAll = async (upgradable: ProjectExtensionInstance[]) => {
+    clearError();
     setUpgradingInstanceIds((current) => [...new Set([...current, ...upgradable.map((extension) => extension.id)])]);
     let upgraded = 0;
     const failed: string[] = [];
@@ -169,8 +175,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       });
     }
     if (failed.length > 0) {
-      toaster.create({
-        type: "error",
+      showError({
         title: t("projectSettings.extensionsPanel.upgradeAll.failed", { count: failed.length }),
         description: failed.join("\n"),
       });
@@ -179,6 +184,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
 
   // Each row upgrades on its own, so several upgrades can run at once and each reports its own result.
   const handleUpgrade = async (extension: ProjectExtensionInstance) => {
+    clearError();
     setUpgradingInstanceIds((current) => [...new Set([...current, extension.id])]);
     try {
       const result = await upgrade.mutateAsync({ instanceId: extension.id });
@@ -191,8 +197,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         ),
       });
     } catch (error) {
-      toaster.create({
-        type: "error",
+      showError({
         title: t("projectSettings.extensionsPanel.upgrade.failed"),
         description: error instanceof Error ? error.message : undefined,
       });
@@ -202,6 +207,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   };
 
   const handleDropFolder = async (folder: DroppedExtensionFolder) => {
+    clearError();
     try {
       const { extension } = await addLocalFolder.mutateAsync(folder);
       toaster.create({
@@ -213,8 +219,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         setReplacement({ name: folder.name, retry: () => handleDropFolder({ ...folder, force: true }) });
         return;
       }
-      toaster.create({
-        type: "error",
+      showError({
         title: t("projectSettings.extensionsPanel.dropZone.failed"),
         description: error instanceof Error ? error.message : undefined,
       });
@@ -224,11 +229,14 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   return (
     <>
       {replacementDialog}
+      {errorNotice}
       <ExtensionsPanelView
         extensions={extensions}
         marketplace={marketplace}
         diagnostics={metadataQuery.data?.diagnostics ?? []}
         automations={metadataQuery.data?.automations ?? []}
+        harnesses={metadataQuery.isSuccess ? metadataQuery.data?.harnesses : undefined}
+        agents={agents}
         togglingInstanceId={setEnabled.isPending ? (setEnabled.variables?.instanceId ?? undefined) : undefined}
         upgradingInstanceIds={upgradingInstanceIds}
         installingMarketplaceNames={installingMarketplaceNames}

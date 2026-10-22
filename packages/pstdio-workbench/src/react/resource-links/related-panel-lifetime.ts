@@ -74,7 +74,7 @@ export const createRelatedPanelLifetime = (ctx: WorkbenchModuleContext) => {
       for (const [region, owner] of owners) {
         if (owner !== sourceKey) continue;
         owners.delete(region);
-        ctx.shell.setRegionOpen(region, false);
+        if (ctx.shell.getPanelPolicy(region).canClose) ctx.shell.setRegionOpen(region, false);
       }
     },
     dispose: unsubscribe,

@@ -22,8 +22,10 @@
 clients/landing-page/public
 **/*.log
 
-# Relay infrastructure and local inputs never belong in runtime images.
-infra/relay/terraform
+# Service deployment setup and local inputs never belong in runtime images.
 infra/relay/.env*
-infra/account-manager/.env*
-infra/account-manager/terraform
+services/relay/.env*
+services/account-manager/.env*
+infra/terraform
+infra/relay/compose.yaml
+infra/relay/Caddyfile

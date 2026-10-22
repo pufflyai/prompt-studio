@@ -14,6 +14,7 @@ export const allowedPanelDestinations = (policy: PanelDestinationPolicy) =>
   workbenchPanelRegions.filter(
     (region) =>
       isWorkbenchModePanelAvailable(policy.mode, region) &&
+      policy.mode?.regionSettings?.[region]?.acceptsTabs !== false &&
       (!policy.movableTo || policy.movableTo.includes(region)) &&
       (!policy.allowedRegions || policy.allowedRegions.includes(region)),
   );
@@ -33,5 +34,8 @@ export const panelDestinations = (core: WorkbenchCore, contributionId: string) =
     mode,
     movableTo: declaration?.movableTo,
     allowedRegions: legacyPanel?.allowedRegions,
+  }).filter((region) => {
+    const policy = core.shell.getPanelPolicy(region);
+    return policy.acceptsTabs && (policy.open || policy.canOpen);
   });
 };

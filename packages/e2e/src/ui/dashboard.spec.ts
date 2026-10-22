@@ -43,7 +43,10 @@ const createSessionViaApi = async (
   return (await res.json()) as { id: string; title: string };
 };
 
-test("dashboard keeps project selection open when no project is selected", async ({ page, request }) => {
+test("dashboard keeps project selection open when no project is selected", { tag: "@smoke" }, async ({
+  page,
+  request,
+}) => {
   test.setTimeout(20_000);
   await deleteAllProjects(request);
 
@@ -178,7 +181,7 @@ test("dashboard keeps the project mode and blocks controls behind the project sw
     .toBe(1);
 });
 
-test("dashboard selects the only project on first load", async ({ page, request }) => {
+test("dashboard selects the only project on first load", { tag: "@smoke" }, async ({ page, request }) => {
   test.setTimeout(20_000);
   await deleteAllProjects(request);
   await createProjectViaApi(request, "Single Project Start Test");
@@ -229,7 +232,10 @@ test("project picker stays open when the background is clicked", async ({ page, 
   await expect(picker).toBeVisible();
 });
 
-test("switching projects never reopens the picker while restoring the landing view", async ({ page, request }) => {
+test("switching projects never reopens the picker while restoring the landing view", { tag: "@smoke" }, async ({
+  page,
+  request,
+}) => {
   await deleteAllProjects(request);
   const firstProject = await createProjectViaApi(request, "First Switch Project");
   const secondProject = await createProjectViaApi(request, "Second Switch Project");

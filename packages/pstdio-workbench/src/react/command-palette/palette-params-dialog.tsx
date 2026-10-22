@@ -2,7 +2,6 @@ import { AlertMessage, DeleteConfirmationModal } from "@pstdio/ui";
 import { useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import type { WorkbenchCommandConfirmation } from "../../core/controllers/command-palette/command-palette-controller";
-import { reportUserActionError } from "../../core/shared/run-user-action";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { type CommandParamFieldRenderer, CommandParamsDialog } from "./command-params-dialog";
 
@@ -27,7 +26,6 @@ export const PaletteParamsDialog = (props: PaletteParamsDialogProps) => {
         prepareArgs={(input) =>
           workbench.commands.prepareCommandArgs(input.commandId, input.args, input.context, input.onArgsChange)
         }
-        onRunError={(label, error) => reportUserActionError(workbench, label, error)}
         onClose={() => workbench.commandPalette.clearParams()}
         // The dialog shows a failure itself and stays open, so let the error reach it.
         onRun={async ({ commandId, args, context }) => {

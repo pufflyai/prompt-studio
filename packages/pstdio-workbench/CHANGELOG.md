@@ -1,5 +1,35 @@
 # @pstdio/workbench
 
+## 0.45.0
+
+_2026-10-22_
+
+### Minor Changes
+
+- 57ac840: Let extensions read the Cloud account, devices and each project's sync status, and sign in, sign out or change which projects sync.
+- c29a2bf: Release unused session resources after thirty minutes while preserving open tabs and active work.
+- 9286f4a: Share harness controls and native resource actions with webviews and preserve popover keyboard focus.
+- e7f8c90: Enforce independent mode panel permissions and share accessible panel controls across hosts.
+
+### Patch Changes
+
+- d63201a: Allow panel placement changes with valid move actions and clear insertion targets, and pin tabs dropped onto closed panels.
+- d15c674: Render sortable subnavigation lists by visible rows, show declared structure before loading contents, defer row menus and editor mounting, and return session launches before agent startup finishes while preserving requests for recovery.
+- f70dd3f: Present Main fullscreen while preserving the global panel layout and live views.
+- aad171f: Resolve resource identifiers before running commands without a parameter form.
+- 63d2424: Update ticket properties immediately while changes save in the background.
+- 3d230ff: Fix theme selection from the command palette.
+- bf68de5: Keep system errors in a scrollable status-bar widget with a count tag, keep action failures local, and align compact ghost alert controls with semantic interaction colors.
+- 07028df: Keep desktop and browser panel controls together at the right edge and separate Windows and Ubuntu window controls.
+- 2528225: Keep deleted resources closed and discard stale related-opening results.
+- 9a6b0d2: Open large Planner boards faster after a restart, show loading placeholders until views and field labels are ready, and keep visible navigation mounted during refreshes.
+- b7a29c2: Share open-tab inventory without retaining replaced default pages, save only customized layouts, index idle deadlines, cache session lists by their source tables, and stop retrying rejected retention claims while cleaning up lost responses.
+- b23436c: Group the desktop maximize button with the top-bar panel controls.
+- e7f8c90: Restore web panel controls and fix extension sessions, required panels, status widget sizing, tab menu dismissal, and resource actions.
+- 2e021e3: Share local document edits across extension views before saving finishes.
+- 1072010: Preserve retained views and menu focus, finish navigation rendering, prevent extension discovery from undoing uninstall, and wait for extension command exit on cancellation.
+- c2807ac: Load tickets by ID without waiting for editor modules or reloading hidden boards.
+
 ## 0.44.0
 
 _2026-10-18_

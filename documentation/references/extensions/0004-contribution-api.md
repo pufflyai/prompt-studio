@@ -147,6 +147,7 @@ const files = defineView({
   title: "Files",
   body: {
     kind: "tree",
+    structure: [{ id: "files", label: "Files" }],
     body: async () => [{ id: "files", label: "Files", nodes: [] }],
   },
 });
@@ -169,7 +170,11 @@ export default defineExtension({
 content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
 node context.
 
+Optional `structure` declares body section IDs, labels, and collapse and visibility settings in view metadata. The host renders this layout synchronously, then starts content reads after that render commits. Pending sections show a spinner rather than an empty result. The callback's final sections replace the structure, including sections that turn out to be empty or absent. Use the same IDs in both declarations so expansion and customization stay attached to the section. A structure section can include `resourceNode: { id, icon }` to show the bound resource using its already-known label without a callback.
+
 Navigation trees default to `resourceScope: "selection"`, so selecting a different resource starts a new read. Use `resourceScope: "project"` when the tree reads project data independently of the selected resource, such as a shared notes list. Its callbacks receive the project and no resource; selection changes keep its rows visible. Declared refresh events still update its data. The owner still controls where the tree appears.
+
+Kanban query rows can include a page `target`. Clicking such a row opens that target immediately, without an activation callback. Include any conditional destination in the query result, using the data already loaded for that row. A target takes precedence over `onRowActivate`; rows without a target retain their callback behavior. Targets and their resources are scoped to the contributing extension and project.
 
 Set `selected: true` on the current node when several rows share a resource, such as
 documents within one ticket. The declaration stays on the node when trees are combined

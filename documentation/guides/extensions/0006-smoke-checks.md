@@ -45,3 +45,37 @@ A pass covers registration, the selected pages that need no resource, mounted we
 Commands, editors for a specific resource, settings, optional tabs, and behavior that needs clicks require your own tests. Two items may share a display label. An extension without eligible pages passes with zero pages visited. The command never creates resources or runs arbitrary commands.
 
 Chromium support follows Playwright 1.60.0: macOS on arm64 and x64, Windows x64, and supported Linux distributions on x64 and arm64. The browser support loads only for this command.
+
+## Test offline edits on two devices
+
+`createMemoryStorageDevices` from `@pstdio/sdk/testing` creates two offline storage APIs for one extension. It is on `main` and ships after SDK 0.44.0. Both devices start from the same seed. Pass either storage API to your command's test context, finish its writes, then call `merge()`:
+
+```ts
+import { expect, test } from "bun:test";
+import { createMemoryStorageDevices } from "@pstdio/sdk/testing";
+
+test("offline changes keep the title and status", async () => {
+  const pair = await createMemoryStorageDevices();
+  const [first, second] = pair.devices;
+  const save = (storage: typeof first, title: string, status: string) =>
+    storage.records.commit({
+      operationId: crypto.randomUUID(),
+      edits: [{ recordId: "ticket", replace: { title, status } }],
+    });
+
+  await save(first, "Before", "ready");
+  await pair.merge();
+  await save(first, "After", "ready");
+  await save(second, "Before", "done");
+  expect(await pair.merge()).toEqual([]);
+  for (const storage of pair.devices) {
+    expect((await storage.records.read("ticket")).value).toEqual({ title: "After", status: "done" });
+  }
+});
+```
+
+The helper uses the product's CRDT merge code. It merges records, scoped values, deprecated collections, and migration versions. Objects merge by field, lists match items by the product's identity rules, and multiline strings merge as text. Call `merge()` again for another offline round. Repeated merges without edits return an empty report.
+
+Each `MemoryStorageReplacement` in the report contains `recordId`, `path`, `kept`, and `replaced`. For competing title edits, the path is `["value", "title"]`; `kept` is the value both devices now read. The winner follows Yjs, so do not assume the first or latest call wins. `undefined` means a removed value; `null` is a stored value. List path positions follow the merged list, with removed items appended in identity order for reporting. Asset references are reported as whole values.
+
+This helper tests document data without a relay. Asset bytes and deprecated file blobs stay local to each device. Test attachment transport separately.

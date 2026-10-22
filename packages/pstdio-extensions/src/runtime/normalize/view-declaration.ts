@@ -1,4 +1,9 @@
-import { controlValuesSchema, localizableStringSchema, packageAssetDescriptorSchema } from "pstdio-api-contracts";
+import {
+  controlValuesSchema,
+  extensionTreeRendererRecordSchema,
+  localizableStringSchema,
+  packageAssetDescriptorSchema,
+} from "pstdio-api-contracts";
 import { z } from "zod";
 import { callbackSchema } from "./composition-declarations";
 import { localRefSchema } from "./navigation-declaration";
@@ -26,6 +31,7 @@ const body = z.discriminatedUnion("kind", [
     .object({
       kind: z.literal("tree"),
       ...native,
+      structure: extensionTreeRendererRecordSchema.shape.structure,
       body: callbackSchema,
       header: callbackSchema.optional(),
       footer: callbackSchema.optional(),

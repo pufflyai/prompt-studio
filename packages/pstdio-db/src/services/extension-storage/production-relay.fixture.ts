@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { CreateBucketCommand, DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { SQL } from "bun";
 import { createRelayAssets, createRelayStorage, migrateRelayStorage } from "pstdio-relay";
@@ -52,7 +52,7 @@ export const createProductionRelayServices = async (databaseUrl: string, objectE
     close: () => admin.destroy(),
   };
   await objects.initialize();
-  await migrateRelayStorage(databaseUrl, resolve(import.meta.dir, "../../../../../infra/relay/drizzle"));
+  await migrateRelayStorage(databaseUrl, fileURLToPath(new URL("../drizzle/", import.meta.resolve("pstdio-relay"))));
   const storage = createRelayStorage(databaseUrl, assets);
   await faults`CREATE TABLE relay_test_commit_failures (operation_id text PRIMARY KEY)`;
   await faults`CREATE FUNCTION relay_test_fail_commit() RETURNS trigger LANGUAGE plpgsql AS $$

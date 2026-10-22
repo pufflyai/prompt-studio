@@ -69,12 +69,27 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
     };
   };
 
+  const findRevisions = async (id: string) => {
+    if (!(await artifacts.get(id))) return [];
+    return (await records.list()).filter((item) => item.artifactId === id).sort(newestFirst);
+  };
+
   const revisions = async (url: string) => {
-    const id = artifactIdFromUrl(projectId, url);
-    if (!(await artifacts.get(id))) throw new Error("Artifact not found.");
-    const items = (await records.list()).filter((item) => item.artifactId === id).sort(newestFirst);
+    const items = await findRevisions(artifactIdFromUrl(projectId, url));
     if (!items.length) throw new Error("Artifact not found.");
     return Promise.all(items.map(summary));
+  };
+
+  const resolve = async (id: string) => {
+    const current = (await findRevisions(id))[0];
+    return current ? (await summary(current)).resource : null;
+  };
+
+  // A snapshot of any revision opens its artifact with the current name.
+  const resolveRevision = async (revisionId: string) => {
+    const revision = await records.get(revisionId);
+    const resource = revision ? await resolve(revision.artifactId) : null;
+    return resource ? { resource, target: artifactTarget(projectId, resource.id, resource.label) } : null;
   };
 
   const read = async (url: string, revisionId?: string) => {
@@ -154,7 +169,7 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
     return { artifactId: id };
   };
 
-  return { publish, read, list, revisions, rename, remove };
+  return { publish, read, list, revisions, resolve, resolveRevision, rename, remove };
 };
 
 export type ArtifactSummary = Awaited<ReturnType<ReturnType<typeof createArtifactService>["publish"]>>;

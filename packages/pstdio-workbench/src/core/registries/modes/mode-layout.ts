@@ -4,9 +4,11 @@ import {
   type WorkbenchLayout,
   type WorkbenchPanelRegion,
   type WorkbenchRegion,
+  type WorkbenchRegionSettings,
   type WorkbenchWidgetPlacement,
   workbenchPanelRegions,
 } from "../layout/layout-model";
+import { defaultArrangement, resolveArrangement } from "../layout/panel-positions";
 import type { WorkbenchModeActivationContext, WorkbenchModeContribution } from "./mode-registry-types";
 
 const modePanelRegions = {
@@ -17,7 +19,8 @@ const modePanelRegions = {
 
 const allModeRegions = Object.values(modePanelRegions).flat();
 
-export const panelsForMode = (mode: WorkbenchModeContribution) => mode.panels ?? workbenchPanelRegions;
+export const panelsForMode = (mode: WorkbenchModeContribution) =>
+  mode.panels ? [...new Set(["main" as const, ...mode.panels])] : workbenchPanelRegions;
 
 export const getWorkbenchModePanelForRegion = (region: WorkbenchRegion) =>
   (Object.keys(modePanelRegions) as WorkbenchPanelRegion[]).find((panel) =>
@@ -92,6 +95,34 @@ export const applyModePanelAvailability = (layout: WorkbenchLayout, panels: read
   return clearRegions(layout, unavailableRegions);
 };
 
+// Availability and close permissions constrain restored layouts as well as commands.
+export const applyModePanelPolicy = (
+  layout: WorkbenchLayout,
+  mode: WorkbenchModeContribution | undefined,
+  getSettings: (region: WorkbenchRegion) => WorkbenchRegionSettings | undefined,
+) => {
+  let next = mode ? applyModePanelAvailability(layout, panelsForMode(mode)) : layout;
+  for (const region of ["side", "secondary"] as const) {
+    if (
+      isWorkbenchModePanelAvailable(mode, region) &&
+      getSettings(region)?.canClose === false &&
+      !next.regions[region].visible
+    ) {
+      next = { ...next, regions: { ...next.regions, [region]: { ...next.regions[region], visible: true } } };
+    }
+  }
+  if (!next.arrangement) return next;
+  const arrangement = resolveArrangement(next.arrangement);
+  for (const region of ["side", "sidenav", "secondary", "activity"] as const) {
+    if (getSettings(region)?.movable === false || (region === "secondary" && getSettings("main")?.movable === false))
+      Object.assign(arrangement, { [region]: defaultArrangement[region] });
+  }
+  const unchanged = (Object.keys(arrangement) as (keyof typeof arrangement)[]).every(
+    (region) => arrangement[region] === next.arrangement?.[region],
+  );
+  return unchanged ? next : { ...next, arrangement };
+};
+
 export const restoreUnscopedModeLayout = (
   current: WorkbenchLayout,
   saved: WorkbenchLayout | undefined,
@@ -102,12 +133,12 @@ export const restoreUnscopedModeLayout = (
     const cleared = clearRegions(current, allModeRegions);
     const regions = { ...cleared.regions };
     for (const regionId of allModeRegions) regions[regionId] = defaults.regions[regionId];
-    return applyModePanelAvailability({ ...cleared, regions }, panels);
+    return applyModePanelAvailability({ ...cleared, arrangement: defaults.arrangement, regions }, panels);
   }
 
   const regions = { ...current.regions };
   for (const regionId of allModeRegions) regions[regionId] = saved.regions[regionId];
-  const merged = applyModePanelAvailability({ ...current, regions }, panels);
+  const merged = applyModePanelAvailability({ ...current, arrangement: saved.arrangement, regions }, panels);
   const savedActive = placementById(merged, saved.activeWidgetId);
   const currentActive = placementById(merged, current.activeWidgetId);
   return {

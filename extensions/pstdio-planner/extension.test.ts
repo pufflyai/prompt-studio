@@ -269,7 +269,7 @@ describe("pstdio planner workspace contributions", () => {
     expect(tickets.body.defaultSettings).toMatchObject({
       viewMode: "board",
       columnGrouping: "status",
-      displayProperties: ["id", "workspace", "type", "priority"],
+      displayProperties: ["id", "workspace", "type", "priority", "needsAttention"],
     });
     expect(tickets.body.onColumnAction).toBeFunction();
     expect(tickets.body.onRowActivate).toBeFunction();
