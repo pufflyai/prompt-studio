@@ -1,4 +1,13 @@
+export { runBinaryTask } from "./binary-background";
 export { captureCheckpoint } from "./checkpoint-capture";
+export {
+  acceptDocumentCheckpoint,
+  applyDocumentBinaryUpdate,
+  documentRevision,
+  exportDocumentBinary,
+  snapshotDocumentBinary,
+  trackDocumentBinary,
+} from "./document-binary";
 export { type DocumentHistory, documentHistory } from "./document-history";
 export { type DocumentSnapshot, findDocumentReplacements, snapshotDocumentRecords } from "./document-replacements";
 export { createDocumentStorage } from "./document-storage";

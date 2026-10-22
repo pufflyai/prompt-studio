@@ -1,4 +1,5 @@
 import * as Y from "yjs";
+import { exportDocumentBinary, trackDocumentBinary } from "./document-binary";
 import { type DocumentStore, memoryDocumentState } from "./document-types";
 import type { StorageOwner } from "./types";
 
@@ -11,7 +12,9 @@ export async function captureCheckpoint<T>(
 ) {
   const fork = new Y.Doc();
   const baseline = Y.encodeStateVector(document);
-  Y.applyUpdate(fork, Y.encodeStateAsUpdate(document));
+  const update = exportDocumentBinary(document);
+  Y.applyUpdate(fork, update);
+  trackDocumentBinary(fork, update);
   const state = memoryDocumentState(fork);
   const store: DocumentStore = {
     observer,

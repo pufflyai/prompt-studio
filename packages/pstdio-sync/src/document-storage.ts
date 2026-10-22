@@ -1,9 +1,11 @@
 import { fingerprint, type StorageRecord } from "pstdio-sync-contracts";
 import * as Y from "yjs";
+import { runBinaryTask } from "./binary-background";
 import { captureCheckpoint } from "./checkpoint-capture";
 import { migrationAuthor } from "./document-author";
+import { exportDocumentBinary } from "./document-binary";
 import { applyDocumentEdit } from "./document-edits";
-import type { DocumentStore } from "./document-types";
+import { applyDocumentUpdate, type DocumentStore } from "./document-types";
 import { validateDocumentGroup } from "./document-validation";
 import { readValue } from "./document-values";
 import type { AssetStore, GroupCommit, ResolutionCommit, StorageOwner } from "./types";
@@ -52,13 +54,20 @@ export const createDocumentStorage = (input: { owner: StorageOwner; store: Docum
       store.transaction(owner, async ({ document }) => {
         document.getMap("data-migrations").set(JSON.stringify([scope, version]), true);
       }),
-    exportUpdate: () => store.transaction(owner, async ({ document }) => Y.encodeStateAsUpdate(document)),
+    exportUpdate: async () => {
+      if (store.snapshot) {
+        return (
+          await runBinaryTask(async () => ({ kind: "checkpoint", updates: (await store.snapshot!(owner)).updates }))
+        ).state;
+      }
+      return store.transaction(owner, async ({ document }) => exportDocumentBinary(document).slice());
+    },
     applyUpdate: (update: Uint8Array) =>
-      store.transaction(owner, async ({ document }) => {
-        Y.applyUpdate(document, update);
+      store.transaction(owner, async (state) => {
+        applyDocumentUpdate(state, update);
       }),
     capture: async <T>(action: (store: DocumentStore) => Promise<T>) => {
-      const update = await store.transaction(owner, async ({ document }) => Y.encodeStateAsUpdate(document));
+      const update = await store.transaction(owner, async ({ document }) => exportDocumentBinary(document));
       const snapshot = new Y.Doc();
       Y.applyUpdate(snapshot, update);
       // Handlers may stage assets in the same database. Release its lock before running them.

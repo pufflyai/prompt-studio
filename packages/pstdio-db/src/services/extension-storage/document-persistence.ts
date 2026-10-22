@@ -1,5 +1,11 @@
 import { and, eq } from "drizzle-orm";
-import { type DocumentState, documentHistory, type StorageOwner } from "pstdio-sync";
+import {
+  applyDocumentBinaryUpdate,
+  type DocumentState,
+  documentHistory,
+  type StorageOwner,
+  trackDocumentBinary,
+} from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_operations, storage_document_updates, storage_documents } from "../../db/schemas.pg";
@@ -13,19 +19,19 @@ export interface DocumentAddress {
   extension_id: string;
   document_id: string;
 }
-const documentWhere = (address: DocumentAddress) =>
+export const documentWhere = (address: DocumentAddress) =>
   and(
     eq(storage_documents.workbench_id, address.workbench_id),
     eq(storage_documents.extension_id, address.extension_id),
     eq(storage_documents.document_id, address.document_id),
   );
-const updatesWhere = (address: DocumentAddress) =>
+export const updatesWhere = (address: DocumentAddress) =>
   and(
     eq(storage_document_updates.workbench_id, address.workbench_id),
     eq(storage_document_updates.extension_id, address.extension_id),
     eq(storage_document_updates.document_id, address.document_id),
   );
-const foldEvery = 128;
+export const foldEvery = 128;
 
 const loadDocument = async (
   tx: Transaction,
@@ -61,6 +67,7 @@ const loadDocument = async (
     .where(updatesWhere(address))
     .orderBy(storage_document_updates.revision);
   for (const update of updates) Y.applyUpdate(document, update.update);
+  trackDocumentBinary(document, [saved.state, ...updates.map(({ update }) => update)]);
   return { row, document };
 };
 
@@ -99,18 +106,12 @@ const appendUpdates = async (
   tx: Transaction,
   address: DocumentAddress,
   row: Pick<typeof storage_documents.$inferSelect, "revision" | "folded_revision">,
-  document: Y.Doc,
   updates: Uint8Array[],
 ) => {
   if (!updates.length) return row.revision;
   const revision = row.revision + 1;
   await tx.insert(storage_document_updates).values({ ...address, revision, update: Y.mergeUpdates(updates) });
-  const fold = revision - row.folded_revision >= foldEvery;
-  await tx
-    .update(storage_documents)
-    .set({ revision, ...(fold && { state: Y.encodeStateAsUpdate(document), folded_revision: revision }) })
-    .where(documentWhere(address));
-  if (fold) await tx.delete(storage_document_updates).where(updatesWhere(address));
+  await tx.update(storage_documents).set({ revision }).where(documentWhere(address));
   return revision;
 };
 
@@ -136,14 +137,20 @@ export const runDocumentTransaction = async <T>(
   try {
     const value = await action({
       document,
+      revision: row.revision,
+      applyUpdate: (update) => {
+        // An accepted update can be buffered by Yjs without emitting an update event.
+        updates.push(update);
+        applyDocumentBinaryUpdate(document, update);
+      },
       migrationSeed: migration?.key,
       migrationHistory: migration?.histories.get(key),
       operation: operations.operation,
       remember: operations.remember,
     });
     await operations.persist();
-    const revision = await appendUpdates(tx, address, row, document, updates);
-    return { value, revision, document, changed: updates.length > 0 };
+    const revision = await appendUpdates(tx, address, row, updates);
+    return { value, revision, document, changed: updates.length > 0, foldedRevision: row.folded_revision };
   } catch (error) {
     if (document !== input.cached?.document) document.destroy();
     throw error;

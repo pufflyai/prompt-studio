@@ -17,6 +17,7 @@ const read = defineCommand({
     return {
       note: await records.read(records.id("note")),
       caption: await records.read(records.id("caption")),
+      checkpoint: await records.read(records.id("unrelated-129")),
     };
   },
 });
@@ -56,7 +57,7 @@ const checkReadCache = defineCommand({
     const records = ctx.storage.records;
     const before = await records.read(records.id("caption"));
     await ctx.storage.set("fixed", { saved: true });
-    for (let index = 0; index < 20; index++) {
+    for (let index = 0; index < 130; index++) {
       const recordId = records.id(`unrelated-${index}`);
       await records.commit({
         operationId: `unrelated-${index}`,

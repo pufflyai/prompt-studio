@@ -100,6 +100,8 @@ export const registerDocumentSyncSmokeTests = () =>
         await waitFor(() => peer.states() > 0);
         await waitFor(async () => (await syncState()) === "synced");
         expect(await client.account.projectSyncStatus(project.id)).toEqual({ state: "synced", offlineReady: true });
+        for (let repeat = 0; repeat < 8; repeat++)
+          expect(await client.account.projectSyncStatus(project.id)).toEqual({ state: "synced", offlineReady: true });
         peer.corrupt();
         const quarantine = join(root, "state", "sync-quarantine");
         await waitFor(async () => (await readdir(quarantine).catch(() => [])).some((file) => file.endsWith(".json")));

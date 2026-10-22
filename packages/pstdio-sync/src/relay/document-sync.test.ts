@@ -408,3 +408,32 @@ test("missing asset bytes keep the first download incomplete and a local draft s
     remote.destroy();
   }
 });
+
+test("unchanged durable status reads only revision metadata without opening the owner", async () => {
+  const f = relayFixture();
+  let revision = 0;
+  const seen: (number | undefined)[] = [];
+  const sync = createDocumentSync({
+    owner,
+    space,
+    documentId,
+    relay: f.relay,
+    quarantine: async () => {},
+    store: {
+      snapshot: async (_owner, knownRevision) => {
+        seen.push(knownRevision);
+        return { revision, updates: knownRevision === revision ? [] : [new Uint8Array([0, 0])] };
+      },
+      transaction: async () => {
+        throw new Error("Status hydrated the owner");
+      },
+    },
+  });
+  expect((await sync.status()).pending).toBe(false);
+  expect((await sync.status()).pending).toBe(false);
+  revision++;
+  expect((await sync.status()).pending).toBe(false);
+  expect((await sync.status()).pending).toBe(false);
+  expect(seen).toEqual([undefined, 0, 0, 1]);
+  sync.close();
+});

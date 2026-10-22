@@ -12,10 +12,12 @@ import type { DbClient } from "../../db/connection.pglite";
 import { storage_documents } from "../../db/schemas.pg";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
-import { runDocumentTransaction } from "./document-persistence";
+import { createDocumentCheckpoints, readDocumentSnapshot } from "./document-checkpoints";
+import { foldEvery, runDocumentTransaction } from "./document-persistence";
 
 export const createDocumentStorageDBService = (db: DbClient, observer?: StorageObserver) => {
   const cache = createDocumentCache();
+  const checkpoints = createDocumentCheckpoints(db);
   const listeners = new Set<(owner: StorageOwner) => void>();
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
   const getEnvironment = () => (environment ??= createEnvironmentDBService(db).get());
@@ -30,6 +32,7 @@ export const createDocumentStorageDBService = (db: DbClient, observer?: StorageO
         );
         cache.publish(key, result);
         if (result.changed) for (const listener of listeners) listener(owner);
+        if (result.revision - result.foldedRevision >= foldEvery) checkpoints.schedule(address, result);
         return result.value;
       } catch (error) {
         cache.discard(key);
@@ -39,12 +42,58 @@ export const createDocumentStorageDBService = (db: DbClient, observer?: StorageO
     return transaction;
   };
   const transaction = transactionFor("records");
+  const snapshotFor =
+    (documentId: string): NonNullable<DocumentStore["snapshot"]> =>
+    async (owner, knownRevision) => {
+      const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: documentId };
+      let snapshot = await readDocumentSnapshot(db, address, knownRevision);
+      if (!snapshot) {
+        await transactionFor(documentId)(owner, async () => {});
+        snapshot = await readDocumentSnapshot(db, address);
+      }
+      return snapshot!;
+    };
+  const snapshot = snapshotFor("records");
+  const revisionFor = (documentId: string) => async (owner: StorageOwner) => {
+    const [row] = await db
+      .select({ revision: storage_documents.revision })
+      .from(storage_documents)
+      .where(
+        and(
+          eq(storage_documents.workbench_id, owner.workbenchId),
+          eq(storage_documents.extension_id, owner.extensionId),
+          eq(storage_documents.document_id, documentId),
+        ),
+      );
+    if (row) return row.revision;
+    await transactionFor(documentId)(owner, async () => {});
+    return (await snapshotFor(documentId)(owner)).revision;
+  };
+  const receiveFor =
+    (documentId: string) => (owner: StorageOwner, expected: number, update: Uint8Array, signal?: AbortSignal) =>
+      transactionFor(documentId)(owner, async (state) => {
+        signal?.throwIfAborted();
+        if (state.revision !== expected) return false;
+        state.applyUpdate!(update);
+        return true;
+      });
+  const revision = revisionFor("records");
+  const receive = receiveFor("records");
   return {
     transaction,
+    snapshot,
+    revision,
+    receive,
+    flushCheckpoints: checkpoints.flush,
     observer,
     getEnvironment,
     documents: {
-      open: (documentId: string) => ({ transaction: transactionFor(documentId) }),
+      open: (documentId: string) => ({
+        transaction: transactionFor(documentId),
+        snapshot: snapshotFor(documentId),
+        revision: revisionFor(documentId),
+        receive: receiveFor(documentId),
+      }),
       list: async (owner: StorageOwner) => {
         const local = await db
           .select({ id: storage_documents.document_id })
@@ -86,12 +135,15 @@ export const createDocumentStorageDBService = (db: DbClient, observer?: StorageO
       };
     },
     open(input: { owner: StorageOwner; assets?: AssetStore }) {
-      return createDocumentStorage({ ...input, store: { transaction, observer } });
+      return createDocumentStorage({ ...input, store: { transaction, snapshot, revision, receive, observer } });
     },
     openTextDocument(input: { owner: StorageOwner; fileId: string }) {
       return createTextDocumentStorage({
         owner: input.owner,
-        store: { transaction: transactionFor(JSON.stringify(["text-file", input.fileId])) },
+        store: {
+          transaction: transactionFor(JSON.stringify(["text-file", input.fileId])),
+          snapshot: snapshotFor(JSON.stringify(["text-file", input.fileId])),
+        },
       });
     },
   };
