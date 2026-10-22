@@ -1,3 +1,4 @@
+import type { ProjectSyncStatus } from "../project-sync";
 import { workbenchResourceKinds } from "./builtin-refs";
 import { eventRef } from "./refs";
 import { defineSlot } from "./slots";
@@ -96,6 +97,11 @@ export const workspaceSlots = {
 
 export const projectEvents = {
   opened: hostEventRef<{ projectId: string }>("project.opened"),
+};
+
+export const accountEvents = {
+  /** The project's derived sync status changed. The host sends it only when the status differs. */
+  projectSyncChanged: hostEventRef<ProjectSyncStatus & { projectId: string }>("account.project-sync.changed"),
 };
 
 /** View dependencies delivered by the host when synced project data changes. */

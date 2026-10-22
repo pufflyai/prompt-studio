@@ -3,7 +3,11 @@ import { join } from "node:path";
 import type { AgentAvailabilityType } from "pstdio-api-contracts";
 import { type ExtensionConnectionsApi, isLocalizedString } from "pstdio-api-contracts/extension-kernel";
 import type { HarnessContextFactory, HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
-import { createHarnessRegistry } from "pstdio-api-runtime-host";
+import {
+  createHarnessRegistry,
+  createHarnessSessionResources,
+  type HarnessSessionResources,
+} from "pstdio-api-runtime-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { apiLogger } from "../../lib/logger";
 import { installDefaultExtensions } from "../extensions/default-extensions";
@@ -22,6 +26,7 @@ export type HarnessScopeOptions = {
 };
 
 export type HarnessRegistryService = {
+  retainSession(sessionId: string): () => void;
   list(options?: HarnessScopeOptions): Promise<HarnessHandle[]>;
   get(id: string, options?: HarnessScopeOptions): Promise<HarnessHandle | null>;
   /** Drop the host-wide registry so the next call rebuilds. Call when extension sources reload in place. */
@@ -76,6 +81,7 @@ export const createHarnessRegistryService = (input: {
   /** Clock for the detect() TTL memo; defaults to Date.now. */
   now?: () => number;
   detectCacheTtlMs?: number;
+  sessionResources?: HarnessSessionResources;
   createConnectionsApi?: (scope: { projectId: string; extensionId: string }) => ExtensionConnectionsApi;
 }): HarnessRegistryService => {
   const unavailableConnections: ExtensionConnectionsApi = {
@@ -132,7 +138,14 @@ export const createHarnessRegistryService = (input: {
     return lifecycle.get(runtime.harnesses);
   };
 
-  const lifecycle = createHarnessRegistryLifecycle((records) => createHarnessRegistry(records, buildContext));
+  const resources =
+    input.sessionResources ??
+    createHarnessSessionResources({
+      onError: (err) => apiLogger.error({ err, event: "harness.session_cleanup.error" }, "Idle session cleanup failed"),
+    });
+  const lifecycle = createHarnessRegistryLifecycle((records) =>
+    createHarnessRegistry(records, buildContext, resources),
+  );
   let closed = false;
   let resolutionGeneration = 0;
   const ensureActive = () => {
@@ -299,6 +312,7 @@ export const createHarnessRegistryService = (input: {
   });
 
   return {
+    retainSession: resources.retain,
     list: async (options) => (await resolveRegistry(options)).list(),
     get: async (id, options) => (await resolveRegistry(options)).get(id),
     invalidate: () => {

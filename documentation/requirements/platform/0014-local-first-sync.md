@@ -42,14 +42,14 @@ anything.
 | Update | An encrypted change to one document, produced by a client. |
 | Latest state | An encrypted copy of one document's full current state, uploaded by a client. |
 | Blob | An encrypted file stored by the relay, such as an image or an extension package. |
-| Personal space | The documents that belong to one user inside one cloud project, such as their sessions. Only that user's devices get them. |
+| Private project data | The documents that belong to one user inside one cloud project: their workspaces, sessions and transcripts. Only that user's devices get them. The code calls this the personal space. |
 
 ## Requirements
 
 ### Data lives on the clients
 
 - R1. Every device keeps a full local copy of every cloud project it can access and of
-  its user's personal spaces, including file contents. It works fully offline.
+  its user's private project data, including file contents. It works fully offline.
 - R2. Clients merge changes with the CRDT, following the shape of the data. Extensions
   do not declare merge rules, and a save does not need to say what changed: the client
   compares the saved value with the current one.
@@ -106,7 +106,7 @@ anything.
 - R8. Clients encrypt every update, latest state, blob, live message and remote command
   before it leaves the device.
 - R9. The relay sees only what it needs to route and store data: project ID, document
-  ID, personal space owner, sending device, sizes, times, update IDs, sequence numbers
+  ID, owner of private project data, sending device, sizes, times, update IDs, sequence numbers
   and blob IDs. Document and blob IDs are random and do not reveal names or content.
 - R10. The relay does not merge, read content, resolve conflicts, run extension code or
   index anything.
@@ -119,8 +119,8 @@ anything.
   never holds keys. The account manager and the relay are separate services with
   separate storage. Known limit: someone who controls both services can read data. A
   stronger key design, for example with passkeys, may replace this later.
-- R13. Each cloud project has a project key that all members' devices get. Each personal
-  space has its own key that only that user's devices get.
+- R13. Each cloud project has a project key that all members' devices get. Each user's private
+  project data has its own key that only that user's devices get.
 - R14. The account manager backs up keys separately from relay data. Losing the key
   store must not make relay data unreadable.
 - R15. Removing a member or device creates a new key for future data. Remaining devices
@@ -159,7 +159,7 @@ anything.
 ### What the relay enforces
 
 - R26. Only devices of a project's members can read or write its documents and blobs.
-  Only a user's own devices can read or write that user's personal spaces.
+  Only a user's own devices can read or write that user's private project data.
 - R27. The relay ignores an update it has already stored, using the update ID.
 - R28. The relay limits update size, blob size, storage per account and request rate.
 - R29. A client and the relay agree on a protocol version when they connect. A client
@@ -208,8 +208,8 @@ anything.
 
 ### Sessions and remote work
 
-- R38. Each device writes its workspaces, sessions and transcripts to the user's
-  personal space in that project. Each session transcript is its own document, so one
+- R38. Each device writes its workspaces, sessions and transcripts as the user's
+  private project data in that project. Each session transcript is its own document, so one
   long session does not make other documents large. Every device of that user can read
   them, even when the device that ran them is offline.
 - R39. From any of their devices, a user can create a workspace, start a session, send a
@@ -236,8 +236,9 @@ anything.
 
 ### Recovery
 
-- R46. After resetting or replacing a device, a user logs in with Google and gets every
-  cloud project and personal space back.
+- R46. After resetting or replacing a device, or installing Prompt Studio on a new one, a
+  user logs in with Google and gets every cloud project back. Their private project data
+  comes back too once it syncs in phase 2.
 - R53. Each device keeps a daily snapshot of every cloud document for 30 days. A person
   can restore a project, or one extension's data in it, to a snapshot. A restore is a
   normal edit, so it syncs to every device.
@@ -254,12 +255,12 @@ anything.
 | Phase | Includes | Requirements |
 | --- | --- | --- |
 | 1. One user, many devices | Encrypted CRDT sync of project data and files, latest state backup, Google login connects everything, early access, device list, sync state, Cloud UI as an extension, extension and automation sync, reset recovery | R1 to R31, R34, R35, R37 (devices), R43 to R56 |
-| 2. Sessions follow you | Personal spaces, session and transcript sync, remote commands, cloud devices | R32, R33, R38 to R42 |
+| 2. Sessions follow you | Private project data (workspace, session and transcript sync), remote commands, cloud devices | R32, R33, R38 to R42 |
 | 3. Teams | Team accounts, members, per-project membership, member removal | R36, R37 (members) |
 
 Phase 1 replaces the v0.1 release defined in PS-736. It starts from the current code
 on `main`, not from scratch. See [Impact on current code](#impact-on-current-code).
-Phase 1 builds the project and personal key split (R13) from the start, so phases 2 and
+Phase 1 builds the split between project keys and private-data keys (R13) from the start, so phases 2 and
 3 do not change the storage format.
 
 ## Non-goals
@@ -384,4 +385,5 @@ These came from the Cloud and Workspaces design review. The designs are in PR #1
 - The Cloud popover has no sync switch. Making a project local is account-wide and lives in Cloud settings (R35).
 - The popover lists devices only while the project syncs and the device is online.
 - A project records its git remote when it becomes a cloud project, so a new device can offer to clone it when it first needs files (R34, PS-825).
-- A bundled Workspaces extension shows the user's workspaces grouped by the device they live on, using the personal-space data from R38 (PS-876).
+- A bundled Workspaces extension shows the user's workspaces grouped by the device they live on, using the private project data from R38 (PS-876).
+- "Personal space" is now called "private project data" in the product, docs and tickets. A new machine gets its cloud projects back in phase 1 (PS-825); private project data comes back in phase 2 (PS-826).

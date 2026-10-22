@@ -38,6 +38,10 @@ export const cancelSessionControls = (entry: ActiveSession | null | undefined) =
 // In-memory registry of active sessions (EventStore + channels + harness session per session)
 export const createSessionStore = () => {
   const sessions = new Map<string, ActiveSession>();
+  const listeners = new Set<(id: string) => void>();
+  const changed = (id: string) => {
+    for (const listener of listeners) listener(id);
+  };
 
   const create = (
     sessionId: string,
@@ -73,7 +77,8 @@ export const createSessionStore = () => {
         .then((messages) => {
           if (sessions.get(sessionId) !== entry || entry.cancellationRequested)
             throw new DOMException("Session was cancelled", "AbortError");
-          ready.resolve(createSessionConversation(eventStore, messages));
+          ready.resolve(createSessionConversation(eventStore, messages, () => changed(sessionId)));
+          changed(sessionId);
         })
         .catch((error) => {
           if (sessions.get(sessionId) === entry) {
@@ -85,7 +90,7 @@ export const createSessionStore = () => {
           questionService.dispose();
           ready.reject(error);
         });
-    } else ready.resolve(createSessionConversation(eventStore));
+    } else ready.resolve(createSessionConversation(eventStore, [], () => changed(sessionId)));
     // Initialization also has readers that arrive after a failed launch.
     void ready.promise.catch(() => undefined);
 
@@ -116,5 +121,17 @@ export const createSessionStore = () => {
     sessions.delete(sessionId);
   };
 
-  return { create, get, setSession, markCancellationRequested, remove };
+  return {
+    create,
+    get,
+    setSession,
+    markCancellationRequested,
+    remove,
+    watch(listener: (id: string) => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
 };

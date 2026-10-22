@@ -1,5 +1,14 @@
 # @pstdio/desktop
 
+## 0.45.0
+
+_2026-10-22_
+
+### Patch Changes
+
+- 501fd58: Update Electron to 43.7.0 so HID and USB permission checks use the right origin.
+- 6ab9670: Update Vite to fix the desktop development server security alerts.
+
 ## 0.44.0
 
 _2026-10-18_

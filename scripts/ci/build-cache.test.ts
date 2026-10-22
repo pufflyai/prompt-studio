@@ -1,8 +1,46 @@
 import { expect, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createBuildCache } from "./build-cache";
+
+test("cache readiness is always complete when another process observes it", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "ci-build-cache-ready-"));
+  const server = { url: "http://127.0.0.1:12345", pid: process.pid };
+  const publisher = Bun.spawn(
+    [
+      process.execPath,
+      "-e",
+      `import { publishBuildCacheReady } from ${JSON.stringify(join(import.meta.dirname, "build-cache.ts"))};
+       for (let index = 0; index < 1000; index++) publishBuildCacheReady(${JSON.stringify(directory)} + "/ready-" + index, ${JSON.stringify(server)});`,
+    ],
+    { stdout: "ignore", stderr: "inherit" },
+  );
+  try {
+    const expectReady = (index: number) => {
+      expect(JSON.parse(readFileSync(join(directory, `ready-${index}`), "utf8"))).toEqual(server);
+    };
+    // Race the writer for this window without making disk throughput part of the contract.
+    const deadline = Date.now() + 2000;
+    let index = 0;
+    while (index < 1000 && Date.now() < deadline) {
+      const ready = join(directory, `ready-${index}`);
+      if (!existsSync(ready)) {
+        await Bun.sleep(1);
+        continue;
+      }
+      expectReady(index);
+      index++;
+    }
+    expect(await publisher.exited).toBe(0);
+    for (; index < 1000; index++) expectReady(index);
+  } finally {
+    publisher.kill();
+    await publisher.exited;
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test("the job cache stays available after its setup process exits", async () => {
   const directory = await mkdtemp(join(tmpdir(), "ci-build-cache-launch-"));

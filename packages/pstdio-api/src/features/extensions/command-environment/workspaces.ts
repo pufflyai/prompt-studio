@@ -5,6 +5,7 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
+import { readableWorkspaces } from "../../../services/personal-history/queries";
 import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
 import { deleteWorkspace } from "../../workspaces/workspace-deletion";
@@ -112,15 +113,22 @@ export const createWorkspacesApi = (
     list: async () =>
       read(async () =>
         Promise.all(
-          (await read(() => deps.workspaceService.list(input.projectId))).map((workspace) =>
-            projectWorkspace(workspace),
-          ),
+          (await read(() => readableWorkspaces(deps, input.projectId))).map((workspace) => projectWorkspace(workspace)),
         ),
       ),
-    get: async (id) => read(async () => projectOptionalWorkspace(await read(() => getScopedWorkspace(id)))),
+    get: async (id) =>
+      read(async () =>
+        projectOptionalWorkspace(
+          (await read(() => getScopedWorkspace(id))) ??
+            (await deps.personalHistoryService.getWorkspace(id, input.projectId)),
+        ),
+      ),
     getByShorthand: async (shorthand) =>
       read(async () =>
-        projectOptionalWorkspace(await read(() => deps.workspaceService.getByShorthand(input.projectId, shorthand))),
+        projectOptionalWorkspace(
+          (await read(() => deps.workspaceService.getByShorthand(input.projectId, shorthand))) ??
+            (await deps.personalHistoryService.getWorkspaceByShorthand(input.projectId, shorthand)),
+        ),
       ),
     create: async (workspaceInput) => {
       input.signal?.throwIfAborted();

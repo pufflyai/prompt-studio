@@ -18,6 +18,8 @@ test.beforeAll(() => {
 });
 
 test("adding a tool keeps the other empty panel open", async () => {
+  const startedAt = Date.now();
+  const phase = (name: string) => console.log(`Packaged empty panels: ${name} (${Date.now() - startedAt}ms)`);
   const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-empty-panels-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
@@ -25,6 +27,7 @@ test("adding a tool keeps the other empty panel open", async () => {
     const started = await test.step("Start the packaged runtime", () =>
       startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") }));
     child = started.child;
+    phase("runtime ready; create project");
     const folder = join(root, "project");
     mkdirSync(folder);
     const response = await fetch(`${started.baseUrl}/v1/projects`, {
@@ -34,13 +37,18 @@ test("adding a tool keeps the other empty panel open", async () => {
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
+    phase("project created; launch browser");
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
+    phase("browser ready; sign in");
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, started.descriptor);
+    phase("signed in; open project");
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
     await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+    phase("project ready; check panel additions");
     await test.step("Add tools while preserving the other empty panel", () => verifyEmptyPanelAddition(page));
+    phase("panel additions checked");
     await test.step("Place panels and cancel from the grab point", () => verifyPanelInsertionTargets(page));
     await test.step("Close a session back to the shared New session page", async () => {
       const sessionsUrl = `${started.baseUrl}/projects/${project.id}/sessions`;
@@ -74,6 +82,7 @@ test("adding a tool keeps the other empty panel open", async () => {
       await expect(editor).toHaveText("Packaged new-session draft");
     });
   } finally {
+    phase("cleanup");
     await browser?.close();
     if (child) await stopProcess(child);
     rmSync(root, { recursive: true, force: true });

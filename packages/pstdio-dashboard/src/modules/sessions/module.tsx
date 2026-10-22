@@ -27,6 +27,7 @@ import { createDashboardSessions, findDashboardSession } from "./data/dashboard-
 import { subscribeSessionListData } from "./data/session-data-subscription";
 import { createSessionIndicator } from "./session-indicator";
 import { registerSessionResourceActions } from "./session-resource-actions";
+import { registerSessionResourceRetention } from "./session-resource-retention";
 import { registerSessionResourceSync } from "./session-resource-sync";
 import { registerSessionView } from "./session-view";
 import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./sessions-sidenav-tree";
@@ -205,6 +206,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       registerSidenavSessions(ctx);
       registerSessionResourceActions(ctx);
       const unsubscribeResourceSync = registerSessionResourceSync(ctx, input.sessionSelectionPersistence);
+      const unsubscribeRetention = registerSessionResourceRetention(ctx);
       if (ctx.commands.getCommand(dashboardCommandIds.createSession)) {
         ctx.keybindings.registerKeybinding({
           action: { kind: "command", commandId: dashboardCommandIds.createSession },
@@ -261,6 +263,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         dispose: () => {
           unsubscribeDashboardData();
           unsubscribeResourceSync();
+          unsubscribeRetention();
           unsubscribeSelection();
           unsubscribePage();
         },

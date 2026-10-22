@@ -184,6 +184,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const retainedPlacements = useRetainedViewPlacements(
     workbench,
     chrome !== undefined || sharedViews ? [] : renderedPlacements,
+    workbench.host.getOpenPlacementIds(),
   );
   const visibleIds = new Set(renderedPlacements.map((entry) => entry.widgetId));
 

@@ -17,6 +17,13 @@ the GitHub release:
 - `ghcr.io/pufflyai/prompt-studio/relay`
 - `ghcr.io/pufflyai/prompt-studio/account-manager`
 
+Both images are public: anyone can pull them without logging in. GitHub creates a newly
+published package as private and offers no API to change that. After an image's first
+release, an organization owner opens the package settings and chooses Danger Zone >
+Change visibility > Public, once; a public package cannot become private again. The
+release checks that both images can be pulled without logging in, and stops before it
+publishes the GitHub release if one cannot.
+
 Use the release version tag to find the image, then record its immutable digest.
 The deployment examples require digests. A pull request build does not publish a
 release. CI also runs the existing isolated relay smoke, which now uses the actual
@@ -72,7 +79,7 @@ and device list survive. Never use `down --volumes` on a deployment you want to 
 
 ## Keys and recovery
 
-The account manager's own PostgreSQL database contains project and personal-space
+The account manager's own PostgreSQL database contains project keys, private-data
 keys, older key generations, device grants and signing keys. Relay object storage
 contains ciphertext. Its latest state and later updates are the content backup;
 there is no relay backup bucket or backup worker.
