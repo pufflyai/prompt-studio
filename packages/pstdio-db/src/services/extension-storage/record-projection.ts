@@ -1,10 +1,10 @@
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { documentRecordTypes, type RecordType, readDocumentRecord } from "pstdio-sync";
 import type * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records, storage_record_projections, storage_record_types } from "../../db/schemas.pg";
 import type { DocumentAddress } from "./document-persistence";
-import { encodeProjectionValue } from "./record-projection-codec";
+import { publishRecordProjection } from "./record-projection-publication";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 type Root = Y.AbstractType<unknown>;
@@ -28,7 +28,8 @@ export const trackRecordProjection = async (
     table: typeof storage_current_records | typeof storage_record_projections | typeof storage_record_types,
   ) => and(eq(table.workbench_id, owner.workbench_id), eq(table.extension_id, owner.extension_id));
   const [projection] = await tx.select().from(storage_record_projections).where(ownerWhere(storage_record_projections));
-  if (initialize && !projection) await tx.insert(storage_record_projections).values({ ...owner, revision: 0 });
+  if (initialize && !projection)
+    await tx.insert(storage_record_projections).values({ ...owner, revision: sourceRevision });
   let types = ownership.get(document);
   if (!types) {
     types = new WeakMap();
@@ -70,68 +71,42 @@ export const trackRecordProjection = async (
       if (rebuild) {
         await tx
           .insert(storage_record_projections)
-          .values({ ...owner, revision })
-          .onConflictDoNothing();
+          .values({ ...owner, revision: sourceRevision })
+          .onConflictDoUpdate({
+            target: [storage_record_projections.workbench_id, storage_record_projections.extension_id],
+            set: { revision: sourceRevision },
+          });
         await tx.delete(storage_current_records).where(ownerWhere(storage_current_records));
         await tx.delete(storage_record_types).where(ownerWhere(storage_record_types));
       }
       let projected = 0;
+      let expectedRevision = sourceRevision;
       const ids = [...affected];
       for (let offset = 0; offset < ids.length; offset += 512) {
         const records = await Promise.all(
           ids.slice(offset, offset + 512).map((id) => readDocumentRecord(document, id)),
         );
-        const rows = records
-          .filter((record) => record.exists)
-          .map((record) => ({
-            ...owner,
-            record_id: record.recordId,
-            deleted: record.deleted,
-            value: encodeProjectionValue(record.value),
-            asset: encodeProjectionValue(record.asset) as typeof record.asset,
-            shared: encodeProjectionValue(record.shared) as typeof record.shared,
-            revision: record.revision,
-          }));
-        if (!rows.length) continue;
-        const changed = await tx
-          .insert(storage_current_records)
-          .values(rows)
-          .onConflictDoUpdate({
-            target: [
-              storage_current_records.workbench_id,
-              storage_current_records.extension_id,
-              storage_current_records.record_id,
-            ],
-            set: {
-              deleted: sql`excluded.deleted`,
-              value: sql`excluded.value`,
-              asset: sql`excluded.asset`,
-              shared: sql`excluded.shared`,
-              revision: sql`excluded.revision`,
-            },
-            setWhere: ne(storage_current_records.revision, sql`excluded.revision`),
-          })
-          .returning({ id: storage_current_records.record_id });
-        projected += changed.length;
         const owned = records.flatMap((record) =>
           documentRecordTypes(document, record.recordId).map((type) => ({ ...type, recordId: record.recordId })),
         );
-        for (let typeOffset = 0; typeOffset < owned.length; typeOffset += 2_000) {
-          await tx
-            .insert(storage_record_types)
-            .values(
-              owned.slice(typeOffset, typeOffset + 2_000).map((type) => ({
-                ...owner,
-                record_id: type.recordId,
-                type_name: type.name,
-                type_kind: type.kind,
-              })),
-            )
-            .onConflictDoNothing();
-        }
+        projected += await publishRecordProjection(tx, {
+          address,
+          sourceRevision: expectedRevision,
+          nextRevision: revision,
+          records,
+          types: owned,
+        });
+        expectedRevision = revision;
         for (const type of owned) recordTypes.set(rootType(document, type) as Root, type.recordId);
       }
-      await tx.update(storage_record_projections).set({ revision }).where(ownerWhere(storage_record_projections));
+      if (!ids.length)
+        await publishRecordProjection(tx, {
+          address,
+          sourceRevision: expectedRevision,
+          nextRevision: revision,
+          records: [],
+          types: [],
+        });
       return projected;
     },
   };
