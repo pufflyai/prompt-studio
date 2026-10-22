@@ -1,9 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { TimelineDisplayMenu } from "./timeline-display-menu";
+import { TimelinePresentationProvider } from "./timeline-presentation";
 
 const meta: Meta<typeof TimelineDisplayMenu> = {
   title: "Extensions/Planner/Timeline display",
   component: TimelineDisplayMenu,
+  decorators: [
+    (Story) => (
+      <TimelinePresentationProvider projectId="timeline-display-story">
+        <Story />
+      </TimelinePresentationProvider>
+    ),
+  ],
   args: {
     storageKey: "timeline-display-story",
     attributes: [

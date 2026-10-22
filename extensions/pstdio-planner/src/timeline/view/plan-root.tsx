@@ -19,6 +19,7 @@ import { PlanHeader } from "./plan-header";
 import { PlanLoading } from "./plan-loading";
 import { useViewSections } from "./plan-state";
 import { reportPlannerError } from "./timeline-notice";
+import { TimelinePresentationProvider } from "./timeline-presentation";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
 import { createTimelineStorage } from "./timeline-storage";
 import { timelineViewsSource } from "./timeline-views";
@@ -44,6 +45,7 @@ interface PlanRootProps {
 export function PlanRoot(props: PlanRootProps) {
   const { host, t } = props;
   const { client, plan } = usePlan(host);
+  // Restore project presentation before mounting controls or applying collapsed geometry.
   const [storage, setStorage] = useState<HostStorage>();
   useEffect(() => {
     let active = true;
@@ -63,7 +65,9 @@ export function PlanRoot(props: PlanRootProps) {
   const viewsSource = timelineViewsSource(client, plan.savedViews);
   return (
     <HostStorageProvider storage={storage}>
-      <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
+      <TimelinePresentationProvider key={plan.projectId} projectId={plan.projectId} storage={storage}>
+        <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
+      </TimelinePresentationProvider>
     </HostStorageProvider>
   );
 }

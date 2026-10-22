@@ -18,6 +18,12 @@ A Track rule in the filter also chooses the track columns. For example, Track is
 
 Use ticket filters for Status, Milestone, Milestone date, Milestone progress, Needs attention, and Review requests. For example, exclude Done tickets, exclude Completed past milestone, or show Needs attention → Yes. These properties can be saved in each page's views. Change a ticket's milestone in its Properties panel or by dragging it in the timeline. The board create form creates unscheduled tickets; the timeline form also chooses placement and preserves the saved ticket when placement needs a retry. Use **Display** to show or hide card properties. Timeline cards show Status and the Needs attention bubble by default. The bubble shows the pending request count, or the resolved total when nothing is waiting, and opens the ticket’s Needs attention page. It uses the same indicator as the ticket overview. These choices save with the timeline view and survive navigation and reloads. Dependency arrows are smooth curves from the prerequisite to the ticket that waits on it. The graph keeps its dependency execution order. Milestone progress uses active tickets, matching the graph; archived tickets remain available in Tickets without active timeline properties. Hover and drop indicators use the shared navigation indicator color. The add-milestone preview appears above ticket cards.
 
+## Milestone display and collapsing
+
+**Display** includes **Show passed milestones** and **Show completed milestones**, both enabled by default. Passed milestones have a date before today. Completion uses all active tickets in the milestone before ticket filters or search. Empty milestones are not completed, and unscheduled work stays visible.
+
+Visibility choices and collapsed tracks and milestones save per project. They survive reloads and saved-view changes without changing the query in a saved view.
+
 ## Milestone ETA
 
 Each milestone shows its estimated time remaining to the left of its progress bar. The bar counts completed tickets. The ETA weights tickets by the configured Complexity options, ordered from simplest to most complex: 1, 2, 3, and so on. A ticket without a complexity uses the middle weight. Projects without complexity options use equal weights.

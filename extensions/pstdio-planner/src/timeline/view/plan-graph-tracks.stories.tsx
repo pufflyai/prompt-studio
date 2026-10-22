@@ -1,13 +1,17 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
+import type { HostStorage } from "@pstdio/ui";
 import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
 import type { Meta, StoryObj } from "@storybook/react";
+import { useState } from "react";
 import { expect, userEvent, waitFor } from "storybook/test";
 import { emptyWorkflowStatuses } from "../../data/workflow-statuses";
 import type { PlanTag } from "../contracts";
 import { buildPlan } from "../model/build-plan";
 import { PlanGraph } from "./plan-graph";
 import { relationsFor, useViewSections } from "./plan-state";
+import { TimelineDisplayMenu } from "./timeline-display-menu";
+import { TimelinePresentationProvider } from "./timeline-presentation";
 import { visibleTracks } from "./visible-tracks";
 
 const track: PlanTag = {
@@ -123,6 +127,13 @@ function TrackGraphStory(props: { filter: ViewFilterGroup; selectedId?: string; 
 const meta: Meta<typeof TrackGraphStory> = {
   title: "Extensions/Planner/Timeline graph/Tracks",
   component: TrackGraphStory,
+  decorators: [
+    (Story) => (
+      <TimelinePresentationProvider projectId="track-story">
+        <Story />
+      </TimelinePresentationProvider>
+    ),
+  ],
   args: { filter: { conjunction: "and", rules: [] } },
 };
 export default meta;
@@ -214,3 +225,26 @@ export const KeyboardAfterPan: Story = {
     await waitFor(() => expect(canvasElement.querySelector('[aria-label="Expand API"]')).not.toBeNull());
   },
 };
+
+function RememberedPresentationStory() {
+  const [generation, setGeneration] = useState(0);
+  const [storage] = useState<HostStorage>(() => {
+    const values = new Map<string, string>();
+    return {
+      getItem: (key) => values.get(key) ?? null,
+      setItem: (key, value) => {
+        values.set(key, value);
+      },
+    };
+  });
+  return (
+    <>
+      <Button onClick={() => setGeneration((value) => value + 1)}>Reopen timeline</Button>
+      <TimelinePresentationProvider key={generation} projectId="remembered-presentation" storage={storage}>
+        <TimelineDisplayMenu storageKey="remembered-display" attributes={fields} />
+        <TrackGraphStory filter={{ conjunction: "and", rules: [] }} />
+      </TimelinePresentationProvider>
+    </>
+  );
+}
+export const RememberedPresentation: Story = { render: () => <RememberedPresentationStory /> };

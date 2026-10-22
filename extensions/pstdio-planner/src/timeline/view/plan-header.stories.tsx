@@ -4,6 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { AutoBuildButton } from "./auto-build-button";
 import { PlanHeader } from "./plan-header";
+import { TimelinePresentationProvider } from "./timeline-presentation";
 import { timelineInitialState } from "./timeline-query";
 
 function HeaderStory(props: { filtered?: boolean; running?: boolean; obsoleteProperties?: boolean }) {
@@ -92,6 +93,13 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean; obsoletePro
 const meta: Meta<typeof HeaderStory> = {
   title: "Extensions/Planner/Timeline header",
   component: HeaderStory,
+  decorators: [
+    (Story) => (
+      <TimelinePresentationProvider projectId="timeline-header-story">
+        <Story />
+      </TimelinePresentationProvider>
+    ),
+  ],
 };
 export default meta;
 type Story = StoryObj<typeof HeaderStory>;

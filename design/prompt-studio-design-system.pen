@@ -32643,7 +32643,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -77354,7 +77354,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -97987,7 +97987,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -126991,7 +126991,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -153485,7 +153485,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153507,7 +153507,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154231,7 +154231,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154253,7 +154253,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154867,7 +154867,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154889,7 +154889,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -156234,7 +156234,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -156256,7 +156256,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -216555,14 +216555,17 @@
               "type": "frame",
               "id": "U9X20t",
               "name": "Timeline Display properties",
-              "width": 300,
+              "width": 360,
               "fill": "$ds-elevated",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border",
               "strokeWidth": 1,
               "layout": "vertical",
               "gap": 12,
-              "padding": 16,
+              "padding": [
+                8,
+                12
+              ],
               "children": [
                 {
                   "type": "text",
@@ -216642,6 +216645,76 @@
                         },
                         "Hf4GT": {
                           "content": "ID"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "I6hhLE",
+                  "name": "Milestones heading",
+                  "fill": "$ds-fg-muted",
+                  "content": "MILESTONES",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "UnTEr",
+                  "name": "Milestone visibility toggles",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "id": "WGU7H",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Show passed milestones",
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": true,
+                          "icon": "check",
+                          "width": 12,
+                          "height": 12
+                        },
+                        "Hf4GT": {
+                          "content": "Show passed milestones"
+                        },
+                        "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "s2EzDi",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Show completed milestones",
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": true,
+                          "icon": "check",
+                          "width": 12,
+                          "height": 12
+                        },
+                        "Hf4GT": {
+                          "content": "Show completed milestones"
                         },
                         "khvEs": {
                           "enabled": false
