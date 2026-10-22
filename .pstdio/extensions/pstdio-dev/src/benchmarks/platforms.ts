@@ -11,15 +11,17 @@ export const DEFAULT_PLATFORM = "linux-x64";
 
 export const platformLabel = (id: string) => PLATFORMS.find((platform) => platform.id === id)?.label ?? id;
 
+// Mirrors the suite list in packages/benchmarks, which this extension cannot import. Minutes are rough
+// per-sample costs on a Linux runner, used only to estimate a run's length.
 export const SUITES = [
-  { id: "desktop", label: "Desktop app" },
-  { id: "workbench", label: "Workbench interactions" },
-  { id: "chat", label: "Chat rendering" },
-  { id: "subnav", label: "Side navigation" },
-  { id: "planner", label: "Planner board" },
-  { id: "storage", label: "Storage" },
-  { id: "runtime", label: "Runtime" },
-  { id: "relay", label: "Relay storage" },
+  { id: "desktop", label: "Desktop app", minutes: 3 },
+  { id: "workbench", label: "Workbench interactions", minutes: 4 },
+  { id: "chat", label: "Chat rendering", minutes: 3 },
+  { id: "subnav", label: "Side navigation", minutes: 2 },
+  { id: "planner", label: "Planner board", minutes: 1 },
+  { id: "storage", label: "Storage", minutes: 1 },
+  { id: "runtime", label: "Runtime", minutes: 1 },
+  { id: "relay", label: "Relay storage", minutes: 3 },
 ] as const;
 
 export const SAMPLE_COUNTS = [3, 5, 10, 20] as const;

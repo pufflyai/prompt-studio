@@ -91,7 +91,8 @@ const startRunCommand = defineCommand({
       samples: input.samples ?? 10,
     });
     await syncRuns(ctx);
-    if (runId) await ctx.automation.enqueue({ command: followRunCommand.ref, input: { params: { runId } }, key: runId });
+    if (runId)
+      await ctx.automation.enqueue({ command: followRunCommand.ref, input: { params: { runId } }, key: runId });
     await changed(ctx, runId);
     return { runId };
   },

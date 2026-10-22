@@ -23,15 +23,46 @@ const github = () => {
     const [command, path] = args;
     if (command === "api" && path === "repos/{owner}/{repo}/releases?per_page=100")
       return [
-        { tag_name: "pstdio@0.46.0", published_at: "2026-10-22", draft: false, assets: [{ id: 1, name: "benchmarks-linux-x64.json" }] },
-        { tag_name: "pstdio@0.46.1-nightly.1", published_at: "2026-10-23", draft: false, assets: [{ id: 2, name: "benchmarks-linux-x64.json" }] },
-        { tag_name: "pstdio@0.47.0", published_at: null, draft: true, assets: [{ id: 3, name: "benchmarks-linux-x64.json" }] },
+        {
+          tag_name: "pstdio@0.46.0",
+          published_at: "2026-10-22",
+          draft: false,
+          assets: [{ id: 1, name: "benchmarks-linux-x64.json" }],
+        },
+        {
+          tag_name: "pstdio@0.46.1-nightly.1",
+          published_at: "2026-10-23",
+          draft: false,
+          assets: [{ id: 2, name: "benchmarks-linux-x64.json" }],
+        },
+        {
+          tag_name: "pstdio@0.47.0",
+          published_at: null,
+          draft: true,
+          assets: [{ id: 3, name: "benchmarks-linux-x64.json" }],
+        },
       ];
     if (command === "api" && path === "repos/{owner}/{repo}/releases/assets/1") return result("release-sha");
     if (command === "run" && path === "list")
       return [
-        { databaseId: 7, displayTitle: "Benchmarks a,b", status: "completed", conclusion: "success", url: "https://github.com/runs/7", createdAt: "2026-10-22T09:00:00Z", updatedAt: "2026-10-22T10:00:00Z" },
-        { databaseId: 8, displayTitle: "Benchmarks c", status: "in_progress", conclusion: null, url: "https://github.com/runs/8", createdAt: "2026-10-22T11:00:00Z", updatedAt: "2026-10-22T11:05:00Z" },
+        {
+          databaseId: 7,
+          displayTitle: "Benchmarks a,b",
+          status: "completed",
+          conclusion: "success",
+          url: "https://github.com/runs/7",
+          createdAt: "2026-10-22T09:00:00Z",
+          updatedAt: "2026-10-22T10:00:00Z",
+        },
+        {
+          databaseId: 8,
+          displayTitle: "Benchmarks c",
+          status: "in_progress",
+          conclusion: null,
+          url: "https://github.com/runs/8",
+          createdAt: "2026-10-22T11:00:00Z",
+          updatedAt: "2026-10-22T11:05:00Z",
+        },
       ];
     if (command === "api" && path === "repos/{owner}/{repo}/actions/runs/7/artifacts")
       return { artifacts: [{ id: 70, name: "benchmark-results-linux-x64", expired: false }] };

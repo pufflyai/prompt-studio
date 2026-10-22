@@ -9,6 +9,8 @@ import {
   workspaceEvents,
   workspaceSlots,
 } from "@pstdio/sdk/extensions";
+import { benchmarkCommands, syncCommandRef } from "./src/benchmarks/commands";
+import { navigationItems, navigationTrees, pages, views } from "./src/pages";
 
 const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
 const BUILD_COMMAND = ["bun", "run", "build"];
@@ -160,7 +162,17 @@ const stopIsolationCommand = defineCommand({
 });
 
 export default defineExtension({
-  commands: [discoverHighImpactIssuesCommand, openInVscodeCommand, openInIsolationCommand, stopIsolationCommand],
+  commands: [
+    discoverHighImpactIssuesCommand,
+    openInVscodeCommand,
+    openInIsolationCommand,
+    stopIsolationCommand,
+    ...Object.values(benchmarkCommands),
+  ],
+  views,
+  pages,
+  navigationItems,
+  navigationTrees,
   skills: [
     defineSkill({
       id: "patch-release",
@@ -184,6 +196,13 @@ export default defineExtension({
       title: "Daily high-impact issue discovery",
       schedule: "0 12 * * *",
       command: discoverHighImpactIssuesCommand.ref,
+    }),
+    // Caches new release and run results before GitHub's artifact retention removes them.
+    defineSchedule({
+      id: "daily-benchmark-sync",
+      title: "Daily benchmark result sync",
+      schedule: "0 6 * * *",
+      command: syncCommandRef,
     }),
   ],
   hooks: [

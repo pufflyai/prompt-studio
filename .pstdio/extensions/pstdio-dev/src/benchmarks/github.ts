@@ -133,7 +133,10 @@ interface ApiArtifacts {
   artifacts: { id: number; name: string; expired: boolean }[];
 }
 export const listRunArtifacts = async (ctx: Context, runId: string) => {
-  const { artifacts } = await ghJson<ApiArtifacts>(ctx, ["api", `repos/{owner}/{repo}/actions/runs/${runId}/artifacts`]);
+  const { artifacts } = await ghJson<ApiArtifacts>(ctx, [
+    "api",
+    `repos/{owner}/{repo}/actions/runs/${runId}/artifacts`,
+  ]);
   return artifacts.map((artifact): RunArtifact => ({ ...artifact }));
 };
 
@@ -144,7 +147,11 @@ export const downloadRunArtifact = (ctx: Context, runId: string, name: string, d
 interface ApiRunView {
   status: string;
   conclusion: string | null;
-  jobs: { name: string; conclusion: string | null; steps: { name: string; status: string; conclusion: string | null }[] }[];
+  jobs: {
+    name: string;
+    conclusion: string | null;
+    steps: { name: string; status: string; conclusion: string | null }[];
+  }[];
 }
 // Progress counts finished steps across every platform job, so it moves while samples run.
 export const runProgress = async (ctx: Context, runId: string) => {

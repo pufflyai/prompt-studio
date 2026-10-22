@@ -1,7 +1,8 @@
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type ExtensionContextBase, eventRef } from "@pstdio/sdk/extensions";
+import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
+import { benchmarksChanged } from "./events";
 import {
   cancelRun,
   downloadReleaseAsset,
@@ -9,18 +10,13 @@ import {
   listReleases,
   listRunArtifacts,
   listRuns,
-  runProgress,
   type RunStatus,
+  runProgress,
   type WorkflowRun,
 } from "./github";
 import { type BenchmarkResultFile, parseResultFile } from "./result-file";
 
 export type StoreContext = Pick<ExtensionContextBase, "process" | "extensionFiles" | "events">;
-
-export const benchmarksChanged = eventRef<{ runId?: string }>({
-  extensionId: "pstdio.pstdio-dev",
-  id: "benchmarks.changed",
-});
 
 export interface RunRecord extends WorkflowRun {
   progress?: number;

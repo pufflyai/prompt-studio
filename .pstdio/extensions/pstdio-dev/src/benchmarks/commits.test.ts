@@ -5,9 +5,11 @@ const line = (...fields: string[]) => fields.join("\u001f");
 
 describe("commit options", () => {
   test("names main commits by their distance from main", () => {
-    const text = [line("65d36f4", "feat(PS-871): enable Cloud"), line("3d7f576", "fix(PS-788): save settings"), ""].join(
-      "\n",
-    );
+    const text = [
+      line("65d36f4", "feat(PS-871): enable Cloud"),
+      line("3d7f576", "fix(PS-788): save settings"),
+      "",
+    ].join("\n");
     expect(parseMainLog(text)).toEqual([
       { sha: "65d36f4", ref: "main", message: "feat(PS-871): enable Cloud" },
       { sha: "3d7f576", ref: "main~1", message: "fix(PS-788): save settings" },
