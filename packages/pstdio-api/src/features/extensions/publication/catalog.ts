@@ -18,11 +18,11 @@ export const openPublishedCatalog = async (
   signal?: AbortSignal,
 ) => {
   const owner = publishedOwner(workbenchId);
-  const storage = await deps.extensionStorageService.open({
+  return createPublicationCatalog({
     owner,
+    store: deps.extensionStorageService.documents.open("records"),
     assets: createRecordAssets(deps.assetTransferService, owner, signal),
   });
-  return { ...storage, ...createPublicationCatalog(storage) };
 };
 
 export const publishExtension = async (

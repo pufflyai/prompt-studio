@@ -2,6 +2,8 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createNativeAccount } from "../../../services/account/native-account";
+import { createNativeStore } from "../../../services/account/native-store";
 import { createExtensionDocumentSync } from "../../../services/relay/documents";
 import { startPublishedExtensions } from "../../../services/relay/publications";
 import { createTestApp } from "../../../test-utils/create-test-app";
@@ -15,10 +17,11 @@ import { documentPeer } from "./document-peer.fixture";
 import { packExtension } from "./package";
 
 const root = await mkdtemp(join(tmpdir(), "extension-documents-"));
-const peer = documentPeer();
 const projectId = crypto.randomUUID();
+const peer = documentPeer([projectId]);
 const controller = new AbortController();
 const apps: Awaited<ReturnType<typeof createTestApp>>[] = [];
+const accounts: ReturnType<typeof createNativeAccount>[] = [];
 const config = {
   accountId: "owner",
   workbenchId: projectId,
@@ -34,9 +37,27 @@ beforeAll(async () => {
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   for (let index = 0; index < 3; index++) {
     const app = await createTestApp({ storageRoot: join(root, String(index)) });
-    apps.push(app);
+    apps[index] = app;
     await app.deps.projectService.create({ id: projectId, name: "Cloud project" });
-    syncs.push(createExtensionDocumentSync({ config, deps: app.deps, owner: publishedOwner(projectId), access }));
+    const file = join(root, String(index), "wire-account.json");
+    await createNativeStore(file).save({
+      managerOrigin: peer.origin,
+      relayOrigin: peer.origin,
+      accountId: "owner",
+      deviceId: (await app.deps.environmentService.get()).environmentId,
+      token: "wire-credential",
+    });
+    const account = createNativeAccount({
+      file,
+      environment: app.deps.environmentService,
+      projects: app.deps.projectService,
+    });
+    accounts.push(account);
+    await account.refresh();
+    // Discover real cloud membership while the test drives transport connections explicitly.
+    app.deps.accountService.status = account.status;
+    app.deps.accountService.projectSyncStatus = account.projectSyncStatus;
+    syncs[index] = createExtensionDocumentSync({ config, deps: app.deps, owner: publishedOwner(projectId), access });
   }
 });
 afterAll(async () => {
@@ -44,6 +65,7 @@ afterAll(async () => {
   for (const connection of publications) connection.close();
   await Promise.all(publications.map((connection) => connection.done));
   for (const sync of syncs) sync.close();
+  for (const account of accounts) account.close();
   await Promise.all(apps.map((app) => app.close()));
   await peer.close();
   await rm(root, { recursive: true, force: true });

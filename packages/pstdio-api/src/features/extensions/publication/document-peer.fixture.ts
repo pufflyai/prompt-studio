@@ -105,6 +105,7 @@ export const documentPeer = (projects: string[] = []) => {
     port: 0,
     async fetch(request, server) {
       const path = new URL(request.url).pathname;
+      if (path === "/v1/account") return Response.json({ features: { relay: true } });
       if (path === "/v1/workbenches") return Response.json(projects.map((workbenchId) => ({ workbenchId })));
       if (path === "/v1/environment-access")
         return Response.json({ token: "wire-access", expiresAt: new Date(Date.now() + 60_000).toISOString() });

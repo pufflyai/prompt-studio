@@ -62,6 +62,42 @@ test("publication is explicit, captures package bytes, and checks the observed c
     expect(toggle.status).toBe(200);
     const disabled = (await (await app.app.request(path)).json()) as { value: { enabled: boolean } }[];
     expect(disabled[0]!.value.enabled).toBe(false);
+    const stage = app.deps.assetTransferService.stage;
+    const preparing = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    app.deps.assetTransferService.stage = async (...args) => {
+      const asset = await stage(...args);
+      preparing.resolve();
+      await resume.promise;
+      return asset;
+    };
+    const observed = (await (await app.app.request(path)).json()) as { revision: string }[];
+    const overlapping = app.app.request(path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "publish",
+        instanceId: enabled.instance.id,
+        expectedRevision: observed[0]!.revision,
+      }),
+    });
+    await preparing.promise;
+    const newer = await app.app.request(path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "enabled",
+        extensionId: loaded.metadata.id,
+        enabled: true,
+        expectedRevision: observed[0]!.revision,
+      }),
+    });
+    expect(newer.status).toBe(200);
+    resume.resolve();
+    expect((await overlapping).status).toBe(409);
+    expect(((await (await app.app.request(path)).json()) as { value: { enabled: boolean } }[])[0]!.value.enabled).toBe(
+      true,
+    );
   } finally {
     await app.close();
     await rm(root, { recursive: true, force: true });

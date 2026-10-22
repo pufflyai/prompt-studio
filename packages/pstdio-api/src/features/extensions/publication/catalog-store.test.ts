@@ -4,6 +4,33 @@ import { createDocumentSync, type DocumentRelay } from "pstdio-sync/relay";
 import type { Asset, StoredUpdate } from "pstdio-sync-contracts";
 import { createPublicationCatalog } from "./catalog-store";
 
+test("republishing restores a deleted selection and stale selections cannot overwrite newer choices", async () => {
+  const owner = { workbenchId: "project", extensionId: "pstdio.published-extensions" };
+  const input = { owner, store: createMemoryDocumentStore(), assets: { verifyComplete: async () => {} } as never };
+  const storage = createDocumentStorage(input);
+  const catalog = createPublicationCatalog(input);
+  const asset = { sha256: "a".repeat(64), byteLength: 1, mediaType: "application/octet-stream" };
+  const publication = {
+    extensionId: "test.extension",
+    revision: asset.sha256,
+    version: "1.0.0",
+    automation: false,
+    enabled: true,
+  };
+  await catalog.select(publication, asset);
+  await storage.records.commit({
+    operationId: "uninstall",
+    edits: [{ recordId: publication.extensionId, deleted: true }],
+  });
+  const deleted = await catalog.read(publication.extensionId);
+  await catalog.select(publication, asset, deleted.revision);
+  expect((await catalog.read(publication.extensionId)).deleted).toBe(false);
+  const beforeDisable = await catalog.read(publication.extensionId);
+  await catalog.select({ ...publication, enabled: false }, asset, beforeDisable.revision);
+  await expect(catalog.select(publication, asset, beforeDisable.revision)).rejects.toThrow("changed");
+  expect((await catalog.read(publication.extensionId)).value!.enabled).toBe(false);
+});
+
 // Real Yjs merging and blob encryption; the wire only appends opaque encrypted bytes.
 test("competing same-version and new-version publications keep package metadata coherent while enabled edits merge", async () => {
   const owner = { workbenchId: "project", extensionId: "pstdio.published-extensions" };
@@ -58,7 +85,7 @@ test("competing same-version and new-version publications keep package metadata 
     };
     const store = createMemoryDocumentStore();
     const storage = createDocumentStorage({ owner, store, assets });
-    const catalog = createPublicationCatalog(storage);
+    const catalog = createPublicationCatalog({ owner, store, assets });
     const sync = createDocumentSync({
       owner,
       space,

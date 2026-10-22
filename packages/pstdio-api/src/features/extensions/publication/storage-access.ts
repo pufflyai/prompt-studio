@@ -42,8 +42,9 @@ export const createPublicationStorageAccess = (
       }
     },
     async migrate() {
+      if ((await deps.accountService.projectSyncStatus(input.projectId)).state === "local") return true;
       const selected = await selection();
-      if (!selected) return !(await deps.accountService.status()).cloudProjects.some((id) => id === input.projectId);
+      if (!selected) return false;
       const invoking = await getSource();
       if (
         !invoking ||

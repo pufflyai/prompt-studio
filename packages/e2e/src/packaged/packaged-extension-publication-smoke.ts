@@ -28,7 +28,10 @@ export const registerExtensionPublicationSmokeTests = () => {
           engines: { pstdio: `^${EXTENSION_API_VERSION}` },
         }),
       );
-      writeFileSync(join(source, "extension.ts"), "export default {};");
+      writeFileSync(
+        join(source, "extension.ts"),
+        `export default { commands: [{ id: "migrate", ref: { kind: "command", id: "migrate" }, title: "Migrate", async run(ctx) { await ctx.storage.migrate(1, async () => { await ctx.storage.set("migration", "ran"); }); return await ctx.storage.get("migration"); } }] };`,
+      );
       const host = await startPackagedServe(home, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
       try {
         const response = await fetch(`${host.baseUrl}/v1/projects`, {
@@ -65,6 +68,13 @@ export const registerExtensionPublicationSmokeTests = () => {
         const previous = (
           (await (await fetch(url, { headers })).json()) as { extensions: { id: string; sourcePath: string }[] }
         ).extensions[0]!;
+        const migrated = await fetch(`${url}/commands/example.unrelated.command.migrate/execute`, {
+          method: "POST",
+          headers: { ...headers, "content-type": "application/json" },
+          body: JSON.stringify({ params: {} }),
+        });
+        expect(migrated.status).toBe(200);
+        expect(((await migrated.json()) as { outcome: { value: unknown } }).outcome.value).toBe("ran");
         expect(JSON.parse(run("extensions", "publication", "adopt", "example.unrelated")).status).toBe("active");
         const active = (
           (await (await fetch(url, { headers })).json()) as { extensions: { id: string; sourcePath: string }[] }
@@ -73,6 +83,12 @@ export const registerExtensionPublicationSmokeTests = () => {
         expect(active.sourcePath).not.toBe(source);
         run("extensions", "publication", "disable", "example.unrelated");
         expect(JSON.parse(run("extensions", "publication", "list"))[0].value.enabled).toBe(false);
+        expect((await fetch(`${url}/${active.id}`, { method: "DELETE", headers })).status).toBe(204);
+        run("extensions", "add", source, "--name", "unrelated", "--skip-install", "--force");
+        run("extensions", "publication", "publish", "unrelated");
+        const republished = JSON.parse(run("extensions", "publication", "list"))[0];
+        expect(republished.deleted).toBe(false);
+        expect(republished.value.revision).toBe(republished.asset.sha256);
       } finally {
         await stopProcess(host.child);
         rmSync(root, { recursive: true, force: true });

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createNativeAccount } from "../../../services/account/native-account";
 import { createNativeStore } from "../../../services/account/native-store";
 import { createSharedArtifactMount } from "../../../services/shared-files/artifact-mount";
 import { createTestApp } from "../../../test-utils/create-test-app";
@@ -23,6 +24,110 @@ afterAll(async () => {
   await app.close();
   await peer.close();
   await rm(root, { recursive: true, force: true });
+});
+
+test("publishing in a local project preserves its source's data migrations", async () => {
+  const project = await app.deps.projectService.create({ name: "Local migrations" });
+  const source = createTestExtensionSource({
+    root,
+    name: "local-access",
+    installName: "local-access",
+    displayName: "Local access",
+    version: "1.0.0",
+  });
+  const { instance } = await app.deps.extensionService.enableInstalledSourceForProject({
+    projectId: project.id,
+    sourcePath: source,
+    name: "local-access",
+    installName: "local-access",
+    displayName: "Local access",
+    extensionId: "test.local-access",
+    version: "1.0.0",
+    manifest: {},
+  });
+  const storage = createStorageApi(app.deps, {
+    projectId: project.id,
+    extensionId: "test.local-access",
+    extensionInstanceId: instance.id,
+  });
+  const catalog = await openPublishedCatalog(app.deps, project.id);
+  const asset = await app.deps.assetTransferService.stage(
+    { workbenchId: project.id, extensionId: "pstdio.published-extensions" },
+    crypto.randomUUID(),
+    new Blob(["local"]),
+  );
+  await catalog.select(
+    { extensionId: "test.local-access", revision: asset.sha256, version: "1.0.0", enabled: true, automation: false },
+    asset,
+  );
+  await storage.migrate(1, async () => {
+    await storage.set("migration", "ran");
+  });
+  expect(await storage.get<string>("migration")).toBe("ran");
+});
+
+test("a private override cannot migrate while cloud membership is still unknown", async () => {
+  const project = await app.deps.projectService.create({ name: "Unknown membership" });
+  const source = createTestExtensionSource({
+    root,
+    name: "offline-access",
+    installName: "offline-access",
+    displayName: "Offline access",
+    version: "1.0.0",
+  });
+  const { instance } = await app.deps.extensionService.enableInstalledSourceForProject({
+    projectId: project.id,
+    sourcePath: source,
+    name: "offline-access",
+    installName: "offline-access",
+    displayName: "Offline access",
+    extensionId: "test.offline-access",
+    version: "1.0.0",
+    manifest: {},
+  });
+  const catalog = await openPublishedCatalog(app.deps, project.id);
+  const asset = await app.deps.assetTransferService.stage(
+    { workbenchId: project.id, extensionId: "pstdio.published-extensions" },
+    crypto.randomUUID(),
+    new Blob(["offline"]),
+  );
+  await catalog.select(
+    { extensionId: "test.offline-access", revision: asset.sha256, version: "1.0.0", enabled: true, automation: false },
+    asset,
+  );
+  const file = join(root, "undiscovered-account.json");
+  await createNativeStore(file).save({
+    managerOrigin: peer.origin,
+    relayOrigin: peer.origin,
+    accountId: "owner",
+    deviceId: (await app.deps.environmentService.get()).environmentId,
+    token: "wire-credential",
+  });
+  const account = createNativeAccount({
+    file,
+    environment: app.deps.environmentService,
+    projects: app.deps.projectService,
+  });
+  try {
+    expect(await account.status()).toMatchObject({ cloudProjects: [], cloudProjectsLoaded: false });
+    expect((await account.projectSyncStatus(project.id)).state).toBe("offline");
+    const deps = {
+      ...app.deps,
+      accountService: {
+        ...app.deps.accountService,
+        status: account.status,
+        projectSyncStatus: account.projectSyncStatus,
+      },
+    };
+    const access = createPublicationStorageAccess(deps, {
+      projectId: project.id,
+      extensionId: "test.offline-access",
+      extensionInstanceId: instance.id,
+    });
+    expect(await access.migrate()).toBe(false);
+  } finally {
+    account.close();
+  }
 });
 
 test("local overrides sync their edits but never run data migrations; older versions can only read", async () => {

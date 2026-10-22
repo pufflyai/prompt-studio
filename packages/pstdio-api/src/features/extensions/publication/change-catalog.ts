@@ -9,31 +9,31 @@ type CatalogChange =
 
 export const changePublishedCatalog = async (deps: ExtensionsRouteDeps, projectId: string, input: CatalogChange) => {
   const catalog = await openPublishedCatalog(deps, projectId);
-  const record = await catalog.read(input.extensionId);
-  const current = publicationSchema.parse(record.value);
-  if (!record.asset) throw new Error("Published package is unavailable");
-  if (input.expectedRevision !== record.revision)
-    throw new Error("Published extension changed; read its revision again");
-  let value = { ...current };
-  if (input.kind === "enabled") {
-    value.enabled = input.enabled;
-  } else {
-    const previous = await catalog.records.read(`package:${input.revision}`);
-    if (!previous.asset || previous.deleted || !previous.value) throw new Error("Package revision not found");
-    const metadata = packageMetadataSchema.parse(previous.value);
-    if (metadata.extensionId !== input.extensionId || previous.asset.sha256 !== input.revision)
-      throw new Error("Package belongs to another extension");
-    value = { ...metadata, revision: input.revision, enabled: current.enabled };
-  }
-  return catalog.records.commit({
-    operationId: crypto.randomUUID(),
-    edits: [
-      {
-        recordId: input.extensionId,
-        expectedRevision: record.revision,
-        replace: { revision: value.revision, enabled: value.enabled },
-      },
-    ],
+  return catalog.change(input.extensionId, input.expectedRevision, async (catalog) => {
+    const record = await catalog.read(input.extensionId);
+    const current = publicationSchema.parse(record.value);
+    if (!record.asset) throw new Error("Published package is unavailable");
+    let value = { ...current };
+    if (input.kind === "enabled") {
+      value.enabled = input.enabled;
+    } else {
+      const previous = await catalog.records.read(`package:${input.revision}`);
+      if (!previous.asset || previous.deleted || !previous.value) throw new Error("Package revision not found");
+      const metadata = packageMetadataSchema.parse(previous.value);
+      if (metadata.extensionId !== input.extensionId || previous.asset.sha256 !== input.revision)
+        throw new Error("Package belongs to another extension");
+      value = { ...metadata, revision: input.revision, enabled: current.enabled };
+    }
+    return catalog.records.commit({
+      operationId: crypto.randomUUID(),
+      edits: [
+        {
+          recordId: input.extensionId,
+          expectedRevision: record.revision,
+          replace: { revision: value.revision, enabled: value.enabled },
+        },
+      ],
+    });
   });
 };
 
