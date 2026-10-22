@@ -1,4 +1,15 @@
-import { Button, CloseButton, HStack, Popover, Portal, Stack, Text, useRecipe, useSlotRecipe } from "@chakra-ui/react";
+import {
+  Button,
+  CloseButton,
+  HStack,
+  Popover,
+  Portal,
+  Separator,
+  Stack,
+  Text,
+  useRecipe,
+  useSlotRecipe,
+} from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import { psTheme } from "@pstdio/ui/theme";
 import { Pause, Play, Square } from "lucide-react";
@@ -108,6 +119,7 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
             </Popover.Body>
             <Popover.Footer flexShrink="0">
               <Stack w="full" alignItems="end">
+                <Separator w="full" />
                 {actionError ? (
                   <Text role="alert" color="fg.error">
                     {actionError}

@@ -2,7 +2,7 @@ import { Button, IconButton, Popover, Portal, Text, Wrap } from "@chakra-ui/reac
 import { ScrollArea, Tooltip } from "@pstdio/ui";
 import { useCollectionViewStore } from "@pstdio/ui/collection-view";
 import { type AttributeDescriptor, buildDisplayPropertyOptions } from "@pstdio/ui/kanban-renderer";
-import { Settings2 } from "lucide-react";
+import { Check, Settings2 } from "lucide-react";
 import { useRef } from "react";
 import { useTimelinePresentation } from "./timeline-presentation";
 import { timelineInitialState } from "./timeline-query";
@@ -81,6 +81,7 @@ export function TimelineDisplayMenu(props: TimelineDisplayMenuProps) {
                     aria-pressed={presentation.value[key] !== false}
                     onClick={() => presentation.update({ [key]: presentation.value[key] === false })}
                   >
+                    {presentation.value[key] !== false ? <Check aria-hidden="true" /> : null}
                     {label}
                   </Button>
                 ))}
