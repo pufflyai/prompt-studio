@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import type { RouteDeps } from "../deps";
 import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps, ExtensionWebviewRouteDeps } from "./deps";
+import { createDeviceAutomationRoutes } from "./device-automation-routes";
 import {
   createExtensionNotificationHandler,
   createExtensionNotificationRoute,
@@ -174,6 +175,7 @@ export const createExtensionRoutes = (
 ) => {
   const routes = new OpenAPIHono<AppBindings>();
 
+  routes.route("/", createDeviceAutomationRoutes(deps));
   registerInstalledExtensionRoutes(routes, deps);
   registerExtensionWorkbenchRoutes(routes, deps);
   registerExtensionFileRoutes(routes, deps);

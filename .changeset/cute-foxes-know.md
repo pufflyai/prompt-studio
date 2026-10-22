@@ -1,8 +1,8 @@
 ---
-"@pstdio/workbench": minor
-"@pstdio/ui": minor
-"pstdio": minor
-"@pstdio/sdk": minor
+"@pstdio/workbench": patch
+"@pstdio/ui": patch
+"pstdio": patch
+"@pstdio/sdk": patch
 ---
 
 Allow cards to move between every board column and remove drag permission settings.

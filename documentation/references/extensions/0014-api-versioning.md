@@ -25,7 +25,7 @@ The host decides what loads. It compares its own extension API version with `eng
 | 0.43.1 | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
 | 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
 | 0.45.0 | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
-| `main` | 0.3.0 | Adds account feature grants and always allows Kanban dragging. Manifests must accept `^0.3.0`. |
+| `main` | 0.2.2 | Adds account feature grants and always allows Kanban dragging. Existing `^0.2.0` ranges still load. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
@@ -265,6 +265,6 @@ Workspace/session read results and resource references may include `device: { ow
 
 `ctx.account`, the `account.read` and `account.manage` webview capabilities, `client.account` on the typed webview client, and the `accountEvents.projectSyncChanged` host event are additive. They ship in the release after 0.44.0. The `/client` account methods add `cancelLogin` and `projectSyncStatus`. `AccountDevice` adds `online`, `AccountStatus` adds `cloudProjectsLoaded`, and `DeviceLogin` adds an optional `email`. `makeCommandContext` from `@pstdio/sdk/testing` provides a signed-out account whose projects are `local`. Publish the SDK and host before separately released extensions use these additions. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).
 
-## Kanban dragging in API 0.3
+## Kanban dragging in API 0.2
 
-Every board column allows cards to be dragged in and out. This includes groups for missing or unknown values. `canDragIn` and `canDragOut` remain as deprecated input fields, but their values are ignored. Remove these fields from column configurations. This changes the behavior of extensions that set them to `false`, so the API takes a breaking step to `0.3.0`. The next coordinated removal of deprecated APIs can remove the fields themselves.
+Every board column allows cards to be dragged in and out. This includes groups for missing or unknown values. `canDragIn` and `canDragOut` remain as deprecated input fields, but their values are ignored. Remove these fields from column configurations. This alpha change stays on the `0.2` API line; manifests need no new version range. The next coordinated removal of deprecated APIs can remove the fields themselves.
