@@ -81,7 +81,7 @@ Create `package.json`:
   "type": "module",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.1.6 || ^0.2.0"
+    "pstdio": "^0.1.6 || ^0.2.0 || ^0.3.0"
   },
   "scripts": {
     "lint": "tsc --noEmit",
