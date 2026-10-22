@@ -321,3 +321,12 @@ The `/client` project methods add `recoveryPoints(projectId)` and `restore(proje
 The `/api` entry exports `ProjectRecoveryPoint`, `RestoreProjectInput` and `RestoreProjectResult`.
 Agents use them to list and restore the same recovery points as project settings. These
 additions ship in the release after 0.45.0. See [Restore project data](../../guides/concepts/0006-restore-project-data.md).
+
+## App-wide and device settings in API 0.2.1
+
+`workbenchSlots.globalSettings` and the `"device"` extension setting scope are
+additive. They ship after 0.44.0 within the existing 0.2.1 release step. Existing
+project/global settings, extension detail panels, and published custom global
+slots keep working. Device settings use `ctx.settings` and the existing typed
+webview settings capabilities. Publish the SDK and host before extensions adopt
+them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).

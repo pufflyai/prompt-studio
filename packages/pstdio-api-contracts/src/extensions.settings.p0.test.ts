@@ -18,6 +18,10 @@ const definition = {
 };
 
 describe("extension settings contracts", () => {
+  test("accepts device-scoped setting definitions", () => {
+    const device = { ...definition, scope: "device" as const };
+    expect(extensionSettingDefinitionRecordSchema.parse(device)).toEqual(device);
+  });
   test("serializes declared setting definitions and effective values", () => {
     expect(extensionSettingDefinitionRecordSchema.parse(definition)).toEqual(definition);
     expect(
