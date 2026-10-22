@@ -3,12 +3,21 @@ locals {
   paths = {
     relay   = var.relay_path
     manager = var.manager_path
+    psx     = var.psx_path
   }
   ports = {
     relay   = 8080
     manager = 8443
+    psx     = 8080
   }
   settings = {
+    psx = {
+      PSX_HOST    = "0.0.0.0"
+      PSX_PORT    = "8080"
+      S3_ENDPOINT = "https://${var.spaces_region}.digitaloceanspaces.com"
+      S3_REGION   = var.spaces_region
+      S3_BUCKET   = digitalocean_spaces_bucket.psx.name
+    }
     relay = {
       RELAY_HOST  = "0.0.0.0"
       RELAY_PORT  = "8080"
@@ -29,10 +38,12 @@ locals {
   secrets = {
     relay   = var.relay_secrets
     manager = var.manager_secrets
+    psx     = var.psx_secrets
   }
   migrations = {
     relay   = "bun container-entrypoint.ts bun database-migration.js ./storage.js migrateRelayStorage relay"
     manager = "bun container-entrypoint.ts bun dist/database-migration.js ./dist/index.js migrateAccountManager manager"
+    psx     = "bun container-entrypoint.ts bun dist/database-migration.js ./dist/index.js migratePsx psx"
   }
   cluster = digitalocean_database_cluster.cloud
   # Services use their own login. Only the migration jobs get the server owner's login.

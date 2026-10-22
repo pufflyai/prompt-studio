@@ -9,7 +9,7 @@ export const registerInstalledExtensionSources = async (
       manifest: Record<string, unknown>;
       name: string;
       sourceHash: string;
-      sourceKind: "git" | "local_path";
+      sourceKind: "git" | "local_path" | "registry";
       sourcePath: string;
       sourceRef: string | null;
       version: string | null;

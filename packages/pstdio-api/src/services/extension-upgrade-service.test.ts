@@ -209,8 +209,8 @@ describe("extension upgrade service", () => {
     expect(
       await service.canUpgrade({
         ...installedSource,
-        install_name: "extension-lab",
-        manifest_json: { name: "extension-lab", enginesPstdio: "^1.0.0" },
+        install_name: "external-tool",
+        manifest_json: { name: "external-tool", enginesPstdio: "^1.0.0" },
         source_ref: null,
       }),
     ).toBe(false);

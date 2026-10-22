@@ -69,7 +69,6 @@ describe("PocketCoder workspaces", () => {
       diff: false,
       merge: false,
       rebase: false,
-      archive: false,
       delete: true,
     });
   });

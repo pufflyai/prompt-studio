@@ -1,7 +1,7 @@
 import type { ExtensionKeybindingRecord, ExtensionMenuContribution, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ContributionKind, ContributionRef, WhenExpression } from "@pstdio/sdk/extensions";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
-import { resourceKindReferences, serializeWhenExpression } from "../../runtime/normalize/references";
+import { serializeWhenExpression } from "../../runtime/normalize/references";
 import { toSettingDefinitionRecord } from "../../runtime/normalize/settings";
 import type { ExtensionRuntime } from "../../types/runtime";
 import {
@@ -63,15 +63,10 @@ const toMenuContributions = (runtime: ExtensionRuntime): ExtensionMenuContributi
       icon: menu.icon,
       presentation: menu.presentation,
       params: menu.params as Record<string, unknown> | undefined,
-      when: serializeWhenExpression(
-        menu.when,
-        command.extensionId,
-        resourceKindReferences(runtime.resourceKinds),
-      ) as ExtensionMenuContribution["when"],
+      when: serializeWhenExpression(menu.when, command.extensionId) as ExtensionMenuContribution["when"],
       disabledWhen: serializeWhenExpression(
         menu.disabledWhen,
         command.extensionId,
-        resourceKindReferences(runtime.resourceKinds),
       ) as ExtensionMenuContribution["disabledWhen"],
       disabledReason: menu.disabledReason,
     })),

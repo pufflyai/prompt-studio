@@ -8,6 +8,10 @@ output "relay_url" {
   value = "https://${var.host}${var.relay_path}"
 }
 
+output "psx_url" {
+  value = "https://${var.host}${var.psx_path}"
+}
+
 output "app_id" {
   value = digitalocean_app.cloud.id
 }

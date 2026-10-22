@@ -8,6 +8,7 @@ import {
 import { createRuntimeCollections } from "@/lib/sync/collections";
 import {
   buildDashboardExtensionMenuRegistrations,
+  buildDashboardWorkbenchWhenExpression,
   getCachedDashboardExtensionMetadata,
   setCachedDashboardExtensionMetadata,
 } from "./workbench-extension-contributions";
@@ -27,6 +28,22 @@ test("the same workbench keeps its extension metadata in its runtime connection"
 
 const labViewWhenExpression = 'workbench.view.id == "pstdio.extension-lab.view.labPage"';
 const ticketResourceContextMenuPath = resourceContextMenuPath("ticket");
+
+test("resource conditions match both the local kind and its publisher", () => {
+  const when = buildDashboardWorkbenchWhenExpression({ resourceType: ["alice.notes.note"] });
+  expect(
+    matchesContextExpression(
+      { "workbench.resource.type": "note", "workbench.resource.extensionId": "alice.notes" },
+      when,
+    ),
+  ).toBe(true);
+  expect(
+    matchesContextExpression(
+      { "workbench.resource.type": "note", "workbench.resource.extensionId": "bob.notes" },
+      when,
+    ),
+  ).toBe(false);
+});
 
 describe("dashboard workbench extension menu contributions", () => {
   test("maps extension view actions into the header with view context", () => {

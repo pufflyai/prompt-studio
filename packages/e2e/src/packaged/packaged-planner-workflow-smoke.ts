@@ -22,7 +22,7 @@ export const expectPlannerWorkflow = async (
   expect(commands.commands).toContainEqual(
     expect.objectContaining({
       id: "pstdio.pstdio-planner.command.implementation-policy",
-      cliPath: "pstdio-planner implementation-policy",
+      cliPath: "pstdio.pstdio-planner implementation-policy",
     }),
   );
   const execute = async <T>(command: string, params: Record<string, unknown> = {}, targetProjectId = projectId) => {

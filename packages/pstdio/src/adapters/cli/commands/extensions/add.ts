@@ -8,14 +8,14 @@ import { isLocalExtensionSource, type uploadExtensionSource } from "@/features/e
 import { type ExtensionsAddArgs, formatInstallOutput, linkedProjectRequired } from "./shared";
 
 export const command = "add <source>";
-export const describe = "Install editable extension source";
+export const describe = "Install an extension from the catalog, a package or a folder";
 
 export const builder = (yargs: Argv) =>
   yargs
     .positional("source", {
       type: "string",
       demandOption: true,
-      describe: "Extension name or local folder path",
+      describe: "Extension ID, catalog name, .tgz package or local folder",
     })
     .option("name", {
       type: "string",

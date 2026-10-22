@@ -15,6 +15,7 @@ export default defineConfig({
     "packaged-command-query.spec.ts",
     "packaged-command-palette.spec.ts",
     "packaged-main-fullscreen.spec.ts",
+    "packaged-independent-extensions.spec.ts",
   ],
   timeout: 120_000,
   workers: 1,

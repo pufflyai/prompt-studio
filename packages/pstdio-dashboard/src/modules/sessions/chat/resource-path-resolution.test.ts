@@ -4,7 +4,8 @@ import { resolveResourcePath } from "./resource-path-resolution";
 
 const extensionId = "acme.planner";
 const kind = {
-  id: "ticket",
+  id: "acme.planner.ticket",
+  localId: "ticket",
   extensionId,
   icon: "component",
   paths: [{ prefix: "tickets/", resolveCommand: "acme.planner.command.open-path" }],

@@ -296,7 +296,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
             ref: "pstdio@0.27.0",
             url: "https://github.com/pufflyai/prompt-studio",
           },
-          publisher: "pufflyai",
+          publisher: "pstdio",
         }),
       ]),
     );

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type WorkspaceCapabilities, workspaceEvents } from "pstdio-api-contracts/extension-kernel";
@@ -80,6 +80,14 @@ const mounts = (env: ReturnType<typeof environment>) => [
   env.artifacts.mount("reports"),
 ];
 
+test("legacy file lists retain the caller's paths after storage moves to the full ID", async () => {
+  const env = environment();
+  const prefix = ".pstdio/extension-storage/tools/reports";
+  const files = await env.projectFiles!.list(`${prefix}/**`);
+  expect(files.map((file) => file.path)).toEqual([`${prefix}/notes.txt`]);
+  expect(await env.projectFiles!.readText(files[0]!.path)).toBe("keep");
+});
+
 test("read-only providers allow reads and reject every file mutation", async () => {
   workspace.provider_capabilities_json = { ...folderWorkspaceCapabilities, files: "read" };
   const env = environment();
@@ -93,6 +101,9 @@ test("read-only providers allow reads and reject every file mutation", async () 
   await expect(env.workspaceFiles!.syncDir("generated", [{ path: "tool.txt", content: "changed" }])).rejects.toThrow(
     "write",
   );
+  expect((await lstat(join(root, ".pstdio/extension-storage/tools"))).isSymbolicLink()).toBe(false);
+  await expect(lstat(join(root, ".pstdio/extension-storage/example.tools"))).rejects.toThrow();
+  await expect(lstat(join(root, ".pstdio/.gitignore"))).rejects.toThrow();
 });
 
 test("file capabilities are checked again after a mount has been used", async () => {

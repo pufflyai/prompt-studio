@@ -66,7 +66,6 @@ const boardSettings = {
   viewMode: "board",
   columnGrouping: "status",
   rowGrouping: "none",
-  ordering: { attributeId: "manual", direction: "asc" },
   displayProperties: ["id", "priority", "team", "assignee"],
 } satisfies Partial<KanbanRendererSettings>;
 
