@@ -72,7 +72,7 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Private history stays readable offline and appears in the initial live-sync snapshot after restart.
 import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
-// Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
+// Planner covers timeline state, side-panel attention actions, complete board moves, missing folders/Git metadata and Git conflicts.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
 // Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
 // Review requests start conversations only when opened and reuse them on later visits.
