@@ -134,12 +134,13 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
     emit("disk", {
       tables: (
         await db.execute(
-          sql`select relname, pg_total_relation_size(oid) as bytes from pg_class where relname like 'storage_document%'`,
+          sql`select relname, pg_total_relation_size(oid) as bytes from pg_class where relkind = 'r' and relname like 'storage_%'`,
         )
       ).rows,
     });
     emit("gaps", {
-      indexMaintenance: "not implemented",
+      indexMaintenance:
+        "Projection maintenance is included in durable writes; its separate duration is not instrumented",
       lockWaitMs: null,
       queueDepth: null,
       notificationMs: null,
