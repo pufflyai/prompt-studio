@@ -1,5 +1,5 @@
 import { defineCommand, l10n, params, type ViewFilterGroup } from "@pstdio/sdk/extensions";
-import { readAutoBuildMode, readAutoBuildModeSnapshot, saveAutoBuildMode } from "../data/auto-build-mode";
+import { readAutoBuildMode, saveAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withWriteGuard } from "../data/write-guard";
 import { enqueueAutoBuild } from "../hooks/auto-build";
@@ -55,32 +55,30 @@ export const configureAutoBuildCommand = defineCommand({
     blockOnReview: params.boolean({ label: "Block on review" }),
   },
   async run(ctx, { enabled, prompt, ignore, blockOnReview }) {
-    const configure = async () => {
-      const { mode: current, record } = await readAutoBuildModeSnapshot(ctx);
-      const nextPrompt = prompt?.trim() ?? current.prompt;
-      if (enabled && !nextPrompt) throw new Error("Enter a prompt for the Auto Build supervisor.");
-      const supervisor =
-        enabled && !current.enabled
-          ? await ctx.storage.records.read(ctx.storage.records.id("auto-build-supervisor"))
-          : undefined;
-      return saveAutoBuildMode(
-        ctx,
-        {
-          ...current,
-          revision: crypto.randomUUID(),
-          enabled,
-          prompt: nextPrompt,
-          ignore: ignore ?? current.ignore,
-          blockOnReview: blockOnReview ?? current.blockOnReview,
-        },
-        record,
-        supervisor ? [{ recordId: supervisor.recordId, expectedRevision: supervisor.revision, replace: {} }] : [],
-      );
-    };
+    const configure = () =>
+      withWriteGuard(ctx, "auto-build-mode", async () => {
+        const current = await readAutoBuildMode(ctx);
+        const nextPrompt = prompt?.trim() ?? current.prompt;
+        if (enabled && !nextPrompt) throw new Error("Enter a prompt for the Auto Build supervisor.");
+        return saveAutoBuildMode(
+          ctx,
+          {
+            ...current,
+            revision: crypto.randomUUID(),
+            enabled,
+            prompt: nextPrompt,
+            ignore: ignore ?? current.ignore,
+            blockOnReview: blockOnReview ?? current.blockOnReview,
+          },
+          enabled && !current.enabled
+            ? [{ recordId: ctx.storage.records.id("auto-build-supervisor"), replace: {} }]
+            : [],
+        );
+      });
     // A previous wake must finish saving its session before a new run clears ownership.
     // Stop stays available while a wake is starting a session.
     const mode = enabled ? await withWriteGuard(ctx, "auto-build-supervisor", configure) : await configure();
-    if (mode.storageOutcome.status !== "conflict" && mode.enabled) await enqueueAutoBuild(ctx);
+    if (mode.enabled) await enqueueAutoBuild(ctx);
     return mode;
   },
 });
