@@ -1,11 +1,14 @@
 import { Text } from "@chakra-ui/react";
+import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
+import { collectionBadgeTarget } from "../../../extensions/contributions/collection-badge-navigation";
 
-const RowTargetNavigation = () => {
+const RowTargetNavigation = (props: { panel?: boolean }) => {
+  const { panel } = props;
   const [workbench] = useState(() => {
     const w = createWorkbench();
     const ref = (id: string) => ({ kind: "page" as const, id, extensionId: "storybook" });
@@ -14,13 +17,55 @@ const RowTargetNavigation = () => {
       title: "Board",
       body: {
         kind: "kanban",
-        attributes: [],
-        defaultSettings: { columnGrouping: "none", rowGrouping: "none" },
+        attributes: panel
+          ? [
+              {
+                id: "attention",
+                label: "Needs attention",
+                type: { kind: "string" },
+                render: (value, row) =>
+                  renderBadgeListDisplay(
+                    {
+                      id: "attention",
+                      label: "Needs attention",
+                      type: { kind: "string" },
+                      display: { kind: "badge-list", itemsAttributeId: "items" },
+                    },
+                    value,
+                    row,
+                    undefined,
+                    (id) => {
+                      const target = collectionBadgeTarget(row, "items", id, "storybook", "project");
+                      return target
+                        ? () => {
+                            void w.navigation.openTarget(target);
+                          }
+                        : undefined;
+                    },
+                  ),
+              },
+            ]
+          : [],
+        defaultSettings: { columnGrouping: "none", rowGrouping: "none", displayProperties: ["attention"] },
         executeQuery: async () => [
           {
             id: "a",
             title: "Ticket A",
-            attributes: {},
+            attributes: {
+              items: [
+                {
+                  id: "attention",
+                  label: "1",
+                  tooltip: "1 item needs attention",
+                  icon: "message-circle-warning",
+                  action: {
+                    kind: "panel",
+                    panel: { kind: "page-slot", page: ref("tickets"), id: "attention" },
+                    resource: { type: "ticket", id: "a" },
+                  },
+                },
+              ],
+            },
             target: {
               kind: "page",
               page: ref("ticket"),
@@ -38,6 +83,11 @@ const RowTargetNavigation = () => {
       title: "Editor",
       body: { kind: "react", render: () => <Text>Ticket opened</Text> },
     });
+    w.views.registerView({
+      id: "attention",
+      title: "Needs attention",
+      body: { kind: "react", render: () => <Text>Ticket attention</Text> },
+    });
     w.modes.registerMode({ id: "project", activate() {} });
     for (const id of ["tickets", "ticket"])
       w.pages.registerPage({
@@ -46,7 +96,23 @@ const RowTargetNavigation = () => {
         title: id,
         path: id,
         modeId: "project",
-        slots: [],
+        slots:
+          id === "tickets"
+            ? [
+                {
+                  id: "attention",
+                  region: "side",
+                  item: {
+                    kind: "binding",
+                    binding: {
+                      kinds: [{ kind: "resource-kind", id: "ticket" }],
+                      view: { kind: "view", id: "attention" },
+                      cardinality: "one",
+                    },
+                  },
+                },
+              ]
+            : [],
         ...(id === "ticket"
           ? { parentId: "tickets", resource: { kinds: [{ kind: "resource-kind" as const, id: "ticket" }] } }
           : {}),
@@ -69,5 +135,15 @@ export const ImmediatePage: StoryObj<typeof meta> = {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByText("Ticket A", { exact: true }));
     await expect(await canvas.findByText("Ticket opened")).toBeVisible();
+  },
+};
+export const BadgeOpensSidePanel: StoryObj<typeof meta> = {
+  args: { panel: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "1 item needs attention" }));
+    await expect(await canvas.findByText("Ticket attention")).toBeVisible();
+    await expect(canvas.getByText("Ticket A", { exact: true })).toBeVisible();
+    expect(canvas.queryByText("Ticket opened")).toBeNull();
   },
 };
