@@ -244,7 +244,9 @@ test("next tickets explains capacity waits without launching work", async () => 
   const next = await nextTicketsCommand.run(ctx, { track: "Workbench" });
   expect(next.tickets).toHaveLength(0);
   expect(next.waiting).toContainEqual(expect.objectContaining({ id: ready.id, reason: "capacity-full" }));
-  expect(await storage.get("auto-build-supervisor")).toBeUndefined();
+  expect(await storage.get<{ sessionId: string }>("auto-build-supervisor")).toEqual({
+    sessionId: "fixture-supervisor",
+  });
 });
 
 test("next tickets can explain waits without resolving a Git base when nothing can launch", async () => {
@@ -264,6 +266,7 @@ test("wake checks, next queries and dispatch share the supervisor scope", async 
   const workbench = await ticket("Requested work");
   const planner = await ticket("Work outside the prompt", "planner");
   await storage.set("auto-build-supervisor", {
+    sessionId: "fixture-supervisor",
     scope: { revision: "test", queries: [{ track: "Workbench" }] },
   });
   expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toEqual([workbench.id]);
@@ -279,10 +282,12 @@ test("supervisor scopes combine tracks and expire when the prompt is reconfigure
   const workbench = await ticket("Workbench work");
   const planner = await ticket("Planner work", "planner");
   await storage.set("auto-build-supervisor", {
+    sessionId: "fixture-supervisor",
     scope: { revision: "test", queries: [{ track: "Workbench" }, { track: "Planner" }] },
   });
   expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toEqual([workbench.id, planner.id]);
   await storage.set("auto-build-supervisor", {
+    sessionId: "fixture-supervisor",
     scope: { revision: "old-prompt", queries: [{ track: "Workbench" }] },
   });
   expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toEqual([workbench.id, planner.id]);
@@ -293,6 +298,7 @@ test("a scope change during dispatch prevents launching work outside the new sco
   const task = await ticket("Requested work");
   await ticket("New scope", "planner");
   await storage.set("auto-build-supervisor", {
+    sessionId: "fixture-supervisor",
     scope: { revision: "test", queries: [{ track: "Workbench" }] },
   });
   const run = ctx.process.run;
@@ -300,6 +306,7 @@ test("a scope change during dispatch prevents launching work outside the new sco
   ctx.process.run = async (input) => {
     if (input.command.includes("--verify") && ++checks === 2)
       await storage.set("auto-build-supervisor", {
+        sessionId: "fixture-supervisor",
         scope: { revision: "test", queries: [{ track: "Planner" }] },
       });
     return run(input);

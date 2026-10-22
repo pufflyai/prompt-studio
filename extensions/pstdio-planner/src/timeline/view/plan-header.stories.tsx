@@ -82,7 +82,6 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean; obsoletePro
           running={0}
           capacity={2}
           onOpenSession={() => {}}
-          onTurnOff={async () => true}
           t={(_key, fallback) => fallback ?? _key}
         />
       }

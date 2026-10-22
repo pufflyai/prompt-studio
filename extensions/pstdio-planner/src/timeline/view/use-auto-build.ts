@@ -45,6 +45,20 @@ export function useAutoBuild(client: PlanClient) {
       setSaving(false);
     }
   };
+  const transition = async (action: "pause" | "resume") => {
+    setSaving(true);
+    setError(undefined);
+    try {
+      const saved = await client.commands[`auto-build.${action}`]();
+      setMode((current) => (current ? { ...current, ...saved } : current));
+      return true;
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
   // Saved run failures belong to the activity popover, not a new configuration attempt.
-  return { mode, saving, error, configure };
+  return { mode, saving, error, configure, transition };
 }

@@ -1,6 +1,7 @@
 import { type CommandContext, defineCommand, l10n, params, type ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { readAutoBuildFilter } from "../data/auto-build-filter";
 import { readAutoBuildMode, saveAutoBuildMode } from "../data/auto-build-mode";
+import { readPendingAutoBuildRequests } from "../data/auto-build-ownership";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withWriteGuard } from "../data/write-guard";
 import { enqueueAutoBuild } from "../hooks/auto-build";
@@ -38,7 +39,8 @@ export const readAutoBuildCommand = defineCommand({
     const ticketSessions = sessions.filter(({ id }) => id !== state.sessionId);
     const inspect = mode.enabled && !running && capacity.running === 0 && !isLiveSession(supervisor);
     // Completion reads only ticket statuses. Git readiness checks wait until no startup or work is active.
-    const work = mode.enabled ? await readAutoBuildCandidates(ctx, mode, inspect ? {} : { limit: 0 }) : undefined;
+    const work =
+      mode.state !== "stopped" ? await readAutoBuildCandidates(ctx, mode, inspect ? {} : { limit: 0 }) : undefined;
     const completed = Boolean(work?.completed);
     let stuck =
       mode.enabled &&
@@ -48,6 +50,12 @@ export const readAutoBuildCommand = defineCommand({
     if (inspect && work) stuck ||= work.readyTicketCount === 0 && work.blockedTickets.length > 0;
     return {
       ...mode,
+      reviewRequests: await readPendingAutoBuildRequests(
+        ctx,
+        mode.state === "stopped" ? undefined : state.sessionId,
+        work?.reviewRequests,
+      ),
+      requestErrors: work?.requestErrors ?? [],
       observations: work?.observations ?? [],
       waitingTickets: work?.waitingTickets ?? [],
       configurationError: work?.configurationError ?? null,
@@ -92,13 +100,14 @@ export const configureAutoBuildCommand = defineCommand({
             ...current,
             revision: crypto.randomUUID(),
             enabled,
+            state: enabled ? "running" : "stopped",
             prompt: nextPrompt,
             eligible: nextEligible,
             supervisorModel: supervisorModel ?? current.supervisorModel,
             blockOnReview: blockOnReview ?? current.blockOnReview,
             requireMergedDependencies: requireMergedDependencies ?? current.requireMergedDependencies,
           },
-          enabled && !current.enabled
+          enabled && current.state === "stopped"
             ? [{ recordId: ctx.storage.records.id("auto-build-supervisor"), replace: {} }]
             : [],
         );

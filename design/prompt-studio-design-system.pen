@@ -216497,7 +216497,10 @@
               "strokeWidth": 1,
               "layout": "vertical",
               "gap": 12,
-              "padding": 16,
+              "padding": [
+                8,
+                12
+              ],
               "children": [
                 {
                   "type": "text",
@@ -216510,44 +216513,77 @@
                   "fontWeight": "600"
                 },
                 {
-                  "type": "text",
-                  "id": "bmZ9e",
-                  "name": "ONGOING SESSIONS\nAuto Build supervisor · sleeping\nP-1 · Preview A: greeting · in progress\n\nRunning · 1 of 2 agents",
-                  "fill": "$ds-fg-muted",
-                  "textGrowth": "fixed-width",
+                  "type": "frame",
+                  "id": "o7ECZN",
+                  "name": "Scrollable activity body",
+                  "clip": true,
                   "width": "fill_container",
-                  "content": "ONGOING SESSIONS\nAuto Build supervisor · sleeping\nP-1 · Preview A: greeting · in progress\n\nRunning · 1 of 2 agents",
-                  "lineHeight": 1.5,
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
+                  "height": 240,
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "bmZ9e",
+                      "name": "Pending requests and ongoing sessions",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "NEEDS ATTENTION\nP-1 · Choose the release scope    Open request\n\nONGOING SESSIONS\nAuto Build supervisor · sleeping\nP-1 · Preview A: greeting · in progress\n\nRunning · 1 of 2 agents",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
                 },
                 {
-                  "id": "m1jut",
-                  "type": "ref",
-                  "ref": "c24zV7",
-                  "name": "Stop Auto Build",
-                  "height": 32,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "sm"
+                  "type": "frame",
+                  "id": "hKlEG",
+                  "name": "Fixed action footer",
+                  "width": "fill_container",
+                  "stroke": "$ds-border",
+                  "strokeWidth": {
+                    "top": 1
                   },
-                  "descendants": {
-                    "DsEVd": {
-                      "enabled": false,
-                      "width": 16,
-                      "height": 16
-                    },
-                    "Hf4GT": {
-                      "content": "Stop"
-                    },
-                    "khvEs": {
+                  "padding": [
+                    8,
+                    0,
+                    0,
+                    0
+                  ],
+                  "justifyContent": "end",
+                  "children": [
+                    {
+                      "id": "m1jut",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Pause Auto Build",
+                      "height": 32,
                       "theme": {
-                        "kbd": "raised",
-                        "size": "md"
+                        "btn": "outline",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": true,
+                          "width": 16,
+                          "height": 16,
+                          "icon": "pause"
+                        },
+                        "Hf4GT": {
+                          "content": "Pause"
+                        },
+                        "khvEs": {
+                          "theme": {
+                            "kbd": "raised",
+                            "size": "md"
+                          },
+                          "enabled": false
+                        }
                       }
                     }
-                  }
+                  ]
                 }
               ]
             },
@@ -216717,6 +216753,107 @@
                           "content": "Show completed milestones"
                         },
                         "khvEs": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "b4DCc",
+              "name": "Auto Build paused activity",
+              "width": 440,
+              "fill": "$ds-elevated",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "m33A9g",
+                  "name": "Auto Build",
+                  "fill": "$ds-fg",
+                  "content": "Auto Build · Paused",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "m9n01A",
+                  "name": "Scrollable activity body",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 240,
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "yQIKK",
+                      "name": "Pending requests and ongoing sessions",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "NEEDS ATTENTION\nP-1 · Choose the release scope    Open request\n\nONGOING SESSIONS\nAuto Build supervisor · sleeping\nP-1 · Preview A: greeting · in progress\n\nRunning · 1 of 2 agents",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "J87vVo",
+                  "name": "Fixed action footer",
+                  "width": "fill_container",
+                  "stroke": "$ds-border",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "padding": [
+                    8,
+                    0,
+                    0,
+                    0
+                  ],
+                  "justifyContent": "end",
+                  "children": [
+                    {
+                      "id": "yJFst",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Resume Auto Build",
+                      "height": 32,
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "icon": "play",
+                          "enabled": true,
+                          "width": 16,
+                          "height": 16
+                        },
+                        "Hf4GT": {
+                          "content": "Resume"
+                        },
+                        "khvEs": {
+                          "theme": {
+                            "kbd": "raised",
+                            "size": "md"
+                          },
                           "enabled": false
                         }
                       }

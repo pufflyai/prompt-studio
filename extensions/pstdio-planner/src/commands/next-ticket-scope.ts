@@ -43,5 +43,5 @@ export async function selectScopedWork(ctx: CommandContext, input: ScopedWorkInp
       !byId.get(row.id)?.draft &&
       !isCompleted(row),
   );
-  return { selected, completed, configurationError };
+  return { selected, scoped, completed, configurationError };
 }

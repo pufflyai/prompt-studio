@@ -21,6 +21,7 @@ test("remembers the supervisor model when Auto Build stops and restarts", async 
 
 test("starts the supervisor with the chosen model and run options", async () => {
   const { ctx, ticket } = await fixture();
+  await ctx.storage.delete("auto-build-supervisor");
   await ticket("Build the greeting");
   await configureAutoBuildCommand.run(ctx, { enabled: true, supervisorModel: supervisor });
   const starts: Parameters<typeof ctx.sessions.create>[0][] = [];

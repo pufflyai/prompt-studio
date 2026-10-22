@@ -7,12 +7,24 @@ export async function readAutoBuildCandidates(
   mode: AutoBuildMode,
   input: { limit?: number } = {},
 ) {
-  const { tickets, waiting, capacity, snapshot, completed, matchingTicketCount, observations, configurationError } =
-    await readNextTickets(ctx, mode, input);
+  const {
+    tickets,
+    waiting,
+    capacity,
+    snapshot,
+    completed,
+    matchingTicketCount,
+    observations,
+    configurationError,
+    reviewRequests,
+    requestErrors,
+  } = await readNextTickets(ctx, mode, input);
   const blockedTickets = waiting
     .filter(({ reason }) => reason !== "assigned" && reason !== "existing-attempt" && reason !== "capacity-full")
     .map(({ ticket }) => ticket);
   return {
+    reviewRequests,
+    requestErrors,
     candidates: tickets.filter(({ action }) => action !== "update-stack"),
     readyTicketCount: tickets.length,
     capacity,
