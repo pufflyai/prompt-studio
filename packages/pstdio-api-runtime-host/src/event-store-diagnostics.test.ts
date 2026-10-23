@@ -62,3 +62,57 @@ test("diagnostic reads do not traverse growing subscriber backlogs", async () =>
   expect(store.diagnostics().queuedBytes).toBe(0);
   store.close();
 });
+
+test("history eviction leaves a subscriber's complete byte span readable", async () => {
+  const patches = ["first", "é", "third", "oversized".repeat(100), "after empty"].map((value) => ({
+    op: "add" as const,
+    path: "/message",
+    value,
+  }));
+  const sizes = patches.map((patch) => Buffer.byteLength(JSON.stringify(patch)));
+  const store = createEventStore({ maxSizeBytes: sizes[1]! + sizes[2]! });
+  const iterator = store.subscribe()[Symbol.asyncIterator]();
+  for (const patch of patches.slice(0, 3)) store.push(patch);
+  expect(store.getHistory()).toEqual(patches.slice(1, 3));
+  store.push(patches[3]!);
+  expect(store.getHistory()).toEqual([]);
+  store.push(patches[4]!);
+  expect(store.getHistory()).toEqual([patches[4]!]);
+  // Collection may begin after a backlog already exists. No diagnostic read or
+  // capture activation is needed while producing and retaining these events.
+  expect(store.diagnostics()).toMatchObject({
+    historyBytes: sizes[4],
+    queuedEvents: 5,
+    queuedBytes: sizes.reduce((sum, size) => sum + size, 0),
+  });
+  expect((await iterator.next()).value).toEqual(patches[0]);
+  expect((await iterator.next()).value).toEqual(patches[1]);
+  expect(store.diagnostics().queuedBytes).toBe(sizes.slice(2).reduce((sum, size) => sum + size, 0));
+  store.close();
+  for (const patch of patches.slice(2)) expect((await iterator.next()).value).toEqual(patch);
+  expect((await iterator.next()).done).toBe(true);
+});
+
+test("separate queued spans exclude bytes delivered directly to a waiting reader", async () => {
+  const store = createEventStore({ maxSizeBytes: 0 });
+  const iterator = store.subscribe()[Symbol.asyncIterator]();
+  const patch = { op: "add" as const, path: "/message", value: "body" };
+  const size = Buffer.byteLength(JSON.stringify(patch));
+  const pending = iterator.next();
+  store.push(patch);
+  expect((await pending).value).toEqual(patch);
+  expect(store.diagnostics().queuedBytes).toBe(0);
+  store.push(patch);
+  store.push(patch);
+  expect(store.diagnostics().queuedBytes).toBe(size * 2);
+  await iterator.next();
+  await iterator.next();
+  const nextPending = iterator.next();
+  store.push(patch);
+  await nextPending;
+  store.push(patch);
+  expect(store.diagnostics()).toMatchObject({ historyBytes: 0, queuedEvents: 1, queuedBytes: size });
+  await iterator.return!();
+  expect(store.diagnostics().queuedBytes).toBe(0);
+  store.close();
+});

@@ -9,20 +9,32 @@ type EventStoreOptions = {
   maxSizeBytes?: number;
 };
 
+interface StoredPatch {
+  patch: JsonPatch;
+  size: number;
+  byteEnd: bigint;
+}
+
+const byteLength = (entries: StoredPatch[]) => {
+  const first = entries[0];
+  const last = entries.at(-1);
+  return first && last ? Number(last.byteEnd - first.byteEnd) + first.size : 0;
+};
+
 export const createEventStore = (options?: EventStoreOptions) => {
   const maxSize = options?.maxSizeBytes ?? DEFAULT_MAX_SIZE_BYTES;
-  const history: JsonPatch[] = [];
-  const patchSizes: number[] = [];
+  const history: StoredPatch[] = [];
   const emitter = new EventEmitter();
-  let totalSize = 0;
+  // History retention and subscriber spans share one functional byte address.
+  // Keep it monotonic even when an oversized patch empties retained history.
+  let byteEnd = 0n;
   let closed = false;
 
   emitter.setMaxListeners(100);
 
   const evict = () => {
-    while (totalSize > maxSize && history.length > 0) {
+    while (byteLength(history) > maxSize && history.length > 0) {
       history.shift();
-      totalSize -= patchSizes.shift()!;
     }
   };
 
@@ -31,36 +43,34 @@ export const createEventStore = (options?: EventStoreOptions) => {
 
     const size = Buffer.byteLength(JSON.stringify(patch));
 
-    history.push(patch);
-    patchSizes.push(size);
-    totalSize += size;
+    byteEnd += BigInt(size);
+    const entry = { patch, size, byteEnd };
+    history.push(entry);
 
     evict();
 
-    emitter.emit(PATCH_EVENT, patch, size);
+    emitter.emit(PATCH_EVENT, entry);
   };
 
-  const getHistory = () => [...history];
+  const getHistory = () => history.map((entry) => entry.patch);
 
   const subscribe = (): AsyncIterable<JsonPatch> => ({
     [Symbol.asyncIterator]: () => {
-      const queue: { patch: JsonPatch; size: number }[] = [];
-      let queuedBytes = 0;
+      const queue: StoredPatch[] = [];
       let resolve: ((value: IteratorResult<JsonPatch>) => void) | null = null;
       let done = closed;
 
-      const onPatch = (patch: JsonPatch, size: number) => {
+      const onPatch = (entry: StoredPatch) => {
         if (resolve) {
           const r = resolve;
           resolve = null;
-          r({ value: patch, done: false });
+          r({ value: entry.patch, done: false });
         } else {
-          queue.push({ patch, size });
-          queuedBytes += size;
+          queue.push(entry);
         }
       };
 
-      onPatch.diagnostics = () => ({ events: queue.length, bytes: queuedBytes });
+      onPatch.diagnostics = () => ({ events: queue.length, bytes: byteLength(queue) });
 
       const onClose = () => {
         done = true;
@@ -83,7 +93,6 @@ export const createEventStore = (options?: EventStoreOptions) => {
         next: () => {
           if (queue.length > 0) {
             const entry = queue.shift()!;
-            queuedBytes -= entry.size;
             return Promise.resolve({ value: entry.patch, done: false });
           }
 
@@ -113,7 +122,7 @@ export const createEventStore = (options?: EventStoreOptions) => {
       return {
         next: () => {
           if (historyIndex < historySnapshot) {
-            return Promise.resolve({ value: history[historyIndex++], done: false });
+            return Promise.resolve({ value: history[historyIndex++]?.patch, done: false });
           }
 
           return liveIterator.next();
@@ -125,7 +134,7 @@ export const createEventStore = (options?: EventStoreOptions) => {
   });
 
   const snapshotAndSubscribe = () => {
-    const historySnapshot = [...history];
+    const historySnapshot = getHistory();
     const liveIterator = subscribe()[Symbol.asyncIterator]();
 
     return {
@@ -155,7 +164,7 @@ export const createEventStore = (options?: EventStoreOptions) => {
     }
     return {
       historyEvents: history.length,
-      historyBytes: totalSize,
+      historyBytes: byteLength(history),
       subscribers: subscribers.length,
       queuedEvents,
       queuedBytes,
