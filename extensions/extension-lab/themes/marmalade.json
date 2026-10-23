@@ -1,0 +1,29 @@
+{
+  "name": "marmalade",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#242424",
+    "editor.foreground": "#e8e8e8",
+    "editorWidget.background": "#303030",
+    "activityBar.background": "#303030",
+    "sideBar.background": "#303030",
+    "panel.background": "#303030",
+    "statusBar.background": "#303030",
+    "input.background": "#252525",
+    "input.foreground": "#e8e8e8",
+    "input.border": "#454545",
+    "menu.background": "#303030",
+    "menu.foreground": "#e8e8e8",
+    "menu.selectionBackground": "#454545",
+    "list.hoverBackground": "#3b3b3b",
+    "list.activeSelectionBackground": "#444d59",
+    "button.background": "#3d72ac",
+    "button.foreground": "#ffffff",
+    "button.hoverBackground": "#4a84c0",
+    "focusBorder": "#609ad4",
+    "foreground": "#e8e8e8",
+    "descriptionForeground": "#b0b0b0",
+    "disabledForeground": "#777777",
+    "border": "#424242"
+  }
+}

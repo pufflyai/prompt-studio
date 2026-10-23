@@ -1,6 +1,6 @@
 # Extension Lab
 
-Extension Lab has five small, working tools built only with the public extension API. Try them, then copy their code when you build your own.
+Extension Lab has six small, working tools built only with the public extension API. Try them, then copy their code when you build your own.
 
 | Example  | Resources     | Features                                                                |
 | -------- | ------------- | ----------------------------------------------------------------------- |
@@ -9,6 +9,7 @@ Extension Lab has five small, working tools built only with the public extension
 | Zipline  | Issues        | Kanban board, status changes, issue inspector                           |
 | Pigeon   | Mail threads  | Search, folders, stars, archive, compose, sent mail                     |
 | Kiln     | Scene objects | Three.js viewport, selection, visibility, transforms, animated timeline |
+| Marmalade | Layered documents | Canvas, editable type, groups, previews, multiselection, visibility, locks, and reordering |
 
 Each example adds its own page, mode, resource kind, views, sample data, and theme. A mode is a workbench layout with its own navigation, panels, and theme. A resource kind is a type of item, such as a document or a track, that the workbench can open and link to.
 
@@ -34,6 +35,10 @@ Read an example's data from a terminal:
 pst extension-lab resources list --name scribble
 pst extension-lab state read --name kiln
 ```
+
+## Marmalade
+
+Open **Examples → Marmalade** to edit the Great Wave sample. Its canvas, tools, properties, and layer panel use Prompt Studio's public extension API. See [Marmalade](docs/0001-marmalade.md) for the controls, commands, state ownership, and sample-image attribution.
 
 ## Mode defaults
 
