@@ -217636,7 +217636,7 @@
                     {
                       "type": "text",
                       "id": "HCuKr",
-                      "name": "Leader / View",
+                      "name": "Keyboard menu / View",
                       "fill": "$ds-fg",
                       "content": "Keyboard menu / View",
                       "fontFamily": "$font-label",
@@ -217838,6 +217838,9 @@
                     }
                   ]
                 },
+                "TK6pL": {
+                  "enabled": false
+                },
                 "Q7Vu5t": {
                   "content": "Navigation stays active · Enter/Escape finishes in selected tab"
                 },
@@ -217956,6 +217959,9 @@
                     }
                   ]
                 },
+                "TK6pL": {
+                  "enabled": false
+                },
                 "Q7Vu5t": {
                   "content": "Choose a target · no initial selection · Escape cancels"
                 },
@@ -217968,7 +217974,7 @@
               "id": "i9MtmG",
               "type": "ref",
               "ref": "hkUeJ",
-              "name": "Shortcut management",
+              "name": "Shortcut reference",
               "width": 704,
               "layout": "vertical",
               "height": "fit_content",
@@ -218026,19 +218032,145 @@
                           "content": "Change ticket status · Planner · Resource"
                         },
                         "E8VVm": {
-                          "id": "t2Mw1Z",
-                          "type": "ref",
-                          "ref": "XpOTN",
-                          "name": "Shortcut A S",
-                          "enabled": true,
-                          "descendants": {
-                            "xvAGG": {
-                              "content": "Alt+Shift+Space → A → S"
+                          "type": "frame",
+                          "id": "BNI48",
+                          "name": "Shortcut sequence",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "e4eiPM",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "xTrD6",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Alt",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Alt"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "VkQoB",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Shift",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Shift"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "jx2nm",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Space",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Space"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
                             },
-                            "uD3AU": {
-                              "enabled": false
+                            {
+                              "type": "icon",
+                              "id": "Z6rwc",
+                              "name": "Next shortcut step",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "redo",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Igg8D",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "R3zOdb",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "A",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "A"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "icon",
+                              "id": "wiPm4",
+                              "name": "Next shortcut step",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "redo",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "S4FhlX",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "aLDQh",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "S",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "S"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
                             }
-                          }
+                          ]
                         }
                       }
                     },
@@ -218056,19 +218188,145 @@
                           "content": "New tab · Core · Panel"
                         },
                         "E8VVm": {
-                          "id": "kE6VO",
-                          "type": "ref",
-                          "ref": "XpOTN",
-                          "name": "Shortcut V N",
-                          "enabled": true,
-                          "descendants": {
-                            "xvAGG": {
-                              "content": "Alt+Shift+Space → V → N"
+                          "type": "frame",
+                          "id": "I5xzd2",
+                          "name": "Shortcut sequence",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "gA5Xo",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "CTWQE",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Alt",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Alt"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "axKJC",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Shift",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Shift"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "Qe5uH",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Space",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Space"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
                             },
-                            "uD3AU": {
-                              "enabled": false
+                            {
+                              "type": "icon",
+                              "id": "c6LgQo",
+                              "name": "Next shortcut step",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "redo",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "fajbT",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "oaKqY",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "V",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "V"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "icon",
+                              "id": "EtycF",
+                              "name": "Next shortcut step",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "redo",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "iZ5fO",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "NpJJS",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "N",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "N"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
                             }
-                          }
+                          ]
                         }
                       }
                     },
@@ -218086,19 +218344,145 @@
                           "content": "Tickets · Planner · Sticky"
                         },
                         "E8VVm": {
-                          "id": "cFGo5",
-                          "type": "ref",
-                          "ref": "XpOTN",
-                          "name": "Shortcut G P",
-                          "enabled": true,
-                          "descendants": {
-                            "xvAGG": {
-                              "content": "Alt+Shift+Space → G → P"
+                          "type": "frame",
+                          "id": "f3UIH",
+                          "name": "Shortcut sequence",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "nJpvp",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "PKdSO",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Alt",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Alt"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "feUKW",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Shift",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Shift"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "pnk8R",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Space",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Space"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
                             },
-                            "uD3AU": {
-                              "enabled": false
+                            {
+                              "type": "icon",
+                              "id": "HdYE7",
+                              "name": "Next shortcut step",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "redo",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Qb5rp",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "TgZem",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "G",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "G"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "icon",
+                              "id": "GDBeZ",
+                              "name": "Next shortcut step",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "redo",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "GD1IJ",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "D8okcu",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "P",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "P"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
                             }
-                          }
+                          ]
                         }
                       }
                     },
@@ -218133,6 +218517,9 @@
                       }
                     }
                   ]
+                },
+                "TK6pL": {
+                  "enabled": false
                 },
                 "Q7Vu5t": {
                   "content": "Search actions and keyboard shortcuts"

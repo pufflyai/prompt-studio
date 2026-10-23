@@ -27,13 +27,28 @@ test("opaque nested content relays only negotiated entry intents and restores lo
     document.querySelector("iframe")?.contentWindow?.postMessage({ type: "pstdio.keyboard.restore" }, "*"),
   );
   await expect(draft).toBeFocused();
+  await draft.dispatchEvent("keydown", {
+    key: "\u00a0",
+    code: "Space",
+    altKey: true,
+    shiftKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
+  const twoRequests = '[{"id":"leader","repeat":false,"nested":true},{"id":"leader","repeat":false,"nested":true}]';
+  await expect(page.getByLabel("Requests")).toHaveText(twoRequests);
+  await page.evaluate(() =>
+    document.querySelector("iframe")?.contentWindow?.postMessage({ type: "pstdio.keyboard.restore" }, "*"),
+  );
+  await expect(draft).toBeFocused();
+  await expect(draft).toHaveValue("Unsaved nested draft");
   await guest.locator("dialog").evaluate((dialog: HTMLDialogElement) => dialog.showModal());
   const modal = guest.getByRole("textbox", { name: "Modal draft" });
   await modal.press("Alt+Shift+Space");
   await modal.press("Alt+Shift+X");
-  await expect(page.getByLabel("Requests")).toHaveText('[{"id":"leader","repeat":false,"nested":true}]');
+  await expect(page.getByLabel("Requests")).toHaveText(twoRequests);
   await guest.locator("dialog").evaluate((dialog: HTMLDialogElement) => dialog.close());
   await draft.focus();
   await draft.press("Alt+Shift+X");
-  await expect(page.getByLabel("Requests")).toHaveText('[{"id":"leader","repeat":false,"nested":true}]');
+  await expect(page.getByLabel("Requests")).toHaveText(twoRequests);
 });

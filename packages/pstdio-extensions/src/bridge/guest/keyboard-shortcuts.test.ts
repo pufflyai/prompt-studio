@@ -15,6 +15,20 @@ const keydown = (key: string, input: Record<string, unknown> = {}) =>
   });
 const leader = { id: "leader", key: "Space", altKey: true, shiftKey: true };
 
+test("Option-modified Space opens the keyboard menu when macOS emits a non-breaking space", () => {
+  const target = new EventTarget();
+  const requests: unknown[] = [];
+  installKeyboardShortcuts(
+    target,
+    () => [leader],
+    (request) => requests.push(request),
+  );
+  const event = keydown("\u00a0", { code: "Space", altKey: true, shiftKey: true });
+  target.dispatchEvent(event);
+  expect(event.defaultPrevented).toBe(true);
+  expect(requests).toEqual([{ id: "leader", repeat: false }]);
+});
+
 test("an owned entry chord is consumed before a guest editor and delivered once", () => {
   const target = new EventTarget();
   const requests: unknown[] = [];

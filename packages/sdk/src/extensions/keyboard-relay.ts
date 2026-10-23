@@ -71,6 +71,7 @@ export const installWebviewKeyboardRelay = (host?: WebviewKeyboardRelayHost) => 
     const shortcut = shortcuts().find(
       (candidate) =>
         (normalize(candidate.key) === normalize(event.key) ||
+          (normalize(candidate.key) === "SPACE" && event.code === "Space") ||
           (/^[0-9]$/.test(candidate.key) && event.code === `Digit${candidate.key}`)) &&
         Boolean(candidate.ctrlKey) === event.ctrlKey &&
         Boolean(candidate.metaKey) === event.metaKey &&

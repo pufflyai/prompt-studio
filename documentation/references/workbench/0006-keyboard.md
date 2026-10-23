@@ -6,6 +6,8 @@ Navigate visible panels, choose an action's target, and discover available keybo
 
 Press **Alt+Shift+Space** to enter the keyboard menu. Choose View (V), Go (G), Create (C), Current view (A), Extensions (E), Settings (S), or Help (H). Press `/` to search actions. Backspace returns one level; Enter or Escape finishes. Keyboard Shortcuts under Help is a searchable reference. Shortcut editing and alias controls are deferred.
 
+On macOS, Alt is Option. Entry matches the physical Space key even when Option produces a non-breaking space. Shortcut sequences use a small redo arrow between steps. The keyboard menu has no Back/Exit buttons or instructional footer; Backspace, Enter, and Escape remain available.
+
 Extensions appear under E as selectable rows with their display names. Use Up/Down and Enter, or click a name, to choose one.
 
 ## Navigation
