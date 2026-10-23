@@ -41,7 +41,7 @@ const getPrimaryWorkspaceResource = (ctx: WorkbenchModuleContext) => {
   const resource = ctx.getPrimaryResource();
   return resource?.type === "workspace" ? resource : undefined;
 };
-const createNewSessionDraftResource = (workspace: ResourceRef | undefined, harnessId?: string): ResourceRef => {
+const createNewSessionDraftResource = (workspace: ResourceRef | undefined): ResourceRef => {
   const workspaceId = workspace?.id ?? metadataString(workspace, "workspaceId");
   const workspaceShorthand = metadataString(workspace, "workspaceShorthand");
   const workspaceBranch = metadataString(workspace, "workspaceBranch");
@@ -54,7 +54,6 @@ const createNewSessionDraftResource = (workspace: ResourceRef | undefined, harne
     label: "New session",
     icon: "MessageSquarePlus",
     metadata: {
-      ...(harnessId ? { agent: harnessId } : {}),
       ...(workspaceId ? { workspaceId } : {}),
       ...(workspaceTitle ? { workspaceTitle } : {}),
       ...(workspaceShorthand ? { workspaceShorthand } : {}),
@@ -89,11 +88,10 @@ const openNewSessionDraft = (
     tabRetention?: WorkbenchTabRetention;
     replacePanel?: PlacementIdentity;
     region?: WorkbenchPanelRegion;
-    harnessId?: string;
   } = {},
 ) => {
   const workspace = input.workspace ?? getPrimaryWorkspaceResource(ctx) ?? createDefaultWorkspaceResource(ctx);
-  const draftResource = createNewSessionDraftResource(workspace, input.harnessId);
+  const draftResource = createNewSessionDraftResource(workspace);
   forgetDashboardSession(ctx);
   selectSidenavSessionNode(ctx, undefined);
   const identity = input.replacePanel;
@@ -175,18 +173,15 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
           workspace,
           replacePanel,
           sidePanel = false,
-          harnessId,
         } = (args ?? {}) as {
           workspace?: ResourceRef;
           replacePanel?: PlacementIdentity;
           sidePanel?: boolean;
-          harnessId?: string;
         };
         // The tab tray's + asks for a new tab; a tab menu replaces its own placement.
         const isNewTab = context?.source === "panel-add";
         await openNewSessionDraft(ctx, {
           workspace,
-          harnessId,
           replacePanel: isNewTab ? undefined : replacePanel,
           sidePanel: sidePanel || isNewTab,
           tabRetention: isNewTab ? "persistent" : undefined,

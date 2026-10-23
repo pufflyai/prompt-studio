@@ -152,7 +152,6 @@ const metadataString = (resource: ResourceRef | undefined, key: string) => {
 const createDraftSessionView = (resource: ResourceRef | undefined): DashboardSessionView => ({
   ...draftSessionView,
   draftKey: resource?.id ?? draftSessionViewId,
-  agent: metadataString(resource, "agent") ?? null,
   workspaceTitle: metadataString(resource, "workspaceTitle") ?? "",
   workspaceId: metadataString(resource, "workspaceId") ?? null,
   workspaceBranch: metadataString(resource, "workspaceBranch") ?? null,
