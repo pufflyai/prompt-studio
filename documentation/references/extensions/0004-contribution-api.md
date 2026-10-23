@@ -261,6 +261,9 @@ Both `dataTable` and `kanban` bodies accept `toolbarActions`. These actions stay
 visible when a query returns no rows. Use them for commands such as creating a
 record or starting an experiment.
 
+The host renders visible actions as `xs` buttons, with one vertical separator
+before the action group. It omits the separator when no actions are visible.
+
 ```ts
 const experiments = defineView({
   id: "experiments",
