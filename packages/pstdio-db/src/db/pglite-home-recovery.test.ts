@@ -7,7 +7,7 @@ import { acquirePgliteLock } from "./pglite-lock";
 
 const run = async (active: string, phase = "") => {
   const child = Bun.spawn(
-    [process.execPath, new URL("./pglite-home-recovery.fixture.ts", import.meta.url).pathname, active, phase],
+    [process.execPath, join(import.meta.dir, "pglite-home-recovery.fixture.ts"), active, phase],
     {
       stdout: "pipe",
       stderr: "pipe",
