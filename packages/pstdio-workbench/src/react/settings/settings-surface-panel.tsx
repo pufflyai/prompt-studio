@@ -9,9 +9,9 @@ import {
   type SettingsRegistry,
   type WorkbenchPanelRenderInput,
 } from "../../core";
+import { getSettingsPanels } from "../../core/registries/settings/settings-registry";
 import { WorkbenchPreferencesForm } from "../renderers/settings/preferences-form";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { useSettingsRevision } from "./use-settings-revision";
 export interface SettingsSurfacePanelProps {
   input: WorkbenchPanelRenderInput;
   settings: SettingsRegistry;
@@ -45,7 +45,15 @@ const SettingsViewContent = (props: {
       </Centered>
     );
   }
-  const content = renderer.render({ ...input, instance: { ...input.instance, panelId, viewId } }) as ReactNode;
+  const content = renderer.render({
+    ...input,
+    instance: {
+      ...input.instance,
+      instanceId: JSON.stringify([input.instance.instanceId, panelId, viewId]),
+      panelId,
+      viewId,
+    },
+  }) as ReactNode;
   return props.embedded ? content : <ScrollableSettingsContent>{content}</ScrollableSettingsContent>;
 };
 // Resolve async collection data before rendering its registered View. The View
@@ -91,11 +99,11 @@ const CollectionItemView = (props: {
 // resource to a schema form, a custom view, or a collection item editor.
 export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
   const { input, settings, resolveScopeId } = props;
-  const revision = useSettingsRevision(settings);
+  const settingsState = useWorkbenchStore(settings.store, (state) => state);
   const resource = input.instance.resource;
   const panelId = typeof resource?.metadata?.panelId === "string" ? resource.metadata.panelId : undefined;
   const itemId = typeof resource?.metadata?.itemId === "string" ? resource.metadata.itemId : undefined;
-  const panel = panelId ? settings.getPanel(panelId) : undefined;
+  const panel = panelId ? settingsState.panels[panelId] : undefined;
   if (!panel) {
     return (
       <Centered>
@@ -104,9 +112,9 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
     );
   }
   if (panel.kind === "view") {
-    const children = settings
-      .listPanels()
-      .filter((child) => child.parentPanelId === panel.id && input.workbench.context.matches(child.when));
+    const children = getSettingsPanels(settingsState).filter(
+      (child) => child.parentPanelId === panel.id && input.workbench.context.matches(child.when),
+    );
     if (children.length === 0) return <SettingsViewContent input={input} panelId={panel.id} viewId={panel.viewId} />;
     return (
       <ScrollableSettingsContent>
@@ -130,7 +138,7 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
       );
     return (
       <CollectionItemView
-        key={`${resourceKey(resource) ?? itemId}:${revision}`}
+        key={`${resourceKey(resource) ?? itemId}:${settingsState.revision}`}
         panel={panel}
         itemId={itemId}
         input={input}

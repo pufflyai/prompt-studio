@@ -56,7 +56,7 @@ export class DesktopPerformanceCapture {
     return this.#options.now?.() ?? performance.now();
   }
 
-  snapshot(): PerformanceCapture {
+  snapshot() {
     return {
       version: 2,
       id: this.#id,
@@ -66,7 +66,7 @@ export class DesktopPerformanceCapture {
       sampleIntervalMs: this.#options.intervalMs,
       samples: this.#samples.map((entry) => entry.value),
       droppedSamples: this.#sequence - this.#samples.length,
-    };
+    } satisfies PerformanceCapture;
   }
 
   stop() {

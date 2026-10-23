@@ -232,14 +232,14 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
 
   // Re-renders may hand the frame a fresh publisher (renderers rebuild their
   // capability context per render); route it to the live connection.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a replacement browsing context releases the old guest's ownership.
   useEffect(() => {
     const remote = remoteRef.current;
-    if (!remote || !hostEvents) return;
-    hostEvents.bind((message) => remote.hostEvent?.(message));
-    // Release the sink so a replaced publisher stops referencing this remote
-    // and returns to buffering.
-    return () => hostEvents.unbind();
-  }, [hostEvents]);
+    if (remote) hostEvents?.bind((message) => remote.hostEvent?.(message));
+    // Register cleanup before the asynchronous handshake completes. A stable
+    // publisher does not rerun this effect when the remote becomes available.
+    return () => hostEvents?.unbind();
+  }, [hostEvents, frameEpoch]);
 
   useEffect(() => {
     if (!initializedRef.current) return;

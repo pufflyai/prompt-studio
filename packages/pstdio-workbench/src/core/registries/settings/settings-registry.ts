@@ -107,6 +107,9 @@ export interface SettingsRegistry {
 const byOrderThenPriority = <T extends RegisteredContributionMetadata & { order?: number }>(left: T, right: T) =>
   (left.order ?? 0) - (right.order ?? 0) || byContributionPriority(left, right);
 
+export const getSettingsPanels = (state: SettingsRegistryStoreState) =>
+  Object.values(state.panels).sort(byOrderThenPriority);
+
 export const createSettingsRegistry = (input: { hasView?: (viewId: string) => boolean } = {}): SettingsRegistry => {
   const store = createWorkbenchStore<SettingsRegistryStoreState>({
     name: "workbench.settings",
@@ -177,7 +180,7 @@ export const createSettingsRegistry = (input: { hasView?: (viewId: string) => bo
     },
 
     listPanels() {
-      return Object.values(store.getState().panels).sort(byOrderThenPriority);
+      return getSettingsPanels(store.getState());
     },
 
     async resolveCollectionItem(panelId, itemId) {

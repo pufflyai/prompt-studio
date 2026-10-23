@@ -45,6 +45,7 @@ export const createEventStore = (options?: EventStoreOptions) => {
   const subscribe = (): AsyncIterable<JsonPatch> => ({
     [Symbol.asyncIterator]: () => {
       const queue: { patch: JsonPatch; size: number }[] = [];
+      let queuedBytes = 0;
       let resolve: ((value: IteratorResult<JsonPatch>) => void) | null = null;
       let done = closed;
 
@@ -55,10 +56,11 @@ export const createEventStore = (options?: EventStoreOptions) => {
           r({ value: patch, done: false });
         } else {
           queue.push({ patch, size });
+          queuedBytes += size;
         }
       };
 
-      onPatch.diagnostics = () => ({ events: queue.length, bytes: queue.reduce((sum, entry) => sum + entry.size, 0) });
+      onPatch.diagnostics = () => ({ events: queue.length, bytes: queuedBytes });
 
       const onClose = () => {
         done = true;
@@ -80,7 +82,9 @@ export const createEventStore = (options?: EventStoreOptions) => {
       return {
         next: () => {
           if (queue.length > 0) {
-            return Promise.resolve({ value: queue.shift()!.patch, done: false });
+            const entry = queue.shift()!;
+            queuedBytes -= entry.size;
+            return Promise.resolve({ value: entry.patch, done: false });
           }
 
           if (done) {
