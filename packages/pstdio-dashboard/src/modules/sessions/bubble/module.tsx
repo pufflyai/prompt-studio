@@ -44,6 +44,7 @@ const getPrimaryWorkspaceResource = (ctx: WorkbenchModuleContext) => {
 const createNewSessionDraftResource = (
   workspace: ResourceRef | undefined,
   projectId: string | undefined,
+  harnessId?: string,
 ): ResourceRef => {
   const workspaceId = workspace?.id ?? metadataString(workspace, "workspaceId");
   const workspaceShorthand = metadataString(workspace, "workspaceShorthand");
@@ -59,6 +60,7 @@ const createNewSessionDraftResource = (
     label: "New session",
     icon: "message-circle",
     metadata: {
+      ...(harnessId ? { agent: harnessId } : {}),
       ...(workspaceId ? { workspaceId } : {}),
       ...(workspaceTitle ? { workspaceTitle } : {}),
       ...(workspaceShorthand ? { workspaceShorthand } : {}),
@@ -94,10 +96,11 @@ const openNewSessionDraft = (
     replacePanel?: PlacementIdentity;
     from?: ResourceRef;
     region?: WorkbenchPanelRegion;
+    harnessId?: string;
   } = {},
 ) => {
   const workspace = input.workspace ?? getPrimaryWorkspaceResource(ctx) ?? createDefaultWorkspaceResource(ctx);
-  const draftResource = createNewSessionDraftResource(workspace, getDashboardSelectedProjectId(ctx));
+  const draftResource = createNewSessionDraftResource(workspace, getDashboardSelectedProjectId(ctx), input.harnessId);
   const identity = input.replacePanel;
   if (identity) {
     return ctx.navigation.openTarget(
@@ -172,16 +175,19 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
           replacePanel,
           sidePanel = false,
           from = context?.resource,
+          harnessId,
         } = (args ?? {}) as {
           workspace?: ResourceRef;
           replacePanel?: PlacementIdentity;
           sidePanel?: boolean;
           from?: ResourceRef;
+          harnessId?: string;
         };
         // The tab tray's + asks for a new tab; a tab menu replaces its own placement.
         const isNewTab = context?.source === "panel-add";
         await openNewSessionDraft(ctx, {
           workspace,
+          harnessId,
           replacePanel: isNewTab ? undefined : replacePanel,
           from,
           sidePanel: sidePanel || (isNewTab && context?.region !== "main"),

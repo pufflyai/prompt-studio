@@ -3,18 +3,20 @@ import { PaletteShortcut } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { NavigationTarget, WorkbenchCoreContributionContext } from "../../core";
 import { getNavigationTargetKey } from "../../core";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useShortcutCatalog } from "./use-shortcut-catalog";
 
-/** A mounted row resolves its hint; adapting a large tree does no catalog work. */
-export const WorkbenchShortcutHint = (props: {
+interface ShortcutHintProps {
   workbench: WorkbenchCoreContributionContext;
   action?: NavigationTarget;
   children?: ReactNode;
   modeOnly?: boolean;
-}) => {
-  const { workbench, action, children, modeOnly } = props;
-  const { state, hints } = useShortcutCatalog(workbench);
-  const hint = action && (!modeOnly || state.active) ? hints.get(getNavigationTargetKey(action)) : undefined;
+}
+
+const ResolvedShortcutHint = (props: ShortcutHintProps) => {
+  const { workbench, action, children } = props;
+  const { hints } = useShortcutCatalog(workbench);
+  const hint = action ? hints.get(getNavigationTargetKey(action)) : undefined;
   if (!hint) return children;
   return (
     <HStack gap="xs">
@@ -22,4 +24,12 @@ export const WorkbenchShortcutHint = (props: {
       <PaletteShortcut binding={hint} />
     </HStack>
   );
+};
+
+/** Hidden navigation hints must not resolve the whole catalog for every mounted tree row. */
+export const WorkbenchShortcutHint = (props: ShortcutHintProps) => {
+  const { workbench, action, children, modeOnly } = props;
+  const active = useWorkbenchStore(workbench.keyboard.store, (state) => state.active);
+  if (!action || (modeOnly && !active)) return children;
+  return <ResolvedShortcutHint {...props} />;
 };
