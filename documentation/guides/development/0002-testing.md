@@ -111,6 +111,8 @@ The `main` ruleset turned the queue on on 2026-10-12, after the queue's jobs pas
 
 When a pull request leaves the queue, a build or check failed on the merged result. Rebase, fix, and queue it again. If the failure is not caused by the pull request, the check is not deterministic; fix the check first.
 
+The **Merge queue removals** workflow (`.github/workflows/merge-queue-removals.yml`) labels every open pull request that GitHub removed from the queue with `removed-from-queue`. It posts one comment with the reason and, for failed checks, the failed merge group run and its failed jobs. The label goes away when the pull request is queued again, merged, or closed. Queue events update one pull request at once, and a sweep every 15 minutes catches missed events. Find these pull requests with `gh pr list --label removed-from-queue`. The workflow reads each pull request's merge queue timeline through `scripts/ci/merge-queue-removals.ts`; like the area labels workflow, it loads that script from the trusted base commit and never checks out pull request code.
+
 ### Full stage
 
 Pushes to `main` run the full stage, including coverage outside the scoped regression families. Fix a failure in a follow-up pull request, or link it to the flaky-test ticket that owns it before re-running.

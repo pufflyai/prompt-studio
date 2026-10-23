@@ -19,6 +19,8 @@ Reviewers own two separate labels: `breaking-change` for incompatible behavior o
 
 The PR author owns `waiting-for-release`. Add it to an extension PR that uses SDK or UI changes that are merged but not yet published to npm. Name the SDK or UI PR it waits for in the description. The `published_extensions` CI job fails on such a PR until the next release, so do not merge it. After the release, raise the extension's `@pstdio/sdk` or `@pstdio/ui` range to the published version, rerun CI, and remove the label once `published_extensions` passes. The workflow never manages this label.
 
+`removed-from-queue` is not an area label. The **Merge queue removals** workflow manages it; see [Merge queue stage](0002-testing.md#merge-queue-stage).
+
 `ci:full` is not an area label. A person adds it to run the full Test and Build stage on a PR; see [CI stages](0002-testing.md#ci-stages).
 
 ## SDK and extension separation
