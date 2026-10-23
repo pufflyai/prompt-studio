@@ -820,8 +820,19 @@ jobs:
         run: node scripts/ci/install-native-dependencies.ts
 
       - name: Test native DMG attachment cleanup
+        id: dmg_cleanup
         if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
-        run: bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts
+        run: |
+          set -o pipefail
+          bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts 2>&1 | tee native-dmg-cleanup.log
+
+      - name: Preserve failed native DMG cleanup log
+        if: failure() && steps.dmg_cleanup.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-dmg-cleanup-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          path: native-dmg-cleanup.log
+          if-no-files-found: error
 
       - name: Build monorepo
         if: matrix.platform == 'linux'
