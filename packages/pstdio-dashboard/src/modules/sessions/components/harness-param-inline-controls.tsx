@@ -1,4 +1,5 @@
 import { Button, Flex, type HTMLChakraProps, Menu, Portal, Text } from "@chakra-ui/react";
+import { Tooltip } from "@pstdio/ui";
 import { type HarnessParamValues, resolveHarnessParamText, updateHarnessParamOverride } from "@pstdio/ui/param-editor";
 import { Check, ChevronDown, Circle } from "lucide-react";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
@@ -23,35 +24,25 @@ interface HarnessParamInlineControlsProps {
 interface TriggerProps extends HTMLChakraProps<"button"> {
   displayLabel: string;
   ariaLabel: string;
+  label: string;
   startIcon?: ReactNode;
-  tone: "neutral" | "accent";
   showChevron?: boolean;
   size?: ControlSize;
 }
 
 const Trigger = forwardRef<HTMLButtonElement, TriggerProps>((props, ref) => {
-  const { displayLabel, ariaLabel, startIcon, tone, showChevron = false, size = "sm", ...rest } = props;
-  const accentProps =
-    tone === "accent" ? { color: "var(--schub-foreground-accent)", bg: "var(--schub-accent-subtle)" } : {};
+  const { displayLabel, ariaLabel, label, startIcon, showChevron = false, size = "sm", ...rest } = props;
 
   return (
-    <Button
-      ref={ref}
-      variant="ghost"
-      size={size}
-      px="2"
-      minW="0"
-      flexShrink="0"
-      aria-label={ariaLabel}
-      {...accentProps}
-      {...rest}
-    >
-      {startIcon}
-      <Text textStyle="label/XS/medium" color="fg" truncate>
-        {displayLabel}
-      </Text>
-      {showChevron ? <ChevronDown size={14} /> : null}
-    </Button>
+    <Tooltip content={label} closeDelay={150}>
+      <Button ref={ref} variant="ghost" size={size} px="2" minW="0" flexShrink="0" aria-label={ariaLabel} {...rest}>
+        {startIcon}
+        <Text textStyle="label/XS/medium" color="fg" truncate>
+          {displayLabel}
+        </Text>
+        {showChevron ? <ChevronDown size={14} /> : null}
+      </Button>
+    </Tooltip>
   );
 });
 
@@ -76,9 +67,9 @@ const BooleanParamControl = (
     <Trigger
       displayLabel={`${label}: ${booleanValue ? "on" : "off"}`}
       ariaLabel={`${label}: ${booleanValue ? "on" : "off"}`}
+      label={label}
       disabled={disabled}
       size={size}
-      tone={Object.hasOwn(overrides, paramKey) ? "accent" : "neutral"}
       startIcon={
         <Circle size={10} fill={booleanValue ? "currentColor" : "transparent"} strokeWidth={booleanValue ? 0 : 2} />
       }
@@ -95,7 +86,6 @@ const SelectParamControl = (
   const selectedValue = typeof value === "string" ? value : descriptor.options[0]?.value;
   const selectedOption = descriptor.options.find((option) => option.value === selectedValue);
   const selectedLabel = selectedOption?.label ?? selectedValue ?? "unset";
-  const isOverride = Object.hasOwn(overrides, paramKey);
 
   return (
     <Menu.Root lazyMount closeOnSelect positioning={{ placement: "bottom-end" }}>
@@ -103,9 +93,9 @@ const SelectParamControl = (
         <Trigger
           displayLabel={selectedLabel}
           ariaLabel={`${label}: ${selectedLabel}`}
+          label={label}
           disabled={disabled}
           size={size}
-          tone={isOverride ? "accent" : "neutral"}
           startIcon={selectedOption?.icon ? <HarnessParamOptionIcon name={selectedOption.icon} /> : undefined}
           showChevron
         />

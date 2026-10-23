@@ -1,5 +1,6 @@
 import { Box, CloseButton, Tabs, Text, useTabsContext } from "@chakra-ui/react";
 import { DropIndicator, Tooltip } from "@pstdio/ui";
+import { useRef } from "react";
 import { WorkbenchIcon } from "../shared/icon";
 import { RegionTabMenu } from "./region-tab-menu";
 import { resolveTabIconName } from "./region-tabs-visibility";
@@ -28,6 +29,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
   const { snapshot, drag, target, drop } = behavior;
   const label = snapshot.label ?? placement.resource?.label ?? placement.title ?? placement.contributionId;
   const labelId = `workbench-tab-label-${placement.widgetId}`;
+  const labelRef = useRef<HTMLSpanElement>(null);
   const widget = workbench.layout.getWidget(placement.contributionId);
   const icon =
     snapshot.icon ??
@@ -53,7 +55,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         maxW="fit-content"
         className="group"
       >
-        <Tooltip content={label} openDelay={300} closeDelay={150} positioning={{ placement: "bottom" }}>
+        <Tooltip content={label} overflowRef={labelRef} closeDelay={150} positioning={{ placement: "bottom" }}>
           <Tabs.Trigger
             id={triggerId}
             value={placement.widgetId}
@@ -75,8 +77,10 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
             onClickCapture={behavior.onClick}
           >
             <TabIcon indicator={snapshot.indicator} icon={icon} />
-            <Text as="span" id={labelId} data-tab-label>
-              {label}
+            <Text asChild>
+              <span ref={labelRef} id={labelId} data-tab-label>
+                {label}
+              </span>
             </Text>
             {placement.closable ? (
               <CloseButton

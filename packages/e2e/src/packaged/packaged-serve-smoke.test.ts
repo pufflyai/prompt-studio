@@ -78,7 +78,7 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // performance-observer.test.ts also runs on reduced Intel and Windows release targets.
 import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
-// Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
+// Planner covers supervisor choices and Resume wakes, idle/startup waiting reasons, timeline review indicators, board moves, missing folders/Git metadata, and dependency recovery.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
 // Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
 // Review requests start conversations only when opened and reuse them on later visits.
@@ -87,8 +87,9 @@ import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-s
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
-// Composer coverage preserves route-group file paths and keeps web references natively clickable in packaged messages.
+// Composer coverage recalls saved prompts, preserves route-group file paths, and keeps web references clickable.
 // Queue drag targets follow live-input support and retain padded delete actions.
+// Extension commands stop active work and cancel remaining queued follow-ups through the public SDK.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
@@ -105,7 +106,7 @@ import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // The session query smoke also checks open-tab resource retention in the compiled host.
 // The fixed 1,000-session / 1,000-ticket compiled navigation gate lives in ../perf/subnav-benchmark.ts.
 // Packaged browser coverage also checks shared Session action groups and lazy title search in the tab menu.
-// Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
+// Includes speed selection, JSON session lists, queued steering and shutdown with existing native goal turns.
 import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
 import { registerPackagedShowcaseSmokeTests } from "./packaged-showcase-smoke";
 import { registerStorageMigrationSmokeTests } from "./packaged-storage-migration-smoke";
@@ -120,6 +121,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
 // Group dragging keeps panel dropzones hidden.
 // The paired session-menu browser check restores focus to its tab after Escape.
+// The packaged collection browser journey checks the fixed mode return below the Sidenav header items.
 // Its floating launcher hides while open, returns on close, and reopens with the keyboard.
 // It also opens a workspace's related session through the default-on preview policy and checks that it is unpinned.
 // Related openings preserve selected tabs; all new automatic previews close on page leave and empty panels collapse.

@@ -3,21 +3,20 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ATTEMPTS_COLLECTION, putAttempt, readAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { putTicket } from "../data/collections";
-import { findTicket } from "../data/resolve";
+import { listTicketReviewRequests } from "../data/review-request-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
 import { reconcileAttemptCommand } from "./reconcile-attempt";
 import { runReviewCommand } from "./run-review";
 import { sessionQuery } from "./session-query.fixture";
 
-const baseAttempt = (state: AttemptRecord["state"]): AttemptRecord => ({
-  schemaVersion: 1,
+const baseAttempt = (_legacyPhase: string): AttemptRecord => ({
+  schemaVersion: 2,
   workspaceId: "workspace-1",
   workspaceShorthand: "PS-1_A1",
   ticketId: "ticket-1",
   ticketShorthand: "PS-1",
   implementationSessionId: "implementation-1",
-  state,
   base: { workspaceId: null, headSha: "base-sha" },
   revisions: [],
   implementationDisconnectRetries: 0,
@@ -53,6 +52,7 @@ const setup = async (attempt: AttemptRecord, statuses: Record<string, string>) =
       invocationId: "reconcile-1",
       sessions: {
         get: async (id: string) => ({ id, title: id, status: statuses[id] ?? "completed", anchors_json: [] }),
+        query: sessionQuery(async () => []),
         followup: async (input: unknown) => {
           followups.push(input);
         },
@@ -90,7 +90,9 @@ describe("reconcileAttemptCommand", () => {
       sessionId: "implementation-1",
       retryCount: 1,
     });
-    expect((await findTicket(fixture.storage, "ticket-1"))?.tagIds).toContain("default-human-requested-true");
+    expect((await listTicketReviewRequests(fixture.storage, "ticket-1")).requests).toEqual([
+      expect.objectContaining({ state: "open" }),
+    ]);
   });
 
   test("creates a linked review round when retrying a disconnected review", async () => {

@@ -59,6 +59,29 @@ export function timelineTicketAttributes(deadlines: readonly Deadline[]) {
       displayable: true,
       display: { kind: "badge-list", itemsAttributeId: REVIEW_REQUEST_ITEMS_ATTRIBUTE },
     },
+    {
+      id: "reviewRequests",
+      label: l10n("ticketProperties.reviewRequests", "Review requests"),
+      type: {
+        kind: "enum",
+        options: [
+          {
+            value: "requested",
+            label: l10n("ticketProperties.reviewRequested", "Review requested"),
+            icon: "user-round",
+            color: "orange",
+          },
+          {
+            value: "answered",
+            label: l10n("ticketProperties.reviewAnswered", "Review answered"),
+            icon: "user-check",
+            color: "green",
+          },
+        ],
+      },
+      filterable: true,
+      displayable: false,
+    },
   ];
   return attributes;
 }
@@ -83,6 +106,10 @@ export function timelineTicketProperties(plan: Plan) {
               milestoneDate: deadline?.date ?? null,
               milestoneState,
               needsAttention: !row.done && (row.flags.length > 0 || row.blocks.length > 0) ? "yes" : "no",
+              reviewRequests:
+                row.requestErrors.length > 0 || row.requests.some(({ state }) => state === "open")
+                  ? "requested"
+                  : reviewRequestAnswer(row),
               [REVIEW_REQUEST_ITEMS_ATTRIBUTE]: reviewRequestBadgeItems(
                 { requests: row.requests, errors: row.requestErrors },
                 row.target.resource!,
@@ -93,4 +120,8 @@ export function timelineTicketProperties(plan: Plan) {
     }),
   );
   return { attributes, values };
+}
+
+function reviewRequestAnswer(row: { requests: { state: string }[] }) {
+  return row.requests.some(({ state }) => state === "answered") ? "answered" : "";
 }

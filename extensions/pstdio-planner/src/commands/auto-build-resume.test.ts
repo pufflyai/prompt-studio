@@ -69,7 +69,7 @@ test("open human input keeps a cancelled implementation paused", async () => {
 test("resumption uses the selected attempt instead of an older stopped attempt", async () => {
   const { ctx, storage, task, started, followups } = await stoppedAttempt("cancelled");
   const selected = {
-    ...started.attempt,
+    ...started.variant,
     workspaceId: "selected-workspace",
     implementationSessionId: "selected-session",
   };
@@ -91,7 +91,21 @@ test("resumption uses the selected attempt instead of an older stopped attempt",
 
 test("a selected attempt in review does not restart an older implementation", async () => {
   const { ctx, storage, task, started, followups } = await stoppedAttempt("completed");
-  const selected = { ...started.attempt, workspaceId: "selected-workspace", state: "review_ready" as const };
+  const selected = {
+    ...started.variant,
+    workspaceId: "selected-workspace",
+    revisions: [
+      {
+        revision: 1,
+        baseSha: "main-sha",
+        headSha: "submitted-head",
+        changeRequestReportId: "report",
+        submittedAt: new Date().toISOString(),
+        submittedBy: { type: "agent" as const, id: "owner", displayName: "Owner" },
+        reviews: [],
+      },
+    ],
+  };
   await putAttempt(storage, selected);
   await attemptSelectionsCollection(storage).put(task.id, {
     ticketId: task.id,
@@ -109,6 +123,56 @@ test("resuming a stopped attempt still waits for its dependency revision", async
   const parent = await ticket("Prerequisite revision");
   await putTicket(storage, { ...task, dependsOn: [parent.id] });
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.some(({ id }) => id === task.id)).toBe(false);
+  expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).toMatchObject({
+    decision: "wait",
+  });
+  expect(followups).toEqual([]);
+});
+
+test("an explicit user stop stays stopped", async () => {
+  const { ctx, task, followups } = await stoppedAttempt("cancelled");
+  const get = ctx.sessions.get;
+  ctx.sessions.get = async (id) =>
+    ({ ...(await get(id)), last_exit: { cause: "user_stop", startedAt: null, endedAt: null } }) as never;
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);
+  expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).toMatchObject({
+    decision: "wait",
+  });
+  expect(followups).toEqual([]);
+});
+
+test.each(["missing metadata", "deleted folder"])("an explicit user stop stays stopped with %s", async (missing) => {
+  const { ctx, task, started, followups } = await stoppedAttempt("cancelled");
+  const get = ctx.sessions.get;
+  ctx.sessions.get = async (id) =>
+    ({ ...(await get(id)), last_exit: { cause: "user_stop", startedAt: null, endedAt: null } }) as never;
+  if (missing === "missing metadata") ctx.workspaces.get = async () => null;
+  else {
+    const run = ctx.process.run;
+    ctx.process.run = async (input) =>
+      input.command.includes(`/workspace/${started.workspace.id}`)
+        ? { exitCode: 128, stdout: "", stderr: "Workspace folder missing" }
+        : run(input);
+  }
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);
+  expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).toMatchObject({
+    decision: "wait",
+  });
+  expect(followups).toEqual([]);
+});
+
+test.each([
+  "blocked status",
+  "blocked reason",
+])("unfinished work waits for its %s without answered input", async (blocker) => {
+  const { ctx, storage, task, followups } = await stoppedAttempt("completed");
+  await putTicket(storage, {
+    ...task,
+    ...(blocker === "blocked status"
+      ? { statusId: "blocked" }
+      : { blockedReason: "Wait until the customer supplies access." }),
+  });
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);
   expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).toMatchObject({
     decision: "wait",
   });
@@ -144,6 +208,6 @@ test("a stopped turn is resumed once while a later stopped turn can resume again
 
 test("multiple stopped attempts wait for an explicit selection", async () => {
   const { ctx, storage, started } = await stoppedAttempt("cancelled");
-  await putAttempt(storage, { ...started.attempt, workspaceId: "other-workspace" });
+  await putAttempt(storage, { ...started.variant, workspaceId: "other-workspace" });
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);
 });

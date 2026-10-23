@@ -41,6 +41,8 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
         kind: "tree",
         getReadKey: () => navigation.getReadKey(),
         getStructure: () => navigation.getStructure("content"),
+        getHeaderStructure: () => navigation.getStructure("header"),
+        getFooterStructure: () => navigation.getStructure("footer"),
         defaultExpandedNodeIds: ["workspace-sessions"],
         defaultExpandedSectionIds: ["sessions-wrap"],
         canMove: ({ source, destination }) => source.moveScope === destination.moveScope,

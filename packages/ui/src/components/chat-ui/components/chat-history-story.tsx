@@ -4,17 +4,19 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 
-export const PromptHistoryPanel = () => {
-  const [messages, setMessages] = useState<SessionMessage[]>([
-    { id: "first", role: "user", parts: [{ type: "text", text: "Explain the project" }] },
-    { id: "second", role: "user", parts: [{ type: "text", text: "Show the next steps" }] },
-    { id: "third", role: "user", parts: [{ type: "text", text: "Summarize the plan" }] },
-  ]);
+export const PromptHistoryPanel = (props: { prompts?: string[] }) => {
+  const { prompts = ["Explain the project", "Show the next steps", "Summarize the plan"] } = props;
+  const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState<SessionMessage[]>(
+    prompts.map((text, index) => ({ id: String(index), role: "user", parts: [{ type: "text", text }] })),
+  );
   return (
     <Box w="full" h="600px">
       <ChatPanel
         conversationKey="prompt-history"
         messages={messages}
+        chatInputDefaultValue={draft}
+        onChatInputChange={setDraft}
         emptyStateTitle="Start a conversation"
         emptyStateDescription="Send a prompt"
         chatInputPlaceholder="Use Arrow Up to recall a prompt"
@@ -45,7 +47,8 @@ export const walkThreePrompts = async ({ canvasElement }: { canvasElement: HTMLE
   }
   for (const text of ["Summarize the plan", "Show the next steps", "Explain the project"]) {
     await userEvent.keyboard("{ArrowUp}");
-    await expect(editor).toHaveTextContent(text);
+    await waitFor(() => expect(editor).toHaveTextContent(text));
+    await expect(editor).toHaveFocus();
   }
   await userEvent.keyboard("{ArrowUp}");
   await expect(editor).toHaveTextContent("Explain the project");
@@ -57,12 +60,33 @@ export const walkThreePrompts = async ({ canvasElement }: { canvasElement: HTMLE
   await expect(editor).toHaveTextContent("Summarize the plan revised");
 };
 
-export const walkTenPrompts = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+export const walkFullHistory = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
   const editor = await focusEditor(canvasElement);
-  for (let i = 0; i < 12; i++) await userEvent.keyboard("{ArrowUp}");
-  await expect(editor).toHaveTextContent("Prompt 3");
-  for (let i = 0; i < 10; i++) await userEvent.keyboard("{ArrowDown}");
-  await expect(editor.textContent).toBe("");
+  for (let i = 12; i >= 1; i--) {
+    await userEvent.keyboard("{ArrowUp}");
+    await waitFor(() => expect(editor).toHaveTextContent(new RegExp(`^Prompt ${i}$`)));
+    await expect(editor).toHaveFocus();
+  }
+  await userEvent.keyboard("{ArrowUp}");
+  await expect(editor).toHaveTextContent(/^Prompt 1$/);
+  for (let i = 2; i <= 12; i++) {
+    await userEvent.keyboard("{ArrowDown}");
+    await waitFor(() => expect(editor).toHaveTextContent(new RegExp(`^Prompt ${i}$`)));
+  }
+  await userEvent.keyboard("{ArrowDown}");
+  await waitFor(() => expect(editor.textContent).toBe(""));
+};
+
+export const walkMultilineHistory = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const editor = await focusEditor(canvasElement);
+  await userEvent.keyboard("{ArrowUp}");
+  await waitFor(() => expect(editor).toHaveTextContent("First line"));
+  await expect(editor).toHaveTextContent("Second line");
+  await expect(editor.querySelectorAll("p")).toHaveLength(2);
+  await userEvent.keyboard("{ArrowUp}");
+  await waitFor(() => expect(editor).toHaveTextContent("Earlier prompt"));
+  await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+  await waitFor(() => expect(editor.textContent).toBe(""));
 };
 
 export const keepDraft = async ({ canvasElement }: { canvasElement: HTMLElement }) => {

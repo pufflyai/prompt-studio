@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { createContext, type ReactNode, type Ref, useContext, useLayoutEffect, useState } from "react";
+import { createContext, type ReactNode, type Ref, useContext, useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
 import { workbenchPanelRegions } from "../../core";
@@ -69,7 +69,14 @@ const PanelViewPortal = (props: {
     // Hidden retained views stay connected to keep their iframe browsing context.
     movePanelHost(host, slot);
   }, [host, slot]);
-  useLayoutEffect(() => () => host.remove(), [host]);
+  useEffect(
+    () => () => {
+      // React removes portal children before passive unmount cleanup. StrictMode
+      // replays effects with those children still live, so their host must stay connected.
+      if (!host.hasChildNodes()) host.remove();
+    },
+    [host],
+  );
   const activate = () => {
     if (workbench.layout.getLayout().activeWidgetId !== placement.widgetId)
       workbench.layout.activatePanel(placement.widgetId);

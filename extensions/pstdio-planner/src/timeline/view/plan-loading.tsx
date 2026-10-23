@@ -29,9 +29,7 @@ export function PlanLoading(props: PlanLoadingProps) {
                 sessions={[]}
                 running={0}
                 capacity={0}
-                onConfigure={() => {}}
                 onOpenSession={() => {}}
-                onTurnOff={async () => false}
                 t={t}
               />
             }
