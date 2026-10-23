@@ -99,7 +99,7 @@ test("first creation and symlink opens share one canonical current-engine home",
     const first = await createDb({ path });
     try {
       await checkLocale(first);
-      expect(await realpath(first.path)).toBe(await realpath(join(directory, "database")));
+      expect(first.path).toBe(join(await realpath(directory), "database"));
     } finally {
       await first.close();
     }
