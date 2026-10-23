@@ -1,0 +1,3 @@
+DROP TABLE "storage_record_types" CASCADE;--> statement-breakpoint
+ALTER TABLE "storage_record_projections" ADD COLUMN "live_count" bigint DEFAULT 0 NOT NULL;--> statement-breakpoint
+UPDATE "storage_record_projections" AS "projection" SET "live_count" = (SELECT count(*) FROM "storage_current_records" AS "record" WHERE "record"."workbench_id" = "projection"."workbench_id" AND "record"."extension_id" = "projection"."extension_id" AND NOT "record"."deleted");

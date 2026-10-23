@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { type AssetStore, editResourceDocument, type StorageObserver, type StorageOwner } from "pstdio-sync";
 import {
   fingerprint,
@@ -97,12 +97,17 @@ export const createResourceRecords = (
         return { id, revision: next, foldedRevision, ...result };
       }),
     );
+    const before = new Map(
+      (await readProjectedRecords(tx, owner, ids)).map((record) => [record.recordId, record.exists && !record.deleted]),
+    );
     await persistResourceDocuments(tx, owner, prepared);
     const records = prepared.map((value) => value.record);
     const projected = await publishProjectedRecords(tx, owner, records);
+    const live = (record: { exists: boolean; deleted: boolean }) => Number(record.exists && !record.deleted);
+    const delta = records.reduce((sum, record) => sum + live(record) - Number(before.get(record.recordId)), 0);
     await tx
       .update(storage_record_projections)
-      .set({ revision: revision + 1 })
+      .set({ revision: revision + 1, live_count: sql`${storage_record_projections.live_count} + ${delta}` })
       .where(
         and(
           eq(storage_record_projections.workbench_id, owner.workbenchId),

@@ -1,5 +1,5 @@
 {
-  "id": "b459af3a-c918-4bcc-b0fc-de3c17ff3078",
+  "id": "a5d5de7b-17c5-4482-8f18-0056ca49c0b4",
   "prevId": "45befc64-18b3-473b-9f2e-6177b5d16e26",
   "version": "7",
   "dialect": "postgresql",
@@ -3923,6 +3923,13 @@
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
+        },
+        "live_count": {
+          "name": "live_count",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         }
       },
       "indexes": {},
