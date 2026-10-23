@@ -1,4 +1,10 @@
-import { type ResourceAnchor, type TreeNode, type TreeViewSection, workbenchPanels } from "@pstdio/sdk/extensions";
+import {
+  l10n,
+  type ResourceAnchor,
+  type TreeNode,
+  type TreeViewSection,
+  workbenchPanels,
+} from "@pstdio/sdk/extensions";
 
 // Session query fields used by the sidenav.
 export interface TicketSession {
@@ -79,7 +85,7 @@ export const buildSessionsSection = (input: BuildSessionsSectionInput): TreeView
 
   return {
     id: "sessions",
-    label: "Sessions",
+    label: l10n("navigation.sessions", "Sessions"),
     collapsible: true,
     nodes: ticketSessions.length === 0 ? [emptySessionsNode()] : ticketSessions.map(sessionNode),
   };

@@ -61,7 +61,8 @@ export const autoBuildSessionCompletedHook = defineHook({
   id: "auto-build.session-completed",
   event: sessionEvents.completed,
   async run(ctx, { sessionId }) {
-    if ((await readAutoBuildSupervisor(ctx)).sessionId === sessionId) return;
+    const owner = await readAutoBuildSupervisor(ctx);
+    if (owner.sessionId === sessionId && owner.pendingWakeRevision !== (await readAutoBuildMode(ctx)).revision) return;
     await enqueueAutoBuild(ctx);
   },
 });

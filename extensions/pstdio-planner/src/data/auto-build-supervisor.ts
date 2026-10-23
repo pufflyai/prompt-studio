@@ -11,6 +11,7 @@ export interface NextTicketQuery {
 interface AutoBuildSupervisor {
   sessionId?: string;
   lastWake?: string;
+  pendingWakeRevision?: string;
   scope?: { revision: string; queries: NextTicketQuery[] };
 }
 
@@ -20,4 +21,10 @@ export const readAutoBuildSupervisor = async (ctx: Pick<ExtensionContextBase, "s
 export const saveAutoBuildSupervisor = async (ctx: ExtensionContextBase, supervisor: AutoBuildSupervisor) => {
   await ctx.storage.set("auto-build-supervisor", supervisor);
   await ctx.events.emit(autoBuildChanged, {});
+};
+
+export const acknowledgeAutoBuildWake = async (ctx: ExtensionContextBase, supervisor: AutoBuildSupervisor) => {
+  if (!supervisor.pendingWakeRevision) return;
+  const { pendingWakeRevision: _pending, ...acknowledged } = supervisor;
+  await saveAutoBuildSupervisor(ctx, acknowledged);
 };

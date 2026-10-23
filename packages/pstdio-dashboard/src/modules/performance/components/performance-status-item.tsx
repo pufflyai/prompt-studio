@@ -50,7 +50,7 @@ export const PerformanceStatusItem = (props: PerformanceStatusItemProps) => {
       onOpenChange={(event) => controller.setPopoverOpen(event.open)}
       positioning={{ placement: "top-end", offset: { mainAxis: 4 } }}
     >
-      <Tooltip content={t("performance.popover.statusLabel", { fps: current ?? "–" })} openDelay={300} disabled={open}>
+      <Tooltip content={t("performance.popover.statusLabel", { fps: current ?? "–" })} disabled={open}>
         <Popover.Trigger asChild>
           <Button
             variant="ghost"

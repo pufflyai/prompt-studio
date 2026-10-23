@@ -1,9 +1,11 @@
-// Keep transient selection, collapsing, and drag operations outside the composed page.
+// Keep selection and drag operations outside the composed page.
 import { useEffect, useState } from "react";
 import type { Plan, PlanRow } from "../contracts";
 import { filterSections } from "../model/filter";
+import { milestoneVisible } from "../model/milestone-visibility";
 import { type DropTarget, sameTarget } from "./drag";
 import type { Relation } from "./plan-view";
+import { useTimelinePresentation } from "./timeline-presentation";
 import type { PlanClient } from "./use-plan";
 
 export function relationsFor(selected: PlanRow | undefined, plan: Plan | undefined) {
@@ -74,18 +76,12 @@ export function useDragAndDrop(client: PlanClient) {
 }
 
 export function useViewSections(plan: Plan | undefined, visibleTicketIds: ReadonlySet<string>) {
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
-  const toggle = (id: string | null) =>
-    setCollapsed((current) => {
-      const next = new Set(current);
-      const key = id ?? "none";
-      if (!next.delete(key)) {
-        next.add(key);
-      }
-      return next;
-    });
-  const shown = plan?.sections ?? [];
-  const sections = (plan ? filterSections(plan, visibleTicketIds) : []).map((section) => ({
+  const { value, toggle: togglePresentation } = useTimelinePresentation();
+  const collapsed = new Set(value.collapsedMilestones);
+  const toggle = (id: string | null) => togglePresentation("collapsedMilestones", id ?? "none");
+  // Test completion before ticket filters can turn a partially finished milestone into a finished one.
+  const shown = plan?.sections.filter((section) => milestoneVisible(section, value)) ?? [];
+  const sections = (plan ? filterSections(plan, visibleTicketIds, value) : []).map((section) => ({
     section,
     rows: section.rows,
     collapsed: collapsed.has(section.deadline?.id ?? "none"),

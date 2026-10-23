@@ -3,19 +3,18 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
-import { plannerTicketsChanged } from "../events";
 import { createSessionResource, makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";
 
 const runningAttempt = (workspaceId: string): AttemptRecord => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   workspaceId,
   workspaceShorthand: workspaceId,
   ticketId: `ticket-${workspaceId}`,
   ticketShorthand: `T-${workspaceId}`,
   implementationSessionId: `session-${workspaceId}`,
-  state: "implementing",
+
   base: { workspaceId: null, headSha: "main-sha" },
   revisions: [],
   implementationDisconnectRetries: 0,
@@ -74,16 +73,11 @@ describe("runAttemptCommand", () => {
         workspaceId: "workspace-1",
         ticketId: ticket.id,
         implementationSessionId: "session-1",
-        state: "implementing",
+
         base: { workspaceId: null, headSha: "main-sha" },
       },
     });
-    expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("in-progress");
-    expect(changes).toContainEqual({
-      event: plannerTicketsChanged,
-      payload: { ticketId: ticket.id },
-      status: "in-progress",
-    });
+    expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe(ticket.statusId);
     expect(workspaces).toEqual([
       {
         anchors: [

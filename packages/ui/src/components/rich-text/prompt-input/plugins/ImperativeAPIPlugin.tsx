@@ -4,16 +4,11 @@ import { useImperativeHandle } from "react";
 import { generateEditorStateFromString } from "../utils";
 
 export interface PromptEditorRef {
+  /** Replace text and report it through onChange with its matching editor state. */
   setEditorValue: (value: string) => void;
 }
 
-export function ImperativeAPIPlugin({
-  editorRef,
-  previousTextRef,
-}: {
-  editorRef: React.ForwardedRef<PromptEditorRef>;
-  previousTextRef: React.MutableRefObject<string>;
-}) {
+export function ImperativeAPIPlugin({ editorRef }: { editorRef: React.ForwardedRef<PromptEditorRef> }) {
   const [editor] = useLexicalComposerContext();
 
   useImperativeHandle(
@@ -25,11 +20,10 @@ export function ImperativeAPIPlugin({
           $getRoot().selectEnd();
         });
         editor.setEditorState(state);
-        previousTextRef.current = value;
         editor.focus();
       },
     }),
-    [editor, previousTextRef],
+    [editor],
   );
 
   return null;

@@ -4,7 +4,6 @@ import {
   appendAttemptEvent,
   attemptEventsCollection,
   attemptSelectionsCollection,
-  putAttempt,
   readAttempt,
 } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
@@ -106,7 +105,6 @@ export async function finishWorkspaceRecovery(ctx: CommandContext, old: AttemptR
     commitSha: null,
     metadata: { previousWorkspaceId: old.workspaceId, reason: "workspace-recovery" },
   });
-  await putAttempt(ctx.storage, { ...old, state: "abandoned", updatedAt: new Date().toISOString() });
   await appendAttemptEvent(ctx.storage, {
     workspaceId: old.workspaceId,
     revision: old.revisions.at(-1)?.revision ?? null,
@@ -140,5 +138,7 @@ export async function recoverySessionInput(
     throw new Error("The recovery attempt changed before launch.");
   if (isLiveSession(owner))
     throw new Error("The previous implementation session is running. Continue its existing owner.");
+  if (owner?.last_exit?.cause === "user_stop")
+    throw new Error("The previous implementation session was stopped. Keep its work paused.");
   return owner ? { originalSessionId: owner.id } : {};
 }

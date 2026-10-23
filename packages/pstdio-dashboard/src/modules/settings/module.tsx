@@ -37,6 +37,7 @@ const registerSettingsSidenavs = (ctx: WorkbenchModuleContext) => {
     id: "dashboard.settings.footer",
     modes: ["project"],
     slot: "footer",
+    getStructure: () => [{ ...dashboardNavigationSections.footer, nodes: [createSettingsFooterNode()] }],
     getSections: () => [{ ...dashboardNavigationSections.footer, nodes: [createSettingsFooterNode()] }],
   });
 };

@@ -14,13 +14,16 @@ const views = Array.from({ length: 18 }, (_, index) => ({
   builtIn: false,
 }));
 
-const CrowdedTabs = () => {
+const longTitle = "Team planning and research for the upcoming desktop release";
+
+const CrowdedTabs = (props: { longLabel?: boolean }) => {
+  const { longLabel } = props;
   const [activeViewId, setActiveViewId] = useState("0");
   return (
     <Box width="full" maxW="24rem">
       <HStack gap="2xs">
         <CollectionViewTabs
-          views={views}
+          views={longLabel ? views.map((view, index) => (index === 1 ? { ...view, title: longTitle } : view)) : views}
           activeViewId={activeViewId}
           dirty={false}
           busy={false}
@@ -146,15 +149,29 @@ export const ManyViews: Story = {
 };
 
 export const FullTitle: Story = {
-  render: () => <CrowdedTabs />,
+  render: () => <CrowdedTabs longLabel />,
   play: async ({ canvasElement }) => {
-    const tab = within(canvasElement).getByRole("tab", { name: "Team view 1", exact: true });
+    const tab = within(canvasElement).getByRole("tab", { name: longTitle });
     const page = within(canvasElement.ownerDocument.body);
+    const short = within(canvasElement).getByRole("tab", { name: "Team view 1" });
+    // Let the label's ResizeObserver commit before sending a synthetic hover.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await userEvent.hover(tab);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent("Team view 1");
-    await userEvent.keyboard("{Escape}");
+    await expect(await page.findByRole("tooltip")).toHaveTextContent(longTitle);
     await userEvent.unhover(tab);
+    await userEvent.hover(short);
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
+    await userEvent.unhover(short);
+    await userEvent.hover(tab);
+    await expect(await page.findByRole("tooltip")).toHaveTextContent(longTitle);
+    await userEvent.unhover(tab);
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
     tab.focus();
-    await expect(await page.findByRole("tooltip")).toHaveTextContent("Team view 1");
+    await expect(await page.findByRole("tooltip")).toHaveTextContent(longTitle);
+    await userEvent.keyboard("{Escape}");
+    short.focus();
+    await userEvent.hover(short);
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
   },
 };

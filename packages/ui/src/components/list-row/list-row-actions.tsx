@@ -13,7 +13,7 @@ interface RowActionsProps {
 const keyedTooltip = (action: ListRowAction, child: ReactElement) => {
   if (action.tooltip) {
     return (
-      <Tooltip key={action.id} content={action.tooltip} openDelay={300}>
+      <Tooltip key={action.id} content={action.tooltip}>
         {child}
       </Tooltip>
     );
@@ -52,7 +52,7 @@ export const RowActions = (props: RowActionsProps) => {
                     {action.menuItems.map((item) => (
                       <Fragment key={item.id}>
                         {item.separatorBefore ? <Menu.Separator /> : null}
-                        <Tooltip content={item.description} disabled={!item.description} openDelay={300}>
+                        <Tooltip content={item.description} disabled={!item.description}>
                           <Menu.Item
                             value={item.id}
                             disabled={item.disabled || item.readOnly}

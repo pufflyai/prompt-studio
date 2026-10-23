@@ -520,7 +520,11 @@ export default defineExtension({
 });
 ```
 
-The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels. Users leave a level through the breadcrumb or browser history; the Sidenav adds no Back row. Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
+The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels.
+
+Inside a level, the shared Sidenav adds a fixed left-arrow button labeled with the current mode name, such as Project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
+
+Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
 
 A level page without a declared parent, such as Notes, has nothing outside the level in its breadcrumb. The host then leads that breadcrumb with a project crumb. It opens the last location the user visited outside every level, or the start page when there is none. A page whose mode sets `chrome.sidenav` also hides the project rows, so it counts as a level here. Extensions need no code for this: declare a `parent` when the level belongs under another page, and leave it out when the level is a top-level page.
 

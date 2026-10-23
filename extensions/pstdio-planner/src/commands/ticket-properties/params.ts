@@ -7,7 +7,6 @@ import {
   type ResourceOption,
 } from "@pstdio/sdk/extensions";
 import { isSingleSelectTicketTag, ticketTagAttributeId } from "../../data/mappers";
-import { HUMAN_REQUESTED_OPTION_ID } from "../../data/review-request-storage";
 import type { StoredStatus, StoredTag, StoredTicket } from "../../data/types";
 import type { StoredPlan } from "../../timeline/contracts";
 import { reviewLinkLabel, reviewLinkTooltip } from "../../views/review-link-values";
@@ -95,7 +94,7 @@ const tagParam = (ticket: StoredTicket, tag: StoredTag): WireResource => {
     id: ticketTagAttributeId(tag),
     name: capitalize(tag.name),
     type: "resource",
-    editable: !optionIds.has(HUMAN_REQUESTED_OPTION_ID),
+    editable: true,
     multiSelect: !single,
     defaultValue: single ? (selected[0] ?? "") : selected,
     emptyText: l10n("ticketDetail.none", "None"),

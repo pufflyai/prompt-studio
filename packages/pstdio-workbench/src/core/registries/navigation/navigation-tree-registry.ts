@@ -5,6 +5,7 @@ import type { ResourceRef } from "../resources/resource-registry";
 import { settleReadBatch } from "../views/settle-read-batch";
 import type { NavigationTarget } from "./navigation-registry";
 import { getNavigationTreeNodeSource, setNavigationTreeNodeSource } from "./navigation-tree-node-source";
+import { createNavigationTreeSnapshots } from "./navigation-tree-snapshots";
 
 export interface DeclaredNavigationAction {
   label: string;
@@ -21,6 +22,7 @@ export interface NavigationTreeOwner {
 }
 
 export interface NavigationTreeContext {
+  projectId?: string;
   resource?: ResourceRef;
   signal?: AbortSignal;
   onProgress?(sections: TreeViewSection[]): void;
@@ -130,6 +132,7 @@ const mergeSection = (sections: TreeViewSection[], section: TreeViewSection) => 
 export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistryInput = {}): NavigationTreeRegistry => {
   const contributions = new Map<string, NavigationTreeContribution>();
   const registryToken = {};
+  const snapshots = createNavigationTreeSnapshots();
   const listeners = new Set<() => void>();
   const emit = () => {
     for (const listener of listeners) listener();
@@ -183,9 +186,9 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     context: NavigationTreeContext,
   ) => {
     const query = readContext(contribution, context);
-    const structure = contribution.viewId
-      ? input.getViewStructure?.(contribution.viewId, query)
-      : contribution.getStructure?.(query);
+    const structure =
+      snapshots.get(contribution.id, query) ??
+      (contribution.viewId ? input.getViewStructure?.(contribution.viewId, query) : contribution.getStructure?.(query));
     return (structure ?? []).map((section) => projectSection(section, contribution, owner, query.resource));
   };
 
@@ -212,6 +215,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
         if (contributions.get(contribution.id) !== contribution) return;
         refreshSubscription?.dispose();
         contributions.delete(contribution.id);
+        snapshots.delete(contribution.id);
         emit();
       });
     },
@@ -244,12 +248,17 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       const selected = matching(owner, slot);
       // Each contribution shows its declared structure until its own read replaces it.
       const available = selected.map((contribution) => structureOf(contribution, owner, context));
+      const reads = selected.map((contribution) =>
+        snapshots.begin(contribution.id, readContext(contribution, context)),
+      );
       const snapshot = () => mergeSections(available);
       await settleReadBatch(
         selected.map((contribution, index) => async (signal) => {
           const query = readContext(contribution, { ...context, signal });
-          const publish = (sections: TreeViewSection[]) => {
+          const publish = (sections: TreeViewSection[], complete = false) => {
             signal.throwIfAborted();
+            if (!complete && reads[index]!.sections !== undefined) return;
+            if (complete) reads[index]!.complete(sections);
             available[index] = sections.map((section) => projectSection(section, contribution, owner, query.resource));
             context.onProgress?.(snapshot());
           };
@@ -257,7 +266,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
           const sections = contribution.viewId
             ? await input.getViewSections?.(contribution.viewId, source)
             : await contribution.getSections?.(source);
-          publish(sections ?? []);
+          publish(sections ?? [], true);
         }),
         context.signal,
       );

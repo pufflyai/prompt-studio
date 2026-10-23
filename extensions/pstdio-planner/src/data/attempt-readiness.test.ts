@@ -3,13 +3,12 @@ import { resolveAttemptReadiness } from "./attempt-readiness";
 import type { AttemptRecord, TicketAttemptSelection } from "./attempt-types";
 
 const attempt = (ticketId: string, workspaceId: string, headSha: string): AttemptRecord => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   workspaceId,
   workspaceShorthand: `${ticketId}_A1`,
   ticketId,
   ticketShorthand: ticketId,
   implementationSessionId: `session-${workspaceId}`,
-  state: "approved",
   base: { workspaceId: null, headSha: "main" },
   revisions: [
     {
@@ -44,6 +43,8 @@ const resolve = (input: {
   mergedHeads?: Map<string, string[]>;
   dependencyDeliveries?: Map<string, { headSha: string | null; mergeSha: string | null }>;
   activeImplementationWorkspaceIds?: Set<string>;
+  retiredWorkspaceIds?: Set<string>;
+  requireMergedDependencies?: boolean;
   target?: string;
   activeImplementationCount?: number;
   mainHeadSha?: string;
@@ -58,6 +59,8 @@ const resolve = (input: {
     mergedHeads: input.mergedHeads ?? new Map(),
     dependencyDeliveries: input.dependencyDeliveries ?? new Map(),
     activeImplementationWorkspaceIds: input.activeImplementationWorkspaceIds,
+    retiredWorkspaceIds: input.retiredWorkspaceIds,
+    requireMergedDependencies: input.requireMergedDependencies,
     mainHeadSha: input.mainHeadSha ?? "main",
     activeImplementationCount: input.activeImplementationCount ?? 0,
     maxInProgress: 2,
@@ -98,7 +101,7 @@ describe("attempt readiness", () => {
 
   test("uses the delivered replacement PR when an old empty attempt outlives its workspace", async () => {
     const dependency = { ...ticket("PS-1"), statusId: "done" };
-    const stale = { ...attempt("PS-1", "deleted", "old"), state: "implementing" as const, revisions: [] };
+    const stale = { ...attempt("PS-1", "deleted", "old"), revisions: [] };
     expect(
       await resolve({
         tickets: [dependency, ticket("PS-3", [dependency.id])],
@@ -114,7 +117,7 @@ describe("attempt readiness", () => {
     expect(
       await resolve({
         tickets: [dependency, ticket("PS-3", [dependency.id])],
-        attempts: [{ ...attempt("PS-1", "selected", "old"), state: "implementing", revisions: [] }],
+        attempts: [{ ...attempt("PS-1", "selected", "old"), revisions: [] }],
         selections: [
           {
             ticketId: dependency.id,
@@ -166,7 +169,7 @@ describe("attempt readiness", () => {
 
   test("Done does not discard a submitted dependency absent from the target", async () => {
     const dependency = { ...ticket("PS-1"), statusId: "done" };
-    const submitted = { ...attempt("PS-1", "workspace-1", "head-1"), state: "review_ready" as const };
+    const submitted = attempt("PS-1", "workspace-1", "head-1");
     expect(await resolve({ tickets: [dependency, ticket("PS-3", [dependency.id])], attempts: [submitted] })).toEqual({
       decision: "ready",
       mode: "stacked",
@@ -199,6 +202,26 @@ describe("attempt readiness", () => {
       mode: "main",
       dependencyAttemptIds: [],
     });
+  });
+
+  test("required merged dependencies wait for submitted code that is not in the target", async () => {
+    const input = {
+      tickets: [ticket("PS-1"), ticket("PS-3", ["PS-1"])],
+      attempts: [attempt("PS-1", "workspace-1", "head-1")],
+      requireMergedDependencies: true,
+    };
+    expect(await resolve(input)).toEqual({ decision: "wait", reason: "dependency-not-ready", dependencyIds: ["PS-1"] });
+    expect(await resolve({ ...input, ancestors: [["head-1", "main"]] })).toMatchObject({ mode: "main" });
+  });
+
+  test("a retired variant cannot supply a dependency commit", async () => {
+    expect(
+      await resolve({
+        tickets: [ticket("PS-1"), ticket("PS-3", ["PS-1"])],
+        attempts: [attempt("PS-1", "workspace-1", "head-1")],
+        retiredWorkspaceIds: new Set(["workspace-1"]),
+      }),
+    ).toEqual({ decision: "wait", reason: "dependency-not-ready", dependencyIds: ["PS-1"] });
   });
 
   test("starts a ticket without blockers while another attempt is implementing", async () => {
