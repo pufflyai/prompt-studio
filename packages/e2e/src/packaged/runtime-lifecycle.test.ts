@@ -88,7 +88,9 @@ const waitForOwner = async (path: string, child: ChildProcess) => {
   const deadline = Date.now() + TEST_TIMEOUT - 5_000;
   while (Date.now() < deadline) {
     if (child.exitCode !== null || child.signalCode !== null)
-      throw new Error(`Packaged runtime ${child.pid} exited before readiness.`);
+      throw new Error(
+        `Packaged runtime ${child.pid} exited before readiness (${child.exitCode ?? child.signalCode}). Runtime log:\n${readRuntimeLogs(join(path, ".."))}`,
+      );
     if (existsSync(path)) {
       const descriptor = readDescriptor(path);
       if (descriptor.pid === child.pid) {
@@ -321,9 +323,12 @@ describe("packaged runtime lifecycle", () => {
         children.push(child);
         return child;
       };
-      // Any file inside a database folder other than the lock means the first start is writing the database.
+      // Wait for database payload, including the staged engine target. Ownership metadata
+      // is written before unpacking starts and must not trigger the interruption.
       const writesDatabase = () =>
-        readdirSync(home, { recursive: true }).some((entry) => /^pstdio\.db(?!\.lock)[^\\/]*[\\/]/.test(String(entry)));
+        readdirSync(home, { recursive: true }).some((entry) =>
+          /^pstdio\.db(?:\.engine-transfer[\\/]target)?(?:\.restoring)?[\\/]/.test(String(entry)),
+        );
 
       const first = startRuntime();
       const firstExited = new Promise((resolve) => first.once("exit", resolve));
