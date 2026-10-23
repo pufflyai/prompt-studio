@@ -1,4 +1,4 @@
-import { fingerprint } from "pstdio-sync-contracts";
+import { fingerprint, type StorageRecord } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { captureCheckpoint } from "./checkpoint-capture";
 import { migrationAuthor } from "./document-author";
@@ -14,6 +14,12 @@ const outcome = (operationId: string) => ({
   state: "saved-locally" as const,
   status: "saved-locally" as const,
 });
+
+/** The record operations available while a transaction holds the owner lock. */
+export interface LockedRecords {
+  read(id: string): Promise<StorageRecord>;
+  commit(group: GroupCommit): Promise<{ operationId: string; state: "saved-locally"; status: "saved-locally" }>;
+}
 
 export const createDocumentStorage = (input: { owner: StorageOwner; store: DocumentStore; assets?: AssetStore }) => {
   const { owner, store } = input;
@@ -51,6 +57,16 @@ export const createDocumentStorage = (input: { owner: StorageOwner; store: Docum
     },
     records: {
       ...(store.queries?.(owner) ?? createMemoryRecordQueries(owner, store)),
+      /** Reads and commits inside one owner lock, for read-modify-write callers. */
+      transaction: <T>(run: (records: LockedRecords) => Promise<T>) =>
+        store.transaction(owner, (state) =>
+          run(
+            createDocumentStorage({
+              ...input,
+              store: { transaction: async (_owner, action) => action(state), observer: store.observer },
+            }).records,
+          ),
+        ),
       read: (id: string, _branch?: { operationId: string }) =>
         store.transaction(owner, async ({ document }) => observed(document, id)),
       list: (prefix = "") =>

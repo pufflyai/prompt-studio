@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { assignDeviceAutomation, openDeviceAutomations, setDeviceAutomationEnabled } from "./device-automations";
+import { replicateRecords } from "./device-automations.fixture";
 import { loadExtensionSource } from "./extension-runtime";
 import { openAutomationRuns } from "./extension-schedule-admission/runs";
 import { createExtensionScheduler } from "./extension-scheduler";
@@ -61,9 +62,8 @@ try {
   await setDeviceAutomationEnabled(a.deps, projectId, { scheduleId, instanceId, enabled: true });
   const catalog = await openDeviceAutomations(a.deps, projectId);
   const replica = await openDeviceAutomations(b.deps, projectId);
-  const update = await catalog.exportUpdate();
-  await replica.applyUpdate(update);
-  await replica.applyUpdate(update);
+  await replicateRecords(catalog, replica);
+  await replicateRecords(catalog, replica);
   const clockFor = async (app: typeof a, name: string) => {
     const cron = createTestCronDriver();
     const scheduler = createExtensionScheduler({

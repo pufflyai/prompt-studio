@@ -12,6 +12,7 @@ import {
 import { createDb } from "../../db/connection.pglite";
 import { runDatabaseScaleEntrypoint } from "./database-scale-entrypoint";
 import { createDocumentStorageDBService } from "./document-storage";
+import { resourceDocumentId } from "./resource-document-persistence";
 
 const projectId = "00000000-0000-4000-8000-000000000903";
 const address = { workbenchId: projectId, extensionId: "scale.owner" };
@@ -47,8 +48,8 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
     emit("first-durable-write", {
       ...first,
       durable: first.value.status === "saved-locally",
-      fullOwnerLoads: 1,
-      note: "Current document store hydrates on its first transaction",
+      fullOwnerLoads: 0,
+      note: "Loads only the written record's document",
     });
     assert.equal(
       (await storage.records.read(row.id)).value &&
@@ -91,8 +92,19 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
       rows: Array.from({ length: 100 }, (_, index) => createRow(kind, 0, index, 3)),
       deleted: [],
     });
-    // Cross the actual persisted folding boundary and retain every individual duration.
-    const before = await db.execute(sql`select revision, folded_revision from storage_documents`);
+    // Cross the record's persisted folding boundary and retain every individual duration.
+    // A record's head is its newest update tail; its document row keeps the checkpoint revision.
+    const history = async () =>
+      (
+        await db.execute<{ revision: string; folded_revision: string }>(sql`
+          select greatest(saved.revision, (select max(tails.revision) from storage_document_updates tails
+            where tails.workbench_id = saved.workbench_id and tails.extension_id = saved.extension_id
+              and tails.document_id = saved.document_id)) as revision, saved.folded_revision
+          from storage_documents saved
+          where saved.workbench_id = ${address.workbenchId} and saved.extension_id = ${address.extensionId}
+            and saved.document_id = ${resourceDocumentId(row.id)}`)
+      ).rows;
+    const before = await history();
     for (let sample = 0; sample < 129; sample++) {
       const fold = await measure(() =>
         storage.records.commit({
@@ -102,9 +114,9 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
       );
       emit("folding-writes", { ...fold, sample });
     }
-    const after = await db.execute(sql`select revision, folded_revision from storage_documents`);
-    emit("fold-boundary", { before: before.rows, after: after.rows });
-    assert(Number(after.rows[0].folded_revision) > Number(before.rows[0].folded_revision));
+    const after = await history();
+    emit("fold-boundary", { before, after });
+    assert(Number(after[0].folded_revision) > Number(before[0].folded_revision));
     emit("disk", {
       tables: (
         await db.execute(

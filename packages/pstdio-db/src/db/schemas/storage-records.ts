@@ -1,5 +1,4 @@
-import { sql } from "drizzle-orm";
-import { bigint, boolean, foreignKey, index, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { bigint, boolean, foreignKey, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import type { StorageRecord, StorageRecordIndex } from "pstdio-sync-contracts";
 import { projects } from "./projects";
 import { storage_documents } from "./storage-documents";
@@ -40,23 +39,6 @@ export const storage_current_records = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.workbench_id, table.extension_id, table.record_id] }),
-    foreignKey({
-      columns: [table.workbench_id, table.extension_id],
-      foreignColumns: [storage_record_projections.workbench_id, storage_record_projections.extension_id],
-    }).onDelete("cascade"),
-  ],
-);
-
-export const storage_record_types = pgTable(
-  "storage_record_types",
-  {
-    ...ownerColumns(),
-    type_name: text("type_name").notNull(),
-    type_kind: text("type_kind").$type<"map" | "list" | "text">().notNull(),
-    record_id: text("record_id").notNull(),
-  },
-  (table) => [
-    index("storage_record_types_lookup").on(table.workbench_id, table.extension_id, sql`md5(${table.type_name})`),
     foreignKey({
       columns: [table.workbench_id, table.extension_id],
       foreignColumns: [storage_record_projections.workbench_id, storage_record_projections.extension_id],

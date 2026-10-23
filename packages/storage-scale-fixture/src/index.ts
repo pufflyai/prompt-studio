@@ -8,3 +8,4 @@ export * from "./prepared-fixture";
 export * from "./seed";
 export * from "./telemetry";
 export * from "./timing-window";
+export * from "./view-queries";
