@@ -62,7 +62,7 @@ export function useCanvasPan(
     panning,
     handlers: {
       onClickCapture: (event: MouseEvent<HTMLDivElement>) => {
-        if (moved.current && event.detail > 0) {
+        if (event.currentTarget.contains(event.target as Node) && moved.current && event.detail > 0) {
           event.preventDefault();
           event.stopPropagation();
         }
@@ -86,7 +86,8 @@ export function useCanvasPan(
       },
 
       onPointerDownCapture: (event: PointerEvent<HTMLDivElement>) => {
-        if (event.button !== 0) {
+        // Portalled menus bubble through React, but their pointers belong to the menu, not the canvas.
+        if (event.button !== 0 || !event.currentTarget.contains(event.target as Node)) {
           return;
         }
 

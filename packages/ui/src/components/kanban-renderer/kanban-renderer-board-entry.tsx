@@ -86,7 +86,7 @@ export const BoardEntry = (props: BoardEntryProps) => {
           {group.label}
         </Text>
         <Badge variant="number" colorPalette="gray" size="sm">
-          {group.items.length}
+          {group.count ?? group.items.length}
         </Badge>
       </HStack>
     );

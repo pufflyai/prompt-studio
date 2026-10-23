@@ -22,14 +22,14 @@ test("resource pages retain their browsing contexts and restore them on Back", a
     await original.evaluate(() => Reflect.set(window, "resourceRebindingMarker", "original context"));
     await playlist.contentFrame().getByRole("button", { name: "Play Afterimage by", exact: false }).click();
     await expect(page).toHaveURL(/\/boombox\/resource\?resource=.*afterimage/);
-    await expect(page.locator("iframe:visible")).toHaveCount(4);
+    await expect(page.locator("iframe:visible")).toHaveCount(5);
     expect(original.isDetached()).toBe(false);
     expect(await (await original.frameElement()).isVisible()).toBe(false);
     const next = (await (await playlist.elementHandle())!.contentFrame())!;
     expect(next).not.toBe(original);
     await page.goBack();
     await expect(page).toHaveURL(/\/boombox\/resource\?resource=.*paper-moon/);
-    await expect(page.locator("iframe:visible")).toHaveCount(4);
+    await expect(page.locator("iframe:visible")).toHaveCount(5);
     expect(await (await original.frameElement()).isVisible()).toBe(true);
     expect(await original.evaluate(() => Reflect.get(window, "resourceRebindingMarker"))).toBe("original context");
     expect(next.isDetached()).toBe(false);

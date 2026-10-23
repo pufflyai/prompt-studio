@@ -1,10 +1,13 @@
 import {
   blobBeginSchema,
+  blobManifestBeginSchema,
   blobReadSchema,
   fingerprintSchema,
   readRequestSchema,
   type SyncRoute,
   stateEnvelopeSchema,
+  syncBlobReferencesFeature,
+  syncProtocolVersion,
   updateEnvelopeSchema,
 } from "pstdio-sync-contracts";
 import type { z } from "zod";
@@ -56,6 +59,8 @@ export const handleSyncOperation = async (
   const { documents, blobs } = owners.sync;
   const { limits } = owners;
   const signal = request.signal;
+  if (route.kind === "capabilities")
+    return relayResponse({ protocolVersion: syncProtocolVersion, features: [syncBlobReferencesFeature] });
   const space = { projectKey: projectKey(caller.accountId, route.projectId), spaceOwner: route.spaceOwner };
   if (route.kind === "document" || route.kind === "state") {
     const address = { ...space, documentId: route.documentId };
@@ -87,6 +92,10 @@ export const handleSyncOperation = async (
   if (route.operation === "begin") {
     const input = await readJson(request, blobBeginSchema, jsonBound(0));
     return relayResponse(await blobs.begin(address, caller, input, signal));
+  }
+  if (route.operation === "begin-manifest") {
+    const input = await readJson(request, blobManifestBeginSchema, jsonBound(0));
+    return relayResponse(await blobs.beginManifest(address, caller, input, signal));
   }
   if (route.operation === "finish") {
     await blobs.finish(address, signal);

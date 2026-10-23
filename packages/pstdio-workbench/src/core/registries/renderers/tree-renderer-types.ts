@@ -144,6 +144,8 @@ export interface TreeRendererContribution {
   getReadKey?(ctx: TreeQueryContext): string;
   /** Synchronous layout available before the first content read. */
   getStructure?(ctx: TreeQueryContext): TreeViewSection[];
+  getHeaderStructure?(ctx: TreeQueryContext): TreeViewSection[];
+  getFooterStructure?(ctx: TreeQueryContext): TreeViewSection[];
   getBody(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getHeader?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getFooter?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];

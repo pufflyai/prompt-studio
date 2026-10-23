@@ -11,7 +11,7 @@ export const DataTablePathCell = (props: { value: string; search?: string }) => 
   const end = value.slice(-visibleEndLength);
 
   return (
-    <Tooltip content={value} openDelay={300}>
+    <Tooltip content={value}>
       <chakra.span
         display="inline-flex"
         minW="0"

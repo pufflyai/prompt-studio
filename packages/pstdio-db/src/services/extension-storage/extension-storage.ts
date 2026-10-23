@@ -12,6 +12,7 @@ import { readRetiredData } from "../../db/retired-data";
 import { createStorageMigrations } from "./data-migrations";
 import { createDocumentStorageDBService } from "./document-storage";
 import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
+import { installRecordIndexes } from "./record-index-installation";
 import { getExtensionStorageOwner } from "./storage-owner";
 
 export type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
@@ -21,7 +22,10 @@ export const createExtensionStorageDBService = (db: DbClient, observer?: Storage
   const scopeFor = async (scope: KvScope) => {
     const owner = await getExtensionStorageOwner(db, scope.extension_instance_id);
     if (!owner) return null;
-    return createLegacyRecordStorage({ owner, store: documents }).scope(scope.scope_type, scope.scope_id);
+    return createLegacyRecordStorage({ records: documents.open({ owner }).records }).scope(
+      scope.scope_type,
+      scope.scope_id,
+    );
   };
   const requireScope = async (scope: KvScope) => {
     const storage = await scopeFor(scope);
@@ -38,6 +42,8 @@ export const createExtensionStorageDBService = (db: DbClient, observer?: Storage
     return item ? { ...scope, item_id: item.id, value_json: item.value, sort_order: item.sortOrder } : null;
   };
   return {
+    installIndexes: (owners: Parameters<typeof installRecordIndexes>[1], validate: () => void = () => {}) =>
+      installRecordIndexes(db, owners, validate),
     watch: documents.watch,
     documents: documents.documents,
     openTextDocument: documents.openTextDocument,

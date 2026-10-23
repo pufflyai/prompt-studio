@@ -53,6 +53,7 @@ interface WindowTabItemProps {
 
 const WindowTabItem = (props: WindowTabItemProps) => {
   const { tab, selected, tabIndex, reorderable, dropEdge, onSelect, onClose, onKeyDown } = props;
+  const labelRef = useRef<HTMLSpanElement>(null);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging, isSorting } = useSortable({
     id: tab.id,
     disabled: !reorderable,
@@ -67,7 +68,7 @@ const WindowTabItem = (props: WindowTabItemProps) => {
       <Tooltip
         content={tab.label}
         open={isSorting ? false : undefined}
-        openDelay={300}
+        overflowRef={labelRef}
         closeDelay={150}
         positioning={{ placement: "bottom" }}
       >
@@ -88,7 +89,7 @@ const WindowTabItem = (props: WindowTabItemProps) => {
           }}
         >
           {tab.icon}
-          <Label>{tab.label}</Label>
+          <Label ref={labelRef}>{tab.label}</Label>
         </Trigger>
       </Tooltip>
       <Close type="button" aria-label={`Close ${tab.label}`} title={`Close ${tab.label}`} onClick={onClose}>

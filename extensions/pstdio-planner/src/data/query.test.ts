@@ -114,11 +114,11 @@ describe("runTicketsQuery", () => {
       "priority",
       "type",
       "complexity",
-      "default-human-requested",
       "milestone",
       "milestoneDate",
       "milestoneState",
       "needsAttention",
+      "reviewRequests",
     ]);
     expect(result.rows[0]?.attributes).toMatchObject({
       archived: "active",
@@ -128,6 +128,7 @@ describe("runTicketsQuery", () => {
       workspaceItems: [],
       priority: "default-priority-high",
       type: "default-type-bug",
+      reviewRequests: "",
     });
 
     const typeAttribute = result.attributes?.find((attribute) => attribute.id === "type");

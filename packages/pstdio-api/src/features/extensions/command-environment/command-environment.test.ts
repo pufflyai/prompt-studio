@@ -677,6 +677,8 @@ describe("createCommandEnvironment project boundaries", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
+        extensionSettingsDBService: { getValue: async () => null },
+        harnessRegistry: { get: async () => ({ listModels: async () => [], params: {} }) },
         sessionService: {
           get: async () => session,
           insertEntryForActive: async (input: unknown) => {

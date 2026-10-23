@@ -2,8 +2,9 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PGlite, type Transaction } from "@electric-sql/pglite";
+import type { PGlite as CurrentPGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
+import { PGlite, type Transaction } from "pglite-previous";
 import { createWorkspacesDBService } from "../services/workspaces/workspaces";
 import { createDb } from "./connection.pglite";
 import { migrateThrough } from "./migrate-through";
@@ -33,7 +34,11 @@ const upgradeFrom = async (seed: (tx: Transaction) => Promise<void>) => {
   await old.waitReady;
   let image: Blob;
   try {
-    await migrateThrough(drizzle(old, { schema }), join(import.meta.dir, "../../drizzle"), 32);
+    await migrateThrough(
+      drizzle(old as unknown as CurrentPGlite, { schema }),
+      join(import.meta.dir, "../../drizzle"),
+      32,
+    );
     await old.transaction(seed);
     image = await old.dumpDataDir("none");
   } finally {

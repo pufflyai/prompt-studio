@@ -1,6 +1,7 @@
 import { Tooltip as ChakraTooltip, Icon, Portal } from "@chakra-ui/react";
 import { type ReactElement, useId } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+import { tooltipOpenDelay } from "@/components/primitives/tooltip";
 import type { ListRowItem } from "./list-row.types";
 import { ListRowMenu } from "./list-row-menu";
 
@@ -65,7 +66,7 @@ export const ListRowChrome = (props: ListRowChromeProps) => {
   if (!item.tooltip) return row;
 
   return (
-    <ChakraTooltip.Root openDelay={100} closeDelay={100} ids={{ trigger: triggerId }}>
+    <ChakraTooltip.Root openDelay={tooltipOpenDelay} closeDelay={100} ids={{ trigger: triggerId }}>
       {row}
       <Portal>
         <ChakraTooltip.Positioner>

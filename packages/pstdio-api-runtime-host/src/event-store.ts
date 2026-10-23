@@ -9,54 +9,68 @@ type EventStoreOptions = {
   maxSizeBytes?: number;
 };
 
-export const createEventStore = (options?: EventStoreOptions): EventStore & { close(): void } => {
+interface StoredPatch {
+  patch: JsonPatch;
+  size: number;
+  byteEnd: bigint;
+}
+
+const byteLength = (entries: StoredPatch[]) => {
+  const first = entries[0];
+  const last = entries.at(-1);
+  return first && last ? Number(last.byteEnd - first.byteEnd) + first.size : 0;
+};
+
+export const createEventStore = (options?: EventStoreOptions) => {
   const maxSize = options?.maxSizeBytes ?? DEFAULT_MAX_SIZE_BYTES;
-  const history: JsonPatch[] = [];
-  const patchSizes: number[] = [];
+  const history: StoredPatch[] = [];
   const emitter = new EventEmitter();
-  let totalSize = 0;
+  // History retention and subscriber spans share one functional byte address.
+  // Keep it monotonic even when an oversized patch empties retained history.
+  let byteEnd = 0n;
   let closed = false;
 
   emitter.setMaxListeners(100);
 
   const evict = () => {
-    while (totalSize > maxSize && history.length > 0) {
+    while (byteLength(history) > maxSize && history.length > 0) {
       history.shift();
-      totalSize -= patchSizes.shift()!;
     }
   };
 
   const push = (patch: JsonPatch) => {
     if (closed) return;
 
-    const size = JSON.stringify(patch).length;
+    const size = Buffer.byteLength(JSON.stringify(patch));
 
-    history.push(patch);
-    patchSizes.push(size);
-    totalSize += size;
+    byteEnd += BigInt(size);
+    const entry = { patch, size, byteEnd };
+    history.push(entry);
 
     evict();
 
-    emitter.emit(PATCH_EVENT, patch);
+    emitter.emit(PATCH_EVENT, entry);
   };
 
-  const getHistory = () => [...history];
+  const getHistory = () => history.map((entry) => entry.patch);
 
   const subscribe = (): AsyncIterable<JsonPatch> => ({
     [Symbol.asyncIterator]: () => {
-      const queue: JsonPatch[] = [];
+      const queue: StoredPatch[] = [];
       let resolve: ((value: IteratorResult<JsonPatch>) => void) | null = null;
       let done = closed;
 
-      const onPatch = (patch: JsonPatch) => {
+      const onPatch = (entry: StoredPatch) => {
         if (resolve) {
           const r = resolve;
           resolve = null;
-          r({ value: patch, done: false });
+          r({ value: entry.patch, done: false });
         } else {
-          queue.push(patch);
+          queue.push(entry);
         }
       };
+
+      onPatch.diagnostics = () => ({ events: queue.length, bytes: byteLength(queue) });
 
       const onClose = () => {
         done = true;
@@ -78,7 +92,8 @@ export const createEventStore = (options?: EventStoreOptions): EventStore & { cl
       return {
         next: () => {
           if (queue.length > 0) {
-            return Promise.resolve({ value: queue.shift()!, done: false });
+            const entry = queue.shift()!;
+            return Promise.resolve({ value: entry.patch, done: false });
           }
 
           if (done) {
@@ -107,7 +122,7 @@ export const createEventStore = (options?: EventStoreOptions): EventStore & { cl
       return {
         next: () => {
           if (historyIndex < historySnapshot) {
-            return Promise.resolve({ value: history[historyIndex++], done: false });
+            return Promise.resolve({ value: history[historyIndex++]?.patch, done: false });
           }
 
           return liveIterator.next();
@@ -119,7 +134,7 @@ export const createEventStore = (options?: EventStoreOptions): EventStore & { cl
   });
 
   const snapshotAndSubscribe = () => {
-    const historySnapshot = [...history];
+    const historySnapshot = getHistory();
     const liveIterator = subscribe()[Symbol.asyncIterator]();
 
     return {
@@ -136,5 +151,32 @@ export const createEventStore = (options?: EventStoreOptions): EventStore & { cl
     emitter.removeAllListeners();
   };
 
-  return { push, getHistory, subscribe, historyPlusStream, snapshotAndSubscribe, close };
+  const diagnostics = () => {
+    const subscribers = emitter.listeners(PATCH_EVENT) as Array<
+      (() => void) & { diagnostics: () => { events: number; bytes: number } }
+    >;
+    let queuedEvents = 0;
+    let queuedBytes = 0;
+    for (const subscriber of subscribers) {
+      const queue = subscriber.diagnostics();
+      queuedEvents += queue.events;
+      queuedBytes += queue.bytes;
+    }
+    return {
+      historyEvents: history.length,
+      historyBytes: byteLength(history),
+      subscribers: subscribers.length,
+      queuedEvents,
+      queuedBytes,
+    };
+  };
+  return {
+    push,
+    getHistory,
+    subscribe,
+    historyPlusStream,
+    snapshotAndSubscribe,
+    close,
+    diagnostics,
+  } satisfies EventStore & { close(): void; diagnostics(): unknown };
 };

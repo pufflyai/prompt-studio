@@ -54,7 +54,7 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
         onClose={(id) => void controller.close(workbench, id)}
         onReorder={(id, targetId) => controller.reorder(workbench, id, targetId)}
       />
-      <Tooltip content="Open / create project" openDelay={300} positioning={{ placement: "bottom" }}>
+      <Tooltip content="Open / create project" positioning={{ placement: "bottom" }}>
         <IconButton
           aria-label="Open / create project"
           variant="ghost"

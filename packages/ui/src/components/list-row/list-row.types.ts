@@ -41,6 +41,9 @@ export interface ListRowAction {
   id: string;
   label: string;
   icon?: ReactNode;
+  disabled?: boolean;
+  /** Accessible state for persistent toggle actions. */
+  pressed?: boolean;
   /** Tooltip shown when the action button is hovered or focused. Can include label + Kbd hint. */
   tooltip?: ReactNode;
   searchPlaceholder?: string;
@@ -79,6 +82,10 @@ export interface ListRowItem {
   };
   /** Custom content rendered on the right, before any hover actions. Use for Kbd shortcuts, counts, or badges. */
   endContent?: ReactNode;
+  /** Extension-supplied previews, independent of the icon size. */
+  startContent?: ReactNode;
+  /** Keep authoring controls visible without hover. */
+  actionsVisibility?: "hover" | "always";
   /** Tooltip shown on hover. Can be a string or ReactNode (e.g. Kbd shortcut hint). */
   tooltip?: ReactNode;
   disabled?: boolean;
@@ -113,6 +120,7 @@ export interface ListRowProps
       | "onDragStart"
       | "onDrop"
       | "onPointerMove"
+      | "onKeyDown"
       | keyof ListRowItem
     > {
   depth?: number;
@@ -122,6 +130,8 @@ export interface ListRowProps
   isExpanded?: boolean;
   /** Forces the expand affordance when children are lazy-loaded or externally controlled. */
   showExpandToggle?: boolean;
+  /** Render a separate chevron button so row activation can select a group. */
+  expandOnClick?: boolean;
   /** Shows context-menu actions from an inline trigger in addition to right-click access. */
   showContextMenuTrigger?: boolean;
   variant?: ListRowVariant;
@@ -132,6 +142,7 @@ export interface ListRowProps
   asChild?: boolean;
   onToggleExpand?: () => void;
   onClick?: (event: ReactMouseEvent<HTMLElement>) => void;
+  onKeyDown?: (event: import("react").KeyboardEvent<HTMLElement>) => void;
   onPointerMove?: (event: ReactPointerEvent<HTMLElement>) => void;
   draggable?: boolean;
   onDragStart?: (event: ReactDragEvent<HTMLElement>) => void;

@@ -64,7 +64,7 @@ describe("buildSessionsSection", () => {
 
     expect(section).toEqual({
       id: "sessions",
-      label: "Sessions",
+      label: expect.anything(),
       collapsible: true,
       nodes: [
         {

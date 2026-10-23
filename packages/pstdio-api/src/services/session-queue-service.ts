@@ -22,6 +22,7 @@ export const createSessionQueueService = (raw: Queue, touch: (sessionId: string)
   return {
     ...raw,
     create: async (...args) => notifyRow(await raw.create(...args)),
+    createSteeringDelivery: async (...args) => notifyRow(await raw.createSteeringDelivery(...args)),
     createDispatchStarted: async (...args) => notifyRow(await raw.createDispatchStarted(...args)),
     claimSteering: async (...args) => notifyRow(await raw.claimSteering(...args)),
     releaseSteering: async (...args) => notifyRow(await raw.releaseSteering(...args)),

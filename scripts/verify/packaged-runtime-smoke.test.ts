@@ -12,6 +12,8 @@ describe("resolvePackagedRuntimeTestArgs", () => {
       "test",
       "src/packaged/packaged.test.ts",
       "src/packaged/runtime-lifecycle.test.ts",
+      "src/packaged/packaged-storage-upgrade.test.ts",
+      "src/packaged/performance-observer.test.ts",
       "src/packaged/npm-entrypoint.test.ts",
       "src/packaged/harness-npm-detection.test.ts",
       "src/packaged/codex-transport.test.ts",
@@ -28,6 +30,8 @@ describe("resolvePackagedRuntimeTestArgs", () => {
     expect(resolvePackagedRuntimeTestArgs({ pkg: "cli-win-x64" })).toEqual([
       "test",
       "src/packaged/runtime-lifecycle.test.ts",
+      "src/packaged/packaged-storage-upgrade.test.ts",
+      "src/packaged/performance-observer.test.ts",
       "src/packaged/harness-npm-detection.test.ts",
       "src/packaged/codex-transport.test.ts",
       "src/packaged/extension-browser-install.test.ts",
@@ -38,6 +42,8 @@ describe("resolvePackagedRuntimeTestArgs", () => {
     expect(resolvePackagedRuntimeTestArgs({ pkg: "cli-win-arm64" })).toEqual([
       "test",
       "src/packaged/runtime-lifecycle.test.ts",
+      "src/packaged/packaged-storage-upgrade.test.ts",
+      "src/packaged/performance-observer.test.ts",
       "src/packaged/harness-npm-detection.test.ts",
       "src/packaged/codex-transport.test.ts",
       "--timeout",

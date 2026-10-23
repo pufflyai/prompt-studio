@@ -1,4 +1,10 @@
-import type { TreeNode, TreeQueryContext, TreeRendererRegistry, TreeViewSection } from "../../../core";
+import type {
+  TreeNode,
+  TreeQueryContext,
+  TreeRendererContribution,
+  TreeRendererRegistry,
+  TreeViewSection,
+} from "../../../core";
 import { settleReadBatch } from "../../../core/registries/views/settle-read-batch";
 
 const isUnregisteredTreeError = (trees: TreeRendererRegistry, treeId: string, error: unknown) =>
@@ -11,6 +17,12 @@ export interface LoadedTreeData {
   body: TreeViewSection[];
   footer: TreeViewSection[];
 }
+
+export const treeStructure = (renderer: TreeRendererContribution | undefined, ctx: TreeQueryContext) => ({
+  header: renderer?.getHeaderStructure?.(ctx) ?? [],
+  body: renderer?.getStructure?.(ctx) ?? [],
+  footer: renderer?.getFooterStructure?.(ctx) ?? [],
+});
 
 const listTreeNodes = (data: LoadedTreeData) => [
   ...data.header.flatMap((section) => section.nodes),
@@ -67,11 +79,7 @@ export const loadTreeData = async (
   onProgress?: (data: LoadedTreeData) => void,
 ): Promise<LoadedTreeData | null> => {
   if (!trees.getTreeRenderer(treeId)) return null;
-  let available: LoadedTreeData = {
-    header: [],
-    body: trees.getTreeRenderer(treeId)?.getStructure?.(ctx) ?? [],
-    footer: [],
-  };
+  let available = treeStructure(trees.getTreeRenderer(treeId), ctx);
   const loadSlot = async (slot: keyof LoadedTreeData, signal: AbortSignal) => {
     const context = {
       ...ctx,

@@ -379,6 +379,9 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0064 — Codex App Server runtime](../adrs/0064-codex-app-server-runtime.md)
 - [0065 — Stream command results over the shared client stream](../adrs/0065-stream-command-results-over-the-shared-client-stream.md)
 - [0076 — Separate account authority from content](../adrs/0076-separate-account-authority-from-content.md)
+- [0088 — Temporary tooltip hover reset](../adrs/0088-temporary-tooltip-hover-reset.md)
+- [0099 — Durable record query projections](../adrs/0099-durable-record-query-projections.md)
+- [0100 — One document per resource](../adrs/0100-one-document-per-resource.md)
 
 ## Lessons learned
 

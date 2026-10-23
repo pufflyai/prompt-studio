@@ -41,15 +41,20 @@ pst sessions create --prompt "Review this repository" \
 
 If the `codex` command is missing, Codex shows as unavailable in the model menu.
 
-## Models and reasoning effort
+## Models, speed and reasoning effort
 
 Prompt Studio asks Codex for its list of models, so the menu shows what your Codex account can use.
+
+The **Speed** option offers Standard and Fast. Fast uses the native Codex service tier, like `/fast` in the Codex CLI, and uses more of your Codex allowance. Availability depends on your model and account. See [Codex speed](https://learn.chatgpt.com/docs/agent-configuration/speed).
+
+Choose a speed before sending a prompt. It applies to that turn and later turns in the session; choosing Standard switches Fast off. It also applies when starting or resuming a goal and when compacting a conversation. Prompt Studio resolves an omitted selection to Standard. Programmatic callers can set the harness parameter `service_tier` to `fast` or `default` (Standard). Direct harness callers that omit this parameter keep the native Codex setting.
 
 The **Reasoning effort** option sets how much Codex thinks before it answers: Minimal, Low, Medium, High, or XHigh. The default is Medium. Each model can offer fewer levels or its own default, and models without the option hide it.
 
 ## How it runs
 
 - Prompt Studio starts `codex app-server` on the computer that runs Prompt Studio and talks to it over standard input and output. Sessions that use the same `codex` command and environment share one app-server process. Each Prompt Studio session has its own Codex thread.
+- Open session tabs keep their native resources, including inactive tabs. After the last tab closes, Prompt Studio keeps the session ready for 30 minutes after its last use, then releases its idle thread and tool servers. Active runs, native questions, goals, controls, and uncertain native execution stay alive. A later message resumes the saved thread and conversation. A saved async question can still be answered after its completed turn's resources are released. The app-server closes after its last thread or history reader releases it.
 - Each thread starts in the session's folder with approvals turned off and full file access (`approvalPolicy: "never"`, `sandbox: "danger-full-access"`). Codex can edit files and run commands there without asking first. Use a separate workspace, such as a Git worktree, when you want to keep your project folder unchanged.
 - Prompt Studio saves the conversation itself. When it needs Codex's own record, for example after a restart or before it continues an interrupted turn, it asks the app-server with `thread/read`. It does not read Codex's session files directly.
 - When Prompt Studio prepares a workspace, it copies the project's enabled skills into `.agents/skills` there. These are copies; edit a skill in the extension that ships it. To install them with the CLI, run `pst agents setup pstdio.harness-codex.harness.codex`. See [Give the agent skills](../../documentation/guides/getting-started/0004-run-agents.md#give-the-agent-skills) for how existing skill files are kept or replaced in each release.
@@ -59,4 +64,4 @@ OpenAI labels the Codex app-server as experimental. [ADR 0064](../../documentati
 
 ## What is tested
 
-The harness tests replay recorded app-server traffic from Codex 0.157.0 and 0.162.0, and use local test servers for threads, history, questions, goals, and cleanup. CI also starts the installed Codex CLI, at the minimum supported version and, before a release, the latest one, without signing in. These tests check detection and the protocol handling. They do not sign in to OpenAI or prove that a real, signed-in Codex turn works on your computer. A live run needs your own Codex installation and sign-in, as described in [Install Codex first](#install-codex-first).
+The harness tests replay recorded app-server traffic from Codex 0.157.0 and 0.162.0, and use local test servers for threads, history, questions, goals, and cleanup. CI also starts the installed Codex CLI, at the minimum supported version and, before a release, the latest one, without signing in. These tests check detection, protocol handling, real MCP child cleanup, and resuming a saved thread with a paused goal. They do not sign in to OpenAI or prove that a real, signed-in Codex turn works on your computer. A live run needs your own Codex installation and sign-in, as described in [Install Codex first](#install-codex-first).

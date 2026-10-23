@@ -85,6 +85,7 @@ export {
   type ReservedKeybindingReason,
   readPackageManifest,
   readPackageManifestMetadata,
+  readRuntimeImportCount,
   resolveDeclaredParams,
   type ScopeDisposer,
   type ScopedHostApis,

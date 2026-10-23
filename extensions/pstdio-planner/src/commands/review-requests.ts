@@ -38,6 +38,12 @@ export const requestHumanCommand = defineCommand({
     title: params.text({ required: true }),
     instructions: params.longText({ required: true }),
     request: params.json<ReviewRequestBody, { required: true }>({ required: true }),
+    affectedAction: params.select({
+      options: [
+        { label: "Implementation", value: "implementation" },
+        { label: "Merge", value: "merge" },
+      ],
+    }),
     reason: params.select({ options: humanRequestReasons.map((reason) => ({ label: reason, value: reason })) }),
     workspaceId: params.text(),
     revision: params.number(),

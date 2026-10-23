@@ -1,3 +1,4 @@
+import type { StorageRecordQueries } from "pstdio-sync-contracts";
 import type * as Y from "yjs";
 import type { DocumentHistory } from "./document-history";
 import type { StorageObserver, StorageOwner } from "./types";
@@ -8,8 +9,11 @@ export interface DocumentState {
   migrationHistory?: DocumentHistory;
   operation(id: string): Promise<string | undefined>;
   remember(id: string, fingerprint: string): void;
+  /** Explicit install/upgrade work. Never called by a query or a cache miss. */
+  rebuildProjection?: () => Promise<void>;
 }
 export interface DocumentStore {
+  queries?: (owner: StorageOwner) => StorageRecordQueries;
   observer?: StorageObserver;
   transaction<T>(owner: StorageOwner, action: (state: DocumentState) => Promise<T>): Promise<T>;
 }

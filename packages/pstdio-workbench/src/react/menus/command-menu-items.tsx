@@ -40,7 +40,7 @@ export const createMenuEndContent = (input: {
   const { binding, external, disabledReason, readOnly } = input;
   if (readOnly && disabledReason)
     return (
-      <Tooltip content={disabledReason} openDelay={300}>
+      <Tooltip content={disabledReason}>
         <Box as="span" tabIndex={0} aria-label={disabledReason}>
           <WorkbenchIcon name="Info" />
         </Box>

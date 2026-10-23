@@ -85,7 +85,7 @@ const installPlanner = async (
 const editedContent = (title: string, edit: number) =>
   `# ${title}\n\n${"Revised plan details. ".repeat(60)}\n\nEdit ${edit}`;
 
-// Seeds 1,000 tickets, a saved filtered view, and edit history before restarting the runtime.
+// Seeds the tickets, a saved filtered view, and edit history before restarting the runtime.
 const seedHome = async (home: string, edits: number, plannerSource?: string) => {
   const runtime = await startRuntime(home);
   try {
@@ -198,17 +198,21 @@ const measureColdOpen = async (home: string, fixture: Fixture) => {
 
 async function main() {
   if (process.argv.includes("--help")) {
-    process.stdout.write(`Time the first Tickets card or row after a compiled runtime restart with 1,000 tickets.
+    process.stdout.write(`Time the first Tickets card or row after a compiled runtime restart with 1,000 tickets
+(or --tickets <count>).
 
 bun run --cwd packages/e2e perf:planner-board-cold-open
 bun run --cwd packages/e2e perf:planner-board-cold-open -- --home <dir>   # keep and reuse the seeded home
 bun run --cwd packages/e2e perf:planner-board-cold-open -- --samples 5 --edits 3
+bun run --cwd packages/e2e perf:planner-board-cold-open -- --tickets 10000
 bun run --cwd packages/e2e perf:planner-board-cold-open -- --planner-source <dir>
 
 Reports every sample against the ${targetMs} ms target. Seeding takes several minutes.
 `);
     return;
   }
+  // The seed script reads the count from the environment it inherits.
+  if (process.argv.includes("--tickets")) process.env.PSTDIO_PLANNER_STRESS_TICKETS = option("--tickets", 1000);
   buildBinary();
   const kept = process.argv.includes("--home") ? option("--home", 0) : undefined;
   const home = kept ?? mkdtempSync(join(tmpdir(), "pstdio-planner-cold-open-"));
@@ -219,6 +223,9 @@ Reports every sample against the ${targetMs} ms target. Seeding takes several mi
     const fixture = seeded
       ? (JSON.parse(readFileSync(fixturePath, "utf8")) as Fixture)
       : await seedHome(home, Number(option("--edits", 3)), plannerSource);
+    const requested = Number(option("--tickets", fixture.tickets));
+    if (fixture.tickets !== requested)
+      throw new Error(`This home holds ${fixture.tickets} tickets, not ${requested}. Use a fresh --home.`);
     if (seeded && plannerSource) {
       const runtime = await startRuntime(home);
       try {

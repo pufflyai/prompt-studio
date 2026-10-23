@@ -3,6 +3,7 @@ import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent } from "storybook/test";
 import { DEFAULT_STATUSES, DEFAULT_TAGS } from "../../data/seed";
+import { emptyWorkflowStatuses } from "../../data/workflow-statuses";
 import { buildPlan } from "../model/build-plan";
 import { buildTracks } from "../model/tracks";
 import { useViewSections } from "./plan-state";
@@ -25,6 +26,7 @@ function MilestoneHeaderStory(props: {
 }) {
   const { state, visible } = props;
   const plan = buildPlan({
+    workflow: { ...emptyWorkflowStatuses(), completedStatusIds: ["done"] },
     today: "2026-10-13",
     now: Date.parse("2026-10-13T12:00:00Z"),
     statuses: DEFAULT_STATUSES,

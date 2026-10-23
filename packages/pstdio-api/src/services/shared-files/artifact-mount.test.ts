@@ -19,13 +19,13 @@ test("ordinary mounts hydrate saved bytes and remote updates without recapturing
   await f.replace("documents/note.md", "from another environment");
   const mount = f.mount();
   expect(await mount.readText("note.md")).toBe("from another environment");
-  const saved = await f.storage.exportUpdate();
+  const saved = await f.storage.records.list();
   await mount.list();
-  expect(await f.storage.exportUpdate()).toEqual(saved);
+  expect(await f.storage.records.list()).toEqual(saved);
   await f.replace("documents/note.md", "new remote bytes");
   await mount.refresh();
   expect(await readFile(f.pathFor("documents/note.md"), "utf8")).toBe("new remote bytes");
-  expect(await f.storage.exportUpdate()).not.toEqual(saved);
+  expect(await f.storage.records.list()).not.toEqual(saved);
 });
 
 test("agent filesystem edits and renames become durable operations and survive recreating the mount", async () => {

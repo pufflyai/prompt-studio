@@ -56,6 +56,28 @@ describe("data table renderer view model", () => {
     expect(actions[0]).toMatchObject({ label: "Restart", destructive: true });
     expect(calls).toEqual([[rows[1], rows[0]]]);
   });
+  test("keeps selected rows usable after the displayed page changes", () => {
+    const first = { id: "one", values: { name: "API" } };
+    const second = { id: "two", values: { name: "Worker" } };
+    const previous = buildDataTableRendererData([first], [{ id: "name" }]);
+    const current = buildDataTableRendererData([second], [{ id: "name" }]);
+    const selected: DataTableRendererRow[][] = [];
+    const actions = resolveDataTableRendererSelectionActions(
+      [
+        {
+          id: "selected",
+          label: "Use selected rows",
+          run: (rows) => {
+            selected.push(rows);
+          },
+        },
+      ],
+      current.rowByData,
+    );
+    actions[0]?.onSelect([previous.data[0]!, current.data[0]!]);
+    expect(selected).toEqual([[first, second]]);
+    expect(JSON.stringify(previous.data[0])).toBe('{"name":"API"}');
+  });
   test("maps resource actions for the row under a data table cell", () => {
     const row = {
       id: "one",

@@ -2,6 +2,7 @@ import { Stack } from "@chakra-ui/react";
 import type { KanbanRendererMove, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import { type ReactNode, useDeferredValue, useState } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
+import type { CollectionPageControl } from "../collection-view/collection-page";
 import { withTitleField } from "../collection-view/collection-view-fields";
 import { countFilterRules } from "../collection-view/collection-view-filter";
 import { useCollectionViews } from "../collection-view/use-collection-views";
@@ -14,6 +15,7 @@ import { groupRows } from "./kanban-renderer-grouping";
 import { resolveKnownColumnKeys } from "./kanban-renderer-helpers";
 import { buildKanbanRendererListItems } from "./kanban-renderer-list-items";
 import { kanbanMoveHandlers } from "./kanban-renderer-move-handlers";
+import { applyKanbanPageCounts, pageTotal } from "./kanban-renderer-page";
 import { KanbanRendererToolbar } from "./kanban-renderer-toolbar";
 import type {
   AttributeDescriptor,
@@ -42,6 +44,8 @@ export interface BoardColumnConfig {
 
 /** Switchable list/board renderer for rows with typed attributes, filtering, grouping, and ordering. */
 export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRendererRow> {
+  /** Provider-filtered rows. Search and scrolling request bounded pages. */
+  page?: CollectionPageControl;
   /** Stable rows to render. Each row must have an id, title, and attributes map. */
   rows: TRow[];
   /** Persistent key used by the renderer store for view, filter, grouping, ordering, and list expansion settings. */
@@ -119,7 +123,9 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
   const fields = withTitleField(attributes);
   useCollectionViews({ ...props, initialState, fields });
   const [createColumnId, setCreateColumnId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [localSearch, setLocalSearch] = useState("");
+  const search = props.page?.request.search ?? localSearch;
+  const setSearch = props.page?.onSearchChange ?? setLocalSearch;
   // Typing stays responsive on large boards; the narrowed rows follow a frame later.
   const deferredSearch = useDeferredValue(search);
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
@@ -132,6 +138,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
 
   const { filteredRows, visibleRows, columnTotals } = narrowKanbanRows({
     rows,
+    providerFiltered: Boolean(props.page),
     filter,
     fields,
     attributes,
@@ -139,19 +146,27 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     search: deferredSearch,
   });
   const searching = deferredSearch.trim() !== "";
-  const grouped = groupRows(visibleRows, {
+  const localGrouped = groupRows(visibleRows, {
     attributes,
     columnGrouping: settings.columnGrouping,
     rowGrouping: settings.rowGrouping,
     knownColumnKeys: resolveKnownColumnKeys(settings.columnGrouping, attributes, filter, rows),
     structureRows: rows,
   });
+  const grouped = applyKanbanPageCounts(
+    localGrouped,
+    props.page?.result?.groups,
+    attributes,
+    settings,
+    props.page?.result?.filteredTotal,
+  );
 
   const listItems =
     settings.viewMode === "list"
       ? buildKanbanRendererListItems({
           settings,
           sorts,
+          presorted: Boolean(props.page),
           search: deferredSearch,
           visibleRows,
           grouped,
@@ -171,6 +186,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
           grouped,
           settings,
           sorts,
+          presorted: Boolean(props.page),
           fields,
           attributes,
           search: deferredSearch,
@@ -205,7 +221,11 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
           defaultSorts={defaultSorts}
           search={search}
           onSearchChange={setSearch}
-          searchResultLabel={searching ? `${visibleRows.length} of ${filteredRows.length}` : undefined}
+          searchResultLabel={
+            searching
+              ? `${props.page?.result?.filteredTotal ?? visibleRows.length} of ${pageTotal(props.page?.result?.total, filteredRows)}`
+              : undefined
+          }
           viewsSource={viewsSource}
           defaultViews={defaultViews}
           defaultActiveViewId={defaultActiveViewId}
@@ -216,8 +236,8 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
 
       <KanbanRendererContent
         contentPlaceholder={contentPlaceholder}
-        sourceCount={rows.length}
-        filteredCount={filteredRows.length}
+        sourceCount={pageTotal(props.page?.result?.total, rows)}
+        filteredCount={pageTotal(props.page?.result?.total, filteredRows)}
         visibleCount={visibleRows.length}
         search={deferredSearch}
         ruleCount={countFilterRules(filter)}
@@ -237,6 +257,8 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
         onColumnAction={onColumnAction}
         onListExpandedGroupChange={setExpandedGroup}
         listKey={`${settings.columnGrouping}:${settings.rowGrouping}`}
+        onLoadMore={props.page?.result?.cursor ? props.page.onLoadMore : undefined}
+        loadingMore={props.page?.loading}
       />
       {createRow && onCreateRow && createColumnId ? (
         <KanbanRendererCreateDialog

@@ -68,7 +68,7 @@ export const createScopedHostApis = (
   const terminal = hosts.terminal && resolveCwd ? createWorkspaceTerminal(hosts.terminal, resolveCwd) : hosts.terminal;
 
   return {
-    sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project, signal }),
+    sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project, signal, scope }),
     workspaces: createWorkspacesApi(deps, { projectId: input.projectId, signal }, runtimeDeps),
     connections: signal ? withConnectionSignal(hosts.connections, signal) : hosts.connections,
     process: createProcessApi({ scope, resolveCwd }),

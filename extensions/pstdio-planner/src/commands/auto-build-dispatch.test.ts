@@ -14,7 +14,7 @@ import { sessionQuery } from "./session-query.fixture";
 const dispatch = (ctx: Awaited<ReturnType<typeof fixture>>["ctx"], ticket: string, revision = "test") =>
   autoBuildDispatchCommand.run(ctx, { ticket, revision });
 
-test("candidates include unattended In Progress and exclude default ignore statuses, drafts, gates, blockers, and human requests", async () => {
+test("candidates include unattended In Progress and exclude ineligible statuses, drafts, gates, blockers, and human requests", async () => {
   const { ctx, storage, ticket } = await fixture(10);
   await createTicketCommand.run(ctx, { title: "Backlog" });
   await createTicketCommand.run(ctx, { title: "Done", statusId: "done" });
@@ -31,18 +31,22 @@ test("candidates include unattended In Progress and exclude default ignore statu
     instructions: "Choose scope",
     request: { kind: "task" },
   });
-  const orphan = await createTicketCommand.run(ctx, { title: "Unattended", statusId: "in-progress" });
+  const orphan = await ticket("Unattended");
+  await putTicket(storage, { ...orphan, statusId: "in-progress" });
   const ready = await ticket("Ready");
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([orphan.id, ready.id]);
 });
 
-test("custom ignore rules are enforced when reading and dispatching tickets", async () => {
+test("eligible ticket exclusions are enforced when reading and dispatching tickets", async () => {
   const { ctx, ticket } = await fixture();
   const ignored = await ticket("Postpone this task");
   const allowed = await ticket("Ship this task");
   const mode = await configureAutoBuildCommand.run(ctx, {
     enabled: true,
-    ignore: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Postpone" }] },
+    eligible: {
+      conjunction: "and",
+      rules: [{ attributeId: "title", condition: "does-not-contain", value: "Postpone" }],
+    },
   });
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([allowed.id]);
   expect(await dispatch(ctx, ignored.id, mode.revision)).toMatchObject({
@@ -108,12 +112,12 @@ test("a board change during readiness prevents a launch that is no longer valid"
   expect(await listAttempts(storage)).toHaveLength(0);
 });
 
-test("empty advanced ignore groups leave valid tickets eligible", async () => {
+test("empty advanced eligible groups include valid tickets", async () => {
   const { ctx, ticket } = await fixture();
   const ready = await ticket("Ready");
   await configureAutoBuildCommand.run(ctx, {
     enabled: true,
-    ignore: { conjunction: "and", rules: [], groups: [{ conjunction: "and", rules: [] }] },
+    eligible: { conjunction: "and", rules: [], groups: [{ conjunction: "and", rules: [] }] },
   });
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([ready.id]);
 });
@@ -124,21 +128,4 @@ test("a Blocked status prevents assignment without a written blocker", async () 
   const ready = await ticket("Ready");
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([ready.id]);
   expect(await dispatch(ctx, blocked.id)).toMatchObject({ decision: "wait", reason: "ticket-not-ready" });
-});
-
-test("unfinished or incompatible ignore rules leave valid tickets eligible", async () => {
-  const { ctx, ticket } = await fixture();
-  const ready = await ticket("Ready");
-  for (const rule of [
-    { attributeId: "title", condition: "contains" as const, value: "" },
-    { attributeId: "status", condition: "is-any-of" as const, value: [] },
-    { attributeId: "title", condition: "contains" as const, value: 1 },
-    { attributeId: "status", condition: "is-any-of" as const, value: "ready" },
-  ]) {
-    await configureAutoBuildCommand.run(ctx, {
-      enabled: true,
-      ignore: { conjunction: "and", rules: [rule] },
-    });
-    expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([ready.id]);
-  }
 });

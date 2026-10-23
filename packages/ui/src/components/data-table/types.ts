@@ -1,5 +1,6 @@
 import type { DataTableRendererSettings, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { ReactNode } from "react";
+import type { CollectionPageControl } from "../collection-view/collection-page";
 import type { CollectionSavedView, CollectionViewsSource } from "../collection-view/collection-view-types";
 
 /** Display settings saved with a table view: grouping, row numbers, wrapping, statistics, and columns. */
@@ -130,6 +131,8 @@ export interface DataTableEditModeConfig {
 }
 
 export interface DataTableProps {
+  /** Provider-filtered page. Omit for the full-result client-side view. */
+  page?: CollectionPageControl;
   data: RowData[];
   editMode?: DataTableEditModeConfig;
   isReadOnly?: boolean;

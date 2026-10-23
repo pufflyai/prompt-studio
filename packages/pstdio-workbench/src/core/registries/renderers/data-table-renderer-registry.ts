@@ -1,4 +1,10 @@
-import type { DataTableRendererSettings, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
+import type {
+  CollectionPage,
+  CollectionPageRequest,
+  DataTableRendererSettings,
+  ViewFilterGroup,
+  ViewSort,
+} from "@pstdio/sdk/extensions";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
@@ -69,11 +75,13 @@ export interface DataTableRendererRow {
 }
 
 export interface DataTableRendererQueryResult {
+  page?: CollectionPage;
   rows: DataTableRendererRow[];
   columns?: DataTableRendererColumn[];
 }
 
 export interface DataTableRendererQueryContext {
+  page?: CollectionPageRequest;
   pageParams?: import("@pstdio/sdk/extensions").PageParams;
   resource?: ResourceRef;
   modeId?: string;
@@ -103,6 +111,7 @@ export interface DataTableRendererSelectionAction {
 }
 
 export interface DataTableRendererContribution {
+  queryMode?: "paged";
   id: string;
   title: string;
   toolbarActions?: ViewToolbarAction[];
