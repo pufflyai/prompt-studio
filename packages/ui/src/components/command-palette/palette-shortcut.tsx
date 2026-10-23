@@ -79,7 +79,9 @@ export const PaletteShortcut = (props: { binding: PaletteShortcutBinding }) => {
               </Kbd>
             ))}
           </ShortcutKeys>
-          {stepIndex < steps.length - 1 ? <Icon as={Redo} size="xs" color="fg.muted" aria-label="Then" /> : null}
+          {stepIndex < steps.length - 1 ? (
+            <Icon as={Redo} size="xs" color="fg.muted" aria-hidden={false} aria-label="Then" />
+          ) : null}
         </Fragment>
       ))}
     </>
