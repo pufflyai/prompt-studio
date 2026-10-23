@@ -209,7 +209,9 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const activePlacement = getActivePlacement(regionState.widgets, regionState.activeWidgetId, pageContent);
   const regionRef = useRef<HTMLDivElement>(null);
   const currentPresentation = useRef(activePlacement?.widgetId);
-  currentPresentation.current = activePlacement?.widgetId;
+  useLayoutEffect(() => {
+    currentPresentation.current = activePlacement?.widgetId;
+  }, [activePlacement?.widgetId]);
   useLayoutEffect(() => {
     if (!workbenchPanelRegions.includes(region as WorkbenchPanelRegion) && !panelMenuRegionIds.has(region)) return;
     const registration = workbench.keyboard.registerVisibleRegion(region, () => {

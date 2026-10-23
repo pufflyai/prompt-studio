@@ -1,12 +1,11 @@
-import type { WorkbenchPanelRegion } from "../../registries/layout/layout-types";
 import type { WorkbenchCore } from "../../workbench-core-types";
-import { openPanelWidget } from "../composition/panel-widget-open";
+import { registerKeyboardNewTab } from "./keyboard-new-tab";
 import { registerKeyboardPanelNavigation } from "./keyboard-panel-navigation";
-import { regionLabel, visibleKeyboardRegions } from "./keyboard-presentations";
+import { presentationResourceKey, regionLabel, visibleKeyboardRegions } from "./keyboard-presentations";
 
-const regions: WorkbenchPanelRegion[] = ["main", "secondary", "side"];
 export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
   registerKeyboardPanelNavigation(core);
+  registerKeyboardNewTab(core);
   const register = (name: string, label: string, key: string, execute: () => void | Promise<void>, sticky = false) => {
     const id = `workbench.keyboard.${name}`;
     core.commands.registerCommand({ id, label }, { execute });
@@ -18,71 +17,6 @@ export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
       sticky,
     });
   };
-  core.commands.registerCommand(
-    { id: "workbench.keyboard.newTab", label: "New tab" },
-    {
-      execute: (args?: { panelId?: string; resourceKind?: string }) => {
-        core.keyboard.select(
-          "New tab · destination",
-          regions
-            .filter((region) =>
-              core.composition
-                .panelsFor(region)
-                .addable.some(
-                  (panel) =>
-                    (!args?.panelId || panel.contribution.id === args.panelId) &&
-                    (!args?.resourceKind || Boolean(panel.contribution.resourceKinds?.includes(args.resourceKind))),
-                ),
-            )
-            .map((region, index) => ({
-              key: String(index + 1),
-              label: regionLabel(region),
-              choose: () => {
-                const panels = core.composition
-                  .panelsFor(region)
-                  .addable.filter(
-                    (panel) =>
-                      (!args?.panelId || panel.contribution.id === args.panelId) &&
-                      (!args?.resourceKind || Boolean(panel.contribution.resourceKinds?.includes(args.resourceKind))),
-                  );
-                core.keyboard.select(
-                  "New tab · panel type",
-                  panels.map((panel, index) => ({
-                    key: String(index + 1),
-                    label: panel.contribution.title,
-                    choose: async () => {
-                      if (
-                        !core.composition
-                          .panelsFor(region)
-                          .addable.some((current) => current.contribution.id === panel.contribution.id)
-                      ) {
-                        core.keyboard.message("This panel is no longer available.");
-                        return;
-                      }
-                      core.keyboard.close(false);
-                      await openPanelWidget({
-                        workbench: core,
-                        widget: panel.contribution,
-                        region,
-                        resource: core.getPrimaryResource(),
-                        open: panel.open,
-                        pinned: panel.pinned,
-                      });
-                    },
-                  })),
-                );
-              },
-            })),
-        );
-      },
-    },
-  );
-  core.keybindings.registerKeybinding({
-    id: "workbench.keyboard.newTab",
-    action: { kind: "command", commandId: "workbench.keyboard.newTab" },
-    keybinding: "N",
-    layer: "view",
-  });
   register("moveTab", "Move tab", "O", () => {
     const tabs = core.keyboard
       .visibleTargets()
@@ -102,10 +36,10 @@ export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
                 key: String(index + 1),
                 label: regionLabel(region),
                 choose: () => {
-                  const current = core.keyboard.listTabs().find((current) => current.id === tab.id);
+                  const current = core.keyboard.visibleTargets().find((current) => current.id === tab.id);
                   if (
                     !current ||
-                    current.resource?.id !== tab.resource?.id ||
+                    presentationResourceKey(current) !== presentationResourceKey(tab) ||
                     !core.getPanelDestinations(tab.id).includes(region)
                   ) {
                     core.keyboard.message("This tab is no longer available.");
@@ -166,18 +100,24 @@ export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
       "Close tab",
       core.keyboard
         .visibleTargets()
-        .filter((tab) => core.composition.panelsFor(tab.region).closable.includes(tab.id))
+        .filter((tab) => core.composition.panelsFor(tab.region).closable.includes(tab.contributionId))
         .map((tab, index) => ({
           key: String(index + 1),
           label: `${tab.label} · ${regionLabel(tab.region)}`,
           choose: () => {
             if (
               core.keyboard
-                .listTabs()
-                .some((current) => current.id === tab.id && current.resource?.id === tab.resource?.id)
+                .visibleTargets()
+                .some(
+                  (current) =>
+                    current.id === tab.id && presentationResourceKey(current) === presentationResourceKey(tab),
+                )
             ) {
               if (tab.placementIdentity) core.closePlacement(tab.placementIdentity);
               else core.layout.closePanel(tab.id);
+            } else {
+              core.keyboard.message("This tab is no longer available.");
+              return;
             }
             core.keyboard.close(false);
           },
@@ -195,11 +135,11 @@ export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
           label: `${tab.tabRetention === "preview" ? "Pin" : "Unpin"} ${tab.label} · ${regionLabel(tab.region)}`,
           choose: () => {
             const current = core.keyboard
-              .listTabs()
+              .visibleTargets()
               .find(
                 (current) =>
                   current.id === tab.id &&
-                  current.resource?.id === tab.resource?.id &&
+                  presentationResourceKey(current) === presentationResourceKey(tab) &&
                   current.tabRetention === tab.tabRetention,
               );
             if (!current) {

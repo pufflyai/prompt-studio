@@ -74,7 +74,11 @@ export const resolveMenuEntries = (input: ResolveMenuEntriesInput) => {
     return [
       {
         id: action.id,
-        action: { kind: "command" as const, commandId: record.command.id, ...(args === undefined ? {} : { args }) },
+        action: {
+          kind: "command" as const,
+          commandId: action.sourceCommandId ?? record.command.id,
+          ...(args === undefined ? {} : { args }),
+        },
         label,
         group: action.resourceGroup,
         commandId: action.sourceCommandId ?? record.command.id,
@@ -85,7 +89,7 @@ export const resolveMenuEntries = (input: ResolveMenuEntriesInput) => {
         binding: hints.get(
           getNavigationTargetKey({
             kind: "command",
-            commandId: record.command.id,
+            commandId: action.sourceCommandId ?? record.command.id,
             ...(args === undefined ? {} : { args }),
           }),
         ),

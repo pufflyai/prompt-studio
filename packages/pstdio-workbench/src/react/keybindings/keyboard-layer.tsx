@@ -188,7 +188,12 @@ export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
                   variant="full-width"
                   label={entry.label}
                   disabled={"disabled" in entry && entry.disabled}
-                  endContent={search && !selection ? undefined : <PaletteShortcut binding={entry.key} />}
+                  endContent={
+                    (search && !selection) ||
+                    (state.path.length === 1 && state.path[0] === "E" && entry.key.length > 1) ? undefined : (
+                      <PaletteShortcut binding={entry.key} />
+                    )
+                  }
                   onActivate={() => activate(entry.key)}
                 />
               ))}

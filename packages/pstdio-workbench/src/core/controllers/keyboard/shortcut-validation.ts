@@ -14,10 +14,10 @@ export const validateShortcutAlias = (aliases: Record<string, string>, id: strin
     throw new Error("An alias cannot share a prefix with another extension.");
 };
 export const validateShortcutAssignment = (core: WorkbenchCore, id: string, assignment: ShortcutAssignment) => {
-  if (assignment.disabled || assignment.keybinding === undefined) return;
+  if (assignment.disabled) return;
   const binding = core.keybindings.listCatalog().find((binding) => core.keybindings.getId(binding) === id);
   const layer = assignment.layer === "direct" ? undefined : (assignment.layer ?? binding?.layer);
-  const steps = getKeybindingSteps(assignment.keybinding);
+  const steps = getKeybindingSteps(assignment.keybinding ?? binding?.keybinding ?? "");
   if (!steps.length) return;
   if (layer) {
     if (steps.some((step) => !(/^[a-z0-9]$/i.test(step) || step === "ArrowLeft" || step === "ArrowRight")))

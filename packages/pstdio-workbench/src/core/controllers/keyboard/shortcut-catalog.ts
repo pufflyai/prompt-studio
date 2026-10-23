@@ -19,8 +19,10 @@ export interface ResolvedShortcut {
 export const shortcutLabel = (core: WorkbenchCore, binding: RegisteredKeybinding) =>
   binding.label ?? shortcutActionLabel(core, binding.action);
 const applicable = (core: WorkbenchCore, binding: RegisteredKeybinding, target?: KeyboardPresentation) => {
-  const values = scopeWorkbenchResourceContextValues(core.context.snapshot(), target?.resource);
-  values["workbench.view.id"] = target?.viewId;
+  const values = target
+    ? scopeWorkbenchResourceContextValues(core.context.snapshot(), target.resource)
+    : core.context.snapshot();
+  if (target) values["workbench.view.id"] = target.viewId;
   if (!matchesContextExpression(values, binding.when)) return false;
   if (binding.action.kind !== "command") return true;
   const context = target ? { resource: target.resource, region: target.region } : undefined;

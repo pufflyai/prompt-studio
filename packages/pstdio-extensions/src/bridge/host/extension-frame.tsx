@@ -66,6 +66,7 @@ const frameShellStyle: CSSProperties = {
 };
 
 export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
+const NO_KEYBOARD_SHORTCUTS: WebviewKeyboardShortcut[] = [];
 
 export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const {
@@ -74,7 +75,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     theme,
     capabilities,
     onKeyboardEvent,
-    keyboardShortcuts = [],
+    keyboardShortcuts = NO_KEYBOARD_SHORTCUTS,
     onShortcut,
     hostEvents,
     onReady,
@@ -237,6 +238,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           });
           if (iframeRef.current !== iframe) return;
           initializedRef.current = true;
+          await remote.keyboardUpdate?.(keyboardRef.current.shortcuts);
           onReadyRef.current?.();
         })
         .catch((error) => {

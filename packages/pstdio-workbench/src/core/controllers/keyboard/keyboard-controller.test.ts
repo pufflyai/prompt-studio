@@ -26,6 +26,53 @@ const setup = () => {
   return { core, ticket };
 };
 
+test("direct shortcuts preserve the live view and resource context", () => {
+  const { core } = setup();
+  core.context.set("workbench.view.id", "ticket-editor");
+  core.context.set("workbench.resource.type", "ticket");
+  core.commands.registerCommand({ id: "contextual-direct", label: "Direct" }, { execute() {} });
+  core.keybindings.registerKeybinding({
+    id: "contextual-direct",
+    action: { kind: "command", commandId: "contextual-direct" },
+    keybinding: "Alt+K",
+    when: 'workbench.view.id == "ticket-editor" && workbench.resource.type == "ticket"',
+  });
+  expect(core.keyboard.catalog().find((entry) => entry.id === "contextual-direct")?.disabled).toBe(false);
+});
+
+test("layer-only assignments validate the retained direct chord", async () => {
+  const { core } = setup();
+  core.commands.registerCommand({ id: "direct", label: "Direct" }, { execute() {} });
+  core.keybindings.registerKeybinding({
+    id: "direct",
+    action: { kind: "command", commandId: "direct" },
+    keybinding: "Alt+K",
+  });
+  await expect(core.keyboard.setAssignment("direct", { layer: "go" })).rejects.toThrow("Layer shortcuts");
+  expect(core.keyboard.getAssignment("direct")).toBeUndefined();
+});
+
+test("catalog observers refresh when menus or navigation action contributions change", () => {
+  const { core } = setup();
+  core.commands.registerCommand({ id: "known", label: "Known" }, { execute() {} });
+  let updates = 0;
+  core.keyboard.store.subscribe(() => {
+    updates++;
+  });
+  core.layout.registerMenuItem(["test"], { commandId: "known" });
+  expect(updates).toBeGreaterThan(0);
+  updates = 0;
+  core.navigationTrees.registerContribution({
+    id: "late",
+    owner: { kind: "mode", id: "keyboard-test", extensionId: "test" },
+    sourceExtensionId: "test",
+    declarationIndex: 0,
+    getSections: () => [],
+    listActions: () => [{ label: "Known", action: { kind: "command", commandId: "known" } }],
+  });
+  expect(updates).toBeGreaterThan(0);
+});
+
 test("Current view selects between resources in every visible panel instead of using focus", async () => {
   const { core, ticket } = setup();
   ticket("A");

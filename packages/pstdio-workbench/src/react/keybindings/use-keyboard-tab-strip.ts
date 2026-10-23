@@ -11,7 +11,9 @@ export const useKeyboardTabStrip = (
 ) => {
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const current = useRef({ visible, placements, viewport });
-  current.current = { visible, placements, viewport };
+  useLayoutEffect(() => {
+    current.current = { visible, placements, viewport };
+  }, [visible, placements, viewport]);
   useLayoutEffect(() => {
     if (!region) return;
     const registration = workbench.keyboard.registerTabStrip(region, () => {
