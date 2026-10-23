@@ -2,6 +2,17 @@ import { expect, test } from "bun:test";
 import { makeCommandContext } from "./command-context";
 import { createMemoryStorage } from "./memory-storage";
 
+test("resource identity batches preserve request order and unknown IDs", async () => {
+  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {}, resourcePrefixes: { ticket: "PS" } });
+  const first = await ctx.resources.allocate({ kind: "ticket" });
+  const second = await ctx.resources.allocate({ kind: "ticket" });
+  expect(
+    (await ctx.resources.identityMany({ kind: "ticket", ids: [second.id, "missing", first.id] })).map(
+      (resource) => resource?.shorthand ?? null,
+    ),
+  ).toEqual(["PS-2", null, "PS-1"]);
+});
+
 test("each context allocates with its own resource prefixes", async () => {
   const storage = createMemoryStorage();
 

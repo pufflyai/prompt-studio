@@ -55,7 +55,11 @@ export const waitForPackagedReady = async (descriptorPath: string, child: ChildP
       return descriptor;
   });
 
-export const startPackagedServe = async (tempRoot: string, env: Record<string, string> = {}) => {
+export const startPackagedServe = async (
+  tempRoot: string,
+  env: Record<string, string> = {},
+  binaryPath = PACKAGED_BINARY_PATH,
+) => {
   const descriptorPath = join(tempRoot, "runtime.json");
   const {
     PSTDIO_EXTENSION_SOURCE_ROOT: _sourceRoot,
@@ -63,7 +67,7 @@ export const startPackagedServe = async (tempRoot: string, env: Record<string, s
     ...runtimeEnv
   } = process.env;
   const child = spawn(
-    PACKAGED_BINARY_PATH,
+    binaryPath,
     ["serve", "--foreground", "--owner", "persistent", "--host", "127.0.0.1", "--port", "0"],
     {
       // Run outside the repo root so runtime file access cannot rely on local workspace paths.

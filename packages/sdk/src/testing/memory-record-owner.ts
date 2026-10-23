@@ -6,11 +6,14 @@ import {
   scopeRecordStorage,
   snapshotDocumentRecords,
 } from "pstdio-sync";
+import type { StorageRecordIndex } from "pstdio-sync-contracts";
 import type { createMemoryAssets } from "./memory-assets";
 
 export interface MemoryStorageSeed {
   kv?: Record<string, unknown>;
   collections?: Record<string, Record<string, unknown>>;
+  /** Use the extension's storageIndexes declaration to mirror local host installation. */
+  indexes?: StorageRecordIndex[];
 }
 
 export const createMemoryRecordOwner = (
@@ -22,6 +25,7 @@ export const createMemoryRecordOwner = (
   const baseStore = createMemoryDocumentStore();
   const seedStorage = createLegacyRecordStorage({ store: baseStore, owner }).scope("project", owner.workbenchId);
   const initialized = Promise.all([
+    createDocumentStorage({ owner, store: baseStore }).records.defineIndexes(seed.indexes ?? []),
     ...Object.entries(seed.kv ?? {}).map(([key, value]) => seedStorage.kv.set(key, value as never)),
     ...Object.entries(seed.collections ?? {}).flatMap(([name, items]) =>
       Object.entries(items).map(([id, value]) => seedStorage.collection(name).set(id, value as never)),
