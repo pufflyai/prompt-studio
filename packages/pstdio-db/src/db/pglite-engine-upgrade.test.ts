@@ -34,6 +34,9 @@ test("createDb upgrades a closed legacy home and preserves records, retry receip
     await old.exec(
       "create table retained_fixture(id text primary key, payload bytea); insert into retained_fixture values ('original','\\x00ff'); create table retained_receipts(id text primary key); insert into retained_receipts values ('same-operation')",
     );
+    await old.exec(
+      "create collation retained_locale from \"C\"; create table retained_titles(label text collate retained_locale); insert into retained_titles values ('z'),('ä')",
+    );
   } finally {
     await old.close();
   }
@@ -45,6 +48,17 @@ test("createDb upgrades a closed legacy home and preserves records, retry receip
         (await upgraded.pglite.query("select id,encode(payload,'hex') payload from retained_fixture")).rows,
       ).toEqual([{ id: "original", payload: "00ff" }]);
       expect((await upgraded.pglite.query("select * from retained_receipts")).rows).toEqual([{ id: "same-operation" }]);
+      expect((await upgraded.pglite.query("select label from retained_titles order by label")).rows).toEqual([
+        { label: "z" },
+        { label: "ä" },
+      ]);
+      expect(
+        (
+          await upgraded.pglite.query(
+            "select collation_name from information_schema.columns where table_name='retained_titles' and column_name='label'",
+          )
+        ).rows,
+      ).toEqual([{ collation_name: "retained_locale" }]);
       await upgraded.pglite.exec("insert into retained_fixture values ('later','\\x17ff')");
     } finally {
       await upgraded.close();

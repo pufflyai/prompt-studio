@@ -1,9 +1,7 @@
 import { mkdir } from "node:fs/promises";
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { PGlite as NextPGlite } from "@electric-sql/pglite";
 import { PGlite } from "pglite-previous";
-import { initializePglite } from "./open-pglite";
 import { exportPgliteDatabase, importPgliteDatabase } from "./pglite-transfer";
 
 // This worker only transforms private copies. Active-home ownership stays with createDb.
@@ -26,17 +24,13 @@ if (phase === "export") {
   }
 } else {
   await mkdir(database);
-  const require = createRequire(import.meta.url);
-  const icu = engine
-    ? join(engine, "icu.76.tgz")
-    : join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
-  if (!engine) await initializePglite(database, { database: "template1", username: "postgres" });
+  // The previous engine cannot create ICU collations. Transfer its C/libc schema
+  // in this engine directly; only the final active runtime needs full locale data.
   const db = await NextPGlite.create(database, {
     pgliteWasmModule: wasmModule,
     fsBundle,
     database: "template1",
     username: "postgres",
-    icuDataDir: Bun.file(icu),
     loadDataDir: engine ? Bun.file(join(engine, "empty-database.tar.gz")) : undefined,
   });
   try {
