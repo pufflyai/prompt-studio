@@ -8,7 +8,7 @@ Proposed implementation for PS-902, PS-905 and PS-906. The approved performance 
 
 The host storage work in PS-905 and PS-906 owns the Temporary adapter for original owner-wide Yjs history. This decision owns durable transport groups and bounded manifest storage. It does not make sparse legacy fragments independently executable documents.
 
-This delivery contains only relay graph retention and cleanup. The owner-stream client, host source migration, capability negotiation and public manifest upload route remain separate implementation work.
+The relay foundation provides graph retention and cleanup. The following transport slice adds authenticated capability discovery and an explicit manifest upload route. The owner-stream client, host source migration and production cutover remain separate implementation work.
 
 ## Problem
 
@@ -57,6 +57,8 @@ The current state replacement compare-and-swap remains mandatory. A state built 
 ### Protocol compatibility
 
 Keep protocol version 1 and the released document endpoints unchanged. Add explicit negotiation for the owner-stream/reference representation. A newer client must not send a new body to a version-1-only relay and silently reinterpret rejection as success. The selected representation is unavailable until a capable relay has been deployed and verified.
+
+Clients discover `blob-references-v1` with authenticated `GET /sync/projects/~<project>/capabilities`. The response names protocol version 1 and supported feature names. A missing endpoint or missing feature means manifest uploads are unavailable; authentication and other request failures remain errors. A negotiated manifest uploader sends `POST /blobs/~<blob>/begin-manifest` with immutable `children` (at most 256 unique IDs). Ordinary `/begin` remains strict and leaf-only. A capability permits reference uploads; it does not claim that the owner-stream client or migration is complete.
 
 The legacy bridge retains original owner addresses and original Yjs updates. It imports old-device changes through indexed causal acceptance and emits the corresponding owner-stream group atomically. It exports owner-compatible original events back to the legacy address, including new resources, deletes and restores. Durable bridge identities suppress echo. Private causal fillers are never persisted or transmitted. While an owner supports released writers, new resources remain in its compatible causal namespace.
 

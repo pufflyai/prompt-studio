@@ -93,7 +93,7 @@ export const createSyncBlobs = (
   return {
     begin: (address: BlobAddress, caller: SyncCaller, input: BlobBegin, signal?: AbortSignal) =>
       begin(address, caller, input, [], signal),
-    // Internal until protocol capability negotiation is wired. Protocol-1 begin remains leaf-only.
+    // Explicit manifest uploads declare immutable children. Ordinary begin remains leaf-only.
     beginManifest: (
       address: BlobAddress,
       caller: SyncCaller,

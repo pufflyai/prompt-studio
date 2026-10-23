@@ -37,7 +37,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
-// Document sync checks the local, synced and needs-attention project states from the sync owners.
+// Document sync checks local, synced and needs-attention states plus strict leaf uploads to an older relay.
 import { registerDeviceAutomationSmokeTests } from "./packaged-device-automations-smoke";
 import { registerDocumentSyncSmokeTests } from "./packaged-document-sync-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
