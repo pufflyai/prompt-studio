@@ -7,6 +7,7 @@ export default defineConfig({
     "packaged-editing-sessions.spec.ts",
     "packaged-extension-startup.spec.ts",
     "packaged-webview-browsers.spec.ts",
+    "packaged-webview-lifetime.spec.ts",
     "packaged-statistics-loading.spec.ts",
     "packaged-planner-runtime.spec.ts",
     "packaged-planner-window.spec.ts",

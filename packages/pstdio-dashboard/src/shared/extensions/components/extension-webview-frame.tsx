@@ -32,7 +32,7 @@ import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } f
 import { PausedExtensionView } from "./paused-extension-view";
 
 interface ExtensionWebviewFrameProps {
-  sizing?: "content-width";
+  sizing?: "content-width" | "content-height";
   extensionId: string;
   extensionInstanceId?: string;
   installName?: string;
