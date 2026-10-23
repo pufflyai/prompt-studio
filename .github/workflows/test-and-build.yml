@@ -696,6 +696,10 @@ jobs:
     if: needs.scope.outputs.stage == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [cli, browser]
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
       options: --user 1001 --init --ipc=host
@@ -724,23 +728,24 @@ jobs:
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
 
       - name: Test Vite terminal e2e
+        if: matrix.suite == 'cli'
         run: bun run --cwd packages/e2e test:vite-terminal
 
       - name: Compile the packaged test CLI once
         run: bun run --cwd scripts build:host
 
-      - name: Test packaged e2e
+      - name: Test packaged ${{ matrix.suite }} e2e
         env:
           DEBUG: pw:browser
           E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
-        run: bun run --cwd packages/e2e test:packaged
+        run: bun run --cwd packages/e2e test:packaged:${{ matrix.suite }}
 
       - name: Preserve packaged and Vite test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: packaged-vite-e2e-results-attempt-${{ github.run_attempt }}
+          name: packaged-vite-e2e-${{ matrix.suite }}-results-attempt-${{ github.run_attempt }}
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report

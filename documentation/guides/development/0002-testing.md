@@ -185,6 +185,8 @@ The packaged Planner runtime spec (`packages/e2e/src/packaged/packaged-planner-r
 
 Three packaged record-relay checks are marked `todo` while per-resource relay sync is unavailable, as specified by [ADR 0100](../../adrs/0100-one-document-per-resource.md). They cover device assignments, encrypted record documents, and two-device record sync. Re-enable them when per-resource sync ships; the remaining relay checks stay active.
 
+Full CI runs packaged CLI and packaged browser checks in separate matrix jobs with the existing 18-minute limit each. The CLI job also runs the Vite terminal checks. Both jobs compile their own current CLI, and neither suite depends on the other finishing first.
+
 Nx test inputs include the shared preload, root Bun configuration, lockfile, and Bun version. Changing these invalidates cached test results.
 
 Global preferences survive project deletion. Browser specs that read or change notifications use the test fixture in `src/ui/helpers/notification-settings.ts` and opt in with `test.use({ notificationsEnabled: true })` when needed. The fixture restores the previous preference during teardown.
