@@ -100,11 +100,21 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     }
     return commit;
   };
+  // A Git install from the catalog's own repository and folder is host-managed, so it moves
+  // to the registry. Any other Git or local source stays under its owner's control.
+  const canMoveToRegistry = async (
+    entry: ExtensionCatalogEntry | undefined,
+    parsed: ReturnType<typeof parseExtensionSourceRef>,
+    version: string | null | undefined,
+  ) => {
+    if (!entry || !parsed || !version || !matchesCatalogOrigin(entry, parsed)) return false;
+    return registry.canUpgradeCatalog(entry, version);
+  };
   const canUpgrade = async (source: UpgradeSource) => {
     if (registry.matches(source)) return registry.canUpgrade(source);
-    if (deps.release?.source === "registry") return false;
     const entry = await catalogEntry(source.install_name);
     const parsed = parseExtensionSourceRef(source.source_ref);
+    if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
     if (!entry && !parsed) return false;
     if (!matchesCatalogOrigin(entry, parsed)) return false;
     let releaseRef: string | undefined;

@@ -4,4 +4,4 @@
 "@pstdio/workbench": patch
 ---
 
-Deliver independent core extension packages through PSX with compatible upgrades and full extension ownership.
+Version core extensions independently, own extension data by full publisher and name ID, and add opt-in PSX registry installs.

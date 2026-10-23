@@ -1,4 +1,4 @@
-# ADR 0088: Deliver core extension releases independently through PSX
+# ADR 0101: Deliver core extension releases independently through PSX
 
 Proposed: 2026-10-22
 
@@ -27,7 +27,14 @@ Use the existing Bun service, PostgreSQL, S3 and Terraform deployment patterns.
 Only authorised CI publishes core packages. Reads require no publisher account.
 Publisher accounts, marketplace search and third-party publication remain in PS-888.
 
-The stable host resolves the newest non-withdrawn version that supports its
+Roll this out in two steps. The first host release (0.46) versions core
+extensions independently, adds full ownership and ships registry support that
+runs only when a host is configured with a `psx:` release ref. Stable hosts keep
+installing core extensions from their `pstdio@<version>` tag, because PSX is not
+deployed yet. After PSX is deployed and verified, a later host release makes it
+the stable default.
+
+A registry host resolves the newest non-withdrawn version that supports its
 extension API. It verifies SHA-256, extension identity and version before staging
 the install. Dependency preparation and source validation finish before the
 working files are replaced. Installed sources load without registry access.
@@ -57,14 +64,16 @@ layout until an authorised write can migrate it.
 
 ## Consequences
 
-- One host release introduces registry support. Later compatible extension fixes
-  need no host release, desktop build or host tag.
+- Until stable hosts default to PSX, extension changes reach users with the next
+  host release, as before. Once they do, compatible extension fixes need no host
+  release, desktop build or host tag.
 - Extension publication has its own workflow. It checks published dependencies.
 - A package contains one extension and identifies it by full ID and version.
 - New registry sources record the registry, full ID and installed version.
-- Historical Git records do not record whether a catalog or explicit branch
-  selected their commit. Their conversion requires a provenance policy before
-  rollout; manifest identity alone is not sufficient evidence.
+- Historical Git records do not record whether the catalog or an explicit
+  install chose their source. On a registry host, a Git install whose repository
+  URL and folder match the bundled catalog entry counts as host-managed and moves
+  to PSX on its next Upgrade. Other Git and local installs keep their source.
+  Manifest identity alone is not enough evidence.
 - Production deployment, publishing credentials and a smoke against the deployed
-  service are release gates. Source code and isolated tests alone do not deliver
-  independent updates to users.
+  service gate the switch of stable hosts to PSX, not the first host release.

@@ -186,6 +186,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0004 — Pull request area labels](development/0004-pull-request-labels.md)
 - [0005 — Extension conformance and regression coverage](development/0005-conformance.md)
 - [0012 — Portable relay and account manager deployment](development/0012-portable-cloud-deployment.md)
+- [0013 — Independent core extension releases](development/0013-independent-extension-releases.md)
 
 ### Build extensions
 
@@ -382,6 +383,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0088 — Temporary tooltip hover reset](../adrs/0088-temporary-tooltip-hover-reset.md)
 - [0099 — Durable record query projections](../adrs/0099-durable-record-query-projections.md)
 - [0100 — One document per resource](../adrs/0100-one-document-per-resource.md)
+- [0101 — Deliver core extension releases independently through PSX](../adrs/0101-independent-core-extension-delivery.md)
 
 ## Lessons learned
 
