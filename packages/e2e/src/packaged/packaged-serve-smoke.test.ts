@@ -84,7 +84,7 @@ import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-s
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
-// Composer coverage preserves route-group file paths and keeps web references natively clickable in packaged messages.
+// Composer coverage recalls saved prompts, preserves route-group file paths, and keeps web references clickable.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.

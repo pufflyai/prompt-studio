@@ -4,7 +4,14 @@ import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
 import { expect, within } from "storybook/test";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
-import { PromptHistoryPanel, PromptHistoryResetPanel, resetHistoryWalk, walkThreePrompts } from "./chat-history-story";
+import {
+  PromptHistoryPanel,
+  PromptHistoryResetPanel,
+  resetHistoryWalk,
+  walkFullHistory,
+  walkMultilineHistory,
+  walkThreePrompts,
+} from "./chat-history-story";
 import { ChatPanel } from "./chat-panel";
 import { WorkingIndicatorVisibilityRenderer } from "./chat-panel-work-timer-fixtures";
 import type { QueuedFollowUp, SessionMessage } from "./message-types";
@@ -673,5 +680,17 @@ export const QueuedFollowUpsWithWorkspaceHub: Story = {
 };
 
 export const PromptHistory: Story = { render: () => <PromptHistoryPanel />, play: walkThreePrompts };
+
+export const PromptHistoryFull: Story = {
+  tags: ["!manifest"],
+  render: () => <PromptHistoryPanel prompts={Array.from({ length: 12 }, (_, i) => `Prompt ${i + 1}`)} />,
+  play: walkFullHistory,
+};
+
+export const PromptHistoryMultiline: Story = {
+  tags: ["!manifest"],
+  render: () => <PromptHistoryPanel prompts={["Earlier prompt", "First line\nSecond line"]} />,
+  play: walkMultilineHistory,
+};
 
 export const PromptHistoryReset: Story = { render: () => <PromptHistoryResetPanel />, play: resetHistoryWalk };
