@@ -9,19 +9,15 @@ import { PanelDragHeader, usePanelPositionActions } from "./panel-position-contr
 interface PanelHeaderProps extends ComponentProps<typeof Header> {
   workbench: WorkbenchCore;
   region: WorkbenchPanelRegion;
-  hasContent?: boolean;
-  hasTabs?: boolean;
 }
 
 /** Keep an accessible context surface even when the tab header is hidden. */
 export const PanelHeader = (props: PanelHeaderProps) => {
-  const { workbench, region, hasContent = true, hasTabs = false, children, ...rest } = props;
+  const { workbench, region, children, ...rest } = props;
   const edgeStyles = useRecipe({ key: "panelHeaderEdge" })();
   const policy = usePanelPolicy(workbench, region);
   const positionActions = usePanelPositionActions(workbench, region);
-  const show = policy.legacyHeaders
-    ? (policy.showHeader || hasTabs) && hasContent
-    : policy.showHeader && (region !== "main" || hasContent || policy.headerExplicit);
+  const show = policy.showHeader;
   const label = { secondary: "Bottom", side: "Side", main: "Main" }[region];
   const headerProps = {
     ...rest,

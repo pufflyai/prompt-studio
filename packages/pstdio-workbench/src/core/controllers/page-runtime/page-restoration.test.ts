@@ -11,7 +11,7 @@ const file = (id: string, open: "pin" | "preview" = "pin") => ({
   resource: { type: "file", id, label: id },
   open,
 });
-const harness = (saved: Map<string | undefined, WorkbenchLayout>, fixedFiles = false) => {
+const harness = (saved: Map<string | undefined, WorkbenchLayout>) => {
   const workbench = createWorkbench({
     layoutPersistence: {
       getLayout: (scope) => saved.get(scope),
@@ -33,16 +33,14 @@ const harness = (saved: Map<string | undefined, WorkbenchLayout>, fixedFiles = f
       {
         id: "files",
         region: "main",
-        item: fixedFiles
-          ? { kind: "view", view: { kind: "view", id: "editor" }, presence: "fixed" }
-          : {
-              kind: "binding",
-              binding: {
-                kinds: [{ kind: "resource-kind", id: "file" }],
-                view: { kind: "view", id: "editor" },
-                cardinality: "many",
-              },
-            },
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [{ kind: "resource-kind", id: "file" }],
+            view: { kind: "view", id: "editor" },
+            cardinality: "many",
+          },
+        },
       },
       {
         id: "inspector",
@@ -84,25 +82,5 @@ test("reload restores page-local editor collections and the latest shared panel"
   ]);
   await restored.navigation.openTarget(target("beta"));
   expect(restored.layout.getLayout().regions.main.widgets.map((item) => item.resource?.id)).toEqual(["beta-file"]);
-  restored.pageLocations.dispose();
-});
-
-test("restoring a location applies current fixed panel declarations to its cached layout", async () => {
-  const saved = new Map<string | undefined, WorkbenchLayout>();
-  const first = harness(saved);
-  await first.navigation.openTarget(target("alpha"));
-  await first.navigation.openTarget(file("readme"));
-  first.pageLocations.dispose();
-
-  const restored = harness(saved, true);
-  await restored.navigation.openTarget(target("alpha"));
-  expect(restored.layout.getLayout().regions.main.widgets).toEqual([
-    expect.objectContaining({
-      viewId: "editor",
-      closable: false,
-      resource: { type: "workspace", id: "alpha" },
-      placementIdentity: expect.objectContaining({ kind: "page", pageId: "workspace", slotId: "files" }),
-    }),
-  ]);
   restored.pageLocations.dispose();
 });

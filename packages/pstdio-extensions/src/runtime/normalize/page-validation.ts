@@ -105,15 +105,32 @@ const validateModeAndRegions = (runtime: Accumulator, record: RuntimePageRecord)
   }
 };
 
+const validatePageMainDefaults = (runtime: Accumulator, record: RuntimePageRecord) => {
+  const page = record.contribution;
+  const main = page.main;
+  if (main.kind === "view" && main.empty)
+    ownRefMissing(runtime, record, main.empty, `pages.${record.localId}.main.empty`);
+  if (
+    main.kind === "panels" &&
+    main.landing &&
+    !page.slots.some((slot) => slot.id === main.landing && slot.region === "main" && slot.item.kind === "view")
+  ) {
+    addPageDiagnostic(runtime, {
+      code: "extension_page_main_invalid",
+      fieldPath: `pages.${record.localId}.main.landing`,
+      message: "The landing slot must be a static Main view",
+      record,
+    });
+  }
+};
+
 const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) => {
   const page = record.contribution;
   const main = page.main;
-  ownRefMissing(
-    runtime,
-    record,
-    main.kind === "view" ? main.view : main.empty,
-    `pages.${record.localId}.main.${main.kind === "view" ? "view" : "empty"}`,
-  );
+  const view = main.kind === "view" ? main.view : main.empty;
+  if (view)
+    ownRefMissing(runtime, record, view, `pages.${record.localId}.main.${main.kind === "view" ? "view" : "empty"}`);
+  validatePageMainDefaults(runtime, record);
   page.resource?.kinds.forEach((kind, index) => {
     ownRefMissing(runtime, record, kind, `pages.${record.localId}.resource.kinds.${index}`);
   });

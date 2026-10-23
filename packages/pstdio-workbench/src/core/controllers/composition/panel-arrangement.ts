@@ -23,6 +23,7 @@ const keepSourceVisible = (source: WorkbenchRegionState, region: WorkbenchRegion
 const revealDropTarget = (target: WorkbenchRegionState) => ({
   ...target,
   visible: true,
+  headerVisible: true,
   presentation: target.id === "side" && !target.visible ? ("attached" as const) : target.presentation,
 });
 

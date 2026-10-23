@@ -201,12 +201,6 @@ export const createWorkbenchPageLocationController = <Value>(
     fail,
     getCurrent: () => input.registry.store.getState(),
     getPageRef: (pageId) => input.registry.getPage(pageId)?.ref,
-    normalizePage: (page) =>
-      normalizeWorkbenchPageTarget({
-        target: { kind: "page", page },
-        pages: pages(),
-        resources: internals.resources,
-      }),
     normalizeStored,
     resolveClosePlacement: internals.resolveClosePlacement,
   });

@@ -20,6 +20,7 @@ import {
   closeOwnedPlacementInstance,
   createOwnedPlacementState,
   isStaticPlacementOpen,
+  placementItemForRegion,
   placementItemViewId,
   staticPlacementClosable,
   updateResourcePlacementInstance,
@@ -254,7 +255,7 @@ export const createWorkbenchShellPlacementRegistry = (
         throw new Error(`Workbench shell placement view is not registered: ${placementItemViewId(placement.item)}`);
       }
       validateOwnedPlacementItem(label, placement.id, placement.item);
-      const registered = { ...placement, item: { ...placement.item } };
+      const registered = { ...placement, item: placementItemForRegion(placement.item, placement.region) };
       const panel = registerWorkbenchViewPlacement(
         input.registerPanel,
         input.views,

@@ -57,9 +57,7 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
     // Collection pages return to their landing panel; resource crumbs keep their resource link.
     const landingPanel =
       page?.main.kind === "panels" && !location.resource
-        ? page.slots.find(
-            (slot) => slot.region === "main" && slot.item.kind === "view" && slot.item.presence === "fixed",
-          )
+        ? page.slots.find((slot) => page.main.kind === "panels" && slot.id === page.main.landing)
         : undefined;
     if (index < locations.length - 1 || (landingPanel && input.openPanel)) {
       item.onClick = () => {

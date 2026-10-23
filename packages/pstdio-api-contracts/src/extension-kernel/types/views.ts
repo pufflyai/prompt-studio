@@ -61,10 +61,10 @@ export interface NavigationTreeContribution extends ContributionDefinition<"navi
 
 /**
  * Initial presence of a static placement inside its owner scope.
- * - "fixed": always open while the owner is active; the user cannot close it.
+ * - "fixed": deprecated alias for "open". Use "open" for closable tabs.
  * - "open": open when the owner has no saved state; the user may close it.
  * - "closed": closed until the user opens it (for example through the Add panel).
- * A saved user choice wins over "open" and "closed" on the next visit.
+ * A saved user choice wins on the next visit. Chrome placements stay visible with their owner.
  */
 export type PlacementPresence = "fixed" | "open" | "closed";
 

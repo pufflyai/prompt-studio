@@ -2,7 +2,7 @@ import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
-import { isPageSlotClosable, PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
+import { PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPagePlacementInput,
@@ -47,6 +47,14 @@ const validatePageSlots = (page: WorkbenchPageContribution) => {
       throw new Error(`Page slot "${slot.id}" must bind at least one resource kind`);
     if (slot.openOn && slot.item.kind !== "binding")
       throw new Error(`Page slot "${slot.id}" requires a binding for openOn`);
+  }
+  const main = page.main;
+  if (
+    main.kind === "panels" &&
+    main.landing &&
+    !page.slots.some((slot) => slot.id === main.landing && slot.region === "main" && slot.item.kind === "view")
+  ) {
+    throw new Error(`Page "${page.id}" must declare a static Main landing slot`);
   }
 };
 
@@ -93,7 +101,7 @@ const placementFor = <Value>(input: {
       ...(input.resource ? { resource: input.resource } : {}),
       ...(input.section ? { section: input.section } : {}),
       ...(input.open ? { open: input.open } : {}),
-      closable: isPageSlotClosable(input.slot),
+      closable: true,
     }),
   } satisfies ResolvedOwnedPlacement<Value>;
 };
@@ -114,23 +122,6 @@ export const resolvePagePlacements = <Value>(input: {
     for (const instance of input.state.resourceInstances[slot.id] ?? []) {
       placements.push(placementFor({ ...input, slot, ...instance }));
     }
-  }
-  if (
-    input.page.main.kind === "panels" &&
-    ![...placements, ...input.sharedPlacements].some((placement) => placement.region === "main")
-  ) {
-    placements.push(
-      placementFor({
-        ...input,
-        instanceKey: input.staticInstanceKey,
-        slot: {
-          id: PAGE_MAIN_SLOT_ID,
-          role: "primary",
-          region: "main",
-          item: { kind: "view", view: input.page.main.empty, presence: "fixed" },
-        },
-      }),
-    );
   }
   return placements;
 };

@@ -83,7 +83,7 @@ describe("extension page registration", () => {
       expect(workbench.pageLocations.closePlacement(placement.placementIdentity!).ok).toBe(true);
       expect(workbench.pages.store.getState().location).toEqual(location);
     }
-    expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(1);
+    expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(0);
     registration.dispose();
   });
   test("registers normalized pages in the shared workbench registry", () => {

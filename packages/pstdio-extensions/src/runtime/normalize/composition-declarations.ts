@@ -54,6 +54,14 @@ export const pageDeclarationSchema = z
     icon: z.string().optional(),
     path: z.string(),
     params: pageParamDefinitionsSchema.optional(),
+    regionSettings: z
+      .object({
+        main: z.object({ showHeader: z.boolean().optional() }).strict().optional(),
+        side: z.object({ showHeader: z.boolean().optional() }).strict().optional(),
+        secondary: z.object({ showHeader: z.boolean().optional() }).strict().optional(),
+      })
+      .strict()
+      .optional(),
     mode: localRefSchema("mode"),
     parent: localRefSchema("page").optional(),
     resource: resource.optional(),
@@ -67,10 +75,13 @@ export const pageDeclarationSchema = z
           kind: z.literal("view"),
           view: localRefSchema("view"),
           cardinality: z.enum(["one", "many"]),
+          empty: localRefSchema("view").optional(),
           ...presentation,
         })
         .strict(),
-      z.object({ kind: z.literal("panels"), empty: localRefSchema("view") }).strict(),
+      z
+        .object({ kind: z.literal("panels"), empty: localRefSchema("view").optional(), landing: z.string().optional() })
+        .strict(),
     ]),
     slots: z.array(slot),
     panels: z.record(z.string(), z.unknown()),

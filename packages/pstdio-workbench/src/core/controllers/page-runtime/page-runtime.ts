@@ -13,7 +13,7 @@ import { applyModePanelPolicy } from "../../registries/modes/mode-layout";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
-import { isPageSlotClosable, pagePlacementDeclarations } from "../../registries/pages/page-main";
+import { pagePlacementDeclarations } from "../../registries/pages/page-main";
 import {
   type CreateWorkbenchPageRegistryInput,
   createWorkbenchPageRegistry,
@@ -274,7 +274,6 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
       const registrations = pagePlacementDeclarations(page).map((slot) => {
         const viewId = contributionRefId(slot.item.kind === "view" ? slot.item.view : slot.item.binding.view);
         if (!viewId) throw new Error(`Workbench page slot view is not registered: ${page.id}.${slot.id}`);
-        const closable = isPageSlotClosable(slot);
         return registerWorkbenchViewPlacement(
           input.layout,
           input.views,
@@ -284,7 +283,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
             viewId,
             role: slot.role === "primary" ? "location" : "sub-panel",
             singleton: slot.item.kind === "view" || slot.item.binding.cardinality !== "many",
-            closable,
+            closable: true,
           },
           input.viewMenus,
         );

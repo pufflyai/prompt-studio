@@ -13,9 +13,10 @@ const mainSchema = z.discriminatedUnion("kind", [
       kind: z.literal("view"),
       view: viewRefSchema,
       cardinality: z.enum(["one", "many"]),
+      empty: viewRefSchema.optional(),
     })
     .strict(),
-  z.object({ kind: z.literal("panels"), empty: viewRefSchema }).strict(),
+  z.object({ kind: z.literal("panels"), empty: viewRefSchema.optional(), landing: z.string().optional() }).strict(),
 ]);
 const slotSchema = workbenchPlacementPresentationSchema
   .extend({
@@ -35,6 +36,13 @@ export const workbenchExtensionPageRecordSchema = z.object({
   icon: z.string().optional(),
   path: z.string(),
   params: pageParamDefinitionsSchema.optional(),
+  regionSettings: z
+    .object({
+      main: z.object({ showHeader: z.boolean().optional() }).optional(),
+      side: z.object({ showHeader: z.boolean().optional() }).optional(),
+      secondary: z.object({ showHeader: z.boolean().optional() }).optional(),
+    })
+    .optional(),
   document: z.object({ metadataKey: z.string().refine((key) => key.trim().length > 0) }).optional(),
   mode: modeRefSchema,
   parent: pageRefSchema.optional(),

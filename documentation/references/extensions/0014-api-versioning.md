@@ -221,7 +221,13 @@ API 0.2 moves `ctx.extensionFiles` from `.pstdio/ext/<publisher>.<name>/` to `.p
 
 API 0.2.1 also adds optional `HarnessProvider.releaseSession(ctx, { sessionId })` for host-managed idle-resource cleanup. The host retains open tabs, active work, and sessions used within 30 minutes. Return `true` after releasing idle resources and `false` while native work or delivery remains uncertain. Preserve history and recreate resources on the next call. Existing providers keep working. Publish the SDK and host before separately released harnesses adopt it.
 
-`ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `movable`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Published extension header and tab behavior stays compatible until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
+`ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `movable`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Deprecated declarations remain accepted until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
+
+## Page tabs and header defaults in API 0.2.2
+
+Pages add optional `regionSettings.<region>.showHeader`, resolved as user, page, then mode. Main view and panel collection pages can omit `main.empty` to use the host placeholder. A collection can declare a static Main `landing` slot for navigation and recovery.
+
+Every tab can close, including single-resource Main content. `presence: "fixed"` is deprecated in tab regions and behaves like `"open"`; chrome placements retain their owner lifecycle. `alwaysShowTabs` is deprecated in favor of `showHeader`. The declarations remain accepted until the coordinated breaking release removes them. A successful tab move restores a hidden destination header as a saved user choice. Publish the SDK and host before separately released extensions use the new declarations.
 
 ## Local editing sessions in API 0.2.1
 

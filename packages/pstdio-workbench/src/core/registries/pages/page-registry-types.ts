@@ -2,6 +2,7 @@ import type {
   DockedWorkbenchRegion,
   FileRendererSectionTarget,
   Localizable,
+  PageContribution,
   PageDocumentDeclaration,
   PageLocation,
   PageMain,
@@ -40,6 +41,7 @@ export interface WorkbenchPageContribution {
   resource?: ResourceConstraint;
   document?: PageDocumentDeclaration;
   params?: Readonly<Record<string, PageParamDefinition>>;
+  regionSettings?: PageContribution["regionSettings"];
   main: WorkbenchPageMain;
   slots: readonly WorkbenchPageSlot[];
 }

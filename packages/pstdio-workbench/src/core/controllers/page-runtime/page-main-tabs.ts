@@ -96,13 +96,15 @@ const restoreMainTabs = (input: PageTabsInput, current: State["placements"], sha
       identity,
       region: "main",
       order,
-      value: activated.has(key) && existing ? existing.value : widget,
+      value: activated.has(key) && existing ? existing.value : refreshPageTab(input, widget),
     });
   }
   return placements;
 };
 
-const refreshSharedPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPlacement) => {
+const refreshPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPlacement) => {
+  // Declarations own close behavior; a saved layout only owns the tab's placement.
+  widget = { ...widget, closable: input.getWidget(widget.contributionId)?.closable ?? widget.closable };
   const identity = widget.placementIdentity;
   if (identity?.kind !== "page" || !widget.resource) return widget;
   const instance = Object.entries(input.state.pageStates)
@@ -123,7 +125,7 @@ const refreshSharedPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPlace
 const sharedPageTabValue = (input: PageTabsInput, widget: WorkbenchWidgetPlacement) => {
   const key = placementIdentityKey(widget.placementIdentity!);
   const explicit = input.state.reconciliation.activate.find((entry) => placementIdentityKey(entry.identity) === key);
-  return explicit ? { ...explicit.value, widgetId: widget.widgetId } : refreshSharedPageTab(input, widget);
+  return explicit ? { ...explicit.value, widgetId: widget.widgetId } : refreshPageTab(input, widget);
 };
 
 const canRestoreSharedPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPlacement, leavingPage: boolean) => {

@@ -1,7 +1,12 @@
 import type { NavigationTarget, PlacementIdentity } from "@pstdio/sdk/extensions";
 import { contributionRefId } from "@pstdio/sdk/extensions";
-import type { WorkbenchLayout, WorkbenchPanelRegion } from "../../registries/layout/layout-model";
+import type {
+  WorkbenchLayout,
+  WorkbenchPanelRegion,
+  WorkbenchWidgetPlacement,
+} from "../../registries/layout/layout-model";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import { pageSlots } from "../../registries/pages/page-main";
 import type { WorkbenchOwnedPlacementItem } from "../../registries/placements/owned-placement-lifecycle";
 import { shellPlacementContributionId } from "../../registries/placements/shell-placement-registry";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
@@ -15,12 +20,14 @@ import { panelDestinations } from "./panel-destinations";
 const ownsPlacement = (
   layout: WorkbenchLayout,
   target: WorkbenchPanelRegion,
-  matches: (identity: PlacementIdentity) => boolean,
+  matches: (identity: PlacementIdentity, placement: WorkbenchWidgetPlacement) => boolean,
 ) =>
   Object.values(layout.regions)
     .filter((region) => region.id === target)
     .some((region) =>
-      region.widgets.some((placement) => placement.placementIdentity && matches(placement.placementIdentity)),
+      region.widgets.some(
+        (placement) => placement.placementIdentity && matches(placement.placementIdentity, placement),
+      ),
     );
 export const activateModePlacementInstance = (core: WorkbenchCore, identity: PlacementIdentity) => {
   const instance = Object.values(core.layout.getLayout().regions)
@@ -77,7 +84,6 @@ const canAddItem = (core: WorkbenchCore, item: WorkbenchOwnedPlacementItem, reso
 const addShellPanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPanel) => {
   for (const placement of core.shellPlacements.listPlacements()) {
     if (!panelDestinations(core, shellPlacementContributionId(placement.id)).includes(input.region)) continue;
-    if (placement.item.kind === "view" && placement.item.presence === "fixed") continue;
     const multiple = placement.item.kind === "binding" && placement.item.binding.cardinality === "many";
     const isOpen = ownsPlacement(
       input.layout,
@@ -101,7 +107,6 @@ const addShellPanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddP
 const addModePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPanel) => {
   for (const placement of core.modePlacements.listPlacements(input.modeId)) {
     if (!panelDestinations(core, modePlacementContributionId(placement.id)).includes(input.region)) continue;
-    if (placement.item.kind === "view" && placement.item.presence === "fixed") continue;
     const multiple = placement.item.kind === "binding" && placement.item.binding.cardinality === "many";
     const isOpen = ownsPlacement(
       input.layout,
@@ -126,27 +131,38 @@ const addPagePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
   const pageState = core.pages.store.getState();
   const page = pageState.activePageId ? core.pages.getPage(pageState.activePageId) : undefined;
   if (!page) return;
-  for (const slot of page.slots) {
+  for (const slot of pageSlots(page)) {
+    if (slot.role === "primary" && input.region !== "main") continue;
     if (slot.isAvailable && !slot.isAvailable(input.resource)) continue;
     if (!panelDestinations(core, pagePlacementContributionId(page.id, slot.id)).includes(input.region)) continue;
-    if (slot.item.kind === "view" && slot.item.presence === "fixed") continue;
-    const multiple = slot.item.kind === "binding" && slot.item.binding.cardinality === "many";
+    const many = slot.item.kind === "binding" && slot.item.binding.cardinality === "many";
+    const multiple = slot.role !== "primary" && many;
+    const defaultResource = slot.role === "primary" ? pageState.location?.resource : input.resource;
     const isOpen = ownsPlacement(
       input.layout,
       input.region,
-      (identity) => identity.kind === "page" && identity.pageId === page.id && identity.slotId === slot.id,
+      (identity, placement) =>
+        identity.kind === "page" &&
+        identity.pageId === page.id &&
+        identity.slotId === slot.id &&
+        (slot.role !== "primary" ||
+          !defaultResource ||
+          (placement.resource &&
+            core.pages.resourceReferenceKey(placement.resource) ===
+              core.pages.resourceReferenceKey(defaultResource))) === true,
     );
-    if ((!multiple && isOpen) || !canAddItem(core, slot.item, input.resource)) continue;
+    if ((!multiple && isOpen) || !canAddItem(core, slot.item, defaultResource)) continue;
     add(pagePlacementContributionId(page.id, slot.id), (resource) => {
       if (slot.item.kind === "binding" && slot.item.binding.add) {
         return openPlacementAddTarget(core, slot.item.binding.add, input.region);
       }
+      const targetResource = slot.role === "primary" ? defaultResource : (resource ?? defaultResource);
       core.pages.openSlot({
         pageId: page.id,
         slotId: slot.id,
         region: input.region,
-        ...(slot.item.kind === "binding" && resource ? { resource } : {}),
-        ...(multiple ? { open: "pin" } : {}),
+        ...(slot.item.kind === "binding" && targetResource ? { resource: targetResource } : {}),
+        ...(many ? { open: "pin" } : {}),
       });
       const opened = Object.values(core.layout.getLayout().regions)
         .flatMap((region) => region.widgets)

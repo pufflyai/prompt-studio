@@ -117,7 +117,9 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     const stateKey = pageStateKey(page, target.location, input.resources);
     const currentPageState =
       pageStates[stateKey] ?? input.restorePageState?.(page, target.location, target.projectId) ?? emptyPageState(page);
-    const primaryState = selectPrimaryTarget({ page, state: currentPageState, target: normalizedTarget, resourceKey });
+    const primaryState = target.pageStates
+      ? currentPageState
+      : selectPrimaryTarget({ page, state: currentPageState, target: normalizedTarget, resourceKey });
     const openFollowers =
       !target.pageStates ||
       current.activePageId !== page.id ||
@@ -156,7 +158,6 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     const page = requirePage(current, target.pageId);
     const resourceKey = (resource: ResourceRef) => pageResourceInstanceKey(page, resource, input.resources);
     const slot = requirePageSlot(page, target.slotId);
-    if (slot.role !== "auxiliary") throw new Error(`Page slot is not an auxiliary panel: ${page.id}.${slot.id}`);
     const stateKey = pageStateKey(page, current.location, input.resources);
     let pageState = current.pageStates[stateKey] ?? emptyPageState(page);
     let instanceKey = staticPageInstanceKey(page, current.location?.resource, input.resources);
@@ -172,7 +173,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     } else {
       if (slot.item.kind === "binding") throw new Error(`Page slot "${slot.id}" requires a resource`);
       if (target.open) throw new Error(`Page slot "${slot.id}" accepts open intent only with a resource`);
-      if (slot.item.presence !== "fixed") pageState = setStaticSlotOpen(pageState, slot.id, true);
+      pageState = setStaticSlotOpen(pageState, slot.id, true);
     }
     return compose(
       current,

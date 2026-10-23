@@ -23,11 +23,15 @@ export interface PageMainView extends PlacementPresentation {
   readonly kind: "view";
   readonly view: ViewRef;
   readonly cardinality: PageSlotCardinality;
+  /** Optional content for an empty Main, beside the host recovery actions. */
+  readonly empty?: ViewRef;
 }
 
 export interface PageMainPanels {
   readonly kind: "panels";
-  readonly empty: ViewRef;
+  readonly empty?: ViewRef;
+  /** Static Main slot opened when navigating to this collection or selecting its breadcrumb. */
+  readonly landing?: string;
 }
 
 export type PageMain = PageMainView | PageMainPanels;
@@ -71,6 +75,8 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly resource?: ResourceConstraint;
   readonly document?: PageDocumentDeclaration;
   readonly params?: Readonly<Record<string, PageParamDefinition>>;
+  /** Header defaults only. User choices win; omitted values inherit the mode. */
+  readonly regionSettings?: Partial<Record<ExtensionPanelRegion, { readonly showHeader?: boolean }>>;
   readonly main: PageMain;
   readonly slots: readonly PageSlot[];
   readonly panels: Readonly<Record<string, PageSlotRef>>;

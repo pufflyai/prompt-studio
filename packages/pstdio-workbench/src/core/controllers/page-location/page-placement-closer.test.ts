@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "../../workbench-core";
 
-test("closing the last resource returns to its declared home page", () => {
+test("closing the last resource keeps its page available for recovery", () => {
   const workbench = createWorkbench();
   const home = { extensionId: "test", kind: "page", id: "sessions" } as const;
   const page = { ...home, id: "session" };
@@ -52,6 +52,7 @@ test("closing the last resource returns to its declared home page", () => {
   );
   const identity = workbench.layout.getLayout().regions.main.widgets[0]!.placementIdentity!;
   expect(workbench.pageLocations.closePlacement(identity).ok).toBe(true);
-  expect(workbench.pages.store.getState().location).toEqual({ page: home });
-  expect(workbench.layout.getLayout().regions.main.widgets).toMatchObject([{ closable: false }]);
+  expect(workbench.pages.store.getState().location?.page).toEqual(page);
+  expect(workbench.pages.store.getState().location?.resource?.id).toBe("one");
+  expect(workbench.layout.getLayout().regions.main.widgets).toEqual([]);
 });

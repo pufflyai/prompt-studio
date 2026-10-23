@@ -10,6 +10,7 @@ export const resolvePanelPolicy = (input: {
   region: WorkbenchRegion;
   mode?: WorkbenchModeContribution;
   settings?: WorkbenchRegionSettings;
+  pageShowHeader?: boolean;
   state: WorkbenchRegionState;
   legacyFloatable?: boolean;
 }) => {
@@ -31,9 +32,7 @@ export const resolvePanelPolicy = (input: {
     movable: provided && settings.movable !== false,
     resizable: provided && !fixedSize && settings.resizable !== false,
     floatable: provided && region === "side" && (settings.floatable ?? input.legacyFloatable ?? true),
-    headerExplicit: state.headerVisible !== undefined || settings.showHeader !== undefined,
-    showHeader: provided && (state.headerVisible ?? settings.showHeader ?? true),
-    legacyHeaders: state.headerVisible === undefined && mode?.panelHeaders === "legacy",
+    showHeader: provided && (state.headerVisible ?? input.pageShowHeader ?? settings.showHeader ?? true),
   };
 };
 

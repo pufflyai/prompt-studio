@@ -7,7 +7,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "./module";
 
-test("keeps Files and Changes fixed and bound to the current workspace", () => {
+test("keeps Files and Changes closable and bound to the current workspace", () => {
   getWriter("workspaces")?.truncateAndWrite([]);
   const workbench = createWorkbench();
   workbench.registerModule(createWorkspacesModule());
@@ -21,8 +21,8 @@ test("keeps Files and Changes fixed and bound to the current workspace", () => {
     openWorkspacesPage(workbench, workspace);
     const panels = workbench.layout.listPanelInstances("main");
     expect(panels).toEqual([
-      expect.objectContaining({ viewId: dashboardWidgetIds.workspaceDiffs, closable: false, resource: workspace }),
-      expect.objectContaining({ viewId: dashboardWidgetIds.workspaceFiles, closable: false, resource: workspace }),
+      expect.objectContaining({ viewId: dashboardWidgetIds.workspaceDiffs, closable: true, resource: workspace }),
+      expect.objectContaining({ viewId: dashboardWidgetIds.workspaceFiles, closable: true, resource: workspace }),
     ]);
     for (const panel of panels) {
       workbench.layout.activatePanel(panel.instanceId);

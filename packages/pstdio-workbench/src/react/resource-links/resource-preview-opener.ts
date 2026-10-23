@@ -25,7 +25,8 @@ const pagePreviewView = (ctx: WorkbenchModuleContext, pageRef: PageRef, resource
     (slot) =>
       slot.region === "main" && slot.item.kind === "binding" && resourceMatchesConstraint(slot.item.binding, resource),
   );
-  return slot?.item.kind === "binding" ? contributionRefId(slot.item.binding.view) : contributionRefId(page.main.empty);
+  if (slot?.item.kind === "binding") return contributionRefId(slot.item.binding.view);
+  if (page.main.empty) return contributionRefId(page.main.empty);
 };
 
 // Owner views render related resources without changing the routed parent page.

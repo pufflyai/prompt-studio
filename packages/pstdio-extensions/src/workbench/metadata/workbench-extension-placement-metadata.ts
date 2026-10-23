@@ -25,8 +25,14 @@ const tabRecord = (tab: RuntimePlacementTab | undefined, extensionId: string) =>
       }
     : undefined;
 const mainRecord = (main: RuntimePageMain, extensionId: string) => {
-  if (main.kind === "panels") return { ...main, empty: normalizedRef(main.empty, extensionId) };
-  return { ...main, view: normalizedRef(main.view, extensionId), tab: tabRecord(main.tab, extensionId) };
+  if (main.kind === "panels")
+    return { ...main, empty: main.empty ? normalizedRef(main.empty, extensionId) : undefined };
+  return {
+    ...main,
+    view: normalizedRef(main.view, extensionId),
+    empty: main.empty ? normalizedRef(main.empty, extensionId) : undefined,
+    tab: tabRecord(main.tab, extensionId),
+  };
 };
 const slotRecord = (slot: RuntimePageSlot, extensionId: string) => ({
   ...slot,
@@ -43,6 +49,7 @@ export const toPageRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMeta
     path: page.contribution.path,
     document: page.contribution.document,
     params: page.contribution.params,
+    regionSettings: page.contribution.regionSettings,
     mode: normalizedRef(page.contribution.mode, page.extensionId),
     parent: page.contribution.parent ? normalizedRef(page.contribution.parent, page.extensionId) : undefined,
     resource: page.contribution.resource

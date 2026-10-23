@@ -87,19 +87,20 @@ const createInbox = (cardinality: "one" | "many" = "one") => {
   return workbench;
 };
 describe("closing page resource panels", () => {
-  test("single-resource Main is fixed while its optional panels remain closable", () => {
+  test("single-resource Main and its optional panels can close", () => {
     const workbench = createInbox();
     const main = workbench.layout.getLayout().regions.main.widgets[0]!;
-    expect(main.closable).toBe(false);
+    expect(main.closable).toBe(true);
     expect(workbench.layout.getLayout().regions.side.widgets.every((item) => item.closable)).toBe(true);
     const location = workbench.pages.store.getState().location;
-    expect(workbench.pageLocations.closePlacement(main.placementIdentity!).ok).toBe(false);
+    expect(workbench.pageLocations.closePlacement(main.placementIdentity!).ok).toBe(true);
+    expect(workbench.layout.listPanelInstances("main")).toEqual([]);
     expect(workbench.pages.store.getState().location).toEqual(location);
     expect(workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "thread", id: "two" } }).ok).toBe(
       true,
     );
     expect(workbench.layout.getLayout().regions.main.widgets).toMatchObject([
-      { closable: false, resource: { id: "two" } },
+      { closable: true, resource: { id: "two" } },
     ]);
   });
   test("a page supporting many resources keeps its only tab closable", () => {
@@ -107,7 +108,7 @@ describe("closing page resource panels", () => {
     const main = workbench.layout.getLayout().regions.main.widgets[0]!;
     expect(main.closable).toBe(true);
     expect(workbench.pageLocations.closePlacement(main.placementIdentity!).ok).toBe(true);
-    expect(workbench.pages.store.getState().location).toEqual({ page: home });
+    expect(workbench.pages.store.getState().location?.page).toEqual(page);
   });
   test("closing a shared resource from another page keeps a manually closed reader closed", () => {
     const workbench = createInbox("many");
@@ -123,7 +124,7 @@ describe("closing page resource panels", () => {
     expect(workbench.pages.store.getState().location?.resource?.id).toBe("two");
     expect(workbench.layout.getLayout().regions.side.widgets.some((item) => item.viewId === "reader")).toBe(false);
   });
-  test("closing the last current Main resource returns to its parent and keeps shared panels", () => {
+  test("closing the last current Main resource keeps its page and shared panels", () => {
     const workbench = createInbox("many");
     for (const id of ["one", "two"]) {
       expect(
@@ -138,7 +139,8 @@ describe("closing page resource panels", () => {
       )!;
     const shared = workbench.layout.getLayout().regions.side.widgets.map((item) => item.widgetId);
     expect(workbench.pageLocations.closePlacement(selected.identity).ok).toBe(true);
-    expect(workbench.pages.store.getState().location).toEqual({ page: home });
+    expect(workbench.pages.store.getState().location?.page).toEqual(page);
+    expect(workbench.layout.listPanelInstances("main")).toEqual([]);
     expect(workbench.layout.getLayout().regions.side.widgets.map((item) => item.widgetId)).toEqual(shared);
   });
   test("keeps page-created auxiliary panels when navigating to the home page", () => {

@@ -46,13 +46,27 @@ for (const story of ["hidden-headers", "restricted-panels", "legacy-headers", "f
       await expect(page.getByLabel("Side header edge", { exact: true })).toBeVisible();
       await expect(page.getByLabel("Bottom header edge", { exact: true })).toBeVisible();
     }
-    if (story === "legacy-headers") await expect(page.getByLabel("Side panel header", { exact: true })).toBeVisible();
+    if (story === "legacy-headers") await expect(page.getByLabel("Side header edge", { exact: true })).toBeVisible();
     if (story === "floating-header") {
       const header = page.getByLabel("Side panel header", { exact: true });
       await header.click({ button: "right" });
       await page.getByRole("menuitem", { name: "Hide header" }).click();
       await expect(page.getByLabel("Side header edge", { exact: true })).toBeVisible();
     }
+  });
+}
+
+for (const name of [
+  "single-page-tab",
+  "page-header-default",
+  "reopen-content",
+  "move-content-back",
+  "custom-empty-view",
+  "closed-moved-content",
+]) {
+  test(`page content ${name}`, async ({ page }) => {
+    await page.goto(storyUrl(baseUrl, `pstdio-workbench-reference-core-api-page-content--${name}`));
+    await waitForStoryPlayback(page);
   });
 }
 

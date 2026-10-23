@@ -11,10 +11,16 @@ export const workbenchPanelPolicy = (
   modeId = core.modes.getActiveModeId(),
 ) => {
   const mode = modeId ? core.modes.getMode(modeId) : undefined;
+  const state = core.pages.store.getState();
+  const page = state.activePageId ? core.pages.getPage(state.activePageId) : undefined;
   return resolvePanelPolicy({
     region,
     mode,
     settings: core.layout.getRegionSettings(region, modeId),
+    pageShowHeader:
+      page && page.modeId === modeId
+        ? page.regionSettings?.[region as "main" | "side" | "secondary"]?.showHeader
+        : undefined,
     state: getWorkbenchPanelLayout(core, modeId).regions[region],
     legacyFloatable: core.sidePanel.canFloat(),
   });

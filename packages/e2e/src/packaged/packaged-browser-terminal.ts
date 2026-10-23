@@ -23,6 +23,9 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   await terminalInput.pressSequentially("export PSTDIO_PACKAGED_STATE=retained");
   await terminalInput.press("Enter");
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
+  await mainHeader.focus();
+  await mainHeader.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
   await expect(mainHeader).toBeHidden();
   const terminalTab = page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab");
   const start = (await terminalTab.boundingBox())!;
@@ -32,6 +35,7 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   await page.mouse.move(start.x + start.width / 2 + 10, start.y + start.height / 2, { steps: 3 });
   await page.mouse.move(end.x + end.width / 2, end.y + end.height / 2, { steps: 10 });
   await page.mouse.up();
+  await expect(mainHeader).toBeVisible();
   await expect(mainHeader.getByRole("tab")).toHaveCount(2);
   await expect(
     page.locator('[data-workbench-region="main"]').getByRole("textbox", { name: "Terminal input" }),
@@ -55,6 +59,7 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Sessions");
   await expect(terminalInput).toHaveCount(0);
   await page.goBack();
+  await expect(mainHeader).toBeVisible();
   await expect(terminalInput).toBeVisible();
   expect(
     await terminalInput.evaluate(

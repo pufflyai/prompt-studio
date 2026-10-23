@@ -69,13 +69,19 @@ export const previewPage = (
   title: page.title,
   icon: page.icon,
   path: page.path,
+  regionSettings: page.regionSettings,
   mode: previewRef(page.mode),
   parent: page.parent ? previewRef(page.parent) : undefined,
   resource: page.resource ? { kinds: page.resource.kinds.map(previewRef) } : undefined,
   main:
     page.main.kind === "panels"
-      ? { ...page.main, empty: previewRef(page.main.empty) }
-      : { ...page.main, view: previewRef(page.main.view), tab: tab(`${page.id}.$main`, page.main.tab) },
+      ? { ...page.main, empty: page.main.empty ? previewRef(page.main.empty) : undefined }
+      : {
+          ...page.main,
+          view: previewRef(page.main.view),
+          empty: page.main.empty ? previewRef(page.main.empty) : undefined,
+          tab: tab(`${page.id}.$main`, page.main.tab),
+        },
   slots: page.slots.map((slot) => ({
     ...slot,
     item: previewItem(slot.item),

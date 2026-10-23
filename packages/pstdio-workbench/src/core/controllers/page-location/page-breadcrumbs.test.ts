@@ -107,10 +107,10 @@ describe("page breadcrumbs", () => {
     expect(items[0].resource).toEqual(resource);
     expect(items[0].onClick).toBeUndefined();
   });
-  test("returns a panel page to its fixed main panel from its current breadcrumb", () => {
+  test("returns a panel page to its declared landing panel from its current breadcrumb", () => {
     const library: WorkbenchPageContribution = {
       ...page("artifacts", "Artifacts"),
-      main: { kind: "panels", empty: { kind: "view", id: "empty" } },
+      main: { kind: "panels", empty: { kind: "view", id: "empty" }, landing: "library" },
       slots: [
         {
           id: "library",

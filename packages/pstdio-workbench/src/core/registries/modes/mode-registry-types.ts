@@ -30,7 +30,7 @@ export interface WorkbenchModeContribution {
   label?: string;
   defaultTheme?: string;
   floatingPanels?: "visible" | "hidden";
-  /** Published extension headers retain their existing implicit tab visibility. */
+  /** @deprecated Use regionSettings.showHeader. Every visible header shows tabs. */
   panelHeaders?: "legacy";
   chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", string | false>>;
   panels?: readonly WorkbenchPanelRegion[];

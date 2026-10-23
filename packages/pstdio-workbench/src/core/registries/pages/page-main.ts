@@ -7,22 +7,16 @@ export interface ResolvedPageSlot extends WorkbenchPageSlot {
   readonly role: "primary" | "auxiliary";
 }
 
-export const isPageSlotClosable = (slot: ResolvedPageSlot) => {
-  if (slot.item.kind === "view") return slot.item.presence !== "fixed";
-  // A single-resource Main is the page itself, not a dismissible resource tab.
-  return slot.role !== "primary" || slot.item.binding.cardinality === "many";
-};
-
 export const primarySlot = (page: WorkbenchPageContribution): ResolvedPageSlot | undefined => {
   if (page.main.kind !== "view") return undefined;
-  const { kind: _kind, view, cardinality, ...presentation } = page.main;
+  const { kind: _kind, view, cardinality, empty: _empty, ...presentation } = page.main;
   const binding: ResourceBinding | undefined = page.resource ? { ...page.resource, view, cardinality } : undefined;
   return {
     ...presentation,
     id: PAGE_MAIN_SLOT_ID,
     role: "primary",
     region: "main",
-    item: binding ? { kind: "binding", binding } : { kind: "view", view, presence: "fixed" },
+    item: binding ? { kind: "binding", binding } : { kind: "view", view, presence: "open" },
   };
 };
 
@@ -37,16 +31,4 @@ export const requirePageSlot = (page: WorkbenchPageContribution, slotId: string)
   return slot;
 };
 
-export const emptyMainSlot = (page: WorkbenchPageContribution): ResolvedPageSlot | undefined => {
-  if (page.main.kind !== "panels") return undefined;
-  return {
-    id: PAGE_MAIN_SLOT_ID,
-    role: "primary",
-    region: "main",
-    item: { kind: "view", view: page.main.empty, presence: "fixed" },
-  };
-};
-export const pagePlacementDeclarations = (page: WorkbenchPageContribution) => {
-  const empty = emptyMainSlot(page);
-  return [...pageSlots(page), ...(empty ? [empty] : [])];
-};
+export const pagePlacementDeclarations = pageSlots;

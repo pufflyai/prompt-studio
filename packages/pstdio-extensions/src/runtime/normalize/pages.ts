@@ -17,11 +17,13 @@ interface NormalizePageInput {
   pageId: string;
 }
 const normalizeMain = (input: NormalizePageInput, main: PageMain): RuntimePageMain => {
-  if (main.kind === "panels") return { ...main, empty: normalizeContributionRef(input.ext, main.empty) };
+  if (main.kind === "panels")
+    return { ...main, empty: main.empty ? normalizeContributionRef(input.ext, main.empty) : undefined };
   const { tab, ...presentation } = main;
   return {
     ...presentation,
     view: normalizeContributionRef(input.ext, main.view),
+    ...(main.empty ? { empty: normalizeContributionRef(input.ext, main.empty) } : {}),
     tab: normalizePlacementTab({ ...input, id: `${input.pageId}.$main`, tab }),
   };
 };
@@ -64,7 +66,20 @@ export const registerPages = (
         ...(contribution.resource
           ? { resource: { kinds: contribution.resource.kinds.map((kind) => normalizeContributionRef(ext, kind)) } }
           : {}),
-        main: normalizeMain(input, contribution.main),
+        main: normalizeMain(
+          input,
+          contribution.main.kind === "panels"
+            ? {
+                ...contribution.main,
+                // Keep published collection landing behavior during the fixed-presence deprecation window.
+                landing:
+                  contribution.main.landing ??
+                  contribution.slots.find(
+                    (slot) => slot.region === "main" && slot.item.kind === "view" && slot.item.presence === "fixed",
+                  )?.id,
+              }
+            : contribution.main,
+        ),
         slots,
         panels: Object.fromEntries(
           slots.map((slot) => [slot.id, { kind: "page-slot" as const, page: ref, id: slot.id }]),
