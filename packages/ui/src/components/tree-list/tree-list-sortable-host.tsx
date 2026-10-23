@@ -12,6 +12,12 @@ const edgePosition = {
   middle: { top: "50%", transform: "translateY(-50%)" },
 } as const;
 
+export const canStartTreeListDrag = (target: EventTarget | null) => {
+  if (!(target instanceof Element)) return true;
+  const control = target.closest("button, a, input, textarea, select, [role=button]");
+  return !control || control.hasAttribute("data-tree-list-focus-id");
+};
+
 // The accent line marks the drop slot on the target's edge without shifting the rows.
 export const DropLine = (props: { edge: TreeListDropIndicator["edge"] }) => {
   const { edge } = props;
@@ -48,7 +54,13 @@ export const SortableHost = (props: SortableHostProps) => {
       opacity={sortable.isDragging ? 0.5 : 1}
       bg={highlighted ? "bg.accent-subtle" : lifted}
       data-tree-list-drop-group={highlighted ? "" : undefined}
-      onPointerDownCapture={handle === "self" ? (event) => sortable.listeners?.onPointerDown?.(event) : undefined}
+      onPointerDownCapture={
+        handle === "self"
+          ? (event) => {
+              if (canStartTreeListDrag(event.target)) sortable.listeners?.onPointerDown?.(event);
+            }
+          : undefined
+      }
     >
       {children(sortable.listeners)}
       {edge ? <DropLine edge={edge} /> : null}
