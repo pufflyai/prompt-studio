@@ -269,6 +269,32 @@ test("current action resolves hidden resource parameters from the chosen target"
   expect(changed).toEqual({ ticketId: "B" });
 });
 
+test("target availability receives the same resolved resource arguments as execution", async () => {
+  const { core, ticket } = setup();
+  ticket("A");
+  ticket("B", "secondary");
+  let changed: unknown;
+  core.commands.registerCommand(
+    { id: "scoped-rename", label: "Rename", params: { ticketId: { type: "string", resolvedFrom: "resource" } } },
+    {
+      isEnabled: (args: { ticketId?: string } | undefined) => args?.ticketId === "B",
+      execute: (args) => {
+        changed = args;
+      },
+    },
+  );
+  core.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "scoped-rename" },
+    layer: "current",
+    keybinding: "R",
+    targetScope: "resource",
+  });
+  core.keyboard.open();
+  await core.keyboard.press("a");
+  await core.keyboard.press("r");
+  expect(changed).toEqual({ ticketId: "B" });
+});
+
 test("matching action contributions combine their visible targets before resolving ambiguity", async () => {
   const { core, ticket } = setup();
   ticket("A");

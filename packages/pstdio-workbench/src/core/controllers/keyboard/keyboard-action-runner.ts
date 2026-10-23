@@ -1,20 +1,11 @@
-import { resolveCommandResourceParams } from "../../registries/commands/command-resource-params";
 import { getNavigationTargetKey } from "../../registries/navigation/navigation-target-key";
 import type { InternalWorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import type { KeyboardActionChoice, KeyboardState } from "./keyboard-controller";
 import { type KeyboardPresentation, regionLabel } from "./keyboard-presentations";
 import { isShortcutTargetAvailable, type ResolvedShortcut } from "./shortcut-catalog";
+import { shortcutCommandArgs } from "./shortcut-command-args";
 
-const shortcutCommandArgs = (
-  params: import("../../registries/commands/command-registry").CommandParamSchema | undefined,
-  base: unknown,
-  context: import("../../registries/commands/command-registry").WorkbenchCommandExecutionContext | undefined,
-) => {
-  const bound = resolveCommandResourceParams(params, base, context);
-  if (!Object.keys(bound).length) return base;
-  return { ...(typeof base === "object" && base !== null ? base : {}), ...bound };
-};
 const needsEditableParameters = (
   record: import("../../registries/commands/command-registry").RegisteredCommand,
   args: unknown,
