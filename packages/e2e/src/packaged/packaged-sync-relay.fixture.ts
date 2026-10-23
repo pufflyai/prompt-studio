@@ -7,6 +7,9 @@ const validateLeafBegin = async (request: Request) => {
   expect(input.byteLength).toBeGreaterThan(0);
 };
 
+/** The project key the peer hands out, so a test can derive the relay ID of a named document. */
+export const packagedProjectKey = { generation: 1, secret: "A".repeat(43) };
+
 const privateSpaceOwner = (parts: string[]) => {
   if (parts[4] !== "spaces") return null;
   const owner = decodeURIComponent(parts[5]!.slice(1));
@@ -61,7 +64,7 @@ export const createPackagedSyncPeer = (
   const workbenchRequest = (path: string) => {
     if (path.endsWith("/keys"))
       return json({
-        project: [{ generation: 1, secret: "A".repeat(43) }],
+        project: [packagedProjectKey],
         personal: [{ generation: 1, secret: "B".repeat(43) }],
       });
     if (path === "/v1/workbenches") return json([...projects].map((workbenchId) => ({ workbenchId })));

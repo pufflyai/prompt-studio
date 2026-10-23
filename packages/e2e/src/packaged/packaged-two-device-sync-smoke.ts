@@ -5,9 +5,10 @@ import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import type { ProjectSyncState, StorageRecord } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { coreOwnerId, createSyncSpace, projectInfoDocumentId } from "pstdio-sync";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
-import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
+import { createPackagedSyncPeer, packagedProjectKey } from "./packaged-sync-relay.fixture";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 const waitFor = async (condition: () => Promise<boolean> | boolean) => {
@@ -125,12 +126,11 @@ export const registerTwoDeviceSyncSmokeTests = () =>
         await first.reach(project.id, "synced");
 
         // A new device reads the project's info before anything else. Let it read that one document and none
-        // of the project's data yet.
-        let info: string | undefined;
-        peer.failReads((documentId) => {
-          info ??= documentId;
-          return documentId !== info;
-        });
+        // of the project's data yet. The first device may still be reading, so name the document by its relay ID,
+        // which every device derives from the project key the peer hands out.
+        const space = await createSyncSpace({ projectId: project.id, spaceOwner: null, keys: [packagedProjectKey] });
+        const info = await space.documentId(JSON.stringify([coreOwnerId, projectInfoDocumentId]));
+        peer.failReads((documentId) => documentId !== info);
         await signIn(second, peer.origin);
         await waitFor(async () => (await second.client.projects.query()).items.some((item) => item.id === project.id));
         expect((await second.client.projects.get(project.id)).name).toBe("Shared notes");
