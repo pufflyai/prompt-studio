@@ -62,7 +62,29 @@ export const verifyPackagedCollectionBreadcrumb = async (
   const search = await sidenav.getByRole("option", { name: "Search", exact: true }).boundingBox();
   const back = await modeReturn.boundingBox();
   expect(back!.y).toBeGreaterThanOrEqual(search!.y + search!.height);
+  const returningRows = page.evaluate(
+    () =>
+      new Promise<Array<{ home: number | null; sessions: number | null }>>((resolve) => {
+        const frames: Array<{ home: number | null; sessions: number | null }> = [];
+        const sample = () => {
+          const nav = document.querySelector('[data-workbench-region="sidenav"]')!;
+          const leaving = [...nav.querySelectorAll('[role="button"]')].some(
+            (row) => row.textContent?.trim() === "Project",
+          );
+          if (!leaving) {
+            const rows = [...nav.querySelectorAll('[role="option"]')];
+            const top = (label: string) =>
+              rows.find((row) => row.textContent?.trim() === label)?.getBoundingClientRect().top ?? null;
+            frames.push({ home: top("Home"), sessions: top("Sessions") });
+          }
+          if (frames.length === 12) resolve(frames);
+          else requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      }),
+  );
   await modeReturn.click();
+  for (const frame of await returningRows) expect(frame).toEqual({ home: home!.y, sessions: sessionsEntry!.y });
   await expect(page).toHaveURL(libraryUrl);
   await expect(modeReturn).toHaveCount(0);
   await page.goBack();

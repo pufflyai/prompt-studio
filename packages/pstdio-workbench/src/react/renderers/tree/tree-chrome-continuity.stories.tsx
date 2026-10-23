@@ -9,6 +9,8 @@ const createFixture = () => {
   const workbench = createWorkbench();
   const navigation = createLevelNavigation(workbench);
   const pending = Promise.withResolvers<void>();
+  const rootRead = Promise.withResolvers<void>();
+  let rootReads = 0;
   const page = (id: string) => ({ kind: "page" as const, extensionId: "story", id });
   workbench.modes.registerMode({ id: "project", label: "Project", activate() {} });
   for (const id of ["home", "ticket"]) {
@@ -19,9 +21,12 @@ const createFixture = () => {
         kind: "react",
         render: () =>
           id === "home" ? (
-            <Button onClick={() => workbench.pageLocations.navigate({ kind: "page", page: page("ticket") })}>
-              Open ticket
-            </Button>
+            <Stack>
+              <Button onClick={() => workbench.pageLocations.navigate({ kind: "page", page: page("ticket") })}>
+                Open ticket
+              </Button>
+              <Button onClick={() => rootRead.resolve()}>Finish project read</Button>
+            </Stack>
           ) : (
             <Stack>
               <Text>Ticket contents</Text>
@@ -53,6 +58,17 @@ const createFixture = () => {
     });
   }
   workbench.navigationTrees.registerContribution({
+    id: "project-items",
+    owner: { kind: "mode", extensionId: "pstdio", id: "project" },
+    sourceExtensionId: "pstdio",
+    declarationIndex: 0,
+    resolveResource: () => undefined,
+    getSections: async () => {
+      if (rootReads++ > 0 && workbench.pages.store.getState().activePageId === "home") await rootRead.promise;
+      return [{ id: "project-items", nodes: ["Home", "Notes", "Tickets"].map((label) => ({ id: label, label })) }];
+    },
+  });
+  workbench.navigationTrees.registerContribution({
     id: "ticket-files",
     owner: { kind: "page", extensionId: "story", id: "ticket" },
     sourceExtensionId: "story",
@@ -65,6 +81,7 @@ const createFixture = () => {
     body: {
       kind: "tree",
       getReadKey: () => navigation.getReadKey(),
+      getStructure: () => navigation.getStructure("content"),
       getHeaderStructure: () => navigation.getStructure("header"),
       getFooterStructure: () => navigation.getStructure("footer"),
       getHeader: async (context) => {
@@ -115,5 +132,30 @@ export const OpenTicket: Story = {
     await canvas.findByRole("option", { name: "notes.md" });
     await expect(search).toBeVisible();
     await expect(help).toBeVisible();
+  },
+};
+
+export const ReturnToProject: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const labels = ["Home", "Notes", "Tickets"];
+    const positions = [];
+    for (const label of labels)
+      positions.push((await canvas.findByRole("option", { name: label })).getBoundingClientRect().top);
+    await userEvent.click(await canvas.findByRole("button", { name: "Open ticket" }));
+    await userEvent.click(await canvas.findByRole("button", { name: "Finish navigation read" }));
+    await canvas.findByRole("option", { name: "notes.md" });
+    await userEvent.click(canvas.getByRole("button", { name: "Project" }));
+    await canvas.findByRole("button", { name: "Open ticket" });
+    for (const [index, label] of labels.entries()) {
+      const row = canvas.getByRole("option", { name: label });
+      await expect(row).toBeVisible();
+      await expect(row.getBoundingClientRect().top).toBe(positions[index]);
+    }
+    await userEvent.click(canvas.getByRole("button", { name: "Finish project read" }));
+    for (const [index, label] of labels.entries()) {
+      await expect(canvas.getByRole("option", { name: label }).getBoundingClientRect().top).toBe(positions[index]);
+    }
+    canvasElement.dataset.returnJourney = "complete";
   },
 };
