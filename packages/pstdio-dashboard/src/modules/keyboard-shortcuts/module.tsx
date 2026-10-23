@@ -1,5 +1,5 @@
 import type { WorkbenchModuleContribution } from "@pstdio/workbench";
-import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
+import { WORKBENCH_KEYBOARD_OPEN_COMMAND_ID, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -28,7 +28,13 @@ export const createKeyboardShortcutsModule = () =>
       ctx.commands.registerCommand(
         { id: dashboardCommandIds.openShortcuts, label: "Keyboard shortcuts", category: "Help", icon: "CircleHelp" },
         {
-          execute: () => ctx.overlays.openOverlay(dashboardWidgetIds.shortcutHelp, { title: "Keyboard shortcuts" }),
+          execute: (args?: { extensionId?: string }) =>
+            ctx.overlays.openOverlay(dashboardWidgetIds.shortcutHelp, {
+              title: "Keyboard shortcuts",
+              resource: args?.extensionId
+                ? { type: "keyboard-shortcuts", id: args.extensionId, metadata: { extensionId: args.extensionId } }
+                : undefined,
+            }),
         },
       );
       ctx.keybindings.registerKeybinding({
@@ -36,10 +42,17 @@ export const createKeyboardShortcutsModule = () =>
         keybinding: DASHBOARD_HELP_SHORTCUT_KEYBINDING,
         when: "!inputFocus",
       });
+      for (const layer of ["settings", "help"] as const)
+        ctx.keybindings.registerKeybinding({
+          action: { kind: "command", commandId: dashboardCommandIds.openShortcuts },
+          keybinding: "K",
+          layer,
+        });
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: dashboardCommandIds.openShortcuts,
         order: 45,
       });
       ctx.layout.registerMenuItem(dashboardHelpMenuPath, { commandId: dashboardCommandIds.openShortcuts, order: 10 });
+      ctx.layout.registerMenuItem(dashboardHelpMenuPath, { commandId: WORKBENCH_KEYBOARD_OPEN_COMMAND_ID, order: 11 });
     },
   }) satisfies WorkbenchModuleContribution;

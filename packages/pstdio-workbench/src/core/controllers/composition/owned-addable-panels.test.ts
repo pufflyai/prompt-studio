@@ -50,6 +50,7 @@ describe("placement add command availability", () => {
     workbench.pageLocations.navigate({ kind: "page", page });
     const addable = () => workbench.composition.panelsFor("side").addable;
     expect(addable()).toHaveLength(1);
+    expect(addable()[0]?.contribution.resourceKinds).toEqual(["guide"]);
     enabled = false;
     expect(addable()).toHaveLength(0);
     enabled = true;

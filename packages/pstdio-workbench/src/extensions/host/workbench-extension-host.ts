@@ -70,6 +70,7 @@ const registerCommands = (
             region: executionContext?.region,
           }),
       },
+      { ownerId: command.extensionId, source: "extension" },
     ),
   );
 const menuCommandResource = (
@@ -201,6 +202,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(
       ...registerWorkbenchExtensionKeybindings({
         bindings: input.metadata.keybindings,
+        extensions: input.metadata.extensions,
         createWhenExpression: input.createKeybindingWhenExpression,
         workbench: input.workbench,
       }),

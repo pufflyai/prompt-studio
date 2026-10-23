@@ -1,4 +1,8 @@
-import type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
+import type {
+  WebviewHostProps,
+  WebviewKeyboardShortcut,
+  WebviewKeyboardShortcutRequest,
+} from "pstdio-api-contracts/extension-kernel";
 
 export const HOST_READY_EVENT = "pstdio.extension.ready";
 export const HOST_RUNTIME_ERROR_EVENT = "pstdio.extension.runtime-error";
@@ -6,6 +10,7 @@ export const HOST_RUNTIME_ERROR_EVENT = "pstdio.extension.runtime-error";
 export type ThemePreference = "dark" | "light";
 
 export type InitMessage = {
+  keyboardShortcuts?: readonly WebviewKeyboardShortcut[];
   sizing?: "content-width" | "content-height";
   moduleUrl: string;
   styles: string[];
@@ -51,6 +56,8 @@ export type HostEventMessage = {
 };
 
 export type HostApi = {
+  keyboardUpdate: (shortcuts: readonly WebviewKeyboardShortcut[]) => void;
+  restoreFocus: () => void;
   init: (message: InitMessage) => Promise<void>;
   themeUpdate: (message: ThemeUpdateMessage) => void;
   propsUpdate: (message: PropsUpdateMessage) => void;
@@ -73,6 +80,7 @@ export type WebviewPointerEvent = Pick<
 > & { type: "pointerdown" | "click" };
 
 export type GuestApi = {
+  dispatchShortcut: (request: WebviewKeyboardShortcutRequest) => Promise<void>;
   contentHeightChanged?: (height: number) => void;
   contentWidthChanged: (width: number) => void;
   dispatchPointerEvent: (event: WebviewPointerEvent) => void;

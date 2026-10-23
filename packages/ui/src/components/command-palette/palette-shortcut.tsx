@@ -1,5 +1,5 @@
-import { chakra, Kbd } from "@chakra-ui/react";
-import { ArrowLeft, ArrowRight, Command, type LucideIcon, Option } from "lucide-react";
+import { chakra, Icon, Kbd } from "@chakra-ui/react";
+import { ArrowLeft, ArrowRight, Command, type LucideIcon, Option, Redo } from "lucide-react";
 import { Fragment } from "react";
 import { shortcutKeysRecipe } from "../../theme/recipes/shortcut-keys";
 
@@ -79,7 +79,9 @@ export const PaletteShortcut = (props: { binding: PaletteShortcutBinding }) => {
               </Kbd>
             ))}
           </ShortcutKeys>
-          {stepIndex < steps.length - 1 ? " then " : null}
+          {stepIndex < steps.length - 1 ? (
+            <Icon as={Redo} size="xs" color="fg.muted" aria-hidden={false} aria-label="Then" />
+          ) : null}
         </Fragment>
       ))}
     </>

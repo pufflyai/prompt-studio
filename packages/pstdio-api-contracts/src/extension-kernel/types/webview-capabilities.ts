@@ -200,6 +200,25 @@ export interface WebviewKeyboardEventParams {
   altKey?: boolean;
   shiftKey?: boolean;
   repeat?: boolean;
+  isComposing?: boolean;
+}
+
+/** A host-owned chord. Guests receive resolved keys, without parsing platform syntax. */
+export interface WebviewKeyboardShortcut {
+  id: string;
+  /** Only these host navigation intents may be relayed by untrusted nested content. */
+  entry?: "mode" | "tab";
+  key: string;
+  ctrlKey?: boolean;
+  metaKey?: boolean;
+  altKey?: boolean;
+  shiftKey?: boolean;
+}
+
+export interface WebviewKeyboardShortcutRequest {
+  id: string;
+  repeat: boolean;
+  nested?: boolean;
 }
 
 export interface WebviewHostCapabilityParams {

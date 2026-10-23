@@ -5,6 +5,7 @@ import type { WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import type { CommandParamFieldRenderer } from "../command-palette/command-params-dialog";
 import { WorkbenchNavChrome } from "../header/workbench-nav-chrome";
+import { WorkbenchKeyboardLayer } from "../keybindings/keyboard-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { movePanelHost } from "../region/move-panel-host";
@@ -232,6 +233,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           onClose={() => workbench.commandPalette.close()}
         />
         <WorkbenchKeybindingDispatcher workbench={workbench} />
+        <WorkbenchKeyboardLayer workbench={workbench} />
         <FullscreenKeyboard workbench={workbench} />
         <WorkbenchNotificationHost workbench={workbench} />
       </Flex>

@@ -5,9 +5,9 @@ import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
+import { reportReservedKeybinding } from "./keybinding-reserved-diagnostic";
 import { normalizeNavigationAction } from "./navigation-action";
 import { resolveCommandRef } from "./references";
-import { findReservedKeybindingConflicts } from "./reserved-keybindings";
 
 const PLATFORM_KEYS = ["mac", "linux", "win"] as const;
 const TANSTACK_PLATFORMS = { linux: "linux", mac: "mac", win: "windows" } as const;
@@ -172,6 +172,46 @@ const addKeybindingDedupeEntries = (
   }
 };
 
+const validateLayerBinding = (
+  contribution: KeybindingContribution,
+  contributionId: string,
+  ext: NormalizedExtension,
+  source: LoadedExtensionSource,
+  runtime: Accumulator,
+) => {
+  const layers = ["view", "go", "create", "current", "extensions", "settings", "help"];
+  const validKeys = [contribution.key, ...PLATFORM_KEYS.map((platform) => contribution[platform])]
+    .filter((key) => key !== undefined)
+    .every(
+      (sequence) =>
+        typeof sequence === "string" &&
+        sequence.trim().length > 0 &&
+        sequence
+          .trim()
+          .split(/\s+/)
+          .every((key) => /^[a-z0-9]$/i.test(key) || key === "ArrowLeft" || key === "ArrowRight"),
+    );
+  const validScope =
+    contribution.targetScope === undefined || ["project", "resource", "panel"].includes(contribution.targetScope);
+  const validSticky = contribution.sticky === undefined || typeof contribution.sticky === "boolean";
+  if (!layers.includes(contribution.layer!) || !validKeys || !validScope || !validSticky) {
+    runtime.diagnostics.push(
+      createDiagnostic({
+        code: "invalid_keybinding",
+        message: `Keybinding "${contributionId}" has invalid layer keys or target behavior`,
+        extensionId: ext.id,
+        sourcePath: source.sourcePath,
+        metadata: { contributionId },
+      }),
+    );
+    return false;
+  }
+  return true;
+};
+
+const hasBindingKey = (contribution: KeybindingContribution) =>
+  isRecord(contribution) && typeof contribution.key === "string" && contribution.key.length > 0;
+
 export const registerKeybindings = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
@@ -190,7 +230,7 @@ export const registerKeybindings = (
     const base = contributionRecordBase(ext, source, "keybinding", localId);
     const contributionId = base.id;
 
-    if (!isRecord(contribution) || typeof contribution.key !== "string" || contribution.key.length === 0) {
+    if (!hasBindingKey(contribution)) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_keybinding",
@@ -203,6 +243,20 @@ export const registerKeybindings = (
       continue;
     }
 
+    if (contribution.layer !== undefined) {
+      if (!validateLayerBinding(contribution, contributionId, ext, source, runtime)) continue;
+      if (!validateKeybindingAction(contribution, contributionId, ext, source, runtime, index)) continue;
+      runtime.keybindings.push({
+        ...base,
+        action: normalizeNavigationAction(ext, contribution.action),
+        contribution,
+        canonicalChord: contribution.key.toUpperCase(),
+        parsed: toParsedChord(contribution.key.trim().split(/\s+/)[0]!),
+        when: contribution.when,
+      });
+      continue;
+    }
+
     if (!validateChord(contribution.key, "key", contributionId, ext, source, runtime)) continue;
 
     const overrides = collectPlatformOverrides(contribution);
@@ -212,39 +266,7 @@ export const registerKeybindings = (
     const action = normalizeNavigationAction(ext, contribution.action);
 
     const canonicalChord = normalizeHotkey(contribution.key, "mac");
-    const reservedConflicts = findReservedKeybindingConflicts({
-      mac: overrides.mac ?? contribution.key,
-      linux: overrides.linux ?? contribution.key,
-      win: overrides.win ?? contribution.key,
-    });
-    if (reservedConflicts.length > 0) {
-      const [firstConflict] = reservedConflicts;
-      const platforms = reservedConflicts.map((conflict) => conflict.platform);
-      const conflicts = reservedConflicts.map((conflict) => ({
-        platform: conflict.platform,
-        chord: conflict.chord,
-        canonicalChord: conflict.canonicalChord,
-        reason: conflict.reason,
-        description: conflict.description,
-      }));
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "reserved_keybinding_chord",
-          severity: "warning",
-          message: `Keybinding "${contributionId}" uses reserved chord "${firstConflict!.canonicalChord}" on ${platforms.join(", ")} (${firstConflict!.description})`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-          metadata: {
-            contributionId,
-            canonicalChord: firstConflict!.canonicalChord,
-            platform: firstConflict!.platform,
-            reason: firstConflict!.reason,
-            platforms,
-            conflicts,
-          },
-        }),
-      );
-    }
+    reportReservedKeybinding(contribution, overrides, contributionId, ext, source, runtime);
 
     const duplicate = findDuplicateKeybinding(contribution, overrides, index);
     if (duplicate) {
