@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { editResourceDocument, readDocumentRecord, type StorageOwner } from "pstdio-sync";
-import type { Json, SharedEdit, StorageGroup, StorageRecord } from "pstdio-sync-contracts";
+import type { Json, SharedEdit, StorageRecord } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_updates, storage_documents, storage_record_projections } from "../../db/schemas.pg";
@@ -10,14 +10,19 @@ import { persistResourceDocuments, resourceDocumentId } from "./resource-documen
 // Owner metadata that stays in the owner document after its records move out.
 const ownerMetadataRoots = ["data-migrations", "sync-documents", "sync-blobs"];
 
-const sharedEdits = (shared: NonNullable<StorageRecord["shared"]>): SharedEdit[] => {
-  if (shared.kind === "text") return [{ kind: "text.insert", index: 0, text: shared.value as string }];
-  if (shared.kind === "list") return [{ kind: "list.insert", index: 0, values: shared.value as Json[] }];
-  return Object.entries(shared.value as Record<string, Json>).map(([key, value]) => ({ kind: "map.set", key, value }));
+const sharedEdits = (shared: NonNullable<StorageRecord["shared"]>) => {
+  if (shared.kind === "text")
+    return [{ kind: "text.insert", index: 0, text: shared.value as string }] satisfies SharedEdit[];
+  if (shared.kind === "list")
+    return [{ kind: "list.insert", index: 0, values: shared.value as Json[] }] satisfies SharedEdit[];
+  const entries = Object.entries(shared.value as Record<string, Json>);
+  // Any shared edit fixes the record's shared kind; deleting an absent key keeps an empty map a map.
+  if (!entries.length) return [{ kind: "map.delete", key: "" }] satisfies SharedEdit[];
+  return entries.map(([key, value]) => ({ kind: "map.set", key, value }) satisfies SharedEdit);
 };
 
 /** The edit that recreates a saved record, with its current value, in a new record document. */
-const recreate = (record: StorageRecord): StorageGroup["edits"][number] => {
+const recreate = (record: StorageRecord) => {
   if (record.deleted) return { recordId: record.recordId, deleted: true };
   return {
     recordId: record.recordId,

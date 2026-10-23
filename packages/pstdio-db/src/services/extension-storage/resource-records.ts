@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { type AssetStore, editResourceDocument, type StorageObserver, type StorageOwner } from "pstdio-sync";
 import {
   fingerprint,
@@ -8,7 +8,12 @@ import {
   type StorageSaveOutcome,
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_document_operations, storage_documents, storage_record_projections } from "../../db/schemas.pg";
+import {
+  storage_current_records,
+  storage_document_operations,
+  storage_documents,
+  storage_record_projections,
+} from "../../db/schemas.pg";
 import type { createProjectionStatistics } from "./projection-statistics";
 import { publishProjectedRecords } from "./record-projection-rows";
 import { createRecordQueries, listProjectedRecords, readProjectedRecords } from "./record-queries";
@@ -97,14 +102,26 @@ export const createResourceRecords = (
         return { id, revision: next, foldedRevision, ...result };
       }),
     );
+    // Only the previous live state matters for the count; values stay unread.
     const before = new Map(
-      (await readProjectedRecords(tx, owner, ids)).map((record) => [record.recordId, record.exists && !record.deleted]),
+      (
+        await tx
+          .select({ id: storage_current_records.record_id, deleted: storage_current_records.deleted })
+          .from(storage_current_records)
+          .where(
+            and(
+              eq(storage_current_records.workbench_id, owner.workbenchId),
+              eq(storage_current_records.extension_id, owner.extensionId),
+              inArray(storage_current_records.record_id, ids),
+            ),
+          )
+      ).map((row) => [row.id, !row.deleted]),
     );
     await persistResourceDocuments(tx, owner, prepared);
     const records = prepared.map((value) => value.record);
     const projected = await publishProjectedRecords(tx, owner, records);
     const live = (record: { exists: boolean; deleted: boolean }) => Number(record.exists && !record.deleted);
-    const delta = records.reduce((sum, record) => sum + live(record) - Number(before.get(record.recordId)), 0);
+    const delta = records.reduce((sum, record) => sum + live(record) - Number(before.get(record.recordId) ?? false), 0);
     await tx
       .update(storage_record_projections)
       .set({ revision: revision + 1, live_count: sql`${storage_record_projections.live_count} + ${delta}` })

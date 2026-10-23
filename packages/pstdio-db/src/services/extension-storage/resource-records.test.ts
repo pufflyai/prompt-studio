@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
 import * as Y from "yjs";
@@ -107,7 +107,12 @@ test("records saved in an owner document move into their own documents once", as
       { recordId: "note", replace: { title: "Kept", nested: { items: [1, 2] } } },
       { recordId: "draft", shared: [{ kind: "text.insert", index: 0, text: "Shared text" }] },
       { recordId: "gone", replace: "removed" },
+      { recordId: "settings", shared: [{ kind: "map.set", key: "theme", value: "dark" }] },
     ],
+  });
+  await old.records.commit({
+    operationId: "empty-map",
+    edits: [{ recordId: "settings", shared: [{ kind: "map.delete", key: "theme" }] }],
   });
   await old.records.commit({ operationId: "delete", edits: [{ recordId: "gone", deleted: true }] });
   await f.db.insert(storage_documents).values({
@@ -123,7 +128,8 @@ test("records saved in an owner document move into their own documents once", as
   expect((await records.read("note")).value).toEqual({ title: "Kept", nested: { items: [1, 2] } });
   expect((await records.read("draft")).shared).toEqual({ kind: "text", value: "Shared text" });
   expect(await records.read("gone")).toMatchObject({ exists: true, deleted: true });
-  expect((await records.list()).map((record) => record.recordId)).toEqual(["draft", "note"]);
+  expect((await records.read("settings")).shared).toEqual({ kind: "map", value: {} });
+  expect((await records.list()).map((record) => record.recordId)).toEqual(["draft", "note", "settings"]);
   expect(await f.storage.dataVersion("scope")).toBe(3);
 
   const ownerWhere = and(
@@ -166,4 +172,47 @@ test("unfiltered totals follow live records without reading them", async () => {
   expect(statements.filter((query) => query.includes("storage_current_records"))).toEqual([]);
   await createExtensionUserDataDBService(f.db).deleteForInstance(f.instanceAId);
   expect(await total()).toBe(0);
+});
+
+test("a failed upgrade leaves the owner document in charge and a later start completes it", async () => {
+  const f = await fixture();
+  const old = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() });
+  await old.records.commit({
+    operationId: "old",
+    edits: [
+      { recordId: "first", replace: { title: "First" } },
+      { recordId: "second", replace: { title: "Second" } },
+    ],
+  });
+  await f.db.insert(storage_documents).values({
+    workbench_id: f.owner.workbenchId,
+    extension_id: f.owner.extensionId,
+    document_id: "records",
+    state: await old.exportUpdate(),
+    revision: 1,
+    folded_revision: 1,
+  });
+  // A real database failure after some record documents were written inside the move.
+  await f.db.execute(sql`CREATE FUNCTION fail_second() RETURNS trigger AS $$
+    BEGIN IF NEW.record_id = 'second' THEN RAISE EXCEPTION 'interrupted upgrade'; END IF; RETURN NEW; END $$
+    LANGUAGE plpgsql`);
+  await f.db.execute(
+    sql`CREATE TRIGGER fail_second BEFORE INSERT ON storage_current_records FOR EACH ROW EXECUTE FUNCTION fail_second()`,
+  );
+  await expect(f.storage.records.read("first")).rejects.toThrow();
+  expect(
+    await f.db
+      .select()
+      .from(storage_documents)
+      .where(eq(storage_documents.document_id, resourceDocumentId("first"))),
+  ).toEqual([]);
+  const [owner] = await f.db.select().from(storage_documents).where(eq(storage_documents.document_id, "records"));
+  const remaining = new Y.Doc();
+  Y.applyUpdate(remaining, owner.state);
+  expect(remaining.getMap("records").size).toBe(2);
+
+  await f.db.execute(sql`DROP TRIGGER fail_second ON storage_current_records`);
+  const restarted = createDocumentStorageDBService(f.db).open({ owner: f.owner });
+  expect((await restarted.records.read("second")).value).toEqual({ title: "Second" });
+  expect((await restarted.records.list()).map((record) => record.recordId)).toEqual(["first", "second"]);
 });
