@@ -84,6 +84,7 @@ export const verifyDatabaseFixture = async (db: DbClient, kind: Workload, count:
       ),
     );
   assert.equal(projection?.revision, seedCommits, "Incomplete owner revision");
+  assert.equal(projection.live_count, count, "Stored live count differs");
   const documents = await db
     .select({ id: storage_documents.document_id })
     .from(storage_documents)

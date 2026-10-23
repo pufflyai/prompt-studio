@@ -16,6 +16,8 @@ export const storage_record_projections = pgTable(
     ...ownerColumns(),
     document_id: text("document_id").notNull().default("records"),
     revision: bigint("revision", { mode: "number" }).notNull(),
+    // Unfiltered totals read this instead of counting rows; commits keep it current.
+    live_count: bigint("live_count", { mode: "number" }).notNull().default(0),
   },
   (table) => [
     primaryKey({ columns: [table.workbench_id, table.extension_id] }),
