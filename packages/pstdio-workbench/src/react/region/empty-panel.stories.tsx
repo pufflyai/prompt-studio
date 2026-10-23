@@ -78,6 +78,17 @@ export const AvailableTabs: Story = { args: { workbench: createEmptyWorkbench() 
 export const HiddenHeader: Story = { args: { workbench: createEmptyWorkbench(true) } };
 export const PageEntries: Story = { args: { workbench: createEmptyWorkbench(false, true) } };
 
+export const CenteredTools: Story = {
+  args: {
+    workbench: (() => {
+      const workbench = createEmptyWorkbench(false, true);
+      workbench.shell.setRegionOpen("side", false);
+      workbench.shell.setRegionOpen("secondary", false);
+      return workbench;
+    })(),
+  },
+};
+
 const openCard = async (canvasElement: HTMLElement, region: WorkbenchPanelRegion) => {
   const panel = within(canvasElement.querySelector(`[data-workbench-panel="${region}"]`) as HTMLElement);
   const cards = within(await panel.findByRole("group", { name: "Available tabs" }));

@@ -21,43 +21,45 @@ export const EmptyPanel = (props: EmptyPanelProps) => {
   if (!activeModeId && Object.keys(modes).length > 0) return null;
   if (!panels.length) return <EmptyState title="No tabs available" />;
   return (
-    <Stack p="md" w="full" maxW="4xl" mx="auto" gap="md">
-      <Text textStyle="label/M/medium">Tools</Text>
-      <SimpleGrid
-        role="group"
-        aria-label="Available tabs"
-        gridTemplateColumns="repeat(auto-fit, minmax(min(100%, max(var(--chakra-sizes-3xs), calc((100% - var(--chakra-spacing-sm)) / 2))), 1fr))"
-        gap="sm"
-      >
-        {panels.map((panel) => (
-          <SimpleCard variant="action" asChild key={panel.panelId}>
-            <button
-              type="button"
-              onClick={() =>
-                openPanelWidget({
-                  workbench,
-                  widget: panel.contribution,
-                  region,
-                  resource,
-                  pinned: panel.pinned,
-                  open: panel.open,
-                })
-              }
-            >
-              <SimpleCardBody>
-                <HStack gap="xs">
-                  {panel.contribution.icon ? (
-                    <WorkbenchIcon name={panel.contribution.icon} size={14} color="fg.muted" />
-                  ) : null}
-                  <Text textStyle="label/M/regular" truncate>
-                    {panel.contribution.title}
-                  </Text>
-                </HStack>
-              </SimpleCardBody>
-            </button>
-          </SimpleCard>
-        ))}
-      </SimpleGrid>
+    <Stack flex="1" justifyContent="center" p="md">
+      <Stack w="full" maxW="lg" mx="auto" gap="md">
+        <Text textStyle="label/M/medium">Tools</Text>
+        <SimpleGrid
+          role="group"
+          aria-label="Available tabs"
+          gridTemplateColumns="repeat(auto-fit, minmax(min(100%, max(var(--chakra-sizes-3xs), calc((100% - var(--chakra-spacing-sm)) / 2))), 1fr))"
+          gap="sm"
+        >
+          {panels.map((panel) => (
+            <SimpleCard variant="action" asChild key={panel.panelId}>
+              <button
+                type="button"
+                onClick={() =>
+                  openPanelWidget({
+                    workbench,
+                    widget: panel.contribution,
+                    region,
+                    resource,
+                    pinned: panel.pinned,
+                    open: panel.open,
+                  })
+                }
+              >
+                <SimpleCardBody>
+                  <HStack gap="xs">
+                    {panel.contribution.icon ? (
+                      <WorkbenchIcon name={panel.contribution.icon} size={14} color="fg.muted" />
+                    ) : null}
+                    <Text textStyle="label/M/regular" truncate>
+                      {panel.contribution.title}
+                    </Text>
+                  </HStack>
+                </SimpleCardBody>
+              </button>
+            </SimpleCard>
+          ))}
+        </SimpleGrid>
+      </Stack>
     </Stack>
   );
 };

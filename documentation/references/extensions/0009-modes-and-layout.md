@@ -74,13 +74,15 @@ main: {
 
 `pagePlaceholderView(main.empty)` returns the view ref from either form. The placeholder's breadcrumb applies only to the current page while Main is empty. Ancestor crumbs keep their page titles. Opening a tab restores the normal breadcrumb presentation. The view and its actions belong to the page; a placeholder does not create a tab or a placement identity. The host adds no recovery buttons. A panel collection may name a static Main slot with `main.landing`; collection breadcrumbs and navigation open it. The `workbench.reopenPageContent` and `workbench.resetLayout` commands remain available independently of the placeholder.
 
+Explicit collection navigation selects its available landing slot. Restoring saved page state preserves the saved selection.
+
 Page header defaults, optional `main.empty` on single-view pages, `main.landing`, and closable fixed tabs describe APIs from `main`. Their first extension API version is 0.2.2.
 
 During the deprecation window, older extension collections keep their first `fixed` Main slot as their landing slot. New declarations should name `main.landing` explicitly.
 
 Default tab cards wait until a declared mode has been selected, so startup never presents unrelated tools before the page resolves.
 
-Tool cards use the compact action-card style: small body padding, the standard row label, and a 14 px icon, matching the density of Home's Recent rows.
+Tool cards use the compact action-card style: small body padding, the standard row label, and a 14 px icon, matching the density of Home's Recent rows. The chooser is centered in its panel and capped at the `lg` size token, so wide panels keep compact cards. Narrow panels use the available width and collapse to one column.
 
 Start uses its home content as `main.empty`, with no initial tabs or landing slot. Its Main header defaults to hidden. A saved user header choice still wins, and dropping a tool tab into Main reveals the header through the shared move behavior.
 

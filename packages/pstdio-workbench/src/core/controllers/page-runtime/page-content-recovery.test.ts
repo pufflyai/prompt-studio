@@ -19,7 +19,7 @@ test.each(["alpha", "document"])("reset reopens %s Main after closing its conten
   expect(w.layout.getActivePanel("main")?.section).toEqual(original.section);
 });
 
-test("revisiting a collection reopens its declared landing tab", () => {
+test("revisiting a collection reopens and selects its declared landing tab", () => {
   const { w, navigate } = modePanelFixture(undefined, true, [
     {
       id: "collection",
@@ -42,6 +42,41 @@ test("revisiting a collection reopens its declared landing tab", () => {
   navigate("alpha");
   navigate("collection");
   expect(w.layout.getActivePanel("main")?.placementIdentity).toMatchObject({ pageId: "collection", slotId: "library" });
+  const preview = w.shellPlacements.openPlacement({
+    placementId: "shared-main",
+    resource: { type: "document", id: "preview" },
+    open: "pin",
+  });
+  const previewTab = w.layout
+    .listPanelInstances("main")
+    .find((tab) => tab.placementIdentity?.kind === preview.kind && tab.resource?.id === "preview")!;
+  w.layout.activatePanel(previewTab.instanceId);
+  expect(w.layout.getActivePanel("main")?.instanceId).toBe(previewTab.instanceId);
+  navigate("collection");
+  expect(w.layout.getActivePanel("main")?.placementIdentity).toMatchObject({ pageId: "collection", slotId: "library" });
+});
+
+test("collection navigation leaves an unavailable landing tab closed", () => {
+  const { w, navigate } = modePanelFixture(undefined, true, [
+    {
+      id: "collection",
+      ref: pageRef("collection"),
+      modeId: "alpha",
+      path: "collection",
+      main: { kind: "panels", landing: "library" },
+      slots: [
+        {
+          id: "library",
+          region: "main",
+          isAvailable: () => false,
+          item: { kind: "view", view: { kind: "view", id: "document" }, presence: "open" },
+        },
+      ],
+    },
+  ]);
+  expect(() => navigate("collection")).not.toThrow();
+  expect(w.pages.store.getState().activePageId).toBe("collection");
+  expect(w.layout.listPanelInstances("main")).toEqual([]);
 });
 
 for (const page of ["alpha", "document"]) {

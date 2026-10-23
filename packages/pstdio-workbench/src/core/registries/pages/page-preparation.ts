@@ -133,6 +133,13 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     const primary = primarySlot(page);
     const instanceKey = pageState.activePrimaryInstanceKey;
     const followers = openFollowers ? pageFollowerIdentities(page, normalizedTarget.resource, resourceKey) : [];
+    const main = page.main;
+    const landing =
+      main.kind === "panels" && !target.pageStates
+        ? page.slots.find(
+            (slot) => slot.id === main.landing && (!slot.isAvailable || slot.isAvailable(normalizedTarget.resource)),
+          )
+        : undefined;
     return compose(
       current,
       {
@@ -143,6 +150,15 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
         activeModeId: page.modeId,
         activate: [
           ...(primary && instanceKey ? [pagePlacementIdentity(page.id, primary.id, instanceKey)] : []),
+          ...(landing
+            ? [
+                pagePlacementIdentity(
+                  page.id,
+                  landing.id,
+                  staticPageInstanceKey(page, normalizedTarget.resource, input.resources),
+                ),
+              ]
+            : []),
           ...followers,
         ],
         action: target.action,

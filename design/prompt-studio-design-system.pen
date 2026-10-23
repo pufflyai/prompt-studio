@@ -32643,7 +32643,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -77355,7 +77355,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -98054,7 +98054,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -127058,7 +127058,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -153552,7 +153552,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153574,7 +153574,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154298,7 +154298,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154320,7 +154320,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154934,7 +154934,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154956,7 +154956,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -156301,7 +156301,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -156323,7 +156323,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -217584,159 +217584,150 @@
       "x": 62710,
       "y": 0,
       "name": "Empty panel · Tools cards",
+      "context": "Default tool chooser centered horizontally and vertically in its panel. Width is capped at the lg size token (512 px); cards retain two columns and collapse in narrow panels.",
       "theme": {
         "mode": "dark"
       },
       "width": 1000,
+      "height": 600,
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 16,
-      "padding": 32,
+      "padding": 16,
+      "justifyContent": "center",
+      "alignItems": "center",
       "children": [
         {
-          "type": "text",
-          "id": "R31hE",
-          "name": "Heading",
-          "fill": "$ds-fg",
-          "content": "Tools",
-          "fontFamily": "$font-body",
-          "fontSize": 16,
-          "fontWeight": "500"
-        },
-        {
           "type": "frame",
-          "id": "xOhJE",
-          "name": "Two-column tool grid",
-          "width": "fill_container",
+          "id": "RUgE0",
+          "name": "Centered tool chooser",
+          "width": 512,
           "layout": "vertical",
-          "gap": 8,
+          "gap": 16,
           "children": [
             {
+              "type": "text",
+              "id": "R31hE",
+              "name": "Heading",
+              "fill": "$ds-fg",
+              "content": "Tools",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "500"
+            },
+            {
               "type": "frame",
-              "id": "E9enHE",
-              "name": "Tools first row",
+              "id": "xOhJE",
+              "name": "Two-column tool grid",
               "width": "fill_container",
-              "gap": 8,
+              "layout": "vertical",
+              "gap": 12,
               "children": [
                 {
                   "type": "frame",
-                  "id": "U8NHW",
-                  "name": "cmp/SimpleCard · Action",
-                  "context": "Compact SimpleCard action variant: borderless surface, radius xs, body padding xs, label/M/regular, 14 px icon. Match Start Recent row density. Hover uses bg.hover; pressed uses bg.active; focus has an outside ring. Default panel grid stays two columns and collapses in narrow panels.",
-                  "reusable": true,
+                  "id": "E9enHE",
+                  "name": "Tools first row",
                   "width": "fill_container",
-                  "height": 37,
-                  "fill": "$ds-surface",
-                  "cornerRadius": 4,
-                  "gap": 8,
-                  "padding": 8,
-                  "alignItems": "center",
+                  "gap": 12,
                   "children": [
                     {
-                      "type": "icon",
-                      "id": "Juuks",
-                      "name": "Icon",
-                      "width": 14,
-                      "height": 14,
-                      "icon": "file-diff",
-                      "library": "lucide",
-                      "fill": "$ds-fg-muted"
+                      "type": "frame",
+                      "id": "U8NHW",
+                      "name": "cmp/SimpleCard · Action",
+                      "context": "Compact SimpleCard action variant: borderless surface, radius xs, body padding xs, label/M/regular, 14 px icon. Match Start Recent row density. Hover uses bg.hover; pressed uses bg.active; focus has an outside ring. Default panel grid stays two columns and collapses in narrow panels.",
+                      "reusable": true,
+                      "width": "fill_container",
+                      "height": 37,
+                      "fill": "$ds-surface",
+                      "cornerRadius": 4,
+                      "gap": 8,
+                      "padding": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Juuks",
+                          "name": "Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "file-diff",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Rhcur",
+                          "name": "Label",
+                          "fill": "$ds-fg",
+                          "content": "Changes",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     },
                     {
-                      "type": "text",
-                      "id": "Rhcur",
-                      "name": "Label",
-                      "fill": "$ds-fg",
-                      "content": "Changes",
-                      "lineHeight": 1.5,
-                      "fontFamily": "$font-body",
-                      "fontSize": 14,
-                      "fontWeight": "normal"
+                      "id": "H7uL9",
+                      "type": "ref",
+                      "ref": "U8NHW",
+                      "name": "Terminal hover",
+                      "width": "fill_container",
+                      "fill": "$ds-surface-hover",
+                      "descendants": {
+                        "Juuks": {
+                          "icon": "terminal"
+                        },
+                        "Rhcur": {
+                          "content": "Terminal"
+                        }
+                      }
                     }
                   ]
                 },
                 {
-                  "id": "H7uL9",
-                  "type": "ref",
-                  "ref": "U8NHW",
-                  "name": "Terminal hover",
+                  "type": "frame",
+                  "id": "xoEgg",
+                  "name": "Tools second row",
                   "width": "fill_container",
-                  "fill": "$ds-surface-hover",
-                  "descendants": {
-                    "Juuks": {
-                      "icon": "terminal"
+                  "gap": 12,
+                  "children": [
+                    {
+                      "id": "UOWPO",
+                      "type": "ref",
+                      "ref": "U8NHW",
+                      "name": "Files",
+                      "width": "fill_container",
+                      "descendants": {
+                        "Juuks": {
+                          "icon": "folders"
+                        },
+                        "Rhcur": {
+                          "content": "Files"
+                        }
+                      }
                     },
-                    "Rhcur": {
-                      "content": "Terminal"
+                    {
+                      "id": "Mb2B3",
+                      "type": "ref",
+                      "ref": "U8NHW",
+                      "name": "Page contribution",
+                      "width": "fill_container",
+                      "stroke": "$ds-accent",
+                      "strokeWidth": 2,
+                      "descendants": {
+                        "Juuks": {
+                          "icon": "file-plus"
+                        },
+                        "Rhcur": {
+                          "content": "New page"
+                        }
+                      }
                     }
-                  }
+                  ]
                 }
               ]
-            },
-            {
-              "type": "frame",
-              "id": "xoEgg",
-              "name": "Tools second row",
-              "width": "fill_container",
-              "gap": 8,
-              "children": [
-                {
-                  "id": "UOWPO",
-                  "type": "ref",
-                  "ref": "U8NHW",
-                  "name": "Files",
-                  "width": "fill_container",
-                  "descendants": {
-                    "Juuks": {
-                      "icon": "folders"
-                    },
-                    "Rhcur": {
-                      "content": "Files"
-                    }
-                  }
-                },
-                {
-                  "id": "Mb2B3",
-                  "type": "ref",
-                  "ref": "U8NHW",
-                  "name": "Page contribution",
-                  "width": "fill_container",
-                  "descendants": {
-                    "Juuks": {
-                      "icon": "file-plus"
-                    },
-                    "Rhcur": {
-                      "content": "New page"
-                    }
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "Nq6Sw",
-          "name": "Hover and focus",
-          "width": "fill_container",
-          "gap": 16,
-          "children": [
-            {
-              "id": "g8ZrB",
-              "type": "ref",
-              "ref": "U8NHW",
-              "name": "Hover",
-              "fill": "$ds-surface-hover",
-              "width": "fill_container"
-            },
-            {
-              "id": "djCRa",
-              "type": "ref",
-              "ref": "U8NHW",
-              "name": "Focus",
-              "stroke": "$ds-accent",
-              "strokeWidth": 2,
-              "width": "fill_container"
             }
           ]
         }
