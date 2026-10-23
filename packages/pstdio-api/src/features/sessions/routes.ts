@@ -53,6 +53,7 @@ import {
   unsubscribeSessionStreamRoute,
 } from "./endpoints/session-stream";
 import { steerQueuedFollowUpHandler, steerQueuedFollowUpRoute } from "./endpoints/steer-queued-follow-up";
+import { steerSessionHandler, steerSessionRoute } from "./endpoints/steer-session";
 import { updateSessionStatusHandler, updateSessionStatusRoute } from "./endpoints/update-session-status";
 import { createSessionStreamConnections } from "./session-stream-connections";
 
@@ -81,6 +82,7 @@ export const createSessionRoutes = (deps: SessionsRouteDeps & ExtensionsRouteDep
   routes.openapi(archiveSessionRoute, archiveSessionHandler(deps));
   routes.openapi(followUpSessionRoute, followUpSessionHandler(deps));
   routes.openapi(steerQueuedFollowUpRoute, steerQueuedFollowUpHandler(deps));
+  routes.openapi(steerSessionRoute, steerSessionHandler(deps));
   routes.openapi(pendingQueuedFollowUpsRoute, pendingQueuedFollowUpsHandler(deps));
   routes.openapi(combineQueuedFollowUpsRoute, combineQueuedFollowUpsHandler(deps));
   routes.openapi(updateQueuedFollowUpRoute, updateQueuedFollowUpHandler(deps));
