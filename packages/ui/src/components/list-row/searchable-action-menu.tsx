@@ -15,6 +15,7 @@ export const SearchableActionMenu = (props: SearchableActionMenuProps) => {
     searchText: [item.label, item.description].filter(Boolean).join(" "),
     tooltipLabel: item.description,
     variant: "full-width" as const,
+    isDisabled: item.disabled || item.readOnly,
     onSelect: () => item.onAction?.(),
   }));
 

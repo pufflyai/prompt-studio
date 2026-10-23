@@ -14,7 +14,7 @@ import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListNode } from 
 import { readDraggedTreeNodeId, writeDraggedTreeNodeId } from "./tree-list-drag";
 import { TreeListInlineInputRow } from "./tree-list-inline-input";
 import { hasExpandableChildren, isActiveNode, isInList, isNavigableNode } from "./tree-list-model";
-import { TreeListSelectionContext } from "./tree-list-selection-context";
+import { TreeListMoveContext, TreeListSelectionContext } from "./tree-list-selection-context";
 
 type TreeListRowVariant = "compact" | "tree";
 
@@ -52,6 +52,7 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
   } = props;
   const [dropPosition, setDropPosition] = useState<"before" | "after" | "inside" | null>(null);
   const selection = useContext(TreeListSelectionContext);
+  const move = useContext(TreeListMoveContext);
 
   if (node.inlineInput) {
     return <TreeListInlineInputRow input={node.inlineInput} icon={node.icon} level={level} />;
@@ -138,11 +139,14 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
           if (!isDisabled) selection.select(node.id, event);
         }
       : undefined,
-    onKeyDown: selection
-      ? (event: KeyboardEvent<HTMLElement>) => {
-          if (!isDisabled) selection.keyDown(node.id, event);
-        }
-      : undefined,
+    onKeyDown:
+      selection || move
+        ? (event: KeyboardEvent<HTMLElement>) => {
+            if (isDisabled) return;
+            move?.(node.id, event);
+            if (!event.defaultPrevented) selection?.keyDown(node.id, event);
+          }
+        : undefined,
     onActivate: handleActivate,
     onToggleExpand: () => onToggleNode?.(node.id),
   };

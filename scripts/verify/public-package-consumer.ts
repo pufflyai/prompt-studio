@@ -90,7 +90,7 @@ import { BubblePanel, ListRow, TreeList } from "@pstdio/ui";
 const outliner = createElement(TreeList, {
   sections: [{ id: "layers", nodes: [{ id: "image", label: "Image", startContent: createElement("span"),
     actionsVisibility: "always", actions: [{ id: "visibility", label: "Visibility", pressed: true, disabled: false }] }] }],
-  activeNodeId: ["image"], onSelectionChange: (ids: string[]) => void ids,
+  activeNodeId: ["image"], onSelectionChange: (ids: string[]) => void ids, moveSelection: true,
   onMoveNode: (source: string) => void source,
 });
 const groupRow = createElement(ListRow, { label: "Group", isContainer: true, showExpandToggle: true,

@@ -12,12 +12,13 @@ export const createResourceRowActions = (item: ListRowItem, showContextMenuTrigg
   const inlineMenuItems =
     item.actions?.flatMap((action) =>
       action.menuItems?.length
-        ? action.menuItems
+        ? action.menuItems.map((item) => ({ ...item, disabled: action.disabled || item.disabled }))
         : [
             {
               id: action.id,
               label: action.label,
               icon: action.icon,
+              disabled: action.disabled,
               onAction: () => action.onAction?.({ nodeId: item.id }),
             },
           ],

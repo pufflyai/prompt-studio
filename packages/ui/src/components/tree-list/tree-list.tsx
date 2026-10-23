@@ -32,8 +32,12 @@ export interface TreeListProps {
   activeNodeId?: string | string[] | null;
   /** Controlled multiselection: click replaces, Ctrl/Cmd toggles, Shift extends a visible range.
    * Space/Enter select; Shift+Up/Down extends; Alt+Up/Down emits a sibling move through onMoveNode.
-   * The host decides whether a move applies to the source or the selected set. */
+   * The host persists selection and enforces domain rules. */
   onSelectionChange?: (nodeIds: string[]) => void;
+  /** Declare that the host moves the selected set when the source is selected.
+   * Keyboard targets then sit outside the selected sibling block. Defaults to source-only moves.
+   * This does not move nodes; the host must apply the same policy to pointer and keyboard requests. */
+  moveSelection?: boolean;
   /** Compact rows suit app navigation; tree rows suit file/resource hierarchies. */
   rowVariant?: TreeListRowVariant;
   sectionGap?: StackProps["gap"];

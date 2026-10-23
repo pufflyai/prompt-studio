@@ -11,8 +11,8 @@ const sections: TreeListSection[] = [
         id: "group",
         label: "Group",
         children: [
-          { id: "wave", label: "Wave", canDrag: true },
-          { id: "foam", label: "Foam", canDrag: true },
+          { id: "wave", label: "Wave", canDrag: true, canDrop: true },
+          { id: "foam", label: "Foam", canDrag: true, canDrop: true },
         ],
       },
       { id: "missing", label: "Missing", disabled: true },
@@ -40,8 +40,23 @@ test("keyboard moves use siblings, preserve hierarchy, and respect move permissi
 
 test("keyboard targets sit outside the selected sibling block", () => {
   const movable: TreeListSection[] = [
-    { id: "layers", nodes: ["a", "b", "c", "d"].map((id) => ({ id, label: id, canDrag: true })) },
+    { id: "layers", nodes: ["a", "b", "c", "d"].map((id) => ({ id, label: id, canDrag: true, canDrop: true })) },
   ];
   expect(treeListSiblingMove(movable, "b", 1, ["b", "c"])).toEqual({ source: "b", target: "d", position: "after" });
   expect(treeListSiblingMove(movable, "c", -1, ["b", "c"])).toEqual({ source: "c", target: "a", position: "before" });
+});
+
+test("keyboard moves reject siblings that do not accept drops", () => {
+  const targets: TreeListSection[] = [
+    {
+      id: "layers",
+      nodes: [
+        { id: "before", label: "Before", canDrop: false },
+        { id: "source", label: "Source", canDrag: true },
+        { id: "after", label: "After" },
+      ],
+    },
+  ];
+  expect(treeListSiblingMove(targets, "source", -1)).toBeUndefined();
+  expect(treeListSiblingMove(targets, "source", 1)).toBeUndefined();
 });

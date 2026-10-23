@@ -61,6 +61,7 @@ export const useTreeListKeyboardNavigation = (input: {
       id: getRowFocusId(row),
       section: row.sectionId,
       level: row.kind === "node" ? row.level : 0,
+      parent: row.kind === "node" ? row.parentNodeId : undefined,
     })),
   );
 
@@ -112,7 +113,7 @@ export const useTreeListKeyboardNavigation = (input: {
       const current = findFocusedRowId(rootRef.current, event.target) ?? focusRowId;
       const target = adjacentNode(rows, current, event.key);
       if (target) {
-        selection.select(target, event);
+        selection.select(target, event, current);
         focusRow(target);
       }
       return;

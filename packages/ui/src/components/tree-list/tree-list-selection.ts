@@ -47,7 +47,7 @@ export const treeListSiblingMove = (
     if (selectedIds.includes(id) && movingIndexes.length)
       edge = direction === -1 ? Math.min(...movingIndexes) : Math.max(...movingIndexes);
     const target = siblings[edge + direction];
-    if (!source?.canDrag || !target) return;
+    if (!source?.canDrag || !target?.canDrop) return;
     return { source: id, target: target.id, position: direction === -1 ? ("before" as const) : ("after" as const) };
   }
 };

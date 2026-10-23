@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Eye, EyeOff, FileImage, Folder, Lock, LockOpen } from "lucide-react";
 import { useRef, useState } from "react";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
+import { ScrollArea } from "../primitives/scroll-area";
 import { TreeList } from "./tree-list";
 import type { TreeListNode } from "./tree-list.types";
 
@@ -16,7 +17,7 @@ const meta: Meta<typeof TreeList> = {
           "Compose authoring rows with controlled selection, expansion, order, extension previews, and persistent toggle actions. " +
           "Click replaces selection; Ctrl/Cmd toggles; Shift-click or Shift+Up/Down extends a visible enabled range. " +
           "Space/Enter selects. Alt+Up/Down emits the focused node's sibling move through onMoveNode. " +
-          "The host decides which selected nodes move, persists order, and enforces domain rules such as locks. " +
+          "Moves apply to the source by default; set moveSelection when the host moves the selected set. The host persists order and enforces domain rules such as locks. " +
           "Group expansion has its own control. Buttons do not select, activate, or drag their row. " +
           "Drop near a group edge for before/after, or in its center for inside. Native HTML drag moves and sortable customization remain separate APIs.",
       },
@@ -97,7 +98,7 @@ const Outliner = (props: { narrow?: boolean }) => {
         onSelectionChange={setSelected}
         onToggleNode={(id) => setExpanded(toggle(expanded, id))}
         onMoveNode={(source, target, position) => {
-          if (!target || !order.includes(source) || !order.includes(target)) return;
+          if (position === "inside" || !target || !order.includes(source) || !order.includes(target)) return;
           const next = order.filter((id) => id !== source);
           next.splice(next.indexOf(target) + (position === "after" ? 1 : 0), 0, source);
           setOrder(next);
@@ -110,6 +111,9 @@ const Outliner = (props: { narrow?: boolean }) => {
   );
 };
 export const ControlledAuthoringRows: Story = {
+  parameters: {
+    docs: { description: { story: "This example reorders root siblings. Drops inside groups are ignored." } },
+  },
   render: () => <Outliner />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -150,7 +154,7 @@ const VirtualSelection = () => {
   const [selected, setSelected] = useState(["row-0"]);
   return (
     <Stack w="80" gap="xs">
-      <Box ref={scroll} h="64" overflow="auto">
+      <ScrollArea viewportRef={scroll} h="64">
         <TreeList
           virtualize
           scrollRef={scroll}
@@ -167,7 +171,7 @@ const VirtualSelection = () => {
             },
           ]}
         />
-      </Box>
+      </ScrollArea>
       <Text role="status">Selected: {selected.join(", ")}</Text>
     </Stack>
   );
@@ -218,6 +222,7 @@ const Reparenting = () => {
   );
 };
 export const FocusAfterReparenting: Story = {
+  tags: ["!manifest"],
   render: () => <Reparenting />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
