@@ -54,6 +54,8 @@ The + control follows the scrolling tab group. Its choices include active panels
 
 When Main has no tabs, its placeholder offers **Reopen**, or **Move back** if the page content is already open in another panel, and **Reset layout**. Move back returns the same tab without creating a copy. Navigating to the page again reopens its Main content. Either kind of page can declare `main.empty: view.ref` instead of the host placeholder. A panel collection may name a static Main slot with `main.landing` for navigation and recovery. The host renders custom empty content beside the same recovery actions. Collection breadcrumbs open the declared landing slot. The `workbench.reopenPageContent` and `workbench.resetLayout` commands use the same actions as these buttons.
 
+Page header defaults, optional `main.empty` on single-view pages, `main.landing`, and closable fixed tabs describe APIs from `main`. Their first extension API version is 0.2.2.
+
 During the deprecation window, older extension collections keep their first `fixed` Main slot as their landing slot. New declarations should name `main.landing` explicitly.
 
 Start uses its home content as `main.empty`, with no initial tabs or landing slot. Its Main header defaults to hidden. A saved user header choice still wins, and dropping a tool tab into Main reveals the header through the shared move behavior.

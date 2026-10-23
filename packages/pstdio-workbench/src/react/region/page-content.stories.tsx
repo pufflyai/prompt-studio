@@ -72,6 +72,37 @@ export const MoveContentBack: Story = {
 };
 export const CustomEmptyView: Story = { args: { workbench: createPageWorkbench("custom") } };
 
+const createFilteredEmptyWorkbench = () => {
+  const workbench = createWorkbench();
+  const page = { kind: "page", extensionId: "example", id: "collection" } as const;
+  workbench.modes.registerMode({ id: "page", activate() {} });
+  workbench.views.registerView({
+    id: "empty-tree",
+    title: "Filtered empty content",
+    body: {
+      kind: "tree",
+      getBody: ({ pageParams }) => [
+        { id: "filter", nodes: [{ id: "result", label: String(pageParams?.filter ?? "Missing filter") }] },
+      ],
+      getChildren: () => [],
+    },
+  });
+  workbench.pages.registerPage({
+    id: page.id,
+    ref: page,
+    modeId: "page",
+    path: "collection",
+    params: { filter: { type: "string", default: "default-filter" } },
+    main: { kind: "panels", empty: { kind: "view", id: "empty-tree" } },
+    slots: [],
+  });
+  workbench.pageLocations.setProject("storybook-filtered-empty");
+  workbench.pageLocations.navigate({ kind: "page", page, params: { filter: "route-filter" } });
+  return workbench;
+};
+
+export const FilteredEmptyView: Story = { args: { workbench: createFilteredEmptyWorkbench() } };
+
 export const ClosedMovedContent: Story = {
   args: { workbench: createPageWorkbench("moved") },
   play: async ({ canvasElement, args }) => {

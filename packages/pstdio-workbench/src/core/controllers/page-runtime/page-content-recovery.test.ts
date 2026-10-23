@@ -2,6 +2,23 @@ import { expect, test } from "bun:test";
 import { createOwnedAddablePanels } from "../composition/owned-addable-panels";
 import { modePanelFixture, pageRef } from "./mode-panel-state.fixture";
 
+test.each(["alpha", "document"])("reset reopens %s Main after closing its content", (page) => {
+  const { w, navigate } = modePanelFixture();
+  navigate(page, page === "document" ? "one" : undefined);
+  if (page === "document")
+    w.pageLocations.navigate({
+      kind: "page",
+      page: pageRef(page),
+      resource: { type: "document", id: "one" },
+      section: { anchors: [{ id: "intro", heading: "Introduction" }] },
+    });
+  const original = w.layout.getActivePanel("main")!;
+  w.closePlacement(original.placementIdentity!);
+  w.resetLayout();
+  expect(w.layout.getActivePanel("main")?.placementIdentity).toEqual(original.placementIdentity);
+  expect(w.layout.getActivePanel("main")?.section).toEqual(original.section);
+});
+
 test("revisiting a collection reopens its declared landing tab", () => {
   const { w, navigate } = modePanelFixture(undefined, true, [
     {

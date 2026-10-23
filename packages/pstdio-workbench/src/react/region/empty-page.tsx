@@ -2,6 +2,7 @@ import { Button, HStack, Stack } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { getPageContentRecovery } from "../../core/controllers/page-runtime/page-content-recovery";
+import { PageViewOwnerContext } from "../renderers/use-page-params";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchWidgetHost } from "./widget-host";
 
@@ -30,17 +31,19 @@ export const EmptyPage = (props: { workbench: WorkbenchCore }) => {
   if (!recovery.viewId) return <EmptyState title="No tabs open">{actions}</EmptyState>;
   return (
     <Stack flex="1" minH="0" gap="md">
-      <WorkbenchWidgetHost
-        workbench={workbench}
-        region="main"
-        placement={{
-          widgetId: "workbench.empty-page",
-          contributionId: "workbench.empty-page",
-          viewId: recovery.viewId,
-          closable: false,
-          resource: recovery.resource,
-        }}
-      />
+      <PageViewOwnerContext value={pageState.activePageId}>
+        <WorkbenchWidgetHost
+          workbench={workbench}
+          region="main"
+          placement={{
+            widgetId: "workbench.empty-page",
+            contributionId: "workbench.empty-page",
+            viewId: recovery.viewId,
+            closable: false,
+            resource: recovery.resource,
+          }}
+        />
+      </PageViewOwnerContext>
       {actions}
     </Stack>
   );

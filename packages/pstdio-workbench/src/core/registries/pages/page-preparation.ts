@@ -125,7 +125,8 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
       current.activePageId !== page.id ||
       pageResourceContextKey(page, current.location?.resource) !==
         pageResourceContextKey(page, normalizedTarget.resource) ||
-      current.pageStates[stateKey]?.activePrimaryInstanceKey !== primaryState.activePrimaryInstanceKey;
+      (primaryState.activePrimaryInstanceKey !== undefined &&
+        current.pageStates[stateKey]?.activePrimaryInstanceKey !== primaryState.activePrimaryInstanceKey);
     const pageState = openFollowers
       ? openPageResourceBindings({ page, state: primaryState, target: normalizedTarget, resourceKey })
       : primaryState;

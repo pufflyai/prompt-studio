@@ -1,6 +1,17 @@
 import { expect, test } from "bun:test";
 import { modePanelFixture } from "./mode-panel-state.fixture";
 
+test.each(["main", "side"] as const)("moving from %s into a shown header preserves page inheritance", (source) => {
+  const { w, open, navigate } = modePanelFixture();
+  w.pages.getPage("alpha")!.regionSettings = { main: { showHeader: true } };
+  w.pages.getPage("alpha-list")!.regionSettings = { main: { showHeader: false } };
+  open("tool", source, "pin");
+  w.movePanel(w.layout.getActivePanel(source)!.instanceId, "main");
+  expect(w.layout.getLayout().regions.main.headerVisible).toBeUndefined();
+  navigate("alpha-list");
+  expect(w.shell.getPanelPolicy("main").showHeader).toBe(false);
+});
+
 test("page header defaults inherit from the mode until the user chooses, and reset clears that choice", () => {
   const { w, navigate } = modePanelFixture();
   w.modes.getMode("alpha")!.regionSettings = { main: { showHeader: false } };

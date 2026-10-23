@@ -70,6 +70,12 @@ for (const name of [
   });
 }
 
+test("custom empty views retain page query parameters", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-page-content--filtered-empty-view"));
+  await waitForStoryPlayback(page);
+  await expect(page.getByRole("option", { name: "route-filter", exact: true })).toBeVisible();
+});
+
 for (const name of [
   "single-available-fixed-panel",
   "multiple-available-fixed-panels",

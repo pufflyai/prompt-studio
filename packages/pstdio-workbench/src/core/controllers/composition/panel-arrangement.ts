@@ -20,10 +20,10 @@ import { panelDestinations } from "./panel-destinations";
 const keepSourceVisible = (source: WorkbenchRegionState, region: WorkbenchRegion, tabCount: number) =>
   source.visible && (tabCount > 0 || region === "main");
 
-const revealDropTarget = (target: WorkbenchRegionState) => ({
+const revealDropTarget = (target: WorkbenchRegionState, showHeader: boolean) => ({
   ...target,
   visible: true,
-  headerVisible: true,
+  headerVisible: showHeader ? target.headerVisible : true,
   presentation: target.id === "side" && !target.visible ? ("attached" as const) : target.presentation,
 });
 
@@ -66,7 +66,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
                 : source.activeWidgetId,
           },
           [destination]: {
-            ...revealDropTarget(target),
+            ...revealDropTarget(target, core.shell.getPanelPolicy(destination).showHeader),
             widgets: plan.widgets,
           },
         },

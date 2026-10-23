@@ -87,6 +87,19 @@ const createInbox = (cardinality: "one" | "many" = "one") => {
   return workbench;
 };
 describe("closing page resource panels", () => {
+  test("closing the last primary tab keeps a manually closed page-resource reader closed", () => {
+    const workbench = createInbox();
+    const main = workbench.layout.getActivePanel("main")!;
+    const reader = workbench.pages.store
+      .getState()
+      .placements.find((item) => item.identity.kind === "page" && item.identity.slotId === "reader")!;
+    workbench.closePlacement(reader.identity);
+    workbench.closePlacement(main.placementIdentity!);
+    expect(workbench.layout.listPanelInstances("main")).toEqual([]);
+    expect(workbench.layout.listPanelInstances("side").some((panel) => panel.viewId === "reader")).toBe(false);
+    workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "thread", id: "one" } });
+    expect(workbench.layout.listPanelInstances("side").some((panel) => panel.viewId === "reader")).toBe(true);
+  });
   test("single-resource Main and its optional panels can close", () => {
     const workbench = createInbox();
     const main = workbench.layout.getLayout().regions.main.widgets[0]!;
