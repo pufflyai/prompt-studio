@@ -122,6 +122,8 @@ test("CDP disconnect leaves active desktop capture and its process observer resp
   application.send("sample");
   const continued = await next("sample");
   expect(continued.snapshot.samples.length).toBeGreaterThan(active.snapshot.samples.length);
+  expect(continued.snapshot.samples.at(-1).processes[0].residentBytes).toBeGreaterThan(0);
+  expect(continued.snapshot.samples.at(-1).backend.state).toBe("reply");
   application.send("stop");
   await next("stopped");
 });
