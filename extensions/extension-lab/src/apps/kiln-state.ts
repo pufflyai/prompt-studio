@@ -1,27 +1,31 @@
 import { createExampleStore } from "../example-store";
 import { exampleDefaults } from "../state-defaults";
+import { kilnFrameRate, sampleKilnPlayback } from "./kiln-animation";
 import type { KilnVector } from "./kiln-data";
 
 const stateStore = createExampleStore("kiln", exampleDefaults.kiln);
+let snapshot = stateStore.getState();
+const listeners = new Set<() => void>();
+const update = () => {
+  const state = stateStore.getState();
+  snapshot = { ...state, frame: sampleKilnPlayback(state, Date.now()) };
+  for (const listener of listeners) listener();
+};
+stateStore.subscribe(update);
 export const kilnStore = {
   ...stateStore,
+  getState: () => snapshot,
+  subscribe(listener: () => void) {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  },
   connect(...args: Parameters<typeof stateStore.connect>) {
     const disconnect = stateStore.connect(...args);
-    let startedAt = 0;
-    let firstFrame = 1;
     const timer = window.setInterval(() => {
-      const state = stateStore.getState();
-      if (!state.playing) {
-        startedAt = 0;
-        return;
-      }
-      if (startedAt !== state.playbackStartedAt) {
-        startedAt = state.playbackStartedAt;
-        firstFrame = state.frame;
-      }
-      const elapsed = Math.floor(((Date.now() - startedAt) * 24) / 1000);
-      stateStore.setTransient({ frame: ((firstFrame - 1 + elapsed) % 120) + 1 });
-    }, 1000 / 24);
+      if (stateStore.getState().playing) update();
+    }, 1000 / kilnFrameRate);
     return () => {
       window.clearInterval(timer);
       disconnect();
