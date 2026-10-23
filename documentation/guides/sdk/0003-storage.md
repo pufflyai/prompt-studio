@@ -10,6 +10,51 @@ On 0.43.x, save data with `ctx.storage.get`, `set`, `delete`, and `collection`. 
 
 The outcome `state` field, optional `expectedRevision`, and the deprecation of the conflict members are on `main`. They ship in the release after 0.44.0. On 0.44.0, read `status` and pass `expectedRevision` on every edit.
 
+## Read a selected page
+
+Indexed queries are additive on `main`, planned for 0.46. Install matching host
+and SDK builds before using them. Register deterministic definitions in your
+extension definition. The host installs them locally before exposing commands:
+
+```ts
+export default defineExtension({
+  storageIndexes: [{
+    name: "ready-items",
+    fields: {
+      status: { path: ["status"], type: "string" },
+      title: { path: ["title"], type: "string" },
+      position: { path: ["position"], type: "string" },
+    },
+    equality: ["status"],
+    orderBy: [{ field: "position", direction: "asc" }],
+  }],
+});
+
+// In a query command:
+const page = await ctx.storage.records.query({
+  index: "ready-items",
+  where: { field: "status", op: "eq", value: "ready" },
+  fields: ["title", "position"],
+  limit: 100,
+});
+const count = await ctx.storage.records.aggregate({
+  index: "ready-items",
+  where: { field: "status", op: "eq", value: "ready" },
+});
+```
+
+Each page contains complete record addresses, content revisions and only the
+selected fields. Pass `page.cursor` to the same query for the next page. A changed
+owner revision invalidates the cursor; restart rather than appending a stale page.
+Compare the page and count revisions before displaying them together. Batch full
+records with `records.readMany(ids)` when an editor needs them. Keep the batch at
+100 addresses or fewer. See [Indexed queries](../../references/sdk/0004-storage.md#indexed-queries)
+for null, array, sorting and authorization rules.
+
+Local indexes do not use the synced `storage.migrate` version. Another device
+can receive that version without having local indexes. In SDK tests, pass the
+same declaration as `createMemoryStorage({ indexes: extension.storageIndexes })`.
+
 ## Stage, then save
 
 Stage any new asset before committing the group. Every edit in a group applies

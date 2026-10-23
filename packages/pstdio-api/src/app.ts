@@ -159,6 +159,7 @@ const buildApp = async (
     dependencies,
     eventBus,
     extensionInstancesDBService,
+    extensionStorageDBService,
     extensionConnectionsDBService,
     installedExtensionSourcesDBService,
     projectService,

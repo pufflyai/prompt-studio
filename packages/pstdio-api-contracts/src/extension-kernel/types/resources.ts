@@ -97,6 +97,8 @@ export interface ExtensionResourcesApi {
   allocate(input: { kind: string; idPrefix?: string }): Promise<{ id: string; shorthand: string }>;
   /** Read the core-owned current number. Returns null for an unknown resource. */
   identity(input: { kind: string; id: string }): Promise<ResourceIdentity | null>;
+  /** Read at most 100 current identities in input order. Unknown IDs return null. */
+  identityMany(input: { kind: string; ids: string[] }): Promise<(ResourceIdentity | null)[]>;
   /** Current matches come first; shared aliases can return several resources. */
   findByShorthand(input: { kind: string; shorthand: string }): Promise<ResourceIdentity[]>;
 }

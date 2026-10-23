@@ -1,4 +1,10 @@
-import type { KanbanRendererMove, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
+import type {
+  CollectionPage,
+  CollectionPageRequest,
+  KanbanRendererMove,
+  ViewFilterGroup,
+  ViewSort,
+} from "@pstdio/sdk/extensions";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
@@ -19,6 +25,7 @@ import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./ren
 import type { ViewToolbarAction } from "./view-toolbar-action";
 
 export interface KanbanRendererQueryState {
+  page?: CollectionPageRequest;
   pageParams?: import("@pstdio/sdk/extensions").PageParams;
   settings: KanbanRendererSettings;
   filter: ViewFilterGroup;
@@ -70,6 +77,11 @@ export interface KanbanRendererContribution<
    * so this can return unfiltered rows in simple cases.
    */
   executeQuery(state: KanbanRendererQueryState, signal: AbortSignal): Promise<TRow[]> | TRow[];
+  /** Bounded alternative. Legacy executeQuery continues to return an array. */
+  executePage?(
+    state: KanbanRendererQueryState & { page: CollectionPageRequest },
+    signal: AbortSignal,
+  ): Promise<{ rows: TRow[]; page: CollectionPage }>;
   subscribe?: (listener: () => void) => Disposable | (() => void);
 
   /** Row activation surfaced by the renderer (mirrored from <KanbanRenderer>). */

@@ -47,8 +47,13 @@ import { registerExtensionInstallSmokeTests } from "./packaged-extension-install
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 // CRDT storage checks atomic saves, ignored revisions, local retry outcomes and durable restart.
+// Declared indexes, filtered cursor pages, selected fields, aggregates and batch reads survive restart.
+// Accepted Unicode normalization and NUL preservation agree before and after restart.
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
 // scripts/verify/storage-package-consumer.ts checks the packaged SDK's two-device merge and replacement report.
+// Selected storage queries preserve case-insensitive text equality and negation through restart.
+// packaged-storage-upgrade.test.ts checks released 0.45 nested records, assets,
+// operation retries and tombstones through index installation and restart.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -69,11 +74,13 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // Navigation metadata preserves independent panel capabilities, including whole-panel movement through the compiled host.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
+import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // The browser suite checks typed host props, page updates, structured capability errors and saved settings.
 // packaged-editing-sessions.spec.ts checks shared local edits, coalesced writes and cancelled previews across opaque views.
 // Real React Query subscriptions cover matching events, reconnect deduplication and unmount cleanup.
 // Typed settings deletion restores its fallback after reload.
-import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
+// Ten public owners retain bounded table/board metadata, selected fields, cursor and direct page navigation.
+import { registerPagedCollectionSmokeTests } from "./packaged-paged-collections-smoke";
 // Private history stays readable offline and appears in the initial live-sync snapshot after restart.
 import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
@@ -326,3 +333,5 @@ registerDeviceAutomationSmokeTests();
 registerDocumentSyncSmokeTests();
 registerPersonalHistorySmokeTests();
 registerTwoDeviceSyncSmokeTests();
+
+registerPagedCollectionSmokeTests();
