@@ -2,4 +2,4 @@
 "extension-lab": patch
 ---
 
-Use shared status items and panels in examples and keep Kiln playback synchronized.
+Use shared status items and panels in examples, keep the queue scrollable, and synchronize Kiln playback.
