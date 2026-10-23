@@ -19,6 +19,7 @@ import { fieldsetSlotRecipe } from "./recipes/form";
 import { inputRecipe } from "./recipes/input";
 import { kanbanBoardColumnSlotRecipe } from "./recipes/kanban-board-column";
 import { kbdRecipe } from "./recipes/kbd";
+import { keyboardBubbleSlotRecipe } from "./recipes/keyboard-bubble";
 import { linkRecipe } from "./recipes/link";
 import { listRowAccessoryRecipe } from "./recipes/list-row-accessory";
 import { menuSlotRecipe } from "./recipes/menu";
@@ -118,6 +119,7 @@ const config = defineConfig({
       menu: menuSlotRecipe,
       numberInput: numberInputSlotRecipe,
       palette: paletteSlotRecipe,
+      keyboardBubble: keyboardBubbleSlotRecipe,
       editable: editableSlotRecipe,
       form: fieldsetSlotRecipe,
       dialog: dialogSlotRecipe,

@@ -5,5 +5,5 @@ export const useKeyboardTabs = (workbench: WorkbenchCore) => {
   "use no memo";
   const keyboard = useWorkbenchStore(workbench.keyboard.store, (state) => state);
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);
-  return { active: keyboard.active, tabs: workbench.keyboard.listTabs() };
+  return { active: keyboard.active, selectedId: keyboard.selectedId, tabs: workbench.keyboard.listTabs() };
 };

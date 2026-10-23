@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { userEvent, within } from "storybook/test";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { createKeyboardWorkbench } from "./keyboard.fixture";
 import { WorkbenchKeyboardShortcutsPanel } from "./keyboard-shortcuts-panel";
@@ -14,7 +15,15 @@ export const VisiblePanels: Story = { args: { workbench: createKeyboardWorkbench
 export const CrowdedTabs: Story = { args: { workbench: createKeyboardWorkbench(12) } };
 const menu = createKeyboardWorkbench();
 menu.keyboard.open();
-export const KeyboardMenu: Story = { args: { workbench: menu } };
+export const KeyboardBubble: Story = { args: { workbench: menu } };
+export const ExpandedBubble: Story = {
+  args: { workbench: menu },
+  play: async ({ canvasElement }) => {
+    await userEvent.hover(
+      within(canvasElement.ownerDocument.body).getByRole("region", { name: "Keyboard shortcut mode" }),
+    );
+  },
+};
 const conflict = createKeyboardWorkbench();
 conflict.keyboard.open();
 void conflict.keyboard.press("a").then(() => conflict.keyboard.press("s"));

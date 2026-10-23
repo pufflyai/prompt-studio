@@ -1,5 +1,5 @@
 ---
-"@pstdio/ui": patch
+"@pstdio/ui": minor
 ---
 
-Show shortcut sequence steps with a compact redo arrow.
+Add a compact shortcut bubble, keyboard-selected tab outlines, and accessible redo arrows between shortcut steps.

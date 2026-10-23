@@ -1,218 +1,168 @@
-import { Dialog, Input, Text, useSlotRecipe } from "@chakra-ui/react";
-import { ListRow, PaletteShortcut, ScrollArea } from "@pstdio/ui";
+import { Box, Dialog, Input, Portal, Text, useSlotRecipe } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { shortcutMenuEntries, shortcutPathLabels } from "../../core/controllers/keyboard/shortcut-menu";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { useKeyboardLayerKeys } from "./use-keyboard-layer-keys";
+import { KeyboardChoices } from "./keyboard-choices";
+import { KeyboardSequence } from "./keyboard-sequence";
+import { focusKeyboardChoice, useKeyboardLayerKeys } from "./use-keyboard-layer-keys";
+import { useKeyboardModeFocus } from "./use-keyboard-mode-focus";
 import { useShortcutCatalog } from "./use-shortcut-catalog";
-
-const editable = (element: EventTarget | null) =>
-  element instanceof HTMLElement && Boolean(element.closest('input,textarea,select,[contenteditable="true"]'));
-const focusSelectedPresentation = (workbench: WorkbenchCore) => {
-  const selected = workbench.keyboard.store.getState();
-  const instance = selected.selectedId
-    ? document.querySelector<HTMLElement>(`[data-workbench-presentation="${CSS.escape(selected.selectedId)}"]`)
-    : null;
-  const region = selected.selectedRegion
-    ? document.querySelector<HTMLElement>(`[data-workbench-region="${selected.selectedRegion}"]`)
-    : null;
-  const root = instance ?? region;
-  const candidates = [
-    '[contenteditable="true"]',
-    "textarea",
-    "input",
-    "iframe",
-    "[autofocus]",
-    '[tabindex="0"]',
-    "button",
-  ];
-  const focus =
-    candidates
-      .flatMap((selector) => [...(root?.querySelectorAll<HTMLElement>(selector) ?? [])])
-      .find(
-        (element) =>
-          element.getClientRects().length &&
-          getComputedStyle(element).visibility !== "hidden" &&
-          !element.matches(':disabled,[type="hidden"]'),
-      ) ?? root;
-  focus?.focus({ preventScroll: true });
-};
 
 export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
-  const { state, catalog: all } = useShortcutCatalog(workbench);
+  const { state, catalog } = useShortcutCatalog(workbench);
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);
-  useWorkbenchStore(workbench.keybindings.store, (state) => state.keybindings);
-  const styles = useSlotRecipe({ key: "palette" })();
-  const heading = useRef<HTMLHeadingElement>(null);
+  const bubble = useSlotRecipe({ key: "keyboardBubble" })();
+  const palette = useSlotRecipe({ key: "palette" })();
   const content = useRef<HTMLDivElement>(null);
+  const heading = useRef<HTMLElement>(null);
   const queryInput = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [browseDirection, setBrowseDirection] = useState<string>();
+  const selection = state.selection;
+  const expanded = hovered || search || Boolean(browseDirection);
+  useKeyboardModeFocus(workbench, state, content, heading);
   useKeyboardLayerKeys({
     workbench,
     content,
     heading,
-    search: () => {
-      setSearch(true);
-      queueMicrotask(() => queryInput.current?.focus());
-    },
+    search: () => setSearch(true),
+    browse: (direction, choicesVisible) => setBrowseDirection(choicesVisible ? "active" : direction),
   });
-  const wasActive = useRef(false);
-  const selection = state.selection;
-  const run = (action: () => unknown) => void runUserAction(workbench, "Keyboard shortcut", action);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: each prefix or selector starts with neutral heading focus.
+  useEffect(() => {
+    if (!state.active) setHovered(false);
+  }, [state.active]);
+  // Each prefix and selector starts with neutral focus; completed navigation keeps its prefix.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: lastKey and availability changes must not reset browsing or search.
   useEffect(() => {
     setQuery("");
     setSearch(false);
-    if (state.active) queueMicrotask(() => heading.current?.focus());
+    setBrowseDirection(undefined);
+    if (state.active) queueMicrotask(() => heading.current?.focus({ preventScroll: true }));
   }, [state.path, selection, state.active]);
   useLayoutEffect(() => {
-    if (wasActive.current && !state.active && state.restoreFocus) focusSelectedPresentation(workbench);
-    wasActive.current = state.active;
-  }, [state.active, state.restoreFocus, workbench]);
-  useEffect(() => {
-    const activation = workbench.layout.onDidActivatePanel((panel) => {
-      if (
-        !workbench.keyboard.store.getState().active ||
-        workbench.keyboard.store.getState().selection ||
-        workbench.keyboard.store.getState().selectedId === panel.instanceId
-      )
-        return;
-      workbench.keyboard.selectPresentation(panel.instanceId);
-      heading.current?.focus();
-    });
-    return () => activation.dispose();
-  }, [workbench]);
-  useEffect(() => {
-    if (!state.active) return;
-    const pointer = (event: PointerEvent) => {
-      if (content.current?.contains(event.target as Node)) return;
-      if (editable(event.target)) workbench.keyboard.close(false);
-    };
-    const focus = (event: FocusEvent) => {
-      if (!workbench.keyboard.store.getState().active || content.current?.contains(event.target as Node)) return;
-      if ((event.target as HTMLElement).closest('[role="dialog"],[role="menu"]')) return;
-      heading.current?.focus();
-    };
-    const blur = () => workbench.keyboard.close(false);
-    window.addEventListener("blur", blur);
-    document.addEventListener("pointerdown", pointer, true);
-    document.addEventListener("focusin", focus);
-    return () => {
-      window.removeEventListener("blur", blur);
-      document.removeEventListener("pointerdown", pointer, true);
-      document.removeEventListener("focusin", focus);
-    };
-  }, [state.active, workbench]);
-  const entries = selection?.choices ?? shortcutMenuEntries(all, state.path);
-  const searched =
+    if (search) queryInput.current?.focus();
+  }, [search]);
+  useLayoutEffect(() => {
+    if (browseDirection && browseDirection !== "active") focusKeyboardChoice(content.current, browseDirection);
+  }, [browseDirection]);
+  const entries = selection?.choices ?? shortcutMenuEntries(catalog, state.path);
+  const filtered =
     search && !selection
-      ? all
+      ? catalog
           .filter((shortcut) =>
-            `${shortcut.label} ${shortcut.binding.sourceExtensionId ?? ""} ${shortcut.keys.join(" ")}`
+            `${shortcut.label} ${shortcut.binding.sourceExtensionLabel ?? ""} ${shortcut.keys.join(" ")}`
               .toLowerCase()
               .includes(query.toLowerCase()),
           )
           .map((shortcut) => ({ key: shortcut.id, label: shortcut.label, disabled: shortcut.disabled }))
       : entries.filter((entry) => entry.label.toLowerCase().includes(query.toLowerCase()));
-  const title =
-    selection?.title ??
-    `Keyboard menu${state.path.length ? ` / ${shortcutPathLabels(all, state.path).join(" / ")}` : ""}`;
   const activate = (key: string) =>
-    run(() => {
-      if (search && !selection) return workbench.keyboard.invoke(key);
+    void runUserAction(workbench, "Keyboard shortcut", () => {
       if (selection) return workbench.keyboard.choose(key);
-      return workbench.keyboard.press(key);
+      return search ? workbench.keyboard.invoke(key) : workbench.keyboard.press(key);
     });
+  const title = shortcutPathLabels(catalog, state.path).at(-1);
+  const input =
+    selection || search ? (
+      <Input
+        ref={queryInput}
+        value={query}
+        aria-label="Search keyboard choices"
+        placeholder="Search by action, resource, or panel"
+        variant="borderless"
+        size="sm"
+        onChange={(event) => setQuery(event.target.value)}
+      />
+    ) : null;
+  const choices = (
+    <KeyboardChoices entries={filtered} path={state.path} search={search && !selection} onActivate={activate} />
+  );
+  if (selection)
+    return (
+      <Dialog.Root
+        open={state.active}
+        restoreFocus={false}
+        initialFocusEl={() => heading.current}
+        onInteractOutside={(event) => event.preventDefault()}
+        onEscapeKeyDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          workbench.keyboard.finish();
+        }}
+        onOpenChange={(details) => {
+          if (!details.open) workbench.keyboard.finish();
+        }}
+      >
+        <Dialog.Backdrop />
+        <Dialog.Positioner css={palette.positioner}>
+          <Dialog.Content ref={content} css={palette.content} aria-label={selection.title}>
+            <Dialog.Header>
+              <Dialog.Title
+                ref={(node) => {
+                  heading.current = node;
+                }}
+                tabIndex={-1}
+              >
+                {selection.title}
+              </Dialog.Title>
+            </Dialog.Header>
+            {input}
+            <Dialog.Body p="0">
+              <ScrollArea maxH="palette-results-height" showHorizontalScrollbar={false}>
+                {choices}
+              </ScrollArea>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+    );
+  if (!state.active) return null;
   return (
-    <Dialog.Root
-      open={state.active}
-      modal={Boolean(selection)}
-      trapFocus={Boolean(selection)}
-      restoreFocus={false}
-      preventScroll={false}
-      initialFocusEl={() => heading.current}
-      onInteractOutside={(event) => event.preventDefault()}
-      onEscapeKeyDown={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        workbench.keyboard.finish();
-      }}
-      onOpenChange={(details) => {
-        if (!details.open) workbench.keyboard.finish();
-      }}
-    >
-      {selection ? <Dialog.Backdrop /> : null}
-      <Dialog.Positioner css={styles.positioner} pointerEvents={selection ? "auto" : "none"}>
-        <Dialog.Content
-          ref={content}
-          css={styles.content}
-          pointerEvents="auto"
-          aria-label={title}
-          aria-modal={Boolean(selection)}
-        >
-          <Dialog.Header>
-            <Dialog.Title
-              ref={(element) => {
-                heading.current = element;
-                if (element)
-                  queueMicrotask(() => {
-                    if (workbench.keyboard.store.getState().active) element.focus({ preventScroll: true });
-                  });
-              }}
-              tabIndex={-1}
-            >
-              {title}
-            </Dialog.Title>
-          </Dialog.Header>
-          {selection || search ? (
-            <Input
-              ref={queryInput}
-              value={query}
-              aria-label="Search keyboard choices"
-              placeholder="Search by action, resource, or panel"
-              variant="borderless"
-              size="sm"
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          ) : null}
-          <Dialog.Body p="0">
-            <ScrollArea maxH="palette-results-height" showHorizontalScrollbar={false}>
-              {searched.map((entry) => (
-                <ListRow
-                  key={entry.key}
-                  role="button"
-                  tabIndex={0}
-                  data-keyboard-choice={entry.key}
-                  variant="full-width"
-                  label={entry.label}
-                  disabled={"disabled" in entry && entry.disabled}
-                  endContent={
-                    (search && !selection) ||
-                    (state.path.length === 1 && state.path[0] === "E" && entry.key.length > 1) ? undefined : (
-                      <PaletteShortcut binding={entry.key} />
-                    )
-                  }
-                  onActivate={() => activate(entry.key)}
-                />
-              ))}
-              {!searched.length ? (
-                <Text px="sm" py="sm" color="fg.muted">
-                  No applicable shortcuts. Press / to search all actions.
-                </Text>
-              ) : null}
+    <Portal>
+      <Box
+        ref={content}
+        css={bubble.root}
+        data-expanded={expanded}
+        role="region"
+        aria-label="Keyboard shortcut mode"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {expanded ? (
+          <Box css={bubble.choices}>
+            {title ? <Text css={bubble.title}>{title}</Text> : null}
+            {input}
+            <ScrollArea maxH="keyboard-bubble-results" showHorizontalScrollbar={false}>
+              {choices}
+              {!filtered.length ? <Text css={bubble.status}>No applicable shortcuts.</Text> : null}
             </ScrollArea>
-          </Dialog.Body>
-          {state.message ? (
-            <Text role="status" px="sm" py="sm" textStyle="label/XS/regular">
-              {state.message}
-            </Text>
-          ) : null}
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+          </Box>
+        ) : null}
+        <Box
+          ref={(node: HTMLDivElement | null) => {
+            heading.current = node;
+          }}
+          tabIndex={-1}
+          css={bubble.sequence}
+          role="status"
+          aria-label="Pressed shortcut sequence"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <KeyboardSequence state={state} catalog={catalog} />
+        </Box>
+        {state.message ? (
+          <Text role="status" css={bubble.status}>
+            {state.message}
+          </Text>
+        ) : null}
+      </Box>
+    </Portal>
   );
 };

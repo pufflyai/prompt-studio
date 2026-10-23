@@ -88,11 +88,11 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
       bubbles: true,
       cancelable: true,
     });
-    await expect(page.getByRole("dialog", { name: "Keyboard menu", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
     await page.keyboard.press("V");
-    await expect(page.getByRole("dialog", { name: "Keyboard menu / View", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog", { name: "Keyboard menu", exact: true })).toBeHidden();
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
     await expect(page.locator('iframe[title="Lab"]')).toBeFocused();
     await enter.click();
     await guest.locator("body").press("Escape");

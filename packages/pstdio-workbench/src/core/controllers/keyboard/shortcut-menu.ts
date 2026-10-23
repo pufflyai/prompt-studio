@@ -75,10 +75,8 @@ export const shortcutHints = (catalog: ResolvedShortcut[], state: KeyboardState)
     let hint = getKeybindingSteps(shortcut.binding.keybinding).join(" ");
     if (shortcut.binding.layer) {
       const within = shortcut.keys.slice(0, state.path.length).every((key, index) => key === state.path[index]);
-      if (extensionNeedsChoice(shortcut) && (state.path.length < 2 || !within)) continue;
-      hint = [within ? "" : shortcutOpeningChord(catalog), ...shortcut.keys.slice(within ? state.path.length : 0)]
-        .filter(Boolean)
-        .join(" → ");
+      if (!within || (extensionNeedsChoice(shortcut) && state.path.length < 2)) continue;
+      hint = shortcut.keys.slice(state.path.length).join(" → ");
     }
     hints.set(getNavigationTargetKey(shortcut.binding.action), hint);
   }

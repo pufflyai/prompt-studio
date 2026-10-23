@@ -2,17 +2,17 @@
 
 Navigate visible panels, choose an action's target, and discover available keyboard shortcuts.
 
-## Open the keyboard menu
+## Enter shortcut mode
 
-Press **Alt+Shift+Space** to enter the keyboard menu. Choose View (V), Go (G), Create (C), Current view (A), Extensions (E), Settings (S), or Help (H). Press `/` to search actions. Backspace returns one level; Enter or Escape finishes. Keyboard Shortcuts under Help is a searchable reference. Shortcut editing and alias controls are deferred.
+Press **Alt+Shift+Space** to enter shortcut mode. A small bubble appears at the bottom center, using the planner zoom control's surface. It shows the opening chord and current sequence, including the last completed navigation key. Hover to reveal choices that continue from the current prefix. Up/Down also reveals choices for keyboard selection; `/` opens search. Choose View (V), Go (G), Create (C), Current view (A), Extensions (E), Settings (S), or Help (H). Backspace returns one level; Enter or Escape finishes. Keyboard Shortcuts under Help is a searchable reference. Shortcut editing and alias controls are deferred.
 
-On macOS, Alt is Option. Entry matches the physical Space key even when Option produces a non-breaking space. Shortcut sequences use a small redo arrow between steps. The keyboard menu has no Back/Exit buttons or instructional footer; Backspace, Enter, and Escape remain available.
+On macOS, Alt is Option. Entry matches the physical Space key even when Option produces a non-breaking space. Shortcut sequences use a small redo arrow between steps. The bubble has no Back/Exit buttons or instructional footer. Required action and target choices still use an explicit modal.
 
 Extensions appear under E as selectable rows with their display names. Use Up/Down and Enter, or click a name, to choose one.
 
 ## Navigation
 
-Left and Right select the previous or next tab across the visible layout and wrap at either end. Navigation keeps keyboard mode active. Enter or Escape returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
+Left and Right select the previous or next tab across the visible layout and wrap at either end. One tab has an outline for the keyboard selection, even when several panels each have a selected tab. Navigation keeps shortcut mode active, including Go actions and their aliases. Labels use Go to sessions, Go to tickets, and the same pattern for other destinations; history actions use Go back and Go forward. A completed action keeps its current group available. Enter or Escape returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
 
 Alt+Shift+1 through Alt+Shift+9 directly select global tab numbers. These chords work without opening the keyboard menu and do not open a picker. Numbers follow spatial placement, then displayed tab order within each strip. Opening, closing, moving, reordering, or changing the layout recomputes contiguous numbers. Numbers appear on tabs while keyboard mode is active. View → T opens a searchable picker for tabs beyond nine. Direct selection outside keyboard mode stays outside it.
 
@@ -26,11 +26,11 @@ Choices retain their identities while the selector is open. A missing or unavail
 
 ## Extension contributions
 
-An extension adds optional `layer`, `targetScope`, and `sticky` fields to its existing `defineKeybinding` contributions. Existing direct bindings keep their behavior. Layer keys are relative to their group. Shared layer keys are allowed because the host resolves action and target ambiguity. `targetScope` is `project`, `resource`, or `panel`. `sticky` retains keyboard mode after execution; ordinary actions finish. Navigation declares sticky behavior by default.
+An extension adds optional `layer`, `targetScope`, and `sticky` fields to its existing `defineKeybinding` contributions. Existing direct bindings keep their behavior. Layer keys are relative to their group. Shared layer keys are allowed because the host resolves action and target ambiguity. `targetScope` is `project`, `resource`, or `panel`. `sticky` retains shortcut mode after execution; ordinary actions finish. Go destinations and other bindings for the exact same action default to sticky. An explicit `sticky: false` remains a one-shot override.
 
 The Extensions group shows extension names. Use Up/Down and Enter, click a name, or search to choose an extension. Then press the displayed action key. An internal extension ID is never a key a person must type. Hints outside a chosen extension omit paths that cannot be typed directly.
 
-The resolved catalog supplies execution, the shortcut reference, contribution details, navigation hints, menus, and palette hints. Hints match the typed action and its arguments. Navigation hints appear in keyboard mode, preserve existing badges, and show the remaining keys or the actual opening chord. All consumers share the catalog for unchanged workbench inputs; action execution rechecks current availability.
+The resolved catalog supplies execution, the shortcut reference, contribution details, navigation hints, menus, and palette hints. Hints match the typed action and its arguments. Navigation hints appear in shortcut mode, preserve existing badges, and show only remaining keys that can complete from the current prefix. After V, a Go action's G → A hint is hidden. Available direct chords can still appear because they work from any prefix. All consumers share the catalog for unchanged workbench inputs; action execution rechecks current availability.
 
 ## Webviews
 

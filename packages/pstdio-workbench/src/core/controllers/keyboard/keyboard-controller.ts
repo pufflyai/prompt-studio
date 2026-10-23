@@ -27,6 +27,7 @@ export interface KeyboardSelection {
 export interface KeyboardState {
   active: boolean;
   path: string[];
+  lastKey?: string;
   selection?: KeyboardSelection;
   message: string;
   selectedId?: string;
@@ -63,7 +64,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
   const stop = (restore = true) => {
     choices = [];
     stack.length = 0;
-    store.setState({ active: false, path: [], selection: undefined, restoreFocus: restore });
+    store.setState({ active: false, path: [], lastKey: undefined, selection: undefined, restoreFocus: restore });
   };
   const message = (text: string) => store.setState({ message: text });
   const select = (title: string, next: KeyboardActionChoice[]) => {
@@ -139,6 +140,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       store.setState({
         active: true,
         path: [],
+        lastKey: undefined,
         selection: undefined,
         message: "",
         selectedId: active?.id,
@@ -179,6 +181,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       await choice?.choose();
     },
     back() {
+      store.setState({ lastKey: undefined });
       const previous = stack.pop();
       if (previous) {
         choices = previous.choices;
@@ -209,6 +212,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
         return;
       }
       if (input === "ArrowLeft" || input === "ArrowRight") {
+        store.setState({ lastKey: input });
         const navigation = catalog(true).filter(
           (shortcut) =>
             !shortcut.disabled &&
@@ -226,16 +230,17 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       const key = input.toUpperCase();
       const path = [...store.getState().path, key];
       if (!store.getState().path.length && Object.values(shortcutLayers).some((candidate) => candidate === key)) {
-        store.setState({ path });
+        store.setState({ path, lastKey: undefined });
         return;
       }
       const matches = matchShortcutPath(catalog(true), path);
       if (matches.complete.length) {
+        store.setState({ lastKey: key });
         await runShortcutMatches(matches.candidates, select, run);
         return;
       }
       if (matches.hasChildren) {
-        store.setState({ path });
+        store.setState({ path, lastKey: undefined });
         return;
       }
       message(`No shortcut for ${input}.`);
