@@ -496,6 +496,17 @@ test("directional panel navigation lands on Secondary's selected presentation an
   expect(core.commands.isCommandEnabled("workbench.keyboard.focus.down")).toBe(false);
 });
 
+test("panel directions refresh when discovery selects the active Secondary tab", async () => {
+  const { core, ticket } = setup();
+  ticket("A");
+  ticket("B", "secondary");
+  core.keyboard.catalog();
+  core.keyboard.open();
+  await core.keyboard.press("V");
+  expect(core.keyboard.entries().some((entry) => entry.key === "U")).toBe(true);
+  expect(core.keyboard.entries().some((entry) => entry.key === "D")).toBe(false);
+});
+
 test("pin selector toggles retention without reordering the tab", async () => {
   const { core, ticket } = setup();
   const tab = ticket("A");

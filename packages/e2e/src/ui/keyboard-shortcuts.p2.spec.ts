@@ -96,6 +96,7 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
     else await expect(greeting).toHaveCount(0);
   }
   await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
   await page.keyboard.press("Alt+Shift+J");
   await expect(page).toHaveURL(/\/extensions\/e2e.shortcut-reference\/reference/);
   await page.keyboard.press("Alt+Shift+I");

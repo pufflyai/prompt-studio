@@ -43,6 +43,26 @@ test("extension discovery uses its name and only advertises pressable keys", asy
   expect(entry.label).toBe("Extension Lab");
   await core.keyboard.press(entry.key);
   expect(core.keyboard.hints().get(getNavigationTargetKey(action))).toBe("O");
+  core.commands.registerCommand({ id: "nested", label: "Nested" }, { execute() {} });
+  core.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "nested" },
+    keybinding: ["A", "R"],
+    layer: "extensions",
+    sourceExtensionId: "pstdio.extension-lab",
+    sourceExtensionLabel: "Extension Lab",
+  });
+  await core.keyboard.press("A");
+  expect(core.keyboard.hints().get(getNavigationTargetKey(action))).toBeUndefined();
+});
+
+test("opening discovery refreshes dynamic availability", () => {
+  const core = createWorkbench();
+  let visible = false;
+  core.commands.registerCommand({ id: "live", label: "Live" }, { execute() {}, isVisible: () => visible });
+  core.keyboard.catalog();
+  visible = true;
+  core.keyboard.open();
+  expect(core.keyboard.catalog().find((entry) => entry.id === "live")?.disabled).toBe(false);
 });
 
 test("shortcut hints show the configured opening chord", async () => {

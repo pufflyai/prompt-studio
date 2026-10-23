@@ -1,12 +1,12 @@
 # Keyboard shortcuts
 
-Navigate visible panels, choose an action's target, and customize shortcuts through one shared keyboard catalog.
+Navigate visible panels, choose an action's target, and discover available keyboard shortcuts.
 
 ## Open the keyboard menu
 
 Press **Alt+Shift+Space** to enter the keyboard menu. Choose View (V), Go (G), Create (C), Current view (A), Extensions (E), Settings (S), or Help (H). Press `/` to search actions. Backspace returns one level; Enter or Escape finishes. Keyboard Shortcuts under Help is a searchable reference. Shortcut editing and alias controls are deferred.
 
-Unaliased extensions appear under E as selectable rows. Use Up/Down and Enter to choose one, or pin an alias in Keyboard Shortcuts for a shorter path.
+Extensions appear under E as selectable rows with their display names. Use Up/Down and Enter, or click a name, to choose one.
 
 ## Navigation
 
