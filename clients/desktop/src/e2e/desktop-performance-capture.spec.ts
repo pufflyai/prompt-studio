@@ -49,7 +49,7 @@ test("CDP disconnect leaves active desktop capture and its process observer resp
   for (const args of [
     [
       "build",
-      join(import.meta.dirname, "performance-capture-cdp.fixture.ts"),
+      join(import.meta.dirname, "performance-capture-cdp-fixture.ts"),
       "--target=node",
       "--format=esm",
       "--external=electron",
