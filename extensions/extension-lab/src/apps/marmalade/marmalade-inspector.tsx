@@ -114,6 +114,7 @@ export const MarmaladeInspector = () => {
             activeNodeId={state.selectedIds}
             expandedNodeIds={state.expandedIds}
             onSelectionChange={(ids) => dispatch({ type: "select", ids })}
+            moveSelection
             onToggleNode={(id) => dispatch({ type: "expand", id })}
             onMoveNode={(source, target, position = "inside") =>
               dispatch({ type: "reorder", source, target, position })
