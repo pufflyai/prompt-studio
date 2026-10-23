@@ -163,5 +163,9 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
   await page.getByRole("menuitem", { name: "Delete artifact" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
   expect((await deleteResponse).ok()).toBe(true);
+  // Deleting the inspected resource returns to Overview. Reopening the collection
+  // must refresh its retained snapshot before showing the remaining artifacts.
+  await page.getByRole("tab", { name: "Artifacts", exact: true }).click();
   await expect(rows).toHaveCount(initialArtifactCount, { timeout: 15_000 });
+  await expect(page.getByText("No artifacts found", { exact: true })).toBeVisible();
 });
