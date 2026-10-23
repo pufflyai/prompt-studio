@@ -114,3 +114,22 @@ export const CustomPlaceholders: Story = {
     })(),
   },
 };
+
+export const SelectingMode: Story = {
+  args: {
+    workbench: (() => {
+      const workbench = createEmptyWorkbench();
+      workbench.pageLocations.clearProject();
+      workbench.modes.setActiveMode(undefined);
+      workbench.shellPlacements.registerPlacement({
+        id: "loading-terminal",
+        region: "main",
+        item: { kind: "view", view: { kind: "view", id: "terminal" }, presence: "closed" },
+      });
+      return workbench;
+    })(),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole("group", { name: "Available tabs" })).toBeNull();
+  },
+};

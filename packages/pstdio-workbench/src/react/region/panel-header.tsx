@@ -38,7 +38,7 @@ export const PanelHeader = (props: PanelHeaderProps) => {
           key: "header",
           label: show ? "Hide header" : "Show header",
           icon: <WorkbenchIcon name="PanelTop" size={14} />,
-          onClick: () => workbench.shell.setHeaderVisible(region, !show),
+          onSelect: () => workbench.shell.setHeaderVisible(region, !show),
         },
       ]}
     >

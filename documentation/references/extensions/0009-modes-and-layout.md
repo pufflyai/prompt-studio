@@ -44,7 +44,7 @@ const mode = defineMode({
 
 Set `regionSettings.secondary.showHeader: false` for a player or timeline that supplies its own controls. During a tab drag, only the hovered valid panel shows a faint overlay across its whole container without shifting its content. The overlay covers padding and header controls in attached and floating panels. Dropping a tab into a panel with a hidden header restores the header and saves Show header as the user's choice. Cancelled and rejected drops preserve the setting. Main, Side, and Secondary use the same rule. Tab insertion keeps the shared Sidenav placement indicator.
 
-A page can declare `regionSettings: { main: { showHeader: false } }`, or header defaults for `side` and `secondary`. Header visibility resolves as **user > page > mode**, then shown. Page settings only declare header defaults; panel permissions remain with the mode. An omitted page value inherits the mode. Switching pages applies the new page default whenever the user has no override. Reset layout clears user overrides.
+A page can declare `regionSettings: { main: { showHeader: false } }`, or header defaults for `side` and `secondary`. Header visibility resolves as **user > page > mode**, then shown. Page settings only declare header defaults; panel permissions remain with the mode. An omitted page value inherits the mode. Each page layout owns its header choices. Switching pages restores that page's choice or applies its default. A choice on another page never overrides it. Reset layout clears the current page's header choices.
 
 ## User arrangement
 
@@ -78,6 +78,8 @@ Page header defaults, optional `main.empty` on single-view pages, `main.landing`
 
 During the deprecation window, older extension collections keep their first `fixed` Main slot as their landing slot. New declarations should name `main.landing` explicitly.
 
+Default tab cards wait until a declared mode has been selected, so startup never presents unrelated tools before the page resolves.
+
 Start uses its home content as `main.empty`, with no initial tabs or landing slot. Its Main header defaults to hidden. A saved user header choice still wins, and dropping a tool tab into Main reveals the header through the shared move behavior.
 
 Sessions uses the new-session composer as its empty Main placeholder. Its current breadcrumb is **New session** with session actions. `workbenchPages.newSession` is the routed draft page at `sessions/new`; it accepts a `session-draft` resource without creating a draft tab. Creating the session navigates to `workbenchPages.session` and opens the real session tab. A completed creation does not change navigation if its original draft page is no longer open. Closing the final session tab restores the composer and its breadcrumb.
@@ -94,7 +96,7 @@ Live views stay mounted during tab selection and page navigation. Iframe state a
 
 ## Panel policy
 
-Each permission is independent. The active mode owns the policy; the saved mode layout owns visibility and header choices. Main always remains available as page context. Side and Bottom remain global within the mode.
+Each permission is independent. The active mode owns the policy; the saved mode layout owns panel visibility and geometry. Header choices belong to each page layout. Main always remains available as page context. Side and Bottom remain global within the mode.
 
 | Region setting | Behavior |
 | --- | --- |
@@ -109,7 +111,7 @@ These optional booleans default to true. Unavailable panels reject opening and d
 
 `floatingPanels` is deprecated in favor of `regionSettings.side.floatable`. Panel `collapsible` is deprecated in favor of `canOpen`/`canClose`; it keeps its legacy drag-collapse behavior, including explicit Show/Hide, when new permissions are omitted. Panel menus still support `collapsible`. Publish this additive SDK and host release before adopting the new fields in separately released extensions.
 
-Right-click a header, press Shift+F10 or the Context Menu key while it has focus, or touch and hold to hide it. Its hidden top edge offers the same ways to show it. Header choices persist in the mode layout and reset with layout reset. Showing a header grants no other permission. The same header and tab rules apply to host and extension pages.
+Right-click a header, press Shift+F10 or the Context Menu key while it has focus, or touch and hold to hide it. Its hidden top edge offers the same ways to show it. Header choices persist per project and page, across that page's resource routes, and reset with layout reset. The choice applies when selected, before another page can become active. Showing a header grants no other permission. The same header and tab rules apply to host and extension pages.
 
 Optional panels still collapse when their final tab closes or moves away. An explicit empty-panel open does not exempt a later final-tab close. Related placement, manual closure and revisit keep the [related-opening rules](0019-related-resource-openings.md). No page Side/Bottom layer or page panel snapshots are added.
 

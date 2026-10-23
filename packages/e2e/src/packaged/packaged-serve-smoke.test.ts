@@ -75,6 +75,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Navigation metadata preserves page header defaults, placeholder breadcrumb actions and independent panel capabilities through the compiled host.
 // packaged-session-placeholder.spec.ts checks creation, closure and switching from the empty Sessions page.
+// packaged-empty-panels.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";

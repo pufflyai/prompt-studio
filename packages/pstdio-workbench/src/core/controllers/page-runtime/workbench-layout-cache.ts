@@ -13,6 +13,7 @@ import { pageResourceContextKey } from "../../registries/pages/page-resource-con
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createWorkbenchInput, WorkbenchPagePersistenceScopeInput } from "../../workbench-core-types";
 import { createOpenPlacementInventory } from "./open-placement-inventory";
+import { createPageHeaderCache, restorePageHeaders } from "./page-header-layout";
 import { isDefaultPageMain } from "./page-layout-baseline";
 
 const selectPlacements = (
@@ -80,7 +81,7 @@ const legacyMainOwner = (input: {
   };
 };
 
-/** Main belongs to a page. Side and Bottom belong to one project/mode, regardless of their tabs' owners. */
+/** Main tabs and header choices belong to a page. Auxiliary tabs and geometry belong to its project/mode. */
 export const createWorkbenchLayoutCache = (
   input: createWorkbenchInput,
   getActiveMode: () => string | undefined = () => undefined,
@@ -122,6 +123,14 @@ export const createWorkbenchLayoutCache = (
       return true;
     });
   };
+  const clear = (scope: string, fallback: WorkbenchLayout) => {
+    runWorkbenchEffect(`remove default page layout for ${scope}`, () => {
+      if (adapter.removeLayout) adapter.removeLayout(scope);
+      else if (adapter.getLayout(scope)) adapter.setLayout(fallback, scope);
+    });
+    inventory.set(scope, adapter.removeLayout ? undefined : adapter.getLayout(scope));
+  };
+  const headers = createPageHeaderCache({ read, write, clear });
   const migratePageMain = (
     layout: WorkbenchLayout,
     context: WorkbenchPagePersistenceScopeInput,
@@ -182,20 +191,24 @@ export const createWorkbenchLayoutCache = (
       if (!context.pageId || !context.modeId) return layout;
       if (layout?.regions.main.widgets.length) migratePageMain(layout, context, page, scope);
       const main = read(mainScope(context, page));
-      if (!layout && !main) return undefined;
+      const pageHeaders = headers.load(context);
+      if (!layout && !main && !pageHeaders) return undefined;
       const base = layout ?? createDefaultWorkbenchLayout();
       const mainIds = new Set(main?.regions.main.widgets.map((tab) => tab.widgetId));
-      return {
-        ...base,
-        regions: {
-          ...base.regions,
-          main: main?.regions.main ?? { ...base.regions.main, widgets: [], activeWidgetId: undefined },
+      return restorePageHeaders(
+        {
+          ...base,
+          regions: {
+            ...base.regions,
+            main: main?.regions.main ?? { ...base.regions.main, widgets: [], activeWidgetId: undefined },
+          },
+          activeWidgetId: mainIds.has(main?.activeWidgetId ?? "") ? main?.activeWidgetId : base.activeWidgetId,
+          activeLocationWidgetId: mainIds.has(main?.activeLocationWidgetId ?? "")
+            ? main?.activeLocationWidgetId
+            : base.activeLocationWidgetId,
         },
-        activeWidgetId: mainIds.has(main?.activeWidgetId ?? "") ? main?.activeWidgetId : base.activeWidgetId,
-        activeLocationWidgetId: mainIds.has(main?.activeLocationWidgetId ?? "")
-          ? main?.activeLocationWidgetId
-          : base.activeLocationWidgetId,
-      };
+        pageHeaders,
+      );
     },
     savePageMain(
       context: WorkbenchPagePersistenceScopeInput,
@@ -204,6 +217,7 @@ export const createWorkbenchLayoutCache = (
       beforePreviewRemoval = layout,
     ) {
       if (!context.pageId || !context.modeId) return;
+      headers.save(context, layout);
       const scope = mainScope(context, page);
       const snapshot = selectPlacements(layout, (_widget, region) => region === "main");
       if (
@@ -211,14 +225,9 @@ export const createWorkbenchLayoutCache = (
         (beforePreviewRemoval !== layout &&
           isDefaultPageMain(page, context.resource, beforePreviewRemoval, input.pageResources))
       ) {
-        runWorkbenchEffect(`remove default page layout for ${scope}`, () => {
-          if (adapter.removeLayout) adapter.removeLayout(scope);
-          // Adapters without deletion can still replace an existing override.
-          else if (adapter.getLayout(scope)) adapter.setLayout(snapshot, scope);
-        });
         // The live layout owns its default tabs. Saving a baseline must not
         // turn a visited page into another owner after that tray is replaced.
-        inventory.set(scope, adapter.removeLayout ? undefined : adapter.getLayout(scope));
+        clear(scope, snapshot);
       } else write(snapshot, scope);
     },
     removeResource(resource: ResourceRef) {

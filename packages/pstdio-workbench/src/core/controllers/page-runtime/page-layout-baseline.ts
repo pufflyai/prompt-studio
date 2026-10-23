@@ -68,8 +68,8 @@ export const isDefaultPageMain = (
   if (!main.widgets.every((widget, index) => matchesDefault(widget, expected[index].value, page))) return false;
   const selected = main.widgets.find((widget) => widget.widgetId === main.activeWidgetId) ?? main.widgets[0];
   const primary = expected.find((placement) => placement.value.role === "primary") ?? expected[0];
-  // Main geometry belongs to the mode. Page overrides only own tray membership,
-  // ordering, pinning, and selection; live labels and contribution providers are derived.
+  // Mode geometry is independent of page tray membership, ordering, pinning,
+  // and selection. Header choices are checked separately by the page cache.
   return selected?.placementIdentity && primary
     ? placementIdentityKey(selected.placementIdentity) === placementIdentityKey(primary.identity)
     : !selected && !primary;

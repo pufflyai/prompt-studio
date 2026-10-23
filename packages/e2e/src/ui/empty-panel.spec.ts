@@ -24,6 +24,12 @@ test("empty panels offer the same permitted tabs as Add panel", async ({ page })
   }
 });
 
+test("default tab cards wait while selecting a declared mode", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, `${prefix}selecting-mode`));
+  await waitForStoryPlayback(page);
+  await expect(page.getByRole("group", { name: "Available tabs" })).toHaveCount(0);
+});
+
 for (const region of ["main", "side", "bottom"]) {
   test(`a card opens a tab in ${region}`, async ({ page }) => {
     await page.goto(storyUrl(baseUrl, `${prefix}open-in-${region}`));
