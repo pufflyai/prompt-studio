@@ -6,6 +6,10 @@ export const sessionRecord = (
   input: Pick<Session, "id" | "title" | "status"> & Partial<Session> & { type?: "session" },
 ) => ({
   type: "session" as const,
+  projectId: "proj-1",
+  agentSessionId: null,
+  sessionFileId: null,
+  params: null,
   archived: false,
   agent: null,
   cwd: null,

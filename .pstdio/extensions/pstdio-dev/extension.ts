@@ -2,6 +2,7 @@ import {
   defineCommand,
   defineExtension,
   defineHook,
+  defineKeybinding,
   defineSchedule,
   defineSkill,
   packageAsset,
@@ -167,6 +168,23 @@ export default defineExtension({
     openInIsolationCommand,
     stopIsolationCommand,
     repairRemovedCommand,
+  ],
+  keybindings: [
+    ...(
+      [
+        ["open", "O", openInVscodeCommand],
+        ["isolate", "I", openInIsolationCommand],
+        ["stop", "S", stopIsolationCommand],
+        ["discover", "D", discoverHighImpactIssuesCommand],
+      ] as const
+    ).map(([id, key, command]) =>
+      defineKeybinding({
+        id: `keyboard-${id}`,
+        layer: "extensions",
+        key,
+        action: { kind: "command", target: { command: command.ref } },
+      }),
+    ),
   ],
   skills: [
     defineSkill({

@@ -9,6 +9,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { commands } from "./src/commands";
 import { libraryTarget } from "./src/contracts";
+import { artifactShortcuts } from "./src/keyboard";
 import { sites } from "./src/mounts";
 import { artifact, artifactPanel, detail, library, libraryPanel, view } from "./src/pages";
 import { artifactResources } from "./src/resources";
@@ -23,7 +24,10 @@ export default defineExtension({
   views: [view],
   placements: [libraryPanel, artifactPanel],
   pages: [library, detail],
-  keybindings: [defineKeybinding({ id: "open-artifacts", key: "Alt+Shift+A", action: libraryTarget })],
+  keybindings: [
+    ...artifactShortcuts,
+    defineKeybinding({ id: "open-artifacts", key: "Alt+Shift+A", action: libraryTarget }),
+  ],
   navigationItems: [
     defineNavigationItem({
       id: "artifacts",

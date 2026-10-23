@@ -36,7 +36,7 @@ const create = defineCommand({
     group: params.text({ required: true }),
     description: params.text(),
     duration: params.number(),
-    canvas: params.json(),
+    canvas: params.json<JsonValue>(),
   },
   async run(ctx, input) {
     const id = studyId.parse(input.id);
@@ -92,3 +92,5 @@ export const studyCommands = {
   "study.delete": remove,
   "studies.refresh": refresh,
 };
+
+import type { JsonValue } from "@pstdio/sdk/extensions";

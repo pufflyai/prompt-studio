@@ -1,4 +1,4 @@
-import { defineExtension, type ViewContribution } from "@pstdio/sdk/extensions";
+import { defineExtension, defineKeybinding, type ViewContribution } from "@pstdio/sdk/extensions";
 import { marmaladeCommands } from "./src/apps/marmalade/marmalade-commands";
 import boombox from "./src/examples/boombox";
 import kiln from "./src/examples/kiln";
@@ -19,5 +19,16 @@ export default defineExtension({
   resourceKinds: examples.flatMap((example) => example.resourceKinds),
   views: examples.flatMap<ViewContribution>((example) => example.views),
   pages: examples.flatMap((example) => example.pages),
+  keybindings: examples.flatMap((example, index) =>
+    example.pages.slice(0, 1).map((page) =>
+      defineKeybinding({
+        id: `keyboard-example-${index}`,
+        layer: "extensions",
+        key: String(index + 1),
+        sticky: true,
+        action: { kind: "page", page: page.ref },
+      }),
+    ),
+  ),
   navigationItems: examples.flatMap((example) => example.navigationItems),
 });

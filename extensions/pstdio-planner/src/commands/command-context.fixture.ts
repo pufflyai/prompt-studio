@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { type CommandContextInput, makeCommandContext as makeContext } from "@pstdio/sdk/testing";
 import { ticketContext } from "../data/ticket-context.fixture";
+import { sessionRecord } from "./session-record.fixture";
 
 export { commandParamsFor } from "@pstdio/sdk/testing";
 export const defaultProjectRoot = resolve("/repo");
@@ -77,9 +78,9 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
 export const makeCommandArgs = <TParams extends Record<string, unknown>>(input: CommandContextInput<TParams>) =>
   [makeCommandContext(input), input.params] as const;
 
-export const createSessionResource = () => ({
-  type: "session" as const,
-  id: "session-1",
-  title: "Session",
-  status: "in_progress" as const,
-});
+export const createSessionResource = () =>
+  sessionRecord({
+    id: "session-1",
+    title: "Session",
+    status: "in_progress" as const,
+  });
