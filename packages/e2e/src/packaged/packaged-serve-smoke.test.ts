@@ -34,7 +34,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // packaged-command-palette.spec.ts checks theme selection from the palette and persistence after reload.
 // packaged-main-fullscreen.spec.ts checks Main fullscreen, its minimized Side bubble, keyboard exit and reload state.
 // Desktop packaged-project-tabs.spec.ts checks the title-bar maximize control and focus after fullscreen exit.
-// Core extension checks cover Notes ownership, Planner archive filters and commands,
+// Core extension checks cover Notes ownership, Planner canvas-first refinement policy, archive filters and commands,
 // grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 // Document sync checks local, synced and needs-attention states plus strict leaf uploads to an older relay.

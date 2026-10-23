@@ -20,6 +20,10 @@ Name what gets better for the person, not the code change. Someone should unders
 | Add retry to upload client | Finish uploads when the connection drops briefly |
 | Add revocable consumer grants to browser previews | Choose who can see previews |
 
+## UI designs
+
+Before saving a new ticket that adds or changes UI, read `pst pstdio-planner refinement-policy`. When `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant live design first. Preserve existing previews and add named variations when comparing alternatives. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically. If the option is off, record why the design step was skipped. Resolve policy-read failures before finishing.
+
 ## Workflow
 
 1. List the available statuses, tags, and ticket templates with `pst statuses list`, `pst tags list`, and `pst tickets templates`. Do not assume their names. Use `pst tickets list` to check for related work. See [Tags and statuses](https://prompt.studio/docs/extensions/planner/tags-and-statuses/).

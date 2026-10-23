@@ -92,8 +92,10 @@ Clearly describe it as a temporary workaround, not the intended design.
 
 ## Visual design rules
 
+- Before creating or implementing a ticket that adds or changes UI, update the relevant design in the Canvas extension. Follow its `canvas` skill. Link the canvas page, exact preview names, and source paths in the ticket. Canvas designs replace artifact prototypes for this workflow.
+- Canvas source lives in `.pstdio/extensions/canvas/src/canvases/`. Preserve existing designs and stable IDs. Pencil remains the reference for designs that have not yet moved to a canvas.
 - Read [design/DESIGN.md](design/DESIGN.md) before working on UI or design. Follow its shared interaction patterns.
-- Pencil `.pen` designs define how the `@pstdio/ui` component library must look. This includes colors, text styles, spacing, corner roundness, component states, and layout. Make the code match the design.
+- Live canvases define the designs that have moved from Pencil. For other sections, Pencil `.pen` designs define how the `@pstdio/ui` component library must look. This includes colors, text styles, spacing, corner roundness, component states, and layout. Make the code match its current design reference.
 - The main design system file is [`design/prompt-studio-design-system.pen`](design/prompt-studio-design-system.pen). Open and edit `.pen` files only with the Pencil CLI. Never edit them by hand.
 - Website and landing page frames live in [`design/prompt-studio-website.pen`](design/prompt-studio-website.pen). Pencil cannot share components between files, so this file keeps copies of the design-system components it uses. Update those copies when the design system changes.
 - If the design and code do not match, update the code to match the design. If the design is wrong, fix it in Pencil first, then update the code.
