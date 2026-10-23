@@ -16,7 +16,7 @@ const outcome = (operationId: string) => ({
 });
 
 /** The record operations available while a transaction holds the owner lock. */
-interface LockedRecords {
+export interface LockedRecords {
   read(id: string): Promise<StorageRecord>;
   commit(group: GroupCommit): Promise<{ operationId: string; state: "saved-locally"; status: "saved-locally" }>;
 }

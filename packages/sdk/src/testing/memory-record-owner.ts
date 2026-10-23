@@ -23,7 +23,9 @@ export const createMemoryRecordOwner = (
 ) => {
   const owner = { workbenchId: crypto.randomUUID(), extensionId: "test-extension", ...identity };
   const baseStore = createMemoryDocumentStore();
-  const seedStorage = createLegacyRecordStorage({ records: createDocumentStorage({ store: baseStore, owner }).records }).scope("project", owner.workbenchId);
+  const seedStorage = createLegacyRecordStorage({
+    records: createDocumentStorage({ store: baseStore, owner }).records,
+  }).scope("project", owner.workbenchId);
   const initialized = Promise.all([
     createDocumentStorage({ owner, store: baseStore }).records.defineIndexes(seed.indexes ?? []),
     ...Object.entries(seed.kv ?? {}).map(([key, value]) => seedStorage.kv.set(key, value as never)),
