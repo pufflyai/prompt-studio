@@ -1,7 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { setDashboardExtensionsReadyProject } from "@/shared/extensions/extension-readiness";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createBootstrapModule } from "./bootstrap";
@@ -40,11 +39,11 @@ describe("createBootstrapModule", () => {
 
     try {
       await flushMicrotasks();
-      expect(activeViewId(workbench)).toBe(dashboardWidgetIds.start);
+      expect(workbench.pages.store.getState().activePageId).toBe("start");
 
       setDashboardExtensionsReadyProject(workbench, "project-1");
       await flushMicrotasks();
-      expect(activeViewId(workbench)).toBe(dashboardWidgetIds.start);
+      expect(workbench.pages.store.getState().activePageId).toBe("start");
     } finally {
       bootstrap.dispose();
       start.dispose();
@@ -103,9 +102,8 @@ describe("createBootstrapModule", () => {
         loading.resolve(metadata);
         await flushMicrotasks();
         await flushMicrotasks();
-        expect(activeViewId(workbench)).toBe(
-          navigateAway ? dashboardWidgetIds.start : "pstdio.extension-lab.view.labPage",
-        );
+        if (navigateAway) expect(workbench.pages.store.getState().activePageId).toBe("start");
+        else expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labPage");
       } finally {
         bootstrap.dispose();
         extensions.dispose();

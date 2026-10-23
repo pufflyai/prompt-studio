@@ -56,6 +56,8 @@ When Main has no tabs, its placeholder offers **Reopen**, or **Move back** if th
 
 During the deprecation window, older extension collections keep their first `fixed` Main slot as their landing slot. New declarations should name `main.landing` explicitly.
 
+Start uses its home content as `main.empty`, with no initial tabs or landing slot. Its Main header defaults to hidden. A saved user header choice still wins, and dropping a tool tab into Main reveals the header through the shared move behavior.
+
 Right-click, Shift+F10, the Context Menu key, and touch long-press open the same grouped tab menu. Normal clicks select. Preview and pinned tabs can appear in any order. Pin and Unpin change retention without changing position. Alt+Left and Alt+Right reorder the focused tab.
 
 Resource tabs begin with the same resource-owned action group as navigation and breadcrumbs. A placement's `tab` query adds independent custom groups, such as the Sessions controls. Each group has `rows` and can have a localized `label`. Session switching opens a separate resource search modal. Shared Tab controls follow these groups. Keep resource operations in resource menu slots so they are available on every surface.

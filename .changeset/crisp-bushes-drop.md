@@ -4,4 +4,4 @@
 "@pstdio/sdk": minor
 ---
 
-Show closable page tabs, recover empty Main content, resolve page header defaults, and reveal headers on tab drops.
+Show closable page tabs, recover empty Main content, use home content as Start's placeholder, and reveal headers on tab drops.

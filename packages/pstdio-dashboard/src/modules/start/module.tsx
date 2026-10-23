@@ -32,13 +32,13 @@ export const createStartModule = () =>
         icon: dashboardViews.start.icon,
         path: "",
         modeId: "project",
+        regionSettings: { main: { showHeader: false } },
         main: {
-          kind: "view",
-          view: {
+          kind: "panels",
+          empty: {
             kind: "view",
             id: dashboardWidgetIds.start,
           },
-          cardinality: "one",
         },
         slots: [],
       });

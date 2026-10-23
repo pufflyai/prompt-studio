@@ -45,6 +45,8 @@ test("adding a tool keeps the other empty panel open", async () => {
     phase("signed in; open project");
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
     await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+    await expect(page.locator('[data-workbench-panel="main"]').getByRole("tab")).toHaveCount(0);
+    await expect(page.getByLabel("Main header edge", { exact: true })).toBeVisible();
     phase("project ready; check panel additions");
     await test.step("Add tools while preserving the other empty panel", () => verifyEmptyPanelAddition(page));
     phase("panel additions checked");

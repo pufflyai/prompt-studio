@@ -3,10 +3,6 @@ import { expect, type Page } from "@playwright/test";
 export const verifyPanelInsertionTargets = async (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
   const mainHeader = page.getByLabel("Main panel header", { exact: true });
-  await expect(main.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
-  await mainHeader.focus();
-  await mainHeader.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
   const edge = page.getByLabel("Main header edge", { exact: true });
   await expect(edge).toBeVisible();
   await edge.focus();
@@ -14,7 +10,9 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
   await edge.press("Shift+F10");
   await expect(page.getByRole("menuitem", { name: "Show header", exact: true })).toBeVisible();
   await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
-  await expect(main.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
+  await mainHeader.getByRole("button", { name: "Add panel", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+  await expect(main.getByRole("tab", { name: "Terminal", exact: true })).toBeVisible();
   for (const [region, edge] of [
     ["side", "left"],
     ["secondary", "top"],
@@ -84,7 +82,7 @@ const verifyDropRestoresHeader = async (page: Page) => {
   await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
   const hiddenEdge = page.getByLabel("Main header edge", { exact: true });
   for (const cancel of [true, false]) {
-    const tab = page.locator('[data-workbench-panel="secondary"]').getByRole("tab", { name: "Start", exact: true });
+    const tab = page.locator('[data-workbench-panel="secondary"]').getByRole("tab", { name: "Terminal", exact: true });
     const source = (await tab.boundingBox())!;
     const target = (await main.boundingBox())!;
     await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
@@ -96,11 +94,11 @@ const verifyDropRestoresHeader = async (page: Page) => {
     if (cancel) await expect(hiddenEdge).toBeVisible();
   }
   await expect(header).toBeVisible();
-  await expect(main.getByRole("tab", { name: "Start", exact: true })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("tab", { name: "Start", exact: true })).toHaveCount(1);
+  await expect(main.getByRole("tab", { name: "Terminal", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Terminal", exact: true })).toHaveCount(1);
   await page.reload();
   await expect(header).toBeVisible();
-  await expect(main.getByRole("tab", { name: "Start", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(main.getByRole("tab", { name: "Terminal", exact: true })).toHaveAttribute("aria-selected", "true");
 };
 
 const verifyNearbyTabTargets = async (page: Page) => {
@@ -122,7 +120,7 @@ const verifyNearbyTabTargets = async (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
   await expect(page.getByLabel("Main panel header", { exact: true })).not.toHaveAttribute("data-panel-draggable");
   const bounds = (await main.boundingBox())!;
-  const tab = main.getByRole("tab", { name: "Start", exact: true });
+  const tab = main.getByRole("tab", { name: "Terminal", exact: true });
   const source = (await tab.boundingBox())!;
   await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
   await page.mouse.down();
@@ -164,7 +162,7 @@ const verifyNearbyTabTargets = async (page: Page) => {
     ["side", "secondary", "bottom"],
   ]) {
     const sourceTab = page.locator(`[data-workbench-panel="${sourceRegion}"]:visible`).getByRole("tab", {
-      name: "Start",
+      name: "Terminal",
       exact: true,
     });
     await sourceTab.hover();
@@ -177,7 +175,7 @@ const verifyNearbyTabTargets = async (page: Page) => {
     await page.locator(`[data-workbench-edge-hit="${region}"][data-workbench-edge-position="${position}"]`).hover();
     await page.mouse.up();
     const moved = page.locator(`[data-workbench-panel="${region}"]:visible`);
-    await expect(moved.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
+    await expect(moved.getByRole("tab", { name: "Terminal", exact: true })).toBeVisible();
     await expect
       .poll(async () => {
         const panel = (await moved.boundingBox())!;
@@ -189,16 +187,16 @@ const verifyNearbyTabTargets = async (page: Page) => {
   }
   await page.reload();
   const bottom = page.locator('[data-workbench-panel="secondary"]:visible');
-  await expect(bottom.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
+  await expect(bottom.getByRole("tab", { name: "Terminal", exact: true })).toBeVisible();
   await expect.poll(async () => (await bottom.boundingBox())!.y < (await main.boundingBox())!.y).toBe(true);
 };
 
 const verifyLastTabPanelMove = async (page: Page, region: string, position: string) => {
   const panel = page.locator(`[data-workbench-panel="${region}"]:visible`);
-  const tab = panel.getByRole("tab", { name: "Start", exact: true });
+  const tab = panel.getByRole("tab", { name: "Terminal", exact: true });
   // Earlier checks leave a session in Bottom. Close it through its tab menu
   // only after the existing destination-content checks have completed.
-  const others = panel.getByRole("tab").filter({ hasNotText: "Start" });
+  const others = panel.getByRole("tab").filter({ hasNotText: "Terminal" });
   for (let remaining = await others.count(); remaining > 0; remaining--) {
     await others.first().focus();
     await page.keyboard.press("Shift+F10");
