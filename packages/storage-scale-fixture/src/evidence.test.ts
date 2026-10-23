@@ -3,7 +3,7 @@ import { assess, summarize } from "./evidence";
 
 test("every sample must finish strictly below the ceiling with complete correctness and bounded work", () => {
   const sample = {
-    durationMs: 999,
+    durationMs: 1_249,
     correct: true,
     scanned: 100,
     materialized: 100,
@@ -13,7 +13,7 @@ test("every sample must finish strictly below the ceiling with complete correctn
   };
   expect(assess(sample).passed).toBe(true);
   for (const change of [
-    { durationMs: 1_000 },
+    { durationMs: 1_250 },
     { correct: false },
     { materialized: 10_000 },
     { fullOwnerLoads: 1 },

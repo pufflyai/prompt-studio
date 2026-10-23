@@ -1,29 +1,26 @@
 import { strict as assert } from "node:assert";
-import { cpSync, mkdirSync, rmSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import {
   assertBenchmarkWorker,
   assertMeasurementWindow,
   createRow,
   measure,
-  runBenchmarkEntrypoint,
-  seedOwner,
+  type seedOwner,
   type Workload,
 } from "storage-scale-fixture";
 import { createDb } from "../../db/connection.pglite";
-import { projects } from "../../db/schemas.pg";
+import { runDatabaseScaleEntrypoint } from "./database-scale-entrypoint";
 import { createDocumentStorageDBService } from "./document-storage";
 
 const projectId = "00000000-0000-4000-8000-000000000903";
 const address = { workbenchId: projectId, extensionId: "scale.owner" };
 
 // This owns a disposable database, never the running application's data directory.
-export const benchmarkDatabase = async (kind: Workload, count: number, root: string, phase: string) => {
+export const benchmarkDatabase = async (kind: Workload, count: number, root: string) => {
   assertBenchmarkWorker();
   const lease = assertMeasurementWindow();
   console.log(JSON.stringify({ phase: "timing-window", lease }));
-  mkdirSync(root, { recursive: true });
   const opened = await measure(() => createDb({ path: join(root, "database") }));
   const { db, close } = opened.value;
   const emit = (name: string, data: object) =>
@@ -42,28 +39,6 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
   };
   try {
     emit("database-open", { ...opened, value: undefined });
-    if (phase === "seed") {
-      await db.insert(projects).values({
-        id: projectId,
-        name: "Scale",
-        shorthand: "SC",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
-      const seeded = await measure(() =>
-        seedOwner(target, kind, 0, count, false, (progress) => {
-          if (progress.completed % 1_000 === 0) emit("seed-progress", progress);
-        }),
-      );
-      emit("seed", seeded);
-      return;
-    }
-    if (phase === "churn") {
-      const churn = await measure(() => seedOwner(target, kind, 0, count, true, () => {}));
-      emit("churn", churn);
-      assert.equal((await storage.records.list()).length, count);
-      return;
-    }
     // The very first storage access after process restart is this write, with no read/export first.
     const row = createRow(kind, 0, 37, 3);
     const operationId = `first-write-${crypto.randomUUID()}`;
@@ -152,21 +127,4 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
   assertMeasurementWindow();
 };
 
-if (import.meta.main) {
-  const [kind, rows, root, phase, snapshot] = process.argv.slice(2);
-  if (
-    (kind !== "rich" && kind !== "small") ||
-    ![1_000, 10_000, 100_000].includes(Number(rows)) ||
-    !root ||
-    !["seed", "sample", "churn"].includes(phase)
-  )
-    throw new Error("Use rich|small 1000|10000|100000 <disposable-directory> seed|sample|churn");
-  await runBenchmarkEntrypoint(`database-${phase}`, async () => {
-    if (phase === "sample" && snapshot) {
-      console.log(JSON.stringify({ phase: "case-setup", action: "copy-closed-seed", status: "started" }));
-      rmSync(resolve(root), { recursive: true, force: true });
-      cpSync(resolve(snapshot), resolve(root), { recursive: true });
-    }
-    await benchmarkDatabase(kind, Number(rows), resolve(root), phase);
-  });
-}
+if (import.meta.main) await runDatabaseScaleEntrypoint(benchmarkDatabase);
