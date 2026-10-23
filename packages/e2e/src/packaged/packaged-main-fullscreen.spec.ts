@@ -50,6 +50,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
     const guest = page.frameLocator('iframe[title="Lab"]');
     await expect(guest.getByRole("heading", { name: "Sandbox webview", exact: true })).toBeVisible();
+    await page.locator('iframe[title="Lab"]').focus();
     await guest.locator("body").dispatchEvent("keydown", {
       key: "\u00a0",
       code: "Space",
