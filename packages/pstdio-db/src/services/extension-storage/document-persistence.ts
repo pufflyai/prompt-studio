@@ -150,7 +150,9 @@ export const runDocumentTransaction = async <T>(
     input.diagnostics,
   );
   const projection =
-    address.document_id === "records" ? await trackRecordProjection(tx, address, document, !!initialize) : undefined;
+    address.document_id === "records"
+      ? await trackRecordProjection(tx, address, document, !!initialize, row.revision)
+      : undefined;
   const identities =
     address.document_id === resourceNumbersDocumentId && address.extension_id === resourceNumbersOwnerId
       ? await trackResourceIdentityProjection(tx, address, document, !!initialize)

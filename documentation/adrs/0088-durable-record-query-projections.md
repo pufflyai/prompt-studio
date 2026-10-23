@@ -38,8 +38,12 @@ without having installed its local indexes. `records.defineIndexes` provides the
 same explicit installation boundary for host adapters and memory fixtures.
 Registration populates the projection and creates deterministic database indexes.
 Queries never register, rebuild or populate indexes. Re-registering unchanged
-definitions against a ready projection does no rebuild. Existing-data upgrade,
-interruption recovery and older-writer checks remain PS-906 acceptance work.
+definitions against a projection at the current source revision does no rebuild.
+An older writer can advance the source without updating derived rows. Reads and
+incremental writes reject that stale projection until explicit index installation
+rebuilds it atomically. A failed or interrupted rebuild preserves source data and
+operation identities for retry. Full-scale upgrade and offline merge acceptance
+remain PS-906 work.
 
 SQL applies the owner, optional address prefix, predicates, stable order and
 cursor before selecting fields and limiting the page to 100 records. The record
