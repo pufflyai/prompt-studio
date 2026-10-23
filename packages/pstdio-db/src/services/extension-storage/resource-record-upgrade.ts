@@ -59,8 +59,10 @@ export const upgradeOwnerRecords = (db: DbClient, owner: StorageOwner) =>
         .insert(storage_record_projections)
         .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId, revision: 0 })
         .onConflictDoNothing();
+      let live = 0;
       for (let offset = 0; offset < ids.length; offset += 500) {
         const saved = await Promise.all(ids.slice(offset, offset + 500).map((id) => readDocumentRecord(document, id)));
+        live += saved.filter((record) => !record.deleted).length;
         const prepared = await Promise.all(saved.map((record) => editResourceDocument([], recreate(record), true)));
         await persistResourceDocuments(
           tx,
@@ -101,7 +103,7 @@ export const upgradeOwnerRecords = (db: DbClient, owner: StorageOwner) =>
         .for("update");
       await tx
         .update(storage_record_projections)
-        .set({ revision: projection.revision + 1 })
+        .set({ revision: projection.revision + 1, live_count: live })
         .where(
           and(
             eq(storage_record_projections.workbench_id, owner.workbenchId),

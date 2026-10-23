@@ -1,8 +1,11 @@
 import { afterEach, expect, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/pglite";
 import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
 import * as Y from "yjs";
+import * as schema from "../../db/schemas.pg";
 import { storage_document_operations, storage_document_updates, storage_documents } from "../../db/schemas.pg";
+import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { resourceDocumentId } from "./resource-document-persistence";
@@ -140,4 +143,27 @@ test("records saved in an owner document move into their own documents once", as
   await records.commit({ operationId: "after", edits: [{ recordId: "note", replace: { title: "Edited" } }] });
   const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner });
   expect((await reopened.records.read("note")).value).toEqual({ title: "Edited" });
+});
+
+test("unfiltered totals follow live records without reading them", async () => {
+  const f = await fixture();
+  const statements: string[] = [];
+  const db = drizzle(f.db.$client, { schema, logger: { logQuery: (query) => statements.push(query) } });
+  const records = createDocumentStorageDBService(db as unknown as typeof f.db).open({ owner: f.owner }).records;
+  await records.defineIndexes([{ name: "all", fields: { n: { path: ["n"], type: "number" } } }]);
+  const total = async () => (await records.aggregate({ index: "all" })).count;
+  const seed = { operationId: "seed", edits: [1, 2, 3].map((n) => ({ recordId: `r${n}`, replace: { n } })) };
+  await records.commit(seed);
+  await records.commit(seed);
+  expect(await total()).toBe(3);
+  await records.commit({ operationId: "delete", edits: [{ recordId: "r1", deleted: true }] });
+  expect(await total()).toBe(2);
+  await records.commit({ operationId: "restore", edits: [{ recordId: "r1", deleted: false, replace: { n: 1 } }] });
+  await records.commit({ operationId: "edit", edits: [{ recordId: "r2", replace: { n: 20 } }] });
+  expect(await total()).toBe(3);
+  statements.length = 0;
+  await total();
+  expect(statements.filter((query) => query.includes("storage_current_records"))).toEqual([]);
+  await createExtensionUserDataDBService(f.db).deleteForInstance(f.instanceAId);
+  expect(await total()).toBe(0);
 });
