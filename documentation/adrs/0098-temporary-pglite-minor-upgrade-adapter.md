@@ -30,7 +30,7 @@ Keep the old engine and its matching dump tool isolated in a temporary upgrade w
 
 The transfer prototype uses a fixed 512-row CTID walk over an immutable source copy. It has no long-lived cursor across processes and no full table materialization in the host. Production must validate table/column coverage and errors; generated columns, user-defined objects and unusually large single values need explicit production coverage before broadening the supported data shape.
 
-The runtime must select `template1` and `postgres` explicitly. New empty and application-seeded images must come from the same engine assets and full ICU resource version as the runtime. The full ICU resource is necessary: the default small ICU data failed numeric/locale parity probes.
+The runtime must select `template1` and `postgres` explicitly. New empty and application-seeded images must come from the same engine assets as the runtime. The active engine must load the qualified full ICU resource: the default small ICU data failed numeric/locale parity probes. Empty source initialization uses the default ICU catalog to avoid loading full locale data twice inside initdb and populating hundreds of unused named collations. The active engine then loads full ICU and can create explicitly qualified query-local collations. This preserves the existing C/C.UTF-8 database locale and does not change legacy-home detection.
 
 ## Publication and recovery ownership
 

@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { PGlite as NextPGlite } from "@electric-sql/pglite";
 import { PGlite } from "pglite-previous";
+import { initializePglite } from "./open-pglite";
 import { exportPgliteDatabase, importPgliteDatabase } from "./pglite-transfer";
 
 // This worker only transforms private copies. Active-home ownership stays with createDb.
@@ -29,6 +30,7 @@ if (phase === "export") {
   const icu = engine
     ? join(engine, "icu.76.tgz")
     : join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
+  if (!engine) await initializePglite(database, { database: "template1", username: "postgres" });
   const db = await NextPGlite.create(database, {
     pgliteWasmModule: wasmModule,
     fsBundle,

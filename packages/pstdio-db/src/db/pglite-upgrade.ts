@@ -1,7 +1,7 @@
 import { cp, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { PGliteOptions } from "@electric-sql/pglite";
-import { openPglite } from "./open-pglite";
+import { initializePglite } from "./open-pglite";
 import { preparePgliteHome } from "./pglite-home-recovery";
 import { type EmbeddedEngineFile, resolveUpgradeWorker } from "./pglite-upgrade-assets";
 
@@ -21,12 +21,7 @@ export const prepareCurrentPgliteHome = async (options: {
       options.signal?.throwIfAborted();
       if (!source) {
         await mkdir(target);
-        const db = await openPglite(target, options.runtime, options.onImageRestored);
-        try {
-          await db.waitReady;
-        } finally {
-          await db.close();
-        }
+        await initializePglite(target, options.runtime, options.onImageRestored);
         options.signal?.throwIfAborted();
         return;
       }

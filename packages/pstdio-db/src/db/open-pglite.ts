@@ -35,3 +35,15 @@ export const openPglite = async (dataDir: string, options: PGliteOptions = {}, o
   }
   return new PGlite(dataDir, runtimeOptions);
 };
+
+export const initializePglite = async (dataDir: string, options: PGliteOptions, onImageRestored = () => {}) => {
+  // initdb otherwise loads full ICU twice and populates hundreds of unused named collations.
+  // The active engine still loads full ICU and creates explicitly qualified query collations.
+  const { icuDataDir: _icuDataDir, ...bootstrap } = options;
+  const db = await openPglite(dataDir, options.loadDataDir ? options : bootstrap, onImageRestored);
+  try {
+    await db.waitReady;
+  } finally {
+    await db.close();
+  }
+};

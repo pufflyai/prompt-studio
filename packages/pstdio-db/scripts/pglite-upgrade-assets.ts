@@ -17,7 +17,7 @@ export const buildPgliteUpgradeAssets = async (directory: string) => {
   const icu = join(next, "icu.76.tgz");
   // Preserve the package's actual data, rather than the default small ICU bundle.
   await cp(join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz"), icu);
-  const db = await PGlite.create({ database: "template1", username: "postgres", icuDataDir: Bun.file(icu) });
+  const db = await PGlite.create({ database: "template1", username: "postgres" });
   try {
     await db.exec("drop database postgres");
     await db.exec("alter database template0 is_template false");
