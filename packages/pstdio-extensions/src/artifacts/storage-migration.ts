@@ -99,12 +99,11 @@ const updateIgnore = async (repoRoot: string, owners: readonly ExtensionStorageO
 };
 /** Storage the user must resolve by hand. Other extensions' storage still migrates. */
 export class ExtensionStorageConflictError extends Error {
-  constructor(
-    readonly extensionIds: readonly string[],
-    causes: readonly Error[],
-  ) {
+  readonly extensionIds: readonly string[];
+  constructor(extensionIds: readonly string[], causes: readonly Error[]) {
     super(causes.map((cause) => cause.message).join("\n"));
     this.name = "ExtensionStorageConflictError";
+    this.extensionIds = extensionIds;
   }
 }
 
