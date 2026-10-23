@@ -1,8 +1,7 @@
 import type { FollowUpInput, HarnessParams } from "pstdio-api-contracts";
 import { createReadBoundary } from "pstdio-extensions";
-import { composeSummary } from "./compose-summary";
 import type { SessionsRouteDeps } from "./deps";
-import { getSessionMessages } from "./get-session-messages";
+import { buildFollowUpPrompt } from "./follow-up-prompt";
 import { resolveHarnessRunParams } from "./harness-params";
 import { QuestionReplyRejectedError, replyToLiveSessionQuestion } from "./live-question-reply";
 import { withResolvedSubmittingSessionAttachments } from "./session-attachments";
@@ -10,33 +9,6 @@ import { createSessionScheduler } from "./session-scheduler";
 import { updateExistingDispatchSelection } from "./session-scheduler-internals";
 
 type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["sessionService"]["get"]>>>;
-
-const buildFollowUpPrompt = async (
-  input: {
-    prompt?: string;
-    summary_from_session_id?: string;
-    summary_format?: "brief" | "detailed";
-    summary_role?: "assistant" | "all";
-  },
-  deps: SessionsRouteDeps,
-) => {
-  let prompt = input.prompt ?? "";
-
-  if (input.summary_from_session_id) {
-    const messages = await getSessionMessages(input.summary_from_session_id, deps);
-    const summary = composeSummary(messages, {
-      format: input.summary_format ?? "brief",
-      role: input.summary_role ?? "assistant",
-    });
-
-    if (summary) {
-      const block = `<session-summary>\n${summary}\n</session-summary>`;
-      prompt = prompt ? `${prompt}\n\n${block}` : block;
-    }
-  }
-
-  return prompt;
-};
 
 const resolveFollowUpParams = async (
   deps: SessionsRouteDeps,

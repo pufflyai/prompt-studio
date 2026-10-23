@@ -76,22 +76,28 @@ export const createRecordQueries = (
     if (!index) throw new Error(`Storage index not installed: ${name}`);
     return decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex;
   };
+  const documentRevision = async (connection: Pick<DbClient, "select">) => {
+    const [document] = await connection
+      .select({ revision: storage_documents.revision })
+      .from(storage_documents)
+      .where(
+        and(
+          eq(storage_documents.workbench_id, owner.workbenchId),
+          eq(storage_documents.extension_id, owner.extensionId),
+          eq(storage_documents.document_id, "records"),
+        ),
+      );
+    return document?.revision;
+  };
   const getRevision = async (connection: Pick<DbClient, "select">) => {
     const [projection] = await connection.select().from(projections).where(ownerWhere(projections));
+    const revision = await documentRevision(connection);
     if (!projection) {
-      const [document] = await connection
-        .select({ revision: storage_documents.revision })
-        .from(storage_documents)
-        .where(
-          and(
-            eq(storage_documents.workbench_id, owner.workbenchId),
-            eq(storage_documents.extension_id, owner.extensionId),
-            eq(storage_documents.document_id, "records"),
-          ),
-        );
-      if (!document) return "0";
+      if (revision === undefined) return "0";
       throw new Error("Storage projection is unavailable; install or upgrade its indexes");
     }
+    if (projection.revision !== revision)
+      throw new Error("Storage projection is out of date; install or upgrade its indexes");
     return String(projection.revision);
   };
   const api: StorageRecordQueries = {
@@ -107,6 +113,7 @@ export const createRecordQueries = (
       const [ready] = await db.select().from(projections).where(ownerWhere(projections));
       if (
         ready &&
+        ready.revision === (await documentRevision(db)) &&
         (await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json))
       )
         return;
@@ -193,13 +200,15 @@ export const createRecordQueries = (
     readMany: async (ids) => {
       if (ids.length > 100) throw new Error("A batch can read at most 100 records");
       if (!ids.length) return [];
-      await getRevision(db);
-      const rows = await db
-        .select()
-        .from(current)
-        .where(and(ownerWhere(current), inArray(current.record_id, ids)));
-      const byId = new Map(rows.map((row) => [row.record_id, asRecord(row)]));
-      return Promise.all(ids.map((id) => byId.get(id) ?? missingRecord(id)));
+      return db.transaction(async (tx) => {
+        await getRevision(tx);
+        const rows = await tx
+          .select()
+          .from(current)
+          .where(and(ownerWhere(current), inArray(current.record_id, ids)));
+        const byId = new Map(rows.map((row) => [row.record_id, asRecord(row)]));
+        return Promise.all(ids.map((id) => byId.get(id) ?? missingRecord(id)));
+      });
     },
   };
   return {

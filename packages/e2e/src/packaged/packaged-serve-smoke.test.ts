@@ -17,6 +17,8 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 import { registerPackagedChatMotionSmokeTests } from "./packaged-chat-motion-smoke";
 // Localized parameter guidance is readable in compiled CLI help.
 import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
+// Explicit live follow-ups capture their active run and never fall back to ordinary queued work.
+import { registerCliSteeringSmokeTests } from "./packaged-cli-steering-smoke";
 // Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
 import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 // OpenAPI publishes recursive command causes without expanding forever.
@@ -50,6 +52,8 @@ import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smo
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
 // scripts/verify/storage-package-consumer.ts checks the packaged SDK's two-device merge and replacement report.
 // Selected storage queries preserve case-insensitive text equality and negation through restart.
+// packaged-storage-upgrade.test.ts checks released 0.45 nested records, assets,
+// operation retries and tombstones through index installation and restart.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -315,6 +319,7 @@ registerResourceRemovalSmokeTests();
 registerQueuedRequestSmokeTests();
 
 registerSessionQuerySmokeTests();
+registerCliSteeringSmokeTests();
 // Migration smoke also checks stable import IDs, random UUIDv7 IDs, and core order positions.
 registerStorageMigrationSmokeTests();
 

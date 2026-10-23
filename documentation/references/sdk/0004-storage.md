@@ -166,6 +166,13 @@ durable projection and does not hydrate the owner's Yjs document. The memory tes
 API follows the same query behavior with its in-memory data. This read contract
 does not establish the separate cold-save and synchronization performance targets.
 
+The host checks that the projection revision matches the authoritative document.
+If an older host changes that document without maintaining the projection, reads
+and writes fail with an out-of-date projection error. Installing the same index
+definitions again explicitly rebuilds the projection. This repair is atomic: a
+failed rebuild leaves source records and operation identities intact, and the next
+installation can retry it. Normal reads never perform this backfill.
+
 ## Edits and outcomes
 
 A record can hold JSON in `value`, one shared primitive, an immutable asset
