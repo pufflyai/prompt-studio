@@ -33,6 +33,7 @@ export const preparePackagedSmokeBrowser = (platformPackage: PlatformPackage, bi
 const INTEL_MAC_ESSENTIAL_TESTS = [
   "src/packaged/packaged.test.ts",
   "src/packaged/runtime-lifecycle.test.ts",
+  "src/packaged/performance-observer.test.ts",
   "src/packaged/npm-entrypoint.test.ts",
   "src/packaged/harness-npm-detection.test.ts",
   "src/packaged/codex-transport.test.ts",
@@ -48,6 +49,7 @@ export const resolvePackagedRuntimeTestArgs = (platformPackage: PlatformPackage)
 
   const tests = [
     "src/packaged/runtime-lifecycle.test.ts",
+    "src/packaged/performance-observer.test.ts",
     "src/packaged/harness-npm-detection.test.ts",
     "src/packaged/codex-transport.test.ts",
   ];

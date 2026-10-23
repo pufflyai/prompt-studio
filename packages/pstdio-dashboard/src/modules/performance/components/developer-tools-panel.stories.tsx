@@ -41,7 +41,7 @@ const DeveloperToolsNavigation = () => {
   const [workbench] = useState(() => {
     const next = createWorkbench();
     next.registerModule(createSettingsModule());
-    next.registerModule(createPerformanceModule());
+    next.registerModule(createPerformanceModule(next.settings));
     void next.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "developer-tools" });
     return next;
   });
