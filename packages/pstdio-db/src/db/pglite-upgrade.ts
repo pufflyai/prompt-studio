@@ -1,0 +1,51 @@
+import { cp, mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import type { PGliteOptions } from "@electric-sql/pglite";
+import { openPglite } from "./open-pglite";
+import { preparePgliteHome } from "./pglite-home-recovery";
+import { type EmbeddedEngineFile, resolveUpgradeWorker } from "./pglite-upgrade-assets";
+
+import { runUpgradeWorker } from "./pglite-upgrade-process";
+
+export const prepareCurrentPgliteHome = async (options: {
+  activePath: string;
+  runtime: PGliteOptions;
+  embedded: readonly EmbeddedEngineFile[];
+  signal?: AbortSignal;
+  onImageRestored: () => void;
+}) => {
+  await preparePgliteHome({
+    activePath: options.activePath,
+    signal: options.signal,
+    prepare: async ({ source, target, work }) => {
+      options.signal?.throwIfAborted();
+      if (!source) {
+        await mkdir(target);
+        const db = await openPglite(target, options.runtime, options.onImageRestored);
+        try {
+          await db.waitReady;
+        } finally {
+          await db.close();
+        }
+        options.signal?.throwIfAborted();
+        return;
+      }
+      const worker = await resolveUpgradeWorker(options.embedded);
+      try {
+        const copy = join(work, "source");
+        const archive = join(work, "archive");
+        await cp(source, copy, { recursive: true });
+        const args = (phase: string, database: string) => [
+          phase,
+          database,
+          archive,
+          ...(worker.assets ? [worker.assets] : []),
+        ];
+        await runUpgradeWorker({ entry: worker.entry, args: args("export", copy), signal: options.signal });
+        await runUpgradeWorker({ entry: worker.entry, args: args("import", target), signal: options.signal });
+      } finally {
+        await worker.dispose();
+      }
+    },
+  });
+};

@@ -1,16 +1,19 @@
 import { cp, mkdir, readdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { PGlite } from "pglite-next";
+import { PGlite } from "@electric-sql/pglite";
 import { vendorPgliteAssets } from "./pglite-assets";
 
 const require = createRequire(import.meta.url);
 const packageRoot = (name: string) => dirname(require.resolve(`${name}/package.json`));
 
 export const buildPgliteUpgradeAssets = async (directory: string) => {
-  vendorPgliteAssets({ vendorDir: join(directory, "pglite"), pglitePackageDir: packageRoot("@electric-sql/pglite") });
-  const next = join(directory, "pglite-next");
-  vendorPgliteAssets({ vendorDir: next, pglitePackageDir: packageRoot("pglite-next") });
+  vendorPgliteAssets({
+    vendorDir: join(directory, "pglite-previous"),
+    pglitePackageDir: packageRoot("pglite-previous"),
+  });
+  const next = join(directory, "pglite");
+  vendorPgliteAssets({ vendorDir: next, pglitePackageDir: packageRoot("@electric-sql/pglite") });
   const icu = join(next, "icu.76.tgz");
   // Preserve the package's actual data, rather than the default small ICU bundle.
   await cp(join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz"), icu);

@@ -1,11 +1,14 @@
 import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 
 export const buildInitialDatabase = async (destination: string) => {
-  const db = await PGlite.create();
+  const require = createRequire(import.meta.url);
+  const icu = join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
+  const db = await PGlite.create({ database: "template1", username: "postgres", icuDataDir: Bun.file(icu) });
   try {
     await migrate(drizzle(db), { migrationsFolder: join(import.meta.dirname, "../drizzle") });
     // The runtime opens only template1. A first start writes every file in the image, which is slow

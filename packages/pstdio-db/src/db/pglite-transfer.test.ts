@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 import { mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PGlite } from "@electric-sql/pglite";
-import { PGlite as NextPGlite } from "pglite-next";
+import { PGlite as NextPGlite } from "@electric-sql/pglite";
+import { PGlite } from "pglite-previous";
 import { exportPgliteDatabase, importPgliteDatabase } from "./pglite-transfer";
 
 test("logical transfer preserves binary fields, nullable values, receipts, schema and sequence state", async () => {

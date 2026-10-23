@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import type { PGlite } from "@electric-sql/pglite";
 import { pgDump } from "@electric-sql/pglite-tools/pg_dump";
+import type { PGlite } from "pglite-previous";
 import {
   binaryInlineLimit,
   binarySliceBytes,
@@ -31,7 +31,12 @@ const assertSupportedSchema = async (db: PGlite) => {
 export const exportPgliteDatabase = async (db: PGlite, directory: string) => {
   await assertSupportedSchema(db);
   for (const section of ["pre-data", "post-data"]) {
-    const dump = await pgDump({ pg: db, args: ["--schema-only", `--section=${section}`] });
+    // The pinned dump tool runs against its matching old engine. Its nominal type
+    // resolves through the application's current peer; only this adapter crosses that boundary.
+    const dump = await pgDump({
+      pg: db as unknown as Parameters<typeof pgDump>[0]["pg"],
+      args: ["--schema-only", `--section=${section}`],
+    });
     await Bun.write(join(directory, `${section}.sql`), dump);
   }
   let nextFile = 0;

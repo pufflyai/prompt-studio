@@ -1,0 +1,99 @@
+import { expect, test } from "bun:test";
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { PGlite as CurrentPGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
+import { PGlite } from "pglite-previous";
+import { createDb } from "./connection.pglite";
+
+const checkLocale = async (db: Awaited<ReturnType<typeof createDb>>) => {
+  await db.pglite.exec(
+    "create collation if not exists exact_locale(provider=icu,locale='sv-SE-u-kn-true-ks-level1',deterministic=false)",
+  );
+  const labels = ["ä", "z", "a", "Item 10", "Item 2", "ö"];
+  const ordered = await db.pglite.query<{ label: string }>(
+    "select label from unnest($1::text[]) t(label) order by label collate exact_locale",
+    [labels],
+  );
+  expect(ordered.rows.map(({ label }) => label)).toEqual(
+    [...labels].sort(new Intl.Collator("sv-SE", { numeric: true, sensitivity: "base" }).compare),
+  );
+};
+
+test("createDb upgrades a closed legacy home and preserves records, retry receipts and later writes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pglite-runtime-upgrade-"));
+  const path = join(root, "database");
+  const old = await PGlite.create(path);
+  try {
+    // Drizzle's query interface is unchanged; this fixture deliberately uses the old engine.
+    await migrate(drizzle(old as unknown as CurrentPGlite), {
+      migrationsFolder: join(import.meta.dirname, "../../drizzle"),
+    });
+    await old.exec(
+      "create table retained_fixture(id text primary key, payload bytea); insert into retained_fixture values ('original','\\x00ff'); create table retained_receipts(id text primary key); insert into retained_receipts values ('same-operation')",
+    );
+  } finally {
+    await old.close();
+  }
+  try {
+    const upgraded = await createDb({ path });
+    try {
+      await checkLocale(upgraded);
+      expect(
+        (await upgraded.pglite.query("select id,encode(payload,'hex') payload from retained_fixture")).rows,
+      ).toEqual([{ id: "original", payload: "00ff" }]);
+      expect((await upgraded.pglite.query("select * from retained_receipts")).rows).toEqual([{ id: "same-operation" }]);
+      await upgraded.pglite.exec("insert into retained_fixture values ('later','\\x17ff')");
+    } finally {
+      await upgraded.close();
+    }
+    expect(JSON.parse(await readFile(join(path, ".pstdio-engine.json"), "utf8"))).toEqual({
+      format: 1,
+      engine: "pglite-0.4",
+    });
+    const reopened = await createDb({ path });
+    try {
+      expect((await reopened.pglite.query("select count(*)::int count from retained_fixture")).rows).toEqual([
+        { count: 2 },
+      ]);
+    } finally {
+      await reopened.close();
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("first creation and symlink opens share one canonical current-engine home", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pglite-runtime-initialize-"));
+  const directory = join(root, "homes");
+  const parentAlias = join(root, "parent-alias");
+  await mkdir(directory);
+  await symlink(directory, parentAlias, "junction");
+  const path = join(parentAlias, "database");
+  try {
+    const first = await createDb({ path });
+    try {
+      await checkLocale(first);
+      expect(first.path).toBe(join(await realpath(directory), "database"));
+    } finally {
+      await first.close();
+    }
+    const homeAlias = join(root, "home-alias");
+    await symlink(join(directory, "database"), homeAlias, "junction");
+    const second = await createDb({ path: homeAlias });
+    try {
+      expect(second.path).toBe(join(await realpath(directory), "database"));
+      expect(JSON.parse(await readFile(join(homeAlias, ".pstdio-engine.json"), "utf8"))).toEqual({
+        format: 1,
+        engine: "pglite-0.4",
+      });
+    } finally {
+      await second.close();
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -2,7 +2,7 @@
 
 Proposed: 2026-10-23
 
-Status: Proposed. The isolated transfer and recovery modules are implemented and tested. They are not connected to application startup. Qualification covers the released fixture and synthetic transfer cases below.
+Status: Proposed. The transfer, recovery and startup integration are implemented with focused local tests. Packaged host and cross-platform qualification remain open. Qualification covers the released fixture and synthetic transfer cases below.
 
 ## Context
 
@@ -65,7 +65,7 @@ Remove the old-engine adapter and its assets when the supported upgrade policy n
 
 ## Recovery states
 
-The isolated recovery module enforces these states when called under the existing external database lock. The application does not call it yet. They describe a process-interruption protocol; they do not claim power-loss qualification.
+The recovery module enforces these states under the existing external database lock. They describe a process-interruption protocol; they do not claim power-loss qualification.
 
 The sibling transfer directory owns an immutable source copy, archive and candidate target. Publication moves the original active home into that directory, then moves the verified target into the active path. The engine identity travels inside the verified target. There is no separately mutable phase flag.
 
@@ -90,8 +90,18 @@ The tests terminate real child processes at the staging, verification, two publi
 
 ## Isolated implementation checkpoint
 
-The private transfer module and bundled child now implement schema-only dump, ordinary COPY chunks, sliced bytea transfer, sequence state and chunk/value SHA256 checks. They are not connected to active-home startup. The current application schema and an actual released0.45 copy both pass complete schema/value comparisons through this module.
+The private transfer module and bundled child implement schema-only dump, ordinary COPY chunks, sliced bytea transfer, sequence state and chunk/value SHA256 checks. The current application schema and an actual released0.45 copy both pass complete schema/value comparisons through this module.
 
 Generated columns and CHECK constraints involving bytea are rejected before publishing an archive, because temporary binary placeholders cannot preserve those rules. Large bytea also requires a non-binary primary key. These shapes are absent from the qualified application schemas; the adapter is not a generic database migration framework.
 
 Ordinary row chunks and binary slices bound payload handling, but the manifest retains file descriptors, table metadata and large-value locators. That metadata grows with the number of chunks and values. The measured memory results must not be described as a strict constant-space bound for arbitrary databases.
+
+## Startup integration
+
+`createDb` resolves an existing home through its real symlink target. For an absent home it resolves the existing canonical parent without creating the active directory. It then holds the same external SQLite lock through preparation, publication and the eventual open. The active runtime uses PGlite 0.4.6 with explicit `template1`/`postgres` and full ICU. The previous 0.3.16 engine is isolated behind an alias and is used only for the temporary export path and legacy fixtures.
+
+Legacy preparation copies the closed source before starting the exporter. The exporter exits before the importer starts. Packaged execution extracts the bundled worker and matching assets into an owned temporary directory; source execution uses the declared package assets. No new engine opens the legacy active directory. A cancelled or failed child prevents publication, and its exit is observed before temporary assets are removed. Cancellation between renames leaves the original and verified candidate available for normal recovery.
+
+First creation initializes and closes a private new-engine home before publication. The active engine is then reopened and normal application migrations run. An application migration failure after publication never restores a stale legacy backup. Public `createDb` tests cover legacy records and receipts, subsequent writes, full ICU sorting, first creation and canonical symlink paths. These focused tests do not replace the pending packaged and platform checks.
+
+The pinned old dump tool's nominal engine type resolves through the application's current peer. A single type adaptation is isolated at that call; actual execution always receives the exact old engine version required by the tool. The old-schema test setup similarly uses Drizzle's unchanged query interface. No runtime engine object is cast to switch its behavior.

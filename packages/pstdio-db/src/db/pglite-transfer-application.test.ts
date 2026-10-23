@@ -2,10 +2,10 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PGlite } from "@electric-sql/pglite";
+import { PGlite as NextPGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import { PGlite as NextPGlite } from "pglite-next";
+import { PGlite } from "pglite-previous";
 import { exportPgliteDatabase, importPgliteDatabase } from "./pglite-transfer";
 import { quoteIdentifier, type TransferDatabase } from "./pglite-transfer-format";
 
@@ -37,7 +37,10 @@ test("the application schema transfers document bytes, receipts and all migratio
   const old = await PGlite.create();
   const next = await NextPGlite.create({ database: "template1", username: "postgres" });
   try {
-    await migrate(drizzle(old), { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+    // Build the original schema using the previous engine's compatible query interface.
+    await migrate(drizzle(old as unknown as NextPGlite), {
+      migrationsFolder: join(import.meta.dirname, "../../drizzle"),
+    });
     await old.exec(
       "insert into projects(id,name,shorthand,created_at,updated_at) values ('project','Original','P','2026-01-01','2026-01-02')",
     );

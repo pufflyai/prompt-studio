@@ -199,3 +199,36 @@ test("partial ownership and active engine identities fail without deleting unkno
     await rm(f.directory, { recursive: true, force: true });
   }
 });
+
+test("cancellation between renames leaves a recoverable original and does not publish early", async () => {
+  const f = await fixture(true);
+  const release = acquirePgliteLock(f.active);
+  const controller = new AbortController();
+  try {
+    await expect(
+      preparePgliteHome({
+        activePath: f.active,
+        signal: controller.signal,
+        prepare: async ({ target }) => {
+          await mkdir(target);
+          await writeFile(join(target, "record"), "original value");
+        },
+        onPhase: (phase) => {
+          if (phase === "original-moved") controller.abort(new Error("cancelled publication"));
+        },
+      }),
+    ).rejects.toThrow("cancelled publication");
+    expect(await Bun.file(join(f.active, "record")).exists()).toBe(false);
+    expect(await readFile(join(f.transition, "original", "record"), "utf8")).toBe("original value");
+    await preparePgliteHome({
+      activePath: f.active,
+      prepare: async () => {
+        throw new Error("verified candidate already exists");
+      },
+    });
+    expect(await readFile(join(f.active, "record"), "utf8")).toBe("original value");
+  } finally {
+    release();
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});

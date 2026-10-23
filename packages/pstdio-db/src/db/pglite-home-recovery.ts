@@ -87,6 +87,7 @@ const readOwner = async (work: string, active: string) => {
 
 interface Preparation {
   activePath: string;
+  signal?: AbortSignal;
   // Resolves only after the private target is verified and its engine is closed.
   // The source remains authoritative; preparation must read an owned copy of it.
   prepare: (paths: { source?: string; target: string; work: string }) => Promise<void>;
@@ -118,6 +119,7 @@ export const preparePgliteHome = async (options: Preparation) => {
     onPhase("cleanup-complete");
   };
   const publish = async (moveOriginal: boolean) => {
+    options.signal?.throwIfAborted();
     if (moveOriginal) {
       await rename(active, original);
       await flushDirectory(work);
@@ -126,6 +128,7 @@ export const preparePgliteHome = async (options: Preparation) => {
     } else {
       await removeEmptyHome(active);
     }
+    options.signal?.throwIfAborted();
     await rename(target, active);
     await flushDirectory(work);
     await flushDirectory(dirname(active));
@@ -178,6 +181,7 @@ export const preparePgliteHome = async (options: Preparation) => {
   await flushDirectory(dirname(work));
   onPhase("staging-created");
   await options.prepare({ source: state === "legacy" ? active : undefined, target, work });
+  options.signal?.throwIfAborted();
   if ((await homeState(target)) !== "legacy") throw new Error("Preparation must produce an unmarked nonempty database");
   await writeIdentity(join(target, engineFile), engineIdentity);
   onPhase("candidate-verified");
