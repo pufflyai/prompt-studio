@@ -27,7 +27,7 @@ export const runDatabaseScaleEntrypoint = async (
     );
   const root = resolve(path);
   const churn = phase === "prepare" ? sourceOrChurn === "churn" : churnOption === "churn";
-  const identity: PreparedFixtureIdentity = { format: "owner-document-v1", kind, count, churn };
+  const identity: PreparedFixtureIdentity = { format: "resource-documents-v1", kind, count, churn };
   const emit = (event: object) => console.log(JSON.stringify(event));
   if (phase === "prepare") {
     if (sourceOrChurn && sourceOrChurn !== "churn") throw new Error("Unknown preparation option");
@@ -47,7 +47,7 @@ export const runDatabaseScaleEntrypoint = async (
       root,
       snapshot: resolve(sourceOrChurn),
       identity,
-      name: `database-owner-document-v1-${kind}-${count}-sample`,
+      name: `database-resource-documents-v1-${kind}-${count}-sample`,
       command: process.execPath,
       args: process.argv.slice(1),
       emit,

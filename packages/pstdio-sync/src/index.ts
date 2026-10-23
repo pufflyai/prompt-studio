@@ -22,6 +22,7 @@ export {
 } from "./record-query";
 export { applyRecordChange, blankRecord, recordConflict } from "./records";
 export { type ResolutionState, validateResolution } from "./resolution-validation";
+export { editResourceDocument } from "./resource-document";
 export type { NumberedResource } from "./resource-numbers";
 export {
   nextResourceNumber,

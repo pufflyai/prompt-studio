@@ -327,9 +327,26 @@ bun packages/pstdio-db/src/services/extension-storage/document-scale.bench.ts sm
 
 Add `churn` to both commands for the separate create/edit/delete variant. Repeat
 samples with ten distinct destinations. Existing preparation or sample directories
-are rejected rather than overwritten. Verification checks all history receipts,
-source revisions, live/deleted counts and decoded final values. It runs only in
-preparation; the first resource access in a sample remains its measured write.
+are rejected rather than overwritten. Fixtures use production storage, one document
+per record ([ADR 0100](../../adrs/0100-one-document-per-resource.md)), with the shared
+`scaleStorageIndexes` installed before seeding as an extension runtime does. The
+frozen full workloads also seed the nine background owners. Verification checks all
+history receipts, the owner revision, one document per record, gap-free update tails,
+and that each rebuilt record matches the generator and its projection row. It runs only
+in preparation; the first resource access in a sample remains its measured write.
+
+`record-read-scale.bench.ts` measures indexed reads on the same fixtures. It is a
+diagnostic and does not take the timing window. `PSTDIO_SCALE_READ_COLD` selects the first
+read in the fresh process: `view`, `second-page`, `point`, `aggregate` or `all-owner-burst`.
+A view is one 100-row page plus its selected and total counts. Each sample then records ten
+warm runs of every read, cursor navigation, the all-owner burst, views while another owner
+receives the contract's write rate, and views while a 100-row write and a compaction write
+hold the database. Every read reports the projection rows Postgres visited.
+
+```sh
+bun packages/pstdio-db/src/services/extension-storage/record-read-scale.bench.ts small 100000 /absolute/disposable/read-fixture prepare
+PSTDIO_SCALE_READ_COLD=view bun packages/pstdio-db/src/services/extension-storage/record-read-scale.bench.ts small 100000 /absolute/disposable/read-sample-01 sample /absolute/disposable/read-fixture
+```
 Preparation duration and memory are separate from sample measurements. A failed
 preparation cannot create the completion manifest, and mutable sample copies cannot
 be reused as prepared fixtures. Case events from database child controllers are

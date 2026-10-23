@@ -7,7 +7,7 @@ import {
   readDeviceAutomation,
   setDeviceAutomationEnabled,
 } from "./device-automations";
-import { createDeviceAutomationFixture } from "./device-automations.fixture";
+import { createDeviceAutomationFixture, replicateRecords } from "./device-automations.fixture";
 import { openAutomationRuns } from "./extension-schedule-admission/runs";
 import { createExtensionScheduler } from "./extension-scheduler";
 import { createProjectExtensionLifecycle } from "./project-extension-lifecycle";
@@ -66,7 +66,7 @@ test("replicated automation runs only on its assigned device and a disable lets 
     openDeviceAutomations(a.deps, projectId),
     openDeviceAutomations(b.deps, projectId),
   ]);
-  await catalogs[1]!.applyUpdate(await catalogs[0]!.exportUpdate());
+  await replicateRecords(catalogs[0]!, catalogs[1]!);
   const gate = Promise.withResolvers<void>();
   const calls: unknown[] = [];
   (globalThis as Record<string, unknown>).__deviceAutomationRun = async (meta: unknown) => {
@@ -95,7 +95,7 @@ test("replicated automation runs only on its assigned device and a disable lets 
   expect(calls).toHaveLength(1);
   expect(calls[0]).toMatchObject({ runId: schedulers[0]!.activity()[0]!.id });
   await setDeviceAutomationEnabled(b.deps, projectId, { scheduleId, instanceId: "clock", enabled: false });
-  await catalogs[0]!.applyUpdate(await catalogs[1]!.exportUpdate());
+  await replicateRecords(catalogs[1]!, catalogs[0]!);
   await schedulers[0]!.refresh();
   expect(clocks[0]!.size()).toBe(0);
   expect(schedulers[0]!.activity()).toHaveLength(1);
@@ -119,9 +119,8 @@ test("offline device misses are recorded without catch-up and duplicate delivery
   await assignDeviceAutomation(a.deps, projectId, { scheduleId, deviceId }, new Date("2026-10-22T09:00:00Z"));
   const catalog = await openDeviceAutomations(a.deps, projectId);
   const replica = await openDeviceAutomations(b.deps, projectId);
-  const update = await catalog.exportUpdate();
-  await replica.applyUpdate(update);
-  await replica.applyUpdate(update);
+  await replicateRecords(catalog, replica);
+  await replicateRecords(catalog, replica);
   const calls: unknown[] = [];
   (globalThis as Record<string, unknown>).__deviceAutomationRun = async (meta: unknown) => {
     calls.push(meta);

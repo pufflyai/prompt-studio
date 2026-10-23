@@ -157,7 +157,6 @@ bun run --cwd packages/pstdio-sync-contracts lint
 bun run --cwd packages/pstdio-sync test
 bun run --cwd packages/pstdio-sync lint
 bun run --cwd packages/pstdio-sync-contracts test:conformance
-bun run --cwd packages/pstdio-api test:conformance
 ```
 
 The default reference entry includes coverage and POSIX document recovery cases.
