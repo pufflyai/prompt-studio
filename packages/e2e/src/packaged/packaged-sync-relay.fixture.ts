@@ -1,8 +1,18 @@
 import { expect } from "bun:test";
 
+const privateSpaceOwner = (parts: string[]) => {
+  if (parts[4] !== "spaces") return null;
+  const owner = decodeURIComponent(parts[5]!.slice(1));
+  parts.splice(4, 2);
+  return owner;
+};
+
 // A wire-level peer for the compiled host. Real PostgreSQL/object-store behavior is checked in
 // services/relay/src/transport/document-client.integration.ts.
-export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFile }) => {
+export const createPackagedSyncPeer = (
+  tls: { key: Bun.BunFile; cert: Bun.BunFile } | undefined,
+  hostname = "127.0.0.1",
+) => {
   const projects = new Set<string>();
   const blobs = new Map<string, { parts: Set<number>; complete: boolean }>();
   const documents = new Map<
@@ -16,6 +26,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
   // While set, document reads fail, so a device cannot finish its first download.
   let failReads = false;
   let failedReads = 0;
+  let completedReads = 0;
   const document = (id: string) => {
     let value = documents.get(id);
     if (!value) {
@@ -114,6 +125,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
         return new Response(null, { status: 503 });
       }
       const { after } = await input();
+      completedReads++;
       return json({
         status: "updates",
         state: doc.state,
@@ -154,20 +166,14 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     return json({ state: doc.state });
   };
   // Private project data lives under /spaces/~<owner>; the rest of the path matches project documents.
-  const privateSpaceOwner = (parts: string[]) => {
-    if (parts[4] !== "spaces") return null;
-    const owner = decodeURIComponent(parts[5]!.slice(1));
-    parts.splice(4, 2);
-    return owner;
-  };
   const serve = (port: number) =>
     Bun.serve({
-      hostname: "127.0.0.1",
+      hostname,
       port,
       tls,
       async fetch(request, server) {
         const path = new URL(request.url).pathname;
-        const managed = await managerRequest(request, path, server.url.origin);
+        const managed = await managerRequest(request, path, new URL(request.url).origin);
         if (managed) return managed;
         if (!path.startsWith("/sync/")) return new Response(null, { status: 404 });
         expect(request.headers.get("pstdio-sync-protocol")).toBe("1");
@@ -198,6 +204,10 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     },
     documents,
     states: () => storedStates,
+    reads: () => completedReads,
+    announceUnchanged() {
+      for (const id of documents.keys()) publishChange(id, personalDocumentIds.has(id) ? "owner" : null);
+    },
     failedReads: () => failedReads,
     personalDocuments: () => [...personalDocumentIds].map((id) => documents.get(id)!),
     failReads(value: boolean) {

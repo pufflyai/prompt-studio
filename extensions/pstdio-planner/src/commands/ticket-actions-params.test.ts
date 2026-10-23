@@ -5,7 +5,13 @@ import { breakIntoSubTicketsCommand, refineTicketCommand } from "./ticket-action
 
 describe("ticket action command params", () => {
   test("limits Run attempt to user-editable inputs", () => {
-    expect(Object.keys(runAttemptCommand.params ?? {})).toEqual(["ticket", "rowId", "agent", "workspace"]);
+    expect(Object.keys(runAttemptCommand.params ?? {})).toEqual([
+      "ticket",
+      "rowId",
+      "agent",
+      "newVariant",
+      "workspace",
+    ]);
   });
 
   test("lets Run attempt choose a Git worktree and its base branch", () => {

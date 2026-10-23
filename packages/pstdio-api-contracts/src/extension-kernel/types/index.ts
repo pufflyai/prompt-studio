@@ -24,6 +24,7 @@ export type * from "./renderer-base";
 export type * from "./resource-binding";
 export type * from "./resources";
 export type * from "./saved-views";
+export type * from "./session-controls";
 export type * from "./slots";
 export type * from "./status-bar";
 export type * from "./storage";

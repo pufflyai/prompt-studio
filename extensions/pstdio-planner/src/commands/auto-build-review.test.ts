@@ -15,7 +15,7 @@ async function reviewDependency() {
   const started = await runAttemptCommand.run(ctx, { ticket: parent.id });
   await putAttempt(storage, {
     ...started.attempt,
-    state: "review_ready",
+
     revisions: [
       {
         revision: 1,
@@ -33,12 +33,12 @@ async function reviewDependency() {
   return { ctx, storage, parent, child, started };
 }
 
-test("Auto Build blocks pending dependency review by default", async () => {
+test("Auto Build uses committed dependency handoffs without a second managed review", async () => {
   const { ctx, child } = await reviewDependency();
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ blockOnReview: true });
-  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toHaveLength(0);
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ requireMergedDependencies: false });
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toContain(child.id);
   expect(await autoBuildDispatchCommand.run(ctx, { ticket: child.id, revision: "test" })).toMatchObject({
-    decision: "wait",
+    decision: "started",
   });
 });
 
@@ -61,19 +61,21 @@ test("turning review blocking off launches children on submitted dependency comm
   expect(await configureAutoBuildCommand.run(ctx, { enabled: true })).toMatchObject({ blockOnReview: false });
 });
 
-test("review blocking off still waits for changes requested on a dependency", async () => {
+test("active replacement execution prevents stacking on an earlier handoff", async () => {
   const { ctx, storage, child, started } = await reviewDependency();
   const attempt = (await listAttempts(storage)).find(({ workspaceId }) => workspaceId === started.workspace.id)!;
-  await putAttempt(storage, { ...attempt, state: "changes_requested" });
+  await putAttempt(storage, attempt);
+  ctx.sessions.get = async (id) => ({ id, title: "Replacement", status: "in_progress" }) as never;
   await configureAutoBuildCommand.run(ctx, { enabled: true, blockOnReview: false });
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.some(({ id }) => id === child.id)).toBe(false);
 });
 
 test("idle Auto Build reports blocked work without flagging a finished board", async () => {
   const { ctx, storage, child } = await reviewDependency();
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ stuck: true });
+  ctx.sessions.get = async (id) => ({ id, title: "Replacement", status: "in_progress" }) as never;
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toHaveLength(0);
   await putTicket(storage, { ...child, statusId: "done" });
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ stuck: false });
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toHaveLength(0);
 });
 
 test("a newer dependency revision during dispatch prevents starting on its stale commit", async () => {

@@ -157,7 +157,7 @@ export const findNodeInSections = (
 const wrapTreeNodeIcon = (icon: ReactNode, iconTooltip: string | undefined) => {
   if (!iconTooltip) return icon;
   return (
-    <Tooltip content={iconTooltip} openDelay={300}>
+    <Tooltip content={iconTooltip}>
       <Box as="span" display="inline-flex" alignItems="center" justifyContent="center">
         {icon}
       </Box>

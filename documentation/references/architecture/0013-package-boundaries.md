@@ -44,6 +44,11 @@ layer-map change.
    with benchmarks declare it as a development dependency; only benchmark and
    performance test files import it.
 
+   `storage-scale-fixture` is a private test utility with no workspace dependencies.
+   The scale benchmarks in `pstdio-sync`, `pstdio-db` and `e2e` declare it as a
+   development dependency. Production entry points do not import it. Its shared
+   generator keeps the same workload across layer and compiled-runtime diagnostics.
+
 2. **Public authoring SDK**
    `@pstdio/sdk` exposes extension and client authoring APIs. Runtime or host
    contracts shared with the API live below it in `pstdio-api-contracts`, not in

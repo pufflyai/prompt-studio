@@ -12,6 +12,7 @@ import {
   type LoadedTreeData,
   loadExpandedTreeChildren,
   loadTreeData,
+  treeStructure,
 } from "./tree-view-load";
 import { canMoveTreeNode, createMoveTreeNode } from "./tree-view-move";
 import { useTreeMovement } from "./use-tree-movement";
@@ -65,7 +66,7 @@ export const useTreeData = (
   ]);
   const childrenKey = JSON.stringify([queryKey, refreshKey]);
   const renderer = trees.getTreeRenderer(treeViewId);
-  const structure = renderer?.getStructure?.({ resource, viewId, filter, pageParams }) ?? [];
+  const structure = treeStructure(renderer, { resource, viewId, filter, pageParams });
   // Defaults apply when the view starts. Refreshes keep sections the user collapsed.
   useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);
   const [expandedChildren, setExpandedChildren] = useState<{ queryKey: string; byNodeId: Record<string, TreeNode[]> }>({
@@ -118,7 +119,7 @@ export const useTreeData = (
     });
     return () => subscription.dispose();
   }, [workbench, read.retry, read.value]);
-  const savedBody = read.loading && !read.value?.body.length ? structure : (read.value?.body ?? []);
+  const savedBody = read.loading && !read.value?.body.length ? structure.body : (read.value?.body ?? []);
   const savedChildren = {
     ...(expandedChildren.queryKey === childrenKey ? expandedChildren.byNodeId : {}),
     ...read.value?.children,
@@ -146,8 +147,8 @@ export const useTreeData = (
     ...movement,
     body: previewTreeResources(movement.body, movement.childrenByNodeId, changes),
     childrenByNodeId: {},
-    header: read.value?.header ?? [],
-    footer: read.value?.footer ?? [],
+    header: read.value?.header ?? structure.header,
+    footer: read.value?.footer ?? structure.footer,
     loadChildren,
     error: read.error ?? null,
     loading: read.loading,

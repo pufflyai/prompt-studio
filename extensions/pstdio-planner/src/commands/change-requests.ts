@@ -1,10 +1,12 @@
 import type { ParamsOf } from "@pstdio/sdk/extensions";
 import { type CommandContext, commandRef, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
-import { rollUpAttemptTicket } from "../data/attempt-rollup";
+import { legacyAttemptOutput } from "../data/attempt-compatibility";
 import { appendRevision } from "../data/attempt-state";
 import { appendAttemptEvent, putAttempt, readAttempt, reviewThreadsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
+import { hasPendingImplementationInput } from "../data/implementation-input";
+import { listTicketReviewRequests } from "../data/review-request-storage";
 import { readSessionHistory } from "../data/session-history";
 import { inlineThreadIsOutdated } from "../data/thread-mapping";
 import { withWriteGuard } from "../data/write-guard";
@@ -115,6 +117,8 @@ async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeo
     throw new Error("The implementation session is not linked to this workspace.");
   const currentHead = await workspaceHead(ctx, attempt.workspaceId);
   if (currentHead !== commandParams.headSha) throw new Error("Workspace HEAD changed before submission.");
+  if (hasPendingImplementationInput(await listTicketReviewRequests(ctx.storage, attempt.ticketId)))
+    throw new Error("Resolve implementation input before submitting a handoff.");
   const previous = attempt.revisions.at(-1);
   const path = await workspaceGitPath(ctx, attempt.workspaceId);
   const base = await validateSubmittedStack(ctx, attempt, path, currentHead);
@@ -148,7 +152,6 @@ async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeo
     throw new Error("Workspace HEAD changed before submission.");
   const next = await putAttempt(ctx.storage, {
     ...attempt,
-    state: "review_ready",
     base,
     revisions,
     blocker: null,
@@ -167,7 +170,6 @@ async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeo
     commitSha: revision.headSha,
     metadata: {},
   });
-  await rollUpAttemptTicket(ctx, attempt.ticketId);
   return next;
 }
 
@@ -177,6 +179,9 @@ export const submitChangeRequestCommand = defineCommand({
   cli: true,
   params: submissionParams,
   async run(ctx, commandParams) {
-    return withWriteGuard(ctx, `attempt:${commandParams.workspaceId}`, () => submitRevision(ctx, commandParams));
+    const variant = await withWriteGuard(ctx, `attempt:${commandParams.workspaceId}`, () =>
+      submitRevision(ctx, commandParams),
+    );
+    return legacyAttemptOutput(ctx.storage, variant);
   },
 });

@@ -18,7 +18,7 @@ At noon each day, it starts an evidence-gated search for one high-impact issue. 
 
 ## Performance
 
-The **Performance** item in the project navigation opens three pages. **Trends** shows every benchmark across releases, or every benchmark in one release. **Compare** compares two commits. **Runs** starts benchmark runs on GitHub Actions. Results are cached in extension storage; see [Benchmark results](../../../documentation/references/performance/0005-benchmark-results.md).
+The **Performance** item in the project navigation opens three pages. **Trends** shows every benchmark across releases, or every benchmark in one release. **Compare** compares two commits. **Runs** starts benchmark runs on GitHub Actions. Results are cached in extension storage; see [Benchmark results](../../../documentation/references/performance/0006-benchmark-results.md).
 
 ```sh
 pst pstdio-dev benchmarks sync

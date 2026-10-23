@@ -31,7 +31,7 @@ import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } 
 import { verifyPackagedSessionMenus } from "./packaged-session-menus";
 import { verifyPackagedShortcutReference } from "./packaged-shortcut-reference";
 import { verifyPackagedViewInitialization } from "./packaged-webview-initialization";
-import { verifyPackagedWebviewRetention } from "./packaged-webview-retention";
+import { verifyPackagedWebviewDisposal, verifyPackagedWebviewRetention } from "./packaged-webview-retention";
 
 test.afterEach(stopPendingTestProcesses);
 test.afterAll(stopPendingTestProcesses);
@@ -248,6 +248,12 @@ test.describe("packaged extension webviews", () => {
           expect(authenticationFailures).toEqual([]);
           expect((await page.content()).includes(started.descriptor.token)).toBe(false);
           expect((await page.evaluate(() => document.cookie)).includes(started.descriptor.token)).toBe(false);
+          await verifyPackagedWebviewDisposal(
+            page,
+            started.baseUrl,
+            project.id,
+            runtimeAuthorization(started.descriptor),
+          );
           phase("checks complete");
         } finally {
           await browser?.close();
