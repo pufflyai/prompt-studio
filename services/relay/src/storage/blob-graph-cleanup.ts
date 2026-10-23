@@ -1,21 +1,50 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import type { createRelayAssets } from "../assets/assets";
 import { lockAccount } from "./accounts";
-import { protectedBlobGraph } from "./blob-graph";
+import { blobRetirementPage } from "./blob-retirement";
 import { blobOwner } from "./blobs";
 import type { connectRelay } from "./database";
-import { syncBlobs } from "./document-schema";
+import { syncBlobs, syncProjects } from "./document-schema";
 
 const batchSize = 500;
 
-// A blob is unused when no stored update or latest state lists it and its last use is older than the
-// grace period (R21). Unfinished uploads expire after the grace period too.
-const unusedBlob = (cutoff: Date) => sql`(
-  (b."status" = 'open' AND b."createdAt" <= ${cutoff})
-  OR (b."status" = 'completed' AND coalesce(b."lastUsedAt", b."completedAt") <= ${cutoff}
-    AND NOT EXISTS (SELECT 1 FROM protected p
-      WHERE p."projectKey" = b."projectKey" AND p."blobId" = b."blobId"))
-)`;
+const markProjectBlobs = async (
+  connection: ReturnType<typeof connectRelay>,
+  accountId: string,
+  projectKey: string,
+  cutoff: Date,
+  signal?: AbortSignal,
+) => {
+  while (true) {
+    let progress = 0;
+    let after = { projectKey, blobId: "" };
+    while (true) {
+      const page = await connection.run(
+        (db) =>
+          db.transaction(async (transaction) => {
+            await lockAccount(transaction, accountId);
+            const page = await transaction.execute<{ projectKey: string; blobId: string; retire: boolean }>(
+              blobRetirementPage(accountId, cutoff, after),
+            );
+            const ids = page.rows.filter((row) => row.retire).map((row) => row.blobId);
+            if (ids.length)
+              await transaction
+                .update(syncBlobs)
+                .set({ status: "deleting" })
+                .where(and(eq(syncBlobs.projectKey, projectKey), inArray(syncBlobs.blobId, ids)));
+            return page.rows;
+          }),
+        signal,
+      );
+      progress += page.filter((row) => row.retire).length;
+      if (page.length < batchSize) break;
+      after = page.at(-1)!;
+    }
+    // Children sorting before their retired parent become eligible on the next pass.
+    // No new grace period or stale reachability cache is introduced between pages.
+    if (!progress) break;
+  }
+};
 
 const markAccountBlobs = async (
   connection: ReturnType<typeof connectRelay>,
@@ -23,26 +52,23 @@ const markAccountBlobs = async (
   cutoff: Date,
   signal?: AbortSignal,
 ) => {
+  let afterProject = "";
   while (true) {
-    const marked = await connection.run(
+    const projects = await connection.run(
       (db) =>
-        db.transaction(async (transaction) => {
-          await lockAccount(transaction, accountId);
-          return transaction.execute(sql`
-          ${protectedBlobGraph(cutoff, accountId)}, candidates AS (
-            SELECT b."projectKey", b."blobId" FROM relay_sync_blobs b JOIN owned USING ("projectKey")
-            WHERE ${unusedBlob(cutoff)}
-              AND NOT EXISTS (SELECT 1 FROM relay_sync_blobs parent
-                WHERE parent."projectKey" = b."projectKey" AND parent."status" <> 'deleting'
-                  AND parent."children" @> ARRAY[b."blobId"])
-            ORDER BY b."projectKey", b."blobId" LIMIT ${batchSize}
-          )
-          UPDATE relay_sync_blobs b SET "status" = 'deleting' FROM candidates c
-          WHERE b."projectKey" = c."projectKey" AND b."blobId" = c."blobId" RETURNING 1`);
-        }),
+        db
+          .select({ projectKey: syncProjects.projectKey })
+          .from(syncProjects)
+          .where(and(eq(syncProjects.accountId, accountId), gt(syncProjects.projectKey, afterProject)))
+          .orderBy(syncProjects.projectKey)
+          .limit(batchSize),
       signal,
     );
-    if (!marked.rows.length) break;
+    for (const { projectKey } of projects) {
+      await markProjectBlobs(connection, accountId, projectKey, cutoff, signal);
+      afterProject = projectKey;
+    }
+    if (projects.length < batchSize) return;
   }
 };
 

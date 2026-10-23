@@ -168,13 +168,13 @@ test("a shared descendant remains live until the last retained manifest retires"
     expect(await sync.blobs.read(blob, 0).catch((error: unknown) => error)).toMatchObject({ status: 404 });
 });
 
-test("retention closure is isolated to the account whose cleanup lock is held", async () => {
-  const { protectedBlobGraph } = await import("./blob-graph");
+test("retirement pages are isolated to the account whose cleanup lock is held", async () => {
+  const { blobRetirementPage } = await import("./blob-retirement");
   const { connectRelay } = await import("./database");
-  const { sql } = await import("drizzle-orm");
   const { sync } = fixture.open();
+  const sharedId = randomId("same-opaque-blob");
   const owners = Array.from({ length: 2 }, () => ({
-    address: { projectKey: randomId("project"), spaceOwner: null, blobId: randomId("blob") },
+    address: { projectKey: randomId("project"), spaceOwner: null, blobId: sharedId },
     caller: { accountId: randomId("account"), deviceId: randomId("device") },
   }));
   for (const { address, caller } of owners) {
@@ -184,11 +184,31 @@ test("retention closure is isolated to the account whose cleanup lock is held", 
     await sync.blobs.writePart(address, 1, { ...input, body: body(bytes) });
     await sync.blobs.finish(address);
   }
+  const second = owners[1]!;
+  await sync.blobs.beginManifest({ ...second.address, blobId: randomId("parent") }, second.caller, {
+    sha256: sha256(new Uint8Array([1])),
+    byteLength: 1,
+    children: [sharedId],
+  });
+  await sync.documents.appendUpdate({ ...second.address, documentId: randomId("document") }, second.caller, {
+    updateId: randomId("update"),
+    payload: encode(new Uint8Array([1])),
+    blobIds: [sharedId],
+  });
   const connection = connectRelay(fixture.databaseUrl);
   try {
-    const rows = await connection.db.execute<{ projectKey: string; blobId: string }>(sql`
-      ${protectedBlobGraph(later(-1), owners[0]!.caller.accountId)} SELECT * FROM protected`);
-    expect(rows.rows).toEqual([{ projectKey: owners[0]!.address.projectKey, blobId: owners[0]!.address.blobId }]);
+    const after = { projectKey: owners[0]!.address.projectKey, blobId: "" };
+    const rows = await connection.db.execute(blobRetirementPage(owners[0]!.caller.accountId, later(1), after));
+    expect(rows.rows).toEqual([{ projectKey: after.projectKey, blobId: owners[0]!.address.blobId, retire: true }]);
+    const other = await connection.db.execute(blobRetirementPage(owners[1]!.caller.accountId, later(1), after));
+    expect(other.rows).toEqual([]);
+    const retained = await connection.db.execute(
+      blobRetirementPage(second.caller.accountId, later(1), {
+        projectKey: second.address.projectKey,
+        blobId: "",
+      }),
+    );
+    expect(retained.rows.find((row) => row.blobId === sharedId)).toMatchObject({ retire: false });
   } finally {
     await connection.close();
   }
