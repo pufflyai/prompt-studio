@@ -283,3 +283,54 @@ export const initialFixturePage: CollectionPageRequest = {
   fields: ["title", "rank", "status"],
   search: "",
 };
+
+export const createDiscoveredColumnsFixture = () => {
+  const views = [false, true].map((declared) =>
+    defineView({
+      id: declared ? "changed" : "discovered",
+      title: declared ? "Changed columns" : "Discovered columns",
+      body: {
+        kind: "dataTable",
+        queryMode: "paged",
+        columns: declared ? [{ id: "old", label: "Old column" }] : undefined,
+        defaultSettings: { showStats: false },
+        query: (ctx, input) => ({
+          columns: [{ id: "value", label: "Current column", type: "string" as const }],
+          rows: [
+            {
+              id: "first",
+              values: Object.fromEntries(
+                input.page?.fields.includes("value") ? [["value", `${ctx.projectId} discovered field value`]] : [],
+              ),
+            },
+          ],
+          page: { revision: "columns-1", cursor: null, total: 1, filteredTotal: 1, groups: [] },
+        }),
+      },
+    }),
+  );
+  const pages = views.map((view) =>
+    definePage({
+      id: view.id,
+      title: view.title,
+      path: view.id,
+      mode: workbenchModes.project,
+      main: { kind: "view", view: view.ref, cardinality: "one" },
+      slots: [],
+    }),
+  );
+  return defineExtension({
+    views,
+    pages,
+    navigationItems: pages.map((page) =>
+      defineNavigationItem({
+        id: page.id,
+        owner: workbenchModes.project,
+        slot: "content",
+        group: "Column fixtures",
+        label: page.title,
+        action: { kind: "page", page: page.ref },
+      }),
+    ),
+  });
+};

@@ -38,6 +38,7 @@ import {
   resolveDataTableRendererSelectionActions,
   resolveDataTableRendererStorageKey,
 } from "./data-table-view-model";
+import { useTablePageColumns } from "./use-table-page-columns";
 
 interface WorkbenchDataTableViewProps {
   workbench: WorkbenchCore;
@@ -72,9 +73,11 @@ const requirePageStatistics = (
 const emptyTablePlaceholder = (
   result: DataTableRendererQueryResult,
   search: string,
+  grouping: string,
   contribution: RegisteredDataTableRendererContribution,
 ) => {
-  if (result.rows.length || search) return undefined;
+  if (result.rows.length || result.page?.groups?.some((group) => group.field === grouping && group.count > 0) || search)
+    return undefined;
   return (
     <EmptyState h="full" title={contribution.emptyTitle ?? "No rows"} description={contribution.emptyDescription} />
   );
@@ -100,16 +103,18 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const sorts = useDataTableViewStore(storageKey, (state) => state.sorts, contribution);
   const settings = useDataTableViewStore(storageKey, (state) => state.settings, contribution);
   const paged = contribution.queryMode === "paged";
+  const queryKey = resolveDataTableRendererQueryKey(contribution, placement.resource, modeId, contextValues);
+  const pageColumns = useTablePageColumns(queryKey, contribution.columns);
   const pages = useRendererPages<DataTableRendererQueryResult["rows"][number]>({
     identity: rendererQueryKey([storageKey, filter, sorts, settings, pageParams]),
     scope: JSON.stringify([storageKey, settings.grouping]),
-    fields: tablePageFields(contribution.columns ?? [], settings),
+    fields: tablePageFields(pageColumns.columns, settings),
     initialPageSize: contribution.initialPageSize,
   });
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
-    queryKey: resolveDataTableRendererQueryKey(contribution, placement.resource, modeId, contextValues),
+    queryKey,
     // Paged providers also receive display fields and search before selecting a bounded page.
     refreshKey: rendererQueryKey([filter, sorts, pageParams, ...(paged ? [settings, pages.request, pages.key] : [])]),
     load: async (signal) => {
@@ -154,8 +159,11 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       }}
     />
   ) : null;
-  const loading = read.loading && !read.value;
   const columns = resolveDataTableRendererColumns(result, contribution.columns);
+  pageColumns.accept(read.value, paged);
+  const loading =
+    (read.loading && !read.value) ||
+    pageColumns.pending(read.value?.position?.fields, pages.request.fields, read.error);
   const model = buildDataTableRendererData(result.rows, columns);
   const labels = Object.fromEntries(
     columns.filter((column) => column.label).map((column) => [column.id, column.label!]),
@@ -231,7 +239,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
             renderParamField={props.renderParamField}
           />
         }
-        contentPlaceholder={emptyTablePlaceholder(result, pages.search, contribution)}
+        contentPlaceholder={emptyTablePlaceholder(result, pages.search, settings.grouping, contribution)}
         data={model.data}
         getRowId={(data) => model.rowByData.get(data)?.id ?? ""}
         toolbarStorageKey={storageKey}

@@ -40,3 +40,13 @@ export const writePagedCollectionFixtures = (root: string) => {
   }
   return extensions;
 };
+
+export const writeDiscoveredColumnsFixture = (root: string) => {
+  const fixtures = writePagedCollectionFixtures(root);
+  const first = fixtures[0]!;
+  writeFileSync(
+    join(first.source, "extension.ts"),
+    'import {createDiscoveredColumnsFixture} from "./fixture.js";\nexport default createDiscoveredColumnsFixture();\n',
+  );
+  return [first];
+};

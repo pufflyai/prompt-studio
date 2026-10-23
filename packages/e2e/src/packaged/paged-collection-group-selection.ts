@@ -42,4 +42,14 @@ export const exerciseGroupedPageSelection = async (page: Page) => {
   await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
   await expect(page.getByRole("cell", { name: /^paged-owner-0 row / })).toHaveCount(100);
   await expect(page.getByRole("spinbutton")).toHaveValue("1");
+  const todo = page.getByTestId("data-table-group-row").getByRole("button", { name: "todo 125", exact: true });
+  const collapsed = nextPage(0);
+  await todo.click();
+  expect((await (await collapsed).json()).outcome.value.rows).toEqual([]);
+  await expect(todo).toHaveAttribute("aria-expanded", "false");
+  await expect(done).toHaveAttribute("aria-expanded", "false");
+  await expect(done).toBeVisible();
+  await done.click();
+  await expect(done).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("cell", { name: "paged-owner-0 row 0001", exact: true })).toBeVisible();
 };
