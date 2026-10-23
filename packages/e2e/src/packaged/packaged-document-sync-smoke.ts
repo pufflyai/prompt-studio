@@ -14,9 +14,9 @@ const waitFor = async (condition: () => Promise<boolean> | boolean) => {
   while (!(await condition())) await Bun.sleep(25);
 };
 export const registerDocumentSyncSmokeTests = () =>
-  // ADR 0100 pauses record relay sync until per-resource synchronization exists.
-  test.todo(
-    "compiled host uploads encrypted states and blobs and sets aside unreadable updates",
+  test(
+    // Record content stays on the device until per-record sync exists (ADR 0100); the owner document still syncs.
+    "compiled host uploads encrypted shared documents, keeps records local and sets aside unreadable updates",
     async () => {
       const root = await mkdtemp(join(tmpdir(), "packaged-document-sync-"));
       const key = join(root, "peer-key.pem");
@@ -95,27 +95,38 @@ export const registerDocumentSyncSmokeTests = () =>
             edits: [{ recordId: note.recordId, replace: `packaged-secret${"x".repeat(1_048_576)}`, asset }],
           },
         });
+        // Resource numbers still sync as a shared document; allocating one gives the relay encrypted content.
+        await command("allocate");
         const syncState = async () => (await client.account.projectSyncStatus(project.id)).state;
         expect(await syncState()).toBe("local");
         await client.account.syncProject(project.id);
-        await waitFor(() => peer.states() > 0);
+        await waitFor(() =>
+          [...peer.documents.values()].some((document) => document.updates.length || document.payload),
+        );
         await waitFor(async () => (await syncState()) === "synced");
         expect(await client.account.projectSyncStatus(project.id)).toEqual({ state: "synced", offlineReady: true });
         peer.corrupt();
         const quarantine = join(root, "state", "sync-quarantine");
         await waitFor(async () => (await readdir(quarantine).catch(() => [])).some((file) => file.endsWith(".json")));
         await waitFor(async () => (await syncState()) === "needs-attention");
-        await command("commit", {
-          group: {
-            operationId: "healthy-after-corrupt",
-            edits: [{ recordId: note.recordId, replace: "healthy after corrupt update" }],
-          },
-        });
-        await waitFor(() => [...peer.documents.values()].some((document) => document.updates.length >= 3));
+        // Healthy uploads continue after an unreadable update; only the new allocation can add one now.
+        const before = new Map([...peer.documents].map(([id, document]) => [id, document.updates.length]));
+        await command("allocate");
+        await waitFor(() =>
+          [...peer.documents].some(([id, document]) => document.updates.length > (before.get(id) ?? 0)),
+        );
         const files = await readdir(quarantine);
         const saved = await Bun.file(join(quarantine, files[0]!)).text();
         expect(saved).toContain("invalidciphertext000000");
         expect(saved).not.toContain("packaged-secret");
+        const payloads = [...peer.documents.values()].flatMap((document) => [
+          ...(document.payload ? [document.payload] : []),
+          ...document.updates.map((update) => String(update.payload)),
+        ]);
+        for (const payload of payloads) {
+          expect(payload).not.toContain("packaged-secret");
+          expect(Buffer.from(payload, "base64").toString("latin1")).not.toContain("packaged-secret");
+        }
       } finally {
         await stopProcess(host.child);
         await peer.stop();

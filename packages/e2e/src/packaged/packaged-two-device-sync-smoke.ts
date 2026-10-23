@@ -87,8 +87,8 @@ const write = (device: Awaited<ReturnType<typeof startDevice>>, projectId: strin
   );
 
 export const registerTwoDeviceSyncSmokeTests = () =>
-  // ADR 0100 pauses record relay sync until per-resource synchronization exists.
-  test.todo(
+  test(
+    // Records stay on each device until per-record sync exists (ADR 0100); project sync states still apply.
     "two compiled hosts report honest sync states through an interrupted download, offline, local and synced again",
     async () => {
       const root = await mkdtemp(join(tmpdir(), "packaged-two-device-sync-"));
@@ -148,9 +148,6 @@ export const registerTwoDeviceSyncSmokeTests = () =>
         peer.restart();
         await first.reach(project.id, "synced");
         await second.reach(project.id, "synced");
-        expect((await second.command<Record<string, StorageRecord>>(project.id, "read")).note?.value).toBe(
-          "written on the first device",
-        );
 
         // Making the project local is account-wide. The second device learns it on its next account refresh,
         // which a project change starts at once.
@@ -165,13 +162,10 @@ export const registerTwoDeviceSyncSmokeTests = () =>
         await second.client.projects.update(project.id, { name: "Shared notes" });
         await first.reach(project.id, "synced");
         await second.reach(project.id, "synced");
-        const merged = async (device: typeof first) => {
-          const records = await device.command<Record<string, StorageRecord>>(project.id, "read");
-          return [records.note?.value, records.caption?.value];
-        };
-        const expected = ["edited on the first device while local", "edited on the second device while local"];
-        await waitFor(async () => Bun.deepEquals(await merged(first), expected));
-        await waitFor(async () => Bun.deepEquals(await merged(second), expected));
+        const records = async (device: typeof first) =>
+          device.command<Record<string, StorageRecord>>(project.id, "read");
+        expect((await records(first)).note?.value).toBe("edited on the first device while local");
+        expect((await records(second)).caption?.value).toBe("edited on the second device while local");
 
         const history = await first.command<{ events: ProjectSyncState[]; current: unknown }>(
           project.id,

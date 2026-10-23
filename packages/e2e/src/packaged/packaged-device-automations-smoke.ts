@@ -10,9 +10,9 @@ import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 export const registerDeviceAutomationSmokeTests = () =>
-  // ADR 0100 pauses record relay sync until per-resource synchronization exists.
-  test.todo(
-    "compiled hosts sync device assignments as encrypted documents and retain them after restart",
+  test(
+    // Assignments are records, which stay on their device until per-record sync exists (ADR 0100).
+    "compiled hosts keep device assignments after restart and never send them in plain text",
     async () => {
       const root = await mkdtemp(join(tmpdir(), "packaged-device-automations-"));
       const key = join(root, "key.pem");
@@ -128,16 +128,10 @@ export const registerDeviceAutomationSmokeTests = () =>
           body: { scheduleId: "test.clock.schedule.tick", deviceId: deviceIds[0] },
         });
         expect(assigned).toMatchObject({ enabled: false });
-        let replica: unknown[] = [];
-        while (!replica.length) {
-          replica = await requests[1]!<unknown[]>(path);
-          if (!replica.length) await Bun.sleep(25);
-        }
-        expect(replica).toEqual([assigned]);
-        expect(await requests[1]!(`${path}/runs`)).toEqual([]);
+        expect(await requests[0]!(`${path}/runs`)).toEqual([]);
         const cli = Bun.spawn([PACKAGED_BINARY_PATH, "extensions", "automations", "list", "--project-id", projectId], {
-          cwd: roots[1],
-          env: { ...process.env, PSTDIO_API_URL: hosts[1]!.baseUrl, PSTDIO_API_TOKEN: hosts[1]!.descriptor.token },
+          cwd: roots[0],
+          env: { ...process.env, PSTDIO_API_URL: hosts[0]!.baseUrl, PSTDIO_API_TOKEN: hosts[0]!.descriptor.token },
           stdout: "pipe",
           stderr: "pipe",
         });
