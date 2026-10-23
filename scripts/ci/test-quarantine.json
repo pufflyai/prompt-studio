@@ -144,5 +144,18 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913"
     ],
     "removeWhen": "Fix completion synchronization and pass ten independent Windows runs at the existing limits."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/db/shared-workspace-folders.test.ts",
+    "name": "upgrading frees the folders of deleted projects so they can be opened again",
+    "platforms": ["win32"],
+    "owner": "PS-907 / workspace folder upgrades",
+    "reason": "The same revision passed this legacy-home upgrade and deleted-folder reuse contract in 4.945 seconds and timed out at 15.454 seconds in another Windows shard. Keep every ownership and folder-reuse assertion and add phase logs to identify the slow part.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40025877536/job/120662025536",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40025883928/job/120662039027"
+    ],
+    "removeWhen": "Identify and fix the slow phase, then pass ten independent Windows runs within the existing 15 second allowance."
   }
 ]
