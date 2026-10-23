@@ -38,6 +38,7 @@ type ProjectState = {
 // Test seam: reports catalog activity without exposing handlers or settings.
 export type ProjectExtensionRuntimeCatalogObserver = {
   onLoadStart?: (event: { projectId: string; reason: string; revision: number }) => void;
+  /** The accepted candidate owns installed indexes, even when a later invalidation immediately marks it dirty. */
   onPublish?: (event: { projectId: string; generation: number; loadCount: number }) => void;
   onDiscard?: (event: { projectId: string; code: "extension_runtime_generation_stale" }) => void;
 };
@@ -77,7 +78,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     return created;
   };
 
-  const buildRuntime = async (projectId: string, state: ProjectState) => {
+  const buildRuntime = async (projectId: string, state: ProjectState, validate: () => void) => {
     const project = await deps.projectService.get(projectId);
     if (!project) throw new ExtensionRuntimeProjectMissingError(projectId);
 
@@ -93,7 +94,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       { projectFolder: workspace?.root_path ?? undefined },
     );
 
-    await installExtensionStorageIndexes(deps.extensionStorageService, projectId, runtime);
+    await installExtensionStorageIndexes(deps.extensionStorageService, projectId, runtime, validate);
 
     return { enabledSources, project, runtime };
   };
@@ -132,7 +133,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     state.current = snapshot;
     state.staleView = null;
     state.loadedRevision = context.startRevision;
-    state.dirtyReason = null;
+    if (state.revision === context.startRevision) state.dirtyReason = null;
     deps.observer?.onPublish?.({ projectId: context.projectId, generation, loadCount: state.loadCount });
     apiLogger.info(
       {
@@ -177,9 +178,15 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     );
 
     try {
-      const loaded = await buildRuntime(projectId, state);
+      const loaded = await buildRuntime(projectId, state, () => {
+        if (state.revision !== context.startRevision) throw discardStaleLoad(context);
+      });
+      // Committed indexes belong to this healthy candidate. If an invalidation
+      // arrived during COMMIT, retain it as the fallback while loading the newer
+      // source. Never pair the previous handlers with newly accepted definitions.
+      const snapshot = publishSnapshot(state, context, loaded);
       if (state.revision !== context.startRevision) throw discardStaleLoad(context);
-      return publishSnapshot(state, context, loaded);
+      return snapshot;
     } catch (error) {
       if (error instanceof ExtensionRuntimeProjectMissingError) states.delete(projectId);
       else if (!(error instanceof ExtensionRuntimeGenerationStaleError)) logLoadFailure(context, error);

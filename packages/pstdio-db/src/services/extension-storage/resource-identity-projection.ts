@@ -16,6 +16,7 @@ export const trackResourceIdentityProjection = async (
   address: DocumentAddress,
   document: Y.Doc,
   initialize: boolean,
+  sourceRevision: number,
 ) => {
   const workbench_id = address.workbench_id;
   const [projection] = await tx.select().from(projections).where(eq(projections.workbench_id, workbench_id));
@@ -50,6 +51,8 @@ export const trackResourceIdentityProjection = async (
     },
     stop: () => document.off("afterTransaction", changed),
     async persist(revision: number) {
+      if (projection && projection.revision !== sourceRevision && !rebuild)
+        throw new Error("Resource identity projection is stale; upgrade before writing");
       if (!projection && !rebuild) return;
       if (rebuild) {
         await tx.insert(projections).values({ workbench_id, revision }).onConflictDoNothing();

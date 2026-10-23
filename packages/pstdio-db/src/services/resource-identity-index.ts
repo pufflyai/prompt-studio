@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import type { ResourceIdentity } from "pstdio-api-contracts/extension-kernel";
 import { resourceNumbersDocumentId, resourceNumbersOwnerId } from "pstdio-sync";
 import type { DbClient } from "../db/connection.pglite";
@@ -14,7 +14,7 @@ export const upgradeResourceIdentityIndexes = async (
   db: DbClient,
   documents: ReturnType<typeof createDocumentStorageDBService>,
 ) => {
-  const missing = await db
+  const outdated = await db
     .select({ projectId: storage_documents.workbench_id })
     .from(storage_documents)
     .leftJoin(projections, eq(projections.workbench_id, storage_documents.workbench_id))
@@ -22,10 +22,10 @@ export const upgradeResourceIdentityIndexes = async (
       and(
         eq(storage_documents.extension_id, resourceNumbersOwnerId),
         eq(storage_documents.document_id, resourceNumbersDocumentId),
-        isNull(projections.workbench_id),
+        or(isNull(projections.workbench_id), ne(projections.revision, storage_documents.revision)),
       ),
     );
-  for (const { projectId } of missing)
+  for (const { projectId } of outdated)
     await documents.documents
       .open(resourceNumbersDocumentId)
       .transaction({ workbenchId: projectId, extensionId: resourceNumbersOwnerId }, async (state) => {

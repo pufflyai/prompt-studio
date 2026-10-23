@@ -42,6 +42,12 @@ enumerating every record. The document directories own inserts, deletes and
 explicit restores. Projection rows and ownership mappings are removed with their
 document or workbench and cleared with an owner purge.
 
+Resource identity and alias indexes also record their source document revision.
+If an older host saves the source without updating these indexes, reads and
+incremental writes reject the stale projection. Resource service startup rebuilds
+missing or stale projections before serving identities. A later allocation must
+not mark an incomplete index current merely because its own new row was indexed.
+
 ## Scheduled automations
 
 The core `pstdio.automations` owner uses the same encrypted document transport as
