@@ -219,11 +219,15 @@ test("reinstalling unchanged Unicode index names does not rebuild the projection
   expect((await records.query({ index: "😀" })).records[0].fields.title).toBe("Saved");
 });
 
-test("deleting a project removes its physical query indexes", async () => {
+test("deleting a project removes its physical query indexes and statistics", async () => {
   const f = await fixture();
-  await f.records.defineIndexes([{ name: "notes", fields: { title: { path: ["title"], type: "string" } } }]);
-  const physical = async () =>
-    (await f.db.execute(sql`SELECT indexname FROM pg_indexes WHERE indexname LIKE 'storage_query_%'`)).rows;
+  await f.records.defineIndexes([
+    { name: "notes", fields: { title: { path: ["title"], type: "string" } }, equality: ["title"] },
+  ]);
+  const physical = async () => [
+    ...(await f.db.execute(sql`SELECT indexname FROM pg_indexes WHERE indexname LIKE 'storage_query_%'`)).rows,
+    ...(await f.db.execute(sql`SELECT stxname FROM pg_statistic_ext WHERE stxname LIKE 'storage_query_%'`)).rows,
+  ];
   expect((await physical()).length).toBeGreaterThan(0);
   await createProjectsDBService(f.db).hardDelete(f.projectAId);
   expect(await physical()).toEqual([]);
@@ -267,6 +271,50 @@ test("selective pages use the declared equality and ordering index before materi
   expect(evidence).toContain("Index Scan");
   expect(evidence).not.toContain("Seq Scan");
   expect(evidence).toContain('"Rows Removed by Filter":0');
+});
+
+test("selective in-list pages probe the declared equality index after ordinary writes", async () => {
+  const f = await createExtensionStorageFixture();
+  cleanup.push(f.close);
+  const service = createDocumentStorageDBService(f.db);
+  const owner = { workbenchId: f.projectAId, extensionId: "ext.example" };
+  const records = service.open({ owner }).records;
+  const index: StorageRecordIndex = {
+    name: "ordinals",
+    fields: { ordinal: { path: ["ordinal"], type: "number" }, rank: { path: ["rank"], type: "number" } },
+    equality: ["ordinal"],
+    orderBy: [{ field: "rank", direction: "asc" }],
+  };
+  await records.defineIndexes([index]);
+  await records.commit({
+    operationId: "seed-in-list",
+    edits: Array.from({ length: 5000 }, (_, ordinal) => ({
+      recordId: `row-${ordinal}`,
+      replace: { ordinal, rank: 5000 - ordinal },
+    })),
+  });
+  // No manual ANALYZE: storage owns planner statistics because PGlite has no autovacuum.
+  await service.flushStatistics();
+  // A view-sized list: Postgres's default guess of 0.5% per value would expect half the rows.
+  const where = { field: "ordinal", op: "in" as const, value: Array.from({ length: 100 }, (_, n) => n * 50) };
+  const page = await records.query({ index: "ordinals", where, fields: ["ordinal"], limit: 5 });
+  expect(page.records.map((row) => row.fields.ordinal)).toEqual([4950, 4900, 4850, 4800, 4750]);
+  const statement = recordPageSql(
+    index,
+    ["ordinal"],
+    sql`${recordScopeSql(owner, index)} AND ${predicateSql(index, where)}`,
+    5,
+  );
+  const evidence = JSON.stringify((await f.db.execute(sql`EXPLAIN (ANALYZE, FORMAT JSON) ${statement}`)).rows);
+  expect(evidence).toContain("storage_query_");
+  expect(evidence).not.toContain("Seq Scan");
+  expect(evidence).toContain('"Rows Removed by Filter":0');
+  // Larger owners choose a full scan when the estimate is far above the 100 matches.
+  const estimate = await f.db.execute<{ "QUERY PLAN": string }>(
+    sql`EXPLAIN SELECT count(*) FROM storage_current_records WHERE ${recordScopeSql(owner, index)} AND ${predicateSql(index, where)}`,
+  );
+  const rows = Math.max(...estimate.rows.map((row) => Number(/rows=(\d+)/.exec(row["QUERY PLAN"])?.[1] ?? 0)));
+  expect(rows).toBeLessThan(500);
 });
 
 test("database and memory agree on null groups and object-only field paths", async () => {

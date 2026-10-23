@@ -24,7 +24,7 @@ for the relay.
 
 ## Indexed current records
 
-[ADR 0088](../../adrs/0088-durable-record-query-projections.md) separates reads from
+[ADR 0099](../../adrs/0099-durable-record-query-projections.md) separates reads from
 merge-state loading. Local commits and received document updates maintain affected
 current rows, content revisions, named-type ownership and the projection watermark
 inside the same durable transaction as CRDT bytes and operation identities. Only

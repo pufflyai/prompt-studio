@@ -112,13 +112,17 @@ const fieldPredicateSql = (index: StorageRecordIndex, predicate: Extract<Storage
       return sql`${comparable} <> ${json(predicate.value)}`;
     case "equalsIgnoreCase":
       return sql`${stringBytesSql(field, true)} = decode(${projectionSubstringBytes(String(predicate.value).toLowerCase())}, 'hex')`;
-    case "in":
-      return predicate.value.length
-        ? sql`(${sql.join(
-            predicate.value.map((value) => equalityPredicate(index, predicate.field, comparable, value)),
-            sql` OR `,
-          )})`
-        : sql`false`;
+    case "in": {
+      if (!predicate.value.length) return sql`false`;
+      // One hashed array comparison per row; an OR chain re-evaluates the field for every value.
+      const values = sql`ARRAY[${sql.join(predicate.value.map(json), sql`, `)}]::jsonb[]`;
+      if (!index.equality?.includes(predicate.field)) return sql`${comparable} = ANY(${values})`;
+      const keys = sql`ARRAY[${sql.join(
+        predicate.value.map((value) => equalityKey(json(value))),
+        sql`, `,
+      )}]`;
+      return sql`(${equalityKey(comparable)} = ANY(${keys}) AND ${comparable} = ANY(${values}))`;
+    }
     case "notIn":
       return predicate.value.length
         ? sql`${comparable} NOT IN (${sql.join(predicate.value.map(json), sql`, `)})`

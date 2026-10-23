@@ -127,6 +127,12 @@ export const createRecordQueries = (
           await tx.execute(
             sql`CREATE INDEX ${sql.identifier(name)} ON storage_current_records (${sql.join(keys, sql`, `)}) WHERE ${visible(index)}`,
           );
+          // Postgres ignores partial-index statistics when estimating rows. Without these,
+          // an in-list looks like half the owner and the planner scans every row.
+          for (const [position, key] of keys.slice(0, index.equality?.length ?? 0).entries())
+            await tx.execute(
+              sql`CREATE STATISTICS ${sql.identifier(`${name}_s${position}`)} ON ${key} FROM storage_current_records`,
+            );
           for (const [position, [field]] of arrayIndexFields(index).entries())
             await tx.execute(
               sql`CREATE INDEX ${sql.identifier(`${name}_g${position}`)} ON storage_current_records USING gin ((${recordFieldSql(index, field)})) WHERE ${visible(index)}`,
@@ -138,6 +144,8 @@ export const createRecordQueries = (
             definition: encodeProjectionValue(index as unknown as Json) as unknown as StorageRecordIndex,
           });
         }
+        // Expression indexes get planner statistics only from ANALYZE, not from CREATE INDEX.
+        await tx.execute(sql`ANALYZE storage_current_records`);
       });
     },
     query: (query) =>
@@ -150,24 +158,27 @@ export const createRecordQueries = (
             index,
             page.fields,
             sql`${visible(index)} AND ${predicateSql(index, query.where)} AND ${pageAfterSql(index, page.after)}`,
-            page.limit,
+            // One extra row shows whether a next page exists without a second scan.
+            page.limit + 1,
             page.offset,
           ),
         );
-        const last = result.rows.at(-1);
-        let cursor: string | null = null;
-        if (last && result.rows.length === page.limit) {
-          const after = { recordId: last.record_id, values: last.sort_values.map(decodeProjectionValue) };
-          const next = await tx.execute(
-            sql`SELECT 1 FROM storage_current_records WHERE ${visible(index)} AND ${predicateSql(index, query.where)} AND ${pageAfterSql(index, after)} LIMIT 1`,
-          );
-          if (next.rows.length) cursor = encodeQueryCursor({ ...after, identity: page.identity, revision });
-        }
-        diagnostics?.({ phase: "records-queried", owner, records: result.rows.length });
+        const rows = result.rows.slice(0, page.limit);
+        const last = rows.at(-1);
+        const cursor =
+          last && result.rows.length > page.limit
+            ? encodeQueryCursor({
+                recordId: last.record_id,
+                values: last.sort_values.map(decodeProjectionValue),
+                identity: page.identity,
+                revision,
+              })
+            : null;
+        diagnostics?.({ phase: "records-queried", owner, records: rows.length });
         return {
           revision,
           cursor,
-          records: result.rows.map((row) => ({
+          records: rows.map((row) => ({
             recordId: row.record_id,
             revision: row.revision,
             fields: decodeProjectionValue(row.fields) as Record<string, Json>,

@@ -72,4 +72,5 @@ test("vendored transfer workers run outside the repository and retain full local
   } finally {
     await rm(root, { recursive: true, force: true });
   }
-});
+  // Builds the assets and boots PGlite in three processes; 15 s approved by the user on 2026-10-23.
+}, 15_000);

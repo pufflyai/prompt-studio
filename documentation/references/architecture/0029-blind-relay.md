@@ -40,10 +40,14 @@ token's account. Blob ID lists hold at most 100,000 IDs.
 | `/documents/~<document>/state` | POST latest state | `{ state }`, or 409 `stale-state` with the current state |
 | `/documents/~<document>/states/~<state>` | GET | Encrypted latest-state bytes |
 | `/blobs/~<blob>/begin` | POST `{ sha256, byteLength }` | Part size and the parts already stored |
+| `/blobs/~<blob>/begin-manifest` | POST `{ sha256, byteLength, children }` | Part size and stored parts; children must already be complete |
+| `/capabilities` (project only) | GET | `{ protocolVersion: 1, features: ["blob-references-v1"] }` |
 | `/blobs/~<blob>/parts/<n>` | PUT bytes with `pstdio-sha256` and `Content-Length` | `{}` |
 | `/blobs/~<blob>/finish` | POST `{}` | `{}` once the full blob is verified |
 | `/blobs/~<blob>/read` | POST `{ offset }` | Encrypted bytes from `offset` |
 | `/live` (project only) | GET WebSocket | `ready`, `live` and `changed` messages |
+
+Manifest upload requires discovery of `blob-references-v1` first. `createDocumentRelay().manifestBlobs()` performs that discovery and returns an uploader bound to the same project and space. Unknown future feature names are allowed. An old relay or a relay without this feature cannot accept manifests; the client never falls back to an ordinary upload for a manifest. Manifest children are immutable, unique, and limited to 256 opaque IDs. They must already be complete in the same project and space. Ordinary `/begin` accepts no child list.
 
 Errors use the `syncErrorSchema` shapes. `missing-blobs` lists blob IDs that an update or latest
 state names before they finished uploading (R21).
@@ -93,7 +97,7 @@ replaced state and the updates after it. Clients upload a new state once the upd
 latest one pass a size limit, so storage stays below twice the latest state plus the
 grace-period copy (R23).
 
-A blob stays while any stored update or latest state lists it. When the last such row goes, the
+A blob stays while any stored update or latest state lists it, directly or through immutable manifest children. A staged parent protects its children within the existing upload grace. When the last such row goes, the
 blob's grace period starts. An offline device's edit that uses the blob within that time is
 accepted (R21). Unfinished uploads are removed after the grace period too.
 

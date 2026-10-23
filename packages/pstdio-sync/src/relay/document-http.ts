@@ -3,6 +3,8 @@ import {
   readResultSchema,
   type SyncRoute,
   stateResultSchema,
+  syncBlobReferencesFeature,
+  syncCapabilitiesSchema,
   syncErrorSchema,
   syncPath,
   syncProtocolHeader,
@@ -42,9 +44,52 @@ export const createDocumentRelay = (input: {
     });
   const document = (operation: "read" | "updates" | "state") =>
     ({ kind: "document", ...space, documentId: input.documentId, operation }) as const;
-  const blob = (blobId: string, operation: "begin" | "finish" | "read") =>
+  const blob = (blobId: string, operation: "begin" | "begin-manifest" | "finish" | "read") =>
     ({ kind: "blob", ...space, blobId, operation }) as const;
-  return {
+  const putBlob = async (
+    blobId: string,
+    bytes: Uint8Array,
+    operation: "begin" | "begin-manifest",
+    children?: string[],
+  ) => {
+    const sha256 = (bytes: Uint8Array) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+    const status = blobStatusSchema.parse(
+      await (
+        await checked(
+          await post(blob(blobId, operation), {
+            sha256: sha256(bytes),
+            byteLength: bytes.length,
+            ...(operation === "begin-manifest" ? { children } : {}),
+          }),
+        )
+      ).json(),
+    );
+    if (status.completed) return;
+    for (let offset = 0, number = 1; offset < bytes.length; offset += status.partSize, number++) {
+      const part = bytes.subarray(offset, offset + status.partSize);
+      const hash = sha256(part);
+      if (
+        status.parts.some(
+          (existing) => existing.number === number && existing.sha256 === hash && existing.byteLength === part.length,
+        )
+      )
+        continue;
+      const response = await checked(
+        await request(
+          { kind: "part", ...space, blobId, number },
+          {
+            method: "PUT",
+            body: part as Uint8Array<ArrayBuffer>,
+            headers: { "pstdio-sha256": hash, "content-length": String(part.length) },
+          },
+        ),
+      );
+      await response.body?.cancel();
+    }
+    await (await checked(await post(blob(blobId, "finish"), {}))).body?.cancel();
+  };
+
+  const relay = {
     read: async (after) =>
       readResultSchema.parse(await (await checked(await post(document("read"), { after }))).json()),
     state: async (state) =>
@@ -80,43 +125,7 @@ export const createDocumentRelay = (input: {
       return true;
     },
     blobs: {
-      async put(blobId, bytes) {
-        const sha256 = (bytes: Uint8Array) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
-        const status = blobStatusSchema.parse(
-          await (
-            await checked(
-              await post(blob(blobId, "begin"), {
-                sha256: sha256(bytes),
-                byteLength: bytes.length,
-              }),
-            )
-          ).json(),
-        );
-        if (status.completed) return;
-        for (let offset = 0, number = 1; offset < bytes.length; offset += status.partSize, number++) {
-          const part = bytes.subarray(offset, offset + status.partSize);
-          const hash = sha256(part);
-          if (
-            status.parts.some(
-              (existing) =>
-                existing.number === number && existing.sha256 === hash && existing.byteLength === part.length,
-            )
-          )
-            continue;
-          const response = await checked(
-            await request(
-              { kind: "part", ...space, blobId, number },
-              {
-                method: "PUT",
-                body: part as Uint8Array<ArrayBuffer>,
-                headers: { "pstdio-sha256": hash, "content-length": String(part.length) },
-              },
-            ),
-          );
-          await response.body?.cancel();
-        }
-        await (await checked(await post(blob(blobId, "finish"), {}))).body?.cancel();
-      },
+      put: (blobId, bytes) => putBlob(blobId, bytes, "begin"),
       async get(blobId) {
         const response = await post(blob(blobId, "read"), { offset: 0 });
         if (response.status === 404) {
@@ -127,4 +136,22 @@ export const createDocumentRelay = (input: {
       },
     },
   } satisfies DocumentRelay;
+  return {
+    ...relay,
+    async manifestBlobs() {
+      const response = await request({ kind: "capabilities", projectId: space.projectId });
+      if (response.status === 404) {
+        await response.body?.cancel();
+        throw new Error("Relay does not support blob references");
+      }
+      const capabilities = syncCapabilitiesSchema.parse(await (await checked(response)).json());
+      if (!capabilities.features.includes(syncBlobReferencesFeature))
+        throw new Error("Relay does not support blob references");
+      return {
+        put: (blobId: string, bytes: Uint8Array, children: string[]) =>
+          putBlob(blobId, bytes, "begin-manifest", children),
+        get: relay.blobs.get,
+      };
+    },
+  };
 };
