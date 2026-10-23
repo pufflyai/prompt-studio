@@ -2,4 +2,4 @@
 "pstdio-artifacts": patch
 ---
 
-Use the artifact list as the empty Artifacts page placeholder.
+Keep the artifact list in a singleton tab and offer it through the page's default placeholder cards.

@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
-test("the artifact list fills empty Main and returns after closing an artifact", async ({ page, request }) => {
+test("the artifact library is a singleton tab that can close and reopen", async ({ page, request }) => {
   const tempRoot = resolve(import.meta.dirname, "../../../../__test-tmp__");
   mkdirSync(tempRoot, { recursive: true });
   const folder = mkdtempSync(join(tempRoot, "artifact-placeholder-"));
@@ -16,12 +16,16 @@ test("the artifact list fills empty Main and returns after closing an artifact",
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   try {
-    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.addInitScript(() => {
+      if (window === window.top) localStorage.setItem("onboarding-complete", "true");
+    });
     await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-artifacts/artifacts`);
     const main = page.locator('[data-workbench-panel="main"]');
     const library = main.frameLocator('iframe[title="Artifacts"]:visible');
     await expect(library.getByRole("button", { name: "Project brief", exact: true })).toBeVisible();
-    await expect(main.getByRole("tab", { includeHidden: true })).toHaveCount(0);
+    const libraryTab = main.getByRole("tab", { name: "Artifacts", exact: true });
+    await expect(libraryTab).toBeVisible();
+    await expect(main.getByRole("tab")).toHaveCount(1);
     writeFileSync(join(folder, "page.html"), "<title>Placeholder example</title><h1>Example content</h1>");
     const published = await request.post(
       `${uiOrigin}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-artifacts.command.publish/execute`,
@@ -32,13 +36,41 @@ test("the artifact list fills empty Main and returns after closing an artifact",
     await library.getByRole("button", { name: "Placeholder example", exact: true }).click();
     const tab = main.getByRole("tab", { name: "Placeholder example", exact: true });
     await expect(tab).toBeVisible();
-    await expect(main.getByRole("tab")).toHaveCount(1);
+    await expect(main.getByRole("tab")).toHaveCount(2);
     const preview = library.frameLocator('iframe[title="Preview: Placeholder example"]').frameLocator("iframe");
     await expect(preview.getByRole("heading", { name: "Example content" })).toBeVisible();
-    await tab.getByRole("button", { name: "Close Placeholder example", exact: true }).click();
+    await libraryTab.click();
     await expect(library.getByRole("button", { name: "Placeholder example", exact: true })).toBeVisible();
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("option", { name: "Artifacts", exact: true }).click();
+    await expect(libraryTab).toHaveCount(1);
+    await expect(libraryTab).toHaveAttribute("aria-selected", "true");
+    await tab.click();
+    await tab.getByRole("button", { name: "Close Placeholder example", exact: true }).click();
+    await libraryTab.getByRole("button", { name: "Close Artifacts", exact: true }).click();
     await expect(main.getByRole("tab", { includeHidden: true })).toHaveCount(0);
+    const card = main
+      .getByRole("group", { name: "Available tabs" })
+      .getByRole("button", { name: "Artifacts", exact: true });
+    await card.click();
+    await expect(libraryTab).toBeVisible();
+    await expect(main.getByRole("tab")).toHaveCount(1);
+    await libraryTab.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
+    const side = page.locator('[data-workbench-panel="side"]:visible');
+    await expect(side.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
+    await card.click();
+    await expect(libraryTab).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Artifacts", exact: true })).toHaveCount(1);
+    await libraryTab.getByRole("button", { name: "Close Artifacts", exact: true }).click();
+    await main.getByRole("button", { name: "Add panel", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Artifacts", exact: true }).click();
+    await expect(libraryTab).toBeVisible();
+    await expect(main.getByRole("tab")).toHaveCount(1);
+    await expect(library.getByRole("button", { name: "Placeholder example", exact: true })).toBeVisible();
     await page.reload();
+    await expect(libraryTab).toHaveCount(1);
     await expect(library.getByRole("button", { name: "Placeholder example", exact: true })).toBeVisible();
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);

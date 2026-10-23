@@ -133,7 +133,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
 
     await frame.getByRole("button", { name: "First page", exact: true }).click();
     await expect(artifactMenu).toBeVisible();
-    await expect(mainTabs).toHaveCount(1);
+    await expect(mainTabs).toHaveCount(2);
     const preview = frame.frameLocator('iframe[title^="Preview: "]').frameLocator("iframe");
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     await expect(preview.getByText("Parent isolated")).toBeVisible();
@@ -206,6 +206,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await page.getByRole("button", { name: "Run", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Launch notes", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Close Launch notes", exact: true }).click();
+    await referenceTab.click();
     await page.getByRole("button", { name: "Close Reference", exact: true }).click();
     const card = frame.getByRole("button", { name: "Launch notes", exact: true });
     await expect(card).toBeVisible();
