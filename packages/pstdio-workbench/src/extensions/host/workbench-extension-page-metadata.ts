@@ -4,11 +4,13 @@ import type { WorkbenchPageMain, WorkbenchPageSlot } from "../../core";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 
 import type { WorkbenchExtensionTabMetadata } from "./workbench-extension-tab-presentation";
+import { toWorkbenchPresentationSnapshot } from "./workbench-extension-tab-presentation";
 
 type MetadataPage = WorkbenchExtensionMetadata["pages"][number];
 interface PagePresentationInput {
   extensionId: string;
   placementId: string;
+  projectId?: string;
   createTab?(metadata: WorkbenchExtensionTabMetadata): WorkbenchPageSlot["tab"];
 }
 const pageSlot = (slot: MetadataPage["slots"][number], input: PagePresentationInput): WorkbenchPageSlot => ({
@@ -19,9 +21,19 @@ const pageSlot = (slot: MetadataPage["slots"][number], input: PagePresentationIn
       : undefined,
 });
 const pageMain = (main: MetadataPage["main"], input: PagePresentationInput): WorkbenchPageMain => {
-  if (main.kind === "panels") return main;
+  const empty =
+    main.empty && "view" in main.empty
+      ? {
+          view: main.empty.view,
+          breadcrumb: main.empty.breadcrumb
+            ? toWorkbenchPresentationSnapshot(main.empty.breadcrumb, input.extensionId, input.projectId)
+            : undefined,
+        }
+      : main.empty;
+  if (main.kind === "panels") return { ...main, empty };
   return {
     ...main,
+    empty,
     tab:
       main.tab && input.createTab
         ? input.createTab({ ...main.tab, extensionId: input.extensionId, placementId: input.placementId })
@@ -30,7 +42,7 @@ const pageMain = (main: MetadataPage["main"], input: PagePresentationInput): Wor
 };
 export const toInternalWorkbenchPages = (
   metadata: WorkbenchExtensionMetadata,
-  createTab?: PagePresentationInput["createTab"],
+  input: Pick<PagePresentationInput, "createTab" | "projectId"> = {},
 ): InternalWorkbenchExtensionMetadata["pages"] =>
   metadata.pages.map((page) => ({
     id: page.id,
@@ -42,9 +54,9 @@ export const toInternalWorkbenchPages = (
     regionSettings: page.regionSettings,
     modeId: contributionRefId(page.mode),
     resource: page.resource,
-    main: pageMain(page.main, { extensionId: page.extensionId, placementId: `${page.id}.$main`, createTab }),
+    main: pageMain(page.main, { extensionId: page.extensionId, placementId: `${page.id}.$main`, ...input }),
     slots: page.slots.map((slot) =>
-      pageSlot(slot, { extensionId: page.extensionId, placementId: `${page.id}.${slot.id}`, createTab }),
+      pageSlot(slot, { extensionId: page.extensionId, placementId: `${page.id}.${slot.id}`, ...input }),
     ),
     ...(page.icon ? { icon: page.icon } : {}),
     ...(page.parent ? { parentId: contributionRefId(page.parent) } : {}),

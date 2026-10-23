@@ -189,6 +189,7 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
 export const toInternalWorkbenchExtensionMetadata = (
   metadata: WorkbenchExtensionMetadata,
   input: {
+    projectId?: string;
     createTab?(
       metadata: WorkbenchExtensionTabMetadata,
     ): InternalWorkbenchExtensionMetadata["placements"][number]["tab"];
@@ -201,7 +202,7 @@ export const toInternalWorkbenchExtensionMetadata = (
     menuContributions: metadata.menuContributions,
     commandPaletteContributions: metadata.commandPaletteContributions,
     modes: modes(metadata),
-    pages: toInternalWorkbenchPages(metadata, input.createTab),
+    pages: toInternalWorkbenchPages(metadata, input),
     placements: metadata.placements.map((placement) => ({
       id: placement.id,
       ref: { extensionId: placement.extensionId, kind: "placement", id: placement.localId },

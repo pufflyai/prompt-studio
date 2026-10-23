@@ -1,5 +1,10 @@
 import type { ContributionRef } from "@pstdio/sdk/extensions";
-import { isValidLocalContributionId, workbenchModeDefinitions, workbenchPageDefinitions } from "@pstdio/sdk/extensions";
+import {
+  isValidLocalContributionId,
+  pagePlaceholderView,
+  workbenchModeDefinitions,
+  workbenchPageDefinitions,
+} from "@pstdio/sdk/extensions";
 import type { RuntimePageRecord, RuntimePageSlot } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { Accumulator } from "./accumulator";
@@ -109,7 +114,7 @@ const validatePageMainDefaults = (runtime: Accumulator, record: RuntimePageRecor
   const page = record.contribution;
   const main = page.main;
   if (main.kind === "view" && main.empty)
-    ownRefMissing(runtime, record, main.empty, `pages.${record.localId}.main.empty`);
+    ownRefMissing(runtime, record, pagePlaceholderView(main.empty)!, `pages.${record.localId}.main.empty`);
   if (
     main.kind === "panels" &&
     main.landing &&
@@ -127,7 +132,7 @@ const validatePageMainDefaults = (runtime: Accumulator, record: RuntimePageRecor
 const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) => {
   const page = record.contribution;
   const main = page.main;
-  const view = main.kind === "view" ? main.view : main.empty;
+  const view = main.kind === "view" ? main.view : pagePlaceholderView(main.empty);
   if (view)
     ownRefMissing(runtime, record, view, `pages.${record.localId}.main.${main.kind === "view" ? "view" : "empty"}`);
   validatePageMainDefaults(runtime, record);

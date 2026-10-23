@@ -4,7 +4,7 @@ import type { ContributionDefinition, ModeRef, PageRef, PlacementRef, ViewRef } 
 import type { FileRendererSectionTarget } from "./file-renderer";
 import type { ResourceConstraint } from "./resource-binding";
 import type { ResourceRef } from "./resources";
-import type { PlacementItem, PlacementPresentation } from "./views";
+import type { PlacementItem, PlacementPresentation, PlacementTabSnapshot } from "./views";
 
 export type PageParamValue = string | number | boolean | readonly string[];
 export type PageParamDefinition =
@@ -19,17 +19,25 @@ export type PageSlotCardinality = "one" | "many";
 export type PageOpenIntent = "preview" | "pin";
 export type PageSlotRegion = ExtensionPanelRegion;
 
+export type PagePlaceholder =
+  | ViewRef
+  | {
+      readonly view: ViewRef;
+      /** Presentation for this page's current breadcrumb while Main is empty. */
+      readonly breadcrumb?: Pick<PlacementTabSnapshot, "label" | "icon" | "menu">;
+    };
+
 export interface PageMainView extends PlacementPresentation {
   readonly kind: "view";
   readonly view: ViewRef;
   readonly cardinality: PageSlotCardinality;
-  /** Optional content for an empty Main, beside the host recovery actions. */
-  readonly empty?: ViewRef;
+  /** Custom content for an empty Main. */
+  readonly empty?: PagePlaceholder;
 }
 
 export interface PageMainPanels {
   readonly kind: "panels";
-  readonly empty?: ViewRef;
+  readonly empty?: PagePlaceholder;
   /** Static Main slot opened when navigating to this collection or selecting its breadcrumb. */
   readonly landing?: string;
 }

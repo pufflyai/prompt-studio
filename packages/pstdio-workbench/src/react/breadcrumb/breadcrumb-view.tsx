@@ -7,6 +7,7 @@ import { resolveResourcePreview } from "../../core/registries/resources/resource
 import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
+import { placementMenuActions } from "../shared/placement-menu-actions";
 import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { breadcrumbSnapshot } from "./breadcrumb-snapshot";
@@ -94,15 +95,16 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   }
   return (
     <Breadcrumb
-      items={buildWorkbenchBreadcrumbItems(crumbs, (item) =>
-        item.resource
+      items={buildWorkbenchBreadcrumbItems(crumbs, (item) => [
+        ...(item.resource
           ? createWorkbenchResourceMenu(
               workbench,
               item.resource,
               breadcrumbSnapshot(item, crumbs.at(-1), resource, snapshot, workbench.pages.resourceReferenceKey),
             )
-          : undefined,
-      )}
+          : []),
+        ...placementMenuActions(workbench, { menu: item.menu }, item.resource),
+      ])}
       separator="/"
       separatorGap="xs"
       display="flex"

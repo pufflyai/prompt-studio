@@ -1,4 +1,10 @@
-import { contributionRefId, type PageRef, type RelatedResourceOpening, resourceKey } from "@pstdio/sdk/extensions";
+import {
+  contributionRefId,
+  type PageRef,
+  pagePlaceholderView,
+  type RelatedResourceOpening,
+  resourceKey,
+} from "@pstdio/sdk/extensions";
 import type {
   NavigationTarget,
   NavigationTargetPanel,
@@ -26,7 +32,8 @@ const pagePreviewView = (ctx: WorkbenchModuleContext, pageRef: PageRef, resource
       slot.region === "main" && slot.item.kind === "binding" && resourceMatchesConstraint(slot.item.binding, resource),
   );
   if (slot?.item.kind === "binding") return contributionRefId(slot.item.binding.view);
-  if (page.main.empty) return contributionRefId(page.main.empty);
+  const empty = pagePlaceholderView(page.main.empty);
+  if (empty) return contributionRefId(empty);
 };
 
 // Owner views render related resources without changing the routed parent page.

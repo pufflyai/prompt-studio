@@ -1,5 +1,10 @@
 import { extensionPanelRegions } from "@pstdio/sdk/extensions";
-import { localizableStringSchema, pageParamDefinitionsSchema, regionSettingsSchema } from "pstdio-api-contracts";
+import {
+  createPagePlaceholderBreadcrumbSchema,
+  localizableStringSchema,
+  pageParamDefinitionsSchema,
+  regionSettingsSchema,
+} from "pstdio-api-contracts";
 import { z } from "zod";
 import { localRefSchema, navigationDeclarationSchema } from "./navigation-declaration";
 
@@ -21,6 +26,15 @@ const presentation = {
     .optional(),
 };
 const resource = z.object({ kinds: z.array(localRefSchema("resource-kind")).min(1) }).strict();
+const empty = z.union([
+  localRefSchema("view"),
+  z
+    .object({
+      view: localRefSchema("view"),
+      breadcrumb: createPagePlaceholderBreadcrumbSchema(navigationDeclarationSchema).optional(),
+    })
+    .strict(),
+]);
 const binding = resource.extend({
   view: localRefSchema("view"),
   cardinality: z.enum(["one", "many"]),
@@ -75,13 +89,11 @@ export const pageDeclarationSchema = z
           kind: z.literal("view"),
           view: localRefSchema("view"),
           cardinality: z.enum(["one", "many"]),
-          empty: localRefSchema("view").optional(),
+          empty: empty.optional(),
           ...presentation,
         })
         .strict(),
-      z
-        .object({ kind: z.literal("panels"), empty: localRefSchema("view").optional(), landing: z.string().optional() })
-        .strict(),
+      z.object({ kind: z.literal("panels"), empty: empty.optional(), landing: z.string().optional() }).strict(),
     ]),
     slots: z.array(slot),
     panels: z.record(z.string(), z.unknown()),

@@ -190,6 +190,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
     metadata: toInternalWorkbenchExtensionMetadata(sourceInput.metadata, {
+      projectId: sourceInput.projectId,
       createTab: (metadata) => createWorkbenchExtensionTabPresentation(sourceInput, metadata),
     }),
   };

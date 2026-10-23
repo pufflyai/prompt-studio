@@ -217181,6 +217181,168 @@
           "fontWeight": "normal"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "W1BRFX",
+      "x": 62670,
+      "y": 0,
+      "name": "Empty panel · Tools cards",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1000,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 32,
+      "children": [
+        {
+          "type": "text",
+          "id": "AhIfI",
+          "name": "Heading",
+          "fill": "$ds-fg",
+          "content": "Tools",
+          "fontFamily": "$font-body",
+          "fontSize": 16,
+          "fontWeight": "500"
+        },
+        {
+          "type": "frame",
+          "id": "TEcpI",
+          "name": "Two-column tool grid",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "frame",
+              "id": "FSVd9",
+              "name": "Tools first row",
+              "width": "fill_container",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Omm0B",
+                  "name": "cmp/SimpleCard · Action",
+                  "context": "SimpleCard action variant: borderless surface, radius xs, body padding md, label/M/regular. Hover uses bg.hover; pressed uses bg.active; focus has an outside ring. Default panel grid has two columns and collapses in narrow panels. Page-owned panels contribute entries through Add panel.",
+                  "reusable": true,
+                  "width": "fill_container",
+                  "fill": "$ds-surface",
+                  "cornerRadius": 4,
+                  "gap": 12,
+                  "padding": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "TsHla",
+                      "name": "Icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "file-diff",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "t5C3I",
+                      "name": "Label",
+                      "fill": "$ds-fg",
+                      "content": "Changes",
+                      "fontFamily": "$font-body",
+                      "fontSize": 16,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "pFY2L",
+                  "type": "ref",
+                  "ref": "Omm0B",
+                  "name": "Terminal hover",
+                  "width": "fill_container",
+                  "fill": "$ds-surface-hover",
+                  "descendants": {
+                    "TsHla": {
+                      "icon": "terminal"
+                    },
+                    "t5C3I": {
+                      "content": "Terminal"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "g2IDu",
+              "name": "Tools second row",
+              "width": "fill_container",
+              "gap": 8,
+              "children": [
+                {
+                  "id": "LoPk5",
+                  "type": "ref",
+                  "ref": "Omm0B",
+                  "name": "Files",
+                  "width": "fill_container",
+                  "descendants": {
+                    "TsHla": {
+                      "icon": "folders"
+                    },
+                    "t5C3I": {
+                      "content": "Files"
+                    }
+                  }
+                },
+                {
+                  "id": "yT1qO",
+                  "type": "ref",
+                  "ref": "Omm0B",
+                  "name": "Page contribution",
+                  "width": "fill_container",
+                  "descendants": {
+                    "TsHla": {
+                      "icon": "file-plus"
+                    },
+                    "t5C3I": {
+                      "content": "New page"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ThPKF",
+          "name": "Hover and focus",
+          "width": "fill_container",
+          "gap": 16,
+          "children": [
+            {
+              "id": "ERKlS",
+              "type": "ref",
+              "ref": "Omm0B",
+              "name": "Hover",
+              "fill": "$ds-surface-hover",
+              "width": "fill_container"
+            },
+            {
+              "id": "oFX5C",
+              "type": "ref",
+              "ref": "Omm0B",
+              "name": "Focus",
+              "stroke": "$ds-accent",
+              "strokeWidth": 2,
+              "width": "fill_container"
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

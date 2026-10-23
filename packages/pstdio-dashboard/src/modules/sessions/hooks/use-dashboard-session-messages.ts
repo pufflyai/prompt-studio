@@ -1,15 +1,14 @@
-import { rendererReadKey } from "@pstdio/workbench";
-import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useEffect, useRef, useState } from "react";
 import { getApiClient } from "@/lib/api";
 import { getCollection, subscribeCollections } from "@/lib/sync/collections";
+import { type SessionViewContext, sessionViewReadKey } from "../chat/session-view-context";
 import { getSessionHistoryCache } from "../data/session-history-cache";
 import { createSessionHistoryController, type SessionHistoryState } from "../data/session-history-controller";
 import { visibleSessionMessages } from "../data/session-messages";
 
 const emptyState: SessionHistoryState = { messages: [], loading: false, streaming: false };
 
-export const useDashboardSessionMessages = (input: WorkbenchPanelRenderInput, sessionId: string | undefined) => {
+export const useDashboardSessionMessages = (input: SessionViewContext, sessionId: string | undefined) => {
   const transport = getApiClient().sessions;
   const [result, setResult] = useState<{
     sessionId?: string;
@@ -18,7 +17,7 @@ export const useDashboardSessionMessages = (input: WorkbenchPanelRenderInput, se
   }>({ state: emptyState });
   const controller = useRef<ReturnType<typeof createSessionHistoryController> | undefined>(undefined);
   const lastResult = useRef(result);
-  const ownerKey = rendererReadKey(input.instance, "session");
+  const ownerKey = sessionViewReadKey(input);
   const workbench = input.workbench;
   useEffect(
     () => () => {

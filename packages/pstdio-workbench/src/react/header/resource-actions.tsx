@@ -6,6 +6,7 @@ import { resolveResourcePreview } from "../../core/registries/resources/resource
 import { createWorkbenchLocationActions, useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
+import { placementMenuActions } from "../shared/placement-menu-actions";
 import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 export const WorkbenchBreadcrumbActions = (props: { workbench: WorkbenchCore }) => {
@@ -26,6 +27,7 @@ export const WorkbenchBreadcrumbActions = (props: { workbench: WorkbenchCore }) 
   const resourceActions = createWorkbenchResourceMenu(workbench, resource, snapshot);
   const actions = [
     ...resourceActions,
+    ...placementMenuActions(workbench, { menu: items.at(-1)?.menu }, resource),
     ...createWorkbenchLocationActions(workbench, resource).map((action) => ({
       ...action,
       group: { id: "location", label: "Location" },

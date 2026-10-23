@@ -112,7 +112,10 @@ const openNewSessionDraft = (
   }
   // Requests from the Side Panel stay in the panel; other entry points follow the open Sessions page.
   const pageId = ctx.pages.store.getState().activePageId;
-  if (!input.sidePanel && (pageId === workbenchPages.sessions.id || pageId === workbenchPages.session.id)) {
+  if (
+    !input.sidePanel &&
+    [workbenchPages.sessions.id, workbenchPages.session.id, workbenchPages.newSession.id].some((id) => id === pageId)
+  ) {
     return openSessionsPage(ctx, draftResource);
   }
   return openSessionBubbleWidgets(ctx, {

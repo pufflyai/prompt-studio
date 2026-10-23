@@ -59,6 +59,26 @@ const previewItem = (item: PlacementItem): MetadataPage["slots"][number]["item"]
           add: item.binding.add ? previewNavigationTarget(item.binding.add) : undefined,
         },
       };
+const previewEmpty = (empty: PageContribution["main"]["empty"]) => {
+  if (!empty) return undefined;
+  if (!("view" in empty)) return previewRef(empty);
+  return {
+    ...empty,
+    view: previewRef(empty.view),
+    breadcrumb: empty.breadcrumb
+      ? {
+          ...empty.breadcrumb,
+          menu: empty.breadcrumb.menu?.map((group) => ({
+            ...group,
+            rows: group.rows.map((row) => ({
+              ...row,
+              action: row.action ? previewNavigationTarget(row.action) : undefined,
+            })),
+          })),
+        }
+      : undefined,
+  };
+};
 export const previewPage = (
   page: PageContribution,
   tab: (id: string, value: PlacementPresentation["tab"]) => MetadataPage["slots"][number]["tab"],
@@ -75,11 +95,11 @@ export const previewPage = (
   resource: page.resource ? { kinds: page.resource.kinds.map(previewRef) } : undefined,
   main:
     page.main.kind === "panels"
-      ? { ...page.main, empty: page.main.empty ? previewRef(page.main.empty) : undefined }
+      ? { ...page.main, empty: previewEmpty(page.main.empty) }
       : {
           ...page.main,
           view: previewRef(page.main.view),
-          empty: page.main.empty ? previewRef(page.main.empty) : undefined,
+          empty: previewEmpty(page.main.empty),
           tab: tab(`${page.id}.$main`, page.main.tab),
         },
   slots: page.slots.map((slot) => ({

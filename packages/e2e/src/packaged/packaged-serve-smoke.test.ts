@@ -71,7 +71,8 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Also checks native harness controls and their structured values in packaged command handlers.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
-// Navigation metadata preserves page header defaults, custom empty views and independent panel capabilities through the compiled host.
+// Navigation metadata preserves page header defaults, placeholder breadcrumb actions and independent panel capabilities through the compiled host.
+// packaged-session-placeholder.spec.ts checks creation, closure and switching from the empty Sessions page.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";

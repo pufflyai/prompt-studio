@@ -62,6 +62,7 @@ export {
   resolvePageParams,
   validatePageParamDefinitions,
 } from "./page-params";
+export { pagePlaceholderView } from "./page-placeholder";
 export * from "./page-resource-codec";
 export * from "./page-url";
 export { commandRef, eventRef } from "./refs";

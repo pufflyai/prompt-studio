@@ -1,11 +1,23 @@
 import { z } from "zod";
 import { localizableStringSchema } from "./common";
+import { navigationTargetSchema } from "./navigation-target-metadata";
 import { pageParamDefinitionsSchema } from "./page-params-schema";
+import { createPagePlaceholderBreadcrumbSchema } from "./page-placeholder-schema";
 import { workbenchPlacementPresentationSchema } from "./placement-metadata";
 import { placementItemSchema, resourceConstraintSchema } from "./resource-binding-metadata";
 import { modeRefSchema, pageRefSchema, viewRefSchema } from "./workbench-refs-metadata";
 
 export { pageRefSchema, pageSlotRefSchema, panelRefSchema, placementRefSchema } from "./workbench-refs-metadata";
+
+const emptySchema = z.union([
+  viewRefSchema,
+  z
+    .object({
+      view: viewRefSchema,
+      breadcrumb: createPagePlaceholderBreadcrumbSchema(navigationTargetSchema).optional(),
+    })
+    .strict(),
+]);
 
 const mainSchema = z.discriminatedUnion("kind", [
   workbenchPlacementPresentationSchema
@@ -13,10 +25,10 @@ const mainSchema = z.discriminatedUnion("kind", [
       kind: z.literal("view"),
       view: viewRefSchema,
       cardinality: z.enum(["one", "many"]),
-      empty: viewRefSchema.optional(),
+      empty: emptySchema.optional(),
     })
     .strict(),
-  z.object({ kind: z.literal("panels"), empty: viewRefSchema.optional(), landing: z.string().optional() }).strict(),
+  z.object({ kind: z.literal("panels"), empty: emptySchema.optional(), landing: z.string().optional() }).strict(),
 ]);
 const slotSchema = workbenchPlacementPresentationSchema
   .extend({

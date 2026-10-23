@@ -56,7 +56,10 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
     history.pushState(null, "", url);
     dispatchEvent(new PopStateEvent("popstate"));
   }, destination.href);
-  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Sessions");
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
+  await expect(
+    page.locator('[data-workbench-panel="main"]').getByTestId("content-editable").filter({ visible: true }),
+  ).toBeVisible();
   await expect(terminalInput).toHaveCount(0);
   await page.goBack();
   await expect(mainHeader).toBeVisible();

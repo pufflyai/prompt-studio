@@ -52,13 +52,35 @@ A declared region is the starting position. Users can move content tabs between 
 
 The + control follows the scrolling tab group. Its choices include active panels from other regions that are allowed in this destination. Main also offers the page's own content when absent. A single-instance panel is reused. Resource bindings retain their declared Add action. Panel menu openers stay at the far right.
 
-An empty Main, Side, or Bottom panel without a custom placeholder shows a card grid of the same available tabs as **Add panel**. Choosing a card uses the same opening action, resource context, and permissions. If that content is already open in another panel, the action moves the existing tab instead of creating a copy. Navigating to a page again reopens its declared Main content. Either kind of page can declare `main.empty: view.ref` instead of the host placeholder. The host renders that custom content without adding recovery buttons. A panel collection may name a static Main slot with `main.landing`; collection breadcrumbs and navigation open it. The `workbench.reopenPageContent` and `workbench.resetLayout` commands remain available independently of the placeholder.
+An empty Main, Side, or Bottom panel without a custom placeholder shows a **Tools** card grid of the same available tabs as **Add panel**. The grid uses two columns in a wide panel and one in a narrow panel. Cards share hover, pressed, and keyboard focus states. Page-owned `slots`, including bindings with command-backed Add actions, contribute entries through that same contract. Choosing a card uses the same opening action, resource context, and permissions. If that content is already open in another panel, the action moves the existing tab instead of creating a copy. Navigating to a page again reopens its declared Main content.
+
+Either kind of page can declare `main.empty: view.ref` instead of the host placeholder. To supply a breadcrumb label and menu while Main has no tabs, use the `PagePlaceholder` object form:
+
+```ts
+main: {
+  kind: "panels",
+  empty: {
+    view: createView.ref,
+    breadcrumb: {
+      label: "New item",
+      menu: [{
+        id: "items",
+        rows: [{ id: "browse", label: "Browse items", action: { kind: "page", page: itemsPage.ref } }],
+      }],
+    },
+  },
+},
+```
+
+`pagePlaceholderView(main.empty)` returns the view ref from either form. The placeholder's breadcrumb applies only to the current page while Main is empty. Ancestor crumbs keep their page titles. Opening a tab restores the normal breadcrumb presentation. The view and its actions belong to the page; a placeholder does not create a tab or a placement identity. The host adds no recovery buttons. A panel collection may name a static Main slot with `main.landing`; collection breadcrumbs and navigation open it. The `workbench.reopenPageContent` and `workbench.resetLayout` commands remain available independently of the placeholder.
 
 Page header defaults, optional `main.empty` on single-view pages, `main.landing`, and closable fixed tabs describe APIs from `main`. Their first extension API version is 0.2.2.
 
 During the deprecation window, older extension collections keep their first `fixed` Main slot as their landing slot. New declarations should name `main.landing` explicitly.
 
 Start uses its home content as `main.empty`, with no initial tabs or landing slot. Its Main header defaults to hidden. A saved user header choice still wins, and dropping a tool tab into Main reveals the header through the shared move behavior.
+
+Sessions uses the new-session composer as its empty Main placeholder. Its current breadcrumb is **New session** with session actions. `workbenchPages.newSession` is the routed draft page at `sessions/new`; it accepts a `session-draft` resource without creating a draft tab. Creating the session navigates to `workbenchPages.session` and opens the real session tab. A completed creation does not change navigation if its original draft page is no longer open. Closing the final session tab restores the composer and its breadcrumb.
 
 Right-click, Shift+F10, the Context Menu key, and touch long-press open the same grouped tab menu. Normal clicks select. Preview and pinned tabs can appear in any order. Pin and Unpin change retention without changing position. Alt+Left and Alt+Right reorder the focused tab.
 

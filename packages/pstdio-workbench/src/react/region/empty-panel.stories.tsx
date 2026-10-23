@@ -4,7 +4,7 @@ import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench, type WorkbenchPanelRegion } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
-const createEmptyWorkbench = (hiddenHeader = false) => {
+const createEmptyWorkbench = (hiddenHeader = false, pageEntries = false) => {
   const workbench = createWorkbench({ initialSidePanelMode: "attached" });
   workbench.modes.registerMode({
     id: "tools",
@@ -32,6 +32,18 @@ const createEmptyWorkbench = (hiddenHeader = false) => {
     });
   }
   const page = { kind: "page", extensionId: "example", id: "tools" } as const;
+  if (pageEntries)
+    for (const [id, title] of [
+      ["changes", "Changes"],
+      ["new-page", "New page"],
+    ]) {
+      workbench.views.registerView({
+        id,
+        title,
+        icon: "FilePlus",
+        body: { kind: "react", render: () => <Text p="md">{title} content</Text> },
+      });
+    }
   workbench.pages.registerPage({
     id: "tools",
     ref: page,
@@ -39,7 +51,13 @@ const createEmptyWorkbench = (hiddenHeader = false) => {
     path: "tools",
     modeId: "tools",
     main: { kind: "panels" },
-    slots: [],
+    slots: pageEntries
+      ? ["changes", "new-page"].map((id) => ({
+          id,
+          region: "main" as const,
+          item: { kind: "view" as const, view: { kind: "view" as const, id }, presence: "closed" as const },
+        }))
+      : [],
   });
   workbench.pageLocations.setProject("storybook-empty-panels");
   workbench.pageLocations.navigate({ kind: "page", page });
@@ -58,6 +76,7 @@ type Story = StoryObj<typeof meta>;
 
 export const AvailableTabs: Story = { args: { workbench: createEmptyWorkbench() } };
 export const HiddenHeader: Story = { args: { workbench: createEmptyWorkbench(true) } };
+export const PageEntries: Story = { args: { workbench: createEmptyWorkbench(false, true) } };
 
 const openCard = async (canvasElement: HTMLElement, region: WorkbenchPanelRegion) => {
   const panel = within(canvasElement.querySelector(`[data-workbench-panel="${region}"]`) as HTMLElement);

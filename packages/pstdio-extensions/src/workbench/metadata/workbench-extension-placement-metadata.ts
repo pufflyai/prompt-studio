@@ -24,13 +24,32 @@ const tabRecord = (tab: RuntimePlacementTab | undefined, extensionId: string) =>
         refreshEventIds: refreshEventIds(tab.refreshEvents, extensionId),
       }
     : undefined;
+const emptyRecord = (empty: RuntimePageMain["empty"], extensionId: string) => {
+  if (!empty) return undefined;
+  if (!("view" in empty)) return normalizedRef(empty, extensionId);
+  return {
+    ...empty,
+    view: normalizedRef(empty.view, extensionId),
+    breadcrumb: empty.breadcrumb
+      ? {
+          ...empty.breadcrumb,
+          menu: empty.breadcrumb.menu?.map((group) => ({
+            ...group,
+            rows: group.rows.map((row) => ({
+              ...row,
+              action: row.action ? normalizeTarget(row.action, extensionId) : undefined,
+            })),
+          })),
+        }
+      : undefined,
+  };
+};
 const mainRecord = (main: RuntimePageMain, extensionId: string) => {
-  if (main.kind === "panels")
-    return { ...main, empty: main.empty ? normalizedRef(main.empty, extensionId) : undefined };
+  if (main.kind === "panels") return { ...main, empty: emptyRecord(main.empty, extensionId) };
   return {
     ...main,
     view: normalizedRef(main.view, extensionId),
-    empty: main.empty ? normalizedRef(main.empty, extensionId) : undefined,
+    empty: emptyRecord(main.empty, extensionId),
     tab: tabRecord(main.tab, extensionId),
   };
 };

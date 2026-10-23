@@ -5,6 +5,7 @@ import type { Accumulator, RegistryIndex } from "./accumulator";
 import { pageDeclarationSchema } from "./composition-declarations";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { validateDeclaration } from "./declaration-diagnostic";
+import { normalizeNavigationAction } from "./navigation-action";
 import { normalizePlacementTab } from "./placement-tab";
 import { normalizeContributionRef } from "./references";
 import { normalizePlacementItem } from "./resource-binding";
@@ -16,14 +17,32 @@ interface NormalizePageInput {
   index: RegistryIndex;
   pageId: string;
 }
+const normalizeEmpty = (input: NormalizePageInput, empty: PageMain["empty"]) => {
+  if (!empty) return undefined;
+  if (!("view" in empty)) return normalizeContributionRef(input.ext, empty);
+  return {
+    view: normalizeContributionRef(input.ext, empty.view),
+    breadcrumb: empty.breadcrumb
+      ? {
+          ...empty.breadcrumb,
+          menu: empty.breadcrumb.menu?.map((group) => ({
+            ...group,
+            rows: group.rows.map((row) => ({
+              ...row,
+              action: row.action ? normalizeNavigationAction(input.ext, row.action) : undefined,
+            })),
+          })),
+        }
+      : undefined,
+  };
+};
 const normalizeMain = (input: NormalizePageInput, main: PageMain): RuntimePageMain => {
-  if (main.kind === "panels")
-    return { ...main, empty: main.empty ? normalizeContributionRef(input.ext, main.empty) : undefined };
+  if (main.kind === "panels") return { ...main, empty: normalizeEmpty(input, main.empty) };
   const { tab, ...presentation } = main;
   return {
     ...presentation,
     view: normalizeContributionRef(input.ext, main.view),
-    ...(main.empty ? { empty: normalizeContributionRef(input.ext, main.empty) } : {}),
+    ...(main.empty ? { empty: normalizeEmpty(input, main.empty) } : {}),
     tab: normalizePlacementTab({ ...input, id: `${input.pageId}.$main`, tab }),
   };
 };

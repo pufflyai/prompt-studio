@@ -225,7 +225,7 @@ API 0.2.1 also adds optional `HarnessProvider.releaseSession(ctx, { sessionId })
 
 ## Page tabs and header defaults in API 0.2.2
 
-Pages add optional `regionSettings.<region>.showHeader`, resolved as user, page, then mode. Main view and panel collection pages can omit `main.empty` to use the host placeholder. A collection can declare a static Main `landing` slot for navigation and recovery.
+Pages add optional `regionSettings.<region>.showHeader`, resolved as user, page, then mode. Main view and panel collection pages can omit `main.empty` to use the host placeholder. `PagePlaceholder` accepts either a view ref or `{ view, breadcrumb }`; the object can define a label and menu for the current breadcrumb while Main is empty. `pagePlaceholderView` resolves the view ref from either form. Existing view refs remain valid. The host adds `workbenchPages.newSession` for a routed session draft without a tab. A collection can declare a static Main `landing` slot for navigation and recovery.
 
 Every tab can close, including single-resource Main content. `presence: "fixed"` is deprecated in tab regions and behaves like `"open"`; chrome placements retain their owner lifecycle. `alwaysShowTabs` is deprecated in favor of `showHeader`. The declarations remain accepted until the coordinated breaking release removes them. A successful tab move restores a hidden destination header as a saved user choice. Publish the SDK and host before separately released extensions use the new declarations.
 

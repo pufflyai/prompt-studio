@@ -17,7 +17,25 @@ test("page header defaults and empty views survive normalization and metadata se
     path: "editor",
     mode: workbenchModes.project,
     regionSettings: { main: { showHeader: false }, side: { showHeader: true } },
-    main: { kind: "view", view: view.ref, cardinality: "one", empty: view.ref },
+    main: {
+      kind: "view",
+      view: view.ref,
+      cardinality: "one",
+      empty: {
+        view: view.ref,
+        breadcrumb: {
+          label: "New session",
+          menu: [
+            {
+              id: "actions",
+              rows: [
+                { id: "new", label: "New session", action: { kind: "page", page: { kind: "page", id: "editor" } } },
+              ],
+            },
+          ],
+        },
+      },
+    },
     slots: [],
   });
   const source: LoadedExtensionSource = {
@@ -40,7 +58,15 @@ test("page header defaults and empty views survive normalization and metadata se
     JSON.parse(JSON.stringify(createWorkbenchExtensionMetadata({ runtime }))),
   );
   expect(metadata.pages[0].regionSettings).toEqual(page.regionSettings);
-  expect(metadata.pages[0].main).toMatchObject({ empty: { extensionId: "example.lab", kind: "view", id: "editor" } });
+  expect(metadata.pages[0].main.empty).toMatchObject({
+    view: { extensionId: "example.lab", kind: "view", id: "editor" },
+    breadcrumb: {
+      label: "New session",
+      menu: [
+        { id: "actions", rows: [{ action: { kind: "page", page: { extensionId: "example.lab", id: "editor" } } }] },
+      ],
+    },
+  });
 });
 
 test("a collection can use the host placeholder without declaring an empty view", () => {
@@ -73,4 +99,50 @@ test("a collection can use the host placeholder without declaring an empty view"
     JSON.parse(JSON.stringify(createWorkbenchExtensionMetadata({ runtime }))),
   );
   expect(metadata.pages[0].main).toEqual({ kind: "panels" });
+});
+
+test("placeholder breadcrumb targets are validated against page declarations", () => {
+  const view = defineView({
+    id: "empty",
+    title: "Empty",
+    body: { kind: "webview", entry: packageAsset("./empty.tsx", import.meta.url) },
+  });
+  const page = definePage({
+    id: "collection",
+    title: "Collection",
+    path: "collection",
+    mode: workbenchModes.project,
+    main: {
+      kind: "panels",
+      empty: {
+        view: view.ref,
+        breadcrumb: {
+          menu: [
+            {
+              id: "actions",
+              rows: [{ id: "missing", label: "Open", action: { kind: "page", page: { kind: "page", id: "missing" } } }],
+            },
+          ],
+        },
+      },
+    },
+    slots: [],
+  });
+  const runtime = normalizeExtensionSources([
+    {
+      packagePath: "/fake/lab",
+      sourcePath: "/fake/lab/extension.ts",
+      sourceKind: "local_path",
+      manifest: {
+        id: "example.lab",
+        name: "lab",
+        publisher: "example",
+        version: "1.0.0",
+        main: "./extension.ts",
+        enginesPstdio: "^0.2.0",
+      },
+      definition: defineExtension({ views: [view], pages: [page] }),
+    },
+  ]);
+  expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "extension_page_missing" }));
 });

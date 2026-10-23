@@ -4,4 +4,4 @@
 "@pstdio/sdk": minor
 ---
 
-Show closable page tabs, offer available tabs as empty-panel cards, use custom home content on Start, and reveal headers on tab drops.
+Show closable tabs, page-owned placeholders and breadcrumb actions, session creation from empty pages, and page header defaults that reveal hidden headers on tab drops.

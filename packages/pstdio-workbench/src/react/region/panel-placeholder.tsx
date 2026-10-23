@@ -1,4 +1,4 @@
-import { contributionRefId } from "@pstdio/sdk/extensions";
+import { contributionRefId, pagePlaceholderView } from "@pstdio/sdk/extensions";
 import type { ReactNode } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { PageViewOwnerContext } from "../renderers/use-page-params";
@@ -16,7 +16,7 @@ export const PanelPlaceholder = (props: PanelPlaceholderProps) => {
   const { workbench, region, fallback } = props;
   const pageState = useWorkbenchStore(workbench.pages.store, (state) => state);
   const page = pageState.activePageId ? pageState.pages[pageState.activePageId] : undefined;
-  const empty = region === "main" ? page?.main.empty : undefined;
+  const empty = region === "main" ? pagePlaceholderView(page?.main.empty) : undefined;
   if (!empty) return fallback ?? <EmptyPanel workbench={workbench} region={region} />;
   return (
     <PageViewOwnerContext value={pageState.activePageId}>

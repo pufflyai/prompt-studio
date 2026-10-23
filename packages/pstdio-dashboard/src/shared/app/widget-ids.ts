@@ -16,6 +16,7 @@ export const dashboardWidgetIds = {
   activityRail: "dashboard-workbench.activity-rail",
   settings: "dashboard-workbench.settings",
   session: "dashboard-workbench.session",
+  newSession: "dashboard-workbench.new-session",
   notificationsModal: "dashboard-workbench.notifications-modal",
   shortcutHelp: "dashboard-workbench.shortcut-help",
   projectPicker: "dashboard-workbench.project-picker",

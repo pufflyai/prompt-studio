@@ -60,3 +60,21 @@ test("registered panel placeholders supply their own content", async ({ page }) 
     page.locator('[data-workbench-panel="secondary"]').getByRole("group", { name: "Available tabs" }),
   ).toBeVisible();
 });
+
+test("the Tools grid has two columns and includes entries contributed by the page", async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 850 });
+  await page.goto(storyUrl(baseUrl, `${prefix}page-entries`));
+  await waitForStoryPlayback(page);
+  const main = page.locator('[data-workbench-panel="main"]');
+  await expect(main.getByText("Tools", { exact: true })).toBeVisible();
+  const cards = main.getByRole("group", { name: "Available tabs" }).getByRole("button");
+  await expect(cards).toHaveCount(4);
+  const boxes = await cards.evaluateAll((items) =>
+    items.map((item) => ({ x: item.getBoundingClientRect().x, y: item.getBoundingClientRect().y })),
+  );
+  expect(new Set(boxes.map(({ x }) => x)).size).toBe(2);
+  expect(new Set(boxes.map(({ y }) => y)).size).toBe(2);
+  await cards.getByText("New page", { exact: true }).click();
+  await expect(main.getByRole("tab", { name: "New page", exact: true })).toBeVisible();
+  await expect(main.getByText("New page content", { exact: true })).toBeVisible();
+});

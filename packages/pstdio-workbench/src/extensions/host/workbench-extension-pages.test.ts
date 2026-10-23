@@ -86,6 +86,50 @@ describe("extension page registration", () => {
     expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(0);
     registration.dispose();
   });
+  test("keeps placeholder menu resources in the host project", () => {
+    const workbench = createWorkbench();
+    const pageRef = { extensionId, kind: "page" as const, id: "review" };
+    const registration = registerWorkbenchExtensionContributions({
+      executeCommand: () => undefined,
+      metadata: {
+        ...metadata,
+        pages: [
+          {
+            ...metadata.pages[0],
+            main: {
+              kind: "panels",
+              empty: {
+                view: metadata.pages[0].main.view,
+                breadcrumb: {
+                  menu: [
+                    {
+                      id: "review",
+                      rows: [
+                        {
+                          id: "open",
+                          label: "Open review",
+                          action: { kind: "page", page: pageRef, resource: { type: "review", id: "same" } },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      },
+      projectId: "project-1",
+      workbench,
+    });
+    const empty = workbench.pages.getPage(pageId)?.main.empty;
+    if (!empty || !("view" in empty)) throw new Error("Missing placeholder");
+    expect(empty.breadcrumb?.menu?.[0]?.rows[0]?.action).toMatchObject({
+      kind: "navigation",
+      target: { kind: "page", resource: { projectId: "project-1", type: "review", id: "same" } },
+    });
+    registration.dispose();
+  });
   test("registers normalized pages in the shared workbench registry", () => {
     const workbench = createWorkbench();
     const registration = registerWorkbenchExtensionContributions({

@@ -320,9 +320,6 @@ const bindOwnedSubPanelsToLocation = (layout: WorkbenchLayout, desired: readonly
 };
 
 const updateOwnedWidgetLayout = (input: ReconcileOwnedWidgetLayoutInput, removedKeys: ReadonlySet<string>) => {
-  if (input.placements.length === 0 && removedKeys.size === 0 && (input.activate?.length ?? 0) === 0) {
-    return input.layout;
-  }
   const current = indexCurrentOwnedPlacements(input.layout);
   const desired = renderDesiredPlacements(input, current);
   let layout: WorkbenchLayout = normalizeRemovedState({

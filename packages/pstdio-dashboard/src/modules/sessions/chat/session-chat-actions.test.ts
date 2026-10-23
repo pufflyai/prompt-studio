@@ -5,6 +5,7 @@ import { MutationObserver, QueryClient } from "@tanstack/react-query";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { type CreateSessionMutation, openCreatedSessionFromDraft, submitSessionMessage } from "./session-chat-actions";
 import { getPendingFollowUp } from "./session-chat-state";
+import { sessionPanelContext } from "./session-view-context";
 
 const draftResource: ResourceRef = {
   type: "session-draft",
@@ -78,7 +79,7 @@ const openDraftInSidePanel = () => {
     instance: placement,
     refresh: () => undefined,
   };
-  return { input, placement, workbench };
+  return { input: sessionPanelContext(input), panelInput: input, placement, workbench };
 };
 describe("openCreatedSessionFromDraft", () => {
   test("updates the current draft placement with the created session", () => {
@@ -101,9 +102,9 @@ describe("openCreatedSessionFromDraft", () => {
     expect(workbench.layout.getActivePanel()?.resource?.id).toBe("session-created-from-draft");
   });
   test("leaves a placement the user moved to another session while the request was open", () => {
-    const { input, workbench } = openDraftInSidePanel();
+    const { input, panelInput, workbench } = openDraftInSidePanel();
     const other = { type: "session", id: "session-picked", label: "Picked session" };
-    workbench.modePlacements.updatePlacement(input.instance.placementIdentity!, {
+    workbench.modePlacements.updatePlacement(panelInput.instance.placementIdentity!, {
       resource: other,
       title: other.label,
     });
@@ -116,7 +117,7 @@ describe("openCreatedSessionFromDraft", () => {
     });
     expect(workbench.layout.getLayout().regions.side.widgets[0]?.resourceKey).toBe(resourceKey(other));
   });
-  test.each(["home", "draft"])("opens the created session from the %s page", (origin) => {
+  test("opens the created session from an owned draft tab", () => {
     const workbench = createWorkbench();
     workbench.views.registerView({
       id: dashboardWidgetIds.session,
@@ -170,19 +171,18 @@ describe("openCreatedSessionFromDraft", () => {
     workbench.pageLocations.setProject("project-1");
     workbench.pageLocations.navigate({
       kind: "page",
-      ...(origin === "draft"
-        ? { page: workbenchPages.session, resource: { type: "session-draft", id: "new", label: "New session" } }
-        : { page: workbenchPages.sessions }),
+      page: workbenchPages.session,
+      resource: { type: "session-draft", id: "new", label: "New session" },
     });
     const placement = workbench.layout.listPanelInstances("main")[0]!;
     openCreatedSessionFromDraft({
-      input: {
+      input: sessionPanelContext({
         workbench,
         panel: workbench.layout.getPanel(placement.panelId)!,
         instance: placement,
         refresh: () => undefined,
-      },
-      draftKey: origin === "draft" ? "new" : "draft",
+      }),
+      draftKey: "new",
       sessionId: "session-created-from-page-draft",
       prompt: "Use the diagram",
       projectId: "project-1",
