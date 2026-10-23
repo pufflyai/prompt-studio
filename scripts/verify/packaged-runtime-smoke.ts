@@ -44,6 +44,9 @@ const INTEL_MAC_ESSENTIAL_TESTS = [
 ];
 
 export const resolvePackagedRuntimeTestArgs = (platformPackage: PlatformPackage) => {
+  // Full CI owns the three-browser suite in packaged_and_vite_e2e. This job checks
+  // the distributed CLI and package consumers without repeating that browser workload.
+  if (platformPackage.pkg.startsWith("cli-linux-")) return ["run", "test:packaged:cli"];
   if (platformPackage.pkg === "cli-darwin-x64")
     return ["test", ...INTEL_MAC_ESSENTIAL_TESTS, "--timeout", "60000", "--silent"];
   if (!platformPackage.pkg.startsWith("cli-win-")) return ["run", "test:packaged"];

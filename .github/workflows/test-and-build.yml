@@ -10,12 +10,13 @@ on:
   push:
     branches:
       - main
+      - test/ci-reliability/**
   workflow_dispatch:
 
 concurrency:
   # Only a newer event on the same pull request replaces a run. Every queue and main commit keeps
   # its own run until it finishes, so a red commit can always be traced.
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'latest' || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -191,10 +192,10 @@ jobs:
       - name: Test monorepo (non-e2e)
         # Stream failures as they happen; buffered task output can be lost when the runner exits.
         # The API and database suites take minutes, so database_tests runs them in shards.
-        run: bunx lerna run test --ignore e2e --ignore pstdio-api --ignore pstdio-db ${{ needs.scope.outputs.lerna_filter }} --stream
+        run: bunx lerna run test --skip-nx-cache --ignore e2e --ignore pstdio-api --ignore pstdio-db ${{ needs.scope.outputs.lerna_filter }} --stream
 
       - name: Test synchronization protocol with isolated storage
-        run: bunx lerna run test:conformance ${{ needs.scope.outputs.lerna_filter }} --stream
+        run: bunx lerna run test:conformance --skip-nx-cache ${{ needs.scope.outputs.lerna_filter }} --stream
 
   relay_smoke:
     needs: scope
@@ -382,7 +383,7 @@ jobs:
         if: matrix.lane == 'unit'
         # ADR 0044: hosted Windows runner variance exceeds Bun's 5 s default.
         # Every package uses bun test; split its files without adding workers on the same runner.
-        run: bunx lerna run test --ignore e2e --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream --concurrency=1 -- --shard=${{ matrix.shard }} --timeout=15000
+        run: bunx lerna run test --skip-nx-cache --ignore e2e --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream --concurrency=1 -- --shard=${{ matrix.shard }} --timeout=15000
 
       - name: Test Git worktree shard ${{ matrix.shard }} with its existing 30-second limit
         if: matrix.lane == 'unit'
@@ -758,6 +759,86 @@ jobs:
             packages/e2e/playwright-report
           if-no-files-found: warn
 
+  quarantined_bun_tests:
+    needs: scope
+    if: needs.scope.outputs.stage == 'full' || needs.scope.outputs.package_checks == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      E2E_TEST_LANE: quarantine
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Build database test dependencies
+        run: bun run build -- --scope pstdio-db --include-dependencies
+      - name: Run quarantined database cases with their existing limits
+        run: bun run --cwd packages/pstdio-db test ${{ runner.os == 'Windows' && '--timeout=15000' || '' }}
+      - name: Run quarantined release cases with their existing limits
+        if: ${{ !cancelled() }}
+        run: bun run --cwd scripts test
+      - name: Preserve quarantine test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quarantined-bun-${{ runner.os }}-results-attempt-${{ github.run_attempt }}
+          path: test-results/quarantine
+          if-no-files-found: warn
+
+  quarantined_browser_tests:
+    needs: scope
+    if: needs.scope.outputs.stage == 'full'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    continue-on-error: true
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_TEST_LANE: quarantine
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Build packaged test dependencies
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - name: Compile the packaged test CLI
+        run: bun run --cwd scripts build:host
+      - name: Run quarantined browser cases without retries
+        env:
+          E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+        run: bun run --cwd packages/e2e test:packaged:browser
+      - name: Preserve quarantine evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quarantined-browser-results-attempt-${{ github.run_attempt }}
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: warn
+
   license_check:
     needs: scope
     if: needs.scope.outputs.license == 'true'
@@ -979,6 +1060,8 @@ jobs:
       - build_clients
       - build_docker
       - packaged_toolchain
+      - quarantined_bun_tests
+      - quarantined_browser_tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

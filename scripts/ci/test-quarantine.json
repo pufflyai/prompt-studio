@@ -1,0 +1,67 @@
+[
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/db/pglite-engine-upgrade.test.ts",
+    "name": "createDb upgrades a closed legacy home and preserves records, retry receipts and later writes",
+    "platforms": ["linux"],
+    "owner": "PS-907 / pstdio-db",
+    "reason": "Cold old-engine creation, transfer, restart and cleanup vary beyond the existing 5 second allowance.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40002393505",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40004464723"
+    ],
+    "removeWhen": "Fix the slow phase and pass ten independent Linux runs at the existing limit, or obtain explicit approval for a measured new allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/db/board-view-rules-migration.test.ts",
+    "name": "saved board views keep their filters and ordering as rules and sorts",
+    "platforms": ["win32"],
+    "owner": "PS-907 / pstdio-db",
+    "reason": "Cold upgrade and reopen exceeded 15 seconds, then passed at 9.768 seconds with added phase diagnostics.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40002393505",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40004464723"
+    ],
+    "removeWhen": "Identify and fix the slow phase and pass ten independent Windows runs within 15 seconds."
+  },
+  {
+    "runner": "bun",
+    "file": "scripts/release/version-patch.test.ts",
+    "name": "uses a patch bump even when the selected fix has a minor changeset",
+    "platforms": ["linux"],
+    "owner": "PS-907 / release tooling",
+    "reason": "The first cold Changesets CLI launch exceeded 5 seconds in two merge groups. Keep all cold CLI integration cases in this lane so selection cannot move the failure to the next case.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/39983451906",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/39983449401"
+    ],
+    "removeWhen": "Fix cold CLI startup and pass ten independent runs without prewarming or increasing the 5 second allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "scripts/release/version-patch.test.ts",
+    "name": "keeps the real fixed group in sync and preserves extension SDK and UI ranges",
+    "platforms": ["linux"],
+    "owner": "PS-907 / release tooling",
+    "reason": "Shares the cold Changesets CLI path with the failing merge-group test; also owns the no-contributor-changeset contract formerly duplicated by the small fixture.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/39983451906",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/39983449401"
+    ],
+    "removeWhen": "Fix cold CLI startup and pass ten independent runs within the existing 5 second allowance."
+  },
+  {
+    "runner": "playwright",
+    "file": "packages/e2e/src/packaged/packaged-editing-sessions.spec.ts",
+    "name": "packaged editing sessions preview, coalesce saves and cancel gestures in chromium",
+    "platforms": ["linux"],
+    "owner": "PS-907 / extension editing sessions",
+    "reason": "Preview intermittently retains position 0,0 after reload instead of 12,24; Firefox and WebKit remain blocking. Retain first-attempt trace and source-canvas assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/39988657697",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/39988648451"
+    ],
+    "removeWhen": "Reproduce and fix preview state propagation after reload, then pass ten independent Chromium runs without retries."
+  }
+]

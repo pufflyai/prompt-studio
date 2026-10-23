@@ -34,6 +34,7 @@ export const requireCiJobs = (required: string[], results: Record<string, { resu
   if (!required.includes("scope") || !required.includes("static_checks"))
     throw new Error("Required CI scope is incomplete");
   for (const [name, job] of Object.entries(results)) {
+    if (["quarantined_bun_tests", "quarantined_browser_tests"].includes(name)) continue;
     if (["failure", "cancelled"].includes(job.result)) throw new Error(`${name}: ${job.result}`);
   }
   for (const name of required) {
