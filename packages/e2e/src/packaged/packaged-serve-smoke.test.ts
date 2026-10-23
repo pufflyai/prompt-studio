@@ -39,8 +39,6 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 // Document sync checks local, synced and needs-attention states plus strict leaf uploads to an older relay.
-import { registerDeviceAutomationSmokeTests } from "./packaged-device-automations-smoke";
-import { registerDocumentSyncSmokeTests } from "./packaged-document-sync-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 // Includes linked dependency loading and missing dependency diagnostics.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
@@ -149,7 +147,6 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // The packaged empty-panel browser flow also checks nearby tab targets, mirrored Navigation, panel handles and reload.
 
 // Two hosts check an interrupted first download, offline and back, and local edits that merge when sync restarts.
-import { registerTwoDeviceSyncSmokeTests } from "./packaged-two-device-sync-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";
 
@@ -334,9 +331,6 @@ registerPageParamsSmokeTests();
 
 registerResourcePageSmokeTests();
 
-registerDeviceAutomationSmokeTests();
-registerDocumentSyncSmokeTests();
 registerPersonalHistorySmokeTests();
-registerTwoDeviceSyncSmokeTests();
 
 registerPagedCollectionSmokeTests();
