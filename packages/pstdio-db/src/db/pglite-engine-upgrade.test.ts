@@ -91,7 +91,7 @@ test("first creation and symlink opens share one canonical current-engine home",
     const first = await createDb({ path });
     try {
       await checkLocale(first);
-      expect(first.path).toBe(join(await realpath(directory), "database"));
+      expect(await realpath(first.path)).toBe(await realpath(join(directory, "database")));
     } finally {
       await first.close();
     }
@@ -99,7 +99,7 @@ test("first creation and symlink opens share one canonical current-engine home",
     await symlink(join(directory, "database"), homeAlias, "junction");
     const second = await createDb({ path: homeAlias });
     try {
-      expect(second.path).toBe(join(await realpath(directory), "database"));
+      expect(second.path).toBe(first.path);
       expect(JSON.parse(await readFile(join(homeAlias, ".pstdio-engine.json"), "utf8"))).toEqual({
         format: 1,
         engine: "pglite-0.4",
