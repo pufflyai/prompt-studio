@@ -37,6 +37,13 @@ export const createMemoryResources = (
       const found = resources.get(id);
       return found?.scope === scope && found.identity.kind === kind ? structuredClone(found.identity) : null;
     },
+    identityMany: async ({ kind, ids }) => {
+      if (ids.length > 100) throw new Error("An identity batch can read at most 100 resources");
+      return ids.map((id) => {
+        const found = resources.get(id);
+        return found?.scope === scope && found.identity.kind === kind ? structuredClone(found.identity) : null;
+      });
+    },
     findByShorthand: async ({ kind, shorthand }) =>
       [...resources.values()]
         .filter((entry) => entry.scope === scope)

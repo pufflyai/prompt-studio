@@ -6,7 +6,8 @@ import {
 } from "@pstdio/sdk/extensions";
 import { ziplineIssues } from "../apps/zipline-data";
 import { readExampleState } from "../example-state";
-import { examplesChanged, updateState } from "../state-commands";
+import { updateState } from "../state-commands";
+import { examplesChanged } from "../state-events";
 
 const boardAttributes: KanbanRendererAttributeDescriptor[] = [
   { id: "id", label: "ID", type: { kind: "string" }, displayable: true },

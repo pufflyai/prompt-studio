@@ -78,14 +78,16 @@ test("a missing saved scope gets a short setup request on the existing superviso
   expect(prompts.at(-1)!.prompt!.length).toBeLessThan(initial.prompt!.length / 4);
 });
 
-test("a replacement supervisor receives the initial brief again", async () => {
+test("a removed supervisor pauses the run without replacing its ownership ledger", async () => {
   const { ctx, ticket, sessions, prompts } = await supervisorFixture();
   await ticket("First");
   await autoBuildCommand.run(ctx, {});
   const initial = prompts[0]!;
   sessions.delete(initial.sessionId);
-  await autoBuildCommand.run(ctx, {});
-  expect(prompts.at(-1)!.prompt).toBe(initial.prompt);
+  await expect(autoBuildCommand.run(ctx, {})).rejects.toThrow("supervisor was removed");
+  expect(prompts).toHaveLength(1);
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ state: "paused", enabled: false });
+  expect(await ctx.storage.get("auto-build-supervisor")).toMatchObject({ sessionId: initial.sessionId });
 });
 
 test("unchanged full-capacity work gets an hourly stalled-progress reminder", async () => {

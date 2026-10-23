@@ -250,6 +250,8 @@ describe("createCommandEnvironment sessions attachments", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
+        extensionSettingsDBService: { getValue: async () => null },
+        harnessRegistry: { get: async () => ({ listModels: async () => [], params: {} }) },
         fileService: {
           get: async () => sessionAttachmentFile("extension-follow-up.txt"),
         },

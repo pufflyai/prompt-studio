@@ -429,3 +429,48 @@ describe("catalog extension installation and upgrades", () => {
     expect(resolveReleaseCommit).toHaveBeenCalledWith(originUrl, "v2.0.0");
   });
 });
+
+describe("catalog Git installs on a registry host", () => {
+  const registryHost = (versions: string[]) => {
+    const server = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch: () =>
+        Response.json({
+          versions: versions.map((version) => ({
+            id: "pstdio.pstdio-planner",
+            version,
+            enginesPstdio: `^${EXTENSION_API_VERSION}`,
+            sha256: "0".repeat(64),
+            withdrawn: false,
+          })),
+        }),
+    });
+    const service = createExtensionUpgradeService({
+      extensionService: idleExtensionService,
+      release: { source: "registry", ref: `psx:${server.url.origin}` },
+      workspaceService: emptyWorkspaceService,
+    });
+    return { service, stop: () => server.stop(true) };
+  };
+
+  test("offers the newer registry release to an install from the catalog's Git source", async () => {
+    const host = registryHost(["0.8.0", "0.8.1"]);
+    try {
+      expect(await host.service.canUpgrade({ ...installedSource, version: "0.8.0" })).toBe(true);
+      expect(await host.service.canUpgrade({ ...installedSource, version: "0.8.1" })).toBe(false);
+    } finally {
+      host.stop();
+    }
+  });
+
+  test("keeps an explicit Git install from another repository on its own source", async () => {
+    const host = registryHost(["0.8.1"]);
+    try {
+      const source_ref = `https://example.com/fork@${"0".repeat(40)}#extensions/pstdio-planner`;
+      expect(await host.service.canUpgrade({ ...installedSource, source_ref, version: "0.8.0" })).toBe(false);
+    } finally {
+      host.stop();
+    }
+  });
+});

@@ -4,7 +4,7 @@ Extension files belong to their full publisher and name. Use the context file me
 
 ## Full extension IDs
 
-The host release that introduces independent extension updates moves allocated
+Prompt Studio 0.46 moves allocated
 files and artifact mounts under
 `.pstdio/extension-storage/<publisher>.<name>/`.
 For example, Planner tickets move from

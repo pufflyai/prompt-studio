@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
-import { commandRunner } from "./packaged-planner-helpers";
+import { commandRunner, configurePlannerWorkflow } from "./packaged-planner-helpers";
 import { expectPackagedPlannerMoves } from "./packaged-planner-moves-smoke";
 import { expectIndependentPlannerViews } from "./packaged-planner-views-smoke";
 
@@ -38,8 +38,9 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(planningNavigation[1]?.group).toBe(planningNavigation[0]?.group);
   expect(planningNavigation.every((item) => item.icon)).toBe(true);
   const execute = commandRunner(input);
+  const { statusId } = await configurePlannerWorkflow(execute);
   await expectIndependentPlannerViews({ ...input, execute });
-  await expectImplementationStatus(execute);
+  await expectAgentOwnedStatus(execute);
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
   const result = await execute("timeline.ticket.create", {
     content: "# Timeline smoke ticket\n\nShared Planner body",
@@ -80,6 +81,36 @@ export async function expectPackagedPlannerTimeline(input: {
     expect.objectContaining({ id: blocked.ticket.id, state: "blocked", flags: expect.arrayContaining(["blocked"]) }),
   );
   await execute("update-ticket", { id: result.ticket.id, status: "Done" });
+  // Only this ticket carries the tag, so the saved scope follows it after it is reopened.
+  await execute("update-ticket", { id: result.ticket.id, tags: ["Urgent"] });
+  // Only completed tickets are eligible, so the run has no new work and starts no supervisor.
+  const { revision } = await execute("auto-build.configure", {
+    enabled: true,
+    prompt: "Finish the preview.",
+    eligible: {
+      conjunction: "and",
+      rules: [{ attributeId: "status", condition: "is-any-of", value: [statusId("Done")] }],
+    },
+  });
+  // The background check that enabling queues can hold the supervisor write guard briefly.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await execute("auto-build.scope", { revision, queries: [{ tags: ["Urgent"] }] });
+      break;
+    } catch (error) {
+      if (attempt >= 50 || !String(error).includes("Another Planner write is running")) throw error;
+      await Bun.sleep(100);
+    }
+  }
+  expect(await execute("auto-build.read", {})).toMatchObject({ completed: true });
+  await execute("update-ticket", {
+    id: result.ticket.id,
+    status: "Todo",
+    blockedReason: "Hold dispatch during completion validation",
+  });
+  expect(await execute("auto-build.read", {})).toMatchObject({ completed: false });
+  await execute("auto-build.configure", { enabled: false });
+  await execute("update-ticket", { id: result.ticket.id, status: "Done", blockedReason: "" });
   const availablePlan = await execute("timeline.plan.read", {});
   const available = availablePlan.sections.flatMap(
     (section: { rows: { id: string; flags: string[] }[] }) => section.rows,
@@ -110,9 +141,8 @@ async function expectSharedMilestoneProperties(execute: Execute, ticketId: strin
 }
 
 type Execute = ReturnType<typeof commandRunner>;
-const reviewNeeded = "default-human-requested-true";
 
-async function expectImplementationStatus(execute: Execute) {
+async function expectAgentOwnedStatus(execute: Execute) {
   const ticket = await execute("create-ticket", { content: "# Live implementation status", status: "Todo" });
   await execute("implement-ticket", {
     id: ticket.id,
@@ -120,11 +150,11 @@ async function expectImplementationStatus(execute: Execute) {
   });
   const plan = await execute("timeline.plan.read", {});
   expect(plan.sections.flatMap((section: { rows: unknown[] }) => section.rows)).toContainEqual(
-    expect.objectContaining({ id: ticket.id, status: expect.objectContaining({ name: "In Progress" }) }),
+    expect.objectContaining({ id: ticket.id, status: expect.objectContaining({ name: "Todo" }) }),
   );
   const query = await execute("query-tickets", {});
   expect(query.rows).toContainEqual(
-    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ status: "in-progress" }) }),
+    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ status: ticket.statusId }) }),
   );
 }
 
@@ -134,8 +164,6 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
     content: "# Review request smoke",
     deadline: deadlineId,
   });
-  await execute("update-ticket", { id: ticket.id, tagIds: [reviewNeeded] });
-  expect((await execute("get-ticket", { id: ticket.id })).tagIds ?? []).not.toContain(reviewNeeded);
   const handoff = await execute("request-human", {
     ticket: ticket.id,
     reason: "approved-revision",
@@ -175,7 +203,9 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
     },
   });
   await execute("set-ticket-tags", { rowId: ticket.id, tagIds: [] });
-  expect((await execute("get-ticket", { id: ticket.id })).tagIds).toContain(reviewNeeded);
+  expect(await execute("review-requests.list", { ticket: ticket.id, openOnly: true })).toMatchObject({
+    requests: expect.arrayContaining([expect.objectContaining({ id: task.id })]),
+  });
   for (const request of [handoff, task, decision]) {
     expect(request).toMatchObject({ state: "open", context: { sessionId: null } });
   }
@@ -201,6 +231,9 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
     .flatMap((section: { rows: Array<{ id: string }> }) => section.rows)
     .find((entry: { id: string }) => entry.id === ticket.id);
   expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["human-needed"]) });
+  expect(mixed.ticketRows).toContainEqual(
+    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ reviewRequests: "requested" }) }),
+  );
   expect(
     mixed.ticketRows.find((entry: { id: string }) => entry.id === ticket.id).attributes.reviewRequestItems,
   ).toMatchObject([
@@ -218,10 +251,11 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
   });
 
   await execute("review-requests.cancel", { requestId: handoff.id, reason: "Superseded by a new revision." });
+  expect((await execute("timeline.plan.read", {})).ticketRows).toContainEqual(
+    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ reviewRequests: "answered" }) }),
+  );
   const settled = await execute("review-requests.read", { requestId: decision.id });
   expect(settled).toMatchObject({ state: "answered", outcomeText: "Platforms: Windows" });
-  const [stored] = (await execute("read-tickets", {})).filter((entry: { id: string }) => entry.id === ticket.id);
-  expect(stored.tagIds ?? []).not.toContain(reviewNeeded);
   const resolved = await execute("timeline.plan.read", {});
   expect(
     resolved.ticketRows.find((entry: { id: string }) => entry.id === ticket.id).attributes.reviewRequestItems,

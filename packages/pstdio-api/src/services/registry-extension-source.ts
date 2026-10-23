@@ -29,18 +29,25 @@ export const createRegistryExtensionSource = (
       prepareNamedSource: (_name, tempDir, _ref, signal) => client.prepare(release, join(tempDir, "package"), signal),
     });
   };
+  const hasNewerRelease = async (registry: string, id: string, installedVersion: string) => {
+    try {
+      const release = await createRegistryClient(registry).latest(id, EXTENSION_API_VERSION);
+      return Bun.semver.order(release.version, installedVersion) > 0;
+    } catch {
+      // Keep the action available so an explicit request can explain a connection or API mismatch.
+      return true;
+    }
+  };
   return {
     matches: (source: RegistryUpgradeSource) => registryFor(source) !== null,
     canUpgrade: async (source: RegistryUpgradeSource) => {
       const recorded = registryFor(source);
       if (!recorded) return false;
-      try {
-        const release = await createRegistryClient(recorded.registry).latest(recorded.id, EXTENSION_API_VERSION);
-        return Bun.semver.order(release.version, source.version ?? recorded.version) > 0;
-      } catch {
-        // Keep the action available so an explicit request can explain a connection or API mismatch.
-        return true;
-      }
+      return hasNewerRelease(recorded.registry, recorded.id, source.version ?? recorded.version);
+    },
+    canUpgradeCatalog: async (entry: ExtensionCatalogEntry, installedVersion: string) => {
+      if (deps.release?.source !== "registry" || !entry.extensionId) return false;
+      return hasNewerRelease(deps.release.ref.slice(4), entry.extensionId, installedVersion);
     },
     installRecorded: (source: RegistryUpgradeSource, options: Omit<InstallExtensionSourceInput, "source">) => {
       const recorded = registryFor(source);

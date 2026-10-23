@@ -2,7 +2,7 @@
 
 Proposed: 2026-10-08
 
-Status: Accepted for the host contract. Provider adoption remains gated by live validation and SDK publication.
+Status: Accepted. Codex adopts the published host contract; other provider adoption remains gated by live validation.
 
 ## Decision
 
@@ -14,6 +14,10 @@ The host saves a steering delivery identity and captured run identity before pro
 
 The provider must emit and retain the host delivery identity in normalized history. Positive history evidence can complete an interrupted handoff. Missing evidence does not prove rejection and never permits automatic replay. The UI exposes uncertainty and retained content rather than a retry action.
 
+### New live requests
+
+`POST /sessions/{id}/steer` accepts new prompt content and a captured run identity. The CLI exposes it as `sessions follow-up --steer`. It shares the saved-request delivery engine and current execution settings. It creates the request with its steering intent in one insert, so the request is never eligible for normal dispatch. Preparation protects attachments before that insert. A definite rejection deletes this new request because it has no next-turn intent to restore. An existing queued request still returns to its pending state after rejection. Acceptance and uncertainty use the same persisted evidence and recovery rules for both entry points.
+
 ## Alternatives
 
 Stopping and resuming changes the meaning of steering. Displaying a user bubble without provider acceptance changes only the screen. Treating a steering intent as a normal dispatch claim would replay uncertain input after restart. None satisfies the delivery contract.
@@ -22,4 +26,6 @@ Stopping and resuming changes the meaning of steering. Displaying a user bubble 
 
 Codex 0.160.0 accepted `turn/steer` during a command, consumed the correction, continued the original work, and rejected input after completion. A second probe verified that `clientUserMessageId` survives `thread/read` as the steered user message’s `clientId`, with one matching native user item.
 
-Claude Code 2.1.294 live validation is blocked by the account's weekly usage limit. OpenCode support remains unverified. Neither is enabled by assumption. Publish the additive SDK contract before adopting it in a separate harness release, as required by the extension workflow.
+Codex exposes `HarnessSession.steer` using `turn/steer`, the current native turn ID, and `clientUserMessageId`. Live and recovered user messages retain the matching `clientId`. A matching native echo or acknowledgement publishes the accepted prompt with host attachment metadata. Pending metadata is released when the request settles. Native rejections keep the request queued. Transport failures remain uncertain and never trigger replay; positive saved history evidence can reconcile them.
+
+Claude Code 2.1.294 live validation is blocked by the account's weekly usage limit. OpenCode support remains unverified. Neither is enabled by assumption. Publish additive SDK contracts before adopting them in separate harness releases, as required by the extension workflow.

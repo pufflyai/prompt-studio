@@ -9,8 +9,9 @@ import { DisplaySortControl } from "../collection-view/display-sort-control";
 import { buildColumns } from "./build-columns";
 import { DataTableDisplayMenu } from "./data-table-display-menu";
 import { DataTableGrid } from "./data-table-grid";
-import { pageGroupedRows, pageRows } from "./data-table-grouping";
+import { resolveCollapsedGroups, resolveTablePage } from "./data-table-grouping";
 import { DataTableHeader } from "./data-table-header";
+import { retainSelectedRows } from "./data-table-selection";
 import {
   reorderDataTableColumns,
   resolveInitialPageSize,
@@ -46,21 +47,37 @@ const DatasetDataTable = (props: DataTableProps) => {
   const view = useDataTableView(props);
   const { settings, setSettings, sorts, setSorts, filter, startRule } = view;
   // A different filter, sort, grouping, or search starts again on the first page.
-  const pageKey = JSON.stringify([filter, sorts, settings.grouping, view.deferredSearch]);
+  const pageKey = JSON.stringify([view.storageKey, filter, sorts, settings.grouping, view.deferredSearch]);
   const [pagePosition, setPagePosition] = useState({ key: pageKey, index: 0 });
-  const pageIndex = pagePosition.key === pageKey ? pagePosition.index : 0;
-  const setPageIndex = (index: number) => setPagePosition({ key: pageKey, index });
-  const [pageSize, setPageSize] = useState(() => resolveInitialPageSize({ initialPageSize }));
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const localPageIndex = pagePosition.key === pageKey ? pagePosition.index : 0;
+  const displayed = props.page?.displayed ?? props.page?.request;
+  const pageIndex = displayed ? Math.floor(displayed.offset / displayed.limit) : localPageIndex;
+  const setPageIndex = props.page?.onPageChange ?? ((index: number) => setPagePosition({ key: pageKey, index }));
+  const [localPageSize, setLocalPageSize] = useState(() => resolveInitialPageSize({ initialPageSize }));
+  const pageSize = displayed?.limit ?? localPageSize;
+  const setPageSize = props.page?.onPageSizeChange ?? setLocalPageSize;
+  const collapseKey = JSON.stringify([view.storageKey, settings.grouping]);
+  const [collapse, setCollapse] = useState({ key: collapseKey, groups: [] as string[] });
+  const collapsed = resolveCollapsedGroups(collapseKey, collapse, props.page?.request.collapsedGroups);
+  const [selection, setSelection] = useState({
+    key: pageKey,
+    ids: {} as RowSelectionState,
+    rows: new Map<string, Record<string, unknown>>(),
+  });
+  const rowSelection = selection.key === pageKey ? selection.ids : {};
   const enableSelection = shouldEnableSelection(props);
   const selectionActions = resolveSelectionActions(props);
   const { groups } = view;
   // Rows in collapsed groups leave the pages but still count for statistics, selection, and row numbers.
   const shownRows = groups ? groups.flatMap((group) => group.rows) : view.shownRows;
-  const page = groups
-    ? pageGroupedRows(groups, collapsed, pageIndex, pageSize)
-    : pageRows(shownRows, pageIndex, pageSize);
+  const page = resolveTablePage({
+    groups,
+    rows: shownRows,
+    collapsed,
+    index: pageIndex,
+    size: pageSize,
+    provider: props.page?.result,
+  });
   const data = shownRows.map((row) => row.sourceRow);
   const idBySource = new Map(shownRows.map((row) => [row.sourceRow, row.id]));
   const columns = buildColumns(data, view.visibleColumnKeys, {
@@ -74,6 +91,7 @@ const DatasetDataTable = (props: DataTableProps) => {
     columnRenderers,
     wrapRows: settings.wrapRows,
     rowNumbers: settings.rowNumbers,
+    rowOffset: displayed?.offset,
     search: view.deferredSearch,
   });
 
@@ -85,7 +103,16 @@ const DatasetDataTable = (props: DataTableProps) => {
     getRowId: (row) => idBySource.get(row) ?? "",
     columnResizeMode: "onChange",
     columnResizeDirection: "ltr",
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: (update) =>
+      setSelection((previous) => {
+        const ids = previous.key === pageKey ? previous.ids : {};
+        const next = typeof update === "function" ? update(ids) : update;
+        return {
+          key: pageKey,
+          ids: next,
+          rows: retainSelectedRows(previous.rows, next, new Map(shownRows.map((row) => [row.id, row.sourceRow]))),
+        };
+      }),
     getCoreRowModel: getCoreRowModel(),
     enableMultiRowSelection: enableSelection,
     enableRowSelection: enableSelection,
@@ -107,11 +134,20 @@ const DatasetDataTable = (props: DataTableProps) => {
       setSettings({ hiddenColumns: toggleHiddenDataTableColumn(settings.hiddenColumns, columnId, false) }),
   };
 
-  const total = view.rows.length;
+  const total = props.page?.result?.total ?? view.rows.length;
   const nothingShown = total > 0 && view.shownRows.length === 0 && Boolean(view.deferredSearch.trim());
 
   return (
-    <Flex direction="column" flex="1" minH="0" minW="0" height="100%" width="100%" overflow="hidden">
+    <Flex
+      aria-busy={props.page?.loading}
+      direction="column"
+      flex="1"
+      minH="0"
+      minW="0"
+      height="100%"
+      width="100%"
+      overflow="hidden"
+    >
       <DataTableHeader
         itemLabel={props.itemLabel}
         view={view}
@@ -143,17 +179,28 @@ const DatasetDataTable = (props: DataTableProps) => {
         </Box>
       ) : (
         <DataTableGrid
+          page={props.page}
+          selectedRecords={
+            props.page
+              ? [
+                  ...retainSelectedRows(
+                    selection.rows,
+                    rowSelection,
+                    new Map(shownRows.map((row) => [row.id, row.sourceRow])),
+                  ).values(),
+                ]
+              : undefined
+          }
           table={table}
           entries={page.entries}
           collapsed={collapsed}
-          onToggleGroup={(key) =>
-            setCollapsed((current) => {
-              const next = new Set(current);
-              if (next.has(key)) next.delete(key);
-              else next.add(key);
-              return next;
-            })
-          }
+          onToggleGroup={(key) => {
+            const next = new Set(collapsed);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            if (props.page) props.page.onCollapsedGroupsChange([...next]);
+            else setCollapse({ key: collapseKey, groups: [...next] });
+          }}
           settings={settings}
           data={data}
           fieldMenu={fieldMenu}
@@ -172,6 +219,8 @@ const DatasetDataTable = (props: DataTableProps) => {
       {page.pageCount > 1 ? (
         <PaginationFooter
           pageCount={page.pageCount}
+          navigationIndex={props.page ? Math.floor(props.page.request.offset / props.page.request.limit) : undefined}
+          loading={props.page?.loading}
           pageIndex={page.page}
           pageSize={pageSize}
           pageSizeOptions={pageSizeOptions}

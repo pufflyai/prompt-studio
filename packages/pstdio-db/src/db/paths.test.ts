@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { ensureDbDirectory, resolveDbPath } from "./paths";
+import { canonicalDbPath, resolveDbPath } from "./paths";
 
 const originalDbPath = process.env.PSTDIO_DB_PATH;
 const originalPstdioHome = process.env.PSTDIO_HOME;
@@ -51,20 +51,18 @@ describe("resolveDbPath", () => {
   });
 });
 
-describe("ensureDbDirectory", () => {
-  it("creates the database directory", () => {
+describe("canonicalDbPath", () => {
+  it("creates only the parent so recovery can inspect an absent active home", () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-"));
     const dbPath = path.join(tempRoot, "nested", ".pstdio");
 
-    ensureDbDirectory(dbPath);
-
-    expect(fs.existsSync(dbPath)).toBe(true);
-    expect(fs.statSync(dbPath).isDirectory()).toBe(true);
+    expect(canonicalDbPath(dbPath)).toBe(path.join(fs.realpathSync(path.dirname(dbPath)), ".pstdio"));
+    expect(fs.existsSync(dbPath)).toBe(false);
 
     fs.rmSync(tempRoot, { force: true, recursive: true });
   });
 
   it("skips directory creation for in-memory databases", () => {
-    expect(() => ensureDbDirectory(":memory:")).not.toThrow();
+    expect(canonicalDbPath(":memory:")).toBe(":memory:");
   });
 });

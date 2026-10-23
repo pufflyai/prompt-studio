@@ -10,9 +10,10 @@ pst extensions update pstdio-notes
 pst extensions check
 ~~~
 
-On a host with PSX support, a core extension update can ship independently of
-Prompt Studio. The host selects the newest released version its extension API
-supports. Withdrawn versions are skipped. A refused package or failed install
+Stable hosts install core extensions from their own release tag, so an update
+arrives with the next Prompt Studio release. A host configured for the PSX extension registry
+can receive a core extension update independently of Prompt Studio. It selects
+the newest released version its extension API supports. Withdrawn versions are skipped. A refused package or failed install
 keeps the working extension. Installed extensions keep running when the registry
 is unavailable.
 

@@ -6,7 +6,7 @@ export const HOST_RUNTIME_ERROR_EVENT = "pstdio.extension.runtime-error";
 export type ThemePreference = "dark" | "light";
 
 export type InitMessage = {
-  sizing?: "content-width";
+  sizing?: "content-width" | "content-height";
   moduleUrl: string;
   styles: string[];
   props: WebviewHostProps;
@@ -73,6 +73,7 @@ export type WebviewPointerEvent = Pick<
 > & { type: "pointerdown" | "click" };
 
 export type GuestApi = {
+  contentHeightChanged?: (height: number) => void;
   contentWidthChanged: (width: number) => void;
   dispatchPointerEvent: (event: WebviewPointerEvent) => void;
   dispatchKeyboardEvent: (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => Promise<void>;

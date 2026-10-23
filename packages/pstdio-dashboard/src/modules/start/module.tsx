@@ -2,6 +2,10 @@ import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import {
+  dashboardNavigationSections,
+  registerDashboardNavigationContribution,
+} from "@/shared/workbench/dashboard-navigation-contribution";
 import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
 import { StartWidget } from "./components/start-widget";
 import { registerToolResources } from "./tool-resources";
@@ -37,6 +41,23 @@ export const createStartModule = () =>
           cardinality: "one",
         },
         slots: [],
+      });
+      registerDashboardNavigationContribution(ctx, {
+        id: "dashboard.start.project-nav",
+        modes: ["project"],
+        getSections: () => [
+          {
+            ...dashboardNavigationSections.root,
+            nodes: [
+              {
+                id: dashboardViews.start.id,
+                label: "Home",
+                icon: dashboardViews.start.icon,
+                target: { kind: "page", page: workbenchPages.start },
+              },
+            ],
+          },
+        ],
       });
       const unsubscribe = ctx.pages.store.subscribeSelector(
         (state) => state.activePageId,

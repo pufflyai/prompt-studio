@@ -16,7 +16,8 @@ import { TreeListNodes } from "./tree-list-nodes";
 import { type TreeListMovePolicy, toSectionDragId, verticalTreeDrag } from "./tree-list-reorder";
 import { TreeListReveal } from "./tree-list-reveal";
 import { TreeListSectionHeader } from "./tree-list-section-header";
-import { SectionGap, SortableHost } from "./tree-list-sortable-host";
+import { TreeListSelectionContext } from "./tree-list-selection-context";
+import { canStartTreeListDrag, SectionGap, SortableHost } from "./tree-list-sortable-host";
 import { VirtualTreeList } from "./tree-list-virtual";
 import { useTreeListKeyboardNavigation } from "./use-tree-list-keyboard-navigation";
 
@@ -79,7 +80,11 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
             // Drag listeners live on the header so dragging the section moves
             // it, while click-to-collapse still works via the activation
             // distance on the pointer sensor.
-            <Box onPointerDownCapture={(event) => listeners?.onPointerDown?.(event)}>
+            <Box
+              onPointerDownCapture={(event) => {
+                if (canStartTreeListDrag(event.target)) listeners?.onPointerDown?.(event);
+              }}
+            >
               <TreeListSectionHeader
                 section={headerRow.section}
                 collapsible={headerRow.collapsible}
@@ -133,6 +138,7 @@ type SortableSectionsProps = Omit<
 
 // Reads the drag state from the enclosing DndContext, which may be shared by several trees.
 const SortableSections = (props: SortableSectionsProps) => {
+  const selection = useContext(TreeListSelectionContext);
   const { sections, expandedSectionIds, expandedNodeIds, sectionGap, ...rest } = props;
   const { active, over } = useDndContext();
   const [pointerY, setPointerY] = useState<number | null>(null);
@@ -161,6 +167,7 @@ const SortableSections = (props: SortableSectionsProps) => {
       <Stack
         ref={keyboard.rootRef}
         role="listbox"
+        aria-multiselectable={Boolean(selection) || undefined}
         onKeyDown={keyboard.handleKeyDown}
         gap="0"
         w="full"

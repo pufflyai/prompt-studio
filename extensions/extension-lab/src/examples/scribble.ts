@@ -1,4 +1,4 @@
-import { defineExtension } from "@pstdio/sdk/extensions";
+import { defineExtension, defineStatusBarItem, workbenchSlots } from "@pstdio/sdk/extensions";
 import { defineExample, webview } from "../definition";
 
 const views = [
@@ -11,12 +11,21 @@ export const example = defineExample({
   label: "Scribble",
   icon: "Feather",
   primary: views[0].ref,
-  chrome: { sidenav: views[1].ref, activity: false, status: views[2].ref },
-  regionSettings: { sidenav: { size: { defaultPx: 240, minPx: 200, maxPx: 320 }, collapsible: false } },
+  regions: ["main", "side"],
+  chrome: { sidenav: views[1].ref, activity: false },
+  regionSettings: { sidenav: { size: { defaultPx: 240, minPx: 200, maxPx: 320 }, canClose: false } },
   slots: [],
   initialResource: true,
 });
 export default defineExtension({
+  statusBarItems: [
+    defineStatusBarItem({
+      id: "scribble-sync",
+      view: views[2].ref,
+      slot: workbenchSlots.statusBarTrailing,
+      when: { mode: example.mode.ref },
+    }),
+  ],
   modes: [example.mode],
   themes: [example.theme],
   resourceKinds: [example.resourceKind],

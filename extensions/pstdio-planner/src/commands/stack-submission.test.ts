@@ -48,7 +48,7 @@ test("a correction after passed review preserves the old verdict and records a f
         },
       ],
     };
-    await putAttempt(f.storage, { ...f.attempt, state: "approved", revisions: [old] });
+    await putAttempt(f.storage, { ...f.attempt, revisions: [old] });
     await f.commit("correction.txt");
     const result = await submitChangeRequestCommand.run(f.ctx, await f.params());
     expect(result.revisions).toHaveLength(2);
@@ -76,7 +76,6 @@ test("submission refuses stale upstream ancestry and records the new base after 
       workspaceId: "parent",
       ticketId: "Parent",
       ticketShorthand: "Parent",
-      state: "approved",
       revisions: [
         {
           revision: 1,
@@ -122,7 +121,6 @@ test("active replacement work cannot provide a dependency revision", async () =>
       ...f.attempt,
       workspaceId: "parent",
       ticketId: "Parent",
-      state: "approved",
       revisions: [
         {
           revision: 1,
@@ -136,7 +134,7 @@ test("active replacement work cannot provide a dependency revision", async () =>
       ],
     });
     f.ctx.sessions.get = async (id) => sessionRecord({ id, title: id, status: "in_progress" });
-    const result = await loadAttemptDependencies(f.ctx, "Child", { dependencyReview: "submitted" });
+    const result = await loadAttemptDependencies(f.ctx, "Child", {});
     expect(result.readiness).toMatchObject({
       decision: "wait",
       reason: "dependency-not-ready",
@@ -158,7 +156,6 @@ test("submission rejects a dependency revision that changes during validation", 
       ...f.attempt,
       workspaceId: "parent",
       ticketId: "Parent",
-      state: "approved" as const,
       revisions: [
         {
           revision: 1,
@@ -229,7 +226,6 @@ test("resubmitting a recorded revision still checks its current dependency ances
     const head = await f.commit("child.txt");
     await putAttempt(f.storage, {
       ...f.attempt,
-      state: "review_ready",
       base: { workspaceId: "parent", headSha: oldParent },
       revisions: [
         {
@@ -250,7 +246,6 @@ test("resubmitting a recorded revision still checks its current dependency ances
       ...f.attempt,
       workspaceId: "parent",
       ticketId: "Parent",
-      state: "approved",
       revisions: [
         {
           revision: 1,

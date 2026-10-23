@@ -43,7 +43,7 @@ const seedTicket = async (storage: ReturnType<typeof createMemoryStorage>, overr
 };
 
 describe("implementTicketCommand", () => {
-  test("moves the ticket to In Progress and launches a session via the template", async () => {
+  test("launches the responsible agent and preserves ticket progress", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
     const ticket = await seedTicket(storage);
@@ -66,7 +66,7 @@ describe("implementTicketCommand", () => {
     const result = await implementTicketCommand.run(ctx, commandParamsFor(ctx));
 
     expect(result).toEqual(createSessionResource());
-    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("in-progress");
+    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe(ticket.statusId);
     expect(created).toEqual([
       expect.objectContaining({
         title: `Implement ticket: ${ticket.shorthand}`,

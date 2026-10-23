@@ -45,7 +45,13 @@ export const startRegistryService = async () => {
           image: "postgres:16-alpine",
           environment: { POSTGRES_DB: "psx", POSTGRES_USER: "test", POSTGRES_PASSWORD: "isolated-test-only" },
           ports: ["127.0.0.1::5432"],
-          healthcheck: { test: ["CMD", "pg_isready", "-U", "test", "-d", "psx"], interval: "1s" },
+          healthcheck: {
+            // Initialization accepts Unix-socket connections before the TCP listener the registry uses.
+            test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "test", "-d", "psx"],
+            interval: "1s",
+            timeout: "1s",
+            retries: 20,
+          },
         },
         objects: {
           image: "rustfs/rustfs:1.0.1",

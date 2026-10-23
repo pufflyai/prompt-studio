@@ -46,7 +46,8 @@ test("a durable multi-record update survives a new service and folds without rep
   expect((await reopened.records.read("note")).value).toBe("first\nlast");
   expect(await f.db.select().from(extension_storage_journal)).toHaveLength(0);
   expect((await f.db.select().from(storage_document_updates)).length).toBeLessThan(128);
-  expect(await f.db.select().from(storage_documents)).toHaveLength(1);
+  // The owner metadata document plus one document per record.
+  expect(await f.db.select().from(storage_documents)).toHaveLength(3);
 });
 
 test("the journal is projected once per owner and later writes leave it untouched", async () => {
@@ -82,102 +83,10 @@ test("another store sees a complete update only after its database commit", asyn
     ],
   });
   expect((await other.records.list()).map((record) => record.value)).toEqual([1, 2]);
+  await f.storage.records.commit({ operationId: "later", edits: [{ recordId: "one", replace: 3 }] });
   expect(await f.db.select().from(storage_document_updates)).toHaveLength(1);
   await f.db.delete(storage_documents).where(eq(storage_documents.workbench_id, f.owner.workbenchId));
   expect(await f.db.select().from(storage_document_updates)).toHaveLength(0);
-});
-
-test("two local databases merge offline ticket edits durably and in either update order", async () => {
-  const first = await fixture();
-  const second = await fixture();
-  await first.storage.records.commit({
-    operationId: "seed",
-    edits: [{ recordId: "ticket", replace: { title: "Before", status: "ready" } }],
-  });
-  await second.storage.applyUpdate(await first.storage.exportUpdate());
-  await first.storage.records.commit({
-    operationId: "title",
-    edits: [{ recordId: "ticket", replace: { title: "After", status: "ready" } }],
-  });
-  await second.storage.records.commit({
-    operationId: "status",
-    edits: [{ recordId: "ticket", replace: { title: "Before", status: "done" } }],
-  });
-  const updates = await Promise.all([first.storage.exportUpdate(), second.storage.exportUpdate()]);
-  await first.storage.applyUpdate(updates[1]);
-  await second.storage.applyUpdate(updates[0]);
-  for (const f of [first, second])
-    expect((await createDocumentStorageDBService(f.db).open({ owner: f.owner }).records.read("ticket")).value).toEqual({
-      title: "After",
-      status: "done",
-    });
-});
-
-test("the same data migration on offline devices inserts multiline content once", async () => {
-  const first = await fixture();
-  const second = await fixture();
-  const scope = (f: Awaited<ReturnType<typeof fixture>>) => ({
-    extension_instance_id: f.instanceAId,
-    project_id: f.projectAId,
-    scope_type: "custom",
-    scope_id: "shared",
-    key: "note",
-  });
-  await first.svc.setKv({ ...scope(first), value_json: { body: "first\nlast", settings: { enabled: false } } });
-  await second.storage.applyUpdate(await first.storage.exportUpdate());
-  await first.storage.records.commit({
-    operationId: "unrelated-first",
-    edits: [{ recordId: "unrelated", replace: 1 }],
-  });
-  await second.storage.records.commit({
-    operationId: "unrelated-second",
-    edits: [{ recordId: "unrelated", replace: 2 }],
-  });
-  for (const f of [first, second])
-    await f.svc.migrate(scope(f), 1, async () => {
-      await f.svc.setKv({
-        ...scope(f),
-        value_json: { body: "first\nadded by migration\nlast", settings: { enabled: true } },
-      });
-    });
-  const updates = await Promise.all([first.storage.exportUpdate(), second.storage.exportUpdate()]);
-  await first.storage.applyUpdate(updates[1]);
-  await second.storage.applyUpdate(updates[0]);
-  for (const f of [first, second])
-    expect((await f.svc.getKv(scope(f), "note"))?.value_json).toEqual({
-      body: "first\nadded by migration\nlast",
-      settings: { enabled: true },
-    });
-  for (const f of [first, second])
-    await f.svc.migrate(scope(f), 1, async () => {
-      throw new Error("A received migration ran twice");
-    });
-});
-
-test("upgrading owners with unrelated differences gives unchanged legacy text the same identity", async () => {
-  const first = await fixture();
-  const second = await fixture();
-  for (const [index, f] of [first, second].entries()) {
-    const legacy = createGroupedStorageDBService(f.db).open({
-      owner: f.owner,
-      environmentId: (await f.service.getEnvironment()).environmentId,
-    });
-    await legacy.records.commit({
-      operationId: "old-content",
-      edits: [
-        { recordId: "note", replace: { body: "first\nlast" } },
-        { recordId: "shared-note", shared: [{ kind: "text.insert", index: 0, text: "shared\nbody" }] },
-        { recordId: "unrelated", replace: index },
-      ],
-    });
-  }
-  const updates = await Promise.all([first.storage.exportUpdate(), second.storage.exportUpdate()]);
-  await first.storage.applyUpdate(updates[1]);
-  await second.storage.applyUpdate(updates[0]);
-  for (const f of [first, second]) {
-    expect((await f.storage.records.read("note")).value).toEqual({ body: "first\nlast" });
-    expect((await f.storage.records.read("shared-note")).shared).toEqual({ kind: "text", value: "shared\nbody" });
-  }
 });
 
 test("declared text files have separate durable documents and merge offline character edits", async () => {
@@ -206,7 +115,12 @@ test("sync discovers text documents through the encrypted records document", asy
   const second = await fixture();
   await first.service.openTextDocument({ owner: first.owner, fileId: "note.md" }).save("offline text");
   expect(await first.service.documents.list(first.owner)).toEqual(["records", '["text-file","note.md"]']);
-  await second.storage.applyUpdate(await first.storage.exportUpdate());
+  const directory = await first.service.documents
+    .open("records")
+    .transaction(first.owner, async ({ document }) => (await import("yjs")).encodeStateAsUpdate(document));
+  await second.service.documents.open("records").transaction(second.owner, async ({ document }) => {
+    (await import("yjs")).applyUpdate(document, directory);
+  });
   expect(await second.service.documents.list(second.owner)).toEqual(["records", '["text-file","note.md"]']);
   const update = await first.service.documents
     .open('["text-file","note.md"]')

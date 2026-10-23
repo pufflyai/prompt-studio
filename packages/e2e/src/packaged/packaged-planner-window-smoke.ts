@@ -21,8 +21,8 @@ export async function expectPlannerWindow(timeline: FrameLocator, execute: Execu
   await expect(first).toBeInViewport();
   await expect.poll(() => cards.count()).toBeLessThan(tickets.length / 2);
   const initialCards = await cards.count();
-  await first.click();
-  await expect(timeline.getByRole("button", { name: "Close details", exact: true })).toBeVisible();
+  await first.focus();
+  await expect(first).toBeFocused();
   const initialHeight = await first.evaluate((card) => card.getBoundingClientRect().height);
   await viewport.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
   const last = timeline.locator(`[data-ticket="${tickets.at(-1)!.id}"]`);
@@ -34,7 +34,7 @@ export async function expectPlannerWindow(timeline: FrameLocator, execute: Execu
   await expect.poll(() => cards.count()).toBeLessThan(tickets.length / 2);
   console.info("Timeline window", { tickets: tickets.length, initialCards, finalCards: await cards.count() });
   await expect(timeline.locator("[data-edge-layer] g")).toHaveCount(tickets.length - 1);
-  await timeline.getByRole("button", { name: "Close details", exact: true }).click();
+  await viewport.focus();
   await expect(first).toHaveCount(0);
   await viewport.evaluate((element) => element.scrollTo({ top: 0 }));
   await expect(first).toBeInViewport();

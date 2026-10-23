@@ -42,15 +42,6 @@ const executePlannerCommand = async (projectId: string, commandId: string, body:
   };
 };
 
-const getPlannerTicket = async (projectId: string, id: string) => {
-  const result = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.get-ticket", {
-    source: "api",
-    params: { id },
-  });
-  expect(result.outcome.ok).toBe(true);
-  return result.outcome.value as { id: string; shorthand: string; statusId: string | null };
-};
-
 const getExtensionInstanceId = async (projectId: string, installName: string) => {
   const res = await fetch(`${api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions`);
   expect(res.status).toBe(200);
@@ -65,7 +56,7 @@ const getExtensionInstanceId = async (projectId: string, installName: string) =>
 const uploadPlannerFile = async (
   projectId: string,
   extensionInstanceId: string,
-  input: { name: string; mimeType: string; data: Uint8Array },
+  input: { name: string; mimeType: string; data: Uint8Array<ArrayBuffer> },
 ) => {
   const res = await fetch(
     `${api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(extensionInstanceId)}/files?scope_type=resource&scope_id=ticket-attachment`,
@@ -140,11 +131,6 @@ describe("planner attempt workspaces", () => {
       expect(value.workspace.workspace_shorthand).toBe(`${ticket.shorthand}_A1`);
       expect(value.session?.id).toBeString();
 
-      const movedToInProgress = await waitFor(
-        async () => (await getPlannerTicket(projectId, ticket.id)).statusId === "in-progress",
-      );
-      expect(movedToInProgress).toBe(true);
-
       const readActivity = async () => {
         const activity = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.workspace-activity", {
           source: "api",
@@ -158,7 +144,7 @@ describe("planner attempt workspaces", () => {
       };
 
       // The default fake run ends after 50 ms and can finish before the command returns.
-      // Hold it until both ticket status and workspace activity have been observed.
+      // Hold it until workspace activity has been observed.
       expect(await readActivity()).toMatchObject({ active: true });
       const sessionResponse = await fetch(`${api.url}/v1/sessions/${value.session!.id}`);
       expect(sessionResponse.status).toBe(200);

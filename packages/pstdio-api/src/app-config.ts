@@ -52,12 +52,7 @@ const resolveRelease = (input: ResolveAppConfigInput): ExtensionRelease | null =
     throw new Error("PSTDIO_EXTENSION_SOURCE_ROOT requires PSTDIO_EXTENSION_RELEASE_REF");
   }
   if (root && ref) return { source: "workspace", ref, root };
-  if (ref?.startsWith("psx:")) {
-    return {
-      source: "registry",
-      ref: input.env.PSTDIO_EXTENSION_REGISTRY ? `psx:${input.env.PSTDIO_EXTENSION_REGISTRY}` : ref,
-    };
-  }
+  if (ref?.startsWith("psx:")) return { source: "registry", ref };
   if (ref) return { source: "git", ref };
   return null;
 };

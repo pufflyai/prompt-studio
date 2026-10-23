@@ -1,5 +1,6 @@
-import { IconButton, type IconButtonProps, Kbd, Portal, Tooltip } from "@chakra-ui/react";
+import { IconButton, type IconButtonProps, Kbd } from "@chakra-ui/react";
 import { ArrowUp, Pause } from "lucide-react";
+import { Tooltip } from "@/components/primitives/tooltip";
 
 export interface SendButtonProps extends IconButtonProps {
   shortcut?: string;
@@ -40,14 +41,9 @@ export const SendButton = (props: SendButtonProps) => {
     );
 
     return (
-      <Tooltip.Root closeDelay={50} openDelay={100}>
-        <Tooltip.Trigger asChild>{button}</Tooltip.Trigger>
-        <Portal>
-          <Tooltip.Positioner>
-            <Tooltip.Content>{tooltipContent}</Tooltip.Content>
-          </Tooltip.Positioner>
-        </Portal>
-      </Tooltip.Root>
+      <Tooltip content={tooltipContent} closeDelay={50}>
+        {button}
+      </Tooltip>
     );
   }
 

@@ -2,8 +2,9 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PGlite } from "@electric-sql/pglite";
+import type { PGlite as CurrentPGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
+import { PGlite } from "pglite-previous";
 import { createDb } from "./connection.pglite";
 import { migrateThrough } from "./migrate-through";
 import * as schema from "./schemas.pg";
@@ -16,7 +17,7 @@ test("saved board views keep their filters and ordering as rules and sorts", asy
   const pglite = new PGlite(dbPath);
   await pglite.waitReady;
   try {
-    const db = drizzle(pglite, { schema });
+    const db = drizzle(pglite as unknown as CurrentPGlite, { schema });
     await migrateThrough(db, migrationsFolder, 34);
     await pglite.exec(`
       INSERT INTO projects (id, name, shorthand, created_at, updated_at) VALUES ('p', 'P', 'P', '1', '1');
