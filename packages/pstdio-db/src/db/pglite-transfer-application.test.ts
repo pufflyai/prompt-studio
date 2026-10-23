@@ -42,10 +42,14 @@ test("the application schema transfers document bytes, receipts and all migratio
       "insert into projects(id,name,shorthand,created_at,updated_at) values ('project','Original','P','2026-01-01','2026-01-02')",
     );
     const snapshot = Uint8Array.from({ length: 700_000 }, (_, i) => i % 251);
-    await old.query("insert into storage_documents values ('project','example.owner','records',$1,2,1)", [snapshot]);
-    await old.query("insert into storage_document_updates values ('project','example.owner','records',2,$1)", [
-      new Uint8Array([0, 255, 17]),
-    ]);
+    await old.query(
+      "insert into storage_documents(workbench_id,extension_id,document_id,state,revision,folded_revision) values ('project','example.owner','records',$1,2,1)",
+      [snapshot],
+    );
+    await old.query(
+      "insert into storage_document_updates(workbench_id,extension_id,document_id,revision,\"update\") values ('project','example.owner','records',2,$1)",
+      [new Uint8Array([0, 255, 17])],
+    );
     await old.exec(
       "insert into storage_document_operations values ('project','example.owner','records','retry-id','exact-fingerprint')",
     );
