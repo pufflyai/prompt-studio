@@ -12,7 +12,7 @@ test("artifact sandbox relays keyboard entry and tab chords while preserving edi
       .getByRole("textbox", { name: "Artifact draft" });
     await editor.fill("Keep this unsaved draft");
     await editor.press("ArrowLeft");
-    await expect.poll(() => editor.evaluate((input: HTMLTextAreaElement) => input.selectionStart)).toBe(21);
+    await expect.poll(() => editor.evaluate((input: HTMLTextAreaElement) => input.selectionStart)).toBe(22);
     await editor.press("Alt+Shift+Space");
     await expect(page.getByLabel("Keyboard request")).toHaveText("leader");
     await expect(page.getByRole("heading", { name: "Keyboard handoff" })).toBeFocused();
@@ -20,7 +20,7 @@ test("artifact sandbox relays keyboard entry and tab chords while preserving edi
     await expect(editor).toHaveValue("Keep this unsaved draft");
     await page.getByRole("button", { name: "Restore editor" }).click();
     await expect(editor).toBeFocused();
-    expect(await editor.evaluate((input: HTMLTextAreaElement) => input.selectionStart)).toBe(21);
+    expect(await editor.evaluate((input: HTMLTextAreaElement) => input.selectionStart)).toBe(22);
     await editor.press("Alt+Shift+4");
     await expect(page.getByLabel("Keyboard request")).toHaveText("tab-four");
     await editor.press("Alt+Shift+X");

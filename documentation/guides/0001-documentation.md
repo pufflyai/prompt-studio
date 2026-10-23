@@ -277,6 +277,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0002 — API](../references/workbench/0002-api.md)
 - [0003 — Contribution ownership](../references/workbench/0003-contribution-ownership.md)
 - [0004 — Navigation](../references/workbench/0004-navigation.md)
+- [0007 — Extension shortcuts](../references/workbench/0007-extension-shortcuts.md)
 
 ## PRDs
 
