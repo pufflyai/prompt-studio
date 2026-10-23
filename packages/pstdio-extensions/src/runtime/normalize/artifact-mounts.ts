@@ -32,7 +32,7 @@ export const registerArtifactMounts = (
       runtime.diagnostics.push(
         createDiagnostic({
           code: "unsafe_artifact_mount_path",
-          message: `Artifact mount "${ext.name}.${localId}" must stay under ${ARTIFACT_MOUNT_ROOT}/${ext.name}/`,
+          message: `Artifact mount "${ext.name}.${localId}" must stay under ${ARTIFACT_MOUNT_ROOT}/${extensionStorageDirectory(ext.id)}/`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
         }),

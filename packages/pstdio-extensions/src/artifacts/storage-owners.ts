@@ -1,5 +1,5 @@
 import { lstat, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join, relative } from "node:path";
 import { ARTIFACT_MOUNT_ROOT, type ExtensionStorageOwner, extensionStorageDirectory } from "./extension-storage-path";
 import { createLegacyExtensionPathResolver } from "./legacy-extension-paths";
 
@@ -64,7 +64,9 @@ export const resolveReadExtensionStoragePath = async (
   declared: readonly ExtensionStorageOwner[],
 ) => {
   const prefix = `${ARTIFACT_MOUNT_ROOT}/`;
-  if (!path.replaceAll("\\", "/").startsWith(prefix)) return path;
+  const segments = path.replaceAll("\\", "/").split("/");
+  // A path that climbs out stays as written, so the caller's root boundary rejects it.
+  if (!path.replaceAll("\\", "/").startsWith(prefix) || segments.includes("..")) return path;
   const owners = await discoverExtensionStorageOwners(repoRoot, declared);
   const canonical = createLegacyExtensionPathResolver(owners)(path);
   if (!canonical.startsWith(prefix)) return path;
@@ -74,7 +76,7 @@ export const resolveReadExtensionStoragePath = async (
   const privatePath = join(ARTIFACT_MOUNT_ROOT, owner.name, ".publishers", owner.extensionId.split(".")[0]!, ...tail);
   if (await storagePathExists(join(repoRoot, privatePath))) return privatePath.replaceAll("\\", "/");
   const legacyRoot = await resolveReadExtensionStorageRoot(repoRoot, owner, false);
-  return join(legacyRoot, ...tail)
-    .slice(repoRoot.length + 1)
-    .replaceAll("\\", "/");
+  const legacyPath = relative(repoRoot, join(legacyRoot, ...tail));
+  if (legacyPath.startsWith("..") || isAbsolute(legacyPath)) return path;
+  return legacyPath.replaceAll("\\", "/");
 };
