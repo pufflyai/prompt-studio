@@ -2,7 +2,7 @@ import { Box, Button, Dialog, Flex, Input, Popover, Portal, Stack, Text } from "
 import { useLayoutEffect, useRef, useState } from "react";
 import { ScrollArea } from "../primitives/scroll-area";
 import { Canvas } from "./canvas";
-import type { CanvasCamera, CanvasPoint, CanvasProps, CanvasZoomChange } from "./canvas.types";
+import type { CanvasCamera, CanvasNavigation, CanvasPoint, CanvasProps, CanvasZoomChange } from "./canvas.types";
 import { zoomCanvas } from "./canvas-geometry";
 
 const PreviewControls = () => {
@@ -53,13 +53,14 @@ const PreviewControls = () => {
   );
 };
 
-export const FreeformCanvasExample = (props: Pick<CanvasProps, "minZoom" | "maxZoom">) => {
-  const { minZoom = 0.1, maxZoom = 4 } = props;
+interface FreeformCanvasExampleProps extends Partial<CanvasNavigation>, Pick<CanvasProps, "minZoom" | "maxZoom"> {}
+
+export const FreeformCanvasExample = (props: FreeformCanvasExampleProps) => {
+  const { minZoom = 0.1, maxZoom = 4, onPan, onZoom, onFit, onReset, onNavigationEnd } = props;
   const viewport = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const camera = useRef<CanvasCamera>({ x: 24, y: 24, zoom: 1 });
   const frame = useRef(0);
-  const [ended, setEnded] = useState(0);
   const [scale, setScale] = useState(1);
   const paint = () => {
     if (frame.current) return;
@@ -72,16 +73,19 @@ export const FreeformCanvasExample = (props: Pick<CanvasProps, "minZoom" | "maxZ
   const pan = (delta: CanvasPoint) => {
     camera.current = { ...camera.current, x: camera.current.x + delta.x, y: camera.current.y + delta.y };
     paint();
+    onPan?.(delta);
   };
   const zoom = (change: CanvasZoomChange) => {
     camera.current = zoomCanvas(camera.current, change, { minZoom, maxZoom });
     setScale(camera.current.zoom);
     paint();
+    onZoom?.(change);
   };
   const reset = () => {
     camera.current = { x: 24, y: 24, zoom: 1 };
     setScale(1);
     paint();
+    onReset?.();
   };
   const fit = () => {
     const scale = Math.max(
@@ -91,6 +95,7 @@ export const FreeformCanvasExample = (props: Pick<CanvasProps, "minZoom" | "maxZ
     camera.current = { x: 24, y: 24, zoom: scale };
     setScale(scale);
     paint();
+    onFit?.();
   };
   useLayoutEffect(() => {
     const { x, y, zoom } = camera.current;
@@ -98,71 +103,58 @@ export const FreeformCanvasExample = (props: Pick<CanvasProps, "minZoom" | "maxZ
     return () => cancelAnimationFrame(frame.current);
   }, []);
   return (
-    <Flex direction="column" h="600px" minW="0">
-      <Flex gap="xs" align="center" p="xs" wrap="wrap">
-        <Button size="xs" onClick={fit}>
-          Fit all
-        </Button>
-        <Button size="xs" onClick={reset}>
-          Reset camera
-        </Button>
-        <Text textStyle="label/XS" role="status">
-          Completed gestures: {ended}
-        </Text>
-      </Flex>
-      <Canvas
-        ref={viewport}
-        flex="1"
-        aria-label="Live designs canvas"
-        zoom={scale}
-        minZoom={minZoom}
-        maxZoom={maxZoom}
-        onPan={pan}
-        onZoom={zoom}
-        onFit={fit}
-        onReset={reset}
-        onNavigationEnd={() => setEnded((value) => value + 1)}
-      >
-        <Box ref={stage} position="absolute" top="0" left="0" transformOrigin="0 0" data-example-stage>
-          <Box
-            position="absolute"
-            top="0"
-            left="0"
-            w="360px"
-            h="380px"
-            bg="bg"
-            borderWidth="1px"
-            borderColor="border"
-            borderRadius="xs"
-            data-canvas-control
-          >
-            <PreviewControls />
-          </Box>
-          <Box
-            position="absolute"
-            top="0"
-            left="440px"
-            w="360px"
-            h="380px"
-            bg="bg"
-            borderWidth="1px"
-            borderColor="border"
-            borderRadius="xs"
-            data-canvas-control
-          >
-            <ScrollArea h="full" aria-label="Scrollable preview">
-              <Stack p="md" gap="md">
-                {Array.from({ length: 20 }, (_, index) => (
-                  <Text key={index} textStyle="paragraph/S/regular">
-                    Preview row {index + 1}
-                  </Text>
-                ))}
-              </Stack>
-            </ScrollArea>
-          </Box>
+    <Canvas
+      ref={viewport}
+      h="600px"
+      aria-label="Live designs canvas"
+      zoom={scale}
+      minZoom={minZoom}
+      maxZoom={maxZoom}
+      onPan={pan}
+      onZoom={zoom}
+      onFit={fit}
+      onReset={reset}
+      onNavigationEnd={onNavigationEnd}
+    >
+      <Box ref={stage} position="absolute" top="0" left="0" transformOrigin="0 0" data-example-stage>
+        <Box
+          position="absolute"
+          top="0"
+          left="0"
+          w="360px"
+          h="380px"
+          bg="bg"
+          borderWidth="1px"
+          borderColor="border"
+          borderRadius="xs"
+          data-canvas-control
+        >
+          <PreviewControls />
         </Box>
-      </Canvas>
-    </Flex>
+        <Box
+          position="absolute"
+          top="0"
+          left="440px"
+          w="360px"
+          h="380px"
+          bg="bg"
+          borderWidth="1px"
+          borderColor="border"
+          borderRadius="xs"
+          data-canvas-control
+        >
+          <ScrollArea h="full" aria-label="Scrollable preview">
+            <Stack p="md" gap="md">
+              {Array.from({ length: 20 }, (_, index) => (
+                <Text key={index} textStyle="paragraph/S/regular">
+                  Preview row {index + 1}
+                </Text>
+              ))}
+            </Stack>
+          </ScrollArea>
+        </Box>
+      </Box>
+    </Canvas>
   );
 };
 

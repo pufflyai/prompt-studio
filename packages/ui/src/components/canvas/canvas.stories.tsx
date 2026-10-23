@@ -6,6 +6,13 @@ import { FlowCanvasExample, FreeformCanvasExample, ScrollCanvasExample } from ".
 const meta: Meta<typeof Canvas> = {
   title: "Components/Layout/Canvas",
   component: Canvas,
+  args: {
+    onPan: fn().mockName("Pan"),
+    onZoom: fn().mockName("Zoom"),
+    onFit: fn().mockName("Fit all"),
+    onReset: fn().mockName("Reset camera"),
+    onNavigationEnd: fn().mockName("Navigation ended"),
+  },
   argTypes: {
     minZoom: { control: { type: "number", min: 0.01, step: 0.1 } },
     maxZoom: { control: { type: "number", min: 0.01, step: 0.1 } },
@@ -15,7 +22,7 @@ const meta: Meta<typeof Canvas> = {
     docs: {
       description: {
         component:
-          "A dotted viewport with fixed timeline-style zoom controls, pan, anchored zoom, keyboard, and touch. Callers own their camera and pass the controlled zoom. minZoom/maxZoom apply to every zoom input (defaults 0.25 and 1). Mark live content or drag targets with data-canvas-control.",
+          "A dotted viewport with fixed timeline-style zoom controls, pan, anchored zoom, keyboard, and touch. Callers own their camera and pass the controlled zoom. minZoom/maxZoom apply to every zoom input (defaults 0.25 and 1). Mark live content or drag targets with data-canvas-control. Focus the canvas and press F to fit or 0 to reset the example camera; callbacks appear in Storybook Actions.",
       },
     },
   },
@@ -25,7 +32,7 @@ type Story = StoryObj<typeof Canvas>;
 
 export const LivePreviews: Story = {
   args: { minZoom: 0.1, maxZoom: 4 },
-  render: (args) => <FreeformCanvasExample minZoom={args.minZoom} maxZoom={args.maxZoom} />,
+  render: (args) => <FreeformCanvasExample {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const draft = canvas.getByRole("textbox", { name: "Preview draft" });
@@ -39,7 +46,7 @@ export const LivePreviews: Story = {
 
 export const CustomZoomLimits: Story = {
   args: { minZoom: 0.5, maxZoom: 1.2 },
-  render: (args) => <FreeformCanvasExample minZoom={args.minZoom} maxZoom={args.maxZoom} />,
+  render: (args) => <FreeformCanvasExample {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const out = canvas.getByRole("button", { name: "Zoom out", exact: true });
@@ -66,14 +73,18 @@ export const Timeline: Story = {
   },
 };
 export const KeyboardNavigation: Story = {
-  render: () => <FreeformCanvasExample />,
-  play: async ({ canvasElement }) => {
+  render: (args) => <FreeformCanvasExample {...args} />,
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const stage = canvasElement.querySelector<HTMLElement>("[data-example-stage]")!;
     canvas.getByRole("region", { name: "Live designs canvas" }).focus();
     const initial = stage.style.transform;
     await userEvent.keyboard("{ArrowRight}");
     await waitFor(() => expect(stage.style.transform).not.toBe(initial));
+    await userEvent.keyboard("f");
+    await expect(args.onFit).toHaveBeenCalled();
+    await userEvent.keyboard("0");
+    await expect(args.onReset).toHaveBeenCalled();
   },
 };
 
