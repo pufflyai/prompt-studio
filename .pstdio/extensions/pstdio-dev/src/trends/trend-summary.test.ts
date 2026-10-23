@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { TrendMetric, TrendPoint } from "../benchmarks/analysis";
-import { groupBySuite, versionSummary } from "./trend-summary";
+import { groupBySuite, pickVersions, versionSummary } from "./trend-summary";
 
 const point = (median: number, verdict?: "improved" | "regressed" | "unchanged"): TrendPoint => ({
   version: "0.46.0",
@@ -14,7 +14,6 @@ const point = (median: number, verdict?: "improved" | "regressed" | "unchanged")
 const metric = (suite: string, label: string, points: (TrendPoint | null)[], budget?: number): TrendMetric => ({
   suite,
   suiteLabel: suite,
-  source: "",
   metric: label,
   label,
   unit: "ms",
@@ -39,5 +38,13 @@ describe("version summary", () => {
       ["desktop", ["a", "c"]],
       ["storage", ["b"]],
     ]);
+  });
+
+  test("keeps only the chosen versions, in release order", () => {
+    const metrics = [metric("desktop", "Cold start", [point(1), point(2), point(3)])];
+    const picked = pickVersions(["0.1.0", "0.2.0", "0.3.0"], metrics, ["0.3.0", "0.1.0"]);
+    expect(picked.versions).toEqual(["0.1.0", "0.3.0"]);
+    expect(picked.metrics[0].points.map((entry) => entry?.median)).toEqual([1, 3]);
+    expect(pickVersions(["0.1.0"], metrics).versions).toEqual(["0.1.0"]);
   });
 });

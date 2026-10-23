@@ -55,10 +55,20 @@ const SummaryCell = (props: SummaryCellProps) => {
 
 const Bars = (props: { row: CompareRow }) => {
   const { row } = props;
-  const top = Math.max(row.base?.high ?? 0, row.head?.high ?? 0) * 1.1;
+  const top = Math.max(row.base?.high ?? 0, row.head?.high ?? 0, row.budget ?? 0) * 1.1;
   const at = (value: number) => `${(value / top) * 100}%`;
   return (
-    <Stack gap="1" aria-hidden="true">
+    <Stack gap="1" aria-hidden="true" position="relative">
+      {row.budget === undefined ? null : (
+        <Box
+          position="absolute"
+          insetY="-1"
+          left={at(row.budget)}
+          borderStartWidth="1px"
+          borderStyle="dashed"
+          borderColor="fg.muted"
+        />
+      )}
       {(["base", "head"] as const).map((side) => {
         const summary = row[side];
         return (
@@ -191,9 +201,9 @@ export const ResultsTable = (props: ResultsTableProps) => {
         })}
       </Box>
       <Text textStyle="label/XS" color="fg.muted" px="md" py="sm" borderTopWidth="1px" borderColor="border.subtle">
-        Bars show each commit's median with its 95% confidence interval. The dot is the change in median; its line is
-        the 95% bootstrap interval. Left of zero is faster or smaller. A change counts only when its interval excludes
-        zero.
+        Bars show each commit's median with its 95% confidence interval; a dashed line marks the budget. The dot is the
+        change in median; its line is the 95% bootstrap interval. Left of zero is faster or smaller. A change counts
+        only when its interval excludes zero.
       </Text>
     </SimpleCard>
   );

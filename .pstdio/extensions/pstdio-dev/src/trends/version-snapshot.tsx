@@ -8,21 +8,19 @@ import { groupBySuite, metricId } from "./trend-summary";
 interface VersionSnapshotProps {
   metrics: TrendMetric[];
   index: number;
-  runner?: string;
 }
 
 interface MetricRowProps {
   metric: TrendMetric;
   point: TrendPoint;
-  previous: TrendPoint | null;
 }
 
 const ROW_COLUMNS = "minmax(12rem, 15rem) 10rem minmax(12rem, 1fr) 12rem";
 
-// Each row has its own scale because units differ; the bar, ring, and budget line compare within a row.
+// Each row has its own scale because units differ; the bar and the budget line compare within a row.
 const MetricRow = (props: MetricRowProps) => {
-  const { metric, point, previous } = props;
-  const top = Math.max(point.high, metric.budget ?? 0, previous?.median ?? 0) * 1.12;
+  const { metric, point } = props;
+  const top = Math.max(point.high, metric.budget ?? 0) * 1.12;
   const at = (value: number) => `${(value / top) * 100}%`;
   const overBudget = metric.budget !== undefined && point.median >= metric.budget;
   return (
@@ -42,11 +40,11 @@ const MetricRow = (props: MetricRowProps) => {
         <Text textStyle="label/XS" color="fg.muted">
           {formatRange(point.low, point.high, metric.unit)}
         </Text>
-        {overBudget ? (
-          <Text textStyle="label/XS" color="fg.error">
-            Over budget
+        {metric.budget === undefined ? null : (
+          <Text textStyle="label/XS" color={overBudget ? "fg.error" : "fg.muted"}>
+            {overBudget ? "Over budget" : "Budget"} {formatValue(metric.budget, metric.unit)}
           </Text>
-        ) : null}
+        )}
       </Stack>
       <Box position="relative" h="8" aria-hidden="true">
         <Box position="absolute" insetX="0" top="calc(50% - 1px)" h="0.5" bg="bg.subtle" />
@@ -67,19 +65,6 @@ const MetricRow = (props: MetricRowProps) => {
           w={at(point.high - point.low)}
           bg="fg"
         />
-        {previous ? (
-          <Box
-            position="absolute"
-            top="50%"
-            left={at(previous.median)}
-            boxSize="2.5"
-            borderRadius="full"
-            borderWidth="2px"
-            borderColor="fg.muted"
-            bg="bg"
-            transform="translate(-50%, -50%)"
-          />
-        ) : null}
         {metric.budget === undefined ? null : (
           <Box
             position="absolute"
@@ -105,7 +90,9 @@ const MetricRow = (props: MetricRowProps) => {
 
 export const VersionSnapshot = (props: VersionSnapshotProps) => {
   const { metrics, index } = props;
-  const groups = groupBySuite(metrics.filter((metric) => metric.points[index]));
+  const shown = metrics.filter((metric) => metric.points[index]);
+  const groups = groupBySuite(shown);
+  const hasBudget = shown.some((metric) => metric.budget !== undefined);
   return (
     <SimpleCard>
       <SimpleCardBody display="flex" flexDirection="column" gap="lg" overflowX="auto">
@@ -118,34 +105,22 @@ export const VersionSnapshot = (props: VersionSnapshotProps) => {
             <Box w="4" h="0.5" bg="fg" />
             <Text>95% confidence interval</Text>
           </HStack>
-          <HStack gap="2xs">
-            <Box boxSize="2.5" borderRadius="full" borderWidth="2px" borderColor="fg.muted" />
-            <Text>Previous version</Text>
-          </HStack>
-          <HStack gap="2xs">
-            <Box h="3" borderStartWidth="1px" borderStyle="dashed" borderColor="fg.muted" />
-            <Text>Budget</Text>
-          </HStack>
+          {hasBudget ? (
+            <HStack gap="2xs">
+              <Box h="3" borderStartWidth="1px" borderStyle="dashed" borderColor="fg.muted" />
+              <Text>Budget</Text>
+            </HStack>
+          ) : null}
         </HStack>
         {groups.map((group) => (
           <Stack key={group.suite} gap="0" minW="3xl">
-            <HStack gap="sm" pb="xs" align="baseline">
-              <Text textStyle="label/M/medium">{group.label}</Text>
-              <Text textStyle="mono/XS" color="fg.muted" truncate>
-                {group.source}
-              </Text>
-            </HStack>
+            <Text textStyle="label/M/medium" pb="xs">
+              {group.label}
+            </Text>
             {group.metrics.map((metric) => {
               const point = metric.points[index];
               if (!point) return null;
-              return (
-                <MetricRow
-                  key={metricId(metric)}
-                  metric={metric}
-                  point={point}
-                  previous={metric.points[index - 1] ?? null}
-                />
-              );
+              return <MetricRow key={metricId(metric)} metric={metric} point={point} />;
             })}
           </Stack>
         ))}

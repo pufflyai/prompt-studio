@@ -12,7 +12,8 @@ export const TrendsPage = () => {
   const [platform, setPlatform] = useState(DEFAULT_PLATFORM);
   const [mode, setMode] = useState<TrendsMode>("versions");
   const [versionIndex, setVersionIndex] = useState<number>();
-  const [selected, setSelected] = useState<string>();
+  const [chosenVersions, setChosenVersions] = useState<string[]>();
+  const [showTable, setShowTable] = useState(false);
   useBenchmarksRefresh();
   const trends = useCommandQuery({
     queryKey: ["trends", platform],
@@ -32,15 +33,18 @@ export const TrendsPage = () => {
       platform={platform}
       mode={mode}
       versionIndex={versionIndex ?? versions.length - 1}
-      selected={selected}
+      chosenVersions={chosenVersions}
+      showTable={showTable}
       onPlatformChange={(next) => {
-        // Another platform can have fewer releases, so the stepper returns to its newest one.
+        // Another platform can have other releases, so the version choices start over.
         setPlatform(next);
         setVersionIndex(undefined);
+        setChosenVersions(undefined);
       }}
       onModeChange={setMode}
       onVersionChange={setVersionIndex}
-      onSelect={setSelected}
+      onChosenVersionsChange={setChosenVersions}
+      onShowTableChange={setShowTable}
     />
   );
 };

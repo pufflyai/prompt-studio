@@ -1,6 +1,6 @@
 import { Box, Grid, HStack, Stack, Text } from "@chakra-ui/react";
 import { psTheme, SimpleCard, SimpleCardBody } from "@pstdio/ui";
-import { defineChart, dot, lineY } from "@tanstack/charts";
+import { defineChart, dot, lineY, ruleX, ruleY } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
@@ -50,11 +50,17 @@ export const SampleDetail = (props: SampleDetailProps) => {
     ...(row.head?.values ?? []).map((value, sample) => ({ commit: "Head" as const, sample: sample + 1, value })),
   ];
   const values = samples.map((sample) => sample.value);
-  const domain = [Math.min(...values) * 0.95, Math.max(...values) * 1.05];
+  // The budget joins the axis range, so its line is always visible.
+  const budget = row.budget === undefined ? [] : [row.budget];
+  const domain = [Math.min(...values, ...budget) * 0.95, Math.max(...values, ...budget) * 1.05];
+  const budgetLine = { stroke: token("fg.muted"), strokeDasharray: "4 4", strokeWidth: 1 };
   const format = (value: number) => formatValue(value, row.unit);
   const strip = defineChart({
     color: commitColors,
-    marks: [dot(samples, { x: "value", y: "commit", color: "commit", r: 4, fillOpacity: 0.85 })],
+    marks: [
+      ruleX(budget, { x: (value) => value, ...budgetLine }),
+      dot(samples, { x: "value", y: "commit", color: "commit", r: 4, fillOpacity: 0.85 }),
+    ],
     scales: {
       x: { scale: () => scaleLinear().domain(domain), axis: { ticks: { format } } },
       y: { scale: () => scaleBand<string>().domain(["Base", "Head"]).padding(0.3) },
@@ -63,6 +69,7 @@ export const SampleDetail = (props: SampleDetailProps) => {
   const order = defineChart({
     color: commitColors,
     marks: [
+      ruleY(budget, { y: (value) => value, ...budgetLine }),
       lineY(samples, { x: "sample", y: "value", z: "commit", color: "commit", strokeWidth: 2 }),
       dot(samples, { x: "sample", y: "value", color: "commit", r: 3 }),
     ],
@@ -77,7 +84,7 @@ export const SampleDetail = (props: SampleDetailProps) => {
         <SimpleCardBody display="flex" flexDirection="column" gap="sm">
           <Stack gap="2xs">
             <Text textStyle="label/S/regular" color="fg.muted">
-              {row.suiteLabel} · {row.source}
+              {row.suiteLabel}
             </Text>
             <Text textStyle="heading/S">{row.label}: every sample</Text>
           </Stack>

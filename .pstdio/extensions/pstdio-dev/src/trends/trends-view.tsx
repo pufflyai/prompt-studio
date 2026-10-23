@@ -1,15 +1,16 @@
-import { Grid, HStack, Stack, Tabs, Text } from "@chakra-ui/react";
+import { Button, Grid, HStack, Stack, Tabs, Text } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import { Tag } from "lucide-react";
 import type { TrendMetric } from "../benchmarks/analysis";
 import { PageFrame } from "../webview/page-frame";
 import { PlatformControl } from "../webview/platform-control";
 import { SelectMenu } from "../webview/select-menu";
-import { MetricCard } from "./metric-card";
-import { SelectedMetric } from "./selected-metric";
 import { SummaryTiles } from "./summary-tiles";
-import { groupBySuite, metricId, versionSummary } from "./trend-summary";
+import { TrendCard } from "./trend-card";
+import { groupBySuite, metricId, pickVersions, versionSummary } from "./trend-summary";
+import { TrendsTable } from "./trends-table";
 import { VersionSnapshot } from "./version-snapshot";
+import { VersionsMenu } from "./versions-menu";
 
 export type TrendsMode = "versions" | "version";
 
@@ -19,17 +20,37 @@ export interface TrendsViewProps {
   platform: string;
   mode: TrendsMode;
   versionIndex: number;
-  selected?: string;
+  chosenVersions?: string[];
+  showTable: boolean;
   onPlatformChange: (platform: string) => void;
   onModeChange: (mode: TrendsMode) => void;
   onVersionChange: (index: number) => void;
-  onSelect: (metric: string) => void;
+  onChosenVersionsChange: (versions?: string[]) => void;
+  onShowTableChange: (showTable: boolean) => void;
 }
 
+interface SeriesProps {
+  versions: string[];
+  metrics: TrendMetric[];
+}
+
+const TimeSeries = (props: SeriesProps) => {
+  const { versions, metrics } = props;
+  return groupBySuite(metrics).map((group) => (
+    <Stack key={group.suite} gap="sm">
+      <Text textStyle="label/M/medium">{group.label}</Text>
+      <Grid templateColumns="repeat(auto-fill, minmax(24rem, 1fr))" gap="md">
+        {group.metrics.map((metric) => (
+          <TrendCard key={metricId(metric)} metric={metric} versions={versions} />
+        ))}
+      </Grid>
+    </Stack>
+  ));
+};
+
 export const TrendsView = (props: TrendsViewProps) => {
-  const { versions, metrics, platform, mode, versionIndex, selected } = props;
-  const index = mode === "versions" ? versions.length - 1 : versionIndex;
-  const selectedMetric = metrics.find((metric) => metricId(metric) === selected) ?? metrics[0];
+  const { versions, metrics, platform, mode, versionIndex, chosenVersions, showTable } = props;
+  const series = pickVersions(versions, metrics, chosenVersions);
   // Tabs and dropdowns, like the collection view: the tabs switch the view, dropdowns pick its data.
   const toolbar = (
     <>
@@ -54,6 +75,19 @@ export const TrendsView = (props: TrendsViewProps) => {
             onValueChange={(version) => props.onVersionChange(versions.indexOf(version))}
           />
         ) : null}
+        {mode === "versions" && versions.length ? (
+          <>
+            <VersionsMenu versions={versions} chosen={chosenVersions} onChange={props.onChosenVersionsChange} />
+            <Button
+              size="xs"
+              variant="ghost"
+              aria-pressed={showTable}
+              onClick={() => props.onShowTableChange(!showTable)}
+            >
+              {showTable ? "Show charts" : "Show table"}
+            </Button>
+          </>
+        ) : null}
         <PlatformControl value={platform} onValueChange={props.onPlatformChange} />
       </HStack>
     </>
@@ -67,38 +101,19 @@ export const TrendsView = (props: TrendsViewProps) => {
         />
       </PageFrame>
     );
+  if (mode === "version")
+    return (
+      <PageFrame toolbar={toolbar}>
+        <SummaryTiles version={versions[versionIndex]} summary={versionSummary(metrics, versionIndex)} />
+        <VersionSnapshot metrics={metrics} index={versionIndex} />
+      </PageFrame>
+    );
   return (
     <PageFrame toolbar={toolbar}>
-      <SummaryTiles version={versions[index]} summary={versionSummary(metrics, index)} />
-      {mode === "version" ? (
-        <VersionSnapshot metrics={metrics} index={index} />
+      {showTable ? (
+        <TrendsTable versions={series.versions} metrics={series.metrics} />
       ) : (
-        <>
-          {selectedMetric ? (
-            <SelectedMetric key={metricId(selectedMetric)} metric={selectedMetric} versions={versions} />
-          ) : null}
-          {groupBySuite(metrics).map((group) => (
-            <Stack key={group.suite} gap="sm">
-              <HStack gap="sm" align="baseline">
-                <Text textStyle="label/M/medium">{group.label}</Text>
-                <Text textStyle="mono/XS" color="fg.muted" truncate>
-                  {group.source}
-                </Text>
-              </HStack>
-              <Grid templateColumns="repeat(auto-fill, minmax(16rem, 1fr))" gap="md">
-                {group.metrics.map((metric) => (
-                  <MetricCard
-                    key={metricId(metric)}
-                    metric={metric}
-                    versions={versions}
-                    selected={metric === selectedMetric}
-                    onSelect={() => props.onSelect(metricId(metric))}
-                  />
-                ))}
-              </Grid>
-            </Stack>
-          ))}
-        </>
+        <TimeSeries versions={series.versions} metrics={series.metrics} />
       )}
     </PageFrame>
   );

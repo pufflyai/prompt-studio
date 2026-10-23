@@ -8,7 +8,6 @@ export type Change = ReturnType<typeof compareSamples>;
 export interface MetricKey {
   suite: string;
   suiteLabel: string;
-  source: string;
   metric: string;
   label: string;
   unit: BenchmarkUnit;
@@ -46,7 +45,6 @@ const metricKey = (file: BenchmarkResultFile, metric: BenchmarkMetricResult): Me
   return {
     suite: metric.suite,
     suiteLabel: suite?.label ?? metric.suite,
-    source: suite?.source ?? "",
     metric: metric.metric,
     label: metric.label,
     unit: metric.unit,
