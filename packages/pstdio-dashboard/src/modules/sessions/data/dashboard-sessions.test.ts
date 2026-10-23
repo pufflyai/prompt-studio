@@ -101,6 +101,15 @@ test("selected session and recent menus never enumerate unrelated files", () => 
 });
 
 describe("resolveDashboardSessionView", () => {
+  test("a draft's explicit harness stays local to that presentation", () => {
+    const view = resolveDashboardSessionViewForPlacement({
+      resource: { type: "session-draft", id: "local", metadata: { agent: "acme.worker" } },
+    });
+    const other = resolveDashboardSessionViewForPlacement({ resource: { type: "session-draft", id: "other" } });
+    expect(view.agent).toBe("acme.worker");
+    expect(view.sessionId).toBeUndefined();
+    expect(other.agent).toBeNull();
+  });
   test("keeps an opened session addressable before synced rows arrive", () => {
     const view = resolveDashboardSessionView("session-created-from-draft");
     expect(view.id).toBe("session-created-from-draft");
