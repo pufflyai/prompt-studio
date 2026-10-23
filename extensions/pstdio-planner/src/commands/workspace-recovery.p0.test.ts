@@ -14,7 +14,8 @@ import { recoverySessionInput } from "./workspace-recovery";
 async function lostWorkspace(source = "revision") {
   const f = await fixture();
   const ticket = await f.ticket("Recover previous implementation");
-  const old = await runAttemptCommand.run(f.ctx, { ticket: ticket.id });
+  const started = await runAttemptCommand.run(f.ctx, { ticket: ticket.id });
+  const old = { ...started, session: sessionRecord(started.session) };
   const previous = {
     ...old.variant,
     revisions: [

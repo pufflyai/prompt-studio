@@ -4,13 +4,13 @@ import { ChevronLeft, ChevronRight, Diamond, Pause, Play, SkipBack, SkipForward 
 import { FPS } from "./kit/model";
 import { LoopRange, PlaybackOptions } from "./playback-options";
 import { usePlaybackPosition, useReview } from "./review-context";
-import { loopBounds } from "./review-state";
+import { loopBounds, togglePlaybackChange } from "./review-state";
 
 export const PlayerControls = () => {
   const { state, study, preview, update } = useReview();
   const { frame, playing } = usePlaybackPosition(state, study.duration);
   const definition = study;
-  const { start, end, max } = loopBounds(state, study.duration);
+  const { max } = loopBounds(state, study.duration);
   const markers = definition.markers.map((marker) => Math.ceil(marker.at * FPS));
   const previous = markers.filter((marker) => marker < frame).at(-1);
   const next = markers.find((marker) => marker > frame);
@@ -18,10 +18,7 @@ export const PlayerControls = () => {
     void update({ frame: Math.max(0, Math.min(max, next)), playing: false });
   };
   const togglePlayback = () => {
-    let nextFrame = frame;
-    if (!playing && state.loop && (frame < start || frame >= end)) nextFrame = start;
-    else if (!playing && frame === max) nextFrame = 0;
-    void update({ playing: !playing, frame: nextFrame });
+    void update(togglePlaybackChange(state, frame, playing, study.duration));
   };
   return (
     <Stack

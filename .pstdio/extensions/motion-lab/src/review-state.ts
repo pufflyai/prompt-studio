@@ -48,6 +48,13 @@ export const playbackPosition = (state: ReviewState, now: number, duration: numb
     playing: state.playing && (state.loop || frame < max),
   };
 };
+export const togglePlaybackChange = (state: ReviewState, frame: number, playing: boolean, duration: number) => {
+  const { start, end, max } = loopBounds(state, duration);
+  let nextFrame = frame;
+  if (!playing && state.loop && (frame < start || frame >= end)) nextFrame = start;
+  else if (!playing && frame === max) nextFrame = 0;
+  return { playing: !playing, frame: nextFrame };
+};
 export const applyReviewChange = (current: ReviewState, change: ReviewChange, now: number, duration: number) => {
   const position = playbackPosition(current, now, duration);
   const study = current.settings.study;

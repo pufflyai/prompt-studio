@@ -57,7 +57,7 @@ export const moveNoteCommand = defineCommand({
   cli: true,
   mutating: true,
   params: {
-    noteId: params.text({ label: l10n("params.noteId", "Note"), required: true }),
+    noteId: params.text({ label: l10n("params.noteId", "Note"), required: true, resolvedFrom: "resource" }),
     folderId: params.text({ label: l10n("params.folder", "Folder") }),
   },
   async run(ctx, input) {

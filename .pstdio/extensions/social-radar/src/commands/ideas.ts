@@ -1,4 +1,4 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, type JsonObject, params } from "@pstdio/sdk/extensions";
 import { requireRunning } from "../run-lifecycle";
 import { ideaStatus, isNewPost, saveIdea, updateIdea } from "../schemas";
 import { changed, ideasOf, requireThread } from "../store";
@@ -13,7 +13,7 @@ export const saveIdeaCommand = defineCommand({
   id: "save-idea",
   title: "Save a reply idea",
   cli: true,
-  params: { input: params.json({ required: true }) },
+  params: { input: params.json<JsonObject, { required: true }>({ required: true }) },
   async run(ctx, { input }) {
     const data = saveIdea.parse(input);
     await requireRunning(ctx, data.runId);
@@ -25,6 +25,27 @@ export const saveIdeaCommand = defineCommand({
     await ideasOf(ctx).put(id, { ...data, id, status: "new", createdAt: new Date().toISOString() });
     await changed(ctx, thread.id);
     return { id };
+  },
+});
+export const saveCurrentIdea = defineCommand({
+  id: "save-current-idea",
+  title: saveIdeaCommand.title,
+  mutating: true,
+  params: {
+    resource: params.resource({ resourceType: "thread", required: true, resolvedFrom: "resource" }),
+    body: params.longText({ required: true }),
+    replyTo: params.text(),
+  },
+  async run(ctx, input) {
+    const thread = await requireThread(ctx, input.resource.id);
+    return saveIdeaCommand.run(ctx, {
+      input: {
+        runId: thread.runId,
+        threadId: thread.id,
+        body: input.body,
+        ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+      },
+    });
   },
 });
 
