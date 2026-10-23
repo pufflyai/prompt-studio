@@ -46,6 +46,38 @@ describe("app database close", () => {
       await reopen(root);
     });
   });
+
+  test("drains session hook reads before closing the database even when cleanup fails", async () => {
+    await withTempRoot(async (root) => {
+      const handle = await createTestApp({ databasePath: join(root, "pstdio.db"), storageRoot: join(root, "storage") });
+      const entered = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      const getWorkspace = handle.deps.workspaceSessionService.getWorkspaceBySessionId;
+      spyOn(handle.deps.workspaceSessionService, "getWorkspaceBySessionId").mockImplementation(async (id) => {
+        entered.resolve();
+        await release.promise;
+        return getWorkspace(id);
+      });
+      spyOn(handle.deps.automationService, "close").mockRejectedValue(new Error("automation close failed"));
+      handle.deps.sessionService.emitStartedHook({ id: "pending-hook", project_id: "project", status: "in_progress" });
+      await entered.promise;
+      let settled = false;
+      const closing = handle
+        .close()
+        .then(
+          () => undefined,
+          (error: unknown) => error,
+        )
+        .finally(() => {
+          settled = true;
+        });
+      await Bun.sleep(0);
+      expect(settled).toBe(false);
+      release.resolve();
+      expect(await closing).toEqual(new Error("automation close failed"));
+      await reopen(root);
+    });
+  });
 });
 
 describe("closeBeforeFatalExit", () => {

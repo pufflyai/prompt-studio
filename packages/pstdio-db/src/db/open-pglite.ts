@@ -35,3 +35,15 @@ export const openPglite = async (dataDir: string, options: PGliteOptions = {}, o
   }
   return new PGlite(dataDir, runtimeOptions);
 };
+
+export const initializePglite = async (dataDir: string, options: PGliteOptions, onImageRestored = () => {}) => {
+  // Private preparation does not execute locale queries. Load full ICU only in the active
+  // engine, where queries create explicitly qualified collations as needed.
+  const { icuDataDir: _icuDataDir, ...bootstrap } = options;
+  const db = await openPglite(dataDir, bootstrap, onImageRestored);
+  try {
+    await db.waitReady;
+  } finally {
+    await db.close();
+  }
+};

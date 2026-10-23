@@ -4,8 +4,9 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { PGlite } from "@electric-sql/pglite";
+import type { PGlite as CurrentPGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
+import { PGlite } from "pglite-previous";
 import { createDb } from "./connection.pglite";
 import { resolveLegacyGitWorkspace } from "./legacy-worktree";
 import { migrateThrough } from "./migrate-through";
@@ -70,7 +71,11 @@ test("recovers the actual managed Git worktree source among multiple linked fold
       });
       expect(await resolveLegacyGitWorkspace({ ...workspace, branch: null }, folders)).toBeNull();
       phase("migrate through entry 25");
-      await migrateThrough(drizzle(old, { schema }), join(import.meta.dir, "../../drizzle"), 25);
+      await migrateThrough(
+        drizzle(old as unknown as CurrentPGlite, { schema }),
+        join(import.meta.dir, "../../drizzle"),
+        25,
+      );
       phase("insert legacy project and workspace records");
       await old.query(
         "INSERT INTO projects(id,name,shorthand,created_at,updated_at) VALUES ('project','Existing','P','2026-01-01','2026-01-01')",
@@ -94,11 +99,15 @@ test("recovers the actual managed Git worktree source among multiple linked fold
         [folders[1]!.path],
       );
       phase("migrate through entry 31");
-      await migrateThrough(drizzle(old, { schema }), join(import.meta.dir, "../../drizzle"), 31);
+      await migrateThrough(
+        drizzle(old as unknown as CurrentPGlite, { schema }),
+        join(import.meta.dir, "../../drizzle"),
+        31,
+      );
       phase("prepare workspace locations");
-      await prepareWorkspaceLocations(old);
+      await prepareWorkspaceLocations(old as unknown as CurrentPGlite);
       phase("repeat workspace preparation");
-      await prepareWorkspaceLocations(old);
+      await prepareWorkspaceLocations(old as unknown as CurrentPGlite);
     } finally {
       phase("close legacy database");
       await old.close();

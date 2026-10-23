@@ -26,7 +26,8 @@ const createPreExtensionTemplateDatabase = async (root: string, storagePath: str
     cpSync(join(MIGRATIONS_ROOT, `${entry.tag}.sql`), join(migrationsPath, `${entry.tag}.sql`));
   }
 
-  const pglite = new PGlite(databasePath);
+  // This fixture covers an old application schema, using the current engine identity.
+  const pglite = new PGlite(databasePath, { database: "template1", username: "postgres" });
   await pglite.waitReady;
   await migrate(drizzle(pglite), { migrationsFolder: migrationsPath });
   await pglite.exec(`INSERT INTO projects
@@ -44,6 +45,7 @@ const createPreExtensionTemplateDatabase = async (root: string, storagePath: str
      VALUES ('template-1', 'project-1', 'implement_ticket', 'prompt', 'file-1', true,
              '2026-01-01', '2026-01-01', NULL)`);
   await pglite.close();
+  writeFileSync(join(databasePath, ".pstdio-engine.json"), JSON.stringify({ format: 1, engine: "pglite-0.4" }));
   return databasePath;
 };
 
