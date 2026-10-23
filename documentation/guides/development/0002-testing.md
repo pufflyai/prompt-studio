@@ -86,7 +86,7 @@ The selector compares the PR merge commit with its target parent. Workspace depe
 - `lint` builds the affected packages and their dependencies, then runs type checking and lint. `unit_tests` builds and runs unit and synchronization conformance tests in parallel with `lint`; unit tests no longer wait for type checking. API and database suites remain in their own shards. E2E-only changes select browser jobs. Package jobs require at least one affected package other than `e2e`.
 - `browser_smoke` runs the six basic dashboard flows when code affects the dashboard or its E2E runtime dependencies. Repository tooling and shared build inputs also select it. Documentation-only changes do not.
 - `browser_regressions` selects real-app specs for session navigation, state and shared streaming, retained ticket editor state, extension lifecycle, and opaque webview interactions. Short specs run in pairs on parallel runners to share build setup. Each spec starts a separate runtime, home and database, and a failure does not prevent the other spec from running. Session inputs select session specs; editor and Planner/Notes inputs select editor specs; extension inputs select lifecycle and webview specs. Shared UI, SDK, workbench, storage, browser helpers and otherwise unclassified browser dependencies select every maintained regression family. These specs use `playwright.pr.config.ts` without Storybook. Run one locally with `bun run --cwd packages/e2e test:pr -- src/ui/session-menu-parity.spec.ts`.
-- `native_contracts` selects short Windows filesystem, process and desktop contracts from changes to those inputs. SDK and API contract changes select filesystem and process checks. Selected groups share one runner's setup and retain their existing test limits. Full Windows database tests and desktop packaging remain in the full stage.
+- `native_contracts` selects short Windows filesystem, process and desktop contracts from changes to those inputs. SDK and API contract changes select filesystem and process checks. Every selected native job also tests release alignment with native Windows paths, including `.pstdio` paths, and reuse of installed default extensions after concurrent startup setup. These checks share the existing SDK build and runner setup. Selected groups retain their existing test limits. Full Windows database tests and desktop packaging remain in the full stage.
 - `database_tests` runs the `pstdio-api` tests in four shards and the `pstdio-db` tests in three, when a change affects either package. Together these suites took 6 to 8 minutes in one job, so each shard runs on its own runner. The `pstdio-db` shards use `bun test --shard`; the API test runner accepts the same `--shard=<index>/<count>` argument.
 - `published_extensions` runs for extension, SDK, UI, and API contract changes. `harness_cli_support` runs the minimum supported agent CLIs for harness changes. Documentation files (Markdown, `design/`, and `LICENSE`) do not select either job. `license_check` runs when a `package.json` or `bun.lock` changes.
 - `build_docker` builds both images when a `package.json`, `bun.lock`, or `Dockerfile` changes. This catches container install failures before the merge queue.
@@ -183,6 +183,10 @@ The UI and Vite launchers also remove inherited runtime settings. Each run alloc
 
 The packaged Planner runtime spec (`packages/e2e/src/packaged/packaged-planner-runtime.spec.ts`) installs the current Planner into a running host and seeds populated projects. It covers saved views, filter controls, Track conflicts, missing caches, and webview reload recovery. The install downloads the Planner's locked dependencies into the test home.
 
+Packaged relay checks cover shared-document replication, project sync states, encrypted uploads, and device-local record persistence. Record replication is paused until per-resource sync exists, as specified by [ADR 0100](../../adrs/0100-one-document-per-resource.md). These checks still run automatically.
+
+Full CI runs packaged CLI and packaged browser checks in separate matrix jobs with the existing 18-minute limit each. The CLI job also runs the Vite terminal checks. Both jobs compile their own current CLI, and neither suite depends on the other finishing first.
+
 Nx test inputs include the shared preload, root Bun configuration, lockfile, and Bun version. Changing these invalidates cached test results.
 
 Global preferences survive project deletion. Browser specs that read or change notifications use the test fixture in `src/ui/helpers/notification-settings.ts` and opt in with `test.use({ notificationsEnabled: true })` when needed. The fixture restores the previous preference during teardown.
@@ -218,6 +222,14 @@ bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.spec.ts --repeat-e
 ```
 
 To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=2/3`. Keep the same shard total when comparing runs.
+
+The Marketplace install/delete/disable/enable lifecycle is manual-only. Run it explicitly with:
+
+```bash
+E2E_MANUAL_MARKETPLACE_LIFECYCLE=1 bun run --cwd packages/e2e test:ui -- src/ui/marketplace-extension-lifecycle.spec.ts --grep "deletes, installs, disables, and enables a Marketplace extension"
+```
+
+Normal UI runs skip that lifecycle check. The separate extension automation toggle test still runs automatically.
 
 In CI, UI shards serve prebuilt `ui`, `pstdio-dashboard`, and `pstdio-workbench` Storybooks from the `storybook-static` artifact. The full stage builds that artifact once before starting the shards. Local `test:ui` keeps Storybook dev servers. To check static output locally, run `bun packages/e2e/src/scripts/build-storybooks.ts`, then use `CI=true` when starting the UI tests. Both paths load a real story before tests begin and keep the existing 60-second startup allowance.
 

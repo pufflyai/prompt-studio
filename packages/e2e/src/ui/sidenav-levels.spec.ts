@@ -30,11 +30,11 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   const firstRow = sidenav.locator("[data-tree-list-node-id]").first();
 
   // Users pin a project row by dragging it into the header.
-  const from = (await row("Tickets").boundingBox())!;
-  const to = (await row("Search").boundingBox())!;
-  await row("Tickets").dragTo(row("Search"), {
-    sourcePosition: { x: 40, y: from.height / 2 },
-    targetPosition: { x: 40, y: to.height * 0.25 },
+  const target = row("Search");
+  await target.hover();
+  const targetHeight = await target.evaluate((element) => element.getBoundingClientRect().height);
+  await row("Tickets").dragTo(target, {
+    targetPosition: { x: 40, y: targetHeight * 0.25 },
     steps: 12,
   });
   await expect(firstRow).toHaveAccessibleName("Tickets");

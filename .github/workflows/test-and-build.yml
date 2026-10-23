@@ -585,6 +585,13 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
       - name: Build SDK contracts used by native fixtures
         run: bun run build -- --scope @pstdio/sdk --include-dependencies
+      - name: Test Windows release paths and default extension reuse
+        run: >-
+          bun --conditions=source test
+          scripts/release/align-release-baseline.test.ts
+          packages/pstdio-api/src/features/extensions/default-extensions.test.ts
+          packages/pstdio-api/src/features/extensions/default-extensions-reuse.test.ts
+          packages/pstdio-api/src/features/extensions/repo-default-extensions.test.ts
       - name: Prepare Windows PowerShell
         run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
       - name: Test dependency installs, workspace links, watchers, and attachments
@@ -696,6 +703,10 @@ jobs:
     if: needs.scope.outputs.stage == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [cli, browser]
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
       options: --user 1001 --init --ipc=host
@@ -724,23 +735,24 @@ jobs:
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
 
       - name: Test Vite terminal e2e
+        if: matrix.suite == 'cli'
         run: bun run --cwd packages/e2e test:vite-terminal
 
       - name: Compile the packaged test CLI once
         run: bun run --cwd scripts build:host
 
-      - name: Test packaged e2e
+      - name: Test packaged ${{ matrix.suite }} e2e
         env:
           DEBUG: pw:browser
           E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
-        run: bun run --cwd packages/e2e test:packaged
+        run: bun run --cwd packages/e2e test:packaged:${{ matrix.suite }}
 
       - name: Preserve packaged and Vite test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: packaged-vite-e2e-results-attempt-${{ github.run_attempt }}
+          name: packaged-vite-e2e-${{ matrix.suite }}-results-attempt-${{ github.run_attempt }}
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
@@ -820,8 +832,19 @@ jobs:
         run: node scripts/ci/install-native-dependencies.ts
 
       - name: Test native DMG attachment cleanup
+        id: dmg_cleanup
         if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
-        run: bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts
+        run: |
+          set -o pipefail
+          bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts 2>&1 | tee native-dmg-cleanup.log
+
+      - name: Preserve failed native DMG cleanup log
+        if: failure() && steps.dmg_cleanup.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-dmg-cleanup-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          path: native-dmg-cleanup.log
+          if-no-files-found: error
 
       - name: Build monorepo
         if: matrix.platform == 'linux'
