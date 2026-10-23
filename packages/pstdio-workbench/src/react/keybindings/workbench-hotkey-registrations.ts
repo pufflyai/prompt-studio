@@ -52,7 +52,7 @@ export const normalizeWorkbenchKeybinding = (keybinding: KeybindingSequence): Ke
 export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyRegistrationsInput) => {
   const { workbench, disabled = false, commandIds } = input;
   const allowedCommandIds = commandIds ? new Set(commandIds) : undefined;
-  const catalog = workbench.keyboard.catalog();
+  const catalog = workbench.keyboard.catalog(true);
 
   return workbench.keybindings.listActiveKeybindings().flatMap((keybinding, index) => {
     const action = keybinding.action;
@@ -71,6 +71,11 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
           ignoreInputs: !keybinding.allowInInputs,
           requestId: JSON.stringify([getNavigationTargetKey(action), keybinding.keybinding]),
           execute: async () => {
+            if (
+              workbench.keyboard.catalog(true).find((entry) => entry.id === workbench.keybindings.getId(keybinding))
+                ?.disabled !== false
+            )
+              return;
             if (workbench.keyboard.store.getState().active || keybinding.targetScope)
               return workbench.keyboard.invoke(workbench.keybindings.getId(keybinding));
             if (action.args === undefined && hasCommandParameters(record.command.params)) {
@@ -97,12 +102,18 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
           !disabled && catalog.some((entry) => entry.id === workbench.keybindings.getId(keybinding) && !entry.disabled),
         ignoreInputs: !keybinding.allowInInputs,
         requestId: JSON.stringify([getNavigationTargetKey(action), keybinding.keybinding]),
-        execute: () =>
-          runUserAction(workbench, "Open", () =>
+        execute: () => {
+          if (
+            workbench.keyboard.catalog(true).find((entry) => entry.id === workbench.keybindings.getId(keybinding))
+              ?.disabled !== false
+          )
+            return Promise.resolve();
+          return runUserAction(workbench, "Open", () =>
             workbench.keyboard.store.getState().active || keybinding.targetScope
               ? workbench.keyboard.invoke(workbench.keybindings.getId(keybinding))
               : workbench.navigation.openTarget(action),
-          ),
+          );
+        },
       } satisfies WorkbenchHotkeyRegistration,
     ];
   });

@@ -24,6 +24,7 @@ export const createShortcutCatalogReader = (
         core.pages.store.getState(),
         core.views.store.getState(),
         core.resources.store.getState(),
+        core.keyboard.store.getState().selectedRegion,
       ];
       if (fresh || !snapshot || next.some((value, index) => value !== inputs[index])) {
         snapshot = resolveShortcutCatalog(core, visibleTargets());

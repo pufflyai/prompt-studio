@@ -129,6 +129,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       });
     },
     open() {
+      catalogReader.invalidate();
       const core = getCore();
       const active =
         presentations().find((tab) => tab.id === core.layout.getLayout().activeWidgetId) ?? presentations()[0];
