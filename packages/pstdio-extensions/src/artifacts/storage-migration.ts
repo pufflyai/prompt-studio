@@ -97,18 +97,40 @@ const updateIgnore = async (repoRoot: string, owners: readonly ExtensionStorageO
   const next = `${[...rules].join("\n")}\n`;
   if (next !== existing) await writeFile(ignorePath, next);
 };
+/** Storage the user must resolve by hand. Other extensions' storage still migrates. */
+export class ExtensionStorageConflictError extends Error {
+  constructor(
+    readonly extensionIds: readonly string[],
+    causes: readonly Error[],
+  ) {
+    super(causes.map((cause) => cause.message).join("\n"));
+    this.name = "ExtensionStorageConflictError";
+  }
+}
+
 const migrate = async (repoRoot: string, owners: readonly ExtensionStorageOwner[]) => {
   if (!(await exists(repoRoot))) return;
   owners = await discoverExtensionStorageOwners(repoRoot, owners);
   const root = join(repoRoot, ARTIFACT_MOUNT_ROOT);
+  const conflicts: { extensionIds: string[]; cause: Error }[] = [];
   for (const [name, group] of groupOwners(owners)) {
-    const old = join(root, name);
-    const previous = await exists(old);
-    const shared = group.length > 1;
-    if (shared && previous?.isSymbolicLink()) await unlink(old);
-    for (const owner of group) await migrateOwner(root, old, previous, shared, owner);
+    try {
+      const old = join(root, name);
+      const previous = await exists(old);
+      const shared = group.length > 1;
+      if (shared && previous?.isSymbolicLink()) await unlink(old);
+      for (const owner of group) await migrateOwner(root, old, previous, shared, owner);
+    } catch (error) {
+      conflicts.push({ extensionIds: group.map((owner) => owner.extensionId), cause: error as Error });
+    }
   }
   await updateIgnore(repoRoot, owners);
+  if (conflicts.length) {
+    throw new ExtensionStorageConflictError(
+      conflicts.flatMap((conflict) => conflict.extensionIds),
+      conflicts.map((conflict) => conflict.cause),
+    );
+  }
 };
 
 export const migrateExtensionStorage = async (repoRoot: string, owners: readonly ExtensionStorageOwner[]) => {
