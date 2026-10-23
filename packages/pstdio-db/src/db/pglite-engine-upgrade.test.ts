@@ -22,6 +22,7 @@ const checkLocale = async (db: Awaited<ReturnType<typeof createDb>>) => {
   );
 };
 
+// The fixed workload takes 4.5-4.9 s on Linux CI. The user approved 15 s, the existing Windows allowance.
 test("createDb upgrades a closed legacy home and preserves records, retry receipts and later writes", async () => {
   const root = await mkdtemp(join(tmpdir(), "pglite-runtime-upgrade-"));
   const path = join(root, "database");
@@ -78,7 +79,7 @@ test("createDb upgrades a closed legacy home and preserves records, retry receip
   } finally {
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 15_000);
 
 test("first creation and symlink opens share one canonical current-engine home", async () => {
   const root = await mkdtemp(join(tmpdir(), "pglite-runtime-initialize-"));
