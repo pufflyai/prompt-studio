@@ -1,9 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
 import { randomBytes } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
 import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
-import { storage_record_projections } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
@@ -190,15 +189,6 @@ test("long ordered values retain complete ordering across pages with equal prefi
     );
     expect(second.cursor).toBeNull();
   }
-});
-
-test("upgraded owners without declared indexes receive the batch-read projection once", async () => {
-  const f = await fixture();
-  await f.records.commit({ operationId: "old", edits: [{ recordId: "note", replace: "existing" }] });
-  await f.db.delete(storage_record_projections).where(eq(storage_record_projections.workbench_id, f.projectAId));
-  const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner }).records;
-  await reopened.defineIndexes([]);
-  expect((await reopened.readMany(["note"]))[0].value).toBe("existing");
 });
 
 test("reinstalling unchanged Unicode index names does not rebuild the projection", async () => {

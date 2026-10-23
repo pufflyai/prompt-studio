@@ -149,6 +149,7 @@
         "src/services/sessions/session-query.bench.ts",
         "src/services/extension-storage/document-storage.bench.ts",
         "src/services/extension-storage/document-scale.bench.ts",
+        "src/services/extension-storage/record-read-scale.bench.ts",
         "src/**/*.test.ts",
         // The isolated conformance runner and durability tests launch these by path.
         "src/**/*.integration.ts",
