@@ -6,6 +6,7 @@ import {
   type CommandRunnerEnvironment,
   createReadBoundary,
   createWorkspaceFilesMount,
+  ExtensionStorageConflictError,
   type InvocationScope,
   migrateExtensionStorage,
   type RuntimeArtifactMount,
@@ -85,8 +86,18 @@ export const createCommandEnvironment = (
     extensionId: installedSource.extension_id,
     name: installedSource.extension_id.split(".")[1]!,
   }));
-  const prepareStorageRoot = async (root: string, access: FileAccess) => {
-    if (access === "write") await migrateExtensionStorage(root, storageOwners);
+  // A storage conflict fails only writes into the conflicted extension's own storage. Other
+  // writes, such as project files or harness skill syncs, must not depend on it.
+  const prepareStorageRoot = async (root: string, access: FileAccess, ownStorage = false) => {
+    if (access !== "write") return root;
+    await migrateExtensionStorage(root, storageOwners).catch((error) => {
+      const conflicted = error instanceof ExtensionStorageConflictError;
+      if (!conflicted || (ownStorage && error.extensionIds.includes(input.extensionId))) throw error;
+      apiLogger.warn(
+        { err: error, event: "extensions.storage_migration.failed", extension_id: input.extensionId },
+        "Extension storage migration needs attention",
+      );
+    });
     return root;
   };
 
@@ -115,11 +126,13 @@ export const createCommandEnvironment = (
         })
       : undefined;
 
-    const resolveProjectPath = async (access: FileAccess) =>
+    const resolveProjectPath = async (access: FileAccess, ownStorage = false) =>
       prepareStorageRoot(
         await resolveWorkspaceFilesPath(deps, { projectId: input.projectId, provisioningWorkspaceId }, access),
         access,
+        ownStorage,
       );
+    const resolveOwnStoragePath = (access: FileAccess) => resolveProjectPath(access, true);
     const storage = createStorageApi(deps, {
       extensionId: input.extensionId,
       extensionInstanceId: enabledSource.instance.id,
@@ -137,7 +150,7 @@ export const createCommandEnvironment = (
     return {
       storage,
       artifacts: createArtifactsApi(
-        resolveProjectPath,
+        resolveOwnStoragePath,
         {
           ...input,
           onWrite: (path) => deps.artifactMountWrites.record(path),
@@ -168,7 +181,7 @@ export const createCommandEnvironment = (
         name: input.name,
         extensionId: input.extensionId,
         signal,
-        resolveRepoPath: resolveProjectPath,
+        resolveRepoPath: resolveOwnStoragePath,
         tracked: manifest.pstdio?.projectFiles?.tracked === true,
       }),
       files: createFilesApi(deps, input.projectId, signal),

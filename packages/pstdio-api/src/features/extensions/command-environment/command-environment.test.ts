@@ -887,3 +887,56 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
     });
   });
 });
+
+describe("createCommandEnvironment storage conflicts", () => {
+  const conflictEnv = (root: string, extensionId: string) =>
+    createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: {
+          setInitializing: async () => null,
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: root,
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+            provider_capabilities_json: folderWorkspaceCapabilities,
+          }),
+          list: async () => [],
+        },
+      } as never,
+      [
+        ...makeEnabledSources(),
+        {
+          instance: { id: "instance-2", namespace: "other" },
+          installedSource: { id: "source-2", extension_id: "pstdio.other", source_path: "/tmp/other" },
+        },
+      ] as never,
+      { extensionId, name: extensionId.split(".")[1]!, project: projectContext, projectId: "project-1" },
+    );
+  const conflictedRoot = () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-storage-conflict-"));
+    tempRoots.push(root);
+    mkdirSync(join(root, ".pstdio/extension-storage/other"), { recursive: true });
+    mkdirSync(join(root, ".pstdio/extension-storage/pstdio.other"), { recursive: true });
+    return root;
+  };
+
+  test("another extension's storage conflict does not block this extension's writes", async () => {
+    const root = conflictedRoot();
+    const env = conflictEnv(root, "pstdio.extension-lab");
+    await env.projectFiles!.writeText("notes.md", "project");
+    await env.extensionFiles!.writeText("cache.json", "{}");
+    expect(readFileSync(join(root, "notes.md"), "utf8")).toBe("project");
+    expect(readFileSync(join(root, ".pstdio/extension-storage/pstdio.extension-lab/cache.json"), "utf8")).toBe("{}");
+  });
+
+  test("an extension's own storage conflict fails only its storage writes", async () => {
+    const root = conflictedRoot();
+    const env = conflictEnv(root, "pstdio.other");
+    await env.projectFiles!.writeText("notes.md", "project");
+    await expect(env.extensionFiles!.writeText("cache.json", "{}")).rejects.toThrow(/legacy and full-ID/);
+  });
+});

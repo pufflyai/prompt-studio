@@ -5,6 +5,7 @@ export {
   createLegacyExtensionPathResolver,
   createWorkspaceFilesMount,
   discoverExtensionStorageOwners,
+  ExtensionStorageConflictError,
   type ExtensionStorageOwner,
   extensionFilesPath,
   extensionStorageDirectory,

@@ -52,7 +52,8 @@ export type ProjectExtensionRuntimeCatalog = ReturnType<typeof createProjectExte
 
 type CandidateExtensionSource = LoadableExtensionSource & { extension_id: string };
 // A storage conflict needs the user to resolve files, so it must not block every extension
-// in the project. Reads keep using the legacy layout, and the next write reports the conflict.
+// in the project. Reads use the full-ID folder until then, and the next write reports the
+// conflict to the extension. Merging the folders here would have to pick one copy.
 const migrateRuntimeStorage = async (root: string | null | undefined, runtime: ExtensionRuntime) => {
   if (!root || !runtime.extensions.length) return;
   const owners = runtime.extensions.map((extension) => ({ name: extension.name, extensionId: extension.id }));

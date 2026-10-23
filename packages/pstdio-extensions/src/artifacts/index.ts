@@ -19,7 +19,11 @@ export {
 } from "./package-assets";
 export { normalizeArtifactMountPath, normalizeCliPath } from "./path-normalization";
 export { normalizeMountRelativePath } from "./safe-file-root";
-export { extensionStorageDirectory, migrateExtensionStorage } from "./storage-migration";
+export {
+  ExtensionStorageConflictError,
+  extensionStorageDirectory,
+  migrateExtensionStorage,
+} from "./storage-migration";
 export {
   discoverExtensionStorageOwners,
   resolveReadExtensionStoragePath,

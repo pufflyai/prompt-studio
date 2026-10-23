@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { extensionStorageDirectory, migrateExtensionStorage } from "./storage-migration";
+import { ExtensionStorageConflictError, extensionStorageDirectory, migrateExtensionStorage } from "./storage-migration";
 
 const roots: string[] = [];
 const fixture = async () => {
@@ -71,4 +71,18 @@ test("keeps moved private files excluded from Git", async () => {
   await writeFile(join(root, ".pstdio/.gitignore"), `# pstdio:ignore-owned ${previousRule}\n${previousRule}\n`);
   await migrateExtensionStorage(root, [{ name: "notes", extensionId: "alice.notes" }]);
   expect(git("check-ignore", "-q", ".pstdio/extension-storage/alice.notes/draft.md").exitCode).toBe(0);
+});
+test("a conflict in one extension's storage still moves the others and names the conflicted owner", async () => {
+  const root = await fixture();
+  await mkdir(join(root, ".pstdio/extension-storage/notes"), { recursive: true });
+  await mkdir(join(root, ".pstdio/extension-storage/alice.notes"), { recursive: true });
+  await mkdir(join(root, ".pstdio/extension-storage/tasks"), { recursive: true });
+  await writeFile(join(root, ".pstdio/extension-storage/tasks/one.md"), "one");
+  const error = await migrateExtensionStorage(root, [
+    { name: "notes", extensionId: "alice.notes" },
+    { name: "tasks", extensionId: "alice.tasks" },
+  ]).catch((caught) => caught);
+  expect(error).toBeInstanceOf(ExtensionStorageConflictError);
+  expect(error.extensionIds).toEqual(["alice.notes"]);
+  expect(await readFile(join(root, ".pstdio/extension-storage/alice.tasks/one.md"), "utf8")).toBe("one");
 });
