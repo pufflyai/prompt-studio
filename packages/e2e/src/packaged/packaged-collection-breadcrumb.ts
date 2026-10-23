@@ -37,6 +37,11 @@ export const verifyPackagedCollectionBreadcrumb = async (
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
   await expect(tab("secondary")).toBeVisible();
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  const home = await sidenav.getByRole("option", { name: "Home", exact: true }).boundingBox();
+  const sessionsEntry = await sidenav.getByRole("option", { name: "Sessions", exact: true }).boundingBox();
+  expect(home!.y + home!.height).toBeLessThanOrEqual(sessionsEntry!.y);
+  const searchBefore = await sidenav.getByRole("option", { name: "Search", exact: true }).elementHandle();
   const sessions = new URL(libraryUrl);
   sessions.pathname = `/projects/${projectId}/sessions`;
   await page.evaluate((url) => {
@@ -44,7 +49,7 @@ export const verifyPackagedCollectionBreadcrumb = async (
     dispatchEvent(new PopStateEvent("popstate"));
   }, sessions.href);
   await expect(breadcrumbs).toContainText("Sessions");
-  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  expect(await searchBefore!.evaluate((row) => row.isConnected)).toBe(true);
   const modeReturn = sidenav.getByRole("button", { name: "Project", exact: true });
   await expect(modeReturn).toBeVisible();
   expect(await modeReturn.evaluate((button) => button.closest('[draggable="true"]'))).toBeNull();

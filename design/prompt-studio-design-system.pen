@@ -79342,6 +79342,28 @@
                           }
                         },
                         {
+                          "id": "yFxnH",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Home",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "icon": "house"
+                            },
+                            "ROY2j": {
+                              "content": "Home",
+                              "fill": "$tree-fg"
+                            }
+                          }
+                        },
+                        {
                           "id": "JB0fN",
                           "type": "ref",
                           "ref": "t5G2s8",
@@ -79543,6 +79565,28 @@
                             },
                             "ROY2j": {
                               "content": "Notifications",
+                              "fill": "$tree-fg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "B8ZLRJ",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Home",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "icon": "house"
+                            },
+                            "ROY2j": {
+                              "content": "Home",
                               "fill": "$tree-fg"
                             }
                           }
@@ -79893,6 +79937,28 @@
                             },
                             "ROY2j": {
                               "content": "Notifications",
+                              "fill": "$tree-fg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "AHEfo",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Home",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "icon": "house"
+                            },
+                            "ROY2j": {
+                              "content": "Home",
                               "fill": "$tree-fg"
                             }
                           }

@@ -249,6 +249,11 @@ const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
 export const ProjectMode: Story = {
   render: () => <SidenavStory open={openStartPage} />,
   play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const home = await canvas.findByRole("option", { name: "Home" });
+    const sessions = await canvas.findByRole("option", { name: "Sessions" });
+    await expect(home.getBoundingClientRect().bottom).toBeLessThanOrEqual(sessions.getBoundingClientRect().top);
+    await expect(home).toHaveAttribute("aria-selected", "true");
     await expect(canvasElement.querySelector('[data-workbench-panel-header="sidenav"]')).toBeNull();
   },
 };

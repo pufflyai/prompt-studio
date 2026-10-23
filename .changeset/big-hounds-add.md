@@ -4,4 +4,4 @@
 "pstdio": patch
 ---
 
-Keep an unmovable mode return entry first in the main subnavigation content.
+Add Home above Sessions, keep navigation chrome visible while tickets load, and place the mode return first in subnavigation content.
