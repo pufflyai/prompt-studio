@@ -1,5 +1,5 @@
 import { definePage, defineView, l10n, packageAsset, workbenchModes } from "@pstdio/sdk/extensions";
-import { artifactPage, artifactPanelRef, libraryPageRef, libraryPanelRef } from "./artifact-refs";
+import { artifactPage, artifactPanelRef, libraryPageRef } from "./artifact-refs";
 import { queryArtifactTab } from "./artifact-tab";
 import { changedEvent } from "./events";
 import { artifact } from "./resource-kinds";
@@ -23,13 +23,6 @@ export const library = definePage({
   mode: workbenchModes.project,
   main: { kind: "panels", empty: view.ref },
   slots: [
-    {
-      id: libraryPanelRef.id,
-      region: "main",
-      order: 0,
-      mountStrategy: "keep-mounted",
-      item: { kind: "view", view: view.ref, presence: "fixed" },
-    },
     {
       id: artifactPanelRef.id,
       region: "main",

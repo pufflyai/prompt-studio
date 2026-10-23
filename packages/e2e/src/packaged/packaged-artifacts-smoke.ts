@@ -26,11 +26,6 @@ export const expectPackagedArtifacts = async (input: {
       main: { kind: "panels", empty: expect.any(Object) },
       slots: expect.arrayContaining([
         expect.objectContaining({
-          id: "library",
-          region: "main",
-          item: expect.objectContaining({ kind: "view", presence: "fixed" }),
-        }),
-        expect.objectContaining({
           id: "artifact",
           tab: expect.objectContaining({
             queryHandlerId: expect.any(String),

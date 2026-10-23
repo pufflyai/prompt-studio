@@ -119,7 +119,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     const artifactMenu = page.locator("[data-workbench-breadcrumb-resource-actions]");
     const versionMenu = frame.getByRole("button", { name: "Versions", exact: true });
     await expect(frame.getByText("Your first artifact starts with an idea", { exact: true })).toBeVisible();
-    const libraryTab = page.getByRole("tab", { name: "Artifacts", exact: true });
+    const mainTabs = page.locator('[data-workbench-panel="main"]').getByRole("tab");
     writeFileSync(
       join(repo, "page.html"),
       `<title>First page</title><h1>First page</h1><button onclick="this.textContent='Complete'">Complete task</button><p id="isolation"></p><p id="network"></p><script>
@@ -133,7 +133,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
 
     await frame.getByRole("button", { name: "First page", exact: true }).click();
     await expect(artifactMenu).toBeVisible();
-    await expect(libraryTab).toHaveAttribute("aria-selected", "false");
+    await expect(mainTabs).toHaveCount(1);
     const preview = frame.frameLocator('iframe[title^="Preview: "]').frameLocator("iframe");
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     await expect(preview.getByText("Parent isolated")).toBeVisible();
@@ -141,10 +141,11 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await preview.getByRole("button", { name: "Complete task" }).click();
     const breadcrumbs = page.getByRole("navigation", { name: "Breadcrumb" });
     await expect(breadcrumbs.getByText("First page", { exact: true })).toBeVisible();
-    await breadcrumbs.getByRole("button", { name: "Artifacts", exact: true }).click();
-    await expect(libraryTab).toHaveAttribute("aria-selected", "true");
-    await expect(breadcrumbs.getByText("First page", { exact: true })).toHaveCount(0);
-    await frame.getByRole("button", { name: "Reference", exact: true }).click();
+    await expect(breadcrumbs.getByText("Artifacts", { exact: true })).toBeVisible();
+    await page.getByRole("option", { name: "Search", exact: true }).click();
+    const palette = page.getByRole("dialog");
+    await palette.getByRole("textbox").fill("Reference");
+    await palette.getByText("Reference", { exact: true }).click();
     await expect(preview.getByRole("heading", { name: "Reference chart" })).toBeVisible();
     const referenceTab = page.getByRole("tab", { name: "Reference", exact: true });
     await expect(referenceTab).toHaveAttribute("aria-selected", "true");
@@ -204,7 +205,8 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await page.getByRole("textbox", { name: "Artifact name" }).fill("Launch notes");
     await page.getByRole("button", { name: "Run", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Launch notes", exact: true })).toBeVisible();
-    await breadcrumbs.getByRole("button", { name: "Artifacts", exact: true }).click();
+    await page.getByRole("button", { name: "Close Launch notes", exact: true }).click();
+    await page.getByRole("button", { name: "Close Reference", exact: true }).click();
     const card = frame.getByRole("button", { name: "Launch notes", exact: true });
     await expect(card).toBeVisible();
     // Thumbnails load only after their card enters the viewport.
@@ -219,7 +221,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await page.getByRole("button", { name: "Delete", exact: true }).click();
     await expect(frame.getByRole("button", { name: "Reference", exact: true })).toBeVisible();
     expect((await execute("list", {})).map((item: { url: string }) => item.url)).toEqual([reference.url]);
-    await referenceTab.click();
+    await frame.getByRole("button", { name: "Reference", exact: true }).click();
     await artifactMenu.click();
     await page.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
     await page.getByRole("button", { name: "Delete", exact: true }).click();
