@@ -20,8 +20,8 @@ import {
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
-import { EmptyPage } from "./empty-page";
 import { ModeChromeView, useModeChrome } from "./mode-chrome";
+import { PanelPlaceholder } from "./panel-placeholder";
 import { usePanelViewSlot, WorkbenchPanelViewSlot } from "./panel-view-hosts";
 import { RegionScrollArea } from "./region-scroll-area";
 import { useRetainedViewPlacements } from "./use-retained-view-placements";
@@ -137,7 +137,6 @@ const WorkbenchRegionPlacement = (props: WorkbenchRegionPlacementProps) => {
 
 export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const { workbench, region, title, pointerEvents = "auto", transparent = false } = props;
-  const activePageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const panelRegion = workbenchPanelRegions.includes(region as WorkbenchPanelRegion)
     ? (region as WorkbenchPanelRegion)
     : undefined;
@@ -207,7 +206,11 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
       <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
     ) : null;
   const placeholderView =
-    !activePlacement && region === "main" && activePageId ? <EmptyPage workbench={workbench} /> : hostPlaceholderView;
+    !activePlacement && panelRegion ? (
+      <PanelPlaceholder workbench={workbench} region={panelRegion} fallback={hostPlaceholderView} />
+    ) : (
+      hostPlaceholderView
+    );
 
   return (
     <Flex

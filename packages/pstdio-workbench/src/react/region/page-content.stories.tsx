@@ -55,7 +55,9 @@ export const ReopenContent: Story = {
   args: { workbench: createPageWorkbench("closed") },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: /^Reopen$/ }));
+    await userEvent.click(
+      within(await canvas.findByRole("group", { name: "Available tabs" })).getByRole("button", { name: "Document" }),
+    );
     await expect(canvas.getByRole("tab", { name: "Document" })).toBeVisible();
     await expect(canvas.getByText("Document content")).toBeVisible();
   },
@@ -65,7 +67,9 @@ export const MoveContentBack: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const original = args.workbench.layout.getActivePanel("side")!.instanceId;
-    await userEvent.click(await canvas.findByRole("button", { name: /^Move back$/ }));
+    await userEvent.click(
+      within(await canvas.findByRole("group", { name: "Available tabs" })).getByRole("button", { name: "Document" }),
+    );
     expect(args.workbench.layout.getActivePanel("main")!.instanceId).toBe(original);
     expect(args.workbench.layout.listPanelInstances("side")).toEqual([]);
   },
@@ -107,9 +111,10 @@ export const ClosedMovedContent: Story = {
   args: { workbench: createPageWorkbench("moved") },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("button", { name: /^Move back$/ })).toBeVisible();
+    const cards = within(await canvas.findByRole("group", { name: "Available tabs" }));
+    await expect(cards.getByRole("button", { name: "Document" })).toBeVisible();
     args.workbench.closePlacement(args.workbench.layout.getActivePanel("side")!.placementIdentity!);
-    await expect(await canvas.findByRole("button", { name: /^Reopen$/ })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: /^Move back$/ })).toBeNull();
+    await userEvent.click(cards.getByRole("button", { name: "Document" }));
+    await expect(await canvas.findByText("Document content")).toBeVisible();
   },
 };
