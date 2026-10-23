@@ -12,7 +12,6 @@ import { storage_document_operations, storage_document_updates, storage_document
 import { dataMigrationContext } from "./data-migration-context";
 import type { LoadedDocument } from "./document-cache";
 import { importOwnerDocument } from "./document-import";
-import { trackRecordProjection } from "./record-projection";
 import { trackResourceIdentityProjection } from "./resource-identity-projection";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
@@ -149,10 +148,6 @@ export const runDocumentTransaction = async <T>(
     input.cached,
     input.diagnostics,
   );
-  const projection =
-    address.document_id === "records"
-      ? await trackRecordProjection(tx, address, document, !!initialize, row.revision)
-      : undefined;
   const identities =
     address.document_id === resourceNumbersDocumentId && address.extension_id === resourceNumbersOwnerId
       ? await trackResourceIdentityProjection(tx, address, document, !!initialize, row.revision)
@@ -171,22 +166,18 @@ export const runDocumentTransaction = async <T>(
       migrationHistory: migration?.histories.get(key),
       operation: operations.operation,
       remember: operations.remember,
-      rebuildProjection: projection?.rebuild ?? identities?.rebuild,
+      rebuildProjection: identities?.rebuild,
     });
     identities?.prepare();
     await operations.persist();
     const revision = await appendUpdates(tx, address, row, document, updates);
-    const projected = await projection?.persist(revision);
     await identities?.persist(revision);
-    if (projected !== undefined)
-      input.diagnostics?.({ phase: "records-projected", owner: input.owner, records: projected });
-    return { value, revision, document, changed: updates.length > 0, projected: projected ?? 0 };
+    return { value, revision, document, changed: updates.length > 0 };
   } catch (error) {
     if (document !== input.cached?.document) document.destroy();
     throw error;
   } finally {
     document.off("update", capture);
-    projection?.stop();
     identities?.stop();
   }
 };

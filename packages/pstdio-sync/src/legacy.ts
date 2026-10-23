@@ -1,8 +1,6 @@
-import { canonicalJson, type Json } from "pstdio-sync-contracts";
-import { createDocumentStorage } from "./document-storage";
-import type { DocumentStore } from "./document-types";
+import { canonicalJson, type Json, type StorageRecord } from "pstdio-sync-contracts";
 import { legacyNamespaceStorage } from "./namespaces";
-import type { StorageOwner } from "./types";
+import type { GroupCommit } from "./types";
 
 interface LegacyCollectionValue {
   value: Json;
@@ -12,23 +10,26 @@ interface LegacyCollectionValue {
 // Legacy SQL JSON writes omitted undefined object fields and used null for undefined array entries.
 const legacyJson = (value: Json) => JSON.parse(JSON.stringify(value)) as Json;
 
-/** Deprecated replacements deliberately observe the latest value inside the owner transaction. */
-export const createLegacyRecordStorage = (input: { store: DocumentStore; owner: StorageOwner }) => {
+interface LegacyRecords {
+  read(id: string): Promise<StorageRecord>;
+  list(prefix: string): Promise<StorageRecord[]>;
+  commit(group: GroupCommit): Promise<unknown>;
+  /** Runs reads and commits under one owner lock. */
+  transaction<T>(
+    run: (records: {
+      read(id: string): Promise<StorageRecord>;
+      commit(group: GroupCommit): Promise<unknown>;
+    }) => Promise<T>,
+  ): Promise<T>;
+}
+
+/** Deprecated replacements deliberately observe the latest value inside the owner lock. */
+export const createLegacyRecordStorage = (input: { records: LegacyRecords }) => {
   const within = <T>(namespace: string[], action: (records: ReturnType<typeof legacyNamespaceStorage>) => Promise<T>) =>
-    input.store.transaction(input.owner, (state) =>
-      action(
-        legacyNamespaceStorage(
-          createDocumentStorage({
-            ...input,
-            store: { transaction: async (_owner, run) => run(state), observer: input.store.observer },
-          }).records,
-          namespace,
-        ),
-      ),
-    );
+    input.records.transaction((records) => action(legacyNamespaceStorage(records, namespace)));
 
   const namespaceApi = (namespace: string[]) => {
-    const current = legacyNamespaceStorage(createDocumentStorage(input).records, namespace);
+    const current = legacyNamespaceStorage(input.records, namespace);
     const read = (records: ReturnType<typeof legacyNamespaceStorage>, id: string) => records.read(id);
     const replace = async (
       records: ReturnType<typeof legacyNamespaceStorage>,

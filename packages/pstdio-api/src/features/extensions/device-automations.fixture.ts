@@ -5,6 +5,7 @@ import type { StorageOwner } from "pstdio-sync";
 import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
 import { EventBus } from "../sync/event-bus";
 import type { ScheduleAdmissionDeps } from "./deps";
+import type { openDeviceAutomations } from "./device-automations";
 import { loadExtensionSource } from "./extension-runtime";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 import { createTestExtensionSource } from "./test-utils/create-test-extension-source";
@@ -123,4 +124,16 @@ export const createDeviceAutomationFixture = async () => {
       delete (globalThis as Record<string, unknown>).__deviceAutomationRun;
     },
   };
+};
+
+type AutomationCatalog = Awaited<ReturnType<typeof openDeviceAutomations>>;
+
+/** Copies one device's current automation records to another, as a sync delivery would. */
+export const replicateRecords = async (from: AutomationCatalog, to: AutomationCatalog) => {
+  const records = await from.records.list();
+  if (!records.length) return;
+  await to.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: records.map((record) => ({ recordId: record.recordId, replace: record.value })),
+  });
 };

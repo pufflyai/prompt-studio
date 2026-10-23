@@ -22,7 +22,10 @@ export const createExtensionStorageDBService = (db: DbClient, observer?: Storage
   const scopeFor = async (scope: KvScope) => {
     const owner = await getExtensionStorageOwner(db, scope.extension_instance_id);
     if (!owner) return null;
-    return createLegacyRecordStorage({ owner, store: documents }).scope(scope.scope_type, scope.scope_id);
+    return createLegacyRecordStorage({ records: documents.open({ owner }).records }).scope(
+      scope.scope_type,
+      scope.scope_id,
+    );
   };
   const requireScope = async (scope: KvScope) => {
     const storage = await scopeFor(scope);
