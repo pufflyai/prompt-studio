@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import type { ResourceIdentity } from "pstdio-api-contracts/extension-kernel";
-import { resourceNumbersDocumentId, coreOwnerId } from "pstdio-sync";
+import { coreOwnerId, resourceNumbersDocumentId } from "pstdio-sync";
 import type { DbClient } from "../db/connection.pglite";
 import {
   storage_resource_aliases as aliases,

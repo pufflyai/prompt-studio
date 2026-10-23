@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { rememberResourceNumber, resourceNumbers, coreOwnerId } from "pstdio-sync";
+import { coreOwnerId, rememberResourceNumber, resourceNumbers } from "pstdio-sync";
 import { createDb } from "../db/connection.pglite";
 import {
   storage_resource_aliases as aliases,

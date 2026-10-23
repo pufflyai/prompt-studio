@@ -1,11 +1,11 @@
 import { and, eq, sql } from "drizzle-orm";
 import { createStorageId } from "pstdio-api-contracts";
 import {
+  coreOwnerId,
   nextResourceNumber,
   rememberResourceNumber,
   resourceIdentity,
   resourceNumbers,
-  coreOwnerId,
 } from "pstdio-sync";
 import type { DbClient } from "../db/connection.pglite";
 import { extension_resource_sequences as sequences } from "../db/schemas.pg";
