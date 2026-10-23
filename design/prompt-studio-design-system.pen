@@ -217583,8 +217583,8 @@
       "id": "MvL0j",
       "x": 62710,
       "y": 0,
-      "name": "Empty panel · Tools cards",
-      "context": "Default tool chooser aligned to the top with 32 px comfortable padding and centered horizontally. Width is capped at the lg token (512 px); cards keep two columns and collapse in narrow panels. Hover entry and exit are immediate.",
+      "name": "Empty panel · Available tab cards",
+      "context": "Default panel cards have no heading. The chooser is aligned to the top with 32 px padding and centered horizontally at a maximum width of 512 px. Cards retain two columns and immediate hover entry and exit.",
       "theme": {
         "mode": "dark"
       },
@@ -217604,17 +217604,6 @@
           "layout": "vertical",
           "gap": 16,
           "children": [
-            {
-              "type": "text",
-              "id": "R31hE",
-              "name": "Heading",
-              "fill": "$ds-fg",
-              "content": "Tools",
-              "lineHeight": 1.5,
-              "fontFamily": "$font-body",
-              "fontSize": 14,
-              "fontWeight": "500"
-            },
             {
               "type": "frame",
               "id": "xOhJE",

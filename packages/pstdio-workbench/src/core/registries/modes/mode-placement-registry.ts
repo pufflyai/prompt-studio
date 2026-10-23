@@ -45,6 +45,8 @@ export interface WorkbenchModePlacementContribution extends WorkbenchPlacementPr
   readonly item: WorkbenchOwnedPlacementItem;
   readonly region: DockedWorkbenchRegion;
   readonly order?: number;
+  readonly addableIn?: readonly DockedWorkbenchRegion[];
+  /** @deprecated Use addableIn. Tab movement is independent of Add choices. */
   readonly movableTo?: readonly DockedWorkbenchRegion[];
 }
 
@@ -191,8 +193,6 @@ export const createWorkbenchModePlacementRegistry = (input: {
     open(target, current = state) {
       const placement = placements.get(target.placementId);
       if (!placement) throw new Error(`Unknown mode placement: ${target.placementId}`);
-      if (target.region && placement.movableTo && !placement.movableTo.some((region) => region === target.region))
-        throw new Error(`Mode panel cannot open in ${target.region}: ${placement.id}`);
       return prepareOwnedPlacement({
         label,
         target,

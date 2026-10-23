@@ -53,6 +53,7 @@ const slot = z
     item,
     order: z.number().optional(),
     openOn: z.literal("page-resource").optional(),
+    addableIn: z.array(region).optional(),
     movableTo: z.array(region).optional(),
     ...presentation,
   })
@@ -114,6 +115,7 @@ export const placementDeclarationSchema = z
     region,
     item,
     order: z.number().optional(),
+    addableIn: z.array(region).optional(),
     movableTo: z.array(region).optional(),
     ...presentation,
   })

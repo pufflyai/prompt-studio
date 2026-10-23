@@ -121,32 +121,6 @@ test("opening into a panel unavailable in the active mode leaves owners and layo
   expect(w.layout.getLayout()).toEqual(before);
   expect(w.modePlacements.resolvePlacements("restricted")).toEqual([]);
 });
-test("a forbidden panel destination rejects compound navigation before changing owners or layout", async () => {
-  const { workbench, snapshot } = createHarness();
-  workbench.modePlacements.registerPlacement({
-    id: "locked",
-    ref: panelRef("locked"),
-    modeId: "notes",
-    region: "side",
-    movableTo: ["side"],
-    item: { kind: "view", view: { kind: "view", id: "content" }, presence: "closed" },
-  });
-  const before = snapshot();
-  await expect(
-    workbench.navigation.openTarget({
-      kind: "compound",
-      targets: [
-        { kind: "panel", panel: panelRef("shared"), resource: { type: "note", id: "valid" } },
-        { kind: "panel", panel: panelRef("locked"), region: "secondary" },
-      ],
-    }),
-  ).rejects.toThrow("cannot open");
-  expect(snapshot()).toEqual(before);
-  expect(() => workbench.modePlacements.openPlacement({ panel: panelRef("locked"), region: "secondary" })).toThrow(
-    "cannot open",
-  );
-  expect(snapshot()).toEqual(before);
-});
 test("compound panel openings use their chosen regions from the first layout publication", async () => {
   const { workbench } = createHarness();
   const seen: string[][] = [];

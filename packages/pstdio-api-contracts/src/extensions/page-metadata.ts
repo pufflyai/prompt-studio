@@ -34,6 +34,7 @@ const slotSchema = workbenchPlacementPresentationSchema
   .extend({
     id: z.string(),
     region: z.enum(["main", "secondary", "side"]),
+    addableIn: z.array(z.enum(["main", "secondary", "side"])).optional(),
     movableTo: z.array(z.enum(["main", "secondary", "side"])).optional(),
     order: z.number().optional(),
     item: placementItemSchema,

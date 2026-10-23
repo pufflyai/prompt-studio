@@ -12,7 +12,7 @@ import {
   type WorkbenchModeContribution,
 } from "../../registries/modes/mode-registry";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
-import { allowedPanelDestinations } from "./panel-destinations";
+import { allowedPanelAddRegions } from "./panel-destinations";
 export interface WorkbenchCompositionAddablePanel extends WorkbenchModeAddablePanel {
   contribution: RegisteredWidgetContribution;
   open?(resource?: ResourceRef): void | Promise<void>;
@@ -55,8 +55,7 @@ const addModePanels = (input: {
 }) => {
   for (const panel of input.modePanels) {
     if (!["main", "side", "secondary"].includes(panel.region)) continue;
-    if (!allowedPanelDestinations({ mode: input.mode, allowedRegions: panel.allowedRegions }).includes(input.region))
-      continue;
+    if (!allowedPanelAddRegions(input.mode, panel.allowedRegions).includes(input.region)) continue;
     const contribution = input.widgets.find((widget) => widget.id === panel.panelId);
     if (!contribution || !hasAddAction(contribution) || isOpenSingleton(contribution, input.placements)) continue;
     input.addable.set(panel.panelId, { ...panel, region: input.region, contribution });
@@ -77,8 +76,7 @@ const addRegisteredPanels = (input: {
     if (!contribution.eligibleLocations) continue;
     if (!["main", "side", "secondary"].includes(contribution.region)) continue;
     const policy = input.modePanels.find((panel) => panel.panelId === contribution.id);
-    if (!allowedPanelDestinations({ mode: input.mode, allowedRegions: policy?.allowedRegions }).includes(input.region))
-      continue;
+    if (!allowedPanelAddRegions(input.mode, policy?.allowedRegions).includes(input.region)) continue;
     if (input.addable.has(contribution.id) || isOpenSingleton(contribution, input.placements)) continue;
     if (
       !isWorkbenchPanelPlacementVisible(contribution, input.resource, input.mode?.id, undefined, {

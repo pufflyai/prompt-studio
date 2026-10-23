@@ -151,6 +151,7 @@ describe("createWorkbenchExtensionMetadata", () => {
             definePlacement({
               id: "tickets.review",
               mode: mode.ref,
+              addableIn: ["main"],
               item: { kind: "view", view: view.ref, presence: "open" },
               region: "main",
               tab: {
@@ -201,6 +202,7 @@ describe("createWorkbenchExtensionMetadata", () => {
     });
     expect(metadata.placements[0]).toMatchObject({
       id: "pstdio.lab.placement.tickets.review",
+      addableIn: ["main"],
       mode: { extensionId: "pstdio.lab", kind: "mode", id: "review" },
       item: {
         kind: "view",
@@ -263,6 +265,7 @@ describe("createWorkbenchExtensionMetadata pages", () => {
         {
           id: "tools",
           region: "side",
+          addableIn: ["side"],
           movableTo: ["side"],
           item: {
             kind: "view",
@@ -307,6 +310,7 @@ describe("createWorkbenchExtensionMetadata pages", () => {
         {
           id: "tools",
           region: "side",
+          addableIn: ["side"],
           movableTo: ["side"],
           item: { kind: "view", presence: "open", view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
         },

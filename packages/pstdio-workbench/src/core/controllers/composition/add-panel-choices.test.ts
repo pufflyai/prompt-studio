@@ -62,40 +62,43 @@ test.each([
   expect(choices()).toHaveLength(1);
 });
 
-test("page slots enforce their declared panel destinations", () => {
+test.each(["page", "mode"] as const)("%s Add regions do not restrict where an open tab can move", async (owner) => {
   const { w } = fixture("page", { kind: "view", view: { kind: "view", id: "tool" }, presence: "closed" });
+  const placement = {
+    id: "library",
+    region: "main",
+    addableIn: ["main"],
+    item: { kind: "view", view: { kind: "view", id: "tool" }, presence: "closed" },
+  } as const;
+  if (owner === "mode")
+    w.modePlacements.registerPlacement({
+      ...placement,
+      ref: { kind: "placement", extensionId: "test", id: "library" },
+      modeId: "project",
+    });
   w.pages.registerPage({
     id: "library",
     ref: { ...page, id: "library" },
     path: "library",
     modeId: "project",
-    main: { kind: "panels", landing: "library" },
-    slots: [
-      {
-        id: "library",
-        region: "main",
-        movableTo: ["main"],
-        item: { kind: "view", view: { kind: "view", id: "tool" }, presence: "open" },
-      },
-    ],
+    main: { kind: "panels" },
+    slots: owner === "page" ? [placement] : [],
   });
   w.pageLocations.navigate({ kind: "page", page: { ...page, id: "library" } });
+  const choices = (region: "main" | "side" | "secondary") => w.composition.panelsFor(region).addable;
+  expect(choices("main")).toHaveLength(1);
+  expect(choices("side")).toEqual([]);
+  expect(choices("secondary")).toEqual([]);
+  await choices("main")[0]!.open!();
   const tab = w.layout.getActivePanel("main")!;
-  expect(w.getPanelDestinations(tab.instanceId)).toEqual(["main"]);
-  expect(() => w.movePanel(tab.instanceId, "side")).toThrow("Panel cannot move");
-  expect(() => w.pages.openSlot({ pageId: "library", slotId: "library", region: "side" })).toThrow();
-  const layout = w.layout.getLayout();
-  const savedTab = layout.regions.main.widgets[0]!;
-  w.layout.restoreLayout({
-    ...layout,
-    regions: {
-      ...layout.regions,
-      main: { ...layout.regions.main, widgets: [], activeWidgetId: undefined },
-      side: { ...layout.regions.side, widgets: [savedTab], activeWidgetId: savedTab.widgetId },
-    },
-  });
-  w.pageLocations.navigate({ kind: "page", page });
-  w.pageLocations.navigate({ kind: "page", page: { ...page, id: "library" } });
-  expect(w.layout.listPanelInstances("side")).toEqual([]);
-  expect(w.layout.getActivePanel("main")?.instanceId).toBe(tab.instanceId);
+  expect(w.getPanelDestinations(tab.instanceId)).toHaveLength(3);
+  for (const region of ["side", "secondary"] as const) {
+    w.movePanel(tab.instanceId, region);
+    expect(w.layout.getActivePanel(region)?.instanceId).toBe(tab.instanceId);
+    expect(choices("main")).toEqual([]);
+  }
+  w.closePlacement(tab.placementIdentity!);
+  expect(choices("main")).toHaveLength(1);
+  expect(choices("side")).toEqual([]);
+  expect(choices("secondary")).toEqual([]);
 });

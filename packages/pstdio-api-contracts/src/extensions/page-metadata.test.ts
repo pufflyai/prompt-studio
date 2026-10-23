@@ -44,8 +44,14 @@ test("preserves the selected document declaration in page metadata", () => {
   );
 });
 
-test("preserves a page slot's allowed panel destinations", () => {
+test("preserves a page slot's legacy Add regions", () => {
   const slot = { id: "library", region: "main", movableTo: ["main"], item: { kind: "view", view, presence: "open" } };
   const record = { ...page({ kind: "panels" }), slots: [slot] };
   expect(workbenchExtensionPageRecordSchema.parse(record).slots[0]?.movableTo).toEqual(["main"]);
+});
+
+test("preserves the regions where a page slot is offered by Add", () => {
+  const slot = { id: "library", region: "main", addableIn: ["main"], item: { kind: "view", view, presence: "open" } };
+  const record = { ...page({ kind: "panels" }), slots: [slot] };
+  expect(workbenchExtensionPageRecordSchema.parse(record).slots[0]?.addableIn).toEqual(["main"]);
 });

@@ -149,20 +149,21 @@ test("moving a location keeps the source's next tab selected", () => {
   expect(w.layout.getLayout().regions.secondary.activeWidgetId).toBe(second!.widgetId);
 });
 
-test("moving a singleton preserves its identity and follows move restrictions", async () => {
+test("moving a singleton preserves its identity across every tab panel", async () => {
   const w = harness();
   w.modePlacements.registerPlacement({
     id: "notes",
     ref: { kind: "placement", extensionId: "test", id: "notes" },
     modeId: "edit",
     region: "secondary",
-    movableTo: ["secondary", "side"],
+    addableIn: ["secondary", "side"],
     item: { kind: "view", view: { kind: "view", id: "editor" }, presence: "open" },
   });
   await w.navigation.openTarget(navigate("alpha"));
   const original = w.layout.getLayout().regions.secondary.widgets[0]!;
-  expect(w.getPanelDestinations(original.widgetId)).toEqual(["secondary", "side"]);
-  expect(() => w.movePanel(original.widgetId, "main")).toThrow("cannot move");
+  expect(w.getPanelDestinations(original.widgetId)).toHaveLength(3);
+  w.movePanel(original.widgetId, "main");
+  expect(w.layout.getLayout().regions.main.widgets[0]?.widgetId).toBe(original.widgetId);
   w.movePanel(original.widgetId, "side");
   expect(w.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(original.widgetId);
   expect(w.layout.getLayout().regions.secondary.widgets).toEqual([]);

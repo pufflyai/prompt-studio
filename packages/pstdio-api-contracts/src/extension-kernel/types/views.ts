@@ -118,6 +118,9 @@ export interface PlacementContribution extends ContributionDefinition<"placement
   readonly item: PlacementItem;
   readonly region: ExtensionPanelRegion;
   readonly order?: number;
+  /** Regions whose Add menu and default placeholder offer this placement. */
+  readonly addableIn?: readonly ExtensionPanelRegion[];
+  /** @deprecated Use addableIn. This legacy value scopes Add choices, never tab movement. */
   readonly movableTo?: readonly ExtensionPanelRegion[];
 }
 

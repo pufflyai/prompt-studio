@@ -6,7 +6,7 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../registries/layout/layout-model";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
-import { pageSlots } from "../../registries/pages/page-main";
+import { pageSlots, type ResolvedPageSlot } from "../../registries/pages/page-main";
 import type { WorkbenchOwnedPlacementItem } from "../../registries/placements/owned-placement-lifecycle";
 import { shellPlacementContributionId } from "../../registries/placements/shell-placement-registry";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
@@ -98,6 +98,8 @@ const addShellPanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddP
 };
 const addModePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPanel) => {
   for (const placement of core.modePlacements.listPlacements(input.modeId)) {
+    const addableIn = placement.addableIn ?? placement.movableTo;
+    if (addableIn && !addableIn.includes(input.region)) continue;
     if (!panelDestinations(core, modePlacementContributionId(placement.id)).includes(input.region)) continue;
     const multiple = placement.item.kind === "binding" && placement.item.binding.cardinality === "many";
     const isOpen = ownsPlacement(
@@ -117,14 +119,19 @@ const addModePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
     });
   }
 };
+const pageSlotAvailable = (core: WorkbenchCore, pageId: string, slot: ResolvedPageSlot, input: AddablePanelInput) => {
+  const addableIn = slot.addableIn ?? slot.movableTo;
+  if (addableIn && !addableIn.includes(input.region)) return false;
+  if (slot.role === "primary" && input.region !== "main") return false;
+  if (slot.isAvailable && !slot.isAvailable(input.resource)) return false;
+  return panelDestinations(core, pagePlacementContributionId(pageId, slot.id)).includes(input.region);
+};
 const addPagePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPanel) => {
   const pageState = core.pages.store.getState();
   const page = pageState.activePageId ? core.pages.getPage(pageState.activePageId) : undefined;
   if (!page) return;
   for (const slot of pageSlots(page)) {
-    if (slot.role === "primary" && input.region !== "main") continue;
-    if (slot.isAvailable && !slot.isAvailable(input.resource)) continue;
-    if (!panelDestinations(core, pagePlacementContributionId(page.id, slot.id)).includes(input.region)) continue;
+    if (!pageSlotAvailable(core, page.id, slot, input)) continue;
     const many = slot.item.kind === "binding" && slot.item.binding.cardinality === "many";
     const multiple = slot.role !== "primary" && many;
     const defaultResource = slot.role === "primary" ? pageState.location?.resource : input.resource;

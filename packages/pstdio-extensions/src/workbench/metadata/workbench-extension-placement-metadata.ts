@@ -55,6 +55,7 @@ const mainRecord = (main: RuntimePageMain, extensionId: string) => {
 };
 const slotRecord = (slot: RuntimePageSlot, extensionId: string) => ({
   ...slot,
+  addableIn: slot.addableIn ? [...slot.addableIn] : undefined,
   movableTo: slot.movableTo ? [...slot.movableTo] : undefined,
   item: itemRecord(slot.item, extensionId),
   tab: tabRecord(slot.tab, extensionId),
@@ -87,6 +88,7 @@ export const toPlacementRecords = (runtime: ExtensionRuntime): WorkbenchExtensio
     item: itemRecord(placement.contribution.item, placement.extensionId),
     region: placement.contribution.region,
     order: placement.contribution.order,
+    addableIn: placement.contribution.addableIn ? [...placement.contribution.addableIn] : undefined,
     movableTo: placement.contribution.movableTo ? [...placement.contribution.movableTo] : undefined,
     mountStrategy: placement.contribution.mountStrategy,
     hiddenByDefault: placement.contribution.hiddenByDefault,

@@ -210,6 +210,7 @@ export const toInternalWorkbenchExtensionMetadata = (
       item: placement.item,
       region: placement.region,
       order: placement.order,
+      addableIn: placement.addableIn,
       movableTo: placement.movableTo,
       mountStrategy: placement.mountStrategy,
       hiddenByDefault: placement.hiddenByDefault,

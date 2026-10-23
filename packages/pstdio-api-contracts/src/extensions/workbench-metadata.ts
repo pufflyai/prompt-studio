@@ -145,6 +145,7 @@ const workbenchExtensionPlacementRecordSchema = workbenchPlacementPresentationSc
   item: placementItemSchema,
   region: z.enum(extensionPanelRegions),
   order: z.number().optional(),
+  addableIn: z.array(z.enum(extensionPanelRegions)).optional(),
   movableTo: z.array(z.enum(extensionPanelRegions)).optional(),
 });
 

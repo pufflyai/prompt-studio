@@ -36,5 +36,6 @@ export const copyPlacement = (placement: WorkbenchModePlacementContribution) => 
   ...placement,
   ref: { ...placement.ref },
   item: placementItemForRegion(placement.item, placement.region),
+  ...(placement.addableIn ? { addableIn: [...placement.addableIn] } : {}),
   ...(placement.movableTo ? { movableTo: [...placement.movableTo] } : {}),
 });

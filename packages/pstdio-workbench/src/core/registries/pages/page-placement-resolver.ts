@@ -93,7 +93,6 @@ const placementFor = <Value>(input: {
   return {
     identity,
     region: input.slot.region,
-    ...(input.slot.movableTo ? { movableTo: input.slot.movableTo } : {}),
     order: input.slot.order ?? 0,
     value: input.resolvePagePlacement({
       identity,

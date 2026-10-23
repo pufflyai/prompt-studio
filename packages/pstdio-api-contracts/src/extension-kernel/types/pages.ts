@@ -48,7 +48,9 @@ export type PageMain = PageMainView | PageMainPanels;
 export interface PageSlot extends PlacementPresentation {
   readonly id: string;
   readonly region: PageSlotRegion;
-  /** Allowed panel destinations, including the initial region. Omit to allow every panel. */
+  /** Regions whose Add menu and default placeholder offer this slot. Omit to offer it in every panel. */
+  readonly addableIn?: readonly ExtensionPanelRegion[];
+  /** @deprecated Use addableIn. This legacy value scopes Add choices, never tab movement. */
   readonly movableTo?: readonly ExtensionPanelRegion[];
   readonly order?: number;
   readonly item: PlacementItem;

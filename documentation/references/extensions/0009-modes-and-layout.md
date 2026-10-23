@@ -15,7 +15,7 @@ definePlacement({
 });
 ```
 
-A placement can show a static view or bind a resource kind to a view. A static item declares `presence`: `open` (open until the user closes it) or `closed` (opened from the Add panel). The deprecated `fixed` value behaves like `open` in tab regions. Every tab can close. Chrome regions have no tabs and stay shown with their owner. A binding item declares `cardinality` (`one` rebinds a single instance, `many` opens one instance per resource) and an optional `add` action for the Add panel. A placement may also declare `order` and `movableTo`. Region size and collapsibility belong to the mode's `regionSettings`, not to placements. Region choices are `main`, `secondary`, and `side`; navigation normally belongs in the shared Sidenav tree.
+A placement can show a static view or bind a resource kind to a view. A static item declares `presence`: `open` (open until the user closes it) or `closed` (opened from the Add panel). The deprecated `fixed` value behaves like `open` in tab regions. Every tab can close. Chrome regions have no tabs and stay shown with their owner. A binding item declares `cardinality` (`one` rebinds a single instance, `many` opens one instance per resource) and an optional `add` action for the Add panel. A placement may also declare `order` and `addableIn`. The latter chooses the panels whose Add menu and default placeholder offer the tool. Region size and collapsibility belong to the mode's `regionSettings`, not to placements. Region choices are `main`, `secondary`, and `side`; navigation normally belongs in the shared Sidenav tree.
 
 Use `definePage` for routed content. Do not model a page as a mode placement, and do not switch a mode as a separate navigation step. A page target activates the page and its declared mode as one transaction.
 
@@ -48,11 +48,11 @@ A page can declare `regionSettings: { main: { showHeader: false } }`, or header 
 
 ## User arrangement
 
-A declared region is the starting position. Users can move content tabs between Main, Side, and Secondary with drag and drop or the tab context menu. Explicit `movableTo` restrictions and the mode's supported panels remain hard limits. Navigation chrome and the Sidenav do not become tabs.
+A declared region is the starting position. Users can move content tabs between Main, Side, and Secondary with drag and drop or the tab context menu. Every content tab can move to every available tab panel. A tool's Add choices do not restrict its open tab. Navigation chrome and the Sidenav do not become tabs.
 
 The + control follows the scrolling tab group. Its choices create or reopen tools allowed in that destination. An open singleton is omitted from every panel's choices. Resource bindings appear only when they declare an explicit `add` action; the current page resource never creates an individual-resource choice. Open existing resources through navigation or resource search. Panel menu openers stay at the far right.
 
-An empty Main, Side, or Bottom panel without a custom placeholder shows a **Tools** card grid of the same available tabs as **Add panel**. The grid uses two columns in a wide panel and one in a narrow panel. Cards share hover, pressed, and keyboard focus states. Page-owned `slots`, including bindings with command-backed Add actions, contribute entries through that same contract. Choosing a card uses the same opening action and permissions. Page slots can declare `movableTo`, including their initial region, to restrict Add, moves, direct panel opens, and saved positions. Navigating to a page again reopens its declared Main content.
+An empty Main, Side, or Bottom panel without a custom placeholder shows a card grid without a heading of the same available tabs as **Add panel**. The grid uses two columns in a wide panel and one in a narrow panel. Cards share hover, pressed, and keyboard focus states. Page-owned `slots`, including bindings with command-backed Add actions, contribute entries through that same contract. Choosing a card uses the same opening action and permissions. Page slots and mode placements can declare `addableIn` to restrict only the panels whose Add menu and default placeholder offer them. Tab movement, explicit navigation, and restored positions stay independent. The deprecated `movableTo` field is accepted as an alias for `addableIn` when the latter is omitted; it never restricts movement. Navigating to a page again reopens its declared Main content.
 
 Either kind of page can declare `main.empty: view.ref` instead of the host placeholder. To supply a breadcrumb label and menu while Main has no tabs, use the `PagePlaceholder` object form:
 
@@ -76,7 +76,7 @@ main: {
 
 Explicit collection navigation selects its available landing slot. Restoring saved page state preserves the saved selection.
 
-Page header defaults, optional `main.empty` on single-view pages, `main.landing`, slot `movableTo`, and closable fixed tabs describe APIs from `main`. Their first extension API version is 0.2.2.
+Page header defaults, optional `main.empty` on single-view pages, `main.landing`, slot and placement `addableIn`, and closable fixed tabs describe APIs from `main`. Their first extension API version is 0.2.2.
 
 During the deprecation window, older extension collections keep their first `fixed` Main slot as their landing slot. New declarations should name `main.landing` explicitly.
 
@@ -86,7 +86,7 @@ Tool cards use the compact action-card style: small body padding, the standard r
 
 Start uses its home content as `main.empty`, with no initial tabs or landing slot. Its Main header defaults to hidden. A saved user header choice still wins, and dropping a tool tab into Main reveals the header through the shared move behavior.
 
-Sessions uses the default Tools placeholder. Its **New session** tool opens a real tab through an explicit creation action. `workbenchPages.newSession` is the routed draft page at `sessions/new`; it accepts a `session-draft` resource and displays that tab. Creating from a routed Main draft navigates to `workbenchPages.session`. A draft moved into a shared panel becomes one session tab there and preserves the current page. A completed creation does not change navigation after its draft has left the current layout. Closing the final tab restores the default Tools placeholder.
+Sessions uses the default card placeholder. Its **New session** tool opens a real tab through an explicit creation action. `workbenchPages.newSession` is the routed draft page at `sessions/new`; it accepts a `session-draft` resource and displays that tab. Creating from a routed Main draft navigates to `workbenchPages.session`. A draft moved into a shared panel becomes one session tab there and preserves the current page. A completed creation does not change navigation after its draft has left the current layout. Closing the final tab restores the default card placeholder.
 
 Right-click, Shift+F10, the Context Menu key, and touch long-press open the same grouped tab menu. Normal clicks select. Preview and pinned tabs can appear in any order. Pin and Unpin change retention without changing position. Alt+Left and Alt+Right reorder the focused tab.
 
@@ -111,7 +111,7 @@ Each permission is independent. The active mode owns the policy; the saved mode 
 | `resizable` | Allows pointer, keyboard and command resizing. Equal minimum and maximum sizes also prevent resizing. |
 | `floatable` | Side only. Allows floating, independently of visibility. Overrides `floatingPanels`. |
 
-These optional booleans default to true. Unavailable panels reject opening and drops, and stale layouts cannot restore them. Commands validate before publishing navigation. Disallowed controls are omitted. A directional Show or Hide action requires its corresponding permission; a toggle requires both. Tab movement still respects published `movableTo` restrictions. Side moves left or right of Main. Navigation moves to the far left or right. Main and Bottom can flip their vertical order. The action bar supports all four outer edges. Placement choices persist per project and mode; Reset layout clears them. A mode that disables movement restores that region to its default position.
+These optional booleans default to true. Unavailable panels reject opening and drops, and stale layouts cannot restore them. Commands validate before publishing navigation. Disallowed controls are omitted. A directional Show or Hide action requires its corresponding permission; a toggle requires both. Tab movement follows the destination panel's availability and `acceptsTabs` policy; Add choices never restrict an existing tab. Side moves left or right of Main. Navigation moves to the far left or right. Main and Bottom can flip their vertical order. The action bar supports all four outer edges. Placement choices persist per project and mode; Reset layout clears them. A mode that disables movement restores that region to its default position.
 
 `floatingPanels` is deprecated in favor of `regionSettings.side.floatable`. Panel `collapsible` is deprecated in favor of `canOpen`/`canClose`; it keeps its legacy drag-collapse behavior, including explicit Show/Hide, when new permissions are omitted. Panel menus still support `collapsible`. Publish this additive SDK and host release before adopting the new fields in separately released extensions.
 

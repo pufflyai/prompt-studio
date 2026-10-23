@@ -67,12 +67,11 @@ test("registered panel placeholders supply their own content", async ({ page }) 
   ).toBeVisible();
 });
 
-test("the Tools grid has two columns and includes entries contributed by the page", async ({ page }) => {
+test("the default card grid has two columns and includes entries contributed by the page", async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 850 });
   await page.goto(storyUrl(baseUrl, `${prefix}page-entries`));
   await waitForStoryPlayback(page);
   const main = page.locator('[data-workbench-panel="main"]');
-  await expect(main.getByText("Tools", { exact: true })).toBeVisible();
   const cards = main.getByRole("group", { name: "Available tabs" }).getByRole("button");
   await expect(cards).toHaveCount(4);
   const boxes = await cards.evaluateAll((items) =>
