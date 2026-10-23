@@ -52,11 +52,12 @@ import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smo
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
 // scripts/verify/storage-package-consumer.ts checks the packaged SDK's two-device merge and replacement report.
 // Selected storage queries preserve case-insensitive text equality and negation through restart.
-// packaged-storage-upgrade.test.ts checks released 0.45 nested records, assets,
+// packaged-storage-upgrade.test.ts checks the released 0.45 engine transition, nested records, assets,
 // operation retries and tombstones through index installation and restart.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
+// Shutdown also drains session lifecycle work after an immediately completed harness run.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { registerLinkIconsSmokeTests } from "./packaged-link-icons-smoke";

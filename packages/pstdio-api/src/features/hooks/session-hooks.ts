@@ -84,20 +84,23 @@ export const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, sess
   };
 };
 
-export const fireSessionLifecycleEventAsync = (
+export const fireSessionLifecycleEvent = (
   deps: SessionHookDeps,
   event: EventRef<SessionLifecyclePayload>,
   session: SessionRecord,
+  signal: AbortSignal,
 ) => {
-  void (async () => {
+  return (async () => {
     let payload: SessionLifecyclePayload;
     try {
-      await waitForWorkspaceReady(deps, session.id);
+      await waitForWorkspaceReady(deps, session.id, { signal });
       payload = (await resolveSessionLifecyclePayload(deps, session)) as SessionLifecyclePayload;
     } catch {
+      if (signal.aborted) return;
       payload = { projectId: session.project_id, sessionId: session.id, sessionStatus: session.status };
     }
 
+    if (signal.aborted) return;
     await fireExtensionEvent(deps, session.project_id, event, payload);
   })().catch((err) => {
     apiLogger.warn(

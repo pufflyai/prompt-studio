@@ -1,10 +1,12 @@
 import { Badge, Box, Button, HStack, IconButton, Input, Stack, Text, Textarea } from "@chakra-ui/react";
 import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
+import { ScrollArea } from "@pstdio/ui";
 import { useEffect } from "react";
-import { initials, useExampleStore } from "../example-store";
+import { initials, useExampleStore, usePageResource } from "../example-store";
 import { ExampleIcon } from "../icon";
 import type { ExampleViewInput } from "../view-context";
 import { type PigeonThread, pigeonThreads } from "./pigeon-data";
+import { PigeonInboxRow } from "./pigeon-inbox-row";
 import { pigeonStore } from "./pigeon-state";
 
 const page: PageRef = { extensionId: "pstdio.extension-lab", kind: "page", id: "pigeon-resource" };
@@ -15,6 +17,7 @@ const resource = (thread: PigeonThread): ResourceRef => ({
   label: thread.subject,
 });
 export const Inbox = (props: { input: ExampleViewInput }) => {
+  const selectedId = usePageResource(props.input.host)?.id;
   const state = useExampleStore(pigeonStore);
   const messages =
     state.folder === "Sent"
@@ -58,73 +61,24 @@ export const Inbox = (props: { input: ExampleViewInput }) => {
           <Composer />
         </Box>
       ) : null}
-      <Stack overflowY="auto" gap="0">
-        {threads.map((thread) => (
-          <HStack
-            key={thread.id}
-            px="lg"
-            py="md"
-            borderBottomWidth="1px"
-            borderColor="border.subtle"
-            bg={thread.unread ? "bg.subtle" : undefined}
-            _hover={{ bg: "bg.hover" }}
-            cursor="pointer"
-            onClick={() => props.input.host.navigate({ kind: "page", page, resource: resource(thread) })}
-          >
-            <IconButton
-              aria-label={state.starredIds.includes(thread.id) ? `Unstar ${thread.subject}` : `Star ${thread.subject}`}
-              size="xs"
-              variant="ghost"
-              onClick={(event) => {
-                event.stopPropagation();
-                pigeonStore.setState({
-                  starredIds: state.starredIds.includes(thread.id)
-                    ? state.starredIds.filter((id) => id !== thread.id)
-                    : [...state.starredIds, thread.id],
-                });
-              }}
-            >
-              <ExampleIcon name="Star" color={state.starredIds.includes(thread.id) ? "fg.warning" : "fg.subtle"} />
-            </IconButton>
-            <IconButton
-              aria-label={`Open message: ${thread.subject}`}
-              size="xs"
-              variant="ghost"
-              onClick={(event) => {
-                event.stopPropagation();
-                props.input.host.navigate({ kind: "page", page, resource: resource(thread) });
-              }}
-            >
-              <ExampleIcon name="MailOpen" />
-            </IconButton>
-            <Box boxSize="9" borderRadius="full" bg="bg.muted" display="grid" placeItems="center">
-              <Text textStyle="paragraph/XS/semibold">{initials(thread.sender)}</Text>
-            </Box>
-            <Stack minW="0" flex="1" gap="xs">
-              <HStack>
-                <Text truncate flex="1" textStyle={thread.unread ? "paragraph/S/semibold" : "paragraph/S/regular"}>
-                  {thread.sender}
-                </Text>
-                <Text color="fg.muted" textStyle="paragraph/XS/regular">
-                  {thread.time}
-                </Text>
-              </HStack>
-              <Text truncate textStyle={thread.unread ? "paragraph/S/semibold" : "paragraph/S/regular"}>
-                {thread.subject}
-              </Text>
-              <Text truncate color="fg.muted" textStyle="paragraph/S/regular">
-                {thread.preview}
-              </Text>
+      <ScrollArea flex="1" minH="0">
+        <Stack gap="0" role="list" aria-label="Mail conversations">
+          {threads.map((thread) => (
+            <PigeonInboxRow
+              key={thread.id}
+              thread={thread}
+              selected={selectedId === thread.id}
+              onOpen={() => props.input.host.navigate({ kind: "page", page, resource: resource(thread) })}
+            />
+          ))}
+          {threads.length === 0 ? (
+            <Stack align="center" py="3xl">
+              <ExampleIcon name="Inbox" size={30} color="fg.muted" />
+              <Text color="fg.muted">Your inbox is clear.</Text>
             </Stack>
-          </HStack>
-        ))}
-        {threads.length === 0 ? (
-          <Stack align="center" py="3xl">
-            <ExampleIcon name="Inbox" size={30} color="fg.muted" />
-            <Text color="fg.muted">Your inbox is clear.</Text>
-          </Stack>
-        ) : null}
-      </Stack>
+          ) : null}
+        </Stack>
+      </ScrollArea>
     </Stack>
   );
 };

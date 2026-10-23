@@ -12,7 +12,7 @@ let image: Uint8Array;
 beforeAll(async () => {
   // Packaged runtimes also start from an empty PostgreSQL image. Application
   // migrations and environment identity creation still run in each disk store.
-  const source = await PGlite.create();
+  const source = await PGlite.create({ database: "template1", username: "postgres" });
   try {
     image = new Uint8Array(await (await source.dumpDataDir("gzip")).arrayBuffer());
   } finally {
@@ -33,6 +33,7 @@ test(
         ["first", "second"].map(async (laptop) => {
           const path = join(root, laptop);
           await new Bun.Archive(image).extract(path);
+          await Bun.write(join(path, ".pstdio-engine.json"), JSON.stringify({ format: 1, engine: "pglite-0.4" }));
           phase(laptop, "open initial database");
           const initial = await createDb({ path, onPhase: (name) => phase(laptop, `initial ${name}`) });
           phase(laptop, "initial database ready");
