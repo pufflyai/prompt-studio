@@ -11,7 +11,7 @@ import {
   listKeyboardTabs,
   visibleKeyboardTargets,
 } from "./keyboard-presentations";
-import { resolveShortcutCatalog } from "./shortcut-catalog";
+import { createShortcutCatalogReader } from "./shortcut-catalog-reader";
 import { runShortcutMatches } from "./shortcut-matches";
 import { matchShortcutPath, shortcutHints, shortcutMenuEntries } from "./shortcut-menu";
 
@@ -46,14 +46,18 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
   const visibility = new Map<string, () => readonly string[]>();
   let choices: KeyboardActionChoice[] = [];
   const stack: Array<{ title: string; choices: KeyboardActionChoice[] }> = [];
-  const refresh = () => store.setState({ ...store.getState() });
+  const refresh = () => {
+    catalogReader.invalidate();
+    store.setState({ ...store.getState() });
+  };
   const listTabs = () => listKeyboardTabs(getCore(), strips);
   const visibleTargets = () => {
     if (!visibility.size) return visibleKeyboardTargets(getCore());
     const ids = new Set([...visibility.values()].flatMap((read) => [...read()]));
     return visibleKeyboardTargets(getCore(), (id) => ids.has(id));
   };
-  const catalog = () => resolveShortcutCatalog(getCore(), visibleTargets());
+  const catalogReader = createShortcutCatalogReader(getCore, visibleTargets);
+  const catalog = (fresh = false) => catalogReader.read(fresh);
   const presentations = () => [...listTabs(), ...visibleTargets()];
   const stop = (restore = true) => {
     choices = [];
@@ -86,7 +90,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
   const run = createKeyboardActionRunner({
     getCore,
     store,
-    catalog,
+    catalog: () => catalog(true),
     stop,
     message,
     select,
@@ -203,7 +207,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
         return;
       }
       if (input === "ArrowLeft" || input === "ArrowRight") {
-        const navigation = catalog().filter(
+        const navigation = catalog(true).filter(
           (shortcut) =>
             !shortcut.disabled &&
             shortcut.binding.layer === "view" &&
@@ -223,7 +227,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
         store.setState({ path });
         return;
       }
-      const matches = matchShortcutPath(catalog(), path);
+      const matches = matchShortcutPath(catalog(true), path);
       if (matches.complete.length) {
         await runShortcutMatches(matches.candidates, select, run);
         return;
@@ -235,7 +239,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       message(`No shortcut for ${input}.`);
     },
     async invoke(id: string) {
-      const shortcut = catalog().find((candidate) => candidate.id === id);
+      const shortcut = catalog(true).find((candidate) => candidate.id === id);
       if (shortcut && !shortcut.disabled) await run(shortcut);
     },
     ...createKeyboardPreferences(getCore, refresh),

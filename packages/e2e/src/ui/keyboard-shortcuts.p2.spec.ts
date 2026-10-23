@@ -80,8 +80,7 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   }
   const dialog = page.getByRole("dialog").last();
   await testInfo.attach("shortcut-inventory", { body: await dialog.innerText(), contentType: "text/plain" });
-  await dialog.getByRole("button", { name: "Rebind Open shortcut destination", exact: true }).focus();
-  await page.keyboard.press("ArrowDown");
+  await dialog.getByRole("group", { name: "Open shortcut destination", exact: true }).scrollIntoViewIfNeeded();
   await testInfo.attach("shortcut-reference", { body: await page.screenshot(), contentType: "image/png" });
   await expect(dialog.getByRole("group", { name: "Open shortcut destination", exact: true })).toContainText(
     "Shortcut reference",

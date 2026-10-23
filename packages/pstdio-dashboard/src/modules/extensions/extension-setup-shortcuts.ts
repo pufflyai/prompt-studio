@@ -7,6 +7,9 @@ type SetupMetadata = Pick<ResolvedWorkbenchExtensionMetadata, "extensions" | "ha
 
 export const registerExtensionSetupShortcuts = (core: WorkbenchModuleContributionContext, metadata: SetupMetadata) => {
   const registrations: Disposable[] = [];
+  const labels = new Map(
+    metadata.extensions.map((extension) => [extension.id, extension.displayName || extension.name]),
+  );
   const register = (extensionId: string, id: string, key: string, label: string, action: Keybinding["action"]) => {
     if (action.kind === "command" && !core.commands.getCommand(action.commandId)) return;
     registrations.push(
@@ -14,6 +17,7 @@ export const registerExtensionSetupShortcuts = (core: WorkbenchModuleContributio
         id: `${extensionId}.setup.${id}`,
         label,
         sourceExtensionId: extensionId,
+        sourceExtensionLabel: labels.get(extensionId),
         layer: "extensions",
         keybinding: key,
         action,

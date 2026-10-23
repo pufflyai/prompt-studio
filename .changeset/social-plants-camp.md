@@ -4,4 +4,4 @@
 "@pstdio/sdk": minor
 ---
 
-Add layered keyboard navigation, shared shortcut settings, and bounded webview keyboard handoff.
+Add fast layered keyboard navigation, a searchable shortcut reference with readable keys and extension names, and bounded webview keyboard handoff.

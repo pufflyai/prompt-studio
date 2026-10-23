@@ -2,7 +2,7 @@ import { Button, Dialog, HStack, Input, Stack, Text, useSlotRecipe } from "@chak
 import { ListRow, PaletteShortcut, ScrollArea } from "@pstdio/ui";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
-import { shortcutMenuEntries } from "../../core/controllers/keyboard/shortcut-menu";
+import { shortcutMenuEntries, shortcutPathLabels } from "../../core/controllers/keyboard/shortcut-menu";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useKeyboardLayerKeys } from "./use-keyboard-layer-keys";
@@ -118,7 +118,9 @@ export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
           )
           .map((shortcut) => ({ key: shortcut.id, label: shortcut.label, disabled: shortcut.disabled }))
       : entries.filter((entry) => entry.label.toLowerCase().includes(query.toLowerCase()));
-  const title = selection?.title ?? `Keyboard menu${state.path.length ? ` / ${state.path.join(" / ")}` : ""}`;
+  const title =
+    selection?.title ??
+    `Keyboard menu${state.path.length ? ` / ${shortcutPathLabels(all, state.path).join(" / ")}` : ""}`;
   const activate = (key: string) =>
     run(() => {
       if (search && !selection) return workbench.keyboard.invoke(key);

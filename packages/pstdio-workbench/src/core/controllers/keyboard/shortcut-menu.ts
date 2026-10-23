@@ -4,6 +4,34 @@ import { getNavigationTargetKey } from "../../registries/navigation/navigation-t
 import type { KeyboardState } from "./keyboard-controller";
 import type { ResolvedShortcut } from "./shortcut-catalog";
 
+export const shortcutOpeningChord = (catalog: ResolvedShortcut[]) =>
+  getKeybindingSteps(
+    catalog.find((shortcut) => shortcut.id === "workbench.keyboard.leader")?.binding.keybinding ?? "",
+  ).join(" ");
+
+export const shortcutExtensionLabel = (shortcut: ResolvedShortcut) =>
+  shortcut.binding.sourceExtensionLabel ?? "Extension";
+
+const extensionNeedsChoice = (shortcut: ResolvedShortcut) =>
+  shortcut.binding.layer === "extensions" && shortcut.keys[1] === shortcut.binding.sourceExtensionId?.toUpperCase();
+
+export const shortcutDisplayKeys = (shortcut: ResolvedShortcut, openingChord: string) => {
+  if (!shortcut.binding.layer) return getKeybindingSteps(shortcut.binding.keybinding);
+  if (extensionNeedsChoice(shortcut)) return getKeybindingSteps(shortcut.binding.keybinding);
+  return [openingChord, ...shortcut.keys];
+};
+
+export const shortcutPathLabels = (catalog: ResolvedShortcut[], path: string[]) =>
+  path.map((key, index) => {
+    if (index === 1 && path[0] === "E") {
+      const shortcut = catalog.find((entry) => entry.keys[1] === key && entry.binding.layer === "extensions");
+      if (shortcut) return shortcutExtensionLabel(shortcut);
+    }
+    const layer = Object.entries(shortcutLayers).find(([, value]) => value === key)?.[0];
+    if (layer === "current") return "Current view";
+    return layer ? layer[0]!.toUpperCase() + layer.slice(1) : key;
+  });
+
 export const shortcutMenuEntries = (catalog: ResolvedShortcut[], path: string[]) => {
   if (!path.length)
     return Object.entries(shortcutLayers).map(([name, key]) => ({
@@ -25,8 +53,8 @@ export const shortcutMenuEntries = (catalog: ResolvedShortcut[], path: string[])
     const label = terminal
       ? shortcut.label
       : (Object.entries(shortcutLayers).find(([, value]) => value === key)?.[0] ??
-        shortcut.binding.sourceExtensionId ??
-        key);
+        shortcut.binding.sourceExtensionLabel ??
+        (shortcut.binding.sourceExtensionId ? "Extension" : key));
     const existing = grouped.get(key);
     grouped.set(key, {
       key,
@@ -46,8 +74,11 @@ export const shortcutHints = (catalog: ResolvedShortcut[], state: KeyboardState)
     if (shortcut.binding.layer && !state.active) continue;
     let hint = getKeybindingSteps(shortcut.binding.keybinding).join(" ");
     if (shortcut.binding.layer) {
+      if (extensionNeedsChoice(shortcut) && (state.path.length < 2 || state.path[1] !== shortcut.keys[1])) continue;
       const within = shortcut.keys.slice(0, state.path.length).every((key, index) => key === state.path[index]);
-      hint = `${within ? "" : "Leader → "}${shortcut.keys.slice(within ? state.path.length : 0).join(" → ")}`;
+      hint = [within ? "" : shortcutOpeningChord(catalog), ...shortcut.keys.slice(within ? state.path.length : 0)]
+        .filter(Boolean)
+        .join(" → ");
     }
     hints.set(getNavigationTargetKey(shortcut.binding.action), hint);
   }
