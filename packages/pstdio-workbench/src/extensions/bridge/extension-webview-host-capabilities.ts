@@ -10,6 +10,7 @@ import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import { z } from "zod";
 import { createAccountCapability } from "./account-capability";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
+import { createPerformanceReadCapability } from "./performance-capability";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
 import { parseWebviewCapabilityParams, WebviewHostCapabilityError } from "./webview-capability-params";
 import { createWebviewCommandStreamHandler, withFrameSignal } from "./webview-command-streams";
@@ -178,6 +179,11 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
     "files.list": capability("files.list", files && ((request) => files.list(request))),
     "files.delete": capability("files.delete", files && ((request) => files.delete(request))),
     "artifacts.read": capability("artifacts.read", artifacts && ((request) => artifacts.read(request))),
+    "performance.read": capability(
+      "performance.read",
+      createPerformanceReadCapability(adapters.performance, hostEvents),
+    ),
+    "performance.control": capability("performance.control", adapters.performance?.control),
     "account.read": capability("account.read", account),
     "account.manage": capability("account.manage", account),
   } satisfies Record<WebviewHostCapability, HostCapability>;
