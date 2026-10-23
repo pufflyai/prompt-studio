@@ -1,5 +1,8 @@
 {
   "requests.navigation.label": "Attention requise",
+  "navigation.files": "Fichiers",
+  "navigation.workspaces": "Espaces de travail",
+  "navigation.sessions": "Sessions",
   "timeline.page.title": "Chronologie du projet",
   "timeline.view.title": "Chronologie du projet",
   "commands.autoBuild.title": "Construire automatiquement",

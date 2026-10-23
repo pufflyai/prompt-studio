@@ -82,6 +82,17 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await page.unroute("**/follow-up");
     phase("follow-up draft handed off");
 
+    for (const recalled of [next, prompt]) {
+      await editor.press("ArrowUp");
+      await expect(editor).toHaveText(recalled);
+      await expect(editor).toBeFocused();
+    }
+    await editor.press("ArrowDown");
+    await expect(editor).toHaveText(next);
+    await editor.press("ArrowDown");
+    await expect(editor).toBeEmpty();
+    phase("prompt history recalled through saved drafts");
+
     const equations =
       "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nRead src/app.ts and src/app/(dashboard)/page.ts, not src/missing.ts. Open {{link('https://example.com')}}. End equations.";
     await editor.fill(equations);

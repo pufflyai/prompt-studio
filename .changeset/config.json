@@ -58,7 +58,8 @@
     "pstdio-relay",
     "pstdio-account-manager",
     "relay-demo",
-    "pstdio-service-telemetry"
+    "pstdio-service-telemetry",
+    "storage-scale-fixture"
   ],
   "snapshot": {
     "useCalculatedVersion": true,

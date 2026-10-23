@@ -7,6 +7,18 @@ test("live and snapshot native items use the same turn and item identity", () =>
   expect(nativeItemMessage(item, "one")?.id).toBe("codex-one-answer");
   expect(nativeItemMessage(item, "two")?.id).toBe("codex-two-answer");
 });
+test("steered native user messages retain their client delivery identity in recovered history", () => {
+  const message = nativeItemMessage(
+    {
+      type: "userMessage",
+      id: "native-user",
+      clientId: "delivery",
+      content: [{ type: "text", text: "Correction", text_elements: [] }],
+    },
+    "one",
+  );
+  expect(message).toMatchObject({ id: "delivery", role: "user", parts: [{ type: "text", text: "Correction" }] });
+});
 test("native refresh is idempotent and preserves attachments and messages removed by compaction", () => {
   const known: SessionMessage[] = [
     {

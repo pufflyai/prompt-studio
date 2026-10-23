@@ -1,15 +1,13 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import type { FollowUpDecision, HarnessAttachment, HarnessParams } from "pstdio-api-contracts";
+import type { FollowUpDecision } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { followUpBodySchema, followUpResponseSchema, notFoundResponseSchema } from "../dto";
-import { buildFollowUpPrompt } from "../follow-up-prompt";
-import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
-import { questionReplyRejection, replyToLiveSessionQuestion } from "../live-question-reply";
-import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
+import { HarnessParamError } from "../harness-params";
+import { questionReplyRejection } from "../live-question-reply";
+import { sendSessionFollowUp } from "../send-session-followup";
+import { SessionAttachmentError } from "../session-attachments";
 import { toSessionResponse } from "../session-response";
-import { createSessionScheduler } from "../session-scheduler";
-import { updateExistingDispatchSelection } from "../session-scheduler-internals";
 
 export const followUpSessionRoute = createRoute({
   method: "post",
@@ -39,36 +37,13 @@ export const followUpSessionRoute = createRoute({
   },
 });
 
-type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["sessionService"]["get"]>>>;
-
-const resolveFollowUpParams = async (
-  deps: SessionsRouteDeps,
-  session: ExistingSession,
-  input: { agent?: string; model?: string; params?: HarnessParams },
-) => {
-  const agentId = input.agent ?? session.agent;
-  if (!agentId) return { type: "ok" as const, params: undefined };
-
-  const sameAgent = agentId === session.agent;
-  const model = input.model?.trim() || (sameAgent ? (session.last_selected_model ?? undefined) : undefined);
-
-  try {
-    const params = await resolveHarnessRunParams(deps, {
-      projectId: session.project_id ?? undefined,
-      agentId,
-      model,
-      persistedOverrides: sameAgent ? (session.params_json ?? undefined) : undefined,
-      overrides: input.params,
-    });
-    return { type: "ok" as const, params: params ?? (sameAgent && session.params_json ? {} : undefined) };
-  } catch (error) {
-    if (error instanceof HarnessParamError) return { type: "error" as const, error: error.message };
-    throw error;
-  }
-};
-
 const followUpError = (error: unknown) => {
-  if (!(error instanceof SessionAttachmentError) && !questionReplyRejection(error)) throw error;
+  if (
+    !(error instanceof SessionAttachmentError) &&
+    !(error instanceof HarnessParamError) &&
+    !questionReplyRejection(error)
+  )
+    throw error;
   return { error: error instanceof Error ? error.message : String(error) };
 };
 
@@ -87,55 +62,8 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
-    const resolvedParams = await resolveFollowUpParams(deps, session, input);
-    if (resolvedParams.type === "error") return c.json({ error: resolvedParams.error }, 400);
-    const reply = await replyToLiveSessionQuestion(deps, id, input.question_response, input.attachments);
-    if (reply) {
-      if (!reply.ok) return c.json({ error: reply.error }, 400);
-      await updateExistingDispatchSelection(deps, {
-        session,
-        agentId: input.agent ?? session.agent!,
-        model: input.model?.trim() || undefined,
-        params: resolvedParams.params,
-        switchingAgent: Boolean(input.agent && input.agent !== session.agent),
-      });
-      const current = (await deps.sessionService.get(id)) ?? session;
-      return c.json(
-        {
-          ...toSessionResponse(
-            current,
-            (await deps.workspaceSessionService.getWorkspaceBySessionId(current.id))?.id ?? null,
-          ),
-          followUp: { status: "dispatched" as const },
-          follow_up: { status: "dispatched" as const },
-        },
-        200,
-      );
-    }
-
-    const prompt = await buildFollowUpPrompt(input, deps);
-    const cwd = session.cwd ?? undefined;
-    const scheduler = createSessionScheduler(deps);
-
     try {
-      const decision = await withResolvedSubmittingSessionAttachments(
-        deps,
-        session.project_id!,
-        input.attachments,
-        async (attachments: HarnessAttachment[]) =>
-          scheduler.startOrQueueExisting({
-            session,
-            prompt,
-            cwd,
-            agentId: input.agent,
-            model: input.model?.trim() || undefined,
-            params: resolvedParams.params,
-            respectCapacity: true,
-            questionResponse: input.question_response,
-            attachments,
-            attachmentRefs: input.attachments,
-          }),
-      );
+      const decision = await sendSessionFollowUp(deps, session, input);
       const result = await deps.sessionService.get(session.id);
       if (!result) {
         return c.json({ error: `Session not found: ${id}` }, 404);

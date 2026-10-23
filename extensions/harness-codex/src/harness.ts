@@ -51,6 +51,15 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
     label: l10n("harness.codex", "Codex"),
     skills: { dir: ".agents/skills" },
     params: {
+      service_tier: params.select({
+        label: l10n("harness.codex.service-tier.label", "Speed"),
+        description: l10n("harness.codex.service-tier.description", "Fast mode uses more of your Codex allowance."),
+        defaultValue: "default",
+        options: [
+          { label: "Standard", value: "default", icon: "Snail" },
+          { label: "Fast", value: "fast", icon: "Zap" },
+        ],
+      }),
       collaboration_mode: {
         control: "command",
         ...params.select({

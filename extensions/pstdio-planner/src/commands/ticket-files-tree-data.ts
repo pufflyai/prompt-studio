@@ -21,7 +21,7 @@ export const readTicketTreeData = async (
     listTicketReviewRequests(ctx.storage, ticket.id),
     statusesCollection(ctx.storage).list(),
     ctx.workspaces.listProviders(),
-    readSessionHistory(ctx.sessions),
+    readSessionHistory(ctx.sessions, { anchor: { type: "ticket", id: ticket.id } }),
     workspaceData,
   ]);
   return {

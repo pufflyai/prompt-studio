@@ -1,4 +1,7 @@
 {
+  "navigation.files": "檔案",
+  "navigation.workspaces": "工作區",
+  "navigation.sessions": "工作階段",
   "timeline.page.title": "專案時間軸",
   "timeline.view.title": "專案時間軸",
   "commands.autoBuild.title": "自動建置",

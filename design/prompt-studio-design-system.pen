@@ -79342,6 +79342,28 @@
                           }
                         },
                         {
+                          "id": "yFxnH",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Home",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "icon": "house"
+                            },
+                            "ROY2j": {
+                              "content": "Home",
+                              "fill": "$tree-fg"
+                            }
+                          }
+                        },
+                        {
                           "id": "JB0fN",
                           "type": "ref",
                           "ref": "t5G2s8",
@@ -79543,6 +79565,28 @@
                             },
                             "ROY2j": {
                               "content": "Notifications",
+                              "fill": "$tree-fg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "B8ZLRJ",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Home",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "icon": "house"
+                            },
+                            "ROY2j": {
+                              "content": "Home",
                               "fill": "$tree-fg"
                             }
                           }
@@ -79893,6 +79937,28 @@
                             },
                             "ROY2j": {
                               "content": "Notifications",
+                              "fill": "$tree-fg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "AHEfo",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Home",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "icon": "house"
+                            },
+                            "ROY2j": {
+                              "content": "Home",
                               "fill": "$tree-fg"
                             }
                           }
@@ -85678,7 +85744,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "· There is no Back row in the Sidenav.",
+                      "content": "· Subnavigation ends its header with a fixed ← mode-name button. It returns to the last root-level page and cannot be moved or hidden.",
                       "lineHeight": 1.4,
                       "fontFamily": "$font-body",
                       "fontSize": 9,
@@ -216863,6 +216929,256 @@
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "pXiXR",
+      "x": 21555,
+      "y": 18634,
+      "name": "Subnavigation · Fixed mode return",
+      "width": 640,
+      "height": 660,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "Q8zIL",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Subnavigation · fixed mode return",
+          "fontFamily": "$font-heading",
+          "fontSize": 18,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "fvCcg",
+          "name": "Ticket subnavigation",
+          "width": 250,
+          "height": 470,
+          "fill": "$ds-bg-subtle",
+          "cornerRadius": 8,
+          "layout": "vertical",
+          "padding": 4,
+          "children": [
+            {
+              "type": "frame",
+              "id": "F45bV3",
+              "name": "Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 1,
+              "children": [
+                {
+                  "id": "VG8Wt",
+                  "type": "ref",
+                  "ref": "t5G2s8",
+                  "name": "Search",
+                  "width": "fill_container",
+                  "descendants": {
+                    "w2TSr": {
+                      "enabled": false
+                    },
+                    "Mbu4C": {
+                      "icon": "search"
+                    },
+                    "ROY2j": {
+                      "content": "Search"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Z52L9",
+              "name": "Page navigation",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "jQgfA",
+                  "name": "Ticket",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 1,
+                  "children": [
+                    {
+                      "id": "hkhp6",
+                      "type": "ref",
+                      "ref": "t5G2s8",
+                      "name": "Mode return · fixed first entry",
+                      "width": "fill_container",
+                      "descendants": {
+                        "w2TSr": {
+                          "enabled": false
+                        },
+                        "Mbu4C": {
+                          "icon": "arrow-left"
+                        },
+                        "ROY2j": {
+                          "content": "Project"
+                        }
+                      }
+                    },
+                    {
+                      "id": "YEObO",
+                      "type": "ref",
+                      "ref": "t5G2s8",
+                      "name": "Ticket row",
+                      "width": "fill_container",
+                      "descendants": {
+                        "w2TSr": {
+                          "enabled": false
+                        },
+                        "Mbu4C": {
+                          "icon": "component"
+                        },
+                        "ROY2j": {
+                          "content": "PS-164 Workbench navigation"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fC6sZ",
+                  "name": "Files",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "kXZCw",
+                      "name": "Files heading",
+                      "fill": "$ds-fg-muted",
+                      "content": "FILES",
+                      "fontFamily": "$font-label",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "jXuMP",
+                      "type": "ref",
+                      "ref": "t5G2s8",
+                      "name": "Files row",
+                      "width": "fill_container",
+                      "descendants": {
+                        "w2TSr": {
+                          "enabled": false
+                        },
+                        "Mbu4C": {
+                          "icon": "file"
+                        },
+                        "ROY2j": {
+                          "content": "notes.md"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "uDkHI",
+                  "name": "Workspaces",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "RkF5q",
+                      "name": "Workspaces heading",
+                      "fill": "$ds-fg-muted",
+                      "content": "WORKSPACES",
+                      "fontFamily": "$font-label",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "qZEJD",
+                      "type": "ref",
+                      "ref": "t5G2s8",
+                      "name": "Workspaces row",
+                      "width": "fill_container",
+                      "descendants": {
+                        "w2TSr": {
+                          "enabled": false
+                        },
+                        "Mbu4C": {
+                          "icon": "git-branch"
+                        },
+                        "ROY2j": {
+                          "content": "PS-164_A1"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "G4V6B6",
+                  "name": "Sessions",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Ap3dj",
+                      "name": "Sessions heading",
+                      "fill": "$ds-fg-muted",
+                      "content": "SESSIONS",
+                      "fontFamily": "$font-label",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "yLfQR",
+                      "type": "ref",
+                      "ref": "t5G2s8",
+                      "name": "Sessions row",
+                      "width": "fill_container",
+                      "descendants": {
+                        "w2TSr": {
+                          "enabled": false
+                        },
+                        "Mbu4C": {
+                          "icon": "message-square"
+                        },
+                        "ROY2j": {
+                          "content": "Review changes"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "V4Ae36",
+          "name": "Behavior",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "The first entry in the main navigation content shows ← and the current mode name, with the same spacing as other entries. It cannot be moved or hidden. Selecting it returns to the last root-level page.",
+          "lineHeight": 1.4,
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
         }
       ]
     }

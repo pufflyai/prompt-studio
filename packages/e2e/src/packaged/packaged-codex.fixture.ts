@@ -51,6 +51,22 @@ for await (const line of createInterface({ input: process.stdin })) {
     }
     result = { turn };
   }
+  if (message.method === "turn/steer") {
+    const turn = threads.get(params.threadId)!.turns.find((turn) => turn.status === "inProgress");
+    if (!turn || turn.id !== params.expectedTurnId) {
+      emit({ id: message.id, error: { code: -32600, message: "No matching active turn" } });
+      continue;
+    }
+    const item = {
+      id: `user-${++sequence}`,
+      type: "userMessage",
+      clientId: params.clientUserMessageId,
+      content: params.input,
+    };
+    turn.items.push(item);
+    emit({ method: "item/completed", params: { threadId: params.threadId, turnId: turn.id, item } });
+    result = { turnId: turn.id };
+  }
   if (message.id !== undefined) emit({ id: message.id, result });
   if (message.method === "turn/start") {
     const turn = threads.get(params.threadId)!.turns.at(-1)!;
