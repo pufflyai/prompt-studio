@@ -260,7 +260,7 @@ export const text = {
 
 export const semanticColors = {
   canvas: {
-    dot: { value: { _light: "{colors.blacks.400}", _dark: "{colors.blacks.700}" } },
+    dot: { value: { _light: "{colors.blacks.300}", _dark: "{colors.blacks.800}" } },
   },
   fg,
   bg,

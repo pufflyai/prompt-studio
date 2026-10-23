@@ -231863,37 +231863,37 @@
       "type": "color",
       "value": [
         {
-          "value": "#C5C5C7",
+          "value": "#EAEAEA",
           "theme": {
             "mode": "light"
           }
         },
         {
-          "value": "#444750",
+          "value": "#22252C",
           "theme": {
             "mode": "dark"
           }
         },
         {
-          "value": "#444750",
+          "value": "#22252C",
           "theme": {
             "mode": "monokai"
           }
         },
         {
-          "value": "#444750",
+          "value": "#22252C",
           "theme": {
             "mode": "dracula"
           }
         },
         {
-          "value": "#444750",
+          "value": "#22252C",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#C5C5C7",
+          "value": "#EAEAEA",
           "theme": {
             "mode": "solarized-light"
           }
