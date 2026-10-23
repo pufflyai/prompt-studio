@@ -32,8 +32,7 @@ CREATE TABLE "storage_record_types" (
 	"extension_id" text NOT NULL,
 	"type_name" text NOT NULL,
 	"type_kind" text NOT NULL,
-	"record_id" text NOT NULL,
-	CONSTRAINT "storage_record_types_workbench_id_extension_id_type_name_pk" PRIMARY KEY("workbench_id","extension_id","type_name")
+	"record_id" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "storage_resource_aliases" (
@@ -73,5 +72,6 @@ ALTER TABLE "storage_resource_identities" ADD CONSTRAINT "storage_resource_ident
 ALTER TABLE "storage_resource_identities" ADD CONSTRAINT "storage_resource_identities_workbench_id_storage_resource_projections_workbench_id_fk" FOREIGN KEY ("workbench_id") REFERENCES "public"."storage_resource_projections"("workbench_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_resource_projections" ADD CONSTRAINT "storage_resource_projections_workbench_id_projects_id_fk" FOREIGN KEY ("workbench_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_resource_projections" ADD CONSTRAINT "storage_resource_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk" FOREIGN KEY ("workbench_id","extension_id","document_id") REFERENCES "public"."storage_documents"("workbench_id","extension_id","document_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "storage_record_types_lookup" ON "storage_record_types" USING btree ("workbench_id","extension_id",md5("type_name"));--> statement-breakpoint
 CREATE INDEX "storage_resource_identity_alias" ON "storage_resource_aliases" USING btree ("workbench_id","shorthand","resource_id");--> statement-breakpoint
 CREATE INDEX "storage_resource_identity_number" ON "storage_resource_identities" USING btree ("workbench_id","extension_id","kind","shorthand","resource_id");

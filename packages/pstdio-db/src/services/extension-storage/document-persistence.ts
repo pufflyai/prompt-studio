@@ -155,7 +155,7 @@ export const runDocumentTransaction = async <T>(
       : undefined;
   const identities =
     address.document_id === resourceNumbersDocumentId && address.extension_id === resourceNumbersOwnerId
-      ? await trackResourceIdentityProjection(tx, address, document, !!initialize)
+      ? await trackResourceIdentityProjection(tx, address, document, !!initialize, row.revision)
       : undefined;
   const operations = localOperations(tx, address);
   const key = JSON.stringify(address);

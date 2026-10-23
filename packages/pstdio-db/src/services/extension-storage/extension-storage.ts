@@ -12,6 +12,7 @@ import { readRetiredData } from "../../db/retired-data";
 import { createStorageMigrations } from "./data-migrations";
 import { createDocumentStorageDBService } from "./document-storage";
 import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
+import { installRecordIndexes } from "./record-index-installation";
 import { getExtensionStorageOwner } from "./storage-owner";
 
 export type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
@@ -38,6 +39,8 @@ export const createExtensionStorageDBService = (db: DbClient, observer?: Storage
     return item ? { ...scope, item_id: item.id, value_json: item.value, sort_order: item.sortOrder } : null;
   };
   return {
+    installIndexes: (owners: Parameters<typeof installRecordIndexes>[1], validate: () => void = () => {}) =>
+      installRecordIndexes(db, owners, validate),
     watch: documents.watch,
     documents: documents.documents,
     openTextDocument: documents.openTextDocument,

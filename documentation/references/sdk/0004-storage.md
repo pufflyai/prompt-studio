@@ -110,6 +110,12 @@ installation operation; do not put local index installation behind the synced
 `storage.migrate` version. A second device can receive that version without having
 local indexes. Memory fixtures accept `createMemoryStorage({ indexes })`.
 
+The host accepts all index definitions for a runtime in one database transaction.
+If any extension's installation fails, the previous runtime keeps its definitions.
+If a newer source arrives after acceptance, the accepted candidate owns those
+definitions while the host retries the newer load; a failed retry falls back to
+that matching candidate rather than the earlier handlers.
+
 Each definition names fields by paths within `record.value`, optional leading
 `equality` fields and a fixed `orderBy`. Field types are `string`, `number`,
 `boolean` and `array` (strings only). Timestamps use consistently formatted strings.

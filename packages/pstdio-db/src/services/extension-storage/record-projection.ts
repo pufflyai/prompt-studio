@@ -5,6 +5,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records, storage_record_projections, storage_record_types } from "../../db/schemas.pg";
 import type { DocumentAddress } from "./document-persistence";
 import { encodeProjectionValue } from "./record-projection-codec";
+import { insertRecordTypeOwnership } from "./record-type-ownership";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 type Root = Y.AbstractType<unknown>;
@@ -117,17 +118,7 @@ export const trackRecordProjection = async (
           documentRecordTypes(document, record.recordId).map((type) => ({ ...type, recordId: record.recordId })),
         );
         for (let typeOffset = 0; typeOffset < owned.length; typeOffset += 2_000) {
-          await tx
-            .insert(storage_record_types)
-            .values(
-              owned.slice(typeOffset, typeOffset + 2_000).map((type) => ({
-                ...owner,
-                record_id: type.recordId,
-                type_name: type.name,
-                type_kind: type.kind,
-              })),
-            )
-            .onConflictDoNothing();
+          await insertRecordTypeOwnership(tx, address, owned.slice(typeOffset, typeOffset + 2_000));
         }
         for (const type of owned) recordTypes.set(rootType(document, type) as Root, type.recordId);
       }

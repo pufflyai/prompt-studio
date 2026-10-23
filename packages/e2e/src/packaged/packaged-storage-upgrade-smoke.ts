@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,6 +7,8 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { observeUpgradeDisk } from "./storage-upgrade-metrics";
+
+const largeBody = Array.from({ length: 256 }, (_, i) => createHash("sha256").update(String(i)).digest("hex")).join("");
 
 const writeFixture = (source: string, indexed: boolean) =>
   Bun.write(
@@ -18,16 +21,17 @@ const writeFixture = (source: string, indexed: boolean) =>
         const records = ctx.storage.records;
         const note = records.id("note");
         const removed = records.id("removed");
+        const items = [{ body: ${JSON.stringify(largeBody)} }];
         if (action === "seed") {
           const asset = await ctx.storage.assets.stage({ operationId: "asset", source: new Blob(["retained asset bytes"]) });
           await records.commit({ operationId: "original", edits: [
-            { recordId: note, replace: { title: "Original", nested: { body: "first\\nlast", tags: ["one", "two"] } }, asset },
+            { recordId: note, replace: { title: "Original", nested: { body: "first\\nlast", tags: ["one", "two"], items } }, asset },
             { recordId: removed, replace: { body: "deleted body\\n".repeat(1000) } }
           ] });
         }
         if (action === "offline") {
           await records.commit({ operationId: "offline-edit", edits: [
-            { recordId: note, replace: { title: "Offline", nested: { body: "first\\nlast", tags: ["one", "two", "three"] } } },
+            { recordId: note, replace: { title: "Offline", nested: { body: "first\\nlast", tags: ["one", "two", "three"], items } } },
             { recordId: removed, deleted: true }
           ] });
         }
@@ -89,6 +93,7 @@ export const registerStorageUpgradeSmokeTests = (releasedBinary: () => string) =
         await exercise("seed");
         const before = await exercise("offline");
         expect(before.note.value.title).toBe("Offline");
+        expect(before.note.value.nested.items).toEqual([{ body: largeBody }]);
         expect(before.removed).toMatchObject({ deleted: true, value: null });
         expect(before.asset).toBe("retained asset bytes");
         await stopProcess(host.child);

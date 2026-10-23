@@ -1,4 +1,5 @@
-import { bigint, boolean, foreignKey, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { bigint, boolean, foreignKey, index, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import type { StorageRecord, StorageRecordIndex } from "pstdio-sync-contracts";
 import { projects } from "./projects";
 import { storage_documents } from "./storage-documents";
@@ -55,7 +56,7 @@ export const storage_record_types = pgTable(
     record_id: text("record_id").notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.workbench_id, table.extension_id, table.type_name] }),
+    index("storage_record_types_lookup").on(table.workbench_id, table.extension_id, sql`md5(${table.type_name})`),
     foreignKey({
       columns: [table.workbench_id, table.extension_id],
       foreignColumns: [storage_record_projections.workbench_id, storage_record_projections.extension_id],

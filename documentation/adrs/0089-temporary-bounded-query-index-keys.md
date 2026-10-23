@@ -22,6 +22,14 @@ Use bounded string prefixes for ordering keys and compare complete values in SQL
 within equal-prefix groups. This temporary workaround belongs only in the SQL
 query compiler; public values and cursor comparisons retain their full values.
 
+Named Yjs types can also contain complete nested JSON values. Their ownership
+table keeps the original type name as text and uses a non-unique B-tree expression
+index on the owner and `md5(type_name)` to find candidates. Insertion checks the
+complete name, so digest collisions remain distinct. The existing authoritative
+document row lock serializes these set insertions. No digest becomes a CRDT ID.
+This replaces the full-name primary key, whose entry limit rejected valid nested
+records and their backfill. It adds no stored hash or surrogate product identity.
+
 ## Limitations
 
 Digest collisions cannot change query results because equality rechecks full values.
@@ -34,3 +42,5 @@ the actual declared indexes and workload before claiming a performance budget.
 Replace prefix ordering with an ordered chunk index if measured workloads require
 bounded access within large equal-prefix groups. Remove this workaround once the
 storage backend can index complete arbitrary-length keys with that guarantee.
+Remove the ownership expression index when full type names can be indexed
+without an entry-size limit; retain exact-name equality during any transition.
