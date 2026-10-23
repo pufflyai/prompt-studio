@@ -1,7 +1,8 @@
-import { Box, HStack, Icon, Stack, Text, useRecipe } from "@chakra-ui/react";
+import { Box, HStack, Icon, IconButton, Stack, Text, useRecipe } from "@chakra-ui/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem, ListRowProps, RowContentProps } from "./list-row.types";
+import { preventRowAccessoryDrag } from "./list-row-accessory-events";
 import { RowActions } from "./list-row-actions";
 
 export const createResourceRowActions = (item: ListRowItem, showContextMenuTrigger = false) => {
@@ -40,6 +41,7 @@ export const createResourceRowActions = (item: ListRowItem, showContextMenuTrigg
 };
 
 const iconLabelGaps: Record<string, string> = { collection: "compact", tree: "1" };
+const denseVariants = new Set(["compact", "collection", "full-width", "tree", "empty-state"]);
 
 const resolveLabelColor = (input: {
   isEmptyStateVariant: boolean;
@@ -52,58 +54,86 @@ const resolveLabelColor = (input: {
   return "fg";
 };
 
-const RowLabel = (props: { label: ListRowItem["label"]; textStyle: string; color: string }) => {
-  const { label, textStyle, color } = props;
+const RowLabel = (props: { label: ListRowItem["label"]; textStyle: string; color: string; labelId: string }) => {
+  const { label, textStyle, color, labelId } = props;
 
   if (typeof label === "string") {
     return (
-      <Text textStyle={textStyle} color={color} truncate>
+      <Text id={labelId} textStyle={textStyle} color={color} truncate>
         {label}
       </Text>
     );
   }
 
   return (
-    <Box minW="0" maxW="full" overflow="hidden" color={color}>
+    <Box id={labelId} minW="0" maxW="full" overflow="hidden" color={color}>
       {label}
     </Box>
   );
 };
 
 const RowDescription = (props: {
+  id: string;
   description: ListRowItem["description"];
   textStyle: string;
   color: string;
   marginLeft: string;
 }) => {
-  const { description, textStyle, color, marginLeft } = props;
+  const { id, description, textStyle, color, marginLeft } = props;
   if (!description) return null;
 
   if (typeof description === "string") {
     return (
-      <Text ml={marginLeft} textStyle={textStyle} color={color} truncate>
+      <Text id={id} ml={marginLeft} textStyle={textStyle} color={color} truncate>
         {description}
       </Text>
     );
   }
 
   return (
-    <Box ml={marginLeft} minW="0" maxW="full" overflow="hidden">
+    <Box id={id} ml={marginLeft} minW="0" maxW="full" overflow="hidden">
       {description}
     </Box>
   );
 };
 
-const RowContent = (props: RowContentProps & { labelId: string }) => {
-  const { item, isExpanded, showChevron, isDisabled, variant, tone, labelId } = props;
+const RowChevron = (
+  props: Pick<RowContentProps, "isExpanded" | "isDisabled" | "showChevron"> & { onToggleExpand?: () => void },
+) => {
+  const { isExpanded, isDisabled, showChevron, onToggleExpand } = props;
   const chevron = useRecipe({ key: "treeChevron" });
+  return (
+    <>
+      {showChevron && onToggleExpand ? (
+        <IconButton
+          aria-label={isExpanded ? "Collapse group" : "Expand group"}
+          aria-expanded={isExpanded}
+          variant="ghost"
+          size="2xs"
+          disabled={isDisabled}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleExpand();
+          }}
+          onMouseDown={preventRowAccessoryDrag}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <Icon as={ChevronRight} boxSize="12px" css={chevron()} data-open={isExpanded} />
+        </IconButton>
+      ) : null}
+      {showChevron && !onToggleExpand ? (
+        <Box color="fg.muted" flexShrink={0} display="flex" alignItems="center">
+          <Icon as={ChevronRight} boxSize="12px" css={chevron()} data-open={isExpanded} />
+        </Box>
+      ) : null}
+    </>
+  );
+};
+
+const RowContent = (props: RowContentProps & { labelId: string; onToggleExpand?: () => void }) => {
+  const { item, isExpanded, showChevron, isDisabled, variant, tone, labelId, onToggleExpand } = props;
   const isEmptyStateVariant = variant === "empty-state";
-  const isDenseVariant =
-    variant === "compact" ||
-    variant === "collection" ||
-    variant === "full-width" ||
-    variant === "tree" ||
-    isEmptyStateVariant;
+  const isDenseVariant = denseVariants.has(variant ?? "");
   const labelTextStyle = isDenseVariant ? "label/S/regular" : "label/M/regular";
   const descriptionTextStyle = isDenseVariant ? "label/XS" : "label/S/regular";
   const descriptionMarginLeft = isDenseVariant ? "0" : "2px";
@@ -119,10 +149,11 @@ const RowContent = (props: RowContentProps & { labelId: string }) => {
   const descriptionColor = tone === "danger" ? "red.400" : "fg.menu-item.secondary";
 
   return (
-    <HStack id={labelId} gap="2" minW="0" flex="1" overflow="hidden" alignItems="center">
-      {showChevron ? (
-        <Box color="fg.muted" flexShrink={0} display="flex" alignItems="center">
-          <Icon as={ChevronRight} boxSize="12px" css={chevron()} data-open={isExpanded} />
+    <HStack gap="2" minW="0" flex="1" overflow="hidden" alignItems="center">
+      <RowChevron {...{ showChevron, isExpanded, isDisabled, onToggleExpand }} />
+      {item.startContent ? (
+        <Box flexShrink={0} display="flex" alignItems="center">
+          {item.startContent}
         </Box>
       ) : null}
       <Stack gap="0" minW="0" flex="1">
@@ -149,9 +180,10 @@ const RowContent = (props: RowContentProps & { labelId: string }) => {
               </Box>
             </Tooltip>
           ) : null}
-          <RowLabel label={item.label} textStyle={labelTextStyle} color={labelColor} />
+          <RowLabel labelId={labelId} label={item.label} textStyle={labelTextStyle} color={labelColor} />
         </HStack>
         <RowDescription
+          id={`${labelId}-description`}
           description={item.description}
           textStyle={descriptionTextStyle}
           color={descriptionColor}
@@ -171,6 +203,7 @@ export const ListRowContent = (props: {
   tone: ListRowProps["tone"];
   variant: ListRowProps["variant"];
   showContextMenuTrigger: boolean;
+  onToggleExpand?: () => void;
 }) => {
   const {
     labelId,
@@ -181,6 +214,7 @@ export const ListRowContent = (props: {
     tone = "default",
     variant = "default",
     showContextMenuTrigger,
+    onToggleExpand,
   } = props;
   const actions = createResourceRowActions(item, showContextMenuTrigger);
 
@@ -194,6 +228,7 @@ export const ListRowContent = (props: {
         isDisabled={isDisabled}
         tone={tone}
         variant={variant}
+        onToggleExpand={onToggleExpand}
       />
       {item.endContent ? (
         <Box id={`${labelId}-end`} color="fg.muted" flexShrink={0} display="flex" alignItems="center">
@@ -204,7 +239,9 @@ export const ListRowContent = (props: {
         <RowActions
           actions={actions}
           context={{ nodeId: item.id }}
-          alwaysVisible={showContextMenuTrigger && (item.contextMenuItems?.length ?? 0) > 0}
+          alwaysVisible={
+            item.actionsVisibility === "always" || (showContextMenuTrigger && (item.contextMenuItems?.length ?? 0) > 0)
+          }
         />
       ) : null}
     </>

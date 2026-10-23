@@ -86,7 +86,16 @@ if (projectNavigation.resourceScope !== "project") throw new Error("Navigation l
       (react && imports.includes("@pstdio/ui")
         ? `
 import { createElement } from "react";
-import { BubblePanel } from "@pstdio/ui";
+import { BubblePanel, ListRow, TreeList } from "@pstdio/ui";
+const outliner = createElement(TreeList, {
+  sections: [{ id: "layers", nodes: [{ id: "image", label: "Image", startContent: createElement("span"),
+    actionsVisibility: "always", actions: [{ id: "visibility", label: "Visibility", pressed: true, disabled: false }] }] }],
+  activeNodeId: ["image"], onSelectionChange: (ids: string[]) => void ids,
+  onMoveNode: (source: string) => void source,
+});
+const groupRow = createElement(ListRow, { label: "Group", isContainer: true, showExpandToggle: true,
+  expandOnClick: false, onToggleExpand: () => {}, startContent: createElement("span") });
+void [outliner, groupRow];
 import { CollectionViewBar, EMPTY_VIEW_FILTER, filterRowsByView, withTitleField } from "@pstdio/ui/collection-view";
 const panelOverlay = createElement(BubblePanel, { isOpen: true, overlay: createElement("div", { "data-drop-feedback": true }) });
 void panelOverlay;

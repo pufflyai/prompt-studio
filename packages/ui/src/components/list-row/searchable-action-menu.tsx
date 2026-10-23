@@ -21,7 +21,7 @@ export const SearchableActionMenu = (props: SearchableActionMenuProps) => {
   return (
     <SearchableMenu
       trigger={
-        <IconButton variant="ghost" size="2xs" aria-label={action.label}>
+        <IconButton variant="ghost" size="2xs" aria-label={action.label} disabled={action.disabled}>
           {action.icon}
         </IconButton>
       }
