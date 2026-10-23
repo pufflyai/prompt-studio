@@ -46,8 +46,10 @@ export const listCommits = async (ctx: GitContext, results: CachedResult[]) => {
   ).slice(0, 15);
   const known = new Set([...main, ...releases].map((commit) => commit.sha));
   // Runs started from elsewhere can measure branches; keep them pickable once their results exist.
+  // Newest first, like the main log, so Compare defaults to the newest commit as head.
   const measured = results
     .filter((result) => !known.has(result.file.commit.sha))
+    .sort((a, b) => b.file.finishedAt.localeCompare(a.file.finishedAt))
     .map((result) => ({ sha: result.file.commit.sha, ref: result.file.commit.ref ?? "", message: "" }));
   const unique = new Map([...main, ...releases, ...measured].map((commit) => [commit.sha, commit]));
   return [...unique.values()];

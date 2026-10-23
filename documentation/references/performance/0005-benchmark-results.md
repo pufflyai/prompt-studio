@@ -81,7 +81,7 @@ After a stable or patch release publishes, the release workflow starts a separat
 
 ## Performance pages
 
-The pages read only from `.pstdio/extension-storage/pstdio-dev/benchmarks/`. Opening a page, the daily schedule, and a followed run download new release assets and finished run artifacts there with the developer's `gh` login. Cached results outlive GitHub's artifact retention. Extension storage is not tracked by Git, so each developer keeps their own cache.
+The pages read only from `.pstdio/extension-storage/pstdio-dev/.publishers/pstdio/benchmarks/`. Opening a page, the daily schedule, and a followed run download new release assets and finished run artifacts there with the developer's `gh` login. Cached results outlive GitHub's artifact retention. Extension storage is not tracked by Git, so each developer keeps their own cache.
 
 - **Trends** shows each metric's median across releases with a 95% confidence interval and its budget. **One version** lists every metric for one release against the previous one.
 - **Compare** shows base and head medians with intervals, and the change with its interval. When a run measured both commits, its results win over separate runs.
