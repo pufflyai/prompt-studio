@@ -6,6 +6,7 @@ export { devicePresenceIntervalMs, devicePresenceLeaseMs } from "./device-presen
 export * from "./fingerprint";
 export * from "./identity";
 export * from "./protocol";
+export type * from "./record-query";
 export * from "./replay";
 export * from "./retention";
 export * from "./state";

@@ -1,5 +1,13 @@
 # pstdio-reports
 
+## 0.45.0
+
+_2026-10-22_
+
+### Patch Changes
+
+- 1f3d64e: Let Planner and Reports migrate their own legacy templates with public storage helpers, and remove the template migration from core.
+
 ## 0.44.0
 
 _2026-10-18_

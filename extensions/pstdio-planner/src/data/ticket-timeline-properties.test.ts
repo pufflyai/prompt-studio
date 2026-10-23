@@ -7,6 +7,7 @@ import { createDeadlineCommand, deleteDeadlineCommand } from "../timeline/comman
 import { moveTicketCommand } from "../timeline/commands/move-ticket";
 import { readPlanCommand } from "../timeline/commands/read-plan";
 import { runTicketsQuery } from "./query";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "./workflow-statuses";
 
 test("ticket properties expose milestone, date, progress, and attention from the same plan", async () => {
   const storage = createMemoryStorage();
@@ -15,7 +16,11 @@ test("ticket properties expose milestone, date, progress, and attention from the
   const completed = await createTicketCommand.run(ctx, { content: "# Completed release work", statusId: "done" });
   const open = await createTicketCommand.run(ctx, { content: "# Waiting for release", statusId: "ready" });
   await moveTicketCommand.run(ctx, { ticket: completed.id, deadline: milestone.id });
-  const query = await runTicketsQuery({ storage, projectId: ctx.projectId });
+  const query = await runTicketsQuery({
+    storage,
+    projectId: ctx.projectId,
+    workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
+  });
   expect(query.attributes?.find((attribute) => attribute.id === "milestone")?.type).toMatchObject({
     kind: "enum",
     options: expect.arrayContaining([{ value: milestone.id, label: "Past release", icon: "calendar" }]),
@@ -31,14 +36,24 @@ test("ticket properties expose milestone, date, progress, and attention from the
     milestoneState: "unscheduled",
   });
   await moveTicketCommand.run(ctx, { ticket: open.id, deadline: milestone.id });
-  const next = await runTicketsQuery({ storage, projectId: ctx.projectId });
+  const next = await runTicketsQuery({
+    storage,
+    projectId: ctx.projectId,
+    workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
+  });
   expect(next.rows.find((row) => row.id === open.id)?.attributes).toMatchObject({
     milestoneState: "open",
     needsAttention: "yes",
   });
   await deleteDeadlineCommand.run(ctx, { deadline: milestone.id });
   expect(
-    (await runTicketsQuery({ storage, projectId: ctx.projectId })).rows.every((row) => row.attributes.milestone === ""),
+    (
+      await runTicketsQuery({
+        storage,
+        projectId: ctx.projectId,
+        workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
+      })
+    ).rows.every((row) => row.attributes.milestone === ""),
   ).toBe(true);
 });
 
@@ -59,13 +74,23 @@ test("ticket inline milestone edits update the plan without adding tag ids", asy
   ).toContain(ticket.id);
   await setTicketAttributeCommand.run(ctx, { rowId: ticket.id, attributeId: "milestone", value: "" });
   expect(
-    (await runTicketsQuery({ storage, projectId: ctx.projectId })).rows.find((row) => row.id === ticket.id)?.attributes
-      .milestone,
+    (
+      await runTicketsQuery({
+        storage,
+        projectId: ctx.projectId,
+        workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
+      })
+    ).rows.find((row) => row.id === ticket.id)?.attributes.milestone,
   ).toBe("");
   await setTicketAttributeCommand.run(ctx, { rowId: ticket.id, attributeId: "milestone", value: milestone.id });
   expect(
-    (await runTicketsQuery({ storage, projectId: ctx.projectId })).rows.find((row) => row.id === ticket.id)?.attributes
-      .milestone,
+    (
+      await runTicketsQuery({
+        storage,
+        projectId: ctx.projectId,
+        workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
+      })
+    ).rows.find((row) => row.id === ticket.id)?.attributes.milestone,
   ).toBe(milestone.id);
 });
 
@@ -78,7 +103,11 @@ test("archived work does not change the active milestone progress", async () => 
   await moveTicketCommand.run(ctx, { ticket: done.id, deadline: milestone.id });
   await moveTicketCommand.run(ctx, { ticket: archived.id, deadline: milestone.id });
   await storage.collection("tickets").update(archived.id, { ...archived, archived: true });
-  const query = await runTicketsQuery({ storage, projectId: ctx.projectId });
+  const query = await runTicketsQuery({
+    storage,
+    projectId: ctx.projectId,
+    workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
+  });
   expect(query.rows.find((row) => row.id === done.id)?.attributes.milestoneState).toBe("completed-past");
   expect(query.rows.find((row) => row.id === archived.id)?.attributes.milestone).toBe("");
   expect(

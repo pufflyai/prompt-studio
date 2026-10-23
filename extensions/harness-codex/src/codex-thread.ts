@@ -17,6 +17,7 @@ export const createCodexThread = (
   let unresolved = false;
   let currentTurn: string | undefined;
   let turnRevision = 0;
+  let goalRevision = 0;
   let awaitingTurn: ReturnType<typeof Promise.withResolvers<void>> | undefined;
   const settleTurn = () => {
     awaitingTurn?.resolve();
@@ -56,6 +57,7 @@ export const createCodexThread = (
       {
         ...(run.agentSessionId ? { threadId: run.agentSessionId } : {}),
         ...(run.model ? { model: run.model } : {}),
+        ...(run.params?.service_tier ? { serviceTier: run.params.service_tier } : {}),
         cwd: run.cwd,
         approvalPolicy: "never",
         sandbox: "danger-full-access",
@@ -87,6 +89,7 @@ export const createCodexThread = (
   };
   return {
     load,
+    isIdle: () => !loading && !unresolved && !currentTurn && !awaitingTurn,
     id: () => threadId,
     model: () => model,
     transcriptPath: () => transcriptPath,
@@ -106,6 +109,7 @@ export const createCodexThread = (
     rejectTurn: settleTurn,
     disconnect: settleTurn,
     turnRevision: () => turnRevision,
+    goalRevision: () => goalRevision,
     acknowledge: (id: string | undefined, revision: number) => {
       if (!id || revision !== turnRevision) return;
       // turn/start can steer an observed goal turn without another start notification.
@@ -113,6 +117,7 @@ export const createCodexThread = (
       currentTurn = id;
     },
     receive: (message: import("./app-server-rpc").RpcMessage) => {
+      if (message.method === "thread/goal/updated") goalRevision++;
       const turn = message.params?.turn as { id: string } | undefined;
       if (!turn) return;
       if (message.method === "turn/started") {

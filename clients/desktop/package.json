@@ -1,7 +1,7 @@
 {
   "name": "@pstdio/desktop",
   "productName": "Prompt Studio",
-  "version": "0.44.0",
+  "version": "0.45.0",
   "private": true,
   "description": "The local-first Prompt Studio desktop application.",
   "author": "Prompt Studio <support@prompt.studio>",
@@ -59,7 +59,7 @@
     "@types/react-dom": "19.2.3",
     "@types/semver": "7.7.1",
     "@vitejs/plugin-react": "5.1.1",
-    "electron": "43.6.0",
+    "electron": "43.7.0",
     "fflate": "0.8.3",
     "storybook": "^10.6.0",
     "typescript": "6.0.2",

@@ -24,6 +24,7 @@ export * from "./runtime-auth";
 export * from "./session-attachment-types";
 export * from "./session-messages";
 export * from "./session-resource-retention";
+export * from "./session-steering";
 export * from "./sessions";
 export * from "./settings";
 export * from "./skills";

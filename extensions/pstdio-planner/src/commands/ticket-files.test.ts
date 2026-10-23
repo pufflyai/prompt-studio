@@ -127,7 +127,7 @@ describe("ticket files tree commands", () => {
     });
 
     // The file lives in the Files section and rebinds the editor to the selected document.
-    expect(body[1]).toMatchObject({ id: "files", label: "Files" });
+    expect(body[1]).toMatchObject({ id: "files" });
     expect(body[1]).not.toHaveProperty("canHide");
     expect(body[1]?.nodes).toEqual([
       {
@@ -160,7 +160,6 @@ describe("ticket files tree commands", () => {
     ]);
     expect(body[3]).toMatchObject({
       id: "sessions",
-      label: "Sessions",
       nodes: [
         {
           id: "sessions-empty",

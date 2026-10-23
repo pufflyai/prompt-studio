@@ -15,7 +15,7 @@ export const registerAccountSmokeTests = () => {
       let host = await startPackagedServe(root);
       try {
         let client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
-        const loggedOut = { login: null, cloudProjects: [], cloudProjectsLoaded: true };
+        const loggedOut = { login: null, cloudProjects: [], cloudProjectsLoaded: true, features: null };
         expect(await client.account.status()).toEqual(loggedOut);
         const project = await client.projects.create(folderProjectInput({ name: "Local without owner" }, root));
         expect(await client.account.projectSyncStatus(project.id)).toEqual({
@@ -50,7 +50,7 @@ export const registerAccountSmokeTests = () => {
   );
 
   test(
-    "compiled host publishes authenticated device presence without a Cloud project",
+    "compiled host keeps signed-in accounts without early access local and publishes device presence",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "packaged-presence-"));
       const heartbeat = Promise.withResolvers<void>();
@@ -61,6 +61,7 @@ export const registerAccountSmokeTests = () => {
         port: 0,
         fetch(request) {
           const path = new URL(request.url).pathname;
+          if (path === "/v1/account") return Response.json({ features: { relay: false } });
           if (path === "/v1/devices/presence") {
             observedCredentials.push(request.headers.get("authorization") ?? "");
             heartbeat.resolve();
@@ -107,6 +108,9 @@ export const registerAccountSmokeTests = () => {
         expect(observedCredentials).toContain("Bearer fixture-device-credential");
         expect(await client.account.devices()).toMatchObject([{ id: deviceId, current: true, online: true }]);
         expect((await client.account.status()).cloudProjects).toEqual([]);
+        expect(await client.account.status()).toMatchObject({ features: { relay: false }, login: { deviceId } });
+        const project = await client.projects.create(folderProjectInput({ name: "Local during early access" }, root));
+        expect(await client.account.projectSyncStatus(project.id)).toEqual({ state: "local", offlineReady: false });
       } finally {
         await stopProcess(host.child);
         await manager.stop(true);

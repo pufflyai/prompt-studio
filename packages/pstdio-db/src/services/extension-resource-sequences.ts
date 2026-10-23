@@ -1,15 +1,16 @@
 import { and, eq, sql } from "drizzle-orm";
 import { createStorageId } from "pstdio-api-contracts";
 import {
-  coreOwnerId,
   nextResourceNumber,
   rememberResourceNumber,
   resourceIdentity,
   resourceNumbers,
+  coreOwnerId,
 } from "pstdio-sync";
 import type { DbClient } from "../db/connection.pglite";
 import { extension_resource_sequences as sequences } from "../db/schemas.pg";
 import { createDocumentStorageDBService } from "./extension-storage/document-storage";
+import { createResourceIdentityIndex, upgradeResourceIdentityIndexes } from "./resource-identity-index";
 import { createResourceNumberStore } from "./resource-number-store";
 
 interface AllocationInput {
@@ -24,27 +25,13 @@ export const createExtensionResourceSequencesDBService = (
   db: DbClient,
   documents = createDocumentStorageDBService(db),
 ) => {
-  const store = createResourceNumberStore(documents);
+  const ready = upgradeResourceIdentityIndexes(db, documents);
+  const store = createResourceNumberStore(documents, ready);
+  const { identity, identityMany, findByShorthand } = createResourceIdentityIndex(db, ready);
   const owner = (projectId: string) => ({ workbenchId: projectId, extensionId: coreOwnerId });
-  const identity = (input: Omit<AllocationInput, "prefix"> & { id: string }) =>
-    store.documentStore.transaction(owner(input.projectId), async ({ document }) => {
-      const resource = resourceNumbers(document).get(input.id);
-      if (!resource || resource.kind !== input.kind || resource.extensionId !== input.extensionId) return null;
-      return resourceIdentity(document, resource);
-    });
-  const findByShorthand = (input: Omit<AllocationInput, "prefix"> & { shorthand: string }) =>
-    store.documentStore.transaction(owner(input.projectId), async ({ document }) =>
-      [...resourceNumbers(document).values()]
-        .filter((resource) => resource.kind === input.kind && resource.extensionId === input.extensionId)
-        .map((resource) => resourceIdentity(document, resource))
-        .filter((resource) => resource.shorthand === input.shorthand || resource.aliases.includes(input.shorthand))
-        .sort(
-          (a, b) =>
-            Number(b.shorthand === input.shorthand) - Number(a.shorthand === input.shorthand) || (a.id < b.id ? -1 : 1),
-        ),
-    );
 
   const allocate = async (input: AllocationInput) => {
+    await ready;
     const id = createStorageId(input.idPrefix);
     const timestamp = new Date().toISOString();
     try {
@@ -92,5 +79,5 @@ export const createExtensionResourceSequencesDBService = (
       throw error;
     }
   };
-  return { allocate, identity, findByShorthand, ...store, watchChanges: documents.watch };
+  return { allocate, identity, identityMany, findByShorthand, ...store, watchChanges: documents.watch };
 };

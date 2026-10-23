@@ -1,7 +1,10 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { canonicalJson, identitySchema } from "pstdio-sync-contracts";
+import type { z } from "zod";
+import { setAccountFeatureInTransaction } from "./account-features";
 import {
   type AccountRequest,
+  accountFeatureSchema,
   accountRequestSchema,
   type DeviceInput,
   type DeviceRegistrationInput,
@@ -33,6 +36,12 @@ import { withAccountTransaction } from "./transactions";
 export const createAccountManager = (databaseUrl: string) => {
   const connection = connectManager(databaseUrl);
   return {
+    setFeature(input: z.infer<typeof accountFeatureSchema>) {
+      const intent = accountFeatureSchema.parse(input);
+      return withAccountTransaction(connection.db, intent.accountId, (transaction) =>
+        setAccountFeatureInTransaction(transaction, intent),
+      );
+    },
     async provision(input: ProvisionInput) {
       const intent = provisionSchema.parse(input);
       const saved = await executeRequest(connection.db, intent, "provision", intent, async (transaction) => {

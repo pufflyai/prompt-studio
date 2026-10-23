@@ -15,7 +15,10 @@ const fixture = async () => {
   const manager = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
-    fetch: () => Response.json([{ workbenchId: "here" }, { workbenchId: "elsewhere" }]),
+    fetch: (request) =>
+      new URL(request.url).pathname === "/v1/account"
+        ? Response.json({ features: { relay: true } })
+        : Response.json([{ workbenchId: "here" }, { workbenchId: "elsewhere" }]),
   });
   const file = join(root, "native-account.json");
   await Bun.write(

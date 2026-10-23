@@ -1,10 +1,8 @@
 import type { SessionMessage } from "./message-types";
 
-export const MAX_RECENT_USER_PROMPTS = 10;
-
 export const getRecentUserPrompts = (messages: SessionMessage[]) => {
   const prompts: string[] = [];
-  for (let i = messages.length - 1; i >= 0 && prompts.length < MAX_RECENT_USER_PROMPTS; i--) {
+  for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i];
     if (message.role !== "user") continue;
     const text = message.parts.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("");

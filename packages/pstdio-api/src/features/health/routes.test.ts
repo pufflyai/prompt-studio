@@ -65,3 +65,13 @@ describe("GET /openapi.json", () => {
     expect(body.info.title).toBe("Demo API Service");
   });
 });
+
+test("an explicit runtime diagnostic read returns numeric owner counters and heap measurements", async () => {
+  const response = await app.request("/diagnostics/performance");
+  expect(response.status).toBe(200);
+  const reading = await response.json();
+  expect(reading.pid).toBe(process.pid);
+  expect(reading.heapUsedBytes).toBeGreaterThan(0);
+  expect(reading.externalBytes).toBeGreaterThanOrEqual(0);
+  expect(reading.counters).toMatchObject({ activeSessions: 0, retainedMessages: 0, queuedEvents: 0 });
+});

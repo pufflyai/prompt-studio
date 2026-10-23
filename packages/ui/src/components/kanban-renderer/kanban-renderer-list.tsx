@@ -4,6 +4,7 @@ import { type ComponentType, type ReactNode, useRef, useState } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { useVirtualizer } from "@/utils/use-virtualizer";
+import { CollectionLoadMore } from "../collection-view/collection-load-more";
 import type { AttributeBadge } from "./kanban-renderer-helpers";
 import { KanbanRendererListRow } from "./kanban-renderer-list-row";
 
@@ -32,6 +33,8 @@ export interface KanbanRendererListItem {
 export type KanbanRendererListExpandedState = Record<string, boolean>;
 
 export interface KanbanRendererListProps {
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
   items: KanbanRendererListItem[];
   selectedItemId?: string | null;
   expandedGroups?: KanbanRendererListExpandedState;
@@ -106,6 +109,9 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
   const viewport = useRef<HTMLDivElement>(null);
   const { virtualizer, virtualItems, totalSize } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: rows.length,
+    onChange: (instance, scrolling) => {
+      if (scrolling && instance.range && instance.range.endIndex >= rows.length - 1) props.onLoadMore?.();
+    },
     getScrollElement: () => viewport.current,
     getItemKey: (index) => rows[index].id,
     estimateSize: (index) => (rows[index].isGroup ? 29 : 35),
@@ -122,7 +128,18 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
   });
 
   return (
-    <ScrollArea flex="1" minH="0" viewportRef={viewport} viewportProps={{ "aria-label": "Collection list" }}>
+    <ScrollArea
+      flex="1"
+      minH="0"
+      viewportRef={viewport}
+      viewportProps={{
+        "aria-label": "Collection list",
+        onWheel: (event) => {
+          const viewport = event.currentTarget;
+          if (event.deltaY > 0 && viewport.scrollHeight <= viewport.clientHeight) props.onLoadMore?.();
+        },
+      }}
+    >
       <Box position="relative" height={`${totalSize}px`}>
         {virtualItems.map((virtual) => {
           const row = rows[virtual.index];
@@ -155,6 +172,9 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
           );
         })}
       </Box>
+      {props.onLoadMore ? (
+        <CollectionLoadMore label="Load more rows" loading={props.loadingMore} onLoadMore={props.onLoadMore} />
+      ) : null}
     </ScrollArea>
   );
 };

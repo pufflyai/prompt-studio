@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { parseRequestBody } from "./review-request-validation";
+import { parseRequestBody, parseStoredRequest } from "./review-request-validation";
 
 const text = (id: string) => ({ id, label: id, required: true, input: { kind: "text" } });
 
@@ -38,4 +38,26 @@ test("valid requests keep only the request shape", () => {
       { id: "a", label: "A", required: false, input: { kind: "multiple-choice", options: [{ id: "x", label: "X" }] } },
     ],
   });
+});
+
+test("stored requests reject an unknown affected action", () => {
+  expect(() =>
+    parseStoredRequest({
+      id: "request",
+      ticketId: "ticket",
+      title: "Review",
+      instructions: "Review the work",
+      request: { kind: "task" },
+      requestedAt: "2026-10-22T00:00:00Z",
+      requestedBy: { type: "human", id: "person", displayName: "Person" },
+      context: {
+        affectedAction: "publish",
+        reason: null,
+        workspaceId: null,
+        attemptRevision: null,
+        sessionId: null,
+        relatedSessionId: null,
+      },
+    }),
+  ).toThrow("affected action is invalid");
 });

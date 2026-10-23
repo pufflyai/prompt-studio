@@ -1,6 +1,13 @@
 {
   "name": "@pstdio/sdk",
-  "version": "0.44.0",
+  "nx": {
+    "targets": {
+      "test:coverage": {
+        "parallelism": false
+      }
+    }
+  },
+  "version": "0.45.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/pufflyai/prompt-studio"

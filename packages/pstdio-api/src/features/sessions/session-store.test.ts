@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { HarnessSession } from "pstdio-api-contracts";
+import type { HarnessSession, SessionMessage } from "pstdio-api-contracts";
 import { createSessionStore } from "./session-store";
 import { inertSessionChannelHooks } from "./session-store.test-utils";
 
@@ -58,4 +58,27 @@ describe("session-store", () => {
     expect(store.get("s1")).toBe(second);
     expect(store.get("s1")).not.toBe(first);
   });
+});
+
+test("diagnostics read live session and conversation owner sizes without exposing messages", async () => {
+  const store = createSessionStore();
+  const entry = store.create("diagnostics", inertSessionChannelHooks);
+  const conversation = await entry.conversationReady;
+  conversation.push({ op: "add", path: "/messages/0", value: { id: "private", role: "assistant", parts: [] } });
+  const reading = await store.diagnostics();
+  expect(reading).toMatchObject({ activeSessions: 1, retainedMessages: 1, subscribers: 0, queuedEvents: 0 });
+  expect(JSON.stringify(reading)).not.toContain("private");
+  store.remove("diagnostics");
+  expect(await store.diagnostics()).toMatchObject({ activeSessions: 0, retainedMessages: 0 });
+});
+
+test("diagnostics remain available while a session initializes", async () => {
+  const store = createSessionStore();
+  const pending = Promise.withResolvers<SessionMessage[]>();
+  const entry = store.create("loading", inertSessionChannelHooks, () => pending.promise);
+  const reading = await Promise.race([store.diagnostics(), Promise.resolve("waiting for initialization")]);
+  expect(reading).toMatchObject({ activeSessions: 1, retainedMessages: 0 });
+  pending.resolve([]);
+  await entry.conversationReady;
+  store.remove("loading");
 });

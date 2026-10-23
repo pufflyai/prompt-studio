@@ -134,6 +134,11 @@ Store the ID with the extension's data. Read the current shorthand with
 `ctx.resources.identity({ kind, id })`; it returns `{ id, kind, shorthand, aliases }`, or
 `null` for an unknown resource. Do not store a separate copy of the number.
 
+Use `ctx.resources.identityMany({ kind, ids })` for up to 100 current identities in
+one indexed batch. Results follow the input ID order, with `null` for each unknown
+ID. The resource kind must belong to the calling extension; reads stay within the
+current project. Use batches for the related resources on a selected page.
+
 After devices merge, the resource whose ID sorts first keeps a duplicated number.
 Core assigns the others the next free number and retains earlier numbers as aliases.
 `ctx.resources.findByShorthand({ kind, shorthand })` returns all matching identities,

@@ -61,7 +61,7 @@ const emptyFilesNode = (): TreeNode => ({
 
 const emptyFilesSection = (): TreeViewSection => ({
   id: "files",
-  label: "Files",
+  label: l10n("navigation.files", "Files"),
   collapsible: true,
   nodes: [emptyFilesNode()],
 });

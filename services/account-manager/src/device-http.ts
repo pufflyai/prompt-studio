@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AccountFeatureDenied } from "./account-features";
 import type { createManagerAuthentication } from "./manager-authentication";
 import { DeviceAccessDenied } from "./renewal-errors";
 
@@ -38,6 +39,7 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
     return json(await auth.loginDevice(request.headers, await request.json()), 201);
   }
   const devices = auth.devices;
+  if (path === "/v1/account" && method === "GET") return json(await devices.account(bearer(request)));
   if (path === "/v1/devices/presence" && method === "POST") return ok(devices.heartbeat(bearer(request)));
   if (path === "/v1/devices" && method === "GET") return json(await devices.devices(bearer(request)));
   if (path === "/v1/workbenches" && method === "GET") return json(await devices.workbenches(bearer(request)));
@@ -54,10 +56,12 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
 
 export const deviceHttp = async (auth: Authentication, origin: string, request: Request) => {
   const path = new URL(request.url).pathname;
-  if (path !== "/v1/device-login" && !/^\/v1\/(devices|workbenches)(\/|$)/.test(path)) return null;
+  if (!["/v1/device-login", "/v1/account"].includes(path) && !/^\/v1\/(devices|workbenches)(\/|$)/.test(path))
+    return null;
   try {
     return (await route(auth, origin, request, path)) ?? json({ error: "Method not allowed" }, 405);
   } catch (error) {
+    if (error instanceof AccountFeatureDenied) return json({ error: error.message }, 403);
     if (error instanceof z.ZodError || error instanceof SyntaxError) return json({ error: "Invalid request" }, 400);
     if (error instanceof DeviceAccessDenied) return json({ error: "Authentication unavailable" }, 401);
     throw error;

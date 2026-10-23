@@ -155,7 +155,7 @@ Write `published` as an unquoted date or UTC timestamp. Use a release's actual p
 
 Keep an original post's publication date when adding images or correcting it. Reuse relevant documentation screenshots. Label a recent capture when it illustrates an older release, and do not imply that a pictured control was introduced in that release unless the changelog confirms it.
 
-Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENTS.md) for concise feature ordering and recording checks. Markdown GIFs named `-light.gif` and `-dark.gif` use the page's active theme. Include both with matching alt text and one caption; the website hides the inactive variant.
+Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/write-blog-post/SKILL.md) for post structure, charts, recordings, code examples and publication checks. Markdown GIFs and SVGs named `-light` and `-dark` use the page's active theme. Include both with matching alt text and one caption; the website hides the inactive variant.
 
 ## Guides
 
@@ -379,6 +379,9 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0064 — Codex App Server runtime](../adrs/0064-codex-app-server-runtime.md)
 - [0065 — Stream command results over the shared client stream](../adrs/0065-stream-command-results-over-the-shared-client-stream.md)
 - [0076 — Separate account authority from content](../adrs/0076-separate-account-authority-from-content.md)
+- [0088 — Temporary tooltip hover reset](../adrs/0088-temporary-tooltip-hover-reset.md)
+- [0099 — Durable record query projections](../adrs/0099-durable-record-query-projections.md)
+- [0100 — One document per resource](../adrs/0100-one-document-per-resource.md)
 
 ## Lessons learned
 

@@ -11301,7 +11301,7 @@
           "type": "frame",
           "id": "w5N0C",
           "name": "cmp/AlertMessage",
-          "context": "Problems in the chat appear in the conversation as inline alerts. The Actions slot holds Retry, shown only for a temporary failure, and Close, shown on every problem.",
+          "context": "Shared AlertMessage: variable title and message wrap and scroll, capped at 384px or half the viewport and shrink within constrained flex parents. The scrollbar inherits the alert semantic foreground and sits at the far right of the scrolling area, beyond the fixed dismiss control. Error alerts include Copy error message in the bottom-right recovery footer; copy includes the full title and message, excluding controls.",
           "theme": {
             "status": "info"
           },

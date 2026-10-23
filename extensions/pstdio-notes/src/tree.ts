@@ -72,4 +72,5 @@ export const notesTreeNavigation = defineNavigationTree({
   owner: workbenchModes.project,
   slot: "content",
   view: notesTree.ref,
+  resourceScope: "project",
 });

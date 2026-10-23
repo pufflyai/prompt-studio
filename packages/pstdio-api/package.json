@@ -14,8 +14,7 @@
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
     "test": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun src/test-utils/run-api-tests.ts",
-    "test:coverage": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun src/test-utils/run-api-tests.ts --coverage",
-    "test:conformance": "SYNC_TEST_ENTRY=../pstdio-api/src/services/shared-files/checkpoint-handlers.integration.ts SYNC_TEST_SUBNET=10.254.230.0/24 bun ../pstdio-sync-contracts/scripts/isolated.ts"
+    "test:coverage": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun src/test-utils/run-api-tests.ts --coverage"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.2",
@@ -36,7 +35,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.3.15",
+    "@electric-sql/pglite": "0.4.6",
     "@pstdio/sdk": "workspace:*",
     "@types/bun": "1.4.2",
     "@types/cmd-shim": "5.0.2",
@@ -46,7 +45,6 @@
     "pstdio-planner": "workspace:*",
     "pstdio-skills": "workspace:*",
     "typescript": "6.0.2",
-    "workbench-fixture": "workspace:*",
-    "pstdio-notes": "workspace:*"
+    "workbench-fixture": "workspace:*"
   }
 }

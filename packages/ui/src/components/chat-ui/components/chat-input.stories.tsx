@@ -1,9 +1,10 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { type ComponentProps, useState } from "react";
+import { fn } from "storybook/test";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { AttachmentList } from "./attachment-list";
-import { keepDraft, walkTenPrompts, walkThreePrompts } from "./chat-history-story";
+import { keepDraft, walkFullHistory, walkMultilineHistory, walkThreePrompts } from "./chat-history-story";
 import { ChatInput } from "./chat-input";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 
@@ -299,22 +300,36 @@ export const QuestionMultiStep: Story = {
   },
 };
 
-export const PromptHistory: Story = {
-  render: (args) => (
+const ControlledHistoryInput = (props: ChatInputProps) => {
+  const [draft, setDraft] = useState(props.defaultState);
+  return (
     <Box w="32rem">
-      <ChatInput {...args} />
+      <ChatInput {...props} defaultState={draft} onChange={(text) => setDraft(createSerializedPromptState(text))} />
     </Box>
-  ),
+  );
+};
+
+export const PromptHistory: Story = {
+  render: (args) => <ControlledHistoryInput {...args} />,
   args: {
     defaultState: initialState,
     recentUserMessages: ["Summarize the plan", "Show the next steps", "Explain the project"],
+    onSelectionChange: fn(),
+    onEditorStateChange: fn(),
   },
   play: walkThreePrompts,
 };
-export const PromptHistoryCap: Story = {
+export const PromptHistoryFull: Story = {
+  tags: ["!manifest"],
   render: PromptHistory.render,
-  args: { defaultState: initialState, recentUserMessages: Array.from({ length: 12 }, (_, i) => `Prompt ${12 - i}`) },
-  play: walkTenPrompts,
+  args: { ...PromptHistory.args, recentUserMessages: Array.from({ length: 12 }, (_, i) => `Prompt ${12 - i}`) },
+  play: walkFullHistory,
+};
+export const PromptHistoryMultiline: Story = {
+  tags: ["!manifest"],
+  render: PromptHistory.render,
+  args: { ...PromptHistory.args, recentUserMessages: ["First line\nSecond line", "Earlier prompt"] },
+  play: walkMultilineHistory,
 };
 export const PromptHistoryDraft: Story = {
   render: PromptHistory.render,

@@ -159,6 +159,7 @@ const buildApp = async (
     dependencies,
     eventBus,
     extensionInstancesDBService,
+    extensionStorageDBService,
     extensionConnectionsDBService,
     installedExtensionSourcesDBService,
     projectService,
@@ -182,6 +183,7 @@ const buildApp = async (
 
   const sessionQueueLifecycle = createSessionQueueLifecycle();
   const sessionHookDeps = (): SessionHookDeps => deps;
+  const sessionHooks = createSessionLifecycleCallbacks(sessionHookDeps);
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
 
@@ -189,7 +191,7 @@ const buildApp = async (
     sessionsDb: sessionsDBService,
     validateCreatedAnchors: (source, anchors) => validateLegacyAnchors(deps, source, anchors),
     eventBus,
-    ...createSessionLifecycleCallbacks(sessionHookDeps),
+    ...sessionHooks,
     onCapacityAvailable: (input) => drainSessionQueue(input),
   });
   const settingsService = await createAppSettingsService({
@@ -266,6 +268,7 @@ const buildApp = async (
 
   const close = await startAppLifecycle({
     deps,
+    closeSessionHooks: sessionHooks.close,
     notificationWakeTimer,
     unsubscribeExtensionEvents,
     extensionRuntime,

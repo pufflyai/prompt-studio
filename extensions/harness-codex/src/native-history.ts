@@ -15,7 +15,7 @@ export const nativeItemMessage = (item: ThreadItem, turnId: string) => {
     };
   if (item.type === "userMessage")
     return {
-      id,
+      id: item.clientId ?? id,
       role: "user" as const,
       parts: item.content.flatMap((content) =>
         content.type === "text"
@@ -75,6 +75,8 @@ export const recoverNativeHistory = (input: Pick<HarnessRecoveryInput, "knownMes
 
 export const createNativeProjection = (events: HarnessEventSink, prompt?: SessionMessage, offset?: number) => {
   const messages = [...events.getMessages()];
+  // A native echo can confirm delivery before the RPC reply, including when that reply is lost.
+  const pendingUsers = new Map<string, SessionMessage>();
   if (offset && offset > messages.length) messages.length = offset;
   let pendingUserIndex: number | undefined;
   const publish = (message: SessionMessage, nativeUser = false) => {
@@ -84,10 +86,14 @@ export const createNativeProjection = (events: HarnessEventSink, prompt?: Sessio
       pendingUserIndex = undefined;
     }
     const known = index >= 0 ? messages[index] : undefined;
+    const fileIds = new Set(message.parts.filter((part) => part.type === "file").map((part) => part.fileId));
     const value = {
       ...message,
       createdAt: known?.createdAt ?? message.createdAt ?? Date.now(),
-      parts: [...message.parts, ...(known?.parts.filter((part) => part.type === "file") ?? [])],
+      parts: [
+        ...message.parts,
+        ...(known?.parts.filter((part) => part.type === "file" && !fileIds.has(part.fileId)) ?? []),
+      ],
     };
     if (index < 0) index = messages.length;
     const op = index < messages.length ? "replace" : "add";
@@ -102,9 +108,16 @@ export const createNativeProjection = (events: HarnessEventSink, prompt?: Sessio
   }
   return {
     publish,
+    prepareUser: (message: SessionMessage) => {
+      pendingUsers.set(message.id, message);
+      return () => pendingUsers.delete(message.id);
+    },
     receive: (item: ThreadItem, turnId: string) => {
       const message = nativeItemMessage(item, turnId);
-      if (message) publish(message, item.type === "userMessage");
+      if (message) {
+        const pending = pendingUsers.get(message.id);
+        publish(pending ?? message, item.type === "userMessage" && !item.clientId);
+      }
     },
   };
 };

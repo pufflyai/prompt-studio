@@ -1,7 +1,7 @@
 import { IconButton } from "@chakra-ui/react";
 import { Tooltip, WindowTabs, WindowTitleBar } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
-import { useWorkbenchStore, WorkbenchPanelToggles } from "@pstdio/workbench/react";
+import { useWorkbenchStore, WorkbenchFullscreenToggle, WorkbenchPanelToggles } from "@pstdio/workbench/react";
 import { Folder, Plus } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -37,7 +37,15 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
     else void controller.select(workbench, id);
   };
   return (
-    <WindowTitleBar platform={platform} actions={<WorkbenchPanelToggles workbench={workbench} />}>
+    <WindowTitleBar
+      platform={platform}
+      actions={
+        <>
+          <WorkbenchPanelToggles workbench={workbench} />
+          <WorkbenchFullscreenToggle workbench={workbench} />
+        </>
+      }
+    >
       <WindowTabs
         tabs={tabs}
         selectedId={typeof selected === "string" ? selected : undefined}
@@ -46,7 +54,7 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
         onClose={(id) => void controller.close(workbench, id)}
         onReorder={(id, targetId) => controller.reorder(workbench, id, targetId)}
       />
-      <Tooltip content="Open / create project" openDelay={300} positioning={{ placement: "bottom" }}>
+      <Tooltip content="Open / create project" positioning={{ placement: "bottom" }}>
         <IconButton
           aria-label="Open / create project"
           variant="ghost"

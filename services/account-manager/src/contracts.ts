@@ -20,6 +20,11 @@ export const deviceRegistrationSchema = deviceProfileSchema.extend({ accountId: 
 export const deviceSchema = z.strictObject({ accountId: identitySchema, deviceId: identitySchema });
 export const workbenchSchema = z.strictObject({ accountId: identitySchema, workbenchId: identitySchema });
 export const accountRequestSchema = z.strictObject({ requestId: identitySchema, accountId: identitySchema });
+export const accountFeatureSchema = z.strictObject({
+  accountId: identitySchema,
+  feature: z.enum(["relay"]),
+  enabled: z.boolean(),
+});
 export const reconciliationSchema = accountRequestSchema.extend({
   owner: ownerSchema,
   state: z.enum(["active", "disabled"]),

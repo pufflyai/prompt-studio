@@ -98,6 +98,9 @@ export const workbenchPanelDefinitions = {
 } as const;
 
 export const workbenchSlots = {
+  /** Controls rendered inside the device-local Developer settings surface. */
+  developerSettings: hostRef("settings-panel", "developer.settings"),
+  globalSettings: hostRef("settings-panel", "global.settings"),
   projectSettings: hostRef("settings-panel", "project.settings"),
   /** Custom controls shown in the owner's extension detail Settings tab. */
   extensionSettings: hostRef("settings-panel", "extension.settings"),

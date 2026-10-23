@@ -225,6 +225,7 @@ test("a cloud project is not deleted from one device while the account syncs it"
       login: { managerOrigin: "https://accounts.example.test", relayOrigin: "", accountId: "a", deviceId: "d" },
       cloudProjects: [project.id],
       cloudProjectsLoaded: true,
+      features: { relay: true },
     }),
   };
   const routes = new OpenAPIHono<AppBindings>();

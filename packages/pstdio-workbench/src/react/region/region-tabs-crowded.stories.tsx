@@ -2,7 +2,7 @@ import { Box, Text } from "@chakra-ui/react";
 import type { PageRef } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -80,11 +80,25 @@ export const FullTitle: Story = {
   play: async ({ canvasElement }) => {
     const tab = await within(canvasElement).findByRole("tab", { name: "a-very-long-resource-name-component.tsx" });
     const page = within(canvasElement.ownerDocument.body);
+    const short = within(canvasElement).getByRole("tab", { name: "Diff" });
+    // Let the label's ResizeObserver commit before sending a synthetic hover.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await userEvent.hover(tab);
     await expect(await page.findByRole("tooltip")).toHaveTextContent("a-very-long-resource-name-component.tsx");
-    await userEvent.keyboard("{Escape}");
     await userEvent.unhover(tab);
+    await userEvent.hover(short);
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
+    await userEvent.unhover(short);
+    await userEvent.hover(tab);
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("a-very-long-resource-name-component.tsx");
+    await userEvent.unhover(tab);
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
     tab.focus();
     await expect(await page.findByRole("tooltip")).toHaveTextContent("a-very-long-resource-name-component.tsx");
+    await userEvent.keyboard("{Escape}");
+    short.focus();
+    await userEvent.hover(short);
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
   },
 };

@@ -120,8 +120,6 @@ const updateBoardAttribute = (rowId: string, attributeId: string, value: unknown
 };
 const getBoardColumnConfig = (groupKey: string) => ({
   color: isIssueStatus(groupKey) ? statusColors[groupKey] : "gray",
-  canDragIn: true,
-  canDragOut: true,
 });
 const IssueInspector = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;

@@ -53,7 +53,7 @@ const UpdateChannelNavigation = () => {
     const next = createWorkbench();
     const bridge = createDesktopBridge();
     next.registerModule(createSettingsModule());
-    next.registerModule(createPerformanceModule());
+    next.registerModule(createPerformanceModule(next.settings));
     next.registerModule(createUpdatesModule(bridge));
     // The panel registers once the desktop reports a channel.
     void bridge

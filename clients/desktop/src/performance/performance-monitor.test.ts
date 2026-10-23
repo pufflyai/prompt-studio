@@ -71,6 +71,7 @@ const createHarness = (enabled = false, cpuCount = 1) => {
   return {
     endpoint,
     events,
+    options,
     monitor: new DesktopPerformanceMonitor(options),
     sample,
     preference: () => preference,
@@ -236,4 +237,86 @@ describe("desktop performance monitor", () => {
 
     expect(harness.monitor.snapshot()?.processes.find((process) => process.role === "workbench")?.cpuPercent).toBe(20);
   });
+});
+
+test("starting the same enabled monitor twice does not duplicate its endpoint or collector", async () => {
+  const harness = createHarness(true);
+  await harness.monitor.start();
+  await harness.monitor.start();
+  expect(harness.endpoint.opened).toBe(1);
+  await harness.monitor.stop();
+  expect(harness.endpoint.closed).toBe(1);
+});
+
+test("failed startup releases capture and sampling before a later retry", async () => {
+  const harness = createHarness();
+  let capturesClosed = 0;
+  harness.options.createCapture = () => ({
+    sample: async () => {},
+    snapshot: () => {
+      throw new Error("unused");
+    },
+    close: async () => {
+      capturesClosed++;
+    },
+  });
+  const open = harness.options.openEndpoint;
+  harness.options.openEndpoint = async () => {
+    throw new Error("endpoint denied");
+  };
+  await expect(harness.monitor.setEnabled(true)).rejects.toThrow("endpoint denied");
+  expect(capturesClosed).toBe(1);
+  expect(harness.scheduled()).toBe(false);
+  expect(harness.monitor.snapshot()).toBeNull();
+  harness.options.openEndpoint = open;
+  await harness.monitor.setEnabled(true);
+  expect(harness.endpoint.opened).toBe(1);
+  await harness.monitor.stop();
+});
+
+test("a failed capture close still closes the endpoint and clears live collection", async () => {
+  const harness = createHarness();
+  harness.options.createCapture = () => ({
+    sample: async () => {},
+    snapshot: () => {
+      throw new Error("unused");
+    },
+    close: async () => {
+      throw new Error("recording failed");
+    },
+  });
+  await harness.monitor.setEnabled(true);
+  await expect(harness.monitor.stop()).rejects.toThrow("recording failed");
+  expect(harness.endpoint.closed).toBe(1);
+  expect(harness.scheduled()).toBe(false);
+  expect(harness.monitor.snapshot()).toBeNull();
+});
+
+test("capture owners share collection and last disposal stops it without changing the preference", async () => {
+  const harness = createHarness(true);
+  await harness.monitor.start();
+  const first = await harness.monitor.retainCapture();
+  const second = await harness.monitor.retainCapture();
+  expect(harness.endpoint.opened).toBe(1);
+  await first();
+  expect(harness.scheduled()).toBe(true);
+  await second();
+  expect(harness.scheduled()).toBe(false);
+  expect(harness.monitor.snapshot()).toBeNull();
+  expect(harness.preference()).toBe(true);
+  const next = await harness.monitor.retainCapture();
+  expect(harness.endpoint.opened).toBe(2);
+  await next();
+});
+
+test("disabling after the last capture release clears the saved preference before another owner arrives", async () => {
+  const harness = createHarness(true);
+  const release = await harness.monitor.retainCapture();
+  await release();
+  await harness.monitor.setEnabled(false);
+  expect(harness.preference()).toBe(false);
+  const next = await harness.monitor.retainCapture();
+  expect(harness.scheduled()).toBe(false);
+  expect(harness.endpoint.opened).toBe(1);
+  await next();
 });

@@ -3,6 +3,7 @@ import { createServer } from "node:net";
 import { connectDevice } from "../src/authority.fixture";
 import type * as Implementation from "../src/index";
 import { createOwnedTls } from "../src/owned-tls.fixture";
+import { smokeFeatures } from "./smoke-features";
 
 export const smokeAuthentication = async (
   databaseUrl: string,
@@ -47,6 +48,7 @@ export const smokeAuthentication = async (
     reader.releaseLock();
     const ca = await Bun.file(tls.cert).text();
     const grant = await connectDevice(manager, accountId);
+    await smokeFeatures({ databaseUrl, accountId, origin, ca, device: grant });
     const deviceHeaders = { authorization: `Bearer ${grant.token}` };
     const heartbeat = await fetch(`${origin}/v1/devices/presence`, {
       method: "POST",

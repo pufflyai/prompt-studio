@@ -17,7 +17,15 @@ export const serverEnvironment = (env?: Record<string, string>) => {
 };
 export const createAppServerTransport = (env: Record<string, string>, deps: SpawnDeps) => {
   const child = deps.spawnProcess(
-    ["app-server", "--listen", "stdio://", "--enable", "default_mode_request_user_input"],
+    [
+      "app-server",
+      "--listen",
+      "stdio://",
+      "--enable",
+      "default_mode_request_user_input",
+      "-c",
+      "thread_unload_delay_secs=0",
+    ],
     { env },
   );
   let closed = false;
