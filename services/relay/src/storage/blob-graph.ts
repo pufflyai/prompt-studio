@@ -1,5 +1,5 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { ownerManifestFanout, syncIdSchema } from "pstdio-sync-contracts";
+import { blobReferenceFanout, syncIdSchema } from "pstdio-sync-contracts";
 import { rejection, SyncRejection } from "./accounts";
 import type { BlobAddress } from "./blobs";
 import type { RelayTransaction } from "./database";
@@ -8,7 +8,7 @@ import { syncBlobs } from "./document-schema";
 /** The account lock makes completed-child checks and parent publication indivisible with cleanup. */
 export const requireBlobChildren = async (transaction: RelayTransaction, address: BlobAddress, children: string[]) => {
   if (
-    children.length > ownerManifestFanout ||
+    children.length > blobReferenceFanout ||
     new Set(children).size !== children.length ||
     children.some((id) => !syncIdSchema.safeParse(id).success || id === address.blobId)
   )
