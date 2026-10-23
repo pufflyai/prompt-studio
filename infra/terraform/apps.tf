@@ -16,7 +16,7 @@ locals {
       PSX_PORT    = "8080"
       S3_ENDPOINT = "https://${var.spaces_region}.digitaloceanspaces.com"
       S3_REGION   = var.spaces_region
-      S3_BUCKET   = digitalocean_spaces_bucket.psx.name
+      S3_BUCKET   = one(digitalocean_spaces_bucket.psx[*].name)
     }
     relay = {
       RELAY_HOST  = "0.0.0.0"

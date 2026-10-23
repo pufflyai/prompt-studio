@@ -326,3 +326,29 @@ test("same-kind menu slots stay scoped to their resource owner", () => {
     ).toBe(false);
   }
 });
+
+test("an owner-qualified resource condition registers in the local kind's context menu", () => {
+  const { registrations } = buildDashboardExtensionMenuRegistrations({
+    ...metadata,
+    resourceKinds: [
+      {
+        id: "alice.notes.note",
+        localId: "note",
+        extensionId: "alice.notes",
+        menuSlots: [{ id: "actions", placement: "context-menu", access: "public" }],
+      },
+    ],
+    commands: [{ id: "alice.notes.command.pin", extensionId: "alice.notes", title: "Pin" }],
+    menuContributions: [
+      {
+        id: "alice.notes.menu.pin",
+        extensionId: "alice.notes",
+        commandId: "alice.notes.command.pin",
+        slotId: "alice.notes.resource-kind.note.actions",
+        label: "Pin",
+        when: { resourceType: ["alice.notes.note"] },
+      },
+    ],
+  });
+  expect(registrations[0]?.menuItems.map((item) => item.menuPath)).toEqual([resourceContextMenuPath("note")]);
+});

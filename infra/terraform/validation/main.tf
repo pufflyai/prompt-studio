@@ -11,6 +11,7 @@ module "cloud" {
   bucket_name     = "pstdio-validation-only"
   host            = "base.example.com"
   dns_zone        = "example.com"
+  services        = ["relay", "manager", "psx"]
   image_digests = {
     relay   = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     manager = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"

@@ -1,4 +1,4 @@
-import { createReadBoundary, resolveArtifactMountRoot } from "pstdio-extensions";
+import { createReadBoundary } from "pstdio-extensions";
 import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import { watchArtifactMount } from "../../features/extensions/artifact-mount-watch/mount-watcher";
 import { resolveWorkspaceFilesPath } from "../../features/extensions/command-environment/workspace-files";
@@ -31,9 +31,8 @@ export const startRelayExtension = async (input: {
   const mounts = repoRoot
     ? snapshot.runtime.artifactMounts
         .filter((mount) => mount.extensionId === extensionId)
-        .map((mount) => ({
-          root: resolveArtifactMountRoot({ repoRoot, name: mount.name, mountPath: mount.relativePath }),
-          mount: createSharedArtifactMount(deps, {
+        .map((mount) =>
+          createSharedArtifactMount(deps, {
             projectId: owner.workbenchId,
             extensionId,
             repoRoot,
@@ -46,7 +45,7 @@ export const startRelayExtension = async (input: {
             resolveWriteRoot: () => resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write"),
             onWrite: (path) => deps.artifactMountWrites.record(path),
           }),
-        }))
+        )
     : [];
   let connection: ReturnType<typeof createDocumentRelayConnection> | undefined;
   const watches: ReturnType<typeof watchArtifactMount>[] = [];
@@ -54,7 +53,7 @@ export const startRelayExtension = async (input: {
     const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(
       () => null,
     );
-    if (writableRoot === repoRoot) await Promise.all(mounts.map(({ mount }) => mount.refresh()));
+    if (writableRoot === repoRoot) await Promise.all(mounts.map((mount) => mount.refresh()));
   };
   try {
     const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(

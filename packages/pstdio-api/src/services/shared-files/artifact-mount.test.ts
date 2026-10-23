@@ -124,3 +124,8 @@ test("write notifications keep the workspace path used by filesystem watchers", 
   await mount.writeText("note.md", "saved through linked workspace");
   expect(writes).toContain(join(alias, ".pstdio/extension-storage/example.documents/documents/note.md"));
 });
+
+test("a mount reports the full-ID folder that filesystem watchers must observe", async () => {
+  const f = await fixture();
+  expect(f.mount().root).toBe(f.pathFor("documents"));
+});

@@ -40,7 +40,8 @@ This page describes `main`, which ships in the release after 0.43.x. Release 0.4
 
 A prototype is a working draft, often an HTML page with TypeScript build sources and
 screenshots. It has no separate storage system. Keep artifact drafts and prototypes in
-`.pstdio/extension-storage/pstdio-artifacts/drafts/<name>/`.
+`.pstdio/extension-storage/pstdio.pstdio-artifacts/drafts/<name>/`. From 0.46 the
+earlier `pstdio-artifacts/` path is a deprecated alias to the same folder.
 
 Publishing through `pst pstdio-artifacts publish` saves a snapshot under the Artifacts
 extension's storage. The source draft can stay beside it for later edits. Keep the

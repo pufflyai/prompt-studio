@@ -38,7 +38,9 @@ make its GHCR package public. Pin its released digest in the existing Terraform 
 and relay. The module creates a private PSX bucket, database and runtime login,
 routes the service under psx_path, and runs its migration before deployment.
 
-Supply psx_secrets through secure operator configuration. The S3 credentials
+Add psx to the module's services and supply psx_secrets through secure
+operator configuration. Without psx in services, the module creates no PSX
+bucket, database or app service. The S3 credentials
 must grant access to the package bucket. PSX_PUBLISH_TOKEN authorises core
 publication and withdrawal. Runtime requests use the service login; only the
 migration job receives the database owner login.
