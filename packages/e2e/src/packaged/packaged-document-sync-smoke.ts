@@ -109,17 +109,24 @@ export const registerDocumentSyncSmokeTests = () =>
         const quarantine = join(root, "state", "sync-quarantine");
         await waitFor(async () => (await readdir(quarantine).catch(() => [])).some((file) => file.endsWith(".json")));
         await waitFor(async () => (await syncState()) === "needs-attention");
+        // Healthy uploads continue after an unreadable update; only the new allocation can add one now.
+        const before = new Map([...peer.documents].map(([id, document]) => [id, document.updates.length]));
+        await command("allocate");
+        await waitFor(() =>
+          [...peer.documents].some(([id, document]) => document.updates.length > (before.get(id) ?? 0)),
+        );
         const files = await readdir(quarantine);
         const saved = await Bun.file(join(quarantine, files[0]!)).text();
         expect(saved).toContain("invalidciphertext000000");
         expect(saved).not.toContain("packaged-secret");
-        const wire = JSON.stringify(
-          [...peer.documents.values()].map((document) => ({
-            payload: document.payload,
-            updates: document.updates.map((update) => update.payload),
-          })),
-        );
-        expect(wire).not.toContain("packaged-secret");
+        const payloads = [...peer.documents.values()].flatMap((document) => [
+          ...(document.payload ? [document.payload] : []),
+          ...document.updates.map((update) => String(update.payload)),
+        ]);
+        for (const payload of payloads) {
+          expect(payload).not.toContain("packaged-secret");
+          expect(Buffer.from(payload, "base64").toString("latin1")).not.toContain("packaged-secret");
+        }
       } finally {
         await stopProcess(host.child);
         await peer.stop();
