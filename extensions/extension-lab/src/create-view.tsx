@@ -15,12 +15,7 @@ export const viewBackgrounds = {
 };
 
 interface ExampleStoreConnection {
-  connect(
-    host: GuestHost,
-    props: PropsStore<ExampleProps>,
-    onError: (error: unknown) => void,
-    onReady?: () => void,
-  ): () => void;
+  connect(host: GuestHost, onError: (error: unknown) => void, onReady?: () => void): () => void;
 }
 interface ExampleRootProps {
   Component: ComponentType<{ input: ExampleViewInput }>;
@@ -39,11 +34,10 @@ const ExampleRoot = (props: ExampleRootProps) => {
     () =>
       store?.connect(
         bridge,
-        propsStore,
         (error) => setError(String(error)),
         () => setReady(true),
       ),
-    [bridge, propsStore, store],
+    [bridge, store],
   );
   const input = { host, resource: hostProps.resource ?? hostProps.pageLocation?.resource };
   return (

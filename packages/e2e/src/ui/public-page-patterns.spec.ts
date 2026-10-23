@@ -133,6 +133,40 @@ test("Boombox retains its player across pages and disposes it when its extension
   expect(await playerFrame!.evaluate((frame) => frame.isConnected)).toBe(false);
 });
 
+test("example edits reach other views before the save finishes", async ({ page }) => {
+  await openExample(page, "boombox", "boombox.track/paper-moon");
+  const playlist = view(page, "Lazy Sunday");
+  const player = view(page, "Player");
+  await expect(playlist.getByRole("button", { name: "Unlike Paper Moon", exact: true })).toBeVisible();
+  await expect(player.getByRole("button", { name: "Unlike current track", exact: true })).toBeVisible();
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let received = () => {};
+  const requested = new Promise<void>((resolve) => {
+    received = resolve;
+  });
+  await page.route("**/pstdio.extension-lab.command.state.update/execute", async (route) => {
+    received();
+    await held;
+    await route.continue();
+  });
+  const saved = waitForExampleSave(page, "boombox", "likedIds");
+  try {
+    await playlist.getByRole("button", { name: "Unlike Paper Moon", exact: true }).click();
+    await requested;
+    await expect(playlist.getByRole("button", { name: "Like Paper Moon", exact: true })).toBeVisible();
+    await expect(player.getByRole("button", { name: "Like current track", exact: true })).toBeVisible();
+  } finally {
+    release();
+  }
+  await saved;
+  await page.unroute("**/pstdio.extension-lab.command.state.update/execute");
+  await page.reload();
+  await expect(player.getByRole("button", { name: "Like current track", exact: true })).toBeVisible();
+});
+
 test("Zipline opens its inspector and persists a status change", async ({ page }) => {
   await openExample(page, "zipline");
   await page.getByText("ZIP-142", { exact: true }).click();
