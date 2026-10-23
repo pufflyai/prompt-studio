@@ -22,6 +22,13 @@
       "when": 1792452882026,
       "tag": "0002_wise_jean_grey",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792725520673,
+      "tag": "0003_quiet_jamie_braddock",
+      "breakpoints": true
     }
   ]
 }

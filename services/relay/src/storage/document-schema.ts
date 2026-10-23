@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { bigint, index, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 // Every column is routing or storage metadata (PRD 0014 R9), except each latest state's small encrypted
@@ -88,6 +89,8 @@ export const syncBlobs = pgTable(
       .references(() => syncProjects.projectKey, { onDelete: "cascade" }),
     blobId: text().notNull(),
     spaceOwner: text(),
+    // Immutable opaque child IDs; old protocol uploads remain leaves.
+    children: text().array().notNull().default(sql`'{}'::text[]`),
     sha256: text().notNull(),
     byteLength: bigint({ mode: "number" }).notNull(),
     status: text({ enum: ["open", "completed", "deleting"] }).notNull(),

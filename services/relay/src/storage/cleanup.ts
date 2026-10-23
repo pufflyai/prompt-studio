@@ -2,6 +2,7 @@ import { and, eq, lte, sql } from "drizzle-orm";
 import type { createRelayAssets } from "../assets/assets";
 import type { RelayLimits } from "../limits";
 import { lockAccount, removeRows } from "./accounts";
+import { protectedBlobGraph } from "./blob-graph";
 import { blobOwner } from "./blobs";
 import type { connectRelay } from "./database";
 import { syncBlobs, syncObjectDeletions, syncStates, syncUpdates } from "./document-schema";
@@ -14,10 +15,8 @@ const batchSize = 500;
 const unusedBlob = (cutoff: Date) => sql`(
   (b."status" = 'open' AND b."createdAt" <= ${cutoff})
   OR (b."status" = 'completed' AND coalesce(b."lastUsedAt", b."completedAt") <= ${cutoff}
-    AND NOT EXISTS (SELECT 1 FROM relay_sync_updates u
-      WHERE u."projectKey" = b."projectKey" AND u."blobIds" @> ARRAY[b."blobId"])
-    AND NOT EXISTS (SELECT 1 FROM relay_sync_states s
-      WHERE s."projectKey" = b."projectKey" AND s."blobIds" @> ARRAY[b."blobId"]))
+    AND NOT EXISTS (SELECT 1 FROM protected p
+      WHERE p."projectKey" = b."projectKey" AND p."blobId" = b."blobId"))
 )`;
 
 export interface SyncCleanupOptions {
@@ -46,6 +45,7 @@ export const cleanupSync = async (
   const accounts = await connection.run(
     (db) =>
       db.execute<{ accountId: string }>(sql`
+        ${protectedBlobGraph(cutoff)}
         SELECT DISTINCT p."accountId" FROM relay_sync_blobs b
         JOIN relay_sync_projects p ON p."projectKey" = b."projectKey" WHERE ${unusedBlob(cutoff)}`),
     signal,
@@ -58,6 +58,7 @@ export const cleanupSync = async (
         db.transaction(async (transaction) => {
           await lockAccount(transaction, accountId);
           await transaction.execute(sql`
+            ${protectedBlobGraph(cutoff)}
             UPDATE relay_sync_blobs b SET "status" = 'deleting' FROM relay_sync_projects p
             WHERE p."projectKey" = b."projectKey" AND p."accountId" = ${accountId} AND ${unusedBlob(cutoff)}`);
         }),
