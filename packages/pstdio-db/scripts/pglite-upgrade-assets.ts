@@ -1,7 +1,7 @@
 import { cp, mkdir, readdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { PGlite } from "@electric-sql/pglite";
+import { buildEmptyDatabase } from "./build-empty-database";
 import { vendorPgliteAssets } from "./pglite-assets";
 
 const require = createRequire(import.meta.url);
@@ -17,15 +17,7 @@ export const buildPgliteUpgradeAssets = async (directory: string) => {
   const icu = join(next, "icu.76.tgz");
   // Preserve the package's actual data, rather than the default small ICU bundle.
   await cp(join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz"), icu);
-  const db = await PGlite.create({ database: "template1", username: "postgres" });
-  try {
-    await db.exec("drop database postgres");
-    await db.exec("alter database template0 is_template false");
-    await db.exec("drop database template0");
-    await Bun.write(join(next, "empty-database.tar.gz"), await db.dumpDataDir("gzip"));
-  } finally {
-    await db.close();
-  }
+  await buildEmptyDatabase(join(next, "empty-database.tar.gz"));
   // pgDump's public API resolves WASM relative to its published JS and cannot accept a module.
   // Keep that unmodified dependency external to the worker bundle, with its adjacent assets.
   const dumpSource = dirname(dirname(require.resolve("@electric-sql/pglite-tools/pg_dump")));

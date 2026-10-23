@@ -14,6 +14,7 @@
     }
   },
   "scripts": {
+    "postinstall": "bun scripts/build-empty-database.ts",
     "vendor:pglite": "bun run scripts/vendor-pglite-assets.ts",
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
     "analyze-bundle": "bun build ./src/index.ts --outdir ./dist --target bun --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",

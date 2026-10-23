@@ -31,7 +31,7 @@ if (phase === "export") {
     fsBundle,
     database: "template1",
     username: "postgres",
-    loadDataDir: engine ? Bun.file(join(engine, "empty-database.tar.gz")) : undefined,
+    loadDataDir: Bun.file(join(engine ?? join(import.meta.dirname, "../../vendor/pglite"), "empty-database.tar.gz")),
   });
   try {
     await importPgliteDatabase(db, archive);

@@ -37,10 +37,10 @@ export const openPglite = async (dataDir: string, options: PGliteOptions = {}, o
 };
 
 export const initializePglite = async (dataDir: string, options: PGliteOptions, onImageRestored = () => {}) => {
-  // initdb otherwise loads full ICU twice and populates hundreds of unused named collations.
-  // The active engine still loads full ICU and creates explicitly qualified query collations.
+  // Private preparation does not execute locale queries. Load full ICU only in the active
+  // engine, where queries create explicitly qualified collations as needed.
   const { icuDataDir: _icuDataDir, ...bootstrap } = options;
-  const db = await openPglite(dataDir, options.loadDataDir ? options : bootstrap, onImageRestored);
+  const db = await openPglite(dataDir, bootstrap, onImageRestored);
   try {
     await db.waitReady;
   } finally {

@@ -108,7 +108,11 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
   if (!wasmFile && !dataFile && !initialDatabase && !icu) {
     const require = createRequire(import.meta.url);
     const icuPath = path.join(path.dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
-    return { ...identity, icuDataDir: Bun.file(icuPath) };
+    return {
+      ...identity,
+      icuDataDir: Bun.file(icuPath),
+      loadDataDir: Bun.file(path.join(import.meta.dirname, "../../vendor/pglite/empty-database.tar.gz")),
+    };
   }
   if (!wasmFile || !dataFile || !initialDatabase || !icu) {
     throw new Error(
