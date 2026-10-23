@@ -109,3 +109,15 @@ Turn off the switch. The meter and its popover disappear. Sampling, the frame co
 Monitoring samples Electron's process metrics every 2 seconds. It keeps at most 30 seconds of CPU history per live process and the latest 50 slow frames. The workbench counts frames with `requestAnimationFrame` and reports its frame rate and paused extensions to the desktop app about once per second. Renderers send slow frames at most once per second. The meter reads a new snapshot every 2 seconds.
 
 The packaged desktop benchmarks measure the idle workbench with monitoring off and on; see [Tests](development/0002-testing.md#desktop-benchmarks).
+
+## Runtime capture
+
+Desktop snapshots use schema version 2 and keep the version-1 fields used by the existing meter. The `capture` field adds a capture id, host version, platform, timestamps, actual sample gaps, and a rolling history of at most 150 samples and 512 KiB. `pst performance` prints this same capture.
+
+The desktop observes its local Bun runtime from a separate process. A busy runtime therefore cannot prevent its CPU and memory readings. CPU is a percentage of one logical core; a process using several cores can exceed 100%. A new process or PID reuse starts a new CPU baseline. The first CPU percentage is unavailable, not zero.
+
+Memory fields use bytes. `residentBytes` is current resident memory. macOS also supplies `physicalFootprintBytes`, which includes compressed memory, and `peakPhysicalFootprintBytes` for its lifetime peak. Windows supplies `privateCommittedBytes` separately from resident working set. Linux supplies resident and peak resident memory from procfs. Missing optional measurements are `null`. Shared working sets overlap, so adding process memory is not an exact application total.
+
+The host also times an authenticated backend response. `reply` records a finite response time. `timeout` records how long the host waited and leaves response time unavailable; it must not enter a successful-response percentile. A missing or disconnected backend is `unavailable`. This measurement includes transport time and does not identify the cause of a delay.
+
+While enabled, the capture writes sanitized JSONL records under the desktop user-data directory's `performance-recordings` folder. Four files of at most 1 MiB each rotate by whole record. Live history clears on disable; saved recordings survive. Capture records contain measurements and process identities, not conversation content, credentials, raw output, or private source paths. The directory uses owner-only access on Unix and a current-user ACL on Windows.

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { bigint, index, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 // Every column is routing or storage metadata (PRD 0014 R9), except each latest state's small encrypted
@@ -88,6 +89,8 @@ export const syncBlobs = pgTable(
       .references(() => syncProjects.projectKey, { onDelete: "cascade" }),
     blobId: text().notNull(),
     spaceOwner: text(),
+    // Immutable opaque child IDs; old protocol uploads remain leaves.
+    children: text().array().notNull().default(sql`'{}'::text[]`),
     sha256: text().notNull(),
     byteLength: bigint({ mode: "number" }).notNull(),
     status: text({ enum: ["open", "completed", "deleting"] }).notNull(),
@@ -96,7 +99,10 @@ export const syncBlobs = pgTable(
     // Set when a stored update or latest state that listed this blob is removed.
     lastUsedAt: timestamp({ withTimezone: true, mode: "date" }),
   },
-  (table) => [primaryKey({ columns: [table.projectKey, table.blobId] })],
+  (table) => [
+    primaryKey({ columns: [table.projectKey, table.blobId] }),
+    index("relay_sync_blobs_children").using("gin", table.children),
+  ],
 );
 
 // Payload objects that may have lost their row. Cleanup deletes those no row points at.

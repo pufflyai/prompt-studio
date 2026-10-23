@@ -20,7 +20,13 @@ const isDesktopSnapshot = (value: unknown) =>
   typeof value === "object" &&
   value !== null &&
   "version" in value &&
-  value.version === 1 &&
+  (value.version === 1 ||
+    (value.version === 2 &&
+      "capture" in value &&
+      typeof value.capture === "object" &&
+      value.capture !== null &&
+      "version" in value.capture &&
+      value.capture.version === 2)) &&
   "host" in value &&
   value.host === "desktop" &&
   "processes" in value &&

@@ -39,3 +39,7 @@ describe("shouldEnsureApiForCommand", () => {
     expect(shouldEnsureApiForCommand({ _: ["inbox"] })).toBe(true);
   });
 });
+
+test("observes process metrics without depending on the runtime under observation", () => {
+  expect(shouldEnsureApiForCommand({ _: ["performance-observer"] })).toBe(false);
+});

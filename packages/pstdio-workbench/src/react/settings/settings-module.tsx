@@ -40,7 +40,7 @@ const openSettings = (input: { args: unknown; ctx: WorkbenchModuleContext; hasPr
   const itemId = requested && "itemId" in requested ? requested.itemId : undefined;
   const requestedPanel = typeof panelId === "string" ? ctx.settings.getPanel(panelId) : undefined;
   const isVisible = (entry: NonNullable<typeof requestedPanel>) =>
-    isSettingsScopeVisible(entry.scope, hasProjectScope()) && ctx.context.matches(entry.when);
+    !entry.parentPanelId && isSettingsScopeVisible(entry.scope, hasProjectScope()) && ctx.context.matches(entry.when);
   const panel =
     (requestedPanel && isVisible(requestedPanel) ? requestedPanel : undefined) ??
     ctx.settings.listPanels().find(isVisible);

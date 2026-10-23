@@ -1,0 +1,2 @@
+ALTER TABLE "relay_sync_blobs" ADD COLUMN "children" text[] DEFAULT '{}'::text[] NOT NULL;--> statement-breakpoint
+CREATE INDEX "relay_sync_blobs_children" ON "relay_sync_blobs" USING gin ("children");
