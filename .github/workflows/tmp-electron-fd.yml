@@ -1,0 +1,18 @@
+name: tmp electron fd repro
+on: pull_request
+jobs:
+  repro:
+    if: github.head_ref == 'chore/tmp-linux-electron-fd-repro'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: .github/tmp-electron-fd
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm init -y >/dev/null && npm i electron@43.7.0 ws@8
+      - run: SPAWN=0 xvfb-run -a node driver.js
+      - run: SPAWN=1 xvfb-run -a node driver.js

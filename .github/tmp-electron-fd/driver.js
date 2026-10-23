@@ -1,0 +1,20 @@
+const { spawn, execSync } = require("node:child_process");
+const WebSocket = require("ws");
+const electron = require("electron");
+const app = spawn(electron, ["--no-sandbox", "--remote-debugging-port=9333", "main.js"], { stdio: ["ignore", "pipe", "ignore"] });
+let childPid = null;
+app.stdout.on("data", (d) => { const m = String(d).match(/CHILD (\d+)/); if (m) childPid = m[1]; });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+(async () => {
+  await sleep(2000);
+  const info = await (await fetch("http://127.0.0.1:9333/json/version")).json();
+  const ws = new WebSocket(info.webSocketDebuggerUrl);
+  await new Promise((r) => ws.once("open", r));
+  await sleep(3000);
+  if (childPid) console.log("child sockets:", execSync(`ls -l /proc/${childPid}/fd | grep -c socket || true`).toString().trim());
+  const t = Date.now();
+  ws.close();
+  await new Promise((r) => ws.once("close", r));
+  console.log(`SPAWN=${process.env.SPAWN} ws close took ${Date.now() - t} ms`);
+  app.kill("SIGKILL"); process.exit(0);
+})();
