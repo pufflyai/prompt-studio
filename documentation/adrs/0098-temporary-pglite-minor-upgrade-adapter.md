@@ -2,7 +2,7 @@
 
 Proposed: 2026-10-23
 
-Status: Proposed. Qualification is complete for the small released fixture and the synthetic transfer cases below. Production transition code is not implemented.
+Status: Proposed. The isolated transfer and recovery modules are implemented and tested. They are not connected to application startup. Qualification covers the released fixture and synthetic transfer cases below.
 
 ## Context
 
@@ -63,9 +63,9 @@ The probes use macOS arm64. Windows/Linux packaging, interruption recovery, disk
 
 Remove the old-engine adapter and its assets when the supported upgrade policy no longer includes 0.3 homes, or when an upstream supported bounded transition replaces it. Keep engine identity and recovery rules only while they protect a supported transition. Do not keep the adapter as a general-purpose database export framework.
 
-## Proposed recovery states
+## Recovery states
 
-The next slice will enforce these states under the existing external database lock. They describe a process-interruption protocol; they do not claim power-loss qualification yet.
+The isolated recovery module enforces these states when called under the existing external database lock. The application does not call it yet. They describe a process-interruption protocol; they do not claim power-loss qualification.
 
 The sibling transfer directory owns an immutable source copy, archive and candidate target. Publication moves the original active home into that directory, then moves the verified target into the active path. The engine identity travels inside the verified target. There is no separately mutable phase flag.
 
@@ -79,6 +79,14 @@ The sibling transfer directory owns an immutable source copy, archive and candid
 | Active path missing and no renamed original exists | Do not infer authority from an export copy. Report missing data rather than silently restoring a possibly stale copy. |
 
 The candidate database closes before its verification identity is written. File and directory durability barriers must precede publication. The process will hold one stable external lock across both renames and recovery. Windows rename/directory flushing and abrupt termination at each boundary need actual tests before connecting this to normal startup.
+
+New homes follow the same staging rule. An immutable transfer owner record distinguishes an initial creation from an upgrade, so recovery cannot mistake a prepared upgrade copy for authority after its original disappears. A new home receives its engine identity while still private, after preparation and verification close the engine. Only then is it renamed into the active path. Partial initialization therefore never leaves an unmarked new-engine home at the active path.
+
+Cleanup deletes retained data before deleting its owner record. An interruption can leave either a recognized transfer directory or an empty directory; both resume safely. Unknown nonempty transfer directories and ambiguous active/original homes are preserved and reported. Older local binaries do not understand the engine identity. This protocol does not promise to fence a local downgrade; old-device wire compatibility is a separate contract.
+
+A missing or truncated candidate identity in an owned staging directory means the candidate is unverified. Initial creation rebuilds it; recovery after moving the original restores that original. Active-home identity parsing remains strict because that home may contain newer writes. If interruption truncates the ownership record itself, ownership cannot be proven. Startup stops with the reserved transfer path and preserves the original and staging contents. This pre-ownership boundary requires explicit inspection and recovery of that folder; not every byte-level interruption restarts automatically.
+
+The tests terminate real child processes at the staging, verification, two publication and cleanup boundaries. They cover first creation, restored originals, later writes, ambiguous homes and lock exclusion. A real old-engine export/new-engine import also passes interrupted publication, reopening and a subsequent durable write. These tests currently run on macOS. Identity files are flushed; containing directories are flushed where Node supports that operation. Windows skips directory fsync and remains unqualified for power loss, as do storage-device flush guarantees on other platforms.
 
 ## Isolated implementation checkpoint
 
