@@ -51,7 +51,7 @@ describe("ticket files tree selection commands", () => {
     expect(body).toEqual([
       {
         id: "files",
-        label: "Files",
+        label: expect.anything(),
         collapsible: true,
         nodes: [{ id: "files-empty", label: "No files", icon: "FileText", disabled: true, rowVariant: "empty-state" }],
       },

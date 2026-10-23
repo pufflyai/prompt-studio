@@ -1,5 +1,5 @@
 import { Box, Stack, type StackProps } from "@chakra-ui/react";
-import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
+import type { MouseEvent as ReactMouseEvent, ReactNode, RefObject } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
 import { TreeListBackground } from "./tree-list-background";
@@ -21,6 +21,8 @@ type TreeListRowVariant = "compact" | "tree";
 export interface TreeListProps {
   /** Ordered sections to render, each containing nested tree nodes. */
   sections: TreeListSection[];
+  /** Fixed content before the customizable rows, inside the shared list inset. */
+  leadingContent?: ReactNode;
   /** Controlled section ids that are currently expanded. */
   expandedSectionIds?: string[];
   /** Controlled node ids that are currently expanded. */
@@ -181,7 +183,12 @@ export const TreeList = (props: TreeListProps) => {
   ) : (
     <StackTreeList {...props} />
   );
-  const paddedContent = <TreeListMoveSurface onMoveNode={props.onMoveNode}>{content}</TreeListMoveSurface>;
+  const paddedContent = (
+    <TreeListMoveSurface onMoveNode={props.onMoveNode}>
+      {props.leadingContent}
+      {content}
+    </TreeListMoveSurface>
+  );
 
   if (!props.backgroundContextActions || props.backgroundContextActions.length === 0) {
     return paddedContent;

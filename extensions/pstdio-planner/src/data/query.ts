@@ -20,9 +20,10 @@ import {
   TICKET_ARCHIVE_STATE_ARCHIVED,
   TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
 } from "./mappers";
-import { readTicketReviewRequests } from "./review-request-storage";
+import { hasPendingInput, readTicketReviewRequests } from "./review-request-storage";
 import { REVIEW_REQUEST_ITEMS_ATTRIBUTE, reviewRequestBadgeItems } from "./review-request-summary";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
+import { ticketActivationTarget } from "./ticket-page-target";
 import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "./workflow-statuses";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
@@ -91,6 +92,10 @@ export const runTicketsQuery = async ({
     const row = toTicketRow(ticket);
     return {
       ...row,
+      target: ticketActivationTarget(
+        row.resource,
+        hasPendingInput(requests.get(ticket.id) ?? { requests: [], errors: [] }),
+      ),
       attributes: {
         ...row.attributes,
         ...(timeline.values.get(ticket.id) ?? {

@@ -1,4 +1,7 @@
 {
+  "navigation.files": "文件",
+  "navigation.workspaces": "工作区",
+  "navigation.sessions": "会话",
   "timeline.page.title": "项目时间线",
   "timeline.view.title": "项目时间线",
   "commands.autoBuild.title": "自动构建",

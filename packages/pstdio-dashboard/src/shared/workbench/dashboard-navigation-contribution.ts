@@ -4,6 +4,7 @@ const declarations: Record<NavigationTreeSlot, readonly string[]> = {
   header: ["dashboard.sidenav.search"],
   content: [
     "dashboard.notifications.sidenav-nav",
+    "dashboard.start.project-nav",
     "dashboard.sessions.project-nav",
     "dashboard.workspaces.project-nav",
     "dashboard.sessions.list",
@@ -27,6 +28,7 @@ interface DashboardNavigationContribution {
   defaultExpandedSectionIds?: string[];
   /** Host navigation reads project data unless it declares a resource dependency. */
   resolveResource?(input: { modeId: string; resource?: ResourceRef }): ResourceRef | undefined;
+  getStructure?(): TreeViewSection[];
   getSections(
     ctx: WorkbenchModuleContext,
     input: { modeId: string; resource?: ResourceRef },
@@ -50,6 +52,7 @@ export const registerDashboardNavigationContribution = (
       slot,
       defaultExpandedSectionIds: contribution.defaultExpandedSectionIds,
       resolveResource: (resource) => resolveResource?.({ modeId, resource }),
+      getStructure: contribution.getStructure,
       getSections: ({ resource }) => contribution.getSections(ctx, { modeId, resource }),
     }),
   );
