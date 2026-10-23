@@ -180,7 +180,7 @@ export const runDocumentTransaction = async <T>(
     await identities?.persist(revision);
     if (projected !== undefined)
       input.diagnostics?.({ phase: "records-projected", owner: input.owner, records: projected });
-    return { value, revision, document, changed: updates.length > 0 };
+    return { value, revision, document, changed: updates.length > 0, projected: projected ?? 0 };
   } catch (error) {
     if (document !== input.cached?.document) document.destroy();
     throw error;

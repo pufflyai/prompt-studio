@@ -9,5 +9,7 @@ export const dropRecordIndexes = async (db: Pick<DbClient, "select" | "execute">
     await db.execute(sql`DROP INDEX IF EXISTS ${sql.identifier(index.database_name)}`);
     for (const [position] of arrayIndexFields(index.definition).entries())
       await db.execute(sql`DROP INDEX IF EXISTS ${sql.identifier(`${index.database_name}_g${position}`)}`);
+    for (const position of (index.definition.equality ?? []).keys())
+      await db.execute(sql`DROP STATISTICS IF EXISTS ${sql.identifier(`${index.database_name}_s${position}`)}`);
   }
 };

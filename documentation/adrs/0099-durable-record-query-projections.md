@@ -51,6 +51,16 @@ ID is the final sort key. Counts and groups run in SQL. Batch reads use complete
 addresses and preserve input order. The memory SDK implements the same query
 semantics; its test implementation may evaluate its in-memory document.
 
+Storage owns the planner statistics for these queries. Each query index is
+partial to its owner, and Postgres ignores partial-index statistics when it
+estimates rows. Registration therefore also creates expression statistics for
+each equality key. PGlite runs no autovacuum, so registration runs `ANALYZE`, and
+the storage service runs it again after commits once projected row changes pass
+50 rows plus 10% of the table. Without these statistics, a 100-value `in` list
+looks like half the owner, and Postgres reads every row instead of the matching
+index entries. An `in` list compiles to one array comparison per row, not one
+comparison per value, so a full scan stays cheap when it is the right plan.
+
 A cursor binds the owner, definition, predicate, selected fields and projection
 revision. It carries the last sort values and record ID. A revision change rejects
 the cursor; callers restart instead of combining inconsistent pages. Nulls sort

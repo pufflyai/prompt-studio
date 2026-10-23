@@ -13,6 +13,7 @@ import { storage_documents } from "../../db/schemas.pg";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { runDocumentTransaction } from "./document-persistence";
+import { createProjectionStatistics } from "./projection-statistics";
 import { createRecordQueries } from "./record-queries";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
@@ -23,6 +24,7 @@ export const createDocumentStorageDBService = (
 ) => {
   const cache = createDocumentCache();
   const listeners = new Set<(owner: StorageOwner) => void>();
+  const statistics = createProjectionStatistics(db);
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
   const getEnvironment = () => (environment ??= createEnvironmentDBService(db).get());
   const transactionFor = (documentId: string) => {
@@ -36,6 +38,7 @@ export const createDocumentStorageDBService = (
         );
         cache.publish(key, result);
         if (result.changed) for (const listener of listeners) listener(owner);
+        if (result.projected) statistics.record(result.projected);
         return result.value;
       } catch (error) {
         cache.discard(key);
@@ -49,6 +52,7 @@ export const createDocumentStorageDBService = (
     transaction,
     observer,
     getEnvironment,
+    flushStatistics: statistics.flush,
     documents: {
       open: (documentId: string) => ({ transaction: transactionFor(documentId) }),
       list: async (owner: StorageOwner) => {
