@@ -13,7 +13,6 @@ export async function containsCommit(ctx: Pick<CommandContext, "process">, path:
 export async function readRequiredStackDependencies(ctx: CommandContext, attempt: AttemptRecord, baseRef?: string) {
   const { readiness } = await loadAttemptDependencies(ctx, attempt.ticketId, {
     base: baseRef ?? attempt.base.headSha,
-    dependencyReview: "submitted",
   });
   if (readiness.decision === "wait") {
     throw new Error(

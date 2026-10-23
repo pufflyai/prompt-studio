@@ -15,12 +15,17 @@ const paramsKey = (params: Record<string, string | boolean>) =>
 export const captureActiveSteering = async (
   deps: SessionsRouteDeps,
   sessionId: string,
-  input: SteerQueuedFollowUpInput,
+  input: Pick<SteerQueuedFollowUpInput, "expectedRunStartedAt">,
 ) => {
   const session = await deps.sessionService.get(sessionId);
   const owner = deps.sessionService.store.get(sessionId);
   const runtime = owner?.session;
-  if (!session?.project_id || !runtime || owner.cancellationRequested)
+  if (
+    !session?.project_id ||
+    !runtime ||
+    owner.cancellationRequested ||
+    (session.status !== "in_progress" && session.status !== "awaiting_input")
+  )
     return { outcome: rejectQueuedSteering("inactive", "The conversation is no longer running.") };
   if (session.last_request_started !== input.expectedRunStartedAt)
     return { outcome: rejectQueuedSteering("stale_run", "The active work changed. Select the queued message again.") };

@@ -1,8 +1,11 @@
 import type { createSessionService } from "../../services/session-service";
 
-type SessionRow = NonNullable<Awaited<ReturnType<ReturnType<typeof createSessionService>["get"]>>>;
+type SessionRow = NonNullable<Awaited<ReturnType<ReturnType<typeof createSessionService>["get"]>>> & {
+  device?: { ownerId: string; id: string; name: string };
+};
 export const toExtensionSession = (session: SessionRow, workspaceId: string | null = null) => ({
   id: session.id,
+  ...(session.device ? { device: session.device } : {}),
   title: session.title,
   status: session.status,
   archived: session.archived,
@@ -32,4 +35,12 @@ export const toExtensionSession = (session: SessionRow, workspaceId: string | nu
         cacheWriteTokens: session.usage_json.cache_write_tokens,
       }
     : null,
+});
+
+export const toExtensionSessionDetails = (session: SessionRow, workspaceId: string | null = null) => ({
+  ...toExtensionSession(session, workspaceId),
+  projectId: session.project_id,
+  agentSessionId: session.agent_session_id,
+  sessionFileId: session.session_file_id,
+  params: session.params_json,
 });

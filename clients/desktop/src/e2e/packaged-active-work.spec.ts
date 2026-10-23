@@ -35,7 +35,7 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
         "websocket",
         (socket) => new URL(socket.url()).pathname === "/v1/terminal",
       );
-      const showSecondary = app.page.getByRole("button", { name: "Show Secondary Panel" });
+      const showSecondary = app.page.getByRole("button", { name: "Show Bottom Panel", exact: true });
       if (await showSecondary.isVisible()) await showSecondary.click();
       await app.page
         .locator('[data-workbench-panel-header="secondary"]')
@@ -62,7 +62,7 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
       await app.page.evaluate(() => void window.promptStudioDesktop.quitApp());
       const dialog = app.page.getByRole("alertdialog", { name: "Active work is still running" });
       await expect(dialog).toBeVisible();
-      await expect(dialog.getByText("Terminals")).toBeVisible();
+      await expect(dialog.getByRole("listitem").getByText("Terminal", { exact: true })).toBeVisible();
       // The warning opens over the workbench. The lifecycle page underneath stays empty.
       await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
       const keepOpen = dialog.getByRole("button", { name: "Keep Prompt Studio open" });

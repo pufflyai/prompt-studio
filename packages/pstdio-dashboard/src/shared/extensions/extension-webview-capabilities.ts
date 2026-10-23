@@ -1,7 +1,10 @@
 import type { WorkbenchCore, WorkbenchPanelInstance } from "@pstdio/workbench";
 import { createWorkbenchWebviewHostAdapters, type ExtensionWebviewHostAdapters } from "@pstdio/workbench/extensions";
+import { getPerformanceDiagnosticsAdapter } from "@/shared/app/performance-diagnostics";
+import { createAccountAdapter } from "./account-capability";
 import { createArtifactsReadAdapter } from "./artifact-read-capability";
 import { createExtensionFileCapabilities } from "./extension-file-capabilities";
+import { createHarnessReadCapability } from "./harness-read-capability";
 
 interface CreateDashboardExtensionWebviewAdaptersInput {
   base: ExtensionWebviewHostAdapters;
@@ -24,6 +27,9 @@ export const createDashboardExtensionWebviewAdapters = (input: CreateDashboardEx
       ? createWorkbenchWebviewHostAdapters({ ...input, workbench: input.workbench, hostEvents: input.base.hostEvents })
       : {}),
     ...input.base,
+    performance: input.workbench ? getPerformanceDiagnosticsAdapter(input.workbench.settings) : undefined,
+    harnesses: input.projectId ? { read: createHarnessReadCapability(input.projectId) } : undefined,
+    account: input.projectId ? createAccountAdapter(input.projectId) : undefined,
     files: owner ? createExtensionFileCapabilities(owner) : undefined,
     artifacts: owner ? { read: createArtifactsReadAdapter({ ...owner, webviewId: input.webviewId }) } : undefined,
   } satisfies ExtensionWebviewHostAdapters;

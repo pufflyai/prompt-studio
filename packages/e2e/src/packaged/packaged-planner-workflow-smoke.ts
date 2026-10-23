@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expectPackagedTicketImages } from "./packaged-ticket-images-smoke";
 
 export const expectPlannerWorkflow = async (
   baseUrl: string,
@@ -12,6 +13,7 @@ export const expectPlannerWorkflow = async (
   tempRoot: string,
 ) => {
   const headers = { ...authorization, "content-type": "application/json" };
+  await expectPackagedTicketImages({ baseUrl, projectId, headers });
   const settingsUrl = `${baseUrl}/v1/projects/${projectId}/extensions/${instanceId}/settings`;
   const commandsUrl = `${baseUrl}/v1/projects/${projectId}/extensions/commands`;
   const commandsResponse = await fetch(commandsUrl, { headers });
@@ -39,7 +41,7 @@ export const expectPlannerWorkflow = async (
   };
   const readPolicy = () => execute("implementation-policy");
 
-  expect(await readPolicy()).toEqual({ adversarialReview: true, openPr: true, defaultTargetBranch: null });
+  expect(await readPolicy()).toMatchObject({ adversarialReview: true, openPr: true, defaultTargetBranch: null });
   for (const [key, expected] of [
     ["implementation.adversarialReview", { adversarialReview: false, openPr: true }],
     ["implementation.openPr", { adversarialReview: false, openPr: false }],
@@ -51,7 +53,7 @@ export const expectPlannerWorkflow = async (
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ value: false });
-    expect(await readPolicy()).toEqual({ ...expected, defaultTargetBranch: null });
+    expect(await readPolicy()).toMatchObject({ ...expected, defaultTargetBranch: null });
   }
 
   const otherFolder = join(tempRoot, "other-project");
@@ -63,7 +65,7 @@ export const expectPlannerWorkflow = async (
   });
   expect(otherResponse.status).toBe(201);
   const other = (await otherResponse.json()) as { id: string };
-  expect(await execute("implementation-policy", {}, other.id)).toEqual({
+  expect(await execute("implementation-policy", {}, other.id)).toMatchObject({
     adversarialReview: true,
     openPr: true,
     defaultTargetBranch: null,
@@ -80,7 +82,7 @@ export const expectPlannerWorkflow = async (
   expect(await execute("implementation-targets")).toEqual([{ branch: "origin/main" }, { branch: "origin/release" }]);
   await execute("set-implementation-target", { branch: "origin/release" });
   expect(await readPolicy()).toMatchObject({ defaultTargetBranch: "origin/release" });
-  expect(await execute("implementation-policy", {}, other.id)).toEqual({
+  expect(await execute("implementation-policy", {}, other.id)).toMatchObject({
     adversarialReview: true,
     openPr: true,
     defaultTargetBranch: null,

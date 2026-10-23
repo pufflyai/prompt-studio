@@ -8,6 +8,7 @@ import type {
 import { AlertMessage, EmptyState, Switch, type SwitchProps } from "@pstdio/ui";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
 import { ArrowLeft, ArrowUpCircle, Blocks, Puzzle, RotateCw, SlidersHorizontal, Timer, Trash2 } from "lucide-react";
+import type { AgentInfo } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
@@ -15,6 +16,7 @@ import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionDetailHealth } from "./extension-detail-health";
+import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionSettingsForm } from "./extension-settings-form";
 import { settingsToParams } from "./extension-settings-params";
 
@@ -24,6 +26,7 @@ export interface ExtensionDetailProps {
   metadata: DashboardExtensionMetadata | undefined;
   automations: WorkbenchExtensionAutomationRecord[];
   diagnostics: ExtensionDiagnostic[];
+  unavailableHarnesses?: AgentInfo[];
   settings: ExtensionSettingValueRecord[];
   settingsViews?: ReactNode;
   toggling?: boolean;
@@ -50,6 +53,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     metadata,
     automations,
     diagnostics,
+    unavailableHarnesses = [],
     settings,
     settingsViews,
     toggling,
@@ -80,11 +84,20 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
   return (
     <Stack gap="md" paddingBottom="lg" data-testid="extension-detail">
       <Stack gap="md" paddingX="lg" paddingTop="lg">
-        <HStack>
+        <HStack justifyContent="space-between">
           <Button variant="ghost" size="2xs" onClick={onBack} data-testid="extension-detail-back">
             <ArrowLeft size={12} />
             {t("projectSettings.extensionsPanel.detail.back")}
           </Button>
+          {unavailableHarnesses.length > 0 && (
+            <ExtensionHealthPopover
+              extension={extension}
+              diagnostics={diagnostics}
+              unavailableHarnesses={unavailableHarnesses}
+              upgrading={upgrading}
+              onUpgrade={onUpgrade}
+            />
+          )}
         </HStack>
 
         <HStack gap="md" alignItems="center">

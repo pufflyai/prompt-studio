@@ -1,5 +1,14 @@
 # pstdio-notes
 
+## 0.45.0
+
+_2026-10-22_
+
+### Patch Changes
+
+- d16f2d1: Open note paths from chat in the note editor, with the note title on the link.
+- 94321b6: Declare Note and Artifact actions once for consistent resource menus.
+
 ## 0.44.0
 
 _2026-10-18_

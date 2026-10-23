@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
+import type { TreeViewSection, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import {
   dashboardNavigationSections,
@@ -7,25 +7,27 @@ import {
 import { registerDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 
 const registerSearchSection = (ctx: WorkbenchModuleContext) => {
+  const sections: TreeViewSection[] = [
+    {
+      ...dashboardNavigationSections.header,
+      nodes: [
+        {
+          id: "search",
+          label: "Search",
+          icon: "Search",
+          canHide: true,
+          commandId: dashboardCommandIds.openCommandPalette,
+          target: { kind: "command", commandId: dashboardCommandIds.openCommandPalette },
+        },
+      ],
+    },
+  ];
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sidenav.search",
     slot: "header",
     modes: ["project"],
-    getSections: () => [
-      {
-        ...dashboardNavigationSections.header,
-        nodes: [
-          {
-            id: "search",
-            label: "Search",
-            icon: "Search",
-            canHide: true,
-            commandId: dashboardCommandIds.openCommandPalette,
-            target: { kind: "command", commandId: dashboardCommandIds.openCommandPalette },
-          },
-        ],
-      },
-    ],
+    getStructure: () => sections,
+    getSections: () => sections,
   });
 };
 

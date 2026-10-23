@@ -19,6 +19,7 @@ import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import { RendererReadNotice } from "../renderer-read-notice";
 import type { TreeActionParamsRequest } from "./tree-actions";
 import { findNodeInSections, toTreeListSection } from "./tree-list-adapter";
+import { TreeModeReturn } from "./tree-mode-return";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { pinnedOnlyNodeIds } from "./tree-pinned-only";
 import { TreeViewBody } from "./tree-view-body";
@@ -234,7 +235,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         aria-label={treeRenderer.title}
         aria-busy={loading}
       >
-        {!loading && visibleHeaderSections.length > 0 ? (
+        {visibleHeaderSections.length > 0 ? (
           <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
             <TreeList
               sections={visibleHeaderSections}
@@ -277,6 +278,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         >
           <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
             <TreeViewBody
+              leadingContent={isSidenav ? <TreeModeReturn workbench={workbench} /> : undefined}
               error={error}
               loading={loading}
               moduleLoading={treeState.loading}
@@ -298,7 +300,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             />
           </Box>
         </ScrollArea>
-        {!loading && visibleFooterSections.length > 0 ? (
+        {visibleFooterSections.length > 0 ? (
           <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
             <TreeList
               sections={visibleFooterSections}

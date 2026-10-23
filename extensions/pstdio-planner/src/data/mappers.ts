@@ -9,7 +9,6 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { l10n, workbenchPages } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
-import { HUMAN_REQUESTED_OPTION_ID } from "./review-request-storage";
 import { ticketPageTarget } from "./ticket-page-target";
 import {
   resolveTicketHierarchy,
@@ -17,7 +16,8 @@ import {
   type TicketResourceReference,
   ticketDisplayTitle,
 } from "./ticket-resource-hierarchy";
-import type { StoredStatus, StoredTag, StoredTicket } from "./types";
+import type { TicketSummary } from "./ticket-summary";
+import type { StoredStatus, StoredTag } from "./types";
 import { workspacePresentation } from "./workspace-presentation";
 import type { TicketWorkspaceSession, TicketWorkspaceSessionLookup } from "./workspace-sessions";
 import { ticketShorthandsFromWorkspace } from "./workspace-ticket-link";
@@ -58,7 +58,7 @@ const CIRCLE_ICON = "circle";
 
 export const ticketTagAttributeId = (tag: Pick<StoredTag, "id">) => DEFAULT_TAG_ATTRIBUTE_IDS[tag.id] ?? tag.id;
 
-export const createTicketParentLookup = (tickets: StoredTicket[]) =>
+export const createTicketParentLookup = (tickets: TicketSummary[]) =>
   new Map(tickets.map((ticket) => [ticket.id, ticket]));
 
 // Existing projects may have seeded the planner-owned Type tag before it became scalar.
@@ -70,7 +70,7 @@ const createTagOptionsLookup = (tags: StoredTag[]) =>
     optionIds: new Set(tag.options.map((option) => option.id)),
   }));
 
-const ticketTagValues = (ticket: StoredTicket, tagOptions: TagOptionsLookup) =>
+const ticketTagValues = (ticket: TicketSummary, tagOptions: TagOptionsLookup) =>
   Object.fromEntries(
     tagOptions.map(({ optionIds, tag }) => {
       const selected = (ticket.tagIds ?? []).filter((id) => optionIds.has(id));
@@ -135,7 +135,7 @@ export const createTicketWorkspaceLookup = (
 };
 
 const ticketWorkspaceValues = (
-  ticket: StoredTicket,
+  ticket: TicketSummary,
   workspaceLookup: TicketWorkspaceLookup,
   resourceReference: TicketResourceReference,
 ) => {
@@ -164,7 +164,7 @@ const ticketWorkspaceValues = (
 };
 
 const ticketToRowWithTags = (
-  ticket: StoredTicket,
+  ticket: TicketSummary,
   projectId: string,
   tagOptions: TagOptionsLookup,
   workspaceLookup: TicketWorkspaceLookup,
@@ -202,7 +202,7 @@ const ticketToRowWithTags = (
 };
 
 export const ticketToRow = (
-  ticket: StoredTicket,
+  ticket: TicketSummary,
   projectId: string,
   tags: StoredTag[] = [],
   workspaceLookup: TicketWorkspaceLookup = new Map(),
@@ -216,7 +216,7 @@ export const createTicketRowMapper = (
   parentLookup: TicketParentLookup = new Map(),
 ) => {
   const tagOptions = createTagOptionsLookup(tags);
-  return (ticket: StoredTicket) => ticketToRowWithTags(ticket, projectId, tagOptions, workspaceLookup, parentLookup);
+  return (ticket: TicketSummary) => ticketToRowWithTags(ticket, projectId, tagOptions, workspaceLookup, parentLookup);
 };
 
 const statusToOption = (status: StoredStatus): KanbanRendererEnumOption => ({
@@ -240,7 +240,7 @@ const tagToAttribute = (tag: StoredTag): KanbanRendererAttributeDescriptor => ({
   },
   filterable: true,
   displayable: true,
-  editable: !tag.options.some((option) => option.id === HUMAN_REQUESTED_OPTION_ID),
+  editable: true,
   groupable: isSingleSelectTicketTag(tag),
 });
 
@@ -303,8 +303,6 @@ export const buildTicketAttributes = (
 
 export const statusToColumnConfig = (status: StoredStatus): KanbanRendererBoardColumnConfig => ({
   color: status.color,
-  canDragIn: status.canDragIn,
-  canDragOut: status.canDragOut,
   canCreate: status.canCreate,
   actions: status.columnActions.map((id) => ({
     id,

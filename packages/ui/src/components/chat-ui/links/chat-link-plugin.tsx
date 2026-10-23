@@ -1,13 +1,14 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { TextNode } from "lexical";
+import { $isTextNode, TextNode } from "lexical";
 import { useEffect } from "react";
 import { MarkdownLinkNode } from "@/components/rich-text/shared/nodes/MarkdownLinkNode";
 import { StreamingTextNode } from "@/components/rich-text/shared/nodes/streaming-text-node";
 import { resolveChatCodeLink } from "./chat-code-link-transform";
-import { type ChatLinkCandidate, type ChatLinkHandler, parseChatLink } from "./chat-link";
+import { type ChatLinkCandidate, type ChatLinkHandler, isChatWebLink, parseChatLink } from "./chat-link";
 import { useChatLinkHandler } from "./chat-link-context";
 import { ChatResourceLinkNode } from "./chat-resource-link-node";
 import { resolveChatTextLinks } from "./chat-text-link-transform";
+import { ChatWebLinkNode } from "./chat-web-link-node";
 
 const isModifiedClick = (event: MouseEvent | KeyboardEvent) =>
   event instanceof MouseEvent &&
@@ -41,6 +42,11 @@ export const ChatLinkPlugin = () => {
     if (!handler) return;
     const removeLink = editor.registerNodeTransform(MarkdownLinkNode, (node) => {
       const candidate: ChatLinkCandidate = { source: node.getSource(), origin: "markdown" };
+      // Links around images, such as badges, keep their image.
+      if (!editor.isEditable() && node.getChildren().every($isTextNode) && isChatWebLink(handler, candidate)) {
+        node.replace(new ChatWebLinkNode(candidate, node.getTextContent()));
+        return;
+      }
       const parsed = parseChatLink(candidate, window.location.origin);
       if (parsed && (parsed.kind !== "external" || handler.resolveHref(candidate))) {
         if (!editor.isEditable()) {

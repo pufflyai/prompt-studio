@@ -246,6 +246,8 @@ export interface WorkbenchRegionState {
 }
 
 export interface WorkbenchLayout {
+  /** Panel positions shared by all pages in this project and mode. */
+  arrangement?: Partial<import("./panel-positions").WorkbenchArrangement>;
   regions: Record<WorkbenchRegion, WorkbenchRegionState>;
   locationSubPanelSelections?: Record<string, Partial<Record<WorkbenchPanelRegion, string>>>;
   activeWidgetId?: string;

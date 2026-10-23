@@ -5,7 +5,7 @@ import { plannerTicketsChanged } from "../events";
 import { moveTicketInPlan } from "../timeline/commands/move-ticket";
 
 export const setTicketAttribute = async (
-  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId" | "settings">,
   input: { rowId: string; attributeId: string; value?: unknown },
 ) => {
   if (input.attributeId === "milestone") {

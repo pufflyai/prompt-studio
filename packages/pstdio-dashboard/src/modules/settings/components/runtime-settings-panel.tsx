@@ -2,6 +2,7 @@ import { Box, Button, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/rea
 import { toaster } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useActionError } from "@/shared/components/use-action-error";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
 import { ProjectDefaultsCard } from "./project-defaults-card";
 
@@ -18,6 +19,7 @@ const parseLimit = (value: string) => {
 // default harness, model, and run options when a project is in scope.
 export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
   const { projectId } = props;
+  const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("settings");
   const { data: settings, error, isError, isLoading, refetch } = useSettings();
   const updateSettings = useUpdateSettings();
@@ -36,6 +38,7 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
 
   const handleSave = () => {
     if (parsedLimit === undefined) return;
+    clearError();
 
     updateSettings.mutate(
       { max_concurrent_sessions: parsedLimit },
@@ -44,7 +47,7 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
           toaster.create({ type: "success", title: t("runtimeSettings.saveSuccess") });
         },
         onError: (error) => {
-          toaster.create({ type: "error", title: t("runtimeSettings.saveError"), description: error.message });
+          showError({ title: t("runtimeSettings.saveError"), description: error.message });
         },
       },
     );
@@ -52,6 +55,7 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
 
   return (
     <Stack gap="md" padding="lg" maxW="720px">
+      {errorNotice}
       <Stack gap="2xs">
         <Text textStyle="heading/S">{t("runtimeSettings.title")}</Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">

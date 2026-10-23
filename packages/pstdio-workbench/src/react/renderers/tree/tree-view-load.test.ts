@@ -62,6 +62,58 @@ test("a failed section aborts its siblings and waits for them to settle", async 
   expect(settled).toBe(true);
 });
 describe("loadTreeData", () => {
+  test("keeps declared header and footer rows while a new body loads", async () => {
+    const trees = createTrees();
+    const header = [{ id: "header", nodes: [{ id: "search", label: "Search" }] }];
+    const footer = [{ id: "footer", nodes: [{ id: "help", label: "Help" }] }];
+    const pending = Promise.withResolvers<[]>();
+    trees.registerTreeRenderer({
+      id: "navigation",
+      title: "Navigation",
+      getHeaderStructure: () => header,
+      getFooterStructure: () => footer,
+      getHeader: () => pending.promise.then(() => header),
+      getFooter: () => pending.promise.then(() => footer),
+      getBody: () => [],
+      getChildren: () => [],
+    });
+    const snapshots: Array<{ header: unknown; footer: unknown }> = [];
+    const reading = loadTreeData(trees, "navigation", {}, (snapshot) => snapshots.push(snapshot));
+    await Bun.sleep(0);
+    try {
+      expect(snapshots.length).toBeGreaterThan(0);
+      for (const snapshot of snapshots) {
+        expect(snapshot.header).toEqual(header);
+        expect(snapshot.footer).toEqual(footer);
+      }
+    } finally {
+      pending.resolve([]);
+      await reading;
+    }
+  });
+
+  test("publishes completed slots while another slot is still loading", async () => {
+    const trees = createTrees();
+    const pending = Promise.withResolvers<[]>();
+    const body = [{ id: "sessions", nodes: [{ id: "session", label: "Session" }] }];
+    trees.registerTreeRenderer({
+      id: "navigation",
+      title: "Navigation",
+      getBody: () => body,
+      getHeader: () => pending.promise,
+      getChildren: () => [],
+    });
+    const published: unknown[] = [];
+    const reading = loadTreeData(trees, "navigation", {}, (data) => published.push(data.body));
+    await Bun.sleep(0);
+    try {
+      expect(published).toContainEqual(body);
+    } finally {
+      pending.resolve([]);
+      await reading;
+    }
+  });
+
   test("passes the widget resource to tree renderer loaders", async () => {
     const trees = createTrees();
     const resource = {

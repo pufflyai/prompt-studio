@@ -24,12 +24,14 @@ import type {
   SessionFollowUpRequest,
   SessionFollowUpResponse,
   SessionQueuedMessagesResponse,
+  SessionSteeringInput,
   SteerQueuedFollowUpInput,
   UpdateQueuedFollowUpInput,
 } from "pstdio-api-contracts";
 import type { Session } from "../resources";
 import type { ClientOptions, RequestFn } from "./request";
 import { createSessionQueryClient } from "./session-query";
+import { retainSessionResources } from "./session-resource-retention";
 import { createSessionStreamTransport } from "./session-stream";
 import type { SseEvent } from "./sse";
 
@@ -71,6 +73,7 @@ export type SessionClient = ReturnType<typeof createSessionQueryClient> & {
   archive(sessionId: string): Promise<void>;
   delete(sessionId: string): Promise<void>;
   followUp(sessionId: string, input: SessionFollowUpRequest | FollowUpInput): Promise<SessionFollowUpResponse>;
+  steer(sessionId: string, input: SessionSteeringInput): Promise<QueuedSteeringResult>;
   approve(sessionId: string, input: ApprovalInput): Promise<void>;
   getConversation(sessionId: string, signal?: AbortSignal): Promise<SessionConversationResponse>;
   /** @deprecated No maintained client caller. Use `GET /v1/sessions/{id}/conversation/sources` for this operation; the convenience method is removed in 0.45. */
@@ -113,6 +116,8 @@ export type SessionClient = ReturnType<typeof createSessionQueryClient> & {
   ): Promise<ListSessionActivityResponse & ActivityPage>;
   stream(sessionId: string, onEvent: (event: SseEvent) => void, options?: { signal?: AbortSignal }): Promise<void>;
   connectStream(sessionId: string, handlers: SessionStreamHandlers): SessionStreamConnection;
+  /** Keep a session's idle tool resources while a tab or other consumer is open. Close to release interest. */
+  retainResources(sessionId: string): SessionStreamConnection;
 };
 
 export type SessionStreamHandlers = {
@@ -175,6 +180,7 @@ export const createSessionClient = (
 ): SessionClient => {
   return {
     ...createSessionQueryClient(request),
+    retainResources: (sessionId) => retainSessionResources(streams, sessionId),
     getDraftHarnessCommands: (input, signal) =>
       request("/v1/sessions/harness-command-state", { method: "POST", body: input, signal }),
     listActivity: (sessionId, input = {}) => {
@@ -214,6 +220,7 @@ export const createSessionClient = (
     archive: (sessionId) => request(`/v1/sessions/${sessionId}/archive`, { method: "POST" }),
     delete: (sessionId) => request(`/v1/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }),
     followUp: (sessionId, input) => request(`/v1/sessions/${sessionId}/follow-up`, { method: "POST", body: input }),
+    steer: (sessionId, input) => request(`/v1/sessions/${sessionId}/steer`, { method: "POST", body: input }),
     approve: (sessionId, input) => request(`/v1/sessions/${sessionId}/approve`, { method: "POST", body: input }),
     getConversation: (sessionId, signal) => request(`/v1/sessions/${sessionId}/conversation`, { signal }),
     getConversationSources: (sessionId, signal) =>

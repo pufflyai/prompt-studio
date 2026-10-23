@@ -40,6 +40,7 @@ interface ReplayLongStreamInput {
   shape: LongStreamShape;
   signal: AbortSignal;
   push: (patch: JsonPatch) => void;
+  afterTurnStart?: (turn: number) => Promise<void>;
 }
 
 export const replayLongStream = async (input: ReplayLongStreamInput) => {
@@ -71,6 +72,7 @@ export const replayLongStream = async (input: ReplayLongStreamInput) => {
         ],
       } satisfies SessionMessage;
       push({ op: chunk === 1 ? "add" : "replace", path: `/messages/${index}`, value: message });
+      if (chunk === 1 && input.afterTurnStart) await input.afterTurnStart(turn);
       await wait(shape.chunkDelayMs, signal);
     }
   }

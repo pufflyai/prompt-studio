@@ -4,6 +4,7 @@ import type {
   CommandInvocation,
   CommandOutcome,
   CommandSource,
+  ExtensionAccountApi,
   ExtensionConnectionsApi,
   ExtensionContextBase,
   ExtensionEventsApi,
@@ -76,6 +77,23 @@ const unavailableConnections: ExtensionConnectionsApi = {
   stream: async function* () {
     yield await Promise.reject(new Error("Extension connections are not available in this host."));
   },
+};
+
+const unavailableAccountCall = (): never => {
+  throw new Error("The Cloud account is not available in this host.");
+};
+const unavailableAccount: ExtensionAccountApi = {
+  status: unavailableAccountCall,
+  login: unavailableAccountCall,
+  loginStatus: unavailableAccountCall,
+  cancelLogin: unavailableAccountCall,
+  logout: unavailableAccountCall,
+  devices: unavailableAccountCall,
+  renameDevice: unavailableAccountCall,
+  removeDevice: unavailableAccountCall,
+  projectSyncStatus: unavailableAccountCall,
+  syncProject: unavailableAccountCall,
+  stopProjectSync: unavailableAccountCall,
 };
 
 const unavailableViews = (): never => {
@@ -181,6 +199,7 @@ export const createContextFactory = (
       terminal: hostApis.terminal,
       logger: createLogger(ids.extensionId),
       settings: hostApis.settings,
+      account: env.account ?? unavailableAccount,
     };
   },
 

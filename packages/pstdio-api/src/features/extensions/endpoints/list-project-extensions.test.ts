@@ -189,7 +189,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    const row = body.extensions.find((entry: { id: string }) => entry.id === synced.instance.id);
+    const row = body.extensions.find((entry: { id: string }) => entry.id === synced!.instance.id);
 
     expect(row).toMatchObject({
       displayName: "Discovered Extension",

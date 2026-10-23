@@ -4,6 +4,7 @@ import {
   type ExtensionStorageApi,
   type ResourceRef,
 } from "@pstdio/sdk/extensions";
+import { migratePlannerStorage } from "../../data/migrate-storage";
 import { findTicket } from "../../data/resolve";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
@@ -19,12 +20,13 @@ const resolveTicketRef = async (storage: ExtensionStorageApi, value: string): Pr
 };
 
 export const queryTicketProperties = async (
-  ctx: Pick<ExtensionContextBase, "storage">,
+  ctx: Pick<ExtensionContextBase, "storage" | "files">,
   resource: ResourceRef | undefined,
 ) => {
   const ticketId = resource?.type === "ticket" ? resource.id : undefined;
   if (!ticketId) return {};
 
+  await migratePlannerStorage(ctx);
   const ticket = await findTicket(ctx.storage, ticketId);
   if (!ticket) return {};
 

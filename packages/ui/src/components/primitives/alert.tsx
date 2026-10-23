@@ -1,40 +1,60 @@
-import { Alert as ChakraAlert, HStack, IconButton } from "@chakra-ui/react";
+import { Box, ButtonPropsProvider, Alert as ChakraAlert, HStack, IconButton } from "@chakra-ui/react";
 import { X } from "lucide-react";
 import * as React from "react";
+import { CopyButton } from "./copy-button";
+import { ScrollArea } from "./scroll-area";
 
 export interface AlertProps extends Omit<ChakraAlert.RootProps, "title"> {
   startElement?: React.ReactNode;
-  // An action that recovers from the alert, such as Retry for a temporary failure.
+  // Recovery controls in the bottom-right footer. Buttons inherit compact, themed ghost defaults.
   endElement?: React.ReactNode;
   title?: React.ReactNode;
   icon?: React.ReactElement;
   // Shows a close button that dismisses the alert.
   onClose?: () => void;
+  closeLabel?: string;
 }
 
 export const AlertMessage = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
-  const { title, children, icon, startElement, endElement, onClose, ...rest } = props;
+  const { title, children, icon, startElement, endElement, onClose, closeLabel = "Dismiss", ...rest } = props;
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const copyable = rest.status === "error";
   return (
-    <ChakraAlert.Root ref={ref} px="xs" py="2xs" gap="2xs" minH="auto" {...rest}>
+    <ChakraAlert.Root ref={ref} {...rest}>
       {startElement || <ChakraAlert.Indicator>{icon}</ChakraAlert.Indicator>}
-      {children ? (
+      <ButtonPropsProvider value={{ variant: "ghost", size: "2xs" }}>
         <ChakraAlert.Content>
-          <ChakraAlert.Title>{title}</ChakraAlert.Title>
-          <ChakraAlert.Description>{children}</ChakraAlert.Description>
-        </ChakraAlert.Content>
-      ) : (
-        <ChakraAlert.Title flex="1">{title}</ChakraAlert.Title>
-      )}
-      {endElement || onClose ? (
-        <HStack gap="2xs" alignSelf="center">
-          {endElement}
-          {onClose ? (
-            <IconButton aria-label="Dismiss" size="2xs" variant="ghost" onClick={onClose}>
-              <X />
-            </IconButton>
+          <Box position="relative" minW="0" minH="0" flex="1">
+            <ScrollArea contentRef={contentRef} viewportProps={{ overscrollBehavior: "contain" }}>
+              <Box paddingEnd={onClose ? "xl" : undefined}>
+                <ChakraAlert.Title>{title}</ChakraAlert.Title>
+                {children ? <ChakraAlert.Description>{children}</ChakraAlert.Description> : null}
+              </Box>
+            </ScrollArea>
+            {onClose ? (
+              <IconButton aria-label={closeLabel} position="absolute" top="0" right="xs" onClick={onClose}>
+                <X />
+              </IconButton>
+            ) : null}
+          </Box>
+          {endElement || copyable ? (
+            <HStack
+              gap="2xs"
+              pt="xs"
+              justifyContent="flex-end"
+              alignItems="flex-end"
+              flexWrap="wrap"
+              minW="0"
+              flexShrink="0"
+            >
+              {copyable ? (
+                <CopyButton size="2xs" label="Copy error message" text={() => contentRef.current?.innerText ?? ""} />
+              ) : null}
+              {endElement}
+            </HStack>
           ) : null}
-        </HStack>
-      ) : null}
+        </ChakraAlert.Content>
+      </ButtonPropsProvider>
     </ChakraAlert.Root>
   );
 });

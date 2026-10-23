@@ -3,7 +3,8 @@ import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
 import { kanbanBuiltInViews, type WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
-import type { Disposable, KanbanRendererCreateSubmission, KanbanRendererQueryState, ResourceRef } from "../../core";
+import type { Disposable, KanbanRendererCreateSubmission, ResourceRef } from "../../core";
+import { acceptRendererPage } from "../../core/registries/renderers/renderer-page";
 import { WorkbenchIcon } from "../../react";
 import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../react/renderers/kanban/kanban-presentation";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
@@ -15,15 +16,14 @@ import {
   defaultResolveRowActionResource,
   defaultResolveRowResource,
   executeKanbanRendererCommand,
-  isQueryResult,
   type KanbanRendererRow,
   type Localizer,
   mergeParams,
   registerRowActionCommands,
   runDefaultRowAction,
   toCreateFields,
-  toWorkbenchRow,
 } from "./kanban-renderer-contribution-helpers";
+import { createKanbanRendererQuery } from "./kanban-renderer-query";
 import { mapViewToolbarActions } from "./view-toolbar-actions";
 
 type ColumnConfigRecord = Record<string, WireBoardColumnConfig>;
@@ -194,12 +194,19 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     );
     let wireAttributes = record.attributes;
     const builtIns = kanbanBuiltInViews(record);
-    const originalRows = new WeakMap<KanbanRendererRow, KanbanRendererRow>();
     let columnConfigs: ColumnConfigRecord | undefined;
-    let latestQueryId = 0;
-    let rowCache = new Map<string, { signature: string; row: KanbanRendererRow }>();
     const rowResource = (row: KanbanRendererRow) => resolveRowResource(record, row);
-    const toActivatedRow = (row: KanbanRendererRow) => originalRows.get(row) ?? row;
+    const query = createKanbanRendererQuery({
+      context,
+      record,
+      rowResource,
+      onMetadata: (value) => {
+        wireAttributes = value.attributes ?? wireAttributes;
+        attributes.set(wireAttributes);
+        columnConfigs = value.boardColumnConfigs;
+      },
+    });
+    const toActivatedRow = query.original;
     const onRowActivate = toRowClick(context, record, adapter, resolveRowResource, toActivatedRow);
 
     disposables.push(...registerRowActionCommands(context, record, localize));
@@ -231,49 +238,11 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           createRow: toCreateRowConfig(record, localize),
           getBoardColumnConfig: (groupKey) => toWorkbenchBoardColumnConfig(columnConfigs?.[groupKey], localize),
           onRowActivate,
-          executeQuery: async (state: KanbanRendererQueryState, signal) => {
-            latestQueryId += 1;
-            const queryId = latestQueryId;
-            const value = await executeKanbanRendererCommand(
-              context,
-              record,
-              record.queryHandlerId,
-              {
-                settings: state.settings,
-                filter: state.filter,
-                sorts: state.sorts,
-              },
-              undefined,
-              signal,
-              state.pageParams,
-            );
-            const mapRows = (rows: unknown[]) => {
-              const nextCache = new Map<string, { signature: string; row: KanbanRendererRow }>();
-              const result = rows.map((row) => {
-                const candidate = row as KanbanRendererRow;
-                const signature = JSON.stringify(row);
-                const cached = rowCache.get(candidate.id);
-                const mapped = cached?.signature === signature ? cached.row : toWorkbenchRow(row, rowResource);
-                originalRows.set(mapped, candidate);
-                nextCache.set(mapped.id, { signature, row: mapped });
-                return mapped;
-              });
-              if (queryId === latestQueryId) rowCache = nextCache;
-              return result;
-            };
-            if (queryId !== latestQueryId) {
-              if (Array.isArray(value)) return mapRows(value);
-              return isQueryResult(value) ? mapRows(value.rows ?? []) : [];
-            }
-
-            if (Array.isArray(value)) return mapRows(value);
-            if (!isQueryResult(value)) return [];
-            const nextAttributes = value.attributes ?? wireAttributes;
-            wireAttributes = nextAttributes;
-            attributes.set(nextAttributes);
-            columnConfigs = value.boardColumnConfigs;
-            return mapRows(value.rows ?? []);
-          },
+          executeQuery: async (state, signal) => (await query.read(state, signal)).rows,
+          executePage:
+            record.queryMode === "paged"
+              ? async (state, signal) => acceptRendererPage(await query.read(state, signal), state.page)
+              : undefined,
           onAttributeChange: record.attributeChangeHandlerId
             ? (rowId, attributeId, value) =>
                 runMutation(record, record.attributeChangeHandlerId!, {

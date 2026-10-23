@@ -6,8 +6,7 @@ import {
   type TreeListMovePolicy,
   type TreeListSection,
 } from "@pstdio/ui";
-import type { RefObject } from "react";
-import { canVirtualizeTreeSections } from "./tree-list-adapter";
+import type { ReactNode, RefObject } from "react";
 
 const TREE_SKELETON_WIDTHS = ["70%", "50%", "82%", "60%", "44%", "76%"];
 
@@ -24,6 +23,7 @@ interface TreeViewBodyProps {
   loading: boolean;
   moduleLoading?: boolean;
   sections: TreeListSection[];
+  leadingContent?: ReactNode;
   backgroundContextActions?: ResourceContextAction[];
   draggable?: boolean;
   customizationAvailable?: boolean;
@@ -46,6 +46,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     loading,
     moduleLoading,
     sections,
+    leadingContent,
     backgroundContextActions,
     draggable,
     customizationAvailable,
@@ -62,9 +63,19 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     onNavigate,
   } = props;
 
-  if (error && sections.length === 0) return null;
-  if (loading) return null;
-  if (moduleLoading) return <TreeViewSkeleton />;
+  if ((error || loading) && sections.length === 0) return <TreeList sections={[]} leadingContent={leadingContent} />;
+  if (moduleLoading)
+    return (
+      <TreeList
+        sections={[]}
+        leadingContent={
+          <>
+            {leadingContent}
+            <TreeViewSkeleton />
+          </>
+        }
+      />
+    );
 
   // Keep an empty-but-customizable tree right-clickable so a fully-hidden tree
   // can still be restored from the back-of-tree menu.
@@ -75,6 +86,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
   return (
     <TreeList
       sections={sections}
+      leadingContent={leadingContent}
       backgroundContextActions={backgroundContextActions}
       draggable={draggable}
       expandedNodeIds={expandedNodeIds}
@@ -83,7 +95,8 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
       rowVariant="compact"
       sectionGap="md"
       nodeGap="1px"
-      virtualize={canVirtualizeTreeSections(sections)}
+      // Late children and inline editors must not switch renderers and remount open menus.
+      virtualize
       scrollRef={scrollRef}
       onToggleSection={onToggleSection}
       onToggleNode={onToggleNode}

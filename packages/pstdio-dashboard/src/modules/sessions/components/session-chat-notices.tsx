@@ -32,13 +32,7 @@ const ChatNotice = (props: ChatNoticeProps) => {
       status="error"
       title={title}
       onClose={onClose}
-      endElement={
-        notice.temporary ? (
-          <Button size="2xs" variant="outline" onClick={onRetry}>
-            Retry
-          </Button>
-        ) : undefined
-      }
+      endElement={notice.temporary ? <Button onClick={onRetry}>Retry</Button> : undefined}
     >
       {notice.message}
     </AlertMessage>

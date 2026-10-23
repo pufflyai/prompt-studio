@@ -89,11 +89,13 @@ function GraphTickets(input: Props) {
           <GraphCard
             key={row.id}
             row={row}
+            interaction={props.cardInteraction}
             x={position.x}
             y={position.y}
             relation={relations.get(row.id)}
             dropBefore={sameTarget(dropTarget, target)}
             onSelect={actions.onSelect}
+            onOpenRequests={actions.onOpenRequests}
             onDragStart={actions.onDragStart}
             onDragOver={() => over(target)}
             onDrop={actions.onDrop}

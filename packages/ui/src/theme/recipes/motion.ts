@@ -56,6 +56,8 @@ export const bubblePanelRecipe = defineRecipe({
 
 export const bubbleLauncherRecipe = defineRecipe({
   base: {
+    // The launcher owns reveal motion; inherited visibility must not animate again on its button.
+    "& > button": { transitionProperty: "background-color, border-color, box-shadow, color" },
     visibility: "visible",
     opacity: "1",
     transform: "none",

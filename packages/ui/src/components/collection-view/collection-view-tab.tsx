@@ -1,5 +1,6 @@
 import { Box, Tabs, Text } from "@chakra-ui/react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { useRef } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { DropIndicator } from "@/components/primitives/drop-indicator";
 import { Tooltip } from "@/components/primitives/tooltip";
@@ -16,6 +17,7 @@ interface CollectionViewTabProps {
 
 export const CollectionViewTab = (props: CollectionViewTabProps) => {
   const { id, title, dirty, actions, reorderable, dropEdge, onMove } = props;
+  const labelRef = useRef<HTMLSpanElement>(null);
   const drag = useDraggable({ id, disabled: !reorderable });
   const target = useDroppable({ id, disabled: !reorderable });
   return (
@@ -30,7 +32,7 @@ export const CollectionViewTab = (props: CollectionViewTabProps) => {
       >
         <Tabs.Context>
           {(tabs) => (
-            <Tooltip content={title} openDelay={300} closeDelay={150} positioning={{ placement: "bottom" }}>
+            <Tooltip content={title} overflowRef={labelRef} closeDelay={150} positioning={{ placement: "bottom" }}>
               <Tabs.Trigger
                 id={tabs.getTriggerProps({ value: id }).id}
                 value={id}
@@ -48,8 +50,10 @@ export const CollectionViewTab = (props: CollectionViewTabProps) => {
                   requestAnimationFrame(() => tab.scrollIntoView({ block: "nearest", inline: "nearest" }));
                 }}
               >
-                <Text as="span" data-tab-label>
-                  {title}
+                <Text asChild>
+                  <span ref={labelRef} data-tab-label>
+                    {title}
+                  </span>
                 </Text>
                 {dirty ? (
                   <Box

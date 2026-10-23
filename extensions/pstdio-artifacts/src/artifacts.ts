@@ -85,6 +85,13 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
     return current ? (await summary(current)).resource : null;
   };
 
+  // A snapshot of any revision opens its artifact with the current name.
+  const resolveRevision = async (revisionId: string) => {
+    const revision = await records.get(revisionId);
+    const resource = revision ? await resolve(revision.artifactId) : null;
+    return resource ? { resource, target: artifactTarget(projectId, resource.id, resource.label) } : null;
+  };
+
   const read = async (url: string, revisionId?: string) => {
     const items = await revisions(url);
     const revision = revisionId ? items.find((item) => item.id === revisionId) : items[0];
@@ -162,7 +169,7 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
     return { artifactId: id };
   };
 
-  return { publish, read, list, revisions, resolve, rename, remove };
+  return { publish, read, list, revisions, resolve, resolveRevision, rename, remove };
 };
 
 export type ArtifactSummary = Awaited<ReturnType<ReturnType<typeof createArtifactService>["publish"]>>;

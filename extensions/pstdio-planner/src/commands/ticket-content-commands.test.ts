@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketsCollection } from "../data/collections";
+import { observeStorageReads } from "../data/storage-reads.fixture";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { getTicketContentCommand } from "./get-ticket-content";
@@ -15,6 +16,24 @@ const seedContent = async (storage: ReturnType<typeof createMemoryStorage>, tick
 };
 
 describe("ticket body file-renderer commands", () => {
+  test("opening a ticket by ID reads only the selected ticket", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    await seedContent(storage, ticket.id, "Selected ticket content");
+    const observed = observeStorageReads(storage);
+
+    const result = await getTicketContentCommand.run(
+      ...makeCommandArgs({
+        storage: observed.storage,
+        params: {},
+        overrides: { resource: { type: "ticket", id: ticket.id } },
+      }),
+    );
+
+    expect(result).toMatchObject({ content: "Selected ticket content" });
+    expect(observed.reads).toEqual([`tickets/${ticket.id}`]);
+  });
+
   test("a missing or foreign document never falls back to the ticket body", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));

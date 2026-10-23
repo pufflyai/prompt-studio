@@ -2,7 +2,6 @@ import { Box } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
 import { EmptyState } from "@/components/primitives/empty-state";
-import { ScrollArea } from "@/components/primitives/scroll-area";
 import { CollectionFilterEmptyState } from "../collection-view/collection-filter-empty-state";
 import { CollectionViewEmptyState } from "../collection-view/collection-view-empty-state";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
@@ -17,6 +16,8 @@ interface KanbanRendererEmptyStateProps {
 }
 
 interface KanbanRendererContentProps {
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
   contentPlaceholder?: ReactNode;
   sourceCount: number;
   filteredCount: number;
@@ -103,6 +104,8 @@ export const KanbanRendererContent = (props: KanbanRendererContentProps) => {
         <Box flex="1" minH="0">
           {boardColumns.length > 0 ? (
             <KanbanRendererBoard
+              onLoadMore={props.onLoadMore}
+              loadingMore={props.loadingMore}
               columns={boardColumns}
               selectedItemId={selectedRowId}
               onMoveItem={onBoardMoveItem}
@@ -128,15 +131,15 @@ export const KanbanRendererContent = (props: KanbanRendererContentProps) => {
     return (
       <>
         {filterMessage}
-        <ScrollArea flex="1" minH="0" viewportProps={{ "aria-label": "Collection list" }}>
-          <KanbanRendererList
-            key={listKey}
-            items={listItems}
-            selectedItemId={selectedRowId}
-            expandedGroups={listExpandedGroups}
-            onExpandedGroupChange={onListExpandedGroupChange}
-          />
-        </ScrollArea>
+        <KanbanRendererList
+          onLoadMore={props.onLoadMore}
+          loadingMore={props.loadingMore}
+          key={listKey}
+          items={listItems}
+          selectedItemId={selectedRowId}
+          expandedGroups={listExpandedGroups}
+          onExpandedGroupChange={onListExpandedGroupChange}
+        />
       </>
     );
   }

@@ -23,6 +23,7 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 
 1. Use small controls in dialogs and settings.
 2. Use extra-small controls for inline file creation and renaming in the side navigation.
+3. Popovers use `sm` horizontal padding and `xs` vertical padding, defined in the shared popover recipe.
 
 ## 4. Delete actions
 
@@ -35,9 +36,17 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 
 ## 6. Feedback placement
 
-1. App-wide indicators sit at the trailing end of the status bar; normal states stay muted.
+1. System errors sit at the leading, left-aligned end of the status bar. Other app-wide indicators sit at the trailing end; normal states stay muted. The error widget label shows the latest error without a count suffix; its popover shows the count in a tag beside its title.
 2. Connection loss shows an amber Reconnecting indicator there while loaded navigation stays visible.
-3. Chat problems appear in the conversation, without banners.
+3. Never use toast notifications for errors.
+4. System errors appear in a status-bar widget. Show an indicator with the error when it occurs; opening the widget shows its details. This widget is for system errors only.
+5. When a user action cannot be completed, show the failure in the UI where the user tried the action, beside the relevant control or content.
+6. Chat problems appear in the conversation, without banners.
+7. The system-error and performance popovers share their width and gap above the status bar. Each aligns with its widget: system errors on the left, performance on the right. Long error lists grow with the viewport and scroll inside the popover. Keep the count and dismissal controls visible when text is long.
+8. Pending system errors keep the status bar visible even when the active mode hides it. Restore the mode's hidden state after the last system error is dismissed. Custom status-bar content stays available beside the error widget.
+9. Alert action buttons sit inside the alert, bottom-right aligned below its message. Close buttons sit at the top right, beside the title. Both use compact `2xs` ghost buttons that inherit the alert's semantic foreground. Hover, keyboard focus, and pressed backgrounds use a translucent tint of that color. Let the action footer wrap in narrow containers. Keep recovery failures inside that same alert.
+10. Alert titles use `label/M/medium`; messages use `paragraph/S/regular`.
+11. Leave an `xs` gap between an alert's icon and text. Align the icon and close button with the center of the title's first line, including when a title wraps.
 
 ## 7. Activity
 
@@ -54,4 +63,12 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 
 1. The chat input is borderless at rest and shows an accent highlight while focus is inside it. Its surrounding workspace container stays borderless.
 2. The workspace container uses the same background as a selected tab.
+
+## 10. Scrolling
+
+1. Always use the shared `ScrollArea` component for scrollable containers. This includes popovers, dialogs, panels, and lists; do not create scrollable surfaces with raw overflow styles.
 3. Main and side chat views fill their panels with the same composer inset. The workspace header touches the input without an extra gap.
+
+## 11. Interface text
+
+1. Cut taglines, helper text and secondary labels. If a screen needs them to make sense, fix the layout.

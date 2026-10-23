@@ -7,7 +7,8 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-relay": ["pstdio-account-manager", "pstdio-sync", "pstdio-sync-contracts", "pstdio-service-telemetry"],
   "pstdio-api-contracts": ["pstdio-sync-contracts"],
   "pstdio-sync-contracts": [],
-  "pstdio-sync": ["pstdio-sync-contracts"],
+  "storage-scale-fixture": [],
+  "pstdio-sync": ["pstdio-sync-contracts", "storage-scale-fixture"],
   "pstdio-file-types": [],
   "pstdio-paths": [],
   "pstdio-logging": ["pstdio-paths"],
@@ -18,6 +19,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-sync",
     "pstdio-sync-contracts",
     "pstdio-relay",
+    "storage-scale-fixture",
   ],
   "pstdio-scheduler": [],
   "pstdio-wt": ["pstdio-file-types"],
@@ -81,8 +83,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // e2e also declares the extensions it installs at runtime and the dashboard it serves,
   // so changing one marks e2e as affected.
   e2e: [
-    "pstdio-sync",
-    "pstdio-sync-contracts",
     "@pstdio/sdk",
     "pstdio",
     "pstdio-api-contracts",
@@ -102,6 +102,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-skills",
     "remote-workspaces",
     "workbench-fixture",
+    "storage-scale-fixture",
   ],
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
   "@pstdio/desktop": [

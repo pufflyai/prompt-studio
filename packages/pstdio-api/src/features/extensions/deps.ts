@@ -4,7 +4,10 @@ import type { ExtensionWebviewUrlIssuer } from "./extension-webview-access";
 
 export type ExtensionsRouteDeps = Pick<
   RouteDeps,
+  | "accountService"
   | "artifactMountWrites"
+  | "personalHistoryService"
+  | "accountService"
   | "assetTransferService"
   | "harnessRegistry"
   | "eventBus"
@@ -20,6 +23,7 @@ export type ExtensionsRouteDeps = Pick<
   | "sessionQueueEntriesService"
   | "sessionQueueLifecycle"
   | "settingsService"
+  | "storagePositions"
   | "skillService"
   | "workspaceSessionService"
 > & {
@@ -44,3 +48,5 @@ export interface ExtensionWebviewMetadataDeps {
   ensureExtensionWebviews: RouteDeps["ensureExtensionWebviews"];
   extensionWebviewAccess: ExtensionWebviewUrlIssuer;
 }
+
+export type ScheduleAdmissionDeps = ExtensionsRouteDeps & Pick<RouteDeps, "environmentService">;

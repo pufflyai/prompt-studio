@@ -31,7 +31,7 @@ test("an open alternative keeps later dependent work while unrelated records con
         },
       ],
     }),
-  ).toMatchObject({ status: "conflict", conflictId: "alternative" });
+  ).toMatchObject({ status: "conflict", state: "needs-attention", conflictId: "alternative" });
   expect((await records.read("note")).value).toBe("first accepted locally");
   expect((await records.read("joined")).value).toBeNull();
   await records.commit({

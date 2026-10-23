@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
+import { createStoragePositions } from "pstdio-api-contracts";
 import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase } from "./app-database";
@@ -26,8 +27,9 @@ import { createSessionQueueLifecycle } from "./features/sessions/session-queue-l
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
+import { createAppAccount } from "./services/account/app-account";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
-import { connectAppRelay } from "./services/relay/runtime";
+import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
@@ -67,6 +69,20 @@ const sessionQueueChanged =
     if (session) eventBus.emit("sessions", "set", session);
   };
 
+const registerAppRuntime = (
+  app: OpenAPIHono<AppBindings>,
+  deps: RouteDeps,
+  input: CreateAppInput,
+  runtime: Parameters<typeof createRuntimeRouteDeps>[0],
+) => {
+  const runtimeDeps = createRuntimeRouteDeps(runtime);
+  if (runtimeDeps) deps.runtime = runtimeDeps;
+  registerApi(app, deps, {
+    security: apiSecurity(input.host, runtimeDeps),
+    terminalOrigins: input.config.transport.terminalOrigins,
+  });
+};
+
 const buildApp = async (
   input: CreateAppInput,
   dependencies: AppDependencies,
@@ -80,6 +96,8 @@ const buildApp = async (
   ensureStorageRoot(storageRoot);
 
   const dbs = createAppDatabaseServices(db);
+  const { environmentId } = await dbs.environmentDBService.get();
+  const storagePositions = createStoragePositions(environmentId);
   const {
     activityEventsDBService,
     automationDBService,
@@ -141,6 +159,7 @@ const buildApp = async (
     dependencies,
     eventBus,
     extensionInstancesDBService,
+    extensionStorageDBService,
     extensionConnectionsDBService,
     installedExtensionSourcesDBService,
     projectService,
@@ -163,35 +182,7 @@ const buildApp = async (
   });
 
   const sessionQueueLifecycle = createSessionQueueLifecycle();
-  const sessionHookDeps = (): SessionHookDeps => ({
-    assetTransferService,
-    artifactMountWrites,
-    boardViewsService: boardViewsDBService,
-    automationService,
-    extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,
-    resourceLinksService: dbs.resourceLinksDBService,
-    activityEventsService: activityEventsDBService,
-    eventBus,
-    extensionAutomationPreferencesService,
-    extensionConnectionService,
-    extensionFileService,
-    extensionRuntimeCatalog,
-    extensionService,
-    extensionSettingsDBService,
-    extensionSettingsService,
-    extensionStorageService: extensionStorageDBService,
-    fileService,
-    harnessRegistry,
-    projectService,
-    sessionQueueEntriesService,
-    sessionQueueLifecycle,
-    sessionService,
-    skillService,
-    notificationService,
-    settingsService,
-    workspaceService,
-    workspaceSessionService,
-  });
+  const sessionHookDeps = (): SessionHookDeps => deps;
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
 
@@ -209,10 +200,19 @@ const buildApp = async (
   });
 
   const terminalSupervisor = createAppTerminalSupervisor();
+  const account = createAppAccount(input.config, dbs.environmentDBService, projectService);
 
   deps = {
+    personalHistoryService: createPersonalHistoryService({
+      eventBus,
+      documents: extensionStorageDBService.documents,
+      account: account.accountService,
+      projects: projectService,
+    }),
+    accountService: account.accountService,
     assetTransferService,
     environmentService: dbs.environmentDBService,
+    storagePositions,
     artifactMountWrites,
     resourceLinksService: dbs.resourceLinksDBService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,
@@ -255,20 +255,14 @@ const buildApp = async (
   const artifactMountWatch = startAppArtifactMountWatch(deps, projectService);
   const notificationWakeTimer = startNotificationWakeTimer(notificationService);
 
-  const runtimeDeps = createRuntimeRouteDeps({
+  registerAppRuntime(app, deps, input, {
     extensionScheduler,
     host: runtimeHost,
     sessionService,
     terminalSupervisor,
   });
-  if (runtimeDeps) deps.runtime = runtimeDeps;
 
   drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
-
-  registerApi(app, deps, {
-    security: apiSecurity(input.host, runtimeDeps),
-    terminalOrigins: input.config.transport.terminalOrigins,
-  });
 
   const close = await startAppLifecycle({
     deps,
@@ -282,7 +276,7 @@ const buildApp = async (
     terminalSupervisor,
     closeDb,
   });
-  return connectAppRelay({ app, close, deps, eventBus }, input.config.relay?.connectionsFile);
+  return account.connectAccountRelay({ app, close, deps, eventBus });
 };
 
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {

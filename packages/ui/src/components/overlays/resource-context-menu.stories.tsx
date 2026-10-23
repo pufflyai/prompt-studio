@@ -1,9 +1,10 @@
-import { Box, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Icon, Input, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Eye } from "lucide-react";
 import { useState } from "react";
 import { expect, fireEvent, screen, userEvent, waitFor, within } from "storybook/test";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+import { getIconComponent } from "@/components/primitives/icon-options";
 
 const createActions = (count: number): ResourceContextAction[] =>
   Array.from({ length: count }, (_, index) => ({
@@ -20,6 +21,19 @@ const menuTarget = (
     <Text textStyle="label/S/regular">Right-click here</Text>
   </Box>
 );
+
+export const TicketActions: StoryObj<typeof ResourceContextMenu> = {
+  args: {
+    children: menuTarget,
+    actions: [
+      ["play", "Run attempt"],
+      ["sparkles", "Refine ticket"],
+      ["list-tree", "Break into sub-tickets"],
+      ["archive", "Archive"],
+      ["trash", "Delete"],
+    ].map(([key, label]) => ({ key, label, icon: <Icon as={getIconComponent(key)} boxSize="4" /> })),
+  },
+};
 
 const InlineActionMenu = () => {
   const [editing, setEditing] = useState(false);

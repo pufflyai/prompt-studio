@@ -2,12 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type {
-  AssetReference,
-  StorageConflictInspection,
-  StorageRecord,
-  StorageSaveOutcome,
-} from "@pstdio/sdk/extensions";
+import type { AssetReference, ResourceIdentity, StorageRecord, StorageSaveOutcome } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -15,7 +10,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 export const registerGroupedStorageSmokeTests = () => {
   test(
-    "packaged public storage preserves grouped conflicts and resolved branches across restarts",
+    "packaged public storage saves document edits atomically and survives restarts",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "packaged-grouped-storage-"));
       const source = join(root, "source");
@@ -61,6 +56,35 @@ export const registerGroupedStorageSmokeTests = () => {
         expect(created.status).toBe(201);
         const project = (await created.json()) as { id: string };
         const initial = await read(project.id);
+        await command(project.id, "seed-query-records");
+        const expectSelected = async () => {
+          const selected = await command<{
+            page: { records: { fields: { rank: number } }[] };
+            next: { records: { fields: { rank: number } }[]; cursor: string | null };
+            rows: StorageRecord[];
+            count: { count: number };
+            scalarText: { records: { fields: { rank: number } }[] };
+          }>(project.id, "query-records");
+          expect(selected.page.records.map((row) => row.fields.rank)).toEqual([1, 2]);
+          expect(selected.next.records.map((row) => row.fields.rank)).toEqual([3]);
+          expect(selected.next.cursor).toBeNull();
+          expect(selected.rows.map((row) => row.value)).toEqual([
+            { state: "ready", rank: 1, body: "full � value" },
+            { state: "ready", rank: 2, body: "full\u0000value" },
+          ]);
+          expect(selected.count.count).toBe(3);
+          expect(selected.scalarText.records.map((row) => row.fields)).toEqual([{ rank: 2 }]);
+        };
+        await expectSelected();
+        const allocated = await command<{ id: string; shorthand: string }>(project.id, "allocate");
+        const identity: ResourceIdentity = { ...allocated, kind: "note", aliases: [] };
+        expect(await command(project.id, "identity", { id: allocated.id })).toEqual(identity);
+        expect(await command(project.id, "find-number", { shorthand: allocated.shorthand })).toEqual([identity]);
+        expect(await command(project.id, "number-event")).toMatchObject({
+          kind: "event",
+          extensionId: "pstdio",
+          id: "resource.renumbered",
+        });
         const cached = await command<{
           before: StorageRecord;
           reads: { record: StorageRecord; legacy: unknown }[];
@@ -116,30 +140,16 @@ export const registerGroupedStorageSmokeTests = () => {
             ],
           },
         });
-        expect(stale.status).toBe("conflict");
-        expect((await read(project.id)).caption.value).toBe("First caption");
+        expect(stale).toMatchObject({ status: "saved-locally", state: "saved-locally" });
+        expect((await read(project.id)).caption.value).toBe("Second caption");
         await stopProcess(host.child);
         host = await startPackagedServe(root, env);
-        expect(
-          (await command<StorageSaveOutcome>(project.id, "outcome", { operationId: "second-caller" })).status,
-        ).toBe("conflict");
-        const inspected = await command<StorageConflictInspection>(project.id, "inspect", {
-          conflictId: "second-caller",
-        });
-        expect(
-          inspected.alternatives[0]!.records.find(({ recordId }) => recordId === initial.caption.recordId)?.value,
-        ).toBe("Second caption");
-        const resolved = await command<StorageSaveOutcome>(project.id, "resolve", {
-          proposal: {
-            operationId: "resolve-caller",
-            conflictId: inspected.conflictId,
-            expectedConflicts: inspected.expectedConflicts,
-            capturedOperationIds: inspected.capturedOperationIds,
-            expectedInputs: inspected.expectedInputs,
-            choose: "local",
-          },
-        });
-        expect(resolved.status).toBe("saved-locally");
+        await expectSelected();
+        expect((await command<StorageSaveOutcome>(project.id, "outcome", { operationId: "second-caller" })).state).toBe(
+          "saved-locally",
+        );
+        expect(await command(project.id, "identity", { id: allocated.id })).toEqual(identity);
+        expect(await command(project.id, "find-number", { shorthand: allocated.shorthand })).toEqual([identity]);
         const final = await read(project.id);
         expect(final.caption.value).toBe("Second caption");
         expect(final.note.asset).toEqual(replacement);
@@ -149,18 +159,12 @@ export const registerGroupedStorageSmokeTests = () => {
         expect(await read(project.id)).toEqual(final);
         const later = await command<StorageSaveOutcome>(project.id, "commit", {
           group: {
-            operationId: "after-resolution",
-            edits: [
-              {
-                recordId: final.caption.recordId,
-                expectedRevision: final.caption.revision,
-                replace: "Caption after resolution",
-              },
-            ],
+            operationId: "later-save",
+            edits: [{ recordId: final.caption.recordId, replace: "Later caption" }],
           },
         });
-        expect(later.status).toBe("saved-locally");
-        expect((await read(project.id)).caption.value).toBe("Caption after resolution");
+        expect(later.state).toBe("saved-locally");
+        expect((await read(project.id)).caption.value).toBe("Later caption");
       } finally {
         await stopProcess(host.child);
         rmSync(root, { recursive: true, force: true });

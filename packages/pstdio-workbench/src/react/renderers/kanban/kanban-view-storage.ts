@@ -2,7 +2,7 @@ import type { WorkbenchPanelInstance } from "../../../core";
 
 const resolveProjectScope = (placement: WorkbenchPanelInstance, storageScope: string | undefined) => {
   const metadata = placement.resource?.metadata;
-  const projectId = metadata?.projectId;
+  const projectId = placement.resource?.projectId ?? metadata?.projectId;
   if (typeof projectId === "string") return projectId;
 
   const favoriteScope = metadata?.favoriteScope;

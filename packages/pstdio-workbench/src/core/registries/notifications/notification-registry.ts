@@ -24,6 +24,8 @@ export interface WorkbenchNotification {
   resource?: ResourceRef;
   actions?: WorkbenchNotificationAction[];
   metadata?: Record<string, unknown>;
+  /** The view or region that owns feedback for a failed user action. */
+  inlineTarget?: string;
 }
 
 export interface RegisteredWorkbenchNotification extends RegisteredContributionMetadata {
@@ -35,6 +37,7 @@ export interface RegisteredWorkbenchNotification extends RegisteredContributionM
   resource?: ResourceRef;
   actions?: WorkbenchNotificationAction[];
   metadata?: Record<string, unknown>;
+  inlineTarget?: string;
 }
 
 export type WorkbenchNotificationEvent =
@@ -54,9 +57,12 @@ export interface NotificationRegistry {
   clear(): void;
   listNotifications(): RegisteredWorkbenchNotification[];
   subscribe(listener: WorkbenchNotificationListener): Disposable;
+  captureActionError(label: string, target?: string): (error: unknown) => void;
 }
 
-export const createNotificationRegistry = (): NotificationRegistry => {
+export const createNotificationRegistry = (
+  resolveActionTarget: () => string = () => "region:main",
+): NotificationRegistry => {
   const store = createWorkbenchStore<WorkbenchNotificationStoreState>({
     name: "workbench.notifications",
     initialState: { notifications: {} },
@@ -71,6 +77,20 @@ export const createNotificationRegistry = (): NotificationRegistry => {
 
   return {
     store,
+
+    captureActionError(label, target = resolveActionTarget()) {
+      const id = `workbench.action-error.${target}`;
+      this.dismiss(id);
+      return (error) => {
+        this.show({
+          id,
+          level: "error",
+          title: `${label} failed`,
+          message: error instanceof Error ? error.message : String(error),
+          inlineTarget: target,
+        });
+      };
+    },
 
     show(notification, metadata) {
       let id = notification.id;

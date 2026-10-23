@@ -53,6 +53,7 @@ The ticket page has three parts: the ticket's sidebar, the editor, and the Prope
 The sidebar lists, from top to bottom:
 
 - The ticket itself. Select it to edit the ticket's description.
+- **Needs attention** collects ticket actions that need a person. It currently shows review requests and their open count. Select it to answer them while the sidebar stays visible. See [Needs attention](0006-review-requests.md).
 - The **Files** section lists extra Markdown files that belong to the ticket, and its image attachments. Choose **New file** to add a file. Right-click a file to rename or delete it. Images open in a read-only preview.
 - The **Sub-tickets** section appears when the ticket has sub-tickets.
 - The **Workspaces** section lists the project workspace and every workspace linked to the ticket. Choose **Create workspace** to add one. See [Attempts](0002-attempts.md#workspaces-on-a-ticket).
@@ -109,4 +110,6 @@ The Ticket tags header keeps **Save** and **Reset** visible while you scroll thr
 
 Archiving or deleting a ticket deletes linked workspaces once no active ticket uses them and the project setting **Delete linked workspaces** (`tickets.deleteLinkedWorkspaces`) is on. The setting is on by default. Deletion removes the worktree, its branch, and any uncommitted changes. The default project workspace and providers without deletion support stay available. Unarchiving restores the ticket, but does not restore deleted workspaces.
 
-The project setting **Mark done on merge** (`tickets.markDoneOnMerge`) is also on by default. Local merges move linked tickets to Done. Planner checks GitHub pull request links and linked workspace branches every five minutes with up to eight parallel checks. Install and authenticate GitHub CLI (`gh`) on the host for these checks. Failed GitHub checks leave tickets unchanged and log the failure. Merges do not archive tickets or delete workspaces.
+**Archive all** updates the board as soon as the tickets are archived. Linked workspace cleanup continues in the background. The host processes up to two workspace deletions at a time across archive batches, API requests, and extension commands. If a deletion fails, cleanup continues with the remaining workspaces and sends a failure notification. The tickets stay archived.
+
+The project setting **Mark done on merge** (`tickets.markDoneOnMerge`) is also on by default. Local merges move linked tickets to the status after merge chosen in Planner workflow settings. Without that choice, tickets stay unchanged. Planner checks GitHub pull request links and linked workspace branches every five minutes with up to eight parallel checks. Install and authenticate GitHub CLI (`gh`) on the host for these checks. Failed GitHub checks leave tickets unchanged and log the failure. Merges do not archive tickets or delete workspaces.

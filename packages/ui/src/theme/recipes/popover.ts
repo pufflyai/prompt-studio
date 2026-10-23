@@ -17,6 +17,7 @@ export const popoverRecipe = defineSlotRecipe({
     },
     content: {
       gap: "8px",
+      px: "sm",
       py: "xs",
       borderRadius: "xs",
       bg: "bg",
@@ -31,17 +32,15 @@ export const popoverRecipe = defineSlotRecipe({
       textStyle: "label/M/medium",
       bg: "bg",
     },
-    body: { textStyle: "primary" },
-    footer: {},
+    header: { padding: "0" },
+    body: { padding: "0", textStyle: "primary" },
+    footer: { padding: "0" },
   },
   variants: {
     variant: {
       panel: {
-        content: { "--popover-size": "sizes.popover-panel", padding: "md", gap: "md", borderColor: "border" },
-        header: { padding: "0" },
+        content: { "--popover-size": "sizes.popover-panel", gap: "md", borderColor: "border" },
         title: { textStyle: "label/M/medium" },
-        body: { padding: "0" },
-        footer: { padding: "0" },
       },
       responsive: {
         content: { width: "unset" },

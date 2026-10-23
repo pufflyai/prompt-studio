@@ -1,16 +1,38 @@
 import { and, eq, sql } from "drizzle-orm";
+import { createStorageId } from "pstdio-api-contracts";
+import {
+  nextResourceNumber,
+  rememberResourceNumber,
+  resourceIdentity,
+  resourceNumbers,
+  resourceNumbersOwnerId,
+} from "pstdio-sync";
 import type { DbClient } from "../db/connection.pglite";
 import { extension_resource_sequences as sequences } from "../db/schemas.pg";
+import { createDocumentStorageDBService } from "./extension-storage/document-storage";
+import { createResourceIdentityIndex, upgradeResourceIdentityIndexes } from "./resource-identity-index";
+import { createResourceNumberStore } from "./resource-number-store";
 
 interface AllocationInput {
   projectId: string;
   extensionId: string;
   kind: string;
   prefix: string;
+  idPrefix?: string;
 }
 
-export const createExtensionResourceSequencesDBService = (db: DbClient) => {
+export const createExtensionResourceSequencesDBService = (
+  db: DbClient,
+  documents = createDocumentStorageDBService(db),
+) => {
+  const ready = upgradeResourceIdentityIndexes(db, documents);
+  const store = createResourceNumberStore(documents, ready);
+  const { identity, identityMany, findByShorthand } = createResourceIdentityIndex(db, ready);
+  const owner = (projectId: string) => ({ workbenchId: projectId, extensionId: resourceNumbersOwnerId });
+
   const allocate = async (input: AllocationInput) => {
+    await ready;
+    const id = createStorageId(input.idPrefix);
     const timestamp = new Date().toISOString();
     try {
       const [row] = await db
@@ -29,7 +51,20 @@ export const createExtensionResourceSequencesDBService = (db: DbClient) => {
           set: { next_value: sql`${sequences.next_value} + 1`, updated_at: timestamp },
         })
         .returning();
-      return { id: crypto.randomUUID(), shorthand: `${row!.prefix}-${row!.next_value}` };
+      return store.documentStore.transaction(owner(input.projectId), async ({ document }) => {
+        const resource = {
+          id,
+          extensionId: input.extensionId,
+          kind: input.kind,
+          prefix: row!.prefix,
+          value: nextResourceNumber(document, row!.prefix, row!.next_value - 1),
+        };
+        document.transact(() => {
+          resourceNumbers(document).set(resource.id, resource);
+          rememberResourceNumber(document, resource);
+        });
+        return { id: resource.id, shorthand: resourceIdentity(document, resource).shorthand };
+      });
     } catch (error) {
       const [owner] = await db
         .select()
@@ -44,5 +79,5 @@ export const createExtensionResourceSequencesDBService = (db: DbClient) => {
       throw error;
     }
   };
-  return { allocate };
+  return { allocate, identity, identityMany, findByShorthand, ...store, watchChanges: documents.watch };
 };

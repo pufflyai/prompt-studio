@@ -143,7 +143,7 @@ const RowContent = (props: RowContentProps & { labelId: string }) => {
             </Box>
           ) : null}
           {item.indicator ? (
-            <Tooltip content={item.indicator.tooltip} disabled={!item.indicator.tooltip} openDelay={300}>
+            <Tooltip content={item.indicator.tooltip} disabled={!item.indicator.tooltip}>
               <Box color={item.indicator.color ?? "fg.muted"} flexShrink={0}>
                 {item.indicator.icon}
               </Box>

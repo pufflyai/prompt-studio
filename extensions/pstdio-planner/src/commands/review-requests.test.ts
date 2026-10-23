@@ -1,12 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandSource } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { putAttempt, readAttempt } from "../data/attempt-storage";
-import { putTicket, tagsCollection, ticketsCollection } from "../data/collections";
-import { findTicket } from "../data/resolve";
-import { REVIEW_OUTCOMES_COLLECTION, reviewRequestsCollection } from "../data/review-request-storage";
-import { seedDefaultTags } from "../data/seed";
+import { putTicket, ticketsCollection } from "../data/collections";
+import { hasPendingImplementationInput } from "../data/implementation-input";
+import {
+  hasPendingInput,
+  listTicketReviewRequests,
+  REVIEW_OUTCOMES_COLLECTION,
+  reviewRequestsCollection,
+} from "../data/review-request-storage";
 import { reviewRequestCleanupHook } from "../hooks/review-request-cleanup";
 import { makeCommandContext } from "./command-context.fixture";
 import {
@@ -19,7 +22,6 @@ import {
 } from "./review-requests";
 
 const timestamp = "2026-08-18T09:00:00.000Z";
-const FLAG = "default-human-requested-true";
 
 const ticket = (id: string, statusId = "in-review") => ({
   id,
@@ -45,6 +47,7 @@ const setup = async () => {
   await putTicket(storage, ticket("ps-1"));
   const created: Array<{ id: string; title: string; prompt?: string; anchors?: unknown[] }> = [];
   const opened: unknown[] = [];
+  const followups: unknown[] = [];
   const context = (source: CommandSource = "cli", extra: Record<string, unknown> = {}) =>
     makeCommandContext({
       storage,
@@ -54,20 +57,25 @@ const setup = async () => {
         invocationId: `${source}-actor`,
         navigation: { open: (target: unknown) => opened.push(target) },
         sessions: {
-          get: async (id: string) => created.find((session) => session.id === id) ?? null,
+          get: async (id: string) => {
+            const session = created.find((session) => session.id === id);
+            return session ? { ...session, anchors_json: session.anchors } : null;
+          },
           create: async (input: { title: string; prompt?: string; anchors?: unknown[] }) => {
             const session = { ...input, id: `session-${created.length + 1}` };
             created.push(session);
             return { type: "session", status: "in_progress", ...session };
           },
           addAnchors: async () => {},
-          followup: async () => {},
+          followup: async (input: unknown) => {
+            followups.push(input);
+          },
         } as never,
         ...extra,
       },
     });
-  const flagged = async () => (await findTicket(storage, "ps-1"))?.tagIds?.includes(FLAG);
-  return { storage, created, opened, context, flagged };
+  const inputPending = async () => hasPendingInput(await listTicketReviewRequests(storage, "ps-1"));
+  return { storage, created, opened, followups, context, inputPending };
 };
 
 const task = {
@@ -113,21 +121,18 @@ const decision = {
 };
 
 describe("review requests", () => {
-  test("a fresh project creates, answers, and reloads a task with its session and flag", async () => {
-    const { storage, created, context, flagged } = await setup();
+  test("a fresh project creates and answers a task without starting a session", async () => {
+    const { storage, created, context, inputPending } = await setup();
 
     const request = await requestHumanCommand.run(context(), task as never);
 
     expect(request).toMatchObject({
       state: "open",
       requestedBy: { type: "agent" },
-      context: { sessionId: "session-1" },
+      context: { sessionId: null },
     });
-    expect(created[0]?.prompt).toContain(`pst pstdio-planner review --request-id ${request.id}`);
-    expect(created[0]?.anchors).toContainEqual(
-      expect.objectContaining({ type: "planner-human-request", id: request.id, extensionId: "pstdio-planner" }),
-    );
-    expect(await flagged()).toBe(true);
+    expect(created).toHaveLength(0);
+    expect(await inputPending()).toBe(true);
 
     await reviewCommand.run(context("dashboard"), { requestId: request.id, response: { confirmed: true } });
 
@@ -139,7 +144,8 @@ describe("review requests", () => {
       outcome: { kind: "answered", by: { type: "human" }, response: { confirmed: true } },
       outcomeText: "Completion confirmed",
     });
-    expect(await flagged()).toBe(false);
+    expect(await inputPending()).toBe(false);
+    expect(created).toHaveLength(0);
   });
 
   test("decisions validate every question kind before saving the answer", async () => {
@@ -161,19 +167,61 @@ describe("review requests", () => {
     );
   });
 
-  test("Review Needed stays until the last open request is answered or cancelled", async () => {
-    const { context, flagged } = await setup();
+  test("input stays pending until the last open request is answered or cancelled", async () => {
+    const { context, inputPending } = await setup();
     const first = await requestHumanCommand.run(context(), task as never);
     const second = await requestHumanCommand.run(context(), decision as never);
 
     await reviewCommand.run(context(), { requestId: first.id, response: { confirmed: true } });
-    expect(await flagged()).toBe(true);
+    expect(await inputPending()).toBe(true);
     const open = await listReviewRequestsCommand.run(context(), { ticket: "PS-1", openOnly: true });
     expect(open.requests.map(({ id }) => id)).toEqual([second.id]);
 
     await cancelReviewRequestCommand.run(context(), { requestId: second.id, reason: "The scope changed." });
-    expect(await flagged()).toBe(false);
+    expect(await inputPending()).toBe(false);
     expect((await listReviewRequestsCommand.run(context(), { ticket: "PS-1" })).requests).toHaveLength(2);
+  });
+
+  test("a saved decision can be revised without hiding other pending input", async () => {
+    const { context, inputPending } = await setup();
+    const request = await requestHumanCommand.run(context(), decision as never);
+    const answer = (answers: Record<string, string | string[]>) =>
+      reviewCommand.run(context("dashboard"), { requestId: request.id, response: { answers } });
+    await answer({ scope: "preview", platforms: ["mac"], limits: "Internal only" });
+    expect(await inputPending()).toBe(false);
+    const pending = await requestHumanCommand.run(context(), task as never);
+
+    await expect(answer({ scope: "beta", limits: "None" })).rejects.toThrow("Invalid choice");
+    expect((await readReviewRequestCommand.run(context(), { requestId: request.id })).outcome).toMatchObject({
+      response: { answers: { scope: "preview", platforms: ["mac"], limits: "Internal only" } },
+    });
+    await answer({ scope: "full", platforms: ["win"], limits: "Public release" });
+
+    const reloaded = await readReviewRequestCommand.run(context(), { requestId: request.id });
+    expect(reloaded).toMatchObject({
+      state: "answered",
+      outcome: {
+        by: { type: "human" },
+        response: { answers: { scope: "full", platforms: ["win"], limits: "Public release" } },
+      },
+      outcomeText: "Release scope: Full release\nPlatforms: Windows\nLimits: Public release",
+    });
+    expect(await inputPending()).toBe(true);
+    expect(
+      (await listReviewRequestsCommand.run(context(), { ticket: "PS-1", openOnly: true })).requests.map(({ id }) => id),
+    ).toEqual([pending.id]);
+  });
+
+  test("cancelled decisions cannot be answered", async () => {
+    const { context } = await setup();
+    const request = await requestHumanCommand.run(context(), decision as never);
+    await cancelReviewRequestCommand.run(context(), { requestId: request.id, reason: "Withdrawn" });
+    await expect(
+      reviewCommand.run(context(), {
+        requestId: request.id,
+        response: { answers: { scope: "full", limits: "None" } },
+      }),
+    ).rejects.toThrow("already cancelled");
   });
 
   test("schedules, automations, and events cannot answer or cancel a request", async () => {
@@ -207,28 +255,85 @@ describe("review requests", () => {
       reviewCommand.run(context(), { requestId: request.id, response: { confirmed: true } }),
     ).rejects.toThrow(`Request ${request.id} is already ${current.state}.`);
   });
+});
 
-  test("opening the linked chat records no response", async () => {
-    const { context, opened } = await setup();
+describe("review request conversations", () => {
+  test("opening a request starts its conversation once and records no response", async () => {
+    const { context, opened, created } = await setup();
     const request = await requestHumanCommand.run(context(), task as never);
 
     expect(await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id })).toMatchObject({
       id: "session-1",
     });
-    expect(opened).toHaveLength(1);
+    expect(created).toHaveLength(1);
+    expect(created[0]?.prompt).toContain(`pst pstdio-planner review --request-id ${request.id}`);
+    expect(created[0]?.anchors).toContainEqual(
+      expect.objectContaining({ type: "planner-human-request", id: request.id, extensionId: "pstdio-planner" }),
+    );
+    await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id });
+    expect(created).toHaveLength(1);
+    expect(opened).toHaveLength(2);
     expect((await readReviewRequestCommand.run(context(), { requestId: request.id })).state).toBe("open");
   });
 
-  test("a request opened before the ticket was done can still be settled", async () => {
-    const { storage, context, flagged } = await setup();
+  test("a related ticket session stays idle until the person opens the request", async () => {
+    const { context, created, followups } = await setup();
+    created.push({ id: "origin", title: "Planning", anchors: [{ type: "ticket", id: "ps-1" }] });
+    const request = await requestHumanCommand.run(context(), { ...task, sessionId: "origin" } as never);
+
+    expect(created).toHaveLength(1);
+    expect(followups).toEqual([]);
+    expect(request.context).toMatchObject({ sessionId: null, relatedSessionId: "origin" });
+
+    await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id });
+    await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id });
+
+    expect(created).toHaveLength(1);
+    expect(followups).toEqual([expect.objectContaining({ sessionId: "origin" })]);
+    expect((await readReviewRequestCommand.run(context(), { requestId: request.id })).context.sessionId).toBe("origin");
+  });
+
+  test("overlapping opens share one conversation", async () => {
+    const { context, created } = await setup();
     const request = await requestHumanCommand.run(context(), task as never);
-    await putTicket(storage, { ...ticket("ps-1"), statusId: "done", tagIds: [FLAG] });
+    const sessions = await Promise.all([
+      openReviewRequestCommand.run(context("dashboard"), { requestId: request.id }),
+      openReviewRequestCommand.run(context("dashboard"), { requestId: request.id }),
+    ]);
+
+    expect(created).toHaveLength(1);
+    expect(sessions[0]?.id).toBe(sessions[1]?.id);
+  });
+
+  test("opening a saved decision preserves its answer", async () => {
+    const { context, created } = await setup();
+    const request = await requestHumanCommand.run(context(), decision as never);
+    const answered = await reviewCommand.run(context("dashboard"), {
+      requestId: request.id,
+      response: { answers: { scope: "preview", limits: "Internal release" } },
+    });
+    expect(created).toHaveLength(0);
+
+    await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id });
+
+    const reopened = await readReviewRequestCommand.run(context(), { requestId: request.id });
+    expect(reopened.outcome).toEqual(answered.outcome);
+    expect(reopened.state).toBe("answered");
+    expect(created).toHaveLength(1);
+  });
+});
+
+describe("review request ownership", () => {
+  test("a request opened before the ticket was done can still be settled", async () => {
+    const { storage, context, inputPending } = await setup();
+    const request = await requestHumanCommand.run(context(), task as never);
+    await putTicket(storage, { ...ticket("ps-1"), statusId: "done", tagIds: [] });
 
     await expect(requestHumanCommand.run(context(), task as never)).rejects.toThrow("The ticket is complete.");
     await reviewCommand.run(context(), { requestId: request.id, response: { confirmed: true } });
 
     expect((await readReviewRequestCommand.run(context(), { requestId: request.id })).state).toBe("answered");
-    expect(await flagged()).toBe(false);
+    expect(await inputPending()).toBe(false);
   });
 
   test("an answer that races ticket deletion leaves no records behind", async () => {
@@ -277,17 +382,14 @@ describe("review requests", () => {
 describe("attempt handoffs", () => {
   const setupAttempt = async () => {
     const fixture = await setup();
-    await seedDefaultTags(fixture.storage);
-    const flags = await tagsCollection(fixture.storage).get("default-human-requested");
-    await tagsCollection(fixture.storage).put("default-human-requested", { ...flags!, name: "Interruptions" });
     await putAttempt(fixture.storage, {
-      schemaVersion: 1,
+      schemaVersion: 2,
       workspaceId: "workspace-1",
       workspaceShorthand: "PS-1_A1",
       ticketId: "ps-1",
       ticketShorthand: "PS-1",
       implementationSessionId: "implementation-1",
-      state: "approved",
+
       base: { workspaceId: null, headSha: "base-sha" },
       revisions: [
         {
@@ -325,41 +427,48 @@ describe("attempt handoffs", () => {
   };
 
   test("a retried handoff reuses its open request and does not reuse an unrelated session", async () => {
-    const { context, created, flagged } = await setupAttempt();
+    const { context, created, inputPending } = await setupAttempt();
 
     const first = await requestHumanCommand.run(context("automation"), handoff as never);
     const second = await requestHumanCommand.run(context("automation"), handoff as never);
 
     expect(second.id).toBe(first.id);
-    expect(created).toHaveLength(1);
+    expect(created).toHaveLength(0);
     expect(first.context).toEqual({
       reason: "approved-revision",
       workspaceId: "workspace-1",
       attemptRevision: 1,
-      sessionId: "session-1",
+      sessionId: null,
       relatedSessionId: "unrelated-session",
     });
-    expect(await flagged()).toBe(true);
+    expect(await inputPending()).toBe(true);
   });
 
-  test("a changed attempt refuses the handoff before writing", async () => {
+  test("a changed revision refuses the handoff before writing", async () => {
     const { context, created } = await setupAttempt();
 
-    await expect(
-      requestHumanCommand.run(context("automation"), { ...handoff, expectedAttemptState: "blocked" } as never),
-    ).rejects.toThrow("Attempt state changed");
+    await expect(requestHumanCommand.run(context("automation"), { ...handoff, revision: 2 } as never)).rejects.toThrow(
+      "Attempt revision changed",
+    );
     expect(created).toHaveLength(0);
   });
 
-  test("an open request marks the attempt ticket Blocked even when its flag write was lost", async () => {
+  test("human requests preserve the chosen ticket status when a variant records evidence", async () => {
     const { storage, context } = await setupAttempt();
     await requestHumanCommand.run(context("automation"), handoff as never);
     await putTicket(storage, { ...ticket("ps-1"), tagIds: [] });
     const attempt = (await readAttempt(storage, "workspace-1"))!;
-    await putAttempt(storage, { ...attempt, state: "implementing" });
+    await putAttempt(storage, { ...attempt, updatedAt: new Date().toISOString() });
 
-    await rollUpAttemptTicket(context(), "ps-1");
-
-    expect((await ticketsCollection(storage).get("ps-1"))?.statusId).toBe("blocked");
+    expect((await ticketsCollection(storage).get("ps-1"))?.statusId).toBe("in-review");
   });
+});
+
+test("persisted merge-only requests do not block implementation", async () => {
+  const { storage, context } = await setup();
+  await requestHumanCommand.run(context(), { ...task, request: { kind: "task" }, affectedAction: "merge" } as const);
+  const requests = await listTicketReviewRequests(storage, "ps-1");
+  expect(requests.requests[0]!.context.affectedAction).toBe("merge");
+  expect(hasPendingImplementationInput(requests)).toBe(false);
+  expect(hasPendingImplementationInput(requests, true)).toBe(true);
 });

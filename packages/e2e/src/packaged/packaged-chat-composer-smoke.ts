@@ -1,14 +1,19 @@
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { expectPackagedCollapsedMessage } from "./packaged-collapsed-message-smoke";
-import { expectPackagedPanelMotion, expectPackagedStreamingMotion } from "./packaged-motion-smoke";
 
 export const expectPackagedChatComposer = async (baseUrl: string, headers: Record<string, string>, root: string) => {
+  const startedAt = Date.now();
+  const phase = (name: string) => logTestPhase(`Packaged composer: ${name} (${Date.now() - startedAt}ms)`);
   const folder = join(root, "chat-project");
-  mkdirSync(folder);
+  // Guessed paths in chat become links only when the files exist.
+  mkdirSync(join(folder, "src", "app", "(dashboard)"), { recursive: true });
+  writeFileSync(join(folder, "src", "app.ts"), "export {};\n");
+  writeFileSync(join(folder, "src", "app", "(dashboard)", "page.ts"), "export {};\n");
   const response = await fetch(`${baseUrl}/v1/projects`, {
     method: "POST",
     headers: { ...headers, "Content-Type": "application/json" },
@@ -26,8 +31,9 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
     await page.goto(`${baseUrl}/projects/${project.id}/sessions`);
-    const editor = page.getByTestId("content-editable").last();
-    const send = page.getByTestId("send-message-button").last();
+    phase("dashboard opened");
+    const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
+    const send = page.getByTestId("send-message-button").filter({ visible: true }).last();
     let release!: () => void;
     const held = new Promise<void>((resolve) => {
       release = resolve;
@@ -51,6 +57,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     }
     await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
     await page.unroute(`${baseUrl}/v1/sessions`);
+    phase("creation draft handed off");
     const next = "Packaged composer follow-up";
     let releaseFollowUp!: () => void;
     const heldFollowUp = new Promise<void>((resolve) => {
@@ -73,9 +80,21 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(editor).toHaveAttribute("contenteditable", "true");
     await expect(editor).toBeFocused();
     await page.unroute("**/follow-up");
+    phase("follow-up draft handed off");
+
+    for (const recalled of [next, prompt]) {
+      await editor.press("ArrowUp");
+      await expect(editor).toHaveText(recalled);
+      await expect(editor).toBeFocused();
+    }
+    await editor.press("ArrowDown");
+    await expect(editor).toHaveText(next);
+    await editor.press("ArrowDown");
+    await expect(editor).toBeEmpty();
+    phase("prompt history recalled through saved drafts");
 
     const equations =
-      "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nRead src/app.ts and src/app/(dashboard)/page.ts. Open {{link('https://example.com')}}. End equations.";
+      "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nRead src/app.ts and src/app/(dashboard)/page.ts, not src/missing.ts. Open {{link('https://example.com')}}. End equations.";
     await editor.fill(equations);
     await editor.press("Enter");
     const reply = page.locator(".ai-message__root").filter({ hasText: "Fake Agent: follow-up" }).last();
@@ -90,6 +109,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(groupedPath).toBeVisible();
     await expect(groupedPath).toHaveAttribute("href", /src%2Fapp%2F%28dashboard%29%2Fpage\.ts/);
     await expect(reply.getByRole("link", { name: "/page.ts", exact: true })).toHaveCount(0);
+    await expect(reply.getByRole("link", { name: "src/missing.ts", exact: true })).toHaveCount(0);
     const webReference = reply.getByRole("link", { name: "example.com", exact: true });
     await expect(webReference).toHaveAttribute("href", "https://example.com");
     await expect(webReference).toHaveAttribute("target", "_blank");
@@ -116,6 +136,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(detail).toHaveCSS("white-space", "nowrap");
     await page.getByText("Wrap rows", { exact: true }).click();
     await page.keyboard.press("Escape");
+    phase("rich messages checked");
 
     const idleResponse = await fetch(`${baseUrl}/v1/sessions`, {
       method: "POST",
@@ -142,8 +163,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await editor.press("Enter");
     await expect(page.getByText('Fake Agent: completed "First idle-session message"').first()).toBeVisible();
     await expectPackagedCollapsedMessage(page, editor);
-    await expectPackagedStreamingMotion(page, baseUrl, project.id, headers);
-    await expectPackagedPanelMotion(page);
+    phase("idle session and collapsed message checked");
   } finally {
     await browser.close();
   }

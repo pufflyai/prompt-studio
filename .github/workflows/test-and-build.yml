@@ -1,9 +1,8 @@
 name: Test and Build
 
-# Each event runs one stage. Pull requests get fast Linux checks scoped to their changes.
-# The merge queue builds every client and runs whole-repo deterministic checks, so it rejects a
-# merged result only when it cannot build or fails a check. Pushes to main and manual runs run
-# every job, and the `ci:full` label runs that full stage on a pull request.
+# Pull requests select fast package, browser and native checks from their affected inputs.
+# Merge groups run the same selection over every queued PR and also build every client.
+# Main, manual runs, and ci:full PRs and merge groups retain full validation.
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
@@ -19,8 +18,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  NX_DAEMON: "false"
+
 jobs:
   scope:
+    permissions:
+      contents: read
+      pull-requests: read
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -32,6 +37,12 @@ jobs:
       published_extensions: ${{ steps.scope.outputs.publishedExtensions }}
       harness_cli: ${{ steps.scope.outputs.harnessCli }}
       relay_smoke: ${{ steps.scope.outputs.relaySmoke }}
+      browser_smoke: ${{ steps.scope.outputs.browserSmoke }}
+      browser_checks: ${{ steps.scope.outputs.browserChecks }}
+      browser_matrix: ${{ steps.scope.outputs.browserMatrix }}
+      native_checks: ${{ steps.scope.outputs.nativeChecks }}
+      package_checks: ${{ steps.scope.outputs.packageChecks }}
+      required_jobs: ${{ steps.scope.outputs.requiredJobs }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -54,6 +65,7 @@ jobs:
         id: scope
         env:
           PULL_REQUEST_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          GH_TOKEN: ${{ github.token }}
         run: bun scripts/ci/pull-request-ci-scope.ts
 
   # Whole-repo checks that give the same result for the same commit. Every stage runs them.
@@ -76,8 +88,8 @@ jobs:
         with:
           bun-version-file: package.json
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
 
       - name: Check formatting
         run: bun run format:check
@@ -128,9 +140,9 @@ jobs:
       - name: Check translations
         run: bun run verify:translations
 
-  lint_and_test:
+  lint:
     needs: scope
-    if: needs.scope.outputs.stage != 'merge_queue'
+    if: needs.scope.outputs.package_checks == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -149,14 +161,32 @@ jobs:
         with:
           bun-version-file: package.json
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
 
       - name: Build the tested packages and their dependencies
         run: bun run build -- ${{ needs.scope.outputs.lerna_filter }} --include-dependencies
 
       - name: Lint monorepo
         run: bunx lerna run lint ${{ needs.scope.outputs.lerna_filter }}
+
+  unit_tests:
+    needs: scope
+    if: needs.scope.outputs.package_checks == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+
+      - name: Build tested packages and their dependencies
+        run: bun run build -- ${{ needs.scope.outputs.lerna_filter }} --include-dependencies
 
       - name: Test monorepo (non-e2e)
         # Stream failures as they happen; buffered task output can be lost when the runner exits.
@@ -183,19 +213,22 @@ jobs:
         run: bun packages/pstdio-db/src/db/pglite-container-lock.integration.ts
 
       - name: Test built relay with disposable PostgreSQL and object storage
-        run: bun run --cwd infra/relay test:isolated
+        run: bun run --cwd services/relay test:isolated
 
       - name: Install dependencies for storage and private account authority checks
         run: bun install --frozen-lockfile
 
       - name: Test PostgreSQL publication and process recovery
-        run: bun run --cwd infra/relay test:storage
+        run: bun run --cwd services/relay test:storage
 
       - name: Test durable streaming assets and object storage contract
-        run: bun run --cwd infra/relay test:assets
+        run: bun run --cwd services/relay test:assets
 
       - name: Test authenticated relay HTTP and finite WebSocket subscriptions
-        run: bun run --cwd infra/relay test:transport
+        run: bun run --cwd services/relay test:transport
+
+      - name: Test the blind sync store, its cleanup and its protocol
+        run: bun run --cwd services/relay test:sync
 
       - name: Test production relay with real local stores
         env:
@@ -203,7 +236,7 @@ jobs:
         run: bun run --cwd packages/pstdio-sync-contracts test:conformance
 
       - name: Test private account authority and its built image with disposable PostgreSQL
-        run: bun run --cwd infra/account-manager test:isolated
+        run: bun run --cwd services/account-manager test:isolated
 
   # Together these suites took 6 to 8 minutes in one job, where they also slowed each other down.
   # Shards keep each job near the PR stage's 5-minute target.
@@ -237,8 +270,8 @@ jobs:
         with:
           bun-version-file: package.json
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
 
       - name: Build ${{ matrix.package }} and its dependencies
         run: bun run build -- --scope ${{ matrix.package }} --include-dependencies
@@ -271,10 +304,21 @@ jobs:
       versions: '["minimum"]'
 
   windows_test_and_build:
+    name: windows_test_and_build (${{ matrix.check }})
     needs: scope
     if: needs.scope.outputs.stage == 'full'
     runs-on: windows-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { check: lint, lane: lint }
+          - { check: native, lane: native }
+          - { check: unit-1, lane: unit, shard: 1/4 }
+          - { check: unit-2, lane: unit, shard: 2/4 }
+          - { check: unit-3, lane: unit, shard: 3/4 }
+          - { check: unit-4, lane: unit, shard: 4/4 }
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -290,54 +334,82 @@ jobs:
         with:
           bun-version-file: package.json
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
 
       - name: Test dependency installs, workspace links, watchers, and attachments
-        run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-api/src/features/extensions/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts
+        if: matrix.lane == 'native'
+        run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-extensions/src/authoring/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts
 
       # A fresh runner's first Windows PowerShell start prepares its modules and C# compiler. That one-time cost
       # is usually about 4 s but has stalled past the 15 s test limit, so pay it before the tests that use PowerShell.
       - name: Warm up Windows PowerShell
+        if: matrix.lane != 'lint'
         run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
 
       - name: Test Windows desktop platform integrations
-        run: bun test --timeout 15000 clients/desktop/src/cli clients/desktop/src/performance/performance-endpoint.test.ts
+        if: matrix.lane == 'native'
+        run: bun test --timeout 15000 clients/desktop/src/cli clients/desktop/src/performance
 
       - name: Check formatting
+        if: matrix.lane == 'lint'
         run: bun run format:check
 
       - name: Build monorepo
         run: bun run build
 
       - name: Test Windows npm command shims
+        if: matrix.lane == 'native'
         run: bun --conditions=source test --timeout 15000 packages/pstdio-api/src/features/extensions/process-command.test.ts packages/pstdio-api/src/features/extensions/process-command.windows.test.ts packages/pstdio-api/src/features/extensions/process-discovery.test.ts packages/pstdio-extensions/src/runtime/process-environment.test.ts packages/pstdio-api-runtime-host/src/harness-registry.test.ts
 
       - name: Compile Windows runtime for harness detection
+        if: matrix.lane == 'native'
         env:
           PSTDIO_BUILD_PLATFORM_PKG: cli-win-x64
         run: bun run --cwd scripts build:all
 
       - name: Test packaged Windows npm harness detection
+        if: matrix.lane == 'native'
         env:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe
-        run: bun test packages/e2e/src/packaged/harness-npm-detection.test.ts --timeout 30000
+        run: bun test packages/e2e/src/packaged/harness-npm-detection.test.ts packages/e2e/src/packaged/performance-observer.test.ts --timeout 30000
 
       - name: Lint monorepo
+        if: matrix.lane == 'lint'
         run: bunx lerna run lint
 
-      - name: Test monorepo (non-e2e)
+      - name: Test monorepo shard ${{ matrix.shard }} (non-e2e)
+        if: matrix.lane == 'unit'
         # ADR 0044: hosted Windows runner variance exceeds Bun's 5 s default.
-        run: bunx lerna run test --ignore e2e --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream --concurrency=1 -- --timeout=15000
+        # Every package uses bun test; split its files without adding workers on the same runner.
+        run: bunx lerna run test --ignore e2e --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream --concurrency=1 -- --shard=${{ matrix.shard }} --timeout=15000
 
-      - name: Test Git worktrees with their existing 30-second limit
-        run: bun run --cwd packages/pstdio-wt test
+      - name: Test Git worktree shard ${{ matrix.shard }} with its existing 30-second limit
+        if: matrix.lane == 'unit'
+        run: bun run --cwd packages/pstdio-wt test --shard=${{ matrix.shard }}
 
   windows_database_tests:
+    name: windows_database_tests (${{ matrix.package }} ${{ matrix.shard }})
     needs: scope
     if: needs.scope.outputs.stage == 'full'
     runs-on: windows-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { package: pstdio-api, shard: 1/8 }
+          - { package: pstdio-api, shard: 2/8 }
+          - { package: pstdio-api, shard: 3/8 }
+          - { package: pstdio-api, shard: 4/8 }
+          - { package: pstdio-api, shard: 5/8 }
+          - { package: pstdio-api, shard: 6/8 }
+          - { package: pstdio-api, shard: 7/8 }
+          - { package: pstdio-api, shard: 8/8 }
+          - { package: pstdio-db, shard: 1/4 }
+          - { package: pstdio-db, shard: 2/4 }
+          - { package: pstdio-db, shard: 3/4 }
+          - { package: pstdio-db, shard: 4/4 }
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -353,21 +425,21 @@ jobs:
         with:
           bun-version-file: package.json
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
 
-      - name: Build database and API dependencies
-        run: bun run build -- --scope pstdio-api --include-dependencies
+      - name: Build ${{ matrix.package }} and its dependencies
+        run: bun run build -- --scope ${{ matrix.package }} --include-dependencies
 
-      # This job has its own fresh runner, so it must prepare PowerShell before API tests too.
+      # Each API shard has a fresh runner. Keep PowerShell setup outside its test limits.
       - name: Warm up Windows PowerShell
+        if: matrix.package == 'pstdio-api'
         run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
 
-      # PGlite setup dominates these suites on Windows. Run them on their own runner
-      # so the platform checks do not wait for hundreds of database initializations.
-      - name: Test database and API packages
+      # Split PGlite initialization across runners without adding workers within a shard.
+      - name: Test ${{ matrix.package }} shard ${{ matrix.shard }}
         # ADR 0044: retain the existing Windows default and the API runner's own limit.
-        run: bunx lerna run test --scope pstdio-db --scope pstdio-api --stream --concurrency=1 -- --timeout=15000
+        run: bun run --cwd packages/${{ matrix.package }} test --shard=${{ matrix.shard }} --timeout=15000
 
   storybooks:
     needs: scope
@@ -387,8 +459,8 @@ jobs:
         with:
           bun-version-file: package.json
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
 
       - name: Build Storybook dependencies
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
@@ -406,6 +478,124 @@ jobs:
             packages/pstdio-dashboard/storybook-static
             packages/pstdio-workbench/storybook-static
           if-no-files-found: error
+
+  browser_smoke:
+    needs: scope
+    if: needs.scope.outputs.browser_smoke == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
+
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+
+      - name: Build dashboard browser test dependencies
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+
+      - name: Test basic dashboard flows
+        run: bun run --cwd packages/e2e test:smoke
+
+      - name: Preserve browser smoke reports and failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-results-attempt-${{ github.run_attempt }}
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: warn
+
+  browser_regressions:
+    name: browser_regressions (${{ matrix.shard }})
+    needs: scope
+    if: needs.scope.outputs.browser_checks != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.scope.outputs.browser_matrix) }}
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Build browser dependencies
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - name: Test affected browser behavior
+        env:
+          PR_BROWSER_SPECS: ${{ matrix.specs }}
+        run: |
+          status=0
+          for spec in $PR_BROWSER_SPECS; do
+            bun run --cwd packages/e2e test:pr -- "$spec" || status=1
+          done
+          exit "$status"
+      - name: Preserve browser regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-regression-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: warn
+
+  native_contracts:
+    needs: scope
+    if: needs.scope.outputs.native_checks != '[]'
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Build SDK contracts used by native fixtures
+        run: bun run build -- --scope @pstdio/sdk --include-dependencies
+      - name: Prepare Windows PowerShell
+        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
+      - name: Test dependency installs, workspace links, watchers, and attachments
+        if: contains(fromJSON(needs.scope.outputs.native_checks), 'filesystem')
+        run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-extensions/src/authoring/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts
+      - name: Test native process discovery and command shims
+        if: contains(fromJSON(needs.scope.outputs.native_checks), 'process')
+        run: bun --conditions=source test --timeout 15000 packages/pstdio-api/src/features/extensions/process-command.test.ts packages/pstdio-api/src/features/extensions/process-command.windows.test.ts packages/pstdio-api/src/features/extensions/process-discovery.test.ts packages/pstdio-extensions/src/runtime/process-environment.test.ts packages/pstdio-api-runtime-host/src/harness-registry.test.ts
+      - name: Test Windows desktop platform integrations
+        if: contains(fromJSON(needs.scope.outputs.native_checks), 'desktop')
+        run: bun test --timeout 15000 clients/desktop/src/cli clients/desktop/src/performance
 
   e2e:
     needs: [scope, storybooks]
@@ -435,8 +625,10 @@ jobs:
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
 
       - name: Build end-to-end dependencies
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
@@ -485,8 +677,10 @@ jobs:
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
 
       - name: Build end-to-end dependencies
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
@@ -521,8 +715,10 @@ jobs:
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
 
       - name: Build packaged and Vite test dependencies
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
@@ -735,14 +931,14 @@ jobs:
   # treats a skipped required check as passing and jobs are skipped when a job they need fails.
   # A run cancelled by a newer run on the same commit (for example after a label is added)
   # reports nothing, so its stale failure does not sit next to the newer run's result.
-  # Pull requests may skip jobs their changes do not need. The merge queue requires its build
-  # and static check jobs. The full stage requires every job.
+  # The scope lists required jobs explicitly. A selected check that skips cannot pass this gate.
   ci_passed:
     if: ${{ !cancelled() }}
     needs:
       - scope
       - static_checks
-      - lint_and_test
+      - lint
+      - unit_tests
       - relay_smoke
       - database_tests
       - published_extensions
@@ -750,6 +946,9 @@ jobs:
       - windows_test_and_build
       - windows_database_tests
       - storybooks
+      - browser_smoke
+      - browser_regressions
+      - native_contracts
       - e2e
       - e2e_cli
       - packaged_and_vite_e2e
@@ -760,10 +959,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Require every job of this stage to succeed
-        if: >-
-          contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') ||
-          (needs.scope.outputs.stage == 'merge_queue' && (needs.static_checks.result != 'success' ||
-          needs.build_clients.result != 'success' || needs.build_docker.result != 'success')) ||
-          (needs.scope.outputs.stage == 'full' && contains(needs.*.result, 'skipped'))
-        run: exit 1
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Require every selected job to succeed
+        env:
+          REQUIRED_JOBS: ${{ needs.scope.outputs.required_jobs }}
+          CI_RESULTS: ${{ toJSON(needs) }}
+        run: node scripts/ci/required-ci-jobs.ts

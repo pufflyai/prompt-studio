@@ -69,7 +69,13 @@ Queued sessions are scheduler-owned. A queued session must have a matching `sess
 
 The queue entry is the durable intent to run the session. The session row is the durable UI and lifecycle record.
 
+Native live input is an explicit alternative to a normal next-turn request. `POST /sessions/{id}/steer` captures an expected active run and inserts its delivery evidence already held from dispatch. It never falls back to starting or queuing another turn. Rejected new input is removed; uncertain input stays held and cannot replay automatically. See [native steering](../../adrs/0062-native-queued-message-steering.md) for the shared delivery rules and [CLI usage](../cli/0006-sessions.md#steer-active-work).
+
 ## Dispatch Safety
+
+Session creation saves the initial prompt, model, options, and attachment references before returning. Both REST and
+extension commands return the session while the host starts the harness. Startup errors update that session. The saved
+request lets startup recovery retry a launch interrupted before harness acceptance.
 
 Queue dispatch keeps the claimed entry while resolving the harness and waiting for its
 workspace. Entries without attachments are removed only when start or resume accepts

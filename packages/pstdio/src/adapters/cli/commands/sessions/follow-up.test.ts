@@ -1,4 +1,5 @@
 import { describe, expect, type Mock, mock, test } from "bun:test";
+import { PstdioApiError } from "@pstdio/sdk/client";
 import type { Arguments } from "yargs";
 import { createHandler, type FollowUpArgs } from "./follow-up";
 
@@ -9,6 +10,16 @@ type Deps = NonNullable<Parameters<typeof createHandler>[0]>;
 const makeDeps = (overrides: Partial<Deps> = {}) => {
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
   return {
+    steerSession: overrides.steerSession ?? mock(async () => ({ status: "accepted" as const, deliveryId: "delivery" })),
+    getSteeringState:
+      overrides.getSteeringState ??
+      mock(async () => ({
+        activeRunStartedAt: "run",
+        steeringAvailable: true,
+        steeringUnavailableReason: null,
+        requests: [],
+      })),
+    setExitCode: overrides.setExitCode ?? mock(),
     followUpSession:
       overrides.followUpSession ??
       mock(
@@ -35,6 +46,98 @@ const makeDeps = (overrides: Partial<Deps> = {}) => {
 };
 
 describe("sessions follow-up", () => {
+  test("steers a new prompt at the captured run and reports its delivery", async () => {
+    const deps = makeDeps();
+    await createHandler(deps)(argv({ id: "s_1", prompt: "Correction", steer: true }));
+    expect(deps.followUpSession).not.toHaveBeenCalled();
+    expect(deps.steerSession).toHaveBeenCalledWith("s_1", { prompt: "Correction", expectedRunStartedAt: "run" });
+    expect(JSON.parse(deps.log.mock.calls[0][0])).toEqual({ status: "accepted", deliveryId: "delivery" });
+    expect(deps.setExitCode).not.toHaveBeenCalled();
+  });
+
+  test("steers attached files and summaries without changing the active settings", async () => {
+    const deps = makeDeps({ uploadAttachments: mock(async () => [{ file_id: "file" }]) as never });
+    await createHandler(deps)(
+      argv({ id: "s_1", "summary-of": "source", "summary-format": "detailed", attach: ["notes.txt"], steer: true }),
+    );
+    expect(deps.steerSession).toHaveBeenCalledWith("s_1", {
+      expectedRunStartedAt: "run",
+      summaryFromSessionId: "source",
+      summaryFormat: "detailed",
+      attachments: [{ fileId: "file" }],
+    });
+    expect(deps.deleteAttachments).not.toHaveBeenCalled();
+  });
+
+  test("unavailable steering fails before uploading or submitting a follow-up", async () => {
+    const deps = makeDeps({
+      getSteeringState: mock(async () => ({
+        activeRunStartedAt: null,
+        steeringAvailable: false,
+        steeringUnavailableReason: "Inactive run",
+        requests: [],
+      })),
+    });
+    await expect(
+      createHandler(deps)(argv({ id: "s_1", prompt: "Correction", steer: true, attach: ["notes.txt"] })),
+    ).rejects.toThrow("Inactive run");
+    expect(deps.uploadAttachments).not.toHaveBeenCalled();
+    expect(deps.steerSession).not.toHaveBeenCalled();
+    expect(deps.followUpSession).not.toHaveBeenCalled();
+  });
+
+  test.each(["agent", "model"] as const)("steering rejects --%s overrides", async (option) => {
+    const deps = makeDeps();
+    await expect(
+      createHandler(deps)(argv({ id: "s_1", prompt: "Correction", steer: true, [option]: "other" })),
+    ).rejects.toThrow(`--${option}`);
+    expect(deps.steerSession).not.toHaveBeenCalled();
+    expect(deps.followUpSession).not.toHaveBeenCalled();
+  });
+
+  test("rejected steering exits unsuccessfully and removes its unused uploads without fallback", async () => {
+    const result = { status: "rejected" as const, reason: "stale_run" as const, message: "Active run changed" };
+    const deps = makeDeps({
+      steerSession: mock(async () => result),
+      uploadAttachments: mock(async () => [{ file_id: "file" }]) as never,
+    });
+    await createHandler(deps)(argv({ id: "s_1", prompt: "Correction", steer: true, attach: ["notes.txt"] }));
+    expect(deps.setExitCode).toHaveBeenCalledWith(1);
+    expect(JSON.parse(deps.log.mock.calls[0][0])).toEqual(result);
+    expect(deps.deleteAttachments).toHaveBeenCalledWith({ projectId: "proj-1", attachments: [{ file_id: "file" }] });
+    expect(deps.followUpSession).not.toHaveBeenCalled();
+  });
+
+  test("uncertain steering exits unsuccessfully and retains its attachments and delivery identity", async () => {
+    const result = { status: "uncertain" as const, deliveryId: "delivery", message: "Acknowledgement lost" };
+    const deps = makeDeps({
+      steerSession: mock(async () => result),
+      uploadAttachments: mock(async () => [{ file_id: "file" }]) as never,
+    });
+    await createHandler(deps)(argv({ id: "s_1", prompt: "Correction", steer: true, attach: ["notes.txt"] }));
+    expect(deps.setExitCode).toHaveBeenCalledWith(1);
+    expect(JSON.parse(deps.log.mock.calls[0][0])).toEqual(result);
+    expect(deps.deleteAttachments).not.toHaveBeenCalled();
+    expect(deps.followUpSession).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    new Error("Connection lost"),
+    new PstdioApiError("Request timed out", 408),
+  ])("a failed steering HTTP request retains attachments that may have been delivered: %s", async (error) => {
+    const deps = makeDeps({
+      steerSession: mock(async () => {
+        throw error;
+      }),
+      uploadAttachments: mock(async () => [{ file_id: "file" }]) as never,
+    });
+    await expect(
+      createHandler(deps)(argv({ id: "s_1", prompt: "Correction", steer: true, attach: ["notes.txt"] })),
+    ).rejects.toThrow(error.message);
+    expect(deps.deleteAttachments).not.toHaveBeenCalled();
+    expect(deps.followUpSession).not.toHaveBeenCalled();
+  });
+
   test("sends follow-up and prints confirmation", async () => {
     const deps = makeDeps();
     const handler = createHandler(deps);

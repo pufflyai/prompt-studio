@@ -47,6 +47,7 @@ export const spacing = {
 };
 
 export const sizes = {
+  "alert-max-height": { value: "min(24rem, 50dvh)" },
   "chat-user-preview": { value: sp[1600] },
   "chat-user-footer": { value: sp[400] },
   "chat-user-expanded": { value: "min(70dvh, calc(100dvh - 12rem), 22rem)" },
@@ -73,7 +74,6 @@ export const sizes = {
   "tab-min": { value: sp[600] },
   "tab-label-max": { value: "8.875rem" },
   "window-tab-min": { value: sp[800] },
-  "window-tab-label-max": { value: "11.0625rem" },
   "mobile-titlebar": { value: "3.25rem" },
   "collection-row": { value: "2.125rem" },
   "drop-indicator": { value: sp[25] },

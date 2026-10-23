@@ -15,12 +15,26 @@ on:
   workflow_dispatch:
     inputs:
       channel:
-        description: stable runs the release pipeline; nightly publishes a nightly build of main
+        description: Release a version on main, build a nightly, or patch the current stable release
         type: choice
         options:
           - stable
           - nightly
+          - patch
         default: stable
+      base_tag:
+        description: "Patch only: current stable tag, such as pstdio@0.43.1"
+        type: string
+      source_sha:
+        description: "Patch only: full commit SHA of the reviewed fixes, based on base_tag"
+        type: string
+      summary:
+        description: "Patch only: one-line release note"
+        type: string
+      publish_patch:
+        description: "Patch only: publish after verification (false builds and verifies without publishing)"
+        type: boolean
+        default: false
 
 # Runs of one channel never overlap, so two attempts never publish at once. A newer run
 # replaces a run of the same channel that is still waiting. A queued nightly never replaces
@@ -33,10 +47,48 @@ permissions:
   contents: read
 
 jobs:
+  # The workflow stays on main for signing trust. Only the build checkout changes.
+  prepare_patch:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.channel == 'patch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    outputs:
+      release: ${{ steps.patch.outputs.release }}
+      version: ${{ steps.patch.outputs.version }}
+      tag: ${{ steps.patch.outputs.tag }}
+      commit: ${{ steps.patch.outputs.commit }}
+      previous_tag: ${{ steps.patch.outputs.previous_tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: node scripts/ci/install-native-dependencies.ts
+      - name: Prepare the patch candidate
+        id: patch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PATCH_BASE_TAG: ${{ inputs.base_tag }}
+          PATCH_SOURCE_SHA: ${{ inputs.source_sha }}
+          PATCH_SUMMARY: ${{ inputs.summary }}
+        run: bun scripts/release/prepare-patch.ts
+
   # Decides whether this run releases, and places the tag that packaged apps install
   # core extensions from. Verification needs that tag, so it exists before any check runs.
   plan:
-    if: github.ref == 'refs/heads/main'
+    needs: prepare_patch
+    if: >-
+      ${{ !cancelled() && github.ref == 'refs/heads/main' &&
+      (needs.prepare_patch.result == 'success' || needs.prepare_patch.result == 'skipped') }}
     runs-on: ubuntu-latest
     # These are the limits of the plan and nightly jobs this job replaces. The nightly path
     # installs dependencies and versions the packages.
@@ -44,14 +96,14 @@ jobs:
     permissions:
       contents: write
     outputs:
-      release: ${{ steps.stable.outputs.release || steps.nightly.outputs.release }}
+      release: ${{ needs.prepare_patch.outputs.release || steps.stable.outputs.release || steps.nightly.outputs.release }}
       channel: ${{ steps.channel.outputs.channel }}
-      version: ${{ steps.stable.outputs.version || steps.nightly.outputs.version }}
-      tag: ${{ steps.stable.outputs.tag || steps.nightly.outputs.tag }}
-      commit: ${{ steps.stable.outputs.commit || steps.nightly.outputs.commit }}
-      previous_tag: ${{ steps.stable.outputs.previous_tag }}
+      version: ${{ needs.prepare_patch.outputs.version || steps.stable.outputs.version || steps.nightly.outputs.version }}
+      tag: ${{ needs.prepare_patch.outputs.tag || steps.stable.outputs.tag || steps.nightly.outputs.tag }}
+      commit: ${{ needs.prepare_patch.outputs.commit || steps.stable.outputs.commit || steps.nightly.outputs.commit }}
+      previous_tag: ${{ needs.prepare_patch.outputs.previous_tag || steps.stable.outputs.previous_tag }}
       # Nightly tags are pruned, so nightly builds install core extensions from the main commit.
-      extension_ref: ${{ steps.channel.outputs.channel == 'nightly' && github.sha || steps.stable.outputs.tag }}
+      extension_ref: ${{ steps.channel.outputs.channel == 'nightly' && github.sha || needs.prepare_patch.outputs.tag || steps.stable.outputs.tag }}
       targets: ${{ steps.channel.outputs.channel == 'nightly' && '["darwin-arm64","darwin-x64","linux-x64"]' || '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]' }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -77,7 +129,7 @@ jobs:
 
       - name: Plan the stable release
         id: stable
-        if: steps.channel.outputs.channel == 'stable'
+        if: steps.channel.outputs.channel == 'stable' && inputs.channel != 'patch'
         run: bun scripts/release/plan-release.ts
 
       # Only an unpublished release reaches this step, so moving its tag affects nothing users see.
@@ -115,6 +167,8 @@ jobs:
         if: steps.changed.outputs.changed == 'true'
         run: |
           set -euo pipefail
+          PSTDIO_STABLE_TAG=$(gh release view --json tagName --jq .tagName)
+          export PSTDIO_STABLE_TAG
           bun run --cwd scripts release:version --nightly
           VERSION=$(jq -r .version packages/pstdio/package.json)
           git config user.name "github-actions[bot]"
@@ -132,22 +186,30 @@ jobs:
 
   packaged_toolchain:
     needs: plan
-    if: needs.plan.outputs.release == 'true'
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true' }}
     uses: ./.github/workflows/verify-packaged-toolchain.yml
     with:
       ref: ${{ needs.plan.outputs.commit }}
 
   harness_cli_support:
     needs: plan
-    if: needs.plan.outputs.release == 'true'
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true' }}
     uses: ./.github/workflows/harness-cli-support.yml
     with:
       ref: ${{ needs.plan.outputs.commit }}
       versions: '["minimum", "latest"]'
 
+  containers:
+    needs: plan
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true' }}
+    uses: ./.github/workflows/service-containers.yml
+    with:
+      ref: ${{ needs.plan.outputs.commit }}
+      version: ${{ needs.plan.outputs.version }}
+
   desktop:
     needs: plan
-    if: needs.plan.outputs.release == 'true'
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true' }}
     permissions:
       contents: read
       id-token: write
@@ -169,7 +231,7 @@ jobs:
   # Nightlies build no Windows assets, so only stable releases check the Windows update.
   windows_update:
     needs: [plan, desktop]
-    if: needs.plan.outputs.channel == 'stable'
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'stable' && needs.desktop.result == 'success' }}
     permissions:
       contents: read
       actions: read
@@ -182,10 +244,12 @@ jobs:
   # so re-running this job completes a release that stopped halfway. The GitHub release is
   # published last: a published release means npm and every desktop asset shipped.
   publish:
-    needs: [plan, packaged_toolchain, harness_cli_support, desktop, windows_update]
+    needs: [plan, packaged_toolchain, harness_cli_support, containers, desktop, windows_update]
     if: >-
       ${{ !cancelled() && needs.plan.outputs.release == 'true' &&
+      (inputs.channel != 'patch' || inputs.publish_patch) &&
       needs.packaged_toolchain.result == 'success' && needs.harness_cli_support.result == 'success' &&
+      needs.containers.result == 'success' &&
       needs.desktop.result == 'success' &&
       (needs.windows_update.result == 'success' || (needs.plan.outputs.channel == 'nightly' && needs.windows_update.result == 'skipped')) }}
     runs-on: ubuntu-latest
@@ -193,6 +257,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      packages: write
     env:
       NPM_CONFIG_PROVENANCE: true
       PSTDIO_EXTENSION_RELEASE_REF: ${{ needs.plan.outputs.extension_ref }}
@@ -207,6 +272,17 @@ jobs:
           ref: ${{ needs.plan.outputs.commit }}
           # Packaged checks in build-release read older release tags, such as the Planner upgrade check.
           fetch-depth: 0
+
+      - name: Confirm the patch still targets the current stable release
+        if: inputs.channel == 'patch'
+        env:
+          BASE_TAG: ${{ needs.plan.outputs.previous_tag }}
+        run: |
+          CURRENT=$(gh release view --json tagName --jq .tagName)
+          if [ "$CURRENT" != "$BASE_TAG" ]; then
+            echo "::error::Only the current stable release can be patched. Stable is now $CURRENT."
+            exit 1
+          fi
 
       # A newer attempt of the same unpublished version moves the tag and owns the release.
       - name: Check that this run still owns the release tag
@@ -275,6 +351,45 @@ jobs:
       - name: Publish npm packages
         run: bunx changeset publish --tag "$DIST_TAG" --no-git-tag
 
+      - name: Download verified service images
+        uses: actions/download-artifact@v4
+        with:
+          pattern: service-container-*
+          path: service-images
+          merge-multiple: true
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish verified service images
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          set -euo pipefail
+          for service in relay account-manager; do
+            docker load --input "service-images/$service.tar"
+            docker push "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION"
+          done
+
+      # Self-hosters pull these images without logging in. GitHub creates a new package as
+      # private and has no API to change that, so an organization owner makes it public once.
+      - name: Check that anyone can pull the service images
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker logout ghcr.io
+          for service in relay account-manager; do
+            if ! docker manifest inspect "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION" > /dev/null; then
+              echo "::error::ghcr.io/$GITHUB_REPOSITORY/$service is private. In its package settings, choose Danger Zone > Change visibility > Public, then re-run this job."
+              exit 1
+            fi
+          done
+
       - name: Create the draft GitHub release with CLI assets
         uses: ./.github/actions/create-pstdio-release
         with:
@@ -314,10 +429,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run --cwd scripts release:nightlies:prune "${{ needs.plan.outputs.tag }}"
 
-  # Keeps the version PR current. It never publishes, so pending changesets cannot hold back
-  # a release that is still finishing.
+  # Refresh after publication or patch verification so main skips reserved patch versions.
+  # This job only prepares a version PR; it never publishes.
   version_pr:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'schedule' && inputs.channel != 'nightly'
+    needs: [prepare_patch, publish]
+    if: >-
+      ${{ !cancelled() && github.ref == 'refs/heads/main' &&
+      github.event_name != 'schedule' && inputs.channel != 'nightly' &&
+      needs.prepare_patch.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -325,6 +444,8 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -339,9 +460,16 @@ jobs:
       - name: Install dependencies
         run: node scripts/ci/install-native-dependencies.ts
 
+      - name: Read the current stable version baseline
+        id: baseline
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "tag=$(gh release view --json tagName --jq .tagName)" >> "$GITHUB_OUTPUT"
+
       - name: Create or update the version PR
         uses: changesets/action@v1
         with:
           version: bun run --cwd scripts release:version
         env:
+          PSTDIO_STABLE_TAG: ${{ steps.baseline.outputs.tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

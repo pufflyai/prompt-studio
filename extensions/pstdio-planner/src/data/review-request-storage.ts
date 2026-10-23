@@ -8,7 +8,6 @@ import type {
   TicketReviewRequests,
 } from "./review-request-types";
 import { parseStoredOutcome, parseStoredRequest } from "./review-request-validation";
-import type { StoredTicket } from "./types";
 
 // New collection names: records from the old free-text request format are not read or migrated.
 export const REVIEW_REQUESTS_COLLECTION = "planner-review-requests";
@@ -33,9 +32,10 @@ const answerText = (request: ReviewRequest, questionId: string, value: string | 
 const describeOutcome = (request: ReviewRequest, outcome: ReviewOutcome | null) => {
   if (!outcome) return null;
   if (outcome.kind === "cancelled") return `Cancelled: ${outcome.reason}`;
-  if ("confirmed" in outcome.response) return "Completion confirmed";
-  return Object.entries(outcome.response.answers)
-    .map(([id, value]) => answerText(request, id, value))
+  if (request.request.kind === "task" || "confirmed" in outcome.response) return "Completion confirmed";
+  const { answers } = outcome.response;
+  return request.request.questions
+    .flatMap(({ id }) => (answers[id] === undefined ? [] : [answerText(request, id, answers[id])]))
     .join("\n");
 };
 
@@ -91,24 +91,3 @@ export const deleteTicketReviewRequests = async (storage: ExtensionStorageApi, t
     await reviewOutcomesCollection(storage).delete(request.id);
   }
 };
-
-export const HUMAN_REQUESTED_OPTION_ID = "default-human-requested-true";
-
-// Display tags never own pending input. Derive the projection even after an interrupted write.
-export const withReviewNeededFlag = <T extends Pick<StoredTicket, "tagIds">>(
-  ticket: T,
-  group: TicketReviewRequests,
-) => {
-  const tagIds = ticket.tagIds ?? [];
-  const pending = hasPendingInput(group);
-  if (tagIds.includes(HUMAN_REQUESTED_OPTION_ID) === pending) return ticket;
-  return {
-    ...ticket,
-    tagIds: pending ? [...tagIds, HUMAN_REQUESTED_OPTION_ID] : tagIds.filter((id) => id !== HUMAN_REQUESTED_OPTION_ID),
-  };
-};
-
-export const deriveReviewNeededFlag = async <T extends Pick<StoredTicket, "id" | "tagIds">>(
-  storage: ExtensionStorageApi,
-  ticket: T,
-) => withReviewNeededFlag(ticket, await listTicketReviewRequests(storage, ticket.id));

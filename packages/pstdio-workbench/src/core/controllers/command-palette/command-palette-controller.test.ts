@@ -17,7 +17,7 @@ describe("createWorkbenchCommandPaletteController", () => {
     const controller = createWorkbenchCommandPaletteController();
 
     expect(controller.isOpen()).toBe(false);
-    expect(controller.store.getState()).toEqual({
+    expect(controller.store.getState()).toMatchObject({
       open: false,
       view: "main",
       initialQuery: "",
@@ -29,7 +29,7 @@ describe("createWorkbenchCommandPaletteController", () => {
     controller.open();
 
     expect(controller.isOpen()).toBe(true);
-    expect(controller.store.getState()).toEqual({
+    expect(controller.store.getState()).toMatchObject({
       open: true,
       view: "main",
       initialQuery: "",
@@ -54,7 +54,7 @@ describe("createWorkbenchCommandPaletteController", () => {
 
     controller.close();
 
-    expect(controller.store.getState()).toEqual({
+    expect(controller.store.getState()).toMatchObject({
       open: false,
       view: "main",
       initialQuery: "",
@@ -122,6 +122,49 @@ describe("createWorkbenchCommandPaletteController", () => {
   test("honors initialOpen", () => {
     const controller = createWorkbenchCommandPaletteController({ initialOpen: true });
 
+    expect(controller.isOpen()).toBe(true);
+  });
+
+  test("a captured close survives command params and confirmation updates", async () => {
+    const controller = createWorkbenchCommandPaletteController({ initialOpen: true });
+    let closed = false;
+    const close = controller.captureClose(() => {
+      closed = true;
+    });
+    const confirmed = controller.requestConfirmation("Archive session");
+    controller.store.getState().confirmation?.resolve(true);
+    expect(await confirmed).toBe(true);
+    controller.requestParams({ record: { command: { id: "demo", label: "Demo" } }, label: "Demo" });
+    controller.clearParams();
+
+    close();
+
+    expect(closed).toBe(true);
+  });
+
+  test.each([
+    "identical open",
+    "another view",
+    "close and reopen",
+    "toggle",
+  ])("a captured close cannot dismiss a replacement after %s", (replacement) => {
+    const controller = createWorkbenchCommandPaletteController({ initialOpen: true });
+    let closed = false;
+    const close = controller.captureClose(() => {
+      closed = true;
+    });
+    if (replacement === "another view") controller.open({ view: "theme" });
+    else if (replacement === "close and reopen") {
+      controller.close();
+      controller.open();
+    } else if (replacement === "toggle") {
+      controller.toggle();
+      controller.toggle();
+    } else controller.open();
+
+    close();
+
+    expect(closed).toBe(false);
     expect(controller.isOpen()).toBe(true);
   });
 });

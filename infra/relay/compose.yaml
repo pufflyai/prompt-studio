@@ -1,0 +1,131 @@
+name: pstdio-cloud
+
+x-relay: &relay
+  image: ${RELAY_IMAGE:?Set a released relay image digest}
+  environment: &relay-env
+    RELAY_HOST: 0.0.0.0
+    RELAY_PORT: "8080"
+    DATABASE_URL: postgres://relay:${RELAY_DB_PASSWORD:?Set a URL-safe password}@relay-db:5432/relay
+    S3_ENDPOINT: http://objects:9000
+    S3_BUCKET: relay
+    S3_REGION: us-east-1
+    S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?Set object storage credentials}
+    S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?Set object storage credentials}
+    RELAY_ACCESS_TRUST: ${RELAY_ACCESS_TRUST:?Set manager public signing trust}
+    RELAY_RECOVERY_KEY: ${RELAY_RECOVERY_KEY:?Set a persistent base64-encoded 32-byte recovery key}
+    NO_PROXY: objects,relay-db,localhost,127.0.0.1
+  networks: [edge, relay]
+
+x-manager: &manager
+  image: ${MANAGER_IMAGE:?Set a released account-manager image digest}
+  environment:
+    DATABASE_URL: postgres://manager:${MANAGER_DB_PASSWORD:?Set a URL-safe password}@manager-db:5432/manager
+    MANAGER_HOST: 0.0.0.0
+    MANAGER_PORT: "8443"
+    MANAGER_ORIGIN: https://${MANAGER_DOMAIN:?Set the public manager domain}
+    RELAY_AUDIENCE: https://${RELAY_DOMAIN:?Set the public relay domain}
+    BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set a persistent auth secret}
+    GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set Google OAuth client ID}
+    GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?Set Google OAuth client secret}
+    SESSION_LIFETIME_SECONDS: "604800"
+    SESSION_UPDATE_AGE_SECONDS: "86400"
+    ACCESS_LIFETIME_SECONDS: "300"
+    NO_PROXY: manager-db,localhost,127.0.0.1
+  networks: [edge, manager]
+
+services:
+  relay:
+    <<: *relay
+    restart: unless-stopped
+    depends_on:
+      relay-migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "bun", "-e", "if (!(await fetch('http://localhost:8080/health')).ok) process.exit(1)"]
+  relay-migrate:
+    <<: *relay
+    command: ["bun", "-e", "import { migrateRelayStorage } from './storage.js'; await migrateRelayStorage(process.env.DATABASE_URL, './drizzle')"]
+    depends_on:
+      relay-db: { condition: service_healthy }
+  manager:
+    <<: *manager
+    restart: unless-stopped
+    depends_on:
+      manager-migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "bun", "-e", "if (!(await fetch('http://localhost:8443/health')).ok) process.exit(1)"]
+  manager-migrate:
+    <<: *manager
+    command: ["bun", "-e", "import { migrateAccountManager } from './dist/index.js'; await migrateAccountManager(process.env.DATABASE_URL, './drizzle')"]
+    depends_on:
+      manager-db: { condition: service_healthy }
+  relay-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: relay
+      POSTGRES_USER: relay
+      POSTGRES_PASSWORD: ${RELAY_DB_PASSWORD}
+    volumes: [relay-db:/var/lib/postgresql/data]
+    networks: [relay]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "relay"]
+  manager-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: manager
+      POSTGRES_USER: manager
+      POSTGRES_PASSWORD: ${MANAGER_DB_PASSWORD}
+    volumes: [manager-db:/var/lib/postgresql/data]
+    networks: [manager]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "manager"]
+  objects:
+    image: rustfs/rustfs:1.0.1
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY}
+      RUSTFS_CONSOLE_ENABLE: "false"
+      RUSTFS_OBS_LOG_DIRECTORY: /logs
+    command: ["/data"]
+    volumes: [objects:/data, object-logs:/logs]
+    networks: [relay]
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:9000/health"]
+  bucket:
+    image: amazon/aws-cli:2.37.13
+    profiles: [setup]
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_EC2_METADATA_DISABLED: "true"
+      NO_PROXY: objects
+    command: ["--endpoint-url", "http://objects:9000", "s3api", "create-bucket", "--bucket", "relay"]
+    networks: [relay]
+  ingress:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      RELAY_DOMAIN: ${RELAY_DOMAIN}
+      MANAGER_DOMAIN: ${MANAGER_DOMAIN}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ingress-data:/data
+      - ingress-config:/config
+    networks: [edge]
+
+volumes:
+  relay-db:
+  manager-db:
+  objects:
+  object-logs:
+  ingress-data:
+  ingress-config:
+
+networks:
+  edge:
+  relay: { internal: true }
+  manager: { internal: true }

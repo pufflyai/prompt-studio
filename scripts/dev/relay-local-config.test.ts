@@ -1,24 +1,24 @@
 import { expect, test } from "bun:test";
-import { type LocalRelayConnection, localGrantNeedsEnrollment, upsertLocalRelayConnection } from "./relay-local-config";
+import { type LocalAccountFile, localLoginNeedsEnrollment, savedFixtureLogin } from "./relay-local-config";
 
-test("renewing the fixture grant preserves other shared workbench connections", () => {
-  const original: LocalRelayConnection = {
-    accountId: "account",
-    workbenchId: "fixture",
-    environmentId: "environment",
-    managerOrigin: "https://authority:8443",
-    relayOrigin: "https://relay:8080",
-    renewalGrant: "expired",
-  };
-  const notes = {
-    ...original,
-    workbenchId: "actual-user-workbench",
-    renewalGrant: "notes-secret",
-  };
-  const replacement = { ...original, renewalGrant: "renewed" };
-  expect(upsertLocalRelayConnection([notes, original], replacement)).toEqual([notes, replacement]);
-  expect(upsertLocalRelayConnection([notes], replacement)).toEqual([notes, replacement]);
-  expect(localGrantNeedsEnrollment(200)).toBe(false);
-  expect(localGrantNeedsEnrollment(401)).toBe(true);
-  expect(() => localGrantNeedsEnrollment(503)).toThrow("unavailable");
+const device = { accountId: "account", deviceId: "device" };
+const login = {
+  ...device,
+  managerOrigin: "https://authority:8443",
+  relayOrigin: "https://relay:8080",
+  token: "device-secret",
+};
+
+test("the launcher keeps only a saved login of this app's fixture device", () => {
+  const saved = (file: LocalAccountFile) => savedFixtureLogin(file, device);
+  expect(saved({ login })).toEqual(login);
+  expect(saved({ login: null })).toBeNull();
+  expect(saved({ login: { ...login, deviceId: "other-device" } })).toBeNull();
+  expect(saved({ login: { ...login, accountId: "real-account" } })).toBeNull();
+});
+
+test("the launcher enrolls again only when the manager denies the saved token", () => {
+  expect(localLoginNeedsEnrollment(200)).toBe(false);
+  expect(localLoginNeedsEnrollment(401)).toBe(true);
+  expect(() => localLoginNeedsEnrollment(503)).toThrow("unavailable");
 });

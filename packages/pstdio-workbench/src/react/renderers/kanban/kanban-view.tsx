@@ -1,16 +1,17 @@
-import { Box, Skeleton, Stack } from "@chakra-ui/react";
-import { type ResourceContextAction, ScrollArea } from "@pstdio/ui";
+import { Box, Stack } from "@chakra-ui/react";
+import type { ResourceContextAction } from "@pstdio/ui";
 import {
   type AttributeDescriptor,
   type AttributesSource,
   applyKanbanMove,
   isAttributesSource,
   KanbanRenderer,
-  type KanbanRendererRow,
+  KanbanRendererSkeleton,
   useKanbanRendererStore,
 } from "@pstdio/ui/kanban-renderer";
 import { type ReactNode, useSyncExternalStore } from "react";
 import type {
+  KanbanRendererRow,
   RegisteredKanbanRendererContribution,
   ResourceRef,
   WorkbenchCore,
@@ -20,8 +21,11 @@ import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
 import { reportUserActionError, runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
+import { kanbanPageFields } from "../renderer-page-fields";
+import { rendererQueryKey } from "../renderer-query-key";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { usePageParams } from "../use-page-params";
+import { useRendererPages } from "../use-renderer-pages";
 import { useRendererRead } from "../use-renderer-read";
 import { ViewToolbarActions } from "../view-toolbar-actions";
 import { prepareKanbanMove } from "./kanban-move";
@@ -37,27 +41,18 @@ interface WorkbenchKanbanViewProps {
 
 interface WorkbenchKanbanViewFrameProps {
   children: ReactNode;
-  usesInternalScroll: boolean;
 }
 
-const kanbanViewScrollContentProps = { display: "flex", flexDirection: "column", minH: "100%" } as const;
-
+// Board columns and the list own vertical scrolling, so the renderer always gets a bounded height.
+// The workbench region's outer ScrollArea must not become the scroll owner, or the list mounts every row.
 const WorkbenchKanbanViewFrame = (props: WorkbenchKanbanViewFrameProps) => {
-  const { children, usesInternalScroll } = props;
+  const { children } = props;
 
   return (
-    <Stack h="full" minH="0" gap="0" bg="bg" overflow="hidden" position={usesInternalScroll ? "relative" : undefined}>
-      {usesInternalScroll ? (
-        // Board columns own vertical scrolling; do not let their content height
-        // make the workbench region's outer ScrollArea become the scroll owner.
-        <Box position="absolute" inset="0" minH="0" minW="0" overflow="hidden">
-          {children}
-        </Box>
-      ) : (
-        <ScrollArea flex="1" minH="0" minW="0" w="full" size="xs" contentProps={kanbanViewScrollContentProps}>
-          {children}
-        </ScrollArea>
-      )}
+    <Stack h="full" minH="0" gap="0" bg="bg" overflow="hidden" position="relative">
+      <Box position="absolute" inset="0" minH="0" minW="0" overflow="hidden" display="flex" flexDirection="column">
+        {children}
+      </Box>
     </Stack>
   );
 };
@@ -119,20 +114,34 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
   const filter = useKanbanRendererStore(storageKey, (state) => state.filter, initialState);
   const sorts = useKanbanRendererStore(storageKey, (state) => state.sorts, initialState);
+  const pages = useRendererPages<KanbanRendererRow>({
+    identity: rendererQueryKey([storageKey, settings, filter, sorts, pageParams]),
+    scope: storageKey,
+    fields: kanbanPageFields(attributes, settings),
+    append: true,
+  });
+  const paged = Boolean(contribution.executePage);
 
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
-    queryKey: contribution.id,
-    // The view can narrow what the query returns, so it loads again while the board stays on
-    // screen. Search is not part of it, so typing a search never runs the query.
-    refreshKey: JSON.stringify([settings, filter, sorts, pageParams]),
+    queryKey: JSON.stringify([contribution.id, storageKey]),
+    // Paged providers apply search before selecting rows; legacy providers keep local search.
+    refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.request, pages.key] : [])]),
 
-    load: (signal) => contribution.executeQuery({ settings, filter, sorts, pageParams }, signal),
+    load: async (signal) => {
+      const state = { settings, filter, sorts, pageParams };
+      if (contribution.executePage)
+        return pages.accept(await contribution.executePage({ ...state, page: pages.request }, signal), signal);
+      return { rows: await contribution.executeQuery(state, signal), page: undefined, position: undefined };
+    },
     subscribe: (refresh) => {
-      const subscription = contribution.subscribe?.(refresh);
+      const invalidate = () => {
+        if (!paged || !pages.reset()) refresh();
+      };
+      const subscription = contribution.subscribe?.(invalidate);
       const events = getWorkbenchRenderers(workbench).onDidRefreshKanbanRenderer((event) => {
-        if (event.kanbanRendererId === contribution.id) refresh();
+        if (event.kanbanRendererId === contribution.id) invalidate();
       });
       return () => {
         if (typeof subscription === "function") subscription();
@@ -141,9 +150,17 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
       };
     },
   });
-  const rows = read.value ?? [];
+  const rows = read.value?.rows ?? [];
+  const mutate = (...args: Parameters<typeof read.mutate>) =>
+    read.mutate(...args).finally(() => {
+      if (paged) pages.reset();
+    });
 
   const handleOpenRow = (row: KanbanRendererRow) => {
+    if (row.target) {
+      void runUserAction(workbench, "Open row", () => workbench.navigation.openTarget(row.target!));
+      return;
+    }
     if (contribution.onRowActivate) void runUserAction(workbench, "Open row", () => contribution.onRowActivate!(row));
   };
 
@@ -155,32 +172,36 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     }));
     return mergeKanbanViewRowActions(resourceActions, contributionActions);
   };
-  const contentPlaceholder = read.error ? (
-    <RendererReadNotice error={read.error} retry={read.retry} />
-  ) : (
-    <Skeleton minH="12rem" w="full" />
-  );
-
-  const readNotice = read.error && read.value ? <RendererReadNotice error={read.error} retry={read.retry} /> : null;
-  if (provider && !viewsSource) {
+  // Tabs, filter pills, and columns read their labels from the views and the query's fields.
+  // Until both arrive, show the view's shape instead of controls that would print raw ids.
+  if ((provider && !viewsSource) || (!read.value && !read.error)) {
     return (
-      <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
-        {readNotice}
-        <Skeleton minH="12rem" w="full" />
+      <WorkbenchKanbanViewFrame>
+        <KanbanRendererSkeleton viewMode={settings.viewMode} />
       </WorkbenchKanbanViewFrame>
     );
   }
 
+  const readNotice = read.error ? (
+    <RendererReadNotice
+      error={read.error}
+      retry={() => {
+        if (!paged || !pages.reset()) void read.retry();
+      }}
+    />
+  ) : null;
+
   return (
-    <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
-      {readNotice}
+    <WorkbenchKanbanViewFrame>
+      {read.value ? readNotice : null}
       <KanbanRenderer
+        page={pages.controls(read.value?.page, read.loading, paged, read.value?.position)}
         itemLabel={
           contribution.resourceKind ? workbench.resources.getKind(contribution.resourceKind)?.label : undefined
         }
         viewsSource={viewsSource}
         rows={rows}
-        contentPlaceholder={read.value ? undefined : contentPlaceholder}
+        contentPlaceholder={read.value ? undefined : readNotice}
         storageKey={storageKey}
         attributes={attributes}
         defaultSettings={contribution.defaultSettings}
@@ -192,13 +213,16 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         emptyDescription={contribution.emptyDescription}
         getBoardColumnConfig={contribution.getBoardColumnConfig}
         hideToolbar={contribution.hideToolbar}
-        onRowClick={contribution.onRowActivate ? handleOpenRow : undefined}
+        onRowClick={contribution.onRowActivate || rows.some((row) => row.target) ? handleOpenRow : undefined}
         onActionError={(error, action) => reportUserActionError(workbench, action, error)}
         onAttributeChange={
           contribution.onAttributeChange
             ? (rowId, attributeId, value) =>
-                read.mutate(
-                  (rows) => applyKanbanMove(rows, { rowId, attributes: { [attributeId]: value } }),
+                mutate(
+                  (snapshot) => ({
+                    ...snapshot,
+                    rows: applyKanbanMove(snapshot.rows, { rowId, attributes: { [attributeId]: value } }),
+                  }),
                   () => contribution.onAttributeChange!(rowId, attributeId, value),
                 )
             : undefined
@@ -207,15 +231,21 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
           contribution.onMove || contribution.onAttributeChange
             ? (move) => {
                 const mutation = prepareKanbanMove(contribution, move);
-                return read.mutate((rows) => applyKanbanMove(rows, mutation.move), mutation.save);
+                return mutate(
+                  (value) => ({ ...value, rows: applyKanbanMove(value.rows, mutation.move) }),
+                  mutation.save,
+                );
               }
             : undefined
         }
         onReorder={
           contribution.onReorder
             ? (rowId, beforeRowId) =>
-                read.mutate(
-                  (rows) => applyKanbanMove(rows, { rowId, attributes: {}, order: { beforeRowId } }),
+                mutate(
+                  (value) => ({
+                    ...value,
+                    rows: applyKanbanMove(value.rows, { rowId, attributes: {}, order: { beforeRowId } }),
+                  }),
                   () => contribution.onReorder!(rowId, beforeRowId),
                 )
             : undefined

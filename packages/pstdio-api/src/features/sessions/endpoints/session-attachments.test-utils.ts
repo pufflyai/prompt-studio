@@ -24,6 +24,7 @@ const tempRoots: string[] = [];
 type HarnessOptions = {
   deferExit?: boolean;
   delayHarnessResolutionAfterGets?: number;
+  onStart?: (input: HarnessStartInput) => void;
   resumeThrows?: boolean;
   startThrows?: boolean;
   transcriptDropsAttachments?: boolean;
@@ -111,6 +112,7 @@ const createAttachmentHarness = (options: HarnessOptions = {}) => {
 
     sessions.set("agent-start", transcript);
     input.events.push({ op: "add", path: "/messages/0", value: message });
+    options.onStart?.(input);
     return completer.completeSession("agent-start");
   });
   const resume = mock((_ctx: unknown, input: HarnessResumeInput) => {
@@ -208,23 +210,35 @@ export const uploadAttachment = async (
 };
 
 export const waitForSessionStatus = async (
-  app: Awaited<ReturnType<typeof createIsolatedApp>>["app"],
+  handle: Pick<Awaited<ReturnType<typeof createTestApp>>, "app" | "eventBus">,
   sessionId: string,
   status: string,
 ) => {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const res = await app.request(`/v1/sessions/${sessionId}`);
+  const changed = Promise.withResolvers<void>();
+  // Subscribe before reading so a transition between the read and the wait cannot be missed.
+  const unsubscribe = handle.eventBus.subscribe((event) => {
+    const session = event.data as { id: string; status: string };
+    if (event.table === "sessions" && session.id === sessionId && session.status === status) changed.resolve();
+  });
+  try {
+    const res = await handle.app.request(`/v1/sessions/${sessionId}`);
     expect(res.status).toBe(200);
     const session = (await res.json()) as { status: string };
     if (session.status === status) return;
-    await Bun.sleep(20);
+    // The enclosing test owns the execution allowance; runner speed is not a session contract.
+    await changed.promise;
+    const completed = await handle.app.request(`/v1/sessions/${sessionId}`);
+    expect(completed.status).toBe(200);
+    expect(await completed.json()).toMatchObject({ status });
+  } finally {
+    unsubscribe();
   }
-
-  throw new Error(`Session ${sessionId} did not reach ${status}`);
 };
 
-export const waitForCompleted = async (app: Awaited<ReturnType<typeof createIsolatedApp>>["app"], sessionId: string) =>
-  waitForSessionStatus(app, sessionId, "completed");
+export const waitForCompleted = async (
+  handle: Pick<Awaited<ReturnType<typeof createTestApp>>, "app" | "eventBus">,
+  sessionId: string,
+) => waitForSessionStatus(handle, sessionId, "completed");
 
 export const cleanupSessionAttachmentTestRoots = () => {
   for (const tempRoot of tempRoots) {

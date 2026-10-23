@@ -1,3 +1,4 @@
+import type { HarnessOperation, HarnessOperationResponse } from "../../harness-commands";
 import type {
   CombineQueuedFollowUpsInput,
   PendingQueuedFollowUpsResponse,
@@ -6,8 +7,9 @@ import type {
   SteerQueuedFollowUpInput,
   UpdateQueuedFollowUpInput,
 } from "../../queued-follow-ups";
-import type { SessionAttachmentRef, SessionStatus } from "../../sessions";
+import type { SessionAttachmentRef, SessionDetails, SessionFollowUpRequest, SessionStatus } from "../../sessions";
 import type { ResourceAnchor, ResourceRef } from "./resources";
+import type { ExtensionSessionControlsApi } from "./session-controls";
 
 export type SessionExitCause =
   | "completed"
@@ -42,6 +44,8 @@ export interface ExtensionSessionUsage {
 }
 
 export interface ExtensionSession {
+  /** The device that owns execution. Present on synced personal sessions. */
+  device?: { ownerId: string; id: string; name: string };
   id: string;
   title: string;
   status: SessionStatus;
@@ -124,7 +128,7 @@ export interface ExtensionSessionResource {
   agent?: string | null;
 }
 
-export interface ExtensionSessionsApi {
+export interface ExtensionSessionsApi extends ExtensionSessionControlsApi {
   getQueuedFollowUps(sessionId: string): Promise<PendingQueuedFollowUpsResponse>;
   updateQueuedFollowUp(
     sessionId: string,
@@ -146,7 +150,7 @@ export interface ExtensionSessionsApi {
         ExtensionSessionSummary & {
           /** @deprecated Use lastExit. */
           last_exit?: SessionExit | null;
-        })
+        } & SessionDetails)
     | null
   >;
 
@@ -160,15 +164,28 @@ export interface ExtensionSessionsApi {
     anchors?: ResourceAnchor[];
     attachments?: SessionAttachmentRef[];
     originalSessionId?: string;
-  }): Promise<ExtensionSession & ExtensionSessionSummary & ExtensionSessionResource>;
+    operation?: HarnessOperation;
+  }): Promise<
+    ExtensionSession &
+      ExtensionSessionSummary &
+      ExtensionSessionResource & { operationResult?: HarnessOperationResponse }
+  >;
 
   followup(input: {
     sessionId: string;
     prompt?: string;
     attachments?: SessionAttachmentRef[];
+    harness?: ExtensionHarnessInput;
+    questionResponse?: SessionFollowUpRequest["questionResponse"];
+    summaryFromSessionId?: string;
+    summaryFormat?: "brief" | "detailed";
+    summaryRole?: "assistant" | "all";
     /** Refuse automatic continuation if execution changed. */
     expectedRun?: SessionRunSnapshot;
   }): Promise<void>;
+
+  /** Cancel a project session and its queued follow-ups. Waits for harness stop acknowledgement when supported. */
+  stop(sessionId: string): Promise<void>;
 
   /** @deprecated Use resources.addAnchors with a session reference. */
   addAnchors(sessionId: string, anchors: ResourceAnchor[]): Promise<void>;

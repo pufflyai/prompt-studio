@@ -27,7 +27,7 @@ const AgentDemo = () => {
   const columns = [
     { id: "running", label: "In progress", color: "blue", items: completed ? [] : [task] },
     { id: "review", label: "Ready for review", color: "green", items: completed ? [task] : [] },
-  ].map((column) => ({ ...column, canDragIn: false, canDragOut: false, canCreate: false, actions: [] }));
+  ].map((column) => ({ ...column, canCreate: false, actions: [] }));
   return (
     <Box css={story.page}>
       <Box css={story.visual}>

@@ -59,11 +59,7 @@ export const RenameWorkspaceWidget = (props: { input: WorkbenchPanelRenderInput 
       });
       closeCurrentPlacement(input);
     } catch (mutationError) {
-      input.workbench.notifications.show({
-        level: "error",
-        title: "Failed to rename workspace",
-        message: mutationError instanceof Error ? mutationError.message : String(mutationError),
-      });
+      setError(mutationError instanceof Error ? mutationError.message : String(mutationError));
     }
   };
 
@@ -92,7 +88,7 @@ export const RenameWorkspaceWidget = (props: { input: WorkbenchPanelRenderInput 
             }}
           />
           {error ? (
-            <Text textStyle="paragraph/S/regular" color="fg.error">
+            <Text role="alert" textStyle="paragraph/S/regular" color="fg.error">
               {error}
             </Text>
           ) : null}

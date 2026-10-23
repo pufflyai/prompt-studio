@@ -1,10 +1,11 @@
-import type { HarnessExit } from "@pstdio/sdk/extensions";
+import type { HarnessExit, HarnessSteeringInput } from "@pstdio/sdk/extensions";
 import { createAppServerItems } from "./app-server-items";
 import type { RpcMessage } from "./app-server-rpc";
 import { snapshotCodexImage } from "./image-items";
 import { errorMessage, itemToMessage, usageMessage } from "./items";
 import { createNativeProjection } from "./native-history";
 import type { ThreadItem } from "./protocol/v2/ThreadItem";
+import type { Turn } from "./protocol/v2/Turn";
 import { confirmQuestionReply } from "./question-confirmation";
 import { createQuestionChannel } from "./questions";
 import { type ResumeSpawnInput, type StartSpawnInput, userMessageFor } from "./session-input";
@@ -22,6 +23,7 @@ export const createAppServerOperation = (
     write: (message: RpcMessage) => void;
     onFinish: () => void;
     onProtocolError: (error: unknown) => void;
+    onLoginRejected: () => void;
     beforeStop?: () => Promise<unknown>;
   },
 ) => {
@@ -95,7 +97,7 @@ export const createAppServerOperation = (
     if (message.method === "thread/goal/updated") applyGoal((message.params?.goal as { status: string }).status);
     if (message.method === "thread/goal/cleared") applyGoal(undefined);
   };
-  const completeTurn = (turn: { id: string; status: string; error?: { message?: string } }) => {
+  const completeTurn = (turn: Turn) => {
     if (turnId !== turn.id) return;
     if (turn.status === "failed")
       projection.publish(errorMessage(turn.error?.message, `codex-${turn.id}-error`, Date.now()));
@@ -114,12 +116,16 @@ export const createAppServerOperation = (
       idleExit = { status };
       finishIfIdle();
     }
+    if (turn.error?.codexErrorInfo === "unauthorized") options.onLoginRejected();
   };
   const receiveItems = (message: RpcMessage) => {
     const params = message.params ?? {};
     const item = params.item as ThreadItem | undefined;
     const itemEvent = message.method === "item/started" || message.method === "item/completed";
-    if (itemEvent && item?.type === "userMessage") projection.receive(item, String(params.turnId));
+    if (itemEvent && item?.type === "userMessage") {
+      projection.receive(item, String(params.turnId));
+      return;
+    }
     if (message.method === "item/completed" && item?.type === "contextCompaction")
       projection.receive(item, String(params.turnId));
     items.receive(message);
@@ -134,7 +140,7 @@ export const createAppServerOperation = (
     goalEvent(message);
     if (finished) return;
     const params = message.params ?? {};
-    const turn = params.turn as { id: string; status: string; error?: { message?: string } } | undefined;
+    const turn = params.turn as Turn | undefined;
     if (message.method === "turn/started" && turn && !turnId) {
       turnId = turn.id;
       idleExit = undefined;
@@ -201,6 +207,11 @@ export const createAppServerOperation = (
       };
     },
     recordGoalUpdate: (prompt: string) => projection.publish(userMessageFor(prompt)),
+    prepareSteering: (delivery: HarnessSteeringInput) => {
+      const message = { ...userMessageFor(delivery.prompt, delivery.attachments), id: delivery.deliveryId };
+      const release = projection.prepareUser(message);
+      return { accept: () => projection.publish(message), release };
+    },
     stop: async (request: (method: string, params: Record<string, unknown>) => Promise<unknown>, threadId: string) => {
       if (finished) return;
       stopping = true;

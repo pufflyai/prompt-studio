@@ -9,7 +9,6 @@ test("dashboard adapters keep the shared capability contract without an owner", 
     createDashboardExtensionWebviewAdapters({
       base: {},
       extensionId: "pstdio.lab",
-      projectId: "project-1",
       webviewId: "view-1",
     }),
   );
@@ -18,6 +17,25 @@ test("dashboard adapters keep the shared capability contract without an owner", 
     await expect(Promise.resolve().then(() => capabilities[capability]({}))).rejects.toMatchObject({
       code: "unsupported",
       data: { capability },
+    });
+  }
+});
+
+test("dashboard adapters read project harnesses without a file owner", async () => {
+  const capabilities = createExtensionWebviewHostCapabilities(
+    createDashboardExtensionWebviewAdapters({
+      base: {},
+      extensionId: "pstdio.lab",
+      projectId: "project-1",
+      webviewId: "view-1",
+    }),
+  );
+  await expect(Promise.resolve().then(() => capabilities["harnesses.read"](null as never))).rejects.toMatchObject({
+    code: "invalid_params",
+  });
+  for (const capability of ["files.list", "artifacts.read"] as const) {
+    await expect(Promise.resolve().then(() => capabilities[capability]({} as never))).rejects.toMatchObject({
+      code: "unsupported",
     });
   }
 });

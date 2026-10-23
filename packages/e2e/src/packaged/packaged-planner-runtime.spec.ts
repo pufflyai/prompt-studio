@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type Browser, chromium, expect, type Page, test } from "@playwright/test";
+import { type Browser, chromium, expect, type FrameLocator, type Page, test } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
@@ -24,9 +24,9 @@ import {
   ARCHIVED_CONFLICTS,
   type Execute,
   plannerCommands,
-  plannerSource,
   seedTrackProject,
 } from "./packaged-planner-runtime-fixture";
+import { preparePlannerSource } from "./packaged-planner-source";
 import {
   type RuntimeDescriptor,
   runtimeAuthorization,
@@ -48,6 +48,15 @@ test.beforeAll(() => {
 
 type Host = { baseUrl: string; descriptor: RuntimeDescriptor; home: string };
 
+const saveTimelinePreference = async (host: Host, url: string, value: Record<string, string>) => {
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: { ...runtimeAuthorization(host.descriptor), "content-type": "application/json" },
+    body: JSON.stringify({ value }),
+  });
+  expect(response.status).toBe(200);
+};
+
 const createProject = async (host: Host, name: string) => {
   const folder = join(host.home, name);
   mkdirSync(folder);
@@ -66,8 +75,8 @@ const createProject = async (host: Host, name: string) => {
   return { execute, folder, id };
 };
 
-const installPlanner = (host: Host, cwd: string) =>
-  runPackagedAsync(["extensions", "add", plannerSource, "--name", "pstdio-planner"], cwd, {
+const installPlanner = (host: Host, cwd: string, source: string) =>
+  runPackagedAsync(["extensions", "add", source, "--name", "pstdio-planner"], cwd, {
     HOME: host.home,
     PSTDIO_HOME: host.home,
   });
@@ -147,6 +156,21 @@ const expectConflictsPreserved = async (execute: Execute, trackId: string, track
   expect(conflicts.filter((row) => row.attributes.archived === "archived")).toHaveLength(ARCHIVED_CONFLICTS);
 };
 
+const expectAutoBuildFilter = async (timeline: FrameLocator) => {
+  await timeline.getByRole("button", { name: "Auto Build", exact: true }).click();
+  const autoBuild = timeline.getByRole("dialog", { name: "Auto Build", exact: true });
+  await autoBuild.getByRole("button", { name: "Filter", exact: true }).click();
+  const filterMenu = timeline.getByTestId("filter-menu");
+  await filterMenu.getByRole("button", { name: "Title", exact: true }).click();
+  await filterMenu.getByRole("textbox", { name: "Value", exact: true }).fill("Seeded");
+  await filterMenu.getByRole("button", { name: "Apply filter", exact: true }).click();
+  await expect(autoBuild.getByRole("group", { name: "Title filter", exact: true })).toBeVisible();
+  await autoBuild.getByRole("textbox", { name: "Value", exact: true }).press("Enter");
+  await autoBuild.getByRole("button", { name: "Remove Title filter", exact: true }).click();
+  await expect(autoBuild.getByRole("group", { name: "Title filter", exact: true })).toHaveCount(0);
+  await autoBuild.getByRole("button", { name: "Cancel", exact: true }).click();
+};
+
 browserTest("serves populated Planner projects and recovers cached webviews", async () => {
   const startedAt = Date.now();
   const phase = (name: string) => logTestPhase(`Planner browser ${name} (${Date.now() - startedAt}ms)`);
@@ -154,16 +178,26 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
   const home = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-packaged-planner-runtime-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
+  const runtimeOutput: string[] = [];
   try {
     const started = await startPackagedServe(home, { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" });
     child = started.child;
+    child.stderr?.on("data", (chunk) => {
+      runtimeOutput.push(String(chunk));
+      if (runtimeOutput.length > 100) runtimeOutput.shift();
+    });
     const host = { baseUrl: started.baseUrl, descriptor: started.descriptor, home };
     phase("runtime ready");
     const conflicting = await createProject(host, "conflicting-track");
     const valid = await createProject(host, "valid-track");
 
     phase("install start");
-    await installPlanner(host, conflicting.folder);
+    // Planner uses SDK and UI APIs that may not be on npm yet, so install it with the workspace builds.
+    await installPlanner(
+      host,
+      conflicting.folder,
+      await preparePlannerSource(join(home, "fixtures", "current-planner")),
+    );
     await enablePlanner(host, valid.id);
     phase("install complete; seed start");
     const [conflictData] = await Promise.all([
@@ -205,7 +239,15 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     const focusedTab = timeline.getByRole("tab", { name: "Timeline focus", exact: true });
     await focusedTab.click();
     await expect(focusedTab).toHaveAttribute("aria-selected", "true");
-    await selectionSaved;
+    const preferenceResponse = await selectionSaved;
+    const preference = (await preferenceResponse.json()) as { value: Record<string, string> };
+    const stateKey = Object.keys(preference.value).find((key) => key.includes(valid.id))!;
+    const restored = JSON.parse(preference.value[stateKey]!);
+    restored.state.settings.displayProperties.push("reviewRequests", "default-human-requested");
+    await saveTimelinePreference(host, preferenceResponse.url(), {
+      ...preference.value,
+      [stateKey]: JSON.stringify(restored),
+    });
     await page.goto(`${host.baseUrl}/projects/${valid.id}/extensions/pstdio.pstdio-planner/tickets`);
     await expect(page.getByRole("tab", { name: "Timeline focus", exact: true })).toHaveCount(0);
     timeline = await openTimeline(page, host, valid.id);
@@ -216,22 +258,44 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     );
     await expect(timeline.getByRole("button", { name: /Seeded ticket 0$/ })).toBeVisible();
     await expect(timeline.getByRole("button", { name: /Seeded ticket 1$/ })).toHaveCount(0);
+    await timeline.getByRole("button", { name: "Display settings", exact: true }).click();
+    const display = timeline.locator('[aria-label="Display settings"][data-part="content"]');
+    await display.getByRole("button", { name: "ID", exact: true }).click();
+    await timeline.getByRole("button", { name: "Display settings", exact: true }).click();
+    await timeline.getByRole("button", { name: "Save view", exact: true }).click();
+    await expect(timeline.getByRole("button", { name: "Save view", exact: true })).toHaveCount(0);
+    const savedFocus = await valid.execute<{
+      views: { id: string; settings: { displayProperties: string[] }; filter: unknown }[];
+    }>("timeline.views.read");
+    expect(savedFocus.views.find(({ id }) => id === focusedView.id)).toMatchObject({
+      settings: { displayProperties: ["status", "needsAttention", "id"] },
+      filter: { rules: [{ attributeId: "title", condition: "contains", value: "Seeded ticket 0" }] },
+    });
+    await page.reload();
+    await expect(timeline.getByRole("tab", { name: "Timeline focus", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(timeline.getByRole("button", { name: "Save view", exact: true })).toHaveCount(0);
+    restored.state.activeViewId = "retired-view";
+    restored.state.settings.displayProperties = ["status", "reviewRequests"];
+    await saveTimelinePreference(host, preferenceResponse.url(), {
+      ...preference.value,
+      [stateKey]: JSON.stringify(restored),
+    });
+    await page.reload();
+    await expect(timeline.getByRole("tab", { name: "All", exact: true })).toHaveAttribute("aria-selected", "true");
+    await timeline.getByRole("button", { name: "Display settings", exact: true }).click();
+    await expect(display.getByRole("button", { name: "Needs attention", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await timeline.getByRole("button", { name: "Display settings", exact: true }).click();
+    await expect(timeline.getByRole("button", { name: "Save view", exact: true })).toHaveCount(0);
     await timeline.getByRole("tab", { name: "All", exact: true }).click();
     await valid.execute("timeline.views.delete", { id: focusedView.id });
 
-    // Exercise the shared control against Planner's installed runtime dependencies.
-    await timeline.getByRole("button", { name: "Auto Build", exact: true }).click();
-    const autoBuild = timeline.getByRole("dialog", { name: "Auto Build", exact: true });
-    await autoBuild.getByRole("button", { name: "Filter", exact: true }).click();
-    const filterMenu = timeline.getByTestId("filter-menu");
-    await filterMenu.getByRole("button", { name: "Title", exact: true }).click();
-    await filterMenu.getByRole("textbox", { name: "Value", exact: true }).fill("Seeded");
-    await filterMenu.getByRole("button", { name: "Apply filter", exact: true }).click();
-    await expect(autoBuild.getByRole("group", { name: "Title filter", exact: true })).toBeVisible();
-    await autoBuild.getByRole("textbox", { name: "Value", exact: true }).press("Enter");
-    await autoBuild.getByRole("button", { name: "Remove Title filter", exact: true }).click();
-    await expect(autoBuild.getByRole("group", { name: "Title filter", exact: true })).toHaveCount(0);
-    await autoBuild.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expectAutoBuildFilter(timeline);
 
     phase("views checked; conflict start");
     // Ordinary ticket work stays available while host chrome reports the Track problem.
@@ -301,6 +365,10 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     expect(await reloadPlanner(host, valid.id)).toMatchObject({ status: "loaded", lastError: null });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
     phase("checks complete");
+  } catch (error) {
+    console.error(`Planner runtime: exit=${child?.exitCode}, signal=${child?.signalCode}`);
+    console.error(runtimeOutput.join("").slice(-12000));
+    throw error;
   } finally {
     phase("cleanup start");
     await browser?.close();

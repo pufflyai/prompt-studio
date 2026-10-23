@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-18
 
+Status: Superseded by [PRD 0014](../requirements/platform/0014-local-first-sync.md) on 2026-10-19.
+
 ## Decision
 
 Replace permanent per-edit retention with locally recoverable live editing, checkpoints,

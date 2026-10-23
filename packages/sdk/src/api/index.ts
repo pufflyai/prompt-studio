@@ -17,6 +17,7 @@ export type {
   InstalledExtensionSource,
   IssueAutomationTokenInput,
   IssueAutomationTokenResponse,
+  LinkIcon,
   ListAutomationRunEventsResponse,
   ListAutomationTokensResponse,
   ResourceRef,
@@ -89,6 +90,7 @@ export type {
   SessionConversationResponse,
   SessionConversationSources,
   SessionQueuedMessagesResponse,
+  SessionSteeringInput,
   SteerQueuedFollowUpInput,
   UpdateQueuedFollowUpInput,
 } from "./sessions";

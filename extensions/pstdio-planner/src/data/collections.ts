@@ -1,6 +1,6 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { dependencyBlockerRefs, withIndependentBlockers } from "./dependency-blockers";
-import { deriveReviewNeededFlag, readTicketReviewRequests, withReviewNeededFlag } from "./review-request-storage";
+import { readTicketReviewRequests } from "./review-request-storage";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 
 export const TICKETS_COLLECTION = "tickets";
@@ -17,13 +17,13 @@ export const tagsCollection = (storage: ExtensionStorageApi) => storage.collecti
 // The runtime's collection.create() stores the value *without* the generated id,
 // so list()/get() would lose it. We own the id and persist it inside the value.
 export const putTicket = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
-  const next = await deriveReviewNeededFlag(storage, await withIndependentBlocker(storage, ticket));
+  const next = await withDerivedTicketState(storage, ticket);
   await ticketsCollection(storage).put(ticket.id, next);
   return next;
 };
 
 export const updateTicket = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
-  const next = await deriveReviewNeededFlag(storage, await withIndependentBlocker(storage, ticket));
+  const next = await withDerivedTicketState(storage, ticket);
   await ticketsCollection(storage).update(ticket.id, next);
   return next;
 };
@@ -41,15 +41,16 @@ export const putTag = async (storage: ExtensionStorageApi, tag: StoredTag) => {
 export const readTicketSnapshot = async (storage: ExtensionStorageApi) => {
   const [tickets, requests] = await Promise.all([ticketsCollection(storage).list(), readTicketReviewRequests(storage)]);
   return {
-    tickets: withIndependentBlockers(tickets).map((ticket) =>
-      withReviewNeededFlag(ticket, requests.get(ticket.id) ?? { requests: [], errors: [] }),
-    ),
+    tickets: withIndependentBlockers(tickets),
     requests,
   };
 };
 
 export const readTicketsWithReviewState = async (storage: ExtensionStorageApi) =>
   (await readTicketSnapshot(storage)).tickets;
+
+export const withDerivedTicketState = async (storage: ExtensionStorageApi, ticket: StoredTicket) =>
+  withIndependentBlocker(storage, ticket);
 
 const withIndependentBlocker = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
   if (!dependencyBlockerRefs(ticket.blockedReason)) return ticket;

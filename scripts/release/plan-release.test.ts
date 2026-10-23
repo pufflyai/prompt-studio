@@ -17,6 +17,7 @@ const plan = (input: Partial<Parameters<typeof planStableRelease>[0]>) =>
     releaseState: "missing",
     packages: unpublished,
     tagCommit: null,
+    patchBaseTag: null,
     headCommit: head,
     mainCommit: head,
     ...input,
@@ -78,4 +79,11 @@ test("stops when packages are on npm but the release tag is missing", () => {
 test("rejects a public package that does not exist on npm", () => {
   const result = plan({ packages: [...unpublished, pkg("pstdio-artifacts", "0.43.0", null)] });
   expect(result.release && result.problems).toEqual([expect.stringContaining("pstdio-artifacts is not on npm")]);
+});
+
+test("leaves patch candidates to manual patch runs, including verification-only candidates", () => {
+  expect(plan({ tagCommit: earlier, patchBaseTag: "pstdio@0.42.0" })).toEqual({ release: false });
+  expect(
+    plan({ tagCommit: earlier, patchBaseTag: "pstdio@0.42.0", packages: [pkg("pstdio", "0.43.0", ["0.43.0"])] }),
+  ).toEqual({ release: false });
 });

@@ -56,7 +56,12 @@ interface StartedHarness {
   defaults?: Record<string, unknown>;
 }
 // Session-creation deps around one fake harness; `defaults` are the project's stored harness params.
-const createSessionEnvironment = (harness: StartedHarness, dispatchEntries: unknown[] = []) => {
+const createSessionEnvironment = (
+  harness: StartedHarness,
+  dispatchEntries: unknown[] = [],
+  signal?: AbortSignal,
+  services: { removeQueueEntry?: () => Promise<void>; transitionStatus?: ReturnType<typeof mock> } = {},
+) => {
   const workspace = {
     id: "workspace",
     project_id: "project-1",
@@ -64,7 +69,7 @@ const createSessionEnvironment = (harness: StartedHarness, dispatchEntries: unkn
     root_path: process.cwd(),
     provider_state: "ready",
   };
-  return createCommandEnvironment(
+  const environment = createCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
       extensionSettingsDBService: {
@@ -94,6 +99,7 @@ const createSessionEnvironment = (harness: StartedHarness, dispatchEntries: unkn
           dispatchEntries.push(input);
           return { queue_position: 1 };
         },
+        remove: services.removeQueueEntry ?? (async () => {}),
       },
       sessionService: {
         create: async (input: Record<string, unknown>) => ({
@@ -107,7 +113,7 @@ const createSessionEnvironment = (harness: StartedHarness, dispatchEntries: unkn
         }),
         update: async () => null,
         get: async () => ({ id: "session-1", project_id: "project-1", status: "in_progress", agent: "fake-agent" }),
-        transitionStatus: async () => null,
+        transitionStatus: services.transitionStatus ?? (async () => null),
         store: createTrackedSessionStore(),
       },
       eventBus: { emit: () => {} },
@@ -121,6 +127,7 @@ const createSessionEnvironment = (harness: StartedHarness, dispatchEntries: unkn
       projectId: "project-1",
     },
   );
+  return signal ? environment.withScope!({ signal, register: () => {}, close: async () => {} }) : environment;
 };
 const startedHarness = () =>
   mock((_input: unknown) => ({
@@ -136,6 +143,49 @@ const firstStart = async (start: ReturnType<typeof mock>) => {
 };
 
 describe("createCommandEnvironment sessions attachments", () => {
+  test("returns a persisted session while the harness is still starting", async () => {
+    const pending = Promise.withResolvers<ReturnType<ReturnType<typeof startedHarness>>>();
+    const start = mock(() => pending.promise);
+    const dispatchEntries: unknown[] = [];
+    const env = createSessionEnvironment({ start }, dispatchEntries, new AbortController().signal);
+    let created = false;
+    const creating = env.sessions.create({ title: "Implement ticket", prompt: "Implement" }).then((session) => {
+      created = true;
+      return session;
+    });
+    await firstStart(start);
+    try {
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(dispatchEntries).toEqual([expect.objectContaining({ prompt: "Implement", request_kind: "start" })]);
+      expect(created).toBe(true);
+    } finally {
+      pending.resolve(startedHarness()({}));
+      await creating;
+    }
+  });
+
+  test("a started session stays running when its saved start request cannot be removed", async () => {
+    const start = startedHarness();
+    const transitionStatus = mock(async () => null);
+    const removed = Promise.withResolvers<void>();
+    let removals = 0;
+    const env = createSessionEnvironment({ start }, [], new AbortController().signal, {
+      removeQueueEntry: async () => {
+        removals += 1;
+        removed.resolve();
+        if (removals === 1) throw new Error("Queue storage is briefly unavailable");
+      },
+      transitionStatus,
+    });
+
+    await env.sessions.create({ title: "Implement ticket", prompt: "Implement" });
+    await removed.promise;
+    await Bun.sleep(10);
+
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(transitionStatus).not.toHaveBeenCalledWith("session-1", "failed", expect.anything());
+  });
+
   test("forwards attachment refs from extension-created sessions", async () => {
     const dispatchEntries: unknown[] = [];
     const start = startedHarness();
@@ -200,6 +250,8 @@ describe("createCommandEnvironment sessions attachments", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
+        extensionSettingsDBService: { getValue: async () => null },
+        harnessRegistry: { get: async () => ({ listModels: async () => [], params: {} }) },
         fileService: {
           get: async () => sessionAttachmentFile("extension-follow-up.txt"),
         },

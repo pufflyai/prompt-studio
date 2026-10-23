@@ -43,13 +43,13 @@ const setup = async () => {
     updatedAt: timestamp,
   });
   const attempt: AttemptRecord = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     workspaceId: "workspace-1",
     workspaceShorthand: "PS-1_A1",
     ticketId: "ticket-1",
     ticketShorthand: "PS-1",
     implementationSessionId: "implementation-1",
-    state: "implementing",
+
     base: { workspaceId: null, headSha: "base-sha" },
     revisions: [],
     implementationDisconnectRetries: 0,
@@ -139,7 +139,7 @@ const submitRevisionAndStartReview = async (fixture: Awaited<ReturnType<typeof s
 };
 
 describe("attempt workflow commands", () => {
-  test("rejects malformed review threads before changing attempt state", async () => {
+  test("rejects malformed review threads before saving review evidence", async () => {
     const fixture = await setup();
     const started = await submitRevisionAndStartReview(fixture);
 
@@ -157,10 +157,10 @@ describe("attempt workflow commands", () => {
         }),
       ),
     ).rejects.toThrow("passed review cannot contain");
-    expect((await readAttempt(fixture.storage, "workspace-1"))?.state).toBe("reviewing");
+    expect((await readAttempt(fixture.storage, "workspace-1"))?.revisions[0]?.reviews[0]?.state).toBe("started");
   });
 
-  test("submits a revision and routes requested changes to its implementation session", async () => {
+  test("records requested changes and findings on the submitted commit", async () => {
     const fixture = await setup();
     const started = await submitRevisionAndStartReview(fixture);
 
@@ -186,11 +186,9 @@ describe("attempt workflow commands", () => {
       }),
     );
 
-    expect(result.attempt.state).toBe("changes_requested");
+    expect(result.review.verdict).toBe("changes_requested");
     expect((await ticketsCollection(fixture.storage).get("ticket-1"))?.statusId).toBe("in-progress");
-    expect(fixture.followups).toEqual([
-      expect.objectContaining({ sessionId: "implementation-1", prompt: expect.stringContaining("review-report-1") }),
-    ]);
+    expect(fixture.followups).toEqual([]);
     expect(await reviewThreadsCollection(fixture.storage).list()).toEqual([
       expect.objectContaining({
         reviewId: started.review.id,
@@ -239,7 +237,6 @@ describe("attempt workflow commands", () => {
     const dismissed = await dismissReviewCommand.run(
       ...fixture.context({ workspaceId: "workspace-1", reviewId: started.review.id, reason: "Superseded" }),
     );
-    expect(dismissed.state).toBe("review_ready");
     expect(dismissed.revisions[0]?.reviews[0]?.state).toBe("dismissed");
     expect((await reviewThreadsCollection(fixture.storage).get(thread.id))?.state).toBe("resolved");
 
@@ -249,7 +246,7 @@ describe("attempt workflow commands", () => {
     expect(JSON.stringify(history.events)).not.toContain("Preserve the workflow invariant");
   });
 
-  test("approves one exact revision and creates an anchored human handoff", async () => {
+  test("records a passing verdict without overwriting the ticket decision", async () => {
     const fixture = await setup();
     const started = await submitRevisionAndStartReview(fixture);
 
@@ -266,18 +263,61 @@ describe("attempt workflow commands", () => {
       }),
     );
 
-    expect((await readAttempt(fixture.storage, "workspace-1"))?.state).toBe("approved");
+    expect((await readAttempt(fixture.storage, "workspace-1"))?.revisions[0]?.reviews[0]?.verdict).toBe("passed");
     const ticket = await findTicket(fixture.storage, "ticket-1");
-    expect(ticket?.statusId).toBe("in-review");
-    expect(ticket?.tagIds).toContain("default-human-requested-true");
-    expect(fixture.addedAnchors).toEqual([
-      expect.objectContaining({
-        sessionId: "implementation-1",
-        anchors: [expect.objectContaining({ type: "planner-human-request" })],
-      }),
-    ]);
+    expect(ticket?.statusId).toBe("in-progress");
+    expect(ticket?.tagIds).toEqual([]);
+    expect(fixture.addedAnchors).toEqual([]);
+    expect(fixture.followups).toEqual([]);
     await expect(runReviewCommand.run(...fixture.context({ workspaceId: "workspace-1" }))).rejects.toThrow(
-      "not ready for review",
+      "already running or completed",
     );
   });
+});
+
+test("later corrections preserve passed review evidence and the chosen ticket status", async () => {
+  const fixture = await setup();
+  const attempt = (await readAttempt(fixture.storage, "workspace-1"))!;
+  await putAttempt(fixture.storage, {
+    ...attempt,
+
+    revisions: [
+      {
+        revision: 1,
+        baseSha: "base-sha",
+        headSha: "old-head",
+        changeRequestReportId: "old-report",
+        submittedAt: attempt.createdAt,
+        submittedBy: actor,
+        reviews: [
+          {
+            id: "old-review",
+            sessionId: "reviewer",
+            reportId: "review-report",
+            reviewedHeadSha: "old-head",
+            reviewer: actor,
+            state: "submitted",
+            verdict: "passed",
+            startedAt: attempt.createdAt,
+            completedAt: attempt.createdAt,
+            supersedesReviewId: null,
+          },
+        ],
+      },
+    ],
+  });
+  const result = await submitChangeRequestCommand.run(
+    ...fixture.context(
+      {
+        workspaceId: "workspace-1",
+        implementationSessionId: "implementation-1",
+        headSha: "new-head",
+        changeRequestReportId: "new-report",
+      },
+      "new-head",
+    ),
+  );
+  expect(result.revisions).toHaveLength(2);
+  expect(result.revisions[0]?.reviews[0]).toMatchObject({ reviewedHeadSha: "old-head", verdict: "passed" });
+  expect((await findTicket(fixture.storage, "ticket-1"))?.statusId).toBe("in-progress");
 });

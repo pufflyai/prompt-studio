@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { extensionResourceRefSchema } from "pstdio-api-contracts";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_API_VERSION, resourceEvents } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createResourcesApi } from "./resources";
 
@@ -50,13 +50,41 @@ test("enabled extensions allocate declared prefixes and reject conflicting insta
       [expect.objectContaining({ op: "set", data: preference })],
     );
     const api = (extensionId: string, projectId = project.id) => ({
-      allocate: ({ kind }: { kind: string }) =>
+      allocate: ({ kind, idPrefix }: { kind: string; idPrefix?: string }) =>
         createResourcesApi(app.deps, { projectId, extensionId }).allocate({
           kind: kind === "item" ? extensionId.split(".")[1]! : kind,
+          idPrefix,
         }),
     });
-    const first = await api("example.planner").allocate({ kind: "item" });
+    await expect(api("example.planner").allocate({ kind: "item", idPrefix: "INVALID" })).rejects.toThrow("ID prefix");
+    const first = await api("example.planner").allocate({ kind: "item", idPrefix: "tk" });
+    expect(first.id).toMatch(/^tk_[0-9A-Za-z]{22}$/);
     expect(first.shorthand).toBe(`${project.shorthand}-1`);
+    const resources = createResourcesApi(app.deps, { projectId: project.id, extensionId: "example.planner" });
+    const identity = { ...first, kind: "planner", aliases: [] };
+    expect(await resources.identity({ kind: "planner", id: first.id })).toEqual(identity);
+    expect(await resources.identityMany({ kind: "planner", ids: ["missing", first.id] })).toEqual([null, identity]);
+    await expect(resources.identityMany({ kind: "reports", ids: [first.id] })).rejects.toThrow("not owned");
+    expect(await resources.findByShorthand({ kind: "planner", shorthand: first.shorthand })).toEqual([identity]);
+    await expect(resources.identity({ kind: "reports", id: first.id })).rejects.toThrow("not owned");
+    await expect(resources.findByShorthand({ kind: "reports", shorthand: first.shorthand })).rejects.toThrow(
+      "not owned",
+    );
+    const dispatched = Promise.withResolvers<unknown>();
+    const stopEvents = app.deps.eventBus.subscribe((event) => {
+      const data = event.data as { eventId?: string };
+      if (event.table === "extension_events" && data.eventId === resourceEvents.renumbered.id) dispatched.resolve(data);
+    });
+    await app.deps.extensionResourceSequencesService.documentStore.transaction(
+      { workbenchId: project.id, extensionId: "pstdio" },
+      async ({ document }) => {
+        const numbers = document.getMap<{ id: string }>("resource-numbers");
+        numbers.set("zz-offline", { ...numbers.get(first.id)!, id: "zz-offline" });
+      },
+    );
+    expect(await dispatched.promise).toMatchObject({ projectId: project.id, eventId: resourceEvents.renumbered.id });
+    stopEvents();
+    expect(await resources.findByShorthand({ kind: "planner", shorthand: first.shorthand })).toHaveLength(2);
     expect(extensionResourceRefSchema.parse({ type: "item", ...first }).shorthand).toBe(first.shorthand);
     expect((await api("example.reports").allocate({ kind: "item" })).shorthand).toBe("RP-1");
     await expect(install("conflict", "RP")).rejects.toThrow("example.reports");

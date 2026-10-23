@@ -1,7 +1,10 @@
 import type { ProcessMetric } from "electron";
 import {
   PERFORMANCE_LIMITS,
+  type PerformanceCapture,
   type PerformanceProcess,
+  type PerformanceProcessSample,
+  type PerformanceRecordingExport,
   type PerformanceSnapshot,
   type RendererStateReport,
   rendererStateReportSchema,
@@ -29,6 +32,12 @@ export interface PerformanceMonitorOptions {
   // Logical CPUs. Electron divides each process's CPU by this count.
   cpuCount: number;
   openEndpoint: (read: () => PerformanceSnapshot | null) => Promise<{ close: () => Promise<void> }>;
+  createCapture?: () => {
+    sample: (processes: PerformanceProcessSample[]) => Promise<void>;
+    snapshot: () => PerformanceCapture;
+    close: () => Promise<void>;
+  };
+  recordings?: () => PerformanceRecordingExport;
   now?: () => number;
   schedule?: (callback: () => void, intervalMs: number) => () => void;
 }
@@ -44,6 +53,7 @@ export class DesktopPerformanceMonitor {
   readonly #options: PerformanceMonitorOptions;
   #cancel: (() => void) | null = null;
   #endpoint: { close: () => Promise<void> } | null = null;
+  #capture: ReturnType<NonNullable<PerformanceMonitorOptions["createCapture"]>> | null = null;
   #cpuHistory = new Map<string, number[]>();
   #lastSampleAt: number | null = null;
   #latest: { capturedAt: number; windowMs: number; processes: PerformanceProcess[] } | null = null;
@@ -52,6 +62,7 @@ export class DesktopPerformanceMonitor {
   #rendererState: RendererStateReport = { frameRate: [], pausedExtensionIds: [] };
   // Changes run one at a time, so an endpoint never opens while the last one closes.
   #changes: Promise<void> = Promise.resolve();
+  #owners = 0;
 
   constructor(options: PerformanceMonitorOptions) {
     this.#options = options;
@@ -59,6 +70,30 @@ export class DesktopPerformanceMonitor {
 
   get enabled() {
     return this.#options.preference.enabled;
+  }
+
+  recordings() {
+    return this.#options.recordings?.() ?? null;
+  }
+
+  async retainCapture() {
+    await this.#change(async () => {
+      this.#owners++;
+      try {
+        if (this.enabled) await this.#begin();
+      } catch (error) {
+        this.#owners--;
+        throw error;
+      }
+    });
+    let released = false;
+    return () =>
+      this.#change(async () => {
+        if (released) return;
+        released = true;
+        this.#owners--;
+        if (this.#owners === 0) await this.#end();
+      });
   }
 
   start() {
@@ -69,8 +104,8 @@ export class DesktopPerformanceMonitor {
 
   setEnabled(enabled: boolean) {
     return this.#change(async () => {
-      if (enabled === Boolean(this.#cancel)) return;
       this.#options.preference.set(enabled);
+      if (enabled === Boolean(this.#cancel)) return;
       if (enabled) await this.#begin();
       else await this.#end();
     });
@@ -90,6 +125,8 @@ export class DesktopPerformanceMonitor {
   async #end() {
     this.#cancel?.();
     this.#cancel = null;
+    const capture = this.#capture;
+    this.#capture = null;
     this.#cpuHistory.clear();
     this.#lastSampleAt = null;
     this.#latest = null;
@@ -98,7 +135,11 @@ export class DesktopPerformanceMonitor {
     this.#rendererState = { frameRate: [], pausedExtensionIds: [] };
     const endpoint = this.#endpoint;
     this.#endpoint = null;
-    await endpoint?.close();
+    try {
+      await capture?.close();
+    } finally {
+      await endpoint?.close();
+    }
   }
 
   reportFrames(report: unknown) {
@@ -118,7 +159,7 @@ export class DesktopPerformanceMonitor {
     if (!this.#cancel) return null;
     const { platform } = this.#options;
     return {
-      version: 1,
+      ...(this.#capture ? { version: 2 as const, capture: this.#capture.snapshot() } : { version: 1 as const }),
       host: "desktop",
       capturedAt: new Date(this.#latest?.capturedAt ?? this.#now()).toISOString(),
       sampleIntervalMs: SAMPLE_INTERVAL_MS,
@@ -141,18 +182,26 @@ export class DesktopPerformanceMonitor {
   }
 
   async #begin() {
-    // The first metrics call only starts Electron's CPU measurement window.
-    this.#options.readMetrics();
-    this.#lastSampleAt = this.#now();
-    this.#cancel = (this.#options.schedule ?? scheduleInterval)(() => {
-      try {
-        this.#sample();
-      } catch {
-        // A frame can be disposed while a renderer reloads or exits. Skip this sample;
-        // the next one reads the new frames.
-      }
-    }, SAMPLE_INTERVAL_MS);
-    this.#endpoint = await this.#options.openEndpoint(() => this.snapshot());
+    if (this.#cancel) return;
+    try {
+      this.#capture = this.#options.createCapture?.() ?? null;
+      void this.#capture?.sample([]);
+      // The first metrics call only starts Electron's CPU measurement window.
+      this.#options.readMetrics();
+      this.#lastSampleAt = this.#now();
+      this.#cancel = (this.#options.schedule ?? scheduleInterval)(() => {
+        try {
+          this.#sample();
+        } catch {
+          // A frame can be disposed while a renderer reloads or exits. Skip this sample;
+          // the next one reads the new frames.
+        }
+      }, SAMPLE_INTERVAL_MS);
+      this.#endpoint = await this.#options.openEndpoint(() => this.snapshot());
+    } catch (error) {
+      await this.#end();
+      throw error;
+    }
   }
 
   #sample() {
@@ -161,7 +210,8 @@ export class DesktopPerformanceMonitor {
     const frames = this.#options.listFrames();
     const runtimeOrigin = this.#options.runtimeOrigin();
     const live = new Set<string>();
-    const processes = this.#options.readMetrics().map((metric) => {
+    const metrics = this.#options.readMetrics();
+    const processes = metrics.map((metric) => {
       const key = `${metric.pid}:${metric.creationTime}`;
       live.add(key);
       // People compare this with activity monitors, where one busy core is 100%.
@@ -189,5 +239,25 @@ export class DesktopPerformanceMonitor {
     processes.sort((left, right) => right.cpuPercent - left.cpuPercent);
     this.#latest = { capturedAt, windowMs: capturedAt - (this.#lastSampleAt ?? capturedAt), processes };
     this.#lastSampleAt = capturedAt;
+    const raw = new Map(metrics.map((metric) => [metric.pid, metric]));
+    void this.#capture?.sample(
+      processes.map((process) => ({
+        pid: process.pid,
+        processStartId: String(raw.get(process.pid)?.creationTime),
+        role: process.role,
+        cpuPercent: process.cpuPercent,
+        cpuTimeMs:
+          raw.get(process.pid)?.cpu.cumulativeCPUUsage === undefined
+            ? null
+            : raw.get(process.pid)!.cpu.cumulativeCPUUsage! * 1000,
+        residentBytes: process.memoryKiB.workingSet * 1024,
+        peakResidentBytes: process.memoryKiB.peakWorkingSet * 1024,
+        privateCommittedBytes: process.memoryKiB.privateBytes === null ? null : process.memoryKiB.privateBytes * 1024,
+        physicalFootprintBytes: null,
+        peakPhysicalFootprintBytes: null,
+        heapUsedBytes: null,
+        externalBytes: null,
+      })),
+    );
   }
 }

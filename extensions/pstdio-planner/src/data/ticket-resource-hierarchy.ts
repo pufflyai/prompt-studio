@@ -1,7 +1,31 @@
-import type { JsonObject } from "@pstdio/sdk/extensions";
-import type { StoredTicket } from "./types";
+import type { ExtensionStorageApi, JsonObject } from "@pstdio/sdk/extensions";
+import { ticketsCollection } from "./collections";
+import { type TicketSummary, ticketSummary } from "./ticket-summary";
 
-export type TicketParentLookup = Map<string, StoredTicket>;
+export type TicketParentLookup = Map<string, TicketSummary>;
+
+export const readTicketParentLookup = async (
+  storage: ExtensionStorageApi,
+  selected: ReadonlyMap<string, TicketSummary | undefined>,
+) => {
+  const lookup: TicketParentLookup = new Map(
+    [...selected].flatMap(([id, ticket]) => (ticket ? [[id, ticketSummary(ticket)]] : [])),
+  );
+  const visited = new Set(selected.keys());
+  let pending = [...lookup.values()];
+  const collection = ticketsCollection(storage);
+  while (pending.length > 0) {
+    const ids = new Set(
+      pending.flatMap((ticket) => (ticket.parentId && !visited.has(ticket.parentId) ? [ticket.parentId] : [])),
+    );
+    // Missing parents are visited too, so another branch cannot fetch them again.
+    for (const id of ids) visited.add(id);
+    const ancestors = await Promise.all([...ids].map((id) => collection.get(id)));
+    pending = ancestors.filter((ticket) => ticket !== undefined).map(ticketSummary);
+    for (const ticket of pending) lookup.set(ticket.id, ticket);
+  }
+  return lookup;
+};
 
 export interface TicketResourceReference extends JsonObject {
   type: "ticket";
@@ -11,7 +35,7 @@ export interface TicketResourceReference extends JsonObject {
   metadata: JsonObject;
 }
 
-export const ticketDisplayTitle = (ticket: StoredTicket) =>
+export const ticketDisplayTitle = (ticket: TicketSummary) =>
   ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand;
 
 const ticketsBrowseRootReference = (): JsonObject => ({
@@ -19,7 +43,7 @@ const ticketsBrowseRootReference = (): JsonObject => ({
   viewId: "pstdio.pstdio-planner.view.tickets",
 });
 
-const createTicketResourceIdentity = (lineage: StoredTicket[], index: number): TicketResourceReference => {
+const createTicketResourceIdentity = (lineage: TicketSummary[], index: number): TicketResourceReference => {
   const ticket = lineage[index];
   const metadata: JsonObject = {
     resourceParent: index > 0 ? createTicketResourceIdentity(lineage, index - 1) : ticketsBrowseRootReference(),
@@ -34,10 +58,10 @@ const createTicketResourceIdentity = (lineage: StoredTicket[], index: number): T
   };
 };
 
-export const resolveTicketHierarchy = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) => {
+export const resolveTicketHierarchy = (ticket: TicketSummary, parentLookup: TicketParentLookup = new Map()) => {
   const lineage = [];
   const visitedTicketIds = new Set<string>();
-  let current: StoredTicket | undefined = ticket;
+  let current: TicketSummary | undefined = ticket;
 
   while (current && !visitedTicketIds.has(current.id)) {
     lineage.push(current);
@@ -63,14 +87,14 @@ export const resolveTicketHierarchy = (ticket: StoredTicket, parentLookup: Ticke
   };
 };
 
-export const ticketResourceReference = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) =>
+export const ticketResourceReference = (ticket: TicketSummary, parentLookup: TicketParentLookup = new Map()) =>
   resolveTicketHierarchy(ticket, parentLookup).resourceReference;
 
 // Stored links (session and workspace anchors) keep only the ticket's identity and
 // ancestry. Its state would go stale in the copy.
-export const ticketResourceIdentity = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) =>
+export const ticketResourceIdentity = (ticket: TicketSummary, parentLookup: TicketParentLookup = new Map()) =>
   resolveTicketHierarchy(ticket, parentLookup).identity;
 
-export const linkedResourceParentMetadata = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) => ({
+export const linkedResourceParentMetadata = (ticket: TicketSummary, parentLookup: TicketParentLookup = new Map()) => ({
   resourceParent: ticketResourceIdentity(ticket, parentLookup),
 });

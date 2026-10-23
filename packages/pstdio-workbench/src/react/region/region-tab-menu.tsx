@@ -59,6 +59,10 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
       onExitComplete={() => {
         const action = pending.current;
         pending.current = null;
+        if (action) {
+          const triggerId = menu.api.getTriggerProps().id;
+          if (triggerId) document.getElementById(triggerId)?.focus({ preventScroll: true });
+        }
         void action?.onClick?.();
       }}
     >

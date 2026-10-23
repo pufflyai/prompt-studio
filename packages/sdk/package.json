@@ -1,6 +1,13 @@
 {
   "name": "@pstdio/sdk",
-  "version": "0.44.0",
+  "nx": {
+    "targets": {
+      "test:coverage": {
+        "parallelism": false
+      }
+    }
+  },
+  "version": "0.45.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/pufflyai/prompt-studio"
@@ -91,6 +98,7 @@
     "react": "^19.0.0",
     "rolldown": "^1.2.11",
     "rolldown-plugin-dts": "^0.28.6",
-    "typescript": "6.0.2"
+    "typescript": "6.0.2",
+    "yjs": "^13.6.29"
   }
 }

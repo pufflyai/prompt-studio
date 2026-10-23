@@ -22,8 +22,10 @@ The host decides what loads. It compares its own extension API version with `eng
 
 | Release | Extension API | Notes |
 | --- | --- | --- |
-| 0.43.1, the current stable release | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
-| `main` and `0.44.0-nightly` builds | 0.2.0 | A breaking step. It ships in the release after 0.43.x. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
+| 0.43.1 | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
+| 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
+| 0.45.0 | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
+| `main` | 0.2.2 | Adds account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, and always allows Kanban dragging. Existing `^0.2.0` ranges still load. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
@@ -217,4 +219,63 @@ API 0.2 moves `ctx.extensionFiles` from `.pstdio/ext/<publisher>.<name>/` to `.p
 
 ## Independent panel permissions in API 0.2.1
 
-`ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Published extension header and tab behavior stays compatible until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
+API 0.2.1 also adds optional `HarnessProvider.releaseSession(ctx, { sessionId })` for host-managed idle-resource cleanup. The host retains open tabs, active work, and sessions used within 30 minutes. Return `true` after releasing idle resources and `false` while native work or delivery remains uncertain. Preserve history and recreate resources on the next call. Existing providers keep working. Publish the SDK and host before separately released harnesses adopt it.
+
+`ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `movable`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Published extension header and tab behavior stays compatible until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
+
+## Local editing sessions in API 0.2.1
+
+The additive `editing.session` capability and `client.editing.open` share local document edits
+across isolated webviews before persistence completes. The host scopes sessions to their project
+and extension. See [local editing sessions](0005-webview-and-storage-api.md#local-editing-sessions).
+This is on `main` and ships after 0.44.0. Existing public APIs remain available.
+
+## Storage conflict members deprecated in API 0.2.1
+
+Edits from several devices are moving to automatic merging. The storage API stops promising conflicts. These changes are additive and ship in the release after 0.44.0:
+
+- `StorageSaveOutcome` adds `state`: `saved-locally`, `waiting-to-sync`, `synced`, `offline`, or `needs-attention`. `records.commit` and `records.outcome` return it. The host always sets `state`, so a hand-written test double of an outcome must add it.
+- `expectedRevision` on a `records.commit` edit is optional. Without it, the edit applies to the record's current value.
+- `records.conflicts`, `records.inspect`, `records.resolve`, the `branch` argument of `records.read`, the outcome's `status`, `checkpoint`, `conflictId` and `conflictRevision`, and the `StorageConflict`, `StorageConflictInspection` and `StorageResolution` types are deprecated.
+- `storage.assets` no longer documents retained versions or unresolved alternatives.
+
+The next breaking release removes the deprecated members together. See [Deprecated conflict members](../sdk/0004-storage.md#deprecated-conflict-members).
+
+## Storage IDs and positions in API 0.2.1
+
+`storage.ids.create()`, `storage.positions.between()`, and the second migration
+callback argument, `migration.id(key)`, are additive. Existing migration callbacks
+keep working. The test storage options add optional `workbenchId`, `extensionId`,
+and `deviceId` values for simulating the same owner on two devices. These additions
+ship in the release after 0.44.0. See the
+[storage guide](../../guides/sdk/0003-storage.md#create-records-and-arrange-items).
+
+These ID helpers also accept an optional lowercase prefix. A supplied prefix selects
+a lossless 22-character Base62 UUID body; omitting it keeps canonical UUID text.
+`resources.allocate({ kind, idPrefix? })` uses the same generator and preserves its
+existing UUID output when `idPrefix` is omitted. Compact IDs are case-sensitive;
+extension adoption must keep ID lookup exact and shorthand lookup separate. These
+options do not rewrite existing IDs or change existing shorthand declarations.
+
+## Personal device references in API 0.2.1
+
+Workspace/session read results and resource references may include `device: { ownerId, id, name }`. A synced record is readable on its owner's other devices. Execution stays on its source device. Shared personal references contain only owner and device details; another user cannot open the underlying record. This additive field ships in the release after 0.44.0.
+
+## Cloud account and sync status in API 0.2.1
+
+`ctx.account`, the `account.read` and `account.manage` webview capabilities, `client.account` on the typed webview client, and the `accountEvents.projectSyncChanged` host event are additive. They ship in the release after 0.44.0. The `/client` account methods add `cancelLogin` and `projectSyncStatus`. `AccountDevice` adds `online`, `AccountStatus` adds `cloudProjectsLoaded`, and `DeviceLogin` adds an optional `email`. `makeCommandContext` from `@pstdio/sdk/testing` provides a signed-out account whose projects are `local`. Publish the SDK and host before separately released extensions use these additions. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).
+
+## Kanban dragging in API 0.2
+
+Every board column allows cards to be dragged in and out. This includes groups for missing or unknown values. `canDragIn` and `canDragOut` remain as deprecated input fields, but their values are ignored. Remove these fields from column configurations. This alpha change stays on the `0.2` API line; manifests need no new version range. The next coordinated removal of deprecated APIs can remove the fields themselves.
+
+## Paged collection views in API 0.2.2
+
+`dataTable` and `kanban` view bodies can opt into `queryMode: "paged"`. Their
+query input adds an optional `page` request, and their result adds optional page
+revision, cursor, count, group, and statistics metadata. Both additions are
+required only for opted-in providers. Existing providers keep their full-result
+contract. Storage queries also accept optional `offset` and expected `revision`
+for direct page jumps. This shares the next compatible release step with indexed
+storage queries; it does not add another API version step before that release.
+See [paged tables and boards](0004-contribution-api.md#paged-tables-and-boards).

@@ -43,6 +43,11 @@ const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>
     updatedAt: "2026-01-01T00:00:00.000Z",
   } satisfies StoredTicket);
 describe("pstdio planner extension contributions", () => {
+  test("registers each command once", () => {
+    const ids = (extension.commands ?? []).map(({ id }) => id);
+    expect(ids.filter((id, index) => ids.indexOf(id) !== index)).toEqual([]);
+  });
+
   test("contributes a routed ticket editor with page-owned navigation", () => {
     expect(extension.modes).toBeUndefined();
     expect(extension.resourceKinds?.[0]).toMatchObject({ id: "ticket" });
@@ -253,9 +258,9 @@ describe("pstdio planner workspace contributions", () => {
       },
     ]);
   });
-  test("run-review only exposes workspace and harness options", () => {
+  test("run-review exposes workspace, revision, and harness options", () => {
     const runReview = command("run-review");
-    expect(Object.keys(runReview?.params ?? {}).sort()).toEqual(["harness", "workspaceId"]);
+    expect(Object.keys(runReview?.params ?? {}).sort()).toEqual(["expectedRevision", "harness", "workspaceId"]);
     expect(runReview?.params?.workspaceId).toMatchObject({ required: false });
   });
   test("opens the Tickets list and ticket detail as separate pages", async () => {
@@ -269,7 +274,7 @@ describe("pstdio planner workspace contributions", () => {
     expect(tickets.body.defaultSettings).toMatchObject({
       viewMode: "board",
       columnGrouping: "status",
-      displayProperties: ["id", "workspace", "type", "priority"],
+      displayProperties: ["id", "workspace", "type", "priority", "needsAttention"],
     });
     expect(tickets.body.onColumnAction).toBeFunction();
     expect(tickets.body.onRowActivate).toBeFunction();

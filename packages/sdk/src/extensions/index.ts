@@ -24,8 +24,11 @@ export type {
   WorktreeRemovedPayload,
 } from "pstdio-api-contracts/extension-kernel";
 export {
+  accountEvents,
+  applyEditingChanges,
   DEFAULT_DATA_TABLE_SETTINGS,
   defineSlot,
+  diffEditingState,
   dockedWorkbenchRegions,
   EXTENSION_API_VERSION,
   extensionPanelRegions,
@@ -43,6 +46,8 @@ export {
   packageAsset,
   projectEvents,
   projectSlots,
+  rebaseEditingChanges,
+  resourceEvents,
   sessionEvents,
   sessionSlots,
   VIEW_FILTER_CONDITIONS,
@@ -123,6 +128,7 @@ export {
   type TerminalSessionBridge,
   type TerminalSessionExit,
 } from "./terminal-session-bridge";
+export type { WebviewAccountClient } from "./webview-account-client";
 export { type ArtifactMountKey, artifactMountId, artifactsRead } from "./webview-capabilities";
 export {
   createWebviewClient,
@@ -132,11 +138,27 @@ export {
   type WebviewCommandsClient,
   type WebviewSettingsClient,
 } from "./webview-client";
+export type {
+  EditingSessionOptions,
+  EditingSnapshot,
+  WebviewEditingClient,
+  WebviewEditingSession,
+} from "./webview-editing";
 export { EXTENSION_EVENTS_SCOPE, type WebviewEventsClient, type WebviewExtensionEvent } from "./webview-events";
 export { matchesResourceWhen } from "./when";
 export const projectPrefix = () => ({ $prefix: "project" as const });
 
 export type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
+export type {
+  PerformanceCapture,
+  PerformanceCaptureSample,
+  PerformanceMonitoringState,
+  PerformanceProcessSample,
+  PerformanceRecordingExport,
+  PerformanceResponseSample,
+  PerformanceRuntimeReading,
+  PerformanceSnapshot,
+} from "pstdio-api-contracts/performance-diagnostics";
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
   mergeOrderedHistory,
@@ -168,4 +190,5 @@ export type {
 } from "./resource-compat";
 export { isWebviewCapabilityError, type WebviewCapabilityError } from "./webview-capability-error";
 export type { WebviewPageClient } from "./webview-page-client";
+export type { WebviewPerformanceClient } from "./webview-performance-client";
 export type { CommandStream, CommandStreamOptions, WebviewStreamsClient } from "./webview-streams";

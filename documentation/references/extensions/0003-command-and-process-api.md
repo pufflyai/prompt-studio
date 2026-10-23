@@ -299,6 +299,49 @@ These are in 0.43.x and `main`:
 | `ctx.logger.info`, `ctx.logger.warn`, `ctx.logger.error` | Write `(message, metadata?)` to the runtime log with event `extension.log`. The default log level, `error`, drops `info` and `warn`. |
 | `ctx.settings.delete(key)` | Removes the stored value of a setting. |
 
+On `main`, `ctx.resources.allocate({ kind, idPrefix: "tk" })` opts into a compact,
+case-sensitive ID while keeping the human shorthand unchanged. This additive option
+ships in the release after 0.44.0. It shares the core generator with
+`ctx.storage.ids.create("tk")`; omitting `idPrefix` keeps UUID output. See
+[Resource identities](../sdk/0002-resources.md#resource-identities).
+
+### Cloud account and sync status
+
+On `main`, `ctx.account` reads this device's Cloud account, the account's devices, and each project's sync status. It is an additive part of extension API 0.2.1 and ships in the release after 0.44.0. The native host owns the device credential; extensions never see it. Methods that take a `projectId` use the current project when it is omitted.
+
+| Method | What it does |
+| --- | --- |
+| `ctx.account.status()` | Returns `{ login, cloudProjects, cloudProjectsLoaded }`. `login` is `null` when this device is signed out; otherwise it has the account and device IDs, the service addresses, and the signed-in `email`. `cloudProjectsLoaded` stays `false` until the account service answered for this login. |
+| `ctx.account.login(managerOrigin)` | Starts a native browser sign-in with the given account service and returns `{ id, url }`. Open `url` in a browser on the computer that runs Prompt Studio. |
+| `ctx.account.loginStatus(id)` | Returns `pending`, `complete`, or `failed`. |
+| `ctx.account.cancelLogin(id)` | Cancels a pending sign-in and returns `failed`. A sign-in that already finished returns `complete`. |
+| `ctx.account.logout()` | Signs this device out and keeps local data. Returns `{ removed }`; `removed` is `false` when the account service could not be reached. |
+| `ctx.account.devices()` | Lists the account's devices with `name`, `platform`, `lastSeenAt`, `online`, and `current` for this device. |
+| `ctx.account.renameDevice(id, name)` | Renames a device. |
+| `ctx.account.removeDevice(id)` | Stops a device from renewing Cloud access. Removing the current device signs it out. |
+| `ctx.account.projectSyncStatus(projectId?)` | Returns `{ state, offlineReady }` for a project. |
+| `ctx.account.syncProject(projectId?)` | Syncs the project on every device of the account that has it. |
+| `ctx.account.stopProjectSync(projectId?)` | Makes the project local on every device. |
+
+`state` is one of these values. The host derives it on each read from the local documents, the record assets and the relay connections. It never stores a second status.
+
+| `state` | Meaning |
+| --- | --- |
+| `local` | The project does not sync. |
+| `waiting-to-sync` | Saved local changes have not reached Cloud yet, or a sync run is still working. |
+| `synced` | Every known document and required file is on this device, and saved changes have reached Cloud. |
+| `offline` | The Cloud connection is lost, or the account service has not confirmed which projects sync. Work continues locally. |
+| `first-download-incomplete` | The first download since the relay connection started has not finished, so some documents or files may not be on this device yet. |
+| `needs-attention` | Some encrypted data could not be read. Healthy updates continue. |
+
+`offlineReady` is `true` only when every known document and required file was verified on this device. The host never reports `synced` or `offlineReady` while content is missing. An incomplete first download stays `first-download-incomplete` when the connection drops. Later downloads, such as catching up after a reconnect, report `waiting-to-sync` with `offlineReady` set to `false` until they finish. The first download starts again when the runtime restarts or a project starts syncing again.
+
+Stopping and restarting sync are account-wide. Stopping keeps the project keys, the encrypted Cloud data, and each device's local copy. Edits made on several devices while the project is local merge when it syncs again.
+
+Listen to `accountEvents.projectSyncChanged` from `@pstdio/sdk/extensions` for changes. The host sends it for one project only when that project's `state` or `offlineReady` changes. Read the status once when the extension starts; the first value is not announced. The payload is `{ projectId, state, offlineReady }`. Webviews receive only the event ID, so read the status again.
+
+Account service failures reach the extension as a generic message, so private service details stay in the host. Device presence comes from the account service: a signed-in runtime sends a heartbeat every 15 seconds, and `online` means the service heard from the device within the last 45 seconds.
+
 ### Agent skill folders
 
 Harness extensions call `ctx.workspaceFiles.syncDir(dir, files)` during workspace setup to copy the skill catalog into an agent folder such as `.claude/skills`. The host records each file it writes, with a hash of its content, outside the workspace. A later sync updates or removes a file only while it still has the recorded content. It adopts an existing file that already has the wanted content. It keeps a file it did not write or that someone edited, and logs a warning with event `extension.workspace_sync.kept_file`. The host log (`logs.jsonl` in the Prompt Studio home folder) records warnings when `PSTDIO_LOG_LEVEL` is `warn`, `info`, or `debug`. The default level, `error`, does not. Deleting a kept file lets the next sync write the current version. `syncDir` does not report kept files to the extension.
@@ -342,6 +385,8 @@ A sibling with `resolvedFrom: "resource"` stays hidden in the dialog, but
 `params.valueOf` can still reference it. Choices and submission use the same
 value: an explicit action argument takes priority over the active resource.
 Opening the dialog for another resource loads choices for that resource.
+Dashboard commands also resolve these hidden values before dispatch when no
+parameter form is needed. Explicit action arguments still take priority.
 
 Workspace provider `params` support the same command-backed choices in Create
 workspace and in nested `workspace` command fields. Changing the provider cancels
@@ -421,6 +466,37 @@ resourceMutation: { kind: "rename", resourceType: "note", idParam: "noteId", lab
 The dashboard previews the change in navigation, tabs, and breadcrumbs while the command saves. Removal asks for confirmation first. Failure restores the affected resource. Writes for the same resource are ordered, and a failed earlier action cannot undo a newer preview. The preview stays until the mounted resource views refresh. The command still owns validation, persistence, and refresh events. API and CLI calls run the command directly, without a UI preview or confirmation. Commands without this declaration keep their existing behavior.
 
 ## Sessions
+
+`ctx.sessions` exposes the host's session operations inside the current project. The capabilities below are available on `main` in extension API 0.2.2 and ship after 0.45.0. `ctx.sessions.get(sessionId)` and conversation reads also include `projectId`, `agentSessionId`, `sessionFileId`, and saved harness `params`. Mutations reject missing or foreign sessions. Reading a synced personal conversation does not start execution on this device; continue it on its owning device.
+
+| Method | Behavior |
+| --- | --- |
+| `ctx.sessions.getConversation(sessionId)` | Returns `{ session, messages }`, including pending queued messages. |
+| `ctx.sessions.getConversationSources(sessionId)` | Reads checkpoint and native history separately, with source errors. |
+| `ctx.sessions.getQueuedMessages(sessionId)` | Reads the pending messages and queue without loading conversation history. |
+| `ctx.sessions.stream(sessionId, onEvent, { signal }?)` | Awaits snapshot and live events: `ready`, `patch`, `approval_request`, `queued_messages`, and `end`. The callback receives a typed `{ event, data }` value and may return a promise for backpressure. |
+| `ctx.sessions.retainResources(sessionId)` | Returns `{ close() }` to keep idle harness resources while needed. |
+| `ctx.sessions.approve(sessionId, { id, decision })` | Resolves a tool approval request with `approve` or `deny`. |
+| `ctx.sessions.rename(sessionId, title)` | Renames the session; trims and rejects an empty title. |
+| `ctx.sessions.archive(sessionId)` | Archives the session and records its activity. |
+| `ctx.sessions.delete(sessionId)` | Deletes an inactive session. Active or queued work must be stopped first. Workspace files and native history are kept. |
+| `ctx.sessions.updateStatus(sessionId, status)` | Uses the host's status transition service. Use `stop` to cancel execution. |
+| `ctx.sessions.listActivity(sessionId, input?)` | Returns `{ items, nextCursor }`; accepts `eventType`, `from`, `to`, `cursor`, and `limit`. |
+| `ctx.sessions.removeQueuedFollowUp(sessionId, queuePosition, expectedRevision?)` | Removes a pending request; rejects a stale revision or a request being consumed. |
+| `ctx.sessions.moveQueuedFollowUp(sessionId, queuePosition, input)` | Moves a request `up` or `down`, optionally by `steps`, with `expectedRevision` and `expectedOrder` guards. Returns its new `queuePosition`. |
+| `ctx.sessions.getDraftHarnessCommands({ harness, workspaceId? })` | Discovers native commands before creating a session. `harness` uses `{ harnessId, model?, params? }`. |
+| `ctx.sessions.getHarnessCommands(sessionId)` | Reads native commands and modes for an existing session. |
+| `ctx.sessions.invokeHarnessOperation(sessionId, operation, expectedHarnessId?)` | Runs a native command or control through the host's execution and cancellation rules. |
+| `ctx.sessions.resolveSessionId({ harnessId, agentSessionId, cwd? })` | Resolves a native identity within this project; rejects ambiguous matches. |
+| `ctx.sessions.uploadAttachment({ name, data, mimeType? })` | Uploads supported attachment bytes. Returns the canonical attachment fields, including `fileId`. The same type and size limits apply as in the app. |
+| `ctx.sessions.readAttachment(fileId)` | Reads attachment bytes from this project. |
+| `ctx.sessions.deleteAttachment(fileId)` | Deletes an unsubmitted attachment; submitted or in-flight files are kept. |
+
+Streams and resource retention are released when the invoking command ends or is cancelled. Closing a stream or retention handle does not stop the agent session. A webview can forward stream events through a command declared with `streamOf`, using `await ctx.stream.write(event)` in the callback. See [command streams](#stream-command-output).
+
+`ctx.sessions.create` also accepts `operation` to start with a native command instead of a prompt, and returns its optional `operationResult`. `ctx.sessions.followup` accepts `harness` to select the next harness, model, or parameters, `questionResponse: { callId?, answers }` to answer a structured question, and `summaryFromSessionId`, `summaryFormat`, and `summaryRole` to include another project session's summary. Attachments remain references of the form `{ file_id }`. An answer to a question cannot include attachments. Existing `expectedRun` guards still reject continuation after execution changes.
+
+Use `await ctx.sessions.stop(sessionId)` to cancel a session in the current project and its queued follow-ups. This is available on `main` in extension API 0.2.2 and ships after 0.45.0. It supports queued, running, and awaiting-input sessions. The host waits for the harness's stop acknowledgement when the harness supports it. Harness failures and a change of execution owner reject the call; a caller must not report a successful stop in that case. Read the session again before deciding what to do next. Missing sessions and sessions from another project are rejected. Calling stop on a terminal session also records explicit stop intent and cancels its queued follow-ups. An uncertain live-input delivery remains recorded for host recovery.
 
 Use `ctx.sessions.query(input?)` to read sessions in the current project. It returns `{ items, nextCursor }`. Each item includes `agent` (harness ID), `last_selected_model`, `workspace_id`, status, archive state, anchors, creation and update times, latest-run start and end times, and `usage`.
 

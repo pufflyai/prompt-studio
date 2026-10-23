@@ -8,11 +8,11 @@ bun run dev:relay
 
 The command starts the real Better Auth manager, PostgreSQL, RustFS and relay, then runs two Prompt Studio dashboards through `dev:isolated`. It prints a **Notes** URL for each dashboard. Create a note in one dashboard and open it in the other. The launcher installs the unchanged Notes, Artifacts, and harness extensions, plus a small native controls fixture. Publish HTML through Artifacts or edit **Shared message** in **Relay test** to check other storage paths.
 
-Each app has its own environment identity, home, PGlite database, project folder, API token and relay renewal grant. Both bind the same shared workbench identity. Dependency files and their Bun cache share one Docker volume; runtime data and credentials do not. Keeping the cache on the dependency filesystem lets Bun hardlink packages instead of copying them across volume mounts. See [Bun's cache documentation](https://bun.com/docs/pm/global-cache).
+Each app has its own environment identity, home, PGlite database, project folder, API token and device login. Both apps are devices of the same fixture account. Both bind the same shared workbench identity, which is a cloud project of that account. Dependency files and their Bun cache share one Docker volume; runtime data and credentials do not. Keeping the cache on the dependency filesystem lets Bun hardlink packages instead of copying them across volume mounts. See [Bun's cache documentation](https://bun.com/docs/pm/global-cache).
 
 The local fixture uses its own account and operator enrollment. It needs no real Google login or cloud account. The production manager uses Better Auth's Google provider and requires real provider settings. Fixture enrollment is absent from the production manager image.
 
-The manager and relay use separate PostgreSQL roles. Native connections use HTTPS with fresh fixture certificates and separate server private keys. The relay receives public signing trust; it receives no manager database role, signing secret or renewal grant. Dashboard and API ports bind to host loopback. The fixture's Docker network defaults to 10.254.239.0/24. Inspect existing networks before choosing another `RELAY_TEST_SUBNET`.
+The manager and relay use separate PostgreSQL roles. Native connections use HTTPS with fresh fixture certificates and separate server private keys. The relay receives public signing trust; it receives no manager database role, signing secret or device token. Dashboard and API ports bind to host loopback. The fixture's Docker network defaults to 10.254.239.0/24. Inspect existing networks before choosing another `RELAY_TEST_SUBNET`.
 
 ## Offline and restart checks
 
@@ -49,30 +49,33 @@ bun run dev:relay -- --name=my-relay
 bun run dev:relay -- --name=my-relay --down
 ```
 
-Use the same name when rerunning. The first run of a new name can stop with `TypeError: The socket connection was closed unexpectedly` from `scripts/dev/relay-local.ts`. Each app installs the default extensions into its own home, and the first `pstdio-artifacts` install downloads about 450 MB of dependencies. It took 46 to 79 seconds here. The setup request waits for that install and the API closes the idle connection first. Run the same command again after the app's log shows the install finished; in one check, the third run succeeded after 43 seconds. Existing native credentials are retained. If enrollment was interrupted before its config was saved, a new fixture enrollment revokes the environment's old grants and creates a fresh one. Cleanup removes only that named fixture's apps, homes, database/object volumes and dependency volume. It does not prune Docker globally.
+Use the same name when rerunning. The first run of a new name can stop with `TypeError: The socket connection was closed unexpectedly` from `scripts/dev/relay-local.ts`. Each app installs the default extensions into its own home, and the first `pstdio-artifacts` install downloads about 450 MB of dependencies. It took 46 to 79 seconds here. The setup request waits for that install and the API closes the idle connection first. Run the same command again after the app's log shows the install finished; in one check, the third run succeeded after 43 seconds. A rerun keeps an app's saved login while the manager still accepts its token. If the manager rejects the token, or no login is saved, the launcher enrolls the app's device again. Enrolling replaces the device token, so the old token stops working. Cleanup removes only that named fixture's apps, homes, database/object volumes and dependency volume. It does not prune Docker globally.
 
-Connection files live under ignored `__test-tmp__/dev-isolated/<app>/` and `__test-tmp__/relay/<name>/`. Treat these files as credentials. Do not commit or attach their contents to reports.
+Connection files and account files live under ignored `__test-tmp__/dev-isolated/<app>/` and `__test-tmp__/relay/<name>/`. Treat these files as credentials. Do not commit or attach their contents to reports.
 
 ## Native runtime configuration
 
-An operator supplies a private JSON file outside shared project content and starts the runtime with `PSTDIO_RELAY_CONFIG_FILE` pointing to it. The local launcher writes this file under each app's isolated home with mode 0600.
+The host keeps one device login in a private JSON file. By default the file is `native-account.json` beside the database. `PSTDIO_ACCOUNT_FILE` selects another path. In normal use, the host writes this file when you log in with `pst login`. The local launcher writes it for each app at `__test-tmp__/dev-isolated/<app>/pstdio-home/account.json` with mode 0600. `infra/local/compose.relay.yaml` points `PSTDIO_ACCOUNT_FILE` at that path.
 
 ```json
 {
-  "connections": [
-    {
-      "accountId": "account",
-      "workbenchId": "workbench",
-      "environmentId": "this-runtime-environment",
-      "managerOrigin": "https://manager.example",
-      "relayOrigin": "https://relay.example",
-      "renewalGrant": "<private-enrollment-grant>"
-    }
-  ]
+  "login": {
+    "managerOrigin": "https://manager.example",
+    "relayOrigin": "https://relay.example",
+    "accountId": "account",
+    "deviceId": "this-runtime-environment",
+    "token": "<private-device-token>"
+  }
 }
 ```
 
-The environment must match `GET /v1/environment`. Each workbench appears once. Bind the workbench locally before connecting. The host discovers all enabled extensions and initializes their owner scopes through an authenticated request. Enabling another extension needs no configuration entry. Disabling it closes its connection. Source or workspace changes rebuild the host watchers. Scope initialization cannot overwrite an existing published revision. HTTPS is required except for owned loopback HTTP fixtures. Configuration is read at runtime startup; restart after changing it. Renewal grants stay in the native process and never enter browser requests, extension storage or snapshots.
+`"login": null` means the host is logged out. A missing file means the same. A logged-out host stays local. The device ID is the host's environment ID from `GET /v1/environment`. One device token covers every cloud project of the account. A cloud project is a workbench that the manager lists for the account.
+
+At startup, a logged-in host asks the manager for its account's cloud projects with `GET /v1/workbenches`. It syncs the cloud projects that exist locally. A cloud project starts to sync once it is created or bound on this host. The host asks the manager again after login, logout and local project changes. If the manager rejects the token, for example because another device removed this one, the host clears the login and stays local. The host does not watch the file, so the launcher restarts an app after it writes a new login.
+
+The local fixture enrollment adds the shared workbench to the fixture account and registers the app's environment ID as a device. It does not go through Google login.
+
+The host discovers all enabled extensions and initializes their owner scopes through an authenticated request. Enabling another extension needs no configuration entry. Disabling it closes its connection. Source or workspace changes rebuild the host watchers. Scope initialization cannot overwrite an existing published revision. HTTPS is required except for owned loopback HTTP fixtures. The device token stays in the native process. It never enters browser requests, host API responses, extension storage or snapshots.
 
 Each connection runs one synchronization at a time. Local committed journal entries wake it. Versioned WebSocket hints also wake it; hints contain no records. The journal, receipts and snapshots own the state. Incoming assets are verified before publication, multipart upload staging uses temporary disk files, and failed source opening removes its spool. Shutdown aborts requests and closes connections before closing the local database.
 

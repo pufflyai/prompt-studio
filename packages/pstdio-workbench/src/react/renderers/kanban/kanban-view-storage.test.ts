@@ -13,6 +13,11 @@ const ticketPlacement = (projectId: string): WorkbenchPanelInstance => ({
   },
 });
 describe("resolveKanbanRendererStorageKey", () => {
+  test("uses canonical resource ownership before metadata", () => {
+    const placement = ticketPlacement("unrelated-project");
+    placement.resource = { ...placement.resource!, projectId: "canonical-project" };
+    expect(resolveKanbanRendererStorageKey("tickets", placement)).toEndWith(":project:canonical-project");
+  });
   test("separates persisted board state for project-scoped resources", () => {
     const firstProjectKey = resolveKanbanRendererStorageKey("pstdio-planner.tickets", ticketPlacement("project-1"));
     const secondProjectKey = resolveKanbanRendererStorageKey("pstdio-planner.tickets", ticketPlacement("project-2"));

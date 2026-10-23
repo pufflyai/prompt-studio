@@ -10,6 +10,7 @@ import {
 } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { ticketRequestsTarget } from "../../data/ticket-page-target";
 import { stepReview } from "../model/review";
 import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
@@ -17,7 +18,8 @@ import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
 import { PlanLoading } from "./plan-loading";
 import { useViewSections } from "./plan-state";
-import { reportTimelineError } from "./timeline-notice";
+import { reportPlannerError } from "./timeline-notice";
+import { TimelinePresentationProvider } from "./timeline-presentation";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
 import { createTimelineStorage } from "./timeline-storage";
 import { timelineViewsSource } from "./timeline-views";
@@ -43,11 +45,12 @@ interface PlanRootProps {
 export function PlanRoot(props: PlanRootProps) {
   const { host, t } = props;
   const { client, plan } = usePlan(host);
+  // Restore project presentation before mounting controls or applying collapsed geometry.
   const [storage, setStorage] = useState<HostStorage>();
   useEffect(() => {
     let active = true;
     const reportError = (reason: unknown) => {
-      if (active) void reportTimelineError(host, reason);
+      if (active) void reportPlannerError(client, reason);
     };
     void createTimelineStorage(host, reportError)
       .then((next) => {
@@ -57,12 +60,14 @@ export function PlanRoot(props: PlanRootProps) {
     return () => {
       active = false;
     };
-  }, [host]);
+  }, [client, host]);
   if (!plan || !storage) return <PlanLoading t={t} />;
   const viewsSource = timelineViewsSource(client, plan.savedViews);
   return (
     <HostStorageProvider storage={storage}>
-      <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
+      <TimelinePresentationProvider key={plan.projectId} projectId={plan.projectId} storage={storage}>
+        <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
+      </TimelinePresentationProvider>
     </HostStorageProvider>
   );
 }
@@ -78,6 +83,11 @@ function PlanContent(props: PlanContentProps) {
   const [search, setSearch] = useState("");
   const queryData = timelineQueryData(plan, t);
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
+  const displayProperties = useCollectionViewStore(
+    queryData.storageKey,
+    timelineInitialState,
+    (state) => state.settings.displayProperties,
+  );
   const filtered = filterRowsByView(queryData.rows, filter, queryData.attributes);
   const matching = searchRows(filtered, search, (row) => [row.title, String(row.attributes.id)]);
   const tracks = visibleTracks(plan, filter, queryData.attributes);
@@ -96,7 +106,20 @@ function PlanContent(props: PlanContentProps) {
       />
       <Flex flex="1" minH="0" minW="0">
         <Box flex="1" minH="0" minW="0">
-          <PlanGraph {...viewProps} today={plan.today} />
+          <PlanGraph
+            {...viewProps}
+            today={plan.today}
+            cardInteraction={{
+              host,
+              client,
+              attributes: queryData.attributes,
+              displayProperties,
+              rows: new Map(queryData.rows.map((row) => [row.id, row])),
+            }}
+            onOpenRequests={(row) => {
+              void host.call("navigation.open", { target: ticketRequestsTarget(row.target.resource!) });
+            }}
+          />
         </Box>
         {selected ? (
           <Suspense fallback={null}>

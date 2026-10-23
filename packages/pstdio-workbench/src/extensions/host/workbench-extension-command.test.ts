@@ -206,6 +206,7 @@ describe("executeWorkbenchExtensionCommand", () => {
 
   test("keeps committed command success when navigation fails and continues later requests", async () => {
     const workbench = setupPage();
+    const origin = workbench.layout.getLayout().regions.main.activeWidgetId;
     const created: string[] = [];
     const result = await executeWorkbenchExtensionCommand(
       {
@@ -232,7 +233,11 @@ describe("executeWorkbenchExtensionCommand", () => {
     expect(created).toEqual(["created"]);
     expect(workbench.pages.store.getState().activePageId).toBe("tickets");
     expect(workbench.notifications.listNotifications()).toEqual([
-      expect.objectContaining({ level: "warning", message: expect.stringContaining("unavailable") }),
+      expect.objectContaining({
+        level: "error",
+        inlineTarget: origin,
+        message: expect.stringContaining("unavailable"),
+      }),
     ]);
   });
 

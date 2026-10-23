@@ -15,6 +15,8 @@ For the user view, see [Projects and workspaces](../../guides/concepts/0001-proj
 
 The CLI create/delete commands call the API. The API resolves the provider and local repository context. Merge remains a local CLI workflow. Remote providers own their own execution and capability boundaries.
 
+Normal workspace deletions share a host queue with two active operations across API and extension callers. Each slot includes provider cleanup and session archival. See [bulk workspace cleanup](../performance/0002-workspace-cleanup.md) for measurements, limits, and regression coverage.
+
 ## Package structure
 
 See the [public exports](../../../packages/pstdio-wt/src/index.ts) for the available functions. Focused modules cover Git subprocess execution, worktree operations, commits, merges, rebases, branch/base resolution, status, setup, and ignored-file copying.

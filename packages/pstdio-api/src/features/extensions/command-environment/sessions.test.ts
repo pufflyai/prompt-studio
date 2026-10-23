@@ -50,7 +50,15 @@ test("session readers expose harness and usage through an explicit public mappin
     cacheReadTokens: 0,
     cacheWriteTokens: 2,
   });
-  expect(await api.get(row.id)).toEqual({ ...page.items[0], lastExit: null, last_exit: null });
+  expect(await api.get(row.id)).toEqual({
+    ...page.items[0],
+    projectId: project.id,
+    agentSessionId: null,
+    sessionFileId: null,
+    params: null,
+    lastExit: null,
+    last_exit: null,
+  });
   expect(page.items[0]).not.toHaveProperty("project_id");
   expect(page.items[0]).not.toHaveProperty("session_file_id");
   const foreign = await handle.deps.projectService.create({ name: "foreign" });
@@ -111,7 +119,7 @@ test("extensions can create and open a session before sending its first message"
     expect(resumedHooks).toBe(0);
     expect(await isolated.deps.workspaceSessionService.getWorkspaceBySessionId(session.id)).not.toBeNull();
     await api.followup({ sessionId: session.id, prompt: "Hello from extension" });
-    await waitForCompleted(isolated.app, session.id);
+    await waitForCompleted(isolated, session.id);
     expect(isolated.harness.start).toHaveBeenCalledTimes(1);
     expect(isolated.harness.start.mock.calls[0]?.[1]).toMatchObject({ prompt: "Hello from extension" });
     expect(isolated.harness.resume).not.toHaveBeenCalled();

@@ -4,7 +4,7 @@ import { surfaceWebviewCommandOutcome } from "./webview-command-outcome";
 
 describe("webview command reports", () => {
   for (const status of ["error", "rejected"] as const) {
-    test(`reports one ${status} outcome beside its notices`, () => {
+    test(`forwards notices and leaves a ${status} outcome for the caller to report`, () => {
       const notices: unknown[] = [];
       surfaceWebviewCommandOutcome(
         {
@@ -20,14 +20,7 @@ describe("webview command reports", () => {
         } as CommandExecutionResult,
         (notice) => notices.push(notice),
       );
-      expect(notices).toEqual([
-        { type: "info", title: "Extension notice", description: "Check your folder" },
-        {
-          type: status === "error" ? "error" : "warning",
-          title: status === "error" ? "Extension command failed" : "Extension command rejected",
-          description: "Cannot save",
-        },
-      ]);
+      expect(notices).toEqual([{ type: "info", title: "Extension notice", description: "Check your folder" }]);
     });
   }
 });

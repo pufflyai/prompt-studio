@@ -55,6 +55,7 @@ const toNativeViewBody = (
     return {
       kind: "tree",
       ...common,
+      structure: body.structure,
       searchable: body.searchable,
       searchPlaceholder: body.searchPlaceholder,
       headerHandlerId: handlers.headerHandlerId as string | undefined,
@@ -88,6 +89,7 @@ const toNativeViewBody = (
   if (body.kind === "dataTable") {
     return {
       kind: "dataTable",
+      queryMode: body.queryMode,
       ...common,
       columns: body.columns,
       queryHandlerId: String(handlers.queryHandlerId),
@@ -110,6 +112,7 @@ const toNativeViewBody = (
   }
   return {
     kind: "kanban",
+    queryMode: body.queryMode,
     ...common,
     attributes: body.attributes,
     queryHandlerId: String(handlers.queryHandlerId),

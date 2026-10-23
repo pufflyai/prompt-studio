@@ -1,5 +1,8 @@
 import { defineResourceKind, l10n, projectPrefix, resourceMenuSlotRef } from "@pstdio/sdk/extensions";
+import { resolveTicketPathCommand } from "./commands/resolve-ticket-path";
+import { resolveTicketResourcesCommand } from "./commands/resolve-ticket-resources";
 import { ticketRelatedOpeningsCommand } from "./commands/ticket-related-openings";
+import { TICKETS_DIR } from "./data/draft-storage";
 
 export const ticketResourceKind = defineResourceKind({
   id: "ticket",
@@ -7,6 +10,8 @@ export const ticketResourceKind = defineResourceKind({
   relatedOpenings: ticketRelatedOpeningsCommand.ref,
   label: l10n("resourceKinds.ticket.label", "Ticket"),
   icon: "component",
+  paths: [{ prefix: `${TICKETS_DIR}/`, resolve: resolveTicketPathCommand.ref }],
+  resolveMany: resolveTicketResourcesCommand.ref,
   menuSlots: [
     {
       id: "header-overflow",

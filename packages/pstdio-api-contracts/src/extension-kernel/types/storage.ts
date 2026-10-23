@@ -7,9 +7,9 @@ import type { ExtensionRecordsApi } from "./storage-records";
 export interface ExtensionStorageCollectionApi<TItem = unknown> {
   get(id: string): Promise<TItem | undefined>;
   list(): Promise<TItem[]>;
-  /** @deprecated Use storage.records.commit with a caller-observed revision. */
+  /** @deprecated Use storage.records.commit. */
   put(id: string, value: TItem): Promise<void>;
-  /** @deprecated Use storage.records.commit with a caller-observed revision. Throws if the item was deleted. */
+  /** @deprecated Use storage.records.commit. Throws if the item was deleted. */
   update(id: string, value: TItem): Promise<void>;
   createIfAbsent(id: string, value: TItem): Promise<boolean>;
   deleteIfValue(id: string, value: TItem): Promise<boolean>;
@@ -23,9 +23,25 @@ export type StorageScope =
   | { type: "resource"; resource: ResourceRef }
   | { type: string; id: string };
 
+export interface ExtensionStorageMigration {
+  /** Derive the same ID from a stable source key. A prefix selects lossless, case-sensitive Base62 output. */
+  id(key: string, prefix?: string): string;
+}
+
+export interface ExtensionStoragePositionsApi {
+  /** Create a unique position between neighbours. Omit either end; compare with < and >, not localeCompare. */
+  between(before?: string, after?: string): string;
+}
+
 export interface ExtensionStorageApi {
   /** Upgrade this storage scope once. Saves the version after success; failed work must be safe to retry. */
-  migrate(version: number, run: (previousVersion: number) => Promise<void>): Promise<void>;
+  migrate(
+    version: number,
+    run: (previousVersion: number, migration: ExtensionStorageMigration) => Promise<void>,
+  ): Promise<void>;
+  /** Create a UUIDv7. A prefix selects lossless, case-sensitive Base62 output. Use migration.id for imports. */
+  ids: { create(prefix?: string): string };
+  positions: ExtensionStoragePositionsApi;
   /** Read retained records from a removed schema, restricted to this project and instance. */
   readLegacy(source: string): Promise<{ version: string; records: JsonObject[] } | undefined>;
   records: ExtensionRecordsApi;
@@ -34,9 +50,9 @@ export interface ExtensionStorageApi {
   files: ExtensionBlobsApi;
   /** @deprecated Use records.read to keep the observed revision with the value. */
   get<T = unknown>(key: string): Promise<T | undefined>;
-  /** @deprecated Use records.commit with the revision returned by records.read. */
+  /** @deprecated Use records.commit. */
   set<T = unknown>(key: string, value: T): Promise<void>;
-  /** @deprecated Use records.commit with deleted: true and the observed revision. */
+  /** @deprecated Use records.commit with deleted: true. */
   delete(key: string): Promise<void>;
   /** @deprecated Use records with stable record IDs and grouped commits. */
   collection<TItem = unknown>(name: string): ExtensionStorageCollectionApi<TItem>;

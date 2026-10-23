@@ -1,6 +1,6 @@
 # Immutable assets
 
-Stage large files as immutable assets. Prompt Studio streams their bytes, verifies their size and checksum, and keeps completed versions addressable.
+Stage large files as immutable assets. Prompt Studio streams their bytes and verifies their size and checksum. Records refer to completed assets.
 
 ## Availability
 
@@ -50,9 +50,9 @@ The owner is resolved from the installed extension in that project. Caller-suppl
 
 `ctx.storage.assets.read(asset)` and `client.assets.read({ ...owner, asset, signal })` return a `ReadableStream<Uint8Array>`. Consume it to its end before treating the download as verified. A truncated or corrupted download fails the stream. Pipe it to a file or another streaming consumer to avoid buffering the whole asset.
 
-Call `ctx.storage.assets.cancel(operationId)` or `client.assets.cancel({ ...owner, operationId })` for explicit cancellation. This stops an active upload and removes its temporary bytes. A completed version remains retained, including when another operation references the same content. A cancelled operation ID cannot be reused.
+Call `ctx.storage.assets.cancel(operationId)` or `client.assets.cancel({ ...owner, operationId })` for explicit cancellation. This stops an active upload and removes its temporary bytes. Cancelling never removes a completed asset. A cancelled operation ID cannot be reused.
 
-Completed versions have no automatic expiry or garbage collection. This local asset API does not delete them. Backup-aware manual cleanup and relay object storage are separate work. Verifying assets does not commit a grouped mutation or establish that an entire workbench is ready offline.
+Keep an asset readable by referencing it from a record. Do not rely on an asset that no record references staying available, and do not use assets as version history. Verifying assets does not commit a group of records or show that an entire workbench is ready offline.
 
 ## Existing blobs
 

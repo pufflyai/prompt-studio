@@ -1,6 +1,6 @@
 import { Center, Text } from "@chakra-ui/react";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
-import { getThemePreferenceMode, useThemePreference } from "@pstdio/ui";
+import { getThemePreferenceMode, toaster, useThemePreference } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
 import { createExtensionWebviewHostCapabilities } from "@pstdio/workbench/extensions";
 import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import i18n from "@/i18n";
 import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
+import { useActionError } from "@/shared/components/use-action-error";
 import { getExtensionTranslationContext, resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
   type ExtensionCommandEvent,
@@ -31,7 +32,7 @@ import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } f
 import { PausedExtensionView } from "./paused-extension-view";
 
 interface ExtensionWebviewFrameProps {
-  sizing?: "content-width";
+  sizing?: "content-width" | "content-height";
   extensionId: string;
   extensionInstanceId?: string;
   installName?: string;
@@ -52,7 +53,11 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
   const { themePreference, themePreferences } = useThemePreference();
-  const executeCommand = useExecuteExtensionCommand(projectId);
+  const { showError, errorNotice, clearError } = useActionError();
+  const executeCommand = useExecuteExtensionCommand(projectId, (notice) => {
+    if (notice.type === "error" || notice.type === "warning") showError(notice);
+    else toaster.create(notice);
+  });
   const [hostEvents] = useState(createHostEventPublisher);
   const { pageLocation, pageParams } = useWebviewPageProps(props.workbench);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
@@ -89,8 +94,9 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       base: {
         hostEvents,
         terminal,
-        executeCommand: (commandInput, signal) =>
-          executeWebviewCommand({
+        executeCommand: (commandInput, signal) => {
+          clearError();
+          return executeWebviewCommand({
             ...commandInput,
             signal,
             resource: commandInput.resource ?? resource ?? props.placement?.resource,
@@ -110,7 +116,8 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
                   source: "dashboard",
                 },
               }),
-          }),
+          });
+        },
         streamCommand: projectId
           ? (input, signal) => {
               const { commandId, ...body } = input;
@@ -123,7 +130,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
           : undefined,
         commandCompleted: (response) => publishExtensionCommandEvent(response, { projectId }, owner),
         settings: createDashboardWebviewSettingsAdapter({ projectId, extensionInstanceId, installName }),
-        notifications: createDashboardWebviewNotificationsAdapter({ projectId, extensionId }),
+        notifications: createDashboardWebviewNotificationsAdapter({ projectId, extensionId, showError }),
       },
       extensionId,
       extensionInstanceId,
@@ -168,23 +175,26 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   };
 
   return (
-    <BridgedWebviewSurface
-      sizing={props.sizing}
-      key={view.id}
-      view={view}
-      extensionProps={{
-        projectId,
-        themePreference,
-        locale,
-        lastCommand,
-        resource,
-        pageLocation,
-        pageParams,
-        translations,
-      }}
-      theme={colorScheme}
-      capabilities={capabilities}
-      hostEvents={hostEvents}
-    />
+    <>
+      {errorNotice}
+      <BridgedWebviewSurface
+        sizing={props.sizing}
+        key={view.id}
+        view={view}
+        extensionProps={{
+          projectId,
+          themePreference,
+          locale,
+          lastCommand,
+          resource,
+          pageLocation,
+          pageParams,
+          translations,
+        }}
+        theme={colorScheme}
+        capabilities={capabilities}
+        hostEvents={hostEvents}
+      />
+    </>
   );
 };

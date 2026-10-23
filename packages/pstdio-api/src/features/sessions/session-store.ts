@@ -1,10 +1,4 @@
-import type {
-  ApprovalRequest,
-  EventStore,
-  HarnessSession,
-  QuestionService,
-  SessionMessage,
-} from "pstdio-api-contracts";
+import type { ApprovalRequest, HarnessSession, QuestionService, SessionMessage } from "pstdio-api-contracts";
 import { createApprovalService, createEventStore, createQuestionService } from "pstdio-api-runtime-host";
 import { createSessionConversation, type SessionConversation } from "./session-conversation";
 
@@ -16,13 +10,14 @@ export type SessionChannelHooks = {
 };
 
 export type ActiveSession = {
-  eventStore: EventStore & { close(): void };
+  eventStore: ReturnType<typeof createEventStore>;
   approvalService: ReturnType<typeof createApprovalService>;
   questionService: QuestionService;
   session: HarnessSession | null;
   cancellationRequested: boolean;
   submittedAttachmentFileIds: Set<string>;
   conversationReady: Promise<SessionConversation>;
+  conversation?: SessionConversation;
   controlInvocations: Set<{ done: Promise<void>; abort: AbortController }>;
   executionSettings?: { model: string | null; params: Record<string, string | boolean> };
   checkpointPromise?: Promise<SessionMessage[] | null>;
@@ -38,6 +33,10 @@ export const cancelSessionControls = (entry: ActiveSession | null | undefined) =
 // In-memory registry of active sessions (EventStore + channels + harness session per session)
 export const createSessionStore = () => {
   const sessions = new Map<string, ActiveSession>();
+  const listeners = new Set<(id: string) => void>();
+  const changed = (id: string) => {
+    for (const listener of listeners) listener(id);
+  };
 
   const create = (
     sessionId: string,
@@ -66,6 +65,10 @@ export const createSessionStore = () => {
       conversationReady: ready.promise,
       controlInvocations: new Set(),
     };
+    const initializeConversation = (messages: SessionMessage[]) => {
+      entry.conversation = createSessionConversation(eventStore, messages, () => changed(sessionId));
+      ready.resolve(entry.conversation);
+    };
     sessions.set(sessionId, entry);
     if (initialize) {
       void Promise.resolve()
@@ -73,7 +76,8 @@ export const createSessionStore = () => {
         .then((messages) => {
           if (sessions.get(sessionId) !== entry || entry.cancellationRequested)
             throw new DOMException("Session was cancelled", "AbortError");
-          ready.resolve(createSessionConversation(eventStore, messages));
+          initializeConversation(messages);
+          changed(sessionId);
         })
         .catch((error) => {
           if (sessions.get(sessionId) === entry) {
@@ -85,7 +89,7 @@ export const createSessionStore = () => {
           questionService.dispose();
           ready.reject(error);
         });
-    } else ready.resolve(createSessionConversation(eventStore));
+    } else initializeConversation([]);
     // Initialization also has readers that arrive after a failed launch.
     void ready.promise.catch(() => undefined);
 
@@ -116,5 +120,31 @@ export const createSessionStore = () => {
     sessions.delete(sessionId);
   };
 
-  return { create, get, setSession, markCancellationRequested, remove };
+  return {
+    diagnostics: () => {
+      let retainedMessages = 0;
+      let subscribers = 0;
+      let queuedEvents = 0;
+      let queuedBytes = 0;
+      for (const entry of sessions.values()) {
+        retainedMessages += entry.conversation?.messageCount ?? 0;
+        const events = entry.eventStore.diagnostics();
+        subscribers += events.subscribers;
+        queuedEvents += events.queuedEvents;
+        queuedBytes += events.queuedBytes;
+      }
+      return { activeSessions: sessions.size, retainedMessages, subscribers, queuedEvents, queuedBytes };
+    },
+    create,
+    get,
+    setSession,
+    markCancellationRequested,
+    remove,
+    watch(listener: (id: string) => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
 };

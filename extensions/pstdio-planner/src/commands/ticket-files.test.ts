@@ -24,27 +24,61 @@ const ticketRendererParams = (ticket: { id: string; shorthand: string }, documen
   },
 });
 
-const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: string }, documentId: string) => ({
-  kind: "page" as const,
-  page: { kind: "page" as const, id: "ticket", extensionId: "pstdio.pstdio-planner" },
-  parent: {
+const ticketDocumentTarget = (
+  ticket: { id: string; shorthand: string; title?: string },
+  documentId: string,
+  fileName?: string,
+  icon = "FileText",
+) => {
+  const body = {
     kind: "page" as const,
-    page: { kind: "page" as const, id: "tickets", extensionId: "pstdio.pstdio-planner" },
-  },
-  resource: {
-    type: "ticket",
-    id: ticket.id,
-    label: ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand,
-    shorthand: ticket.shorthand,
-    metadata: {
-      archived: false,
-      ...(documentId !== "__ticket__" ? { documentId } : {}),
-      resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+    page: { kind: "page" as const, id: "ticket", extensionId: "pstdio.pstdio-planner" },
+    parent: {
+      kind: "page" as const,
+      page: { kind: "page" as const, id: "tickets", extensionId: "pstdio.pstdio-planner" },
     },
-  },
-});
+    resource: {
+      type: "ticket",
+      id: ticket.id,
+      label: ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand,
+      shorthand: ticket.shorthand,
+      metadata: {
+        archived: false,
+        resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+      },
+    },
+  };
+  if (!fileName) return body;
+  return {
+    ...body,
+    parent: body,
+    resource: { ...body.resource, label: fileName, icon, metadata: { ...body.resource.metadata, documentId } },
+  };
+};
 
 describe("ticket files tree commands", () => {
+  test("files open below the ticket body while keeping the ticket ancestry", async () => {
+    const storage = createMemoryStorage();
+    const parent = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Parent" } }));
+    const ticket = await createTicketCommand.run(
+      ...makeCommandArgs({ storage, params: { title: "Child", parentId: parent.id } }),
+    );
+    const file = await createTicketFileCommand.run(
+      ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
+    );
+    const sections = await listTicketFilesTreeCommand.run(
+      ...makeCommandArgs({ storage, params: ticketRendererParams(ticket, file.id) }),
+    );
+    const target = sections.find((section) => section.id === "files")?.nodes[0].target;
+    expect(target).toMatchObject({
+      resource: { id: ticket.id, label: file.name, icon: "FileText", metadata: { documentId: file.id } },
+      parent: {
+        resource: { id: ticket.id, label: `${ticket.shorthand} Child` },
+        parent: { resource: { id: parent.id, label: `${parent.shorthand} Parent` } },
+      },
+    });
+    expect(target).not.toHaveProperty("parent.resource.metadata.documentId");
+  });
   test("the body uses the default document route to avoid duplicate history", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
@@ -93,14 +127,14 @@ describe("ticket files tree commands", () => {
     });
 
     // The file lives in the Files section and rebinds the editor to the selected document.
-    expect(body[1]).toMatchObject({ id: "files", label: "Files" });
+    expect(body[1]).toMatchObject({ id: "files" });
     expect(body[1]).not.toHaveProperty("canHide");
     expect(body[1]?.nodes).toEqual([
       {
         id: file.id,
         label: "notes.md",
         icon: "FileText",
-        target: ticketDocumentTarget(ticket, file.id),
+        target: ticketDocumentTarget(ticket, file.id, "notes.md"),
         selected: false,
         contextMenuActions: [
           {
@@ -126,7 +160,6 @@ describe("ticket files tree commands", () => {
     ]);
     expect(body[3]).toMatchObject({
       id: "sessions",
-      label: "Sessions",
       nodes: [
         {
           id: "sessions-empty",
@@ -163,8 +196,7 @@ describe("ticket files tree commands", () => {
       }),
     );
 
-    const bodyTarget = ticketDocumentTarget(ticket, "unused");
-    delete (bodyTarget.resource.metadata as { documentId?: string }).documentId;
+    const bodyTarget = ticketDocumentTarget(ticket, "__ticket__");
     expect(requested).toEqual([bodyTarget]);
     expect(result).toEqual({ ticketId: ticket.id, fileId: file.id });
     expect((await ticketsCollection(storage).get(ticket.id))?.files).toEqual([]);
@@ -245,7 +277,7 @@ describe("ticket files tree commands", () => {
         id: "att-diagram.png",
         label: "diagram.png",
         icon: "Image",
-        target: ticketDocumentTarget(ticket, "att-diagram.png"),
+        target: ticketDocumentTarget(ticket, "att-diagram.png", "diagram.png", "Image"),
         selected: false,
       },
     ]);

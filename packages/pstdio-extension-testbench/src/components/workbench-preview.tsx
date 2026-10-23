@@ -16,6 +16,7 @@ import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import type { CommandCallLogEntry } from "../lib/command-call-log";
 import { createPreviewResource } from "../lib/preview-resource";
 import { createPreviewWebviewFileHost } from "../lib/webview-files";
+import { readBenchHarnesses } from "../lib/webview-harnesses";
 import { surfaceCommandOutcome } from "./command-outcome";
 import { registerContentContributionWidgets } from "./content-contribution-panel";
 import { ContributionExplorer } from "./contribution-explorer";
@@ -160,6 +161,7 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
       themePreference: getThemePreference(),
     }),
     createWebviewTheme: () => getThemePreferenceMode(getThemePreference()),
+    createWebviewHostAdapters: () => ({ harnesses: { read: readBenchHarnesses } }),
     webviewFiles,
     workbench,
   });

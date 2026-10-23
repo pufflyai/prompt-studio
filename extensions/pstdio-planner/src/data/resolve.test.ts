@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketsCollection } from "./collections";
-import { resolveStatusId, resolveTagId, resolveTagOptionIds, resolveTicketId } from "./resolve";
+import { findTicket, resolveStatusId, resolveTagId, resolveTagOptionIds, resolveTicketId } from "./resolve";
+import { reviewRequestsCollection } from "./review-request-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
+import { observeStorageReads } from "./storage-reads.fixture";
 
 describe("resolveStatusId", () => {
   test("resolves by id and by case-insensitive name", async () => {
@@ -67,6 +69,38 @@ describe("resolveTicketId", () => {
 });
 
 describe("findTicket", () => {
+  test("reads a ticket ID directly without scanning other tickets", async () => {
+    const storage = createMemoryStorage();
+    await ticketsCollection(storage).put("ticket-1", {
+      id: "ticket-1",
+      shorthand: "PS-1",
+      title: "Selected ticket",
+      content: "",
+      statusId: null,
+      tagIds: [],
+      archived: false,
+      sortOrder: 0,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    await reviewRequestsCollection(storage).put("request-1", {
+      id: "request-1",
+      ticketId: "ticket-1",
+      title: "Confirm the scope",
+      instructions: "Confirm before continuing.",
+      request: { kind: "task" },
+      requestedAt: "2026-01-01T00:00:00.000Z",
+      requestedBy: { type: "agent", id: "agent-1", displayName: "Agent" },
+      context: { reason: null, workspaceId: null, attemptRevision: null, sessionId: null, relatedSessionId: null },
+    });
+    const observed = observeStorageReads(storage);
+
+    const ticket = await findTicket(observed.storage, "ticket-1");
+
+    expect(ticket?.tagIds).toEqual([]);
+    expect(observed.reads.filter((key) => key.startsWith("tickets/"))).toEqual(["tickets/ticket-1"]);
+  });
+
   test("resolves a shorthand that was stored with surrounding whitespace", async () => {
     const storage = createMemoryStorage();
     const tickets = ticketsCollection(storage);

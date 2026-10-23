@@ -23,6 +23,7 @@ export const rowEyebrow = (row: KanbanRendererRow) => {
 };
 
 interface NarrowKanbanRowsInput<TRow extends KanbanRendererRow> {
+  providerFiltered?: boolean;
   rows: TRow[];
   filter: ViewFilterGroup;
   fields: AttributeDescriptor[];
@@ -34,6 +35,7 @@ interface NarrowKanbanRowsInput<TRow extends KanbanRendererRow> {
 /** Applies the view's filter, then the search, and counts each column before search narrowed it. */
 export const narrowKanbanRows = <TRow extends KanbanRendererRow>(input: NarrowKanbanRowsInput<TRow>) => {
   const { rows, filter, fields, attributes, settings, search } = input;
+  if (input.providerFiltered) return { filteredRows: rows, visibleRows: rows, columnTotals: new Map<string, number>() };
   const displayProperties = settings.displayProperties.filter((property) => property !== "id");
   const showsId = settings.displayProperties.includes("id");
   // Lists always show a row's short id. Boards show an id only when it is a display property.
@@ -62,6 +64,7 @@ export const narrowKanbanRows = <TRow extends KanbanRendererRow>(input: NarrowKa
 };
 
 interface BuildKanbanBoardColumnsInput<TRow extends KanbanRendererRow> {
+  presorted?: boolean;
   grouped: KanbanRendererColumnGroup[];
   settings: KanbanRendererSettings;
   sorts: ViewSort[];
@@ -85,7 +88,7 @@ export const buildKanbanBoardColumns = <TRow extends KanbanRendererRow>(input: B
   const showsId = settings.displayProperties.includes("id");
   const columnField = findAttribute(attributes, settings.columnGrouping);
   const toBoardItems = (rows: KanbanRendererRow[]) =>
-    sortRowsByView(rows, sorts, fields).map((row) => ({
+    (input.presorted ? rows : sortRowsByView(rows, sorts, fields)).map((row) => ({
       id: row.id,
       get contextMenuActions() {
         return getRowContextMenuActions?.(row as TRow);
@@ -116,17 +119,17 @@ export const buildKanbanBoardColumns = <TRow extends KanbanRendererRow>(input: B
         ? column.subgroups.map((subgroup) => ({
             key: subgroup.key,
             label: subgroup.label,
+            count: subgroup.count,
             items: toBoardItems(subgroup.rows),
           }))
         : undefined;
 
     return {
       id: column.key,
+      count: column.count,
       label: column.label,
       color: columnConfig.color ?? enumOption?.color,
       icon: enumOption?.icon ?? "circle",
-      canDragIn: columnConfig.canDragIn ?? false,
-      canDragOut: columnConfig.canDragOut ?? false,
       canCreate: columnConfig.canCreate ?? false,
       actions: columnConfig.actions ?? [],
       items: groups

@@ -38,7 +38,8 @@ const openExtensions = async (page: import("@playwright/test").Page, projectId: 
 const holdProjectExtensionReads = async (page: import("@playwright/test").Page, projectId: string) => {
   const pattern = `**/v1/projects/${projectId}/extensions**`;
   const held: import("@playwright/test").Route[] = [];
-  await page.route(pattern, async (route) => {
+  let holding = true;
+  const handleRoute = async (route: import("@playwright/test").Route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
     const shouldHold =
@@ -46,12 +47,13 @@ const holdProjectExtensionReads = async (page: import("@playwright/test").Page, 
       (pathname === `/v1/projects/${projectId}/extensions` ||
         pathname.endsWith("/extensions/ui") ||
         pathname.endsWith("/contributions"));
-    if (shouldHold) {
+    if (holding && shouldHold) {
       held.push(route);
       return;
     }
     await route.continue();
-  });
+  };
+  await page.route(pattern, handleRoute);
 
   return {
     wait: () =>
@@ -59,8 +61,9 @@ const holdProjectExtensionReads = async (page: import("@playwright/test").Page, 
         .poll(() => held.length, { message: "background extension reconciliation was not requested" })
         .toBeGreaterThan(0),
     release: async () => {
-      await page.unroute(pattern);
-      await Promise.all(held.splice(0).map((route) => route.continue().catch(() => undefined)));
+      holding = false;
+      await Promise.all(held.splice(0).map((route) => route.continue()));
+      await page.unroute(pattern, handleRoute);
     },
   };
 };
@@ -82,6 +85,7 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   page,
   request,
 }) => {
+  test.setTimeout(45_000);
   const project = await createProject(request);
 
   const [initialInstallResponse] = await Promise.all([

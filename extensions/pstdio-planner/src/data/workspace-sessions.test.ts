@@ -62,7 +62,7 @@ describe("loadLatestWorkspaceSessions", () => {
 
   test("only queries workspaces linked to a ticket", async () => {
     const calls: string[] = [];
-    await loadLatestWorkspaceSessions(sessionsApi({}, calls), [
+    await loadLatestWorkspaceSessions(sessionsApi({ "workspace-1": [makeSession("active", "in_progress")] }, calls), [
       makeWorkspace("workspace-1"),
       makeWorkspace("workspace-unlinked", { workspace_shorthand: "scratch", anchors_json: [] }),
     ]);
@@ -70,9 +70,9 @@ describe("loadLatestWorkspaceSessions", () => {
     expect(calls).toEqual(["workspace-1"]);
   });
 
-  test("queries each workspace once", async () => {
+  test("does not repeat lookups for duplicate workspace references", async () => {
     const calls: string[] = [];
-    await loadLatestWorkspaceSessions(sessionsApi({}, calls), [
+    await loadLatestWorkspaceSessions(sessionsApi({ "workspace-1": [makeSession("active", "in_progress")] }, calls), [
       makeWorkspace("workspace-1"),
       makeWorkspace("workspace-1"),
     ]);

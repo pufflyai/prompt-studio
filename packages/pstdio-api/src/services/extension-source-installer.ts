@@ -1,7 +1,7 @@
 import { existsSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import type { InstallExtensionRequest, UploadExtensionRequest } from "pstdio-api-contracts";
-import type { ExtensionCatalogEntry } from "../features/extensions/extension-catalog";
+import { type ExtensionCatalogEntry, ExtensionNotInCatalogError } from "../features/extensions/extension-catalog";
 import {
   type InstallExtensionSourceInput,
   prepareGitExtensionSource,
@@ -43,7 +43,7 @@ export const createExtensionSourceInstaller = (input: ExtensionSourceInstallerDe
   const { deps, install, catalogEntry, releaseRefFor } = input;
   const installCatalog = async (source: CatalogSource, options: Omit<InstallExtensionSourceInput, "source">) => {
     const entry = await catalogEntry(source.name);
-    if (!entry) throw new ProjectNotFoundError(source.name);
+    if (!entry) throw new ExtensionNotInCatalogError(source.name);
     const ref = source.ref ?? releaseRefFor(entry);
     const workspaceSource = !source.ref && deps.release?.source === "workspace" && entry.origin.ref === "{hostRelease}";
     const sourcePath =

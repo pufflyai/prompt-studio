@@ -25,11 +25,11 @@ Open **Settings → Project Planner → Ticket status** to add, rename, recolor,
 
 When you delete a status, its tickets move to the default status.
 
-### Status changes that Planner makes
+### Who changes a ticket's status
 
-Planner moves a ticket by itself while agents work on it. The ticket goes to In Progress while an agent implements it, to In Review while its work waits for or gets a review, and to Blocked when every attempt is blocked. Planner never moves a ticket to Done. You decide when the work is delivered. See [Attempts](0002-attempts.md#how-planner-sets-the-ticket-status) for the full rules.
+The implementation agent keeps its ticket's status current while it works, and you can change it at any time. Planner does not move tickets when attempts start, sessions stop, or reviews finish. See [Attempts](0002-attempts.md#who-sets-the-ticket-status).
 
-Planner finds these statuses by name. If you rename In Progress, In Review, or Blocked, Planner can no longer move tickets into it. If you rename Done, Planner no longer treats the tickets in it as finished.
+Planner does not find statuses by name. Choose which statuses count as completed, blocked, and active, and the status after merge, in Planner's workflow settings: open **Settings → Project → Extensions**, select **Project Planner**, and use its **Settings** tab. Selections use status IDs, so you can rename or reorder columns freely.
 
 ## Tags
 
@@ -42,13 +42,12 @@ A new project starts with these tags:
 | Priority   | single-select | Low, Medium, High, Urgent         |
 | Type       | single-select | Bug, Feature, Chore               |
 | Complexity | single-select | Simple, Moderate, Complex         |
-| Flags      | multi-select  | Review Needed                     |
 
 Open **Settings → Project Planner → Ticket tags** to add, rename, reorder, or delete tags and their options. From a terminal, use [`pst tags`](0004-cli.md#tags). When you delete a tag, Planner removes its options from every ticket.
 
 A single-select tag holds at most one option on every ticket. Planner rejects a ticket change that would give it a second option. To change a multi-select tag to single-select, every ticket must hold at most one of its options first, including archived tickets and drafts. If some tickets hold several, the change fails, changes nothing, and lists those tickets. Choose one option on each of them, for example in the ticket's Properties panel or with `pst pstdio-planner set-ticket-attribute`, then change the type again. Planner never picks an option for you.
 
-The Review Needed flag is derived from open or unreadable review requests. Open a flagged board card to answer its requests. Generic tag edits cannot request input or hide an open request. Planner keeps the Flags tag and its Review Needed option; you can rename them. See [Review requests](0006-review-requests.md) for legacy reconciliation.
+Pending requests appear in the numbered Needs attention bubble. Tags describe ticket properties and do not control pending input. See [Review requests](0006-review-requests.md).
 
 ## Colors
 

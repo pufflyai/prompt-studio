@@ -15,6 +15,7 @@ import { createCommandPaletteModule } from "../command-palette/module";
 import { createHeadersModule } from "../headers/module";
 import { createHelpModule } from "../help/module";
 import { createNotificationsModule } from "../notifications/module";
+import { DesktopProjectTabsController } from "../projects/desktop-project-tabs-controller";
 import { createProjectsModule } from "../projects/module";
 import { createSessionBubbleModule } from "../sessions/bubble/module";
 import { createSessionsModule } from "../sessions/module";
@@ -191,7 +192,7 @@ const linkSessionsToWorkspace = () => {
     { id: "link-2", workspace_id: "workspace-1", session_id: "session-yesterday" },
   ]);
 };
-const bootstrapWorkbench = () => {
+const bootstrapWorkbench = (desktop = false) => {
   seedSidenavStory(PROJECT_ID);
   linkSessionsToWorkspace();
   const workbench = createWorkbench();
@@ -200,7 +201,7 @@ const bootstrapWorkbench = () => {
     createCommandPaletteModule(),
     createWorkspacesModule(),
     createProjectsModule(),
-    createHeadersModule(),
+    createHeadersModule(desktop ? new DesktopProjectTabsController([], async () => {}) : undefined),
     createHelpModule(),
     createNotificationsModule(),
     createSessionBubbleModule(),
@@ -233,10 +234,11 @@ const meta = {
 } satisfies Meta;
 export default meta;
 type Story = StoryObj;
-const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
+const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void; desktop?: boolean }) => {
+  const { open, desktop } = props;
   const [workbench] = useState(() => {
-    const next = bootstrapWorkbench();
-    props.open(next);
+    const next = bootstrapWorkbench(desktop);
+    open(next);
     return next;
   });
   return (
@@ -249,6 +251,11 @@ const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
 export const ProjectMode: Story = {
   render: () => <SidenavStory open={openStartPage} />,
   play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const home = await canvas.findByRole("option", { name: "Home" });
+    const sessions = await canvas.findByRole("option", { name: "Sessions" });
+    await expect(home.getBoundingClientRect().bottom).toBeLessThanOrEqual(sessions.getBoundingClientRect().top);
+    await expect(home).toHaveAttribute("aria-selected", "true");
     await expect(canvasElement.querySelector('[data-workbench-panel-header="sidenav"]')).toBeNull();
   },
 };
@@ -316,6 +323,18 @@ export const TicketMode: Story = {
   name: "Ticket page navigation",
   render: () => <SidenavStory open={openTicketPage} />,
 };
+export const DesktopSessionNavigation: Story = {
+  name: "Desktop session navigation",
+  render: () => <SidenavStory desktop open={(workbench) => void openSessionsPage(workbench)} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const breadcrumb = await canvas.findByRole("navigation", { name: "breadcrumb" });
+    await expect(within(breadcrumb).getByText("Sessions", { exact: true })).toBeVisible();
+    await userEvent.click(await canvas.findByRole("button", { name: /^Project$/ }));
+    await expect(await canvas.findByRole("option", { name: /^Home$/ })).toHaveAttribute("aria-selected", "true");
+    canvasElement.dataset.desktopSessionJourney = "complete";
+  },
+};
 // F22: the linked resource keeps the ticket ancestry and Back restores the selected ticket.
 export const TicketWorkspaceBackJourney: Story = {
   name: "Ticket linked workspace and back",
@@ -335,7 +354,7 @@ export const SessionMode: Story = {
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
     await fireEvent.contextMenu(canvas.getByRole("option", { name: "Search" }));
-    await waitFor(() => expect(document.getByRole("menuitem", { name: "Reset to default" })).toBeVisible());
+    await waitFor(() => expect(document.getByRole("menuitem", { name: "Hide/show items" })).toBeVisible());
     await waitFor(() => expect(document.getByRole("menu")).toHaveFocus());
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
