@@ -1,6 +1,7 @@
 export type * from "./account";
 export type * from "./assets";
 export type * from "./automation";
+export type * from "./collection-page";
 export type * from "./collection-view";
 export type * from "./commands";
 export * from "./composition";

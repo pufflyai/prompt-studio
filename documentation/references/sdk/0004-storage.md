@@ -73,7 +73,7 @@ define the exact types exported by `@pstdio/sdk/extensions`.
 | `read(recordId)` | Value, shared content, asset, deletion state, existence, and opaque revision. |
 | `list()` | The owner's current saved records across scopes, excluding tombstones. |
 | `defineIndexes(definitions)` | Explicitly install or upgrade the owner's deterministic field/index definitions. |
-| `query({ index, where?, fields?, limit?, cursor? })` | A bounded selected page with its revision and nullable cursor. |
+| `query({ index, where?, fields?, limit?, cursor?, offset?, revision? })` | A bounded selected page with its revision and nullable cursor. |
 | `aggregate({ index, where?, groupBy? })` | A count and optional grouped counts at one revision. |
 | `readMany(recordIds)` | Up to 100 complete records in input order, including missing records and tombstones. |
 | `commit({ operationId, edits })` | Durable outcome for the entire group. `expectedRevision` on an edit is optional. |
@@ -294,3 +294,11 @@ same logical owner on different devices. Without them, each store has a random
 workbench and device ID and uses `test-extension` as its extension ID.
 
 See the [save workflow](../../guides/sdk/0003-storage.md) for examples.
+
+### Direct page navigation
+
+`query` accepts a nonnegative integer `offset` for direct table page jumps. Supply
+the previous page's `revision` to reject a jump after the owner changes. Use either
+a nonzero offset or a cursor, never both. Cursor continuation remains the preferred
+path for adjacent pages. Deep offsets still traverse skipped index entries inside
+the database; they do not read skipped record bodies or hydrate the owner document.

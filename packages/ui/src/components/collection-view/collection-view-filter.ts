@@ -39,7 +39,7 @@ const rowNumber = (value: unknown) => {
 };
 
 const rowText = (row: KanbanRendererRow, field: AttributeDescriptor) =>
-  getAttributeStringValues(row, field).join(" ").toLocaleLowerCase();
+  getAttributeStringValues(row, field).join(" ").toLowerCase();
 
 const compareTests: Record<string, (left: number, right: number) => boolean> = {
   is: (left, right) => left === right,
@@ -74,7 +74,7 @@ const compileListRule = (field: AttributeDescriptor, condition: string, value: s
 
 const compileTextRule = (field: AttributeDescriptor, condition: string, value: string): RowTest | undefined => {
   if (value === "") return undefined;
-  const needle = value.toLocaleLowerCase();
+  const needle = value.toLowerCase();
   if (condition === "contains") return (row) => rowText(row, field).includes(needle);
   if (condition === "does-not-contain") return (row) => !rowText(row, field).includes(needle);
   if (condition === "is") return (row) => rowText(row, field) === needle;

@@ -21,6 +21,37 @@ const fixture = async () => {
   return { ...f, owner, records };
 };
 
+test("direct indexed page jumps match memory ordering and reject changed revisions", async () => {
+  const f = await fixture();
+  const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;
+  const index: StorageRecordIndex = {
+    name: "pages",
+    fields: { rank: { path: ["rank"], type: "number" } },
+    orderBy: [{ field: "rank", direction: "asc" }],
+  };
+  for (const records of [f.records, memory]) {
+    await records.defineIndexes([index]);
+    await records.commit({
+      operationId: "seed-pages",
+      edits: Array.from({ length: 9 }, (_, position) => ({
+        recordId: `item-${position}`,
+        replace: { rank: Math.floor(position / 2), body: "not selected" },
+      })),
+    });
+    const first = await records.query({ index: "pages", limit: 2 });
+    const jumped = await records.query({ index: "pages", limit: 2, offset: 6, revision: first.revision });
+    expect(jumped.records.map((row) => row.recordId)).toEqual(["item-6", "item-7"]);
+    expect(jumped.records[0].fields).toEqual({ rank: 3 });
+    const last = await records.query({ index: "pages", limit: 2, cursor: jumped.cursor! });
+    expect(last.records.map((row) => row.recordId)).toEqual(["item-8"]);
+    expect(last.cursor).toBeNull();
+    await expect(records.query({ index: "pages", offset: -1 })).rejects.toThrow("offset");
+    await expect(records.query({ index: "pages", offset: 1, cursor: first.cursor! })).rejects.toThrow("offset");
+    await records.commit({ operationId: "move-page", edits: [{ recordId: "item-8", replace: { rank: -1 } }] });
+    await expect(records.query({ index: "pages", offset: 6, revision: first.revision })).rejects.toThrow("revision");
+  }
+});
+
 test("case-insensitive equality and negation preserve selected-page and aggregate semantics", async () => {
   const f = await fixture();
   const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;

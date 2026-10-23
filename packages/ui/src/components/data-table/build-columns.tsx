@@ -26,6 +26,7 @@ interface BuildColumnsOptions {
   columnRenderers?: Partial<Record<string, DataTableColumnRenderer>>;
   wrapRows?: boolean;
   rowNumbers?: boolean;
+  rowOffset?: number;
   search?: string;
 }
 
@@ -56,7 +57,7 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
     search,
   } = options;
   // Rows arrive in the order the view shows them, so their position is their number.
-  const rowIndexColumn = columnHelper.accessor((_row, rowIndex) => rowIndex + 1, {
+  const rowIndexColumn = columnHelper.accessor((_row, rowIndex) => rowIndex + 1 + (options.rowOffset ?? 0), {
     header: "",
     id: "rowIndex",
     enableResizing: false,

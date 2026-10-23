@@ -73,3 +73,16 @@ test("multi-select row groups show each membership while column totals count uni
   expect(column.groups!.map((group) => group.items.length)).toEqual([1, 1]);
   expect(column.items).toHaveLength(1);
 });
+
+test("provider-filtered rows do not search missing projected fields again", () => {
+  const result = narrowKanbanRows({
+    rows,
+    providerFiltered: true,
+    filter: { conjunction: "and", rules: [] },
+    fields: withTitleField([]),
+    attributes: [],
+    settings: DEFAULT_KANBAN_RENDERER_SETTINGS,
+    search: "provider matched hidden text",
+  });
+  expect(result.visibleRows).toEqual(rows);
+});
