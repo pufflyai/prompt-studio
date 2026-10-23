@@ -22,7 +22,7 @@ Use `ctx.extensionFiles` or artifact mounts for these files. See
 [extension file storage](../../guides/extensions/0009-allocated-extension-files.md) for draft
 locations and how to move files from older layouts.
 
-Artifact mounts are constrained to the extension's full-ID root under each repo's extension storage directory. From 0.46 the earlier `<package-name>/` root is a deprecated alias to the same folder:
+Artifact mounts are constrained to the extension's full-ID root under each repo's extension storage directory. From 0.46 the earlier `<package-name>/` root is a deprecated alias to the same folder when only one installed publisher uses that name. When two publishers share it, name-only reads are refused:
 
 The first mount-path segment cannot be `.publishers`, including case variants.
 That directory is reserved for allocated `ctx.extensionFiles`.
