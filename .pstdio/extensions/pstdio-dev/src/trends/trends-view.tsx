@@ -1,10 +1,10 @@
-import { Grid, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, SegmentedControl } from "@pstdio/ui";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { ReactNode } from "react";
+import { Grid, HStack, Stack, Tabs, Text } from "@chakra-ui/react";
+import { EmptyState } from "@pstdio/ui";
+import { Tag } from "lucide-react";
 import type { TrendMetric } from "../benchmarks/analysis";
 import { PageFrame } from "../webview/page-frame";
 import { PlatformControl } from "../webview/platform-control";
+import { SelectMenu } from "../webview/select-menu";
 import { MetricCard } from "./metric-card";
 import { SelectedMetric } from "./selected-metric";
 import { SummaryTiles } from "./summary-tiles";
@@ -20,68 +20,40 @@ export interface TrendsViewProps {
   mode: TrendsMode;
   versionIndex: number;
   selected?: string;
-  status?: ReactNode;
   onPlatformChange: (platform: string) => void;
   onModeChange: (mode: TrendsMode) => void;
   onVersionChange: (index: number) => void;
   onSelect: (metric: string) => void;
 }
 
-interface VersionStepperProps {
-  versions: string[];
-  index: number;
-  onChange: (index: number) => void;
-}
-
-const VersionStepper = (props: VersionStepperProps) => {
-  const { versions, index, onChange } = props;
-  return (
-    <HStack gap="2xs" role="group" aria-label="Version">
-      <IconButton
-        size="xs"
-        variant="ghost"
-        aria-label="Previous version"
-        disabled={index <= 0}
-        onClick={() => onChange(index - 1)}
-      >
-        <ChevronLeft />
-      </IconButton>
-      <Text textStyle="mono/XS" minW="16" textAlign="center">
-        {versions[index]}
-      </Text>
-      <IconButton
-        size="xs"
-        variant="ghost"
-        aria-label="Next version"
-        disabled={index >= versions.length - 1}
-        onClick={() => onChange(index + 1)}
-      >
-        <ChevronRight />
-      </IconButton>
-    </HStack>
-  );
-};
-
 export const TrendsView = (props: TrendsViewProps) => {
-  const { versions, metrics, platform, mode, versionIndex, selected, status } = props;
+  const { versions, metrics, platform, mode, versionIndex, selected } = props;
   const index = mode === "versions" ? versions.length - 1 : versionIndex;
   const selectedMetric = metrics.find((metric) => metricId(metric) === selected) ?? metrics[0];
+  // Tabs and dropdowns, like the collection view: the tabs switch the view, dropdowns pick its data.
   const toolbar = (
     <>
-      <SegmentedControl
-        aria-label="View"
+      <Tabs.Root
+        size="sm"
+        variant="subtle"
         value={mode}
-        onValueChange={(value) => props.onModeChange(value as TrendsMode)}
-        options={[
-          { value: "versions", label: "Across versions" },
-          { value: "version", label: "One version" },
-        ]}
-      />
-      {mode === "version" && versions.length ? (
-        <VersionStepper versions={versions} index={versionIndex} onChange={props.onVersionChange} />
-      ) : null}
-      <HStack flex="1" justify="flex-end" gap="sm" minW="0">
-        {status}
+        onValueChange={(details) => props.onModeChange(details.value as TrendsMode)}
+      >
+        <Tabs.List>
+          <Tabs.Trigger value="versions">Across versions</Tabs.Trigger>
+          <Tabs.Trigger value="version">One version</Tabs.Trigger>
+        </Tabs.List>
+      </Tabs.Root>
+      <HStack flex="1" justify="flex-end" gap="xs" minW="0">
+        {mode === "version" && versions.length ? (
+          <SelectMenu
+            label="Version"
+            icon={<Tag />}
+            value={versions[versionIndex]}
+            options={[...versions].reverse().map((version) => ({ value: version, label: version }))}
+            onValueChange={(version) => props.onVersionChange(versions.indexOf(version))}
+          />
+        ) : null}
         <PlatformControl value={platform} onValueChange={props.onPlatformChange} />
       </HStack>
     </>
@@ -97,7 +69,7 @@ export const TrendsView = (props: TrendsViewProps) => {
     );
   return (
     <PageFrame toolbar={toolbar}>
-      <SummaryTiles version={versions[index]} previous={versions[index - 1]} summary={versionSummary(metrics, index)} />
+      <SummaryTiles version={versions[index]} summary={versionSummary(metrics, index)} />
       {mode === "version" ? (
         <VersionSnapshot metrics={metrics} index={index} />
       ) : (

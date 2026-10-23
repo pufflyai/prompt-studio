@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { storyCommits, storyComparison } from "../webview/story-fixtures";
-import { CompareView, type ResultFilter, RunAction } from "./compare-view";
+import { CompareView, type ResultFilter } from "./compare-view";
 
 interface InteractiveCompareProps {
   base: string;
@@ -27,14 +27,6 @@ const InteractiveCompare = (props: InteractiveCompareProps) => {
         rows={both ? storyComparison.rows : []}
         filter={filter}
         selected={selected}
-        runAction={
-          <RunAction
-            label={both ? "Run again" : "Run benchmarks"}
-            pending={false}
-            onRun={() => {}}
-            onOpenRuns={() => {}}
-          />
-        }
         onBaseChange={setBase}
         onHeadChange={setHead}
         onPlatformChange={setPlatform}

@@ -27,4 +27,7 @@ export const SUITES = [
 // The relay suite needs Docker and minutes of setup, so runs leave it out unless chosen.
 export const DEFAULT_SUITES = SUITES.filter((suite) => suite.id !== "relay").map((suite) => suite.id);
 
+// Mirrors timeout-minutes of the benchmark job in .github/workflows/benchmarks.yml.
+export const JOB_LIMIT_MINUTES = 45;
+
 export const SAMPLE_COUNTS = [3, 5, 10, 20] as const;

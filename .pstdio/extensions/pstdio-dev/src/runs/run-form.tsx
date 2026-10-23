@@ -2,7 +2,7 @@ import { Button, Fieldset, HStack, IconButton, Input, Stack, Text } from "@chakr
 import { Checkbox, Chip, SegmentedControl, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { X } from "lucide-react";
 import { useState } from "react";
-import { PLATFORMS, SAMPLE_COUNTS, SUITES } from "../benchmarks/platforms";
+import { JOB_LIMIT_MINUTES, PLATFORMS, SAMPLE_COUNTS, SUITES } from "../benchmarks/platforms";
 
 export interface RunRequest {
   commits: string[];
@@ -152,12 +152,16 @@ export const RunForm = (props: RunFormProps) => {
         </Stack>
         <HStack justify="space-between" gap="md" wrap="wrap" borderTopWidth="1px" borderColor="border.subtle" pt="md">
           <Stack gap="0">
-            <Text textStyle="label/S/medium">About {minutes} min</Text>
+            <Text textStyle="label/S/medium" color={minutes > JOB_LIMIT_MINUTES ? "fg.warning" : undefined}>
+              {minutes > JOB_LIMIT_MINUTES
+                ? `About ${minutes} min, over the ${JOB_LIMIT_MINUTES}-minute job limit`
+                : `About ${minutes} min`}
+            </Text>
             <Text textStyle="label/XS" color="fg.muted">
               {value.suites.length * value.platforms.length} parallel jobs, one per suite and platform
             </Text>
           </Stack>
-          <Button size="sm" onClick={onStart} disabled={Boolean(problem)} loading={pending}>
+          <Button size="sm" variant="primary" onClick={onStart} disabled={Boolean(problem)} loading={pending}>
             Start run
           </Button>
         </HStack>

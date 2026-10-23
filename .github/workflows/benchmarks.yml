@@ -94,8 +94,8 @@ jobs:
     name: ${{ matrix.platform }} · ${{ matrix.suite }}
     needs: plan
     runs-on: ${{ matrix.os }}
-    # Proposed allowance for twenty samples of the slowest suite on two commits; see PS-920 before raising it.
-    timeout-minutes: 240
+    # Approved in PS-920 as an upper limit until the first full runs give real timings.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:

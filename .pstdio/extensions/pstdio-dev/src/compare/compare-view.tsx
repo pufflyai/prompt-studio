@@ -1,6 +1,5 @@
-import { Button, Flex, Grid, HStack, Text } from "@chakra-ui/react";
+import { Flex, Grid, HStack, Text } from "@chakra-ui/react";
 import { EmptyState, SimpleCard } from "@pstdio/ui";
-import type { ReactNode } from "react";
 import type { CompareRow } from "../benchmarks/analysis";
 import { platformLabel } from "../benchmarks/platforms";
 import type { Verdict } from "../benchmarks/stats";
@@ -22,8 +21,6 @@ export interface CompareViewProps {
   rows: CompareRow[];
   filter: ResultFilter;
   selected?: string;
-  status?: ReactNode;
-  runAction: ReactNode;
   onBaseChange: (sha: string) => void;
   onHeadChange: (sha: string) => void;
   onPlatformChange: (platform: string) => void;
@@ -31,11 +28,11 @@ export interface CompareViewProps {
   onSelect: (id: string) => void;
 }
 
-const FILTERS: { value: ResultFilter; label: string; hint: string }[] = [
-  { value: "all", label: "All metrics", hint: "Measured on both commits" },
-  { value: "regressed", label: "Regressed", hint: "↑ Interval above zero" },
-  { value: "improved", label: "Improved", hint: "↓ Interval below zero" },
-  { value: "unchanged", label: "No significant change", hint: "≈ Interval crosses zero" },
+const FILTERS: { value: ResultFilter; label: string }[] = [
+  { value: "all", label: "All metrics" },
+  { value: "regressed", label: "Regressed" },
+  { value: "improved", label: "Improved" },
+  { value: "unchanged", label: "No significant change" },
 ];
 
 const ORDER: Record<Verdict, number> = { regressed: 0, improved: 1, unchanged: 2 };
@@ -48,7 +45,7 @@ export const sortRows = (rows: CompareRow[]) =>
   });
 
 export const CompareView = (props: CompareViewProps) => {
-  const { commits, base, head, platform, rows, filter, selected, status, runAction } = props;
+  const { commits, base, head, platform, rows, filter, selected } = props;
   const find = (sha?: string) => commits.find((commit) => commit.sha === sha);
   const missing = [find(base), find(head)].filter((commit) => commit && !commit.measured);
   const compared = rows.filter((row) => row.change);
@@ -59,13 +56,9 @@ export const CompareView = (props: CompareViewProps) => {
   return (
     <PageFrame
       toolbar={
-        <>
+        <HStack flex="1" justify="flex-end" minW="0">
           <PlatformControl value={platform} onValueChange={props.onPlatformChange} />
-          <HStack flex="1" justify="flex-end" gap="sm" minW="0">
-            {status}
-            {runAction}
-          </HStack>
-        </>
+        </HStack>
       }
     >
       <Flex gap="md" wrap="wrap">
@@ -87,7 +80,7 @@ export const CompareView = (props: CompareViewProps) => {
       {missing.length ? (
         <EmptyState
           title={`${missing.map((commit) => shortSha(commit?.sha ?? "")).join(" and ")} ${missing.length > 1 ? "have" : "has"} no results on ${platformLabel(platform)}`}
-          description="Use Run benchmarks above to measure both commits together on GitHub Actions. Results appear here when the run finishes."
+          description="Start a run for both commits from Performance › Runs. Results appear here when the run finishes."
         />
       ) : (
         <>
@@ -116,9 +109,6 @@ export const CompareView = (props: CompareViewProps) => {
                   {option.label}
                 </Text>
                 <Text textStyle="heading/XL">{count(option.value)}</Text>
-                <Text textStyle="label/XS" color="fg.muted">
-                  {option.hint}
-                </Text>
               </SimpleCard>
             ))}
           </Grid>
@@ -127,37 +117,5 @@ export const CompareView = (props: CompareViewProps) => {
         </>
       )}
     </PageFrame>
-  );
-};
-
-interface RunActionProps {
-  label: string;
-  pending: boolean;
-  disabled?: boolean;
-  startedRunId?: string;
-  error?: string;
-  onRun: () => void;
-  onOpenRuns: () => void;
-}
-
-// Feedback stays beside the button: the run that started, or why it could not start.
-export const RunAction = (props: RunActionProps) => {
-  const { label, pending, disabled = false, startedRunId, error, onRun, onOpenRuns } = props;
-  return (
-    <HStack gap="sm">
-      {error ? (
-        <Text textStyle="label/S/regular" color="fg.error" maxW="sm" lineClamp={2}>
-          {error}
-        </Text>
-      ) : null}
-      {startedRunId ? (
-        <Button size="sm" variant="ghost" onClick={onOpenRuns}>
-          Run {startedRunId} started · View
-        </Button>
-      ) : null}
-      <Button size="sm" onClick={onRun} loading={pending} disabled={disabled}>
-        {label}
-      </Button>
-    </HStack>
   );
 };

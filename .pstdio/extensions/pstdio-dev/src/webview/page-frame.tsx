@@ -3,7 +3,7 @@ import { ScrollArea } from "@pstdio/ui";
 import type { ReactNode } from "react";
 
 interface PageFrameProps {
-  toolbar: ReactNode;
+  toolbar?: ReactNode;
   children: ReactNode;
 }
 
@@ -12,17 +12,19 @@ export const PageFrame = (props: PageFrameProps) => {
   const { toolbar, children } = props;
   return (
     <Flex direction="column" h="full" minH="0">
-      <HStack
-        gap="sm"
-        px="lg"
-        py="sm"
-        flexShrink={0}
-        flexWrap="wrap"
-        borderBottomWidth="1px"
-        borderColor="border.subtle"
-      >
-        {toolbar}
-      </HStack>
+      {toolbar ? (
+        <HStack
+          gap="sm"
+          px="lg"
+          py="sm"
+          flexShrink={0}
+          flexWrap="wrap"
+          borderBottomWidth="1px"
+          borderColor="border.subtle"
+        >
+          {toolbar}
+        </HStack>
+      ) : null}
       <ScrollArea flex="1" minH="0">
         <Flex direction="column" gap="lg" p="lg" maxW="7xl" mx="auto" w="full">
           {children}

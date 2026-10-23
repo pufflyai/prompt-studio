@@ -32,11 +32,3 @@ export const useOpenLink = () => {
   const { host } = useBenchmarks();
   return (href: string) => host.call("navigation.open", { target: { kind: "href", href } });
 };
-
-const PAGE_IDS = { trends: "performance", compare: "performance-compare", runs: "performance-runs" };
-
-export const useOpenPage = () => {
-  const { host } = useBenchmarks();
-  return (page: keyof typeof PAGE_IDS) =>
-    host.call("navigation.open", { target: { kind: "page", page: { kind: "page", id: PAGE_IDS[page] } } });
-};

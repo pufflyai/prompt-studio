@@ -3,13 +3,12 @@ import { AlertMessage } from "@pstdio/ui";
 import { useState } from "react";
 import { DEFAULT_PLATFORM } from "../benchmarks/platforms";
 import { useBenchmarks, useBenchmarksRefresh } from "../webview/client";
-import { SyncStatus } from "../webview/sync-status";
 import { useSyncOnOpen } from "../webview/use-sync";
 import { type TrendsMode, TrendsView } from "./trends-view";
 
 export const TrendsPage = () => {
   const { client } = useBenchmarks();
-  const sync = useSyncOnOpen();
+  useSyncOnOpen();
   const [platform, setPlatform] = useState(DEFAULT_PLATFORM);
   const [mode, setMode] = useState<TrendsMode>("versions");
   const [versionIndex, setVersionIndex] = useState<number>();
@@ -34,7 +33,6 @@ export const TrendsPage = () => {
       mode={mode}
       versionIndex={versionIndex ?? versions.length - 1}
       selected={selected}
-      status={<SyncStatus sync={sync} />}
       onPlatformChange={(next) => {
         // Another platform can have fewer releases, so the stepper returns to its newest one.
         setPlatform(next);

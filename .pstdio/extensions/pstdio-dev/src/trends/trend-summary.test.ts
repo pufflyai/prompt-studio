@@ -29,8 +29,8 @@ describe("version summary", () => {
       metric("desktop", "Warm attach", [point(1000), point(800, "improved")], 3000),
       metric("storage", "Record save", [point(1), null]),
     ];
-    expect(versionSummary(metrics, 1)).toEqual({ improved: 1, regressed: ["Cold start"], overBudget: 1, budgeted: 2 });
-    expect(versionSummary(metrics, 0)).toEqual({ improved: 0, regressed: [], overBudget: 0, budgeted: 2 });
+    expect(versionSummary(metrics, 1)).toEqual({ improved: 1, regressed: 1, overBudget: 1, budgeted: 2 });
+    expect(versionSummary(metrics, 0)).toEqual({ improved: 0, regressed: 0, overBudget: 0, budgeted: 2 });
   });
 
   test("groups metrics by suite in their original order", () => {

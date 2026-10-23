@@ -9,7 +9,7 @@ export const versionSummary = (metrics: TrendMetric[], index: number) => {
   });
   return {
     improved: measured.filter(({ point }) => point.change?.verdict === "improved").length,
-    regressed: measured.filter(({ point }) => point.change?.verdict === "regressed").map(({ metric }) => metric.label),
+    regressed: measured.filter(({ point }) => point.change?.verdict === "regressed").length,
     overBudget: measured.filter(({ metric, point }) => metric.budget !== undefined && point.median >= metric.budget)
       .length,
     budgeted: measured.filter(({ metric }) => metric.budget !== undefined).length,

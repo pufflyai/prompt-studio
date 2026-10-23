@@ -1,5 +1,6 @@
-import { SegmentedControl } from "@pstdio/ui";
+import { Monitor } from "lucide-react";
 import { PLATFORMS } from "../benchmarks/platforms";
+import { SelectMenu } from "./select-menu";
 
 interface PlatformControlProps {
   value: string;
@@ -9,11 +10,12 @@ interface PlatformControlProps {
 export const PlatformControl = (props: PlatformControlProps) => {
   const { value, onValueChange } = props;
   return (
-    <SegmentedControl
-      aria-label="Platform"
+    <SelectMenu
+      label="Platform"
+      icon={<Monitor />}
       value={value}
-      onValueChange={onValueChange}
       options={PLATFORMS.map((platform) => ({ value: platform.id, label: platform.label }))}
+      onValueChange={onValueChange}
     />
   );
 };

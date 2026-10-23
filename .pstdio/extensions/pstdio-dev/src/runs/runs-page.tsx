@@ -6,7 +6,6 @@ import { useState } from "react";
 import { DEFAULT_PLATFORM, DEFAULT_SUITES } from "../benchmarks/platforms";
 import { useBenchmarks, useBenchmarksRefresh, useOpenLink } from "../webview/client";
 import { PageFrame } from "../webview/page-frame";
-import { SyncStatus } from "../webview/sync-status";
 import { useSyncOnOpen } from "../webview/use-sync";
 import { RunForm, type RunRequest } from "./run-form";
 import { RunList } from "./run-list";
@@ -23,7 +22,7 @@ const quickCommits = (commits: { ref: string }[] = []) => {
 export const RunsPage = () => {
   const { client } = useBenchmarks();
   const openLink = useOpenLink();
-  const sync = useSyncOnOpen();
+  useSyncOnOpen();
   const [request, setRequest] = useState<RunRequest>({
     commits: [],
     suites: DEFAULT_SUITES,
@@ -44,7 +43,7 @@ export const RunsPage = () => {
     mutationFn: (runId: string) => client.commands["benchmarks.cancel-run"]({ runId }),
   });
   return (
-    <PageFrame toolbar={<SyncStatus sync={sync} />}>
+    <PageFrame>
       <Flex gap="lg" wrap="wrap" align="flex-start">
         <Stack flex="1 1 24rem" minW="0" maxW="lg">
           <RunForm

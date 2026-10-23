@@ -4,18 +4,16 @@ import type { versionSummary } from "./trend-summary";
 
 interface SummaryTilesProps {
   version: string;
-  previous?: string;
   summary: ReturnType<typeof versionSummary>;
 }
 
 interface TileProps {
   label: string;
   value: string | number;
-  detail: string;
 }
 
 const Tile = (props: TileProps) => {
-  const { label, value, detail } = props;
+  const { label, value } = props;
   return (
     <SimpleCard>
       <SimpleCardBody display="flex" flexDirection="column" gap="2xs">
@@ -23,30 +21,18 @@ const Tile = (props: TileProps) => {
           {label}
         </Text>
         <Text textStyle="heading/XL">{value}</Text>
-        <Text textStyle="label/S/regular" color="fg.muted" lineClamp={2}>
-          {detail}
-        </Text>
       </SimpleCardBody>
     </SimpleCard>
   );
 };
 
 export const SummaryTiles = (props: SummaryTilesProps) => {
-  const { version, previous, summary } = props;
-  const against = previous ? `against ${previous}, 95% confidence` : "First tracked version";
+  const { version, summary } = props;
   return (
     <Grid templateColumns="repeat(auto-fit, minmax(14rem, 1fr))" gap="md">
-      <Tile label={`Improved in ${version}`} value={summary.improved} detail={`↓ ${against}`} />
-      <Tile
-        label={`Regressed in ${version}`}
-        value={summary.regressed.length}
-        detail={summary.regressed.length ? `↑ ${summary.regressed.join(", ")}` : `↑ ${against}`}
-      />
-      <Tile
-        label={`Over budget in ${version}`}
-        value={summary.overBudget}
-        detail={`Of ${summary.budgeted} metrics with a performance budget`}
-      />
+      <Tile label={`Improved in ${version}`} value={summary.improved} />
+      <Tile label={`Regressed in ${version}`} value={summary.regressed} />
+      <Tile label={`Over budget in ${version}`} value={summary.overBudget} />
     </Grid>
   );
 };
