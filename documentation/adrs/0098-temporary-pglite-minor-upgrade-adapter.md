@@ -92,6 +92,8 @@ The tests terminate real child processes at the staging, verification, two publi
 
 The private transfer module and bundled child implement schema-only dump, ordinary COPY chunks, sliced bytea transfer, sequence state and chunk/value SHA256 checks. The current application schema and an actual released0.45 copy both pass complete schema/value comparisons through this module.
 
+The importer runs schema creation, data checks and index creation in one transaction. A failed check rolls back the private import. A successful import flushes once instead of committing each COPY and verification statement separately.
+
 Generated columns and CHECK constraints involving bytea are rejected before publishing an archive, because temporary binary placeholders cannot preserve those rules. Large bytea also requires a non-binary primary key. These shapes are absent from the qualified application schemas; the adapter is not a generic database migration framework.
 
 Ordinary row chunks and binary slices bound payload handling, but the manifest retains file descriptors, table metadata and large-value locators. That metadata grows with the number of chunks and values. The measured memory results must not be described as a strict constant-space bound for arbitrary databases.

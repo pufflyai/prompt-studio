@@ -13,6 +13,7 @@ import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } 
 
 test.afterEach(stopPendingTestProcesses);
 test.afterAll(stopPendingTestProcesses);
+test.use({ trace: "retain-on-failure" });
 test.beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
