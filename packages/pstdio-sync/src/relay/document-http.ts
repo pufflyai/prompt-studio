@@ -13,6 +13,7 @@ import {
 } from "pstdio-sync-contracts";
 import type { SyncSpace } from "../encryption";
 import { DocumentBlobMissing, type DocumentRelay, DocumentUpdateTooLarge } from "./document-sync-types";
+import { readExactResponse } from "./exact-response";
 import { serviceAddress, serviceUrl } from "./http";
 
 export const createDocumentRelay = (input: {
@@ -150,7 +151,15 @@ export const createDocumentRelay = (input: {
       return {
         put: (blobId: string, bytes: Uint8Array, children: string[]) =>
           putBlob(blobId, bytes, "begin-manifest", children),
-        get: relay.blobs.get,
+        // The manifest reader supplies its validated, authenticated ciphertext extent.
+        async get(blobId: string, byteLength: number) {
+          const response = await post(blob(blobId, "read"), { offset: 0 });
+          if (response.status === 404) {
+            await response.body?.cancel();
+            throw new DocumentBlobMissing();
+          }
+          return readExactResponse(await checked(response), byteLength);
+        },
       };
     },
   };
