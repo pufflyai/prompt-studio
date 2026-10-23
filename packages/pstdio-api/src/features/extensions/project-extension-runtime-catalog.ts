@@ -51,15 +51,17 @@ export type ProjectExtensionRuntimeCatalogObserver = {
 export type ProjectExtensionRuntimeCatalog = ReturnType<typeof createProjectExtensionRuntimeCatalog>;
 
 type CandidateExtensionSource = LoadableExtensionSource & { extension_id: string };
+// A storage conflict needs the user to resolve files, so it must not block every extension
+// in the project. Reads keep using the legacy layout, and the next write reports the conflict.
 const migrateRuntimeStorage = async (root: string | null | undefined, runtime: ExtensionRuntime) => {
   if (!root || !runtime.extensions.length) return;
-  await migrateExtensionStorage(
-    root,
-    runtime.extensions.map((extension) => ({
-      name: extension.name,
-      extensionId: extension.id,
-    })),
-  );
+  const owners = runtime.extensions.map((extension) => ({ name: extension.name, extensionId: extension.id }));
+  await migrateExtensionStorage(root, owners).catch((error) => {
+    apiLogger.warn(
+      { err: error, event: "extensions.storage_migration.failed", root },
+      "Extension storage migration needs attention",
+    );
+  });
 };
 
 type LoadContext = { projectId: string; reason: string; startedAt: number; startRevision: number };

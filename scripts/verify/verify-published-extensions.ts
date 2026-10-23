@@ -40,7 +40,8 @@ export async function stageExtension(root: string, dir: string, temporaryRoot: s
 }
 
 async function run(dir: string, command: string[]) {
-  const child = Bun.spawn(command, { cwd: dir, stdout: "inherit", stderr: "inherit" });
+  // Pass the current environment: Bun's default is the environment at launch.
+  const child = Bun.spawn(command, { cwd: dir, env: { ...process.env }, stdout: "inherit", stderr: "inherit" });
   if ((await child.exited) !== 0) throw new Error(`${command.join(" ")} failed`);
 }
 

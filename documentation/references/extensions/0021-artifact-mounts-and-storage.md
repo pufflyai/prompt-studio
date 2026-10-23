@@ -16,25 +16,25 @@ Commands and hooks also have `ctx.storage.assets` for immutable versioned bytes.
 
 Existing `ctx.storage.files`, collection attachments, and webview file calls remain supported. Their HTTP bytes stream through local storage. `getBytes` still returns a full byte array by request. Blob IDs and asset references remain different contracts; no blob migration or API removal is required.
 
-Keep every extension-owned project file under `.pstdio/extension-storage/<package-name>/`,
+Keep every extension-owned project file under `.pstdio/extension-storage/<publisher>.<name>/`,
 including configuration, caches, drafts, prototypes, evidence, and migration backups.
 Use `ctx.extensionFiles` or artifact mounts for these files. See
 [extension file storage](../../guides/extensions/0009-allocated-extension-files.md) for draft
 locations and how to move files from older layouts.
 
-Artifact mounts are constrained to a package-name root under each repo's extension storage directory:
+Artifact mounts are constrained to the extension's full-ID root under each repo's extension storage directory. From 0.46 the earlier `<package-name>/` root is a deprecated alias to the same folder:
 
 The first mount-path segment cannot be `.publishers`, including case variants.
 That directory is reserved for allocated `ctx.extensionFiles`.
 
 ```txt
-<repo>/.pstdio/extension-storage/<package-name>/...
+<repo>/.pstdio/extension-storage/<publisher>.<name>/...
 ```
 
-For package `planner`, the default scoped root is:
+For extension `acme.planner`, the default scoped root is:
 
 ```txt
-<repo>/.pstdio/extension-storage/planner/
+<repo>/.pstdio/extension-storage/acme.planner/
 ```
 
 Structured records and immutable assets are API-owned by stable extension and
@@ -42,11 +42,11 @@ workbench identity. Artifact mounts use the extension package's allocated file r
 
 Artifact mounts create their directories on the first write. Before that, `exists()` returns false and `list()` returns an empty array.
 
-The mount's `path` is relative to that package-name root. Its `id` is only the mount's local name. The
-`id` appears in refs and capability grants, never in the disk path. For package `planner`,
+The mount's `path` is relative to that full-ID root. Its `id` is only the mount's local name. The
+`id` appears in refs and capability grants, never in the disk path. For extension `acme.planner`,
 `defineArtifactMount({ id: "runs", path: "runs", label: "Runs" })` resolves to
-`<repo>/.pstdio/extension-storage/planner/runs/`, and a read of `a/summary.json` targets
-`<repo>/.pstdio/extension-storage/planner/runs/a/summary.json`.
+`<repo>/.pstdio/extension-storage/acme.planner/runs/`, and a read of `a/summary.json` targets
+`<repo>/.pstdio/extension-storage/acme.planner/runs/a/summary.json`.
 
 ### Webview reads
 

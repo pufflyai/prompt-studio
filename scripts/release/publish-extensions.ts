@@ -28,5 +28,7 @@ if (import.meta.main) {
   const registry = process.env.PSTDIO_EXTENSION_REGISTRY;
   const token = process.env.PSX_PUBLISH_TOKEN;
   if (!registry || !token) throw new Error("PSTDIO_EXTENSION_REGISTRY and PSX_PUBLISH_TOKEN are required");
+  // Verification runs extension installs and tests; they must not see the publish token.
+  delete process.env.PSX_PUBLISH_TOKEN;
   await publishExtensions(resolve(import.meta.dir, "../.."), registry, token);
 }

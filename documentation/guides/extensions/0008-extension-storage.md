@@ -1,14 +1,15 @@
 # Extension file storage
 
-All extension-owned project files belong in `.pstdio/extension-storage/<package-name>/`.
+All extension-owned project files belong in `.pstdio/extension-storage/<publisher>.<name>/`.
 This includes configuration, caches, drafts, prototypes, screenshots, ticket checkouts,
 report checkouts, and migration backups. Keep this directory out of Git unless the
 project deliberately tracks a specific extension's files.
 
 Use `ctx.extensionFiles` for allocated extension files. Use declared artifact mounts
-for view access and change events. Both stay inside the package-name directory.
-Allocated files use its reserved `.publishers/<publisher>/` child so publishers with
-the same package name keep separate data. Read the
+for view access and change events. Both stay inside the full-ID directory, so
+publishers with the same package name keep separate data. From 0.46 the earlier
+`<package-name>/` and `.publishers/<publisher>/` paths are deprecated aliases to the
+same data. Read the
 [API 0.2 migration guide](0009-allocated-extension-files.md) before upgrading.
 Use `ctx.storage.records` for shared structured project data. Keep the revision a
 caller read and save related records with one grouped commit. Use
@@ -60,13 +61,14 @@ overwriting either copy.
 
 | Old project path | New project path |
 | --- | --- |
-| `.pstdio/font-editor/config.json` | `.pstdio/extension-storage/font-editor/config.json` |
-| `.pstdio/tickets/` | `.pstdio/extension-storage/pstdio-planner/tickets/` |
-| `.pstdio/reports/` | `.pstdio/extension-storage/pstdio-reports/reports/` |
-| `.pstdio/ticket-identity-migration/` | `.pstdio/extension-storage/pstdio-planner/ticket-identity-migration/` |
-| `.pstdio/artifacts/` | `.pstdio/extension-storage/pstdio-artifacts/drafts/` |
-| `.pstdio/prototypes/` | `.pstdio/extension-storage/pstdio-artifacts/prototypes/` |
+| `.pstdio/font-editor/config.json` | `.pstdio/extension-storage/pstdio.font-editor/config.json` |
+| `.pstdio/tickets/` | `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/` |
+| `.pstdio/reports/` | `.pstdio/extension-storage/pstdio.pstdio-reports/reports/` |
+| `.pstdio/ticket-identity-migration/` | `.pstdio/extension-storage/pstdio.pstdio-planner/ticket-identity-migration/` |
+| `.pstdio/artifacts/` | `.pstdio/extension-storage/pstdio.pstdio-artifacts/drafts/` |
+| `.pstdio/prototypes/` | `.pstdio/extension-storage/pstdio.pstdio-artifacts/prototypes/` |
 
-The updated extensions read and write only the new paths. Update local scripts and saved file
+The updated extensions no longer read the old project paths. From 0.46 the host moves
+name-only folders such as `pstdio-planner/` to their full-ID folder automatically. Update local scripts and saved file
 links that use an old path. Refresh installed agent skills from their updated sources.
 Published artifact URLs and saved ticket and report identities stay valid.

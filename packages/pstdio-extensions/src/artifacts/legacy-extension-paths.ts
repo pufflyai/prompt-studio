@@ -1,8 +1,10 @@
 import { ARTIFACT_MOUNT_ROOT, type ExtensionStorageOwner, extensionStorageDirectory } from "./extension-storage-path";
 
+// One warning per legacy name for the process; resolvers are rebuilt on every read.
+const warned = new Set<string>();
+
 /** @deprecated Name-only storage paths will be removed with the next breaking extension API. */
 export const createLegacyExtensionPathResolver = (owners: readonly ExtensionStorageOwner[]) => {
-  const warned = new Set<string>();
   const distinctOwners = [...new Map(owners.map((owner) => [owner.extensionId, owner])).values()];
   return (path: string) => {
     const normalized = path.replaceAll("\\", "/");

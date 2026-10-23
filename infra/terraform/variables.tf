@@ -60,7 +60,7 @@ variable "image_registry" {
 }
 
 variable "image_repositories" {
-  type = object({ relay = string, manager = string, psx = string })
+  type = object({ relay = string, manager = string, psx = optional(string, "prompt-studio/psx") })
   default = {
     relay   = "prompt-studio/relay"
     manager = "prompt-studio/account-manager"
