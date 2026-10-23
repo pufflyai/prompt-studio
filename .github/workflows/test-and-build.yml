@@ -585,6 +585,13 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
       - name: Build SDK contracts used by native fixtures
         run: bun run build -- --scope @pstdio/sdk --include-dependencies
+      - name: Test Windows release paths and default extension reuse
+        run: >-
+          bun --conditions=source test
+          scripts/release/align-release-baseline.test.ts
+          packages/pstdio-api/src/features/extensions/default-extensions.test.ts
+          packages/pstdio-api/src/features/extensions/default-extensions-reuse.test.ts
+          packages/pstdio-api/src/features/extensions/repo-default-extensions.test.ts
       - name: Prepare Windows PowerShell
         run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
       - name: Test dependency installs, workspace links, watchers, and attachments
