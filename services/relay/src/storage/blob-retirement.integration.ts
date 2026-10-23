@@ -11,42 +11,53 @@ afterAll(() => fixture.close());
 
 test("retirement pages skip retained prefixes without traversing their descendant graph", async () => {
   const connection = connectRelay(fixture.databaseUrl);
+  const rollback = Symbol("query fixture complete");
   try {
-    const { accountId, projectKey } = await seedRetirementGraph((query) => connection.db.execute(query), 10_000);
-    const query = blobRetirementPage(accountId, new Date("2021-01-01"), { projectKey, blobId: "a-retained-010000" });
-    const result = await connection.db.execute<{ "QUERY PLAN": { Plan: RetirementPlan }[] }>(
-      sql`EXPLAIN (ANALYZE, FORMAT JSON) ${query}`,
-    );
-    const nodes = retirementPlanNodes(result.rows[0]!["QUERY PLAN"][0]!.Plan);
-    expect(nodes.some((node) => node["Node Type"] === "Recursive Union")).toBe(false);
-    const scans = nodes.filter(
-      (node) =>
-        ["relay_sync_blobs", "relay_sync_updates", "relay_sync_states"].includes(node["Relation Name"] ?? "") &&
-        node["Node Type"].includes("Scan"),
-    );
-    const visited = scans.reduce(
-      (total, node) =>
-        total +
-        ((node["Actual Rows"] ?? 0) +
-          (node["Rows Removed by Filter"] ?? 0) +
-          (node["Rows Removed by Index Recheck"] ?? 0)) *
-          (node["Actual Loops"] ?? 1),
-      0,
-    );
-    expect(visited).toBeLessThanOrEqual(1500);
-    const page = await connection.db.execute<{ projectKey: string; blobId: string; retire: boolean }>(query);
-    expect(page.rows).toHaveLength(500);
-    expect(page.rows.every((row) => row.projectKey === projectKey && row.retire)).toBe(true);
-    expect(page.rows[0]!.blobId).toBe("z-expired-000001");
-    const retained = await connection.db.execute<{ projectKey: string; blobId: string; retire: boolean }>(
-      blobRetirementPage(accountId, new Date("2021-01-01"), { projectKey, blobId: "" }),
-    );
-    expect(retained.rows).toHaveLength(500);
-    expect(retained.rows.every((row) => !row.retire)).toBe(true);
-    const following = await connection.db.execute<{ blobId: string }>(
-      blobRetirementPage(accountId, new Date("2021-01-01"), retained.rows.at(-1)!),
-    );
-    expect(following.rows[0]!.blobId).toBe("a-retained-000501");
+    await connection.db
+      .transaction(async (tx) => {
+        const { accountId, projectKey } = await seedRetirementGraph((query) => tx.execute(query), 10_000);
+        const query = blobRetirementPage(accountId, new Date("2021-01-01"), {
+          projectKey,
+          blobId: "a-retained-010000",
+        });
+        const result = await tx.execute<{ "QUERY PLAN": { Plan: RetirementPlan }[] }>(
+          sql`EXPLAIN (ANALYZE, FORMAT JSON) ${query}`,
+        );
+        const nodes = retirementPlanNodes(result.rows[0]!["QUERY PLAN"][0]!.Plan);
+        expect(nodes.some((node) => node["Node Type"] === "Recursive Union")).toBe(false);
+        const scans = nodes.filter(
+          (node) =>
+            ["relay_sync_blobs", "relay_sync_updates", "relay_sync_states"].includes(node["Relation Name"] ?? "") &&
+            node["Node Type"].includes("Scan"),
+        );
+        const visited = scans.reduce(
+          (total, node) =>
+            total +
+            ((node["Actual Rows"] ?? 0) +
+              (node["Rows Removed by Filter"] ?? 0) +
+              (node["Rows Removed by Index Recheck"] ?? 0)) *
+              (node["Actual Loops"] ?? 1),
+          0,
+        );
+        expect(visited, JSON.stringify(result.rows)).toBeLessThanOrEqual(1500);
+        const page = await tx.execute<{ projectKey: string; blobId: string; retire: boolean }>(query);
+        expect(page.rows).toHaveLength(500);
+        expect(page.rows.every((row) => row.projectKey === projectKey && row.retire)).toBe(true);
+        expect(page.rows[0]!.blobId).toBe("z-expired-000001");
+        const retained = await tx.execute<{ projectKey: string; blobId: string; retire: boolean }>(
+          blobRetirementPage(accountId, new Date("2021-01-01"), { projectKey, blobId: "" }),
+        );
+        expect(retained.rows).toHaveLength(500);
+        expect(retained.rows.every((row) => !row.retire)).toBe(true);
+        const following = await tx.execute<{ blobId: string }>(
+          blobRetirementPage(accountId, new Date("2021-01-01"), retained.rows.at(-1)!),
+        );
+        expect(following.rows[0]!.blobId).toBe("a-retained-000501");
+        throw rollback;
+      })
+      .catch((error: unknown) => {
+        if (error !== rollback) throw error;
+      });
   } finally {
     await connection.close();
   }

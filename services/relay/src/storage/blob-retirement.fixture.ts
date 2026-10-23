@@ -18,6 +18,13 @@ export const seedRetirementGraph = async (execute: (query: SQL) => Promise<unkno
   await execute(sql`INSERT INTO relay_sync_updates
     ("projectKey", "documentId", sequence, "updateId", "deviceId", "byteLength", "objectKey", "blobIds", "createdAt")
     VALUES (${projectKey},'document',1,'update','device',1,${crypto.randomUUID()},ARRAY['a-retained-000001'],'2020-01-01')`);
+  // Small reference tables still choose a sequential scan. The page must not
+  // repeat that scan for every candidate just because other projects are small.
+  await execute(sql`INSERT INTO relay_sync_updates
+    ("projectKey", "documentId", sequence, "updateId", "deviceId", "byteLength", "objectKey", "blobIds", "createdAt")
+    SELECT ${projectKey}, 'small-directory', n, 'small-update-' || n, 'device', 1,
+      ${crypto.randomUUID()} || n, '{}'::text[], '2020-01-01'
+    FROM generate_series(1,14) n`);
   return { accountId, projectKey };
 };
 
