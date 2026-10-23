@@ -2,9 +2,18 @@
 
 PS-903 freezes the PS-902 release workloads before storage optimization. Run this
 explicit diagnostic to collect a failing baseline. It is not a required CI check
-and does not change product storage or performance budgets. The user authorized
-the lower external case execution cap below. PS-909 owns the later release gate. A performance failure is useful
+and does not change product storage. The user authorized
+the lower external case execution cap below, then excluded fixture setup from
+benchmark work on 2026-10-23. PS-909 owns the later release gate. A performance failure is useful
 baseline evidence; missing or unproved coverage remains a failure.
+
+On 2026-10-23, the user accepted up to 25% deviation from this track's performance
+limits while completing the repair. The one-second target therefore has a
+temporary acceptance ceiling of 1,250 ms in the shared contract. Reports must
+still show raw timings and identify samples above the original 1,000 ms target.
+This allowance does not change the 60-second execution cap, other test or job
+timeouts, fixed workloads, sample counts, correctness checks, or required
+platforms. It does not turn a diagnostic run into release acceptance evidence.
 
 ## Fixed workloads
 
@@ -138,32 +147,41 @@ restarts the configured service. Expiry also stops containers with that exact
 Compose project label. The stack's `connection.json` and runtime descriptor contain credentials; do not
 attach them to a report.
 
-## Hard case execution cap
+## Fixture preparation and measured case boundaries
 
 User requirement added 2026-10-22. PS-904 through PS-909 inherit this cap through
 PS-902's architecture contract. It lowers an execution allowance; it does not
 replace the less-than-1,000-ms product acceptance budget. Keep all tighter limits.
+On 2026-10-23 the user corrected the fixture boundary: constructing and copying
+the dataset is preparation, not a benchmark or a bulk-write performance target.
+The measured operations, workloads and sample counts remain unchanged.
+
+Prepare the complete dataset, verify its expected values and durable history,
+and close all database and worker handles before marking the fixture complete.
+A failed or interrupted preparation cannot supply a sample. Copy a complete,
+closed fixture in the controller before spawning each fresh measurement process.
+Do not open or hydrate that copy before the cold operation. Record preparation
+progress, duration and memory separately; its RSS must not enter the measured
+process's high-water mark. The measured-case watchdog does not cap construction.
 
 An idle supervisor starts one absolute deadline before spawning each case worker.
 It does no Yjs or database work. Progress never resets the deadline. The effective
 allowance is the lesser of 60,000 ms and any tighter caller allowance. There is
-no CLI switch to raise it. In-case startup, imports, calibration, warmup, fixture
-copying/construction, sync setup, measured operations, verification, restoration
+no CLI switch to raise it. In-case startup, imports, calibration, warmup,
+background sync activity, measured operations, verification, restoration
 and worker cleanup all consume that same allowance.
 
 | Case boundary | Included work |
 | --- | --- |
-| One application scenario/sample | One profile/background/temperature/operation/sample ID, including its runtime/browser starts, sync fixture, SDK and UI probes, kill/reopen proof and reset. A shard still requires all ten cold and ten warm samples. |
-| One sync layer invocation | Full one-owner seed and optional churn, encode, offline correctness and all ten repetitions of every phase. It has one cap for the whole invocation, not ten fresh deadlines. |
-| One database seed/churn/sample process | Database open/close and every operation in that phase. A cold sample's copy of the closed seed is inside its cap. Ten independent cold cases are still required. |
-| One explicit preparation command | Full `--emit-fixture`, `--seed`, `--refresh-source`, `--verify-fixture` or container setup invocation. Partial setup is invalid; it does not qualify a smaller fixture for measurement. |
+| One database sample process | Database open/close, cold and warm operations, verification and shutdown. Fixture construction and copying finish before the process starts. Ten independent cold cases are still required. |
+| Application and sync layer controllers | These still include some fixture work inside their old case wrappers. PS-909 must move initial relay download, extension/view preparation and sync-layer seeding outside measured workers before claiming compliance with the corrected boundary. |
 
 Separate binary and fixture extension builds run before these cases under their existing build limits.
 Run `perf:storage-scale:build` again after changing the fixture consumer; seed and
-refresh commands require that output and never invoke the bundler. Preparation and startup remain separate
-phase records and do not enter navigation/edit latency timers; keeping them out
-of the foreground timer does not exempt them from the case cap. A setup timeout
-must be repaired or reported as missing coverage, never hidden by restarting it.
+refresh commands require that output and never invoke the bundler. Preparation
+failures are setup failures, not failed foreground latency samples. Existing
+tool-specific build and container-startup limits are separate from benchmark
+acceptance. Never use a partial fixture or relabel setup as a successful sample.
 
 At expiry the supervisor freezes its owned POSIX process group, finds descendants
 (including separate Chromium groups), and sends SIGKILL. Windows uses `taskkill
@@ -191,9 +209,10 @@ per-case output remains available even if a sample was printed before timeout.
 The fixture is invalidated and remaining samples stay missing. No retry,
 reduced fixture/sample count, prewarming or disabled sync can turn this into a pass.
 
-Earlier PS-903 runs that exceed this whole-case cap are historical uncapped
-diagnostic observations, not acceptance of the corrected runner. Keep their
-original metadata and exclusions. Short injected-deadline watchdog tests prove
+Earlier PS-903 uncapped observations and setup timeouts retain their original
+metadata and exclusions. The corrected boundary
+does not retroactively turn them into accepted cold-operation measurements.
+Short injected-deadline watchdog tests prove
 control behavior; they are not full-workload performance samples.
 
 ## Measurement shards
@@ -295,6 +314,27 @@ separates open, first durable write, warm writes, full list, atomic-100 and writ
 crossing the actual fold boundary. Each of ten cold database processes receives
 a copy of the same closed seed; each also records ten warm writes. Do not report
 those 100 warm observations as ten independent cold observations.
+
+The database layer controller prepares and verifies a complete immutable fixture
+once, then starts ten sample controllers with distinct destinations. Each sample
+copies the closed fixture before its fresh worker and unchanged 60-second watchdog.
+The standalone database commands use the same boundary:
+
+```sh
+bun packages/pstdio-db/src/services/extension-storage/document-scale.bench.ts small 100000 /absolute/disposable/owner-fixture prepare
+bun packages/pstdio-db/src/services/extension-storage/document-scale.bench.ts small 100000 /absolute/disposable/owner-sample-01 sample /absolute/disposable/owner-fixture
+```
+
+Add `churn` to both commands for the separate create/edit/delete variant. Repeat
+samples with ten distinct destinations. Existing preparation or sample directories
+are rejected rather than overwritten. Verification checks all history receipts,
+source revisions, live/deleted counts and decoded final values. It runs only in
+preparation; the first resource access in a sample remains its measured write.
+Preparation duration and memory are separate from sample measurements. A failed
+preparation cannot create the completion manifest, and mutable sample copies cannot
+be reused as prepared fixtures. Case events from database child controllers are
+retained in `database.jsonl`; the outer `results.jsonl` retains environment and
+coverage records. This path still reports diagnostic-only coverage.
 
 Phase telemetry includes wall time, process CPU, event-loop delay, RSS high-water
 mark, retained memory, encoded/decoded bytes, clones and database size where
