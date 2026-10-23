@@ -1,6 +1,7 @@
-export const stressTicketCount = 1000;
+// Benchmarks raise this to measure larger projects; the dev stress fixture keeps 1,000.
+export const stressTicketCount = Number(process.env.PSTDIO_PLANNER_STRESS_TICKETS ?? 1000);
 export const focusCount = 25;
-export const focusViewTitle = "Focus 25 of 1,000";
+export const focusViewTitle = `Focus 25 of ${stressTicketCount.toLocaleString("en-US")}`;
 export const trackNames = ["Stress Client", "Stress API", "Stress Storage", "Stress Integrations", "Stress Release"];
 const focusTitle = "Planner stress focus";
 
