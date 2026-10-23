@@ -57,6 +57,7 @@ export const createCodexThread = (
       {
         ...(run.agentSessionId ? { threadId: run.agentSessionId } : {}),
         ...(run.model ? { model: run.model } : {}),
+        ...(run.params?.service_tier ? { serviceTier: run.params.service_tier } : {}),
         cwd: run.cwd,
         approvalPolicy: "never",
         sandbox: "danger-full-access",

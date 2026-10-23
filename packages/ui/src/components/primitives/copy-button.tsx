@@ -37,7 +37,7 @@ export const CopyButton = (props: CopyButtonProps) => {
   if (state === "copied") status = "Copied";
   if (state === "failed") status = "Copy failed. Try again.";
   return (
-    <Tooltip content={status} openDelay={300} closeDelay={150}>
+    <Tooltip content={status} closeDelay={150}>
       <IconButton variant="ghost" size="sm" {...rest} aria-label={status} disabled={disabled || !text} onClick={copy}>
         {state === "copied" ? <Check /> : <Copy />}
       </IconButton>

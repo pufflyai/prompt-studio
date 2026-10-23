@@ -2,7 +2,7 @@
 
 Proposed: 2026-10-08
 
-Status: Accepted for the host contract. Provider adoption remains gated by live validation and SDK publication.
+Status: Accepted. Codex adopts the published host contract; other provider adoption remains gated by live validation.
 
 ## Decision
 
@@ -22,4 +22,6 @@ Stopping and resuming changes the meaning of steering. Displaying a user bubble 
 
 Codex 0.160.0 accepted `turn/steer` during a command, consumed the correction, continued the original work, and rejected input after completion. A second probe verified that `clientUserMessageId` survives `thread/read` as the steered user message’s `clientId`, with one matching native user item.
 
-Claude Code 2.1.294 live validation is blocked by the account's weekly usage limit. OpenCode support remains unverified. Neither is enabled by assumption. Publish the additive SDK contract before adopting it in a separate harness release, as required by the extension workflow.
+Codex exposes `HarnessSession.steer` using `turn/steer`, the current native turn ID, and `clientUserMessageId`. Live and recovered user messages retain the matching `clientId`. A matching native echo or acknowledgement publishes the accepted prompt with host attachment metadata. Pending metadata is released when the request settles. Native rejections keep the request queued. Transport failures remain uncertain and never trigger replay; positive saved history evidence can reconcile them.
+
+Claude Code 2.1.294 live validation is blocked by the account's weekly usage limit. OpenCode support remains unverified. Neither is enabled by assumption. Publish additive SDK contracts before adopting them in separate harness releases, as required by the extension workflow.

@@ -45,6 +45,14 @@ pst sessions follow-up --id <session-id> --summary-of <source-session-id> --summ
 
 `list` can filter by `--project-id`, `--status`, `--agent`, and `--workspace-id`. Add `--archived` to include archived sessions.
 
+Add `--json` to print the complete session records as a JSON array, including full session IDs and statuses. It works with the same filters and prints `[]` when no sessions match. Without `--json`, the command prints a table.
+
+```sh
+pst sessions list --json
+pst sessions list --status in_progress --json
+pst sessions list --status awaiting_input --json
+```
+
 Use `stream` to follow live output in the terminal. When the agent asks for permission to use a tool, pass the session ID and the approval request ID to `approve` or `deny`. `stop` ends a running session. `archive` hides a session from the default list.
 
 `resolve-session-id` finds the Prompt Studio session for a session ID from the agent itself, such as a Claude Code session ID. `--cwd` picks the right one when the same external ID appears in more than one working folder.

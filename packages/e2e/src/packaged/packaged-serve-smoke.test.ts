@@ -84,7 +84,7 @@ import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-s
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
-// Composer coverage preserves route-group file paths and keeps web references natively clickable in packaged messages.
+// Composer coverage recalls saved prompts, preserves route-group file paths, and keeps web references clickable.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
@@ -102,7 +102,7 @@ import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // The session query smoke also checks open-tab resource retention in the compiled host.
 // The fixed 1,000-session / 1,000-ticket compiled navigation gate lives in ../perf/subnav-benchmark.ts.
 // Packaged browser coverage also checks shared Session action groups and lazy title search in the tab menu.
-// Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
+// Includes speed selection, JSON session lists, queued steering and shutdown with existing native goal turns.
 import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
 import { registerPackagedShowcaseSmokeTests } from "./packaged-showcase-smoke";
 import { registerStorageMigrationSmokeTests } from "./packaged-storage-migration-smoke";

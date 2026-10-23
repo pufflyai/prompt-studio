@@ -170,3 +170,22 @@ test("a pending async answer keeps ownership after its native turn completes", a
   await answering;
   expect(await p.runtime.releaseSession("p", "a")).toBe(true);
 });
+
+test("pending steering keeps ownership after its native turn completes", async () => {
+  const p = setup();
+  const a = input("a");
+  const run = await p.runtime.run(a);
+  const held = p.holdNext("turn/steer");
+  const steering = run.steer!({ deliveryId: "correction", prompt: "Use the other approach", attachments: [] }).catch(
+    (error) => error,
+  );
+  await held.requested;
+  complete(p, run.agentSessionId!);
+  await run.done;
+  const releasedWhileSteering = await p.runtime.releaseSession("p", "a");
+  held.reply();
+  const result = await steering;
+  expect(releasedWhileSteering).toBe(false);
+  expect(result).toEqual({ status: "accepted" });
+  expect(await p.runtime.releaseSession("p", "a")).toBe(true);
+});
