@@ -1,9 +1,9 @@
 import { defineKeybinding } from "@pstdio/sdk/extensions";
 import { changeKeyboardStatus, keyboardStatusOptions } from "./commands/keyboard-status";
 import { newTicketCommand } from "./commands/new-ticket";
-import { openTicketsCommand } from "./commands/open-tickets";
 import { runAttemptCommand } from "./commands/run-attempt";
 import { breakIntoSubTicketsCommand, refineTicketCommand } from "./commands/ticket-actions";
+import { ticketsPageTarget } from "./data/ticket-page-target";
 import { ticketResourceKind } from "./resource-kinds";
 import { timelinePage } from "./timeline/pages";
 
@@ -14,7 +14,7 @@ export const plannerShortcuts = [
     layer: "go",
     key: "P",
     sticky: true,
-    action: { kind: "command", target: { command: openTicketsCommand.ref } },
+    action: ticketsPageTarget,
   }),
   defineKeybinding({
     id: "go-timeline",
@@ -34,7 +34,7 @@ export const plannerShortcuts = [
     layer: "extensions",
     key: "O",
     sticky: true,
-    action: { kind: "command", target: { command: openTicketsCommand.ref } },
+    action: ticketsPageTarget,
   }),
   defineKeybinding({
     id: "extension-timeline",

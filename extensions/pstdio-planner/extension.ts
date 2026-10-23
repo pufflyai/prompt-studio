@@ -14,10 +14,10 @@ import { plannerCommands } from "./src/commands";
 import { mergedPullRequestsSchedule } from "./src/commands/check-merged-pull-requests";
 import { implementationTargetsCommand } from "./src/commands/implementation-targets";
 import { newTicketCommand } from "./src/commands/new-ticket";
-import { openTicketsCommand } from "./src/commands/open-tickets";
 import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
+import { ticketsPageTarget } from "./src/data/ticket-page-target";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
 import { autoBuildHooks, autoBuildSchedule } from "./src/hooks/auto-build";
 import { dependencyBlockerHooks } from "./src/hooks/dependency-blockers";
@@ -154,7 +154,7 @@ export default defineExtension({
     defineKeybinding({
       id: "open-tickets",
       key: "Alt+Shift+P",
-      action: { kind: "command", target: { command: openTicketsCommand.ref } },
+      action: ticketsPageTarget,
     }),
     defineKeybinding({
       id: "new-ticket",
