@@ -15,7 +15,7 @@ const matchesPlatform = (entry: QuarantinedTest, platform: string, arch: string)
 
 export const quarantinePattern = (cases: QuarantinedTest[], runner: string, platform: string, arch = process.arch) => {
   const names = cases.filter((entry) => entry.runner === runner && matchesPlatform(entry, platform, arch));
-  const tags = runner === "bun" ? "" : "(?:\\s+@\\S+)*";
+  const tags = runner === "bun" || runner === "packaged-bun" ? "" : "(?:\\s+@\\S+)*";
   return names.length ? `(?:${names.map((entry) => escapeRegex(entry.name)).join("|")})${tags}$` : undefined;
 };
 
@@ -24,9 +24,10 @@ export const bunTestSelection = (
   packageDir: string,
   platform: string,
   quarantine: boolean,
+  runner = "bun",
 ) => {
-  const selected = cases.filter((entry) => entry.runner === "bun" && entry.file.startsWith(`${packageDir}/`));
-  const pattern = quarantinePattern(selected, "bun", platform);
+  const selected = cases.filter((entry) => entry.runner === runner && entry.file.startsWith(`${packageDir}/`));
+  const pattern = quarantinePattern(selected, runner, platform);
   return {
     count: selected.filter((entry) => matchesPlatform(entry, platform, process.arch)).length,
     pattern: quarantine ? pattern : pattern && `^(?!.*${pattern}).*$`,

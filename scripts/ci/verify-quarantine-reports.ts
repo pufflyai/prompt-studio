@@ -17,7 +17,7 @@ const record = (name: string, result: { executed: number; failures: number }) =>
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, line);
 };
 
-if (runner === "bun") {
+if (runner === "bun" || runner === "packaged-bun") {
   const packages = new Set(
     cases.map((entry) => {
       let directory = dirname(resolve(root, entry.file));
@@ -26,7 +26,7 @@ if (runner === "bun") {
     }),
   );
   for (const packageDir of packages) {
-    const selection = bunTestSelection(registry, packageDir, process.platform, true);
+    const selection = bunTestSelection(registry, packageDir, process.platform, true, runner);
     const xml = await Bun.file(resolve(root, "test-results/quarantine", packageDir, "results.xml")).text();
     record(packageDir, verifyQuarantineReport(xml, selection.count));
   }
@@ -44,5 +44,5 @@ if (runner === "bun") {
     ),
   );
 } else {
-  throw new Error("Choose bun, playwright or packaged-desktop quarantine reports.");
+  throw new Error("Choose bun, packaged-bun, playwright or packaged-desktop quarantine reports.");
 }

@@ -6,7 +6,8 @@ import cases from "./test-quarantine.json";
 const root = resolve(import.meta.dir, "../..");
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
 const packageDir = relative(root, process.cwd()).replaceAll("\\", "/");
-const selection = bunTestSelection(cases, packageDir, process.platform, quarantine);
+const runner = packageDir === "packages/e2e" ? "packaged-bun" : "bun";
+const selection = bunTestSelection(cases, packageDir, process.platform, quarantine, runner);
 if (quarantine && !selection.files.length) {
   console.log(`No quarantined Bun tests for ${packageDir} on ${process.platform}.`);
 } else {

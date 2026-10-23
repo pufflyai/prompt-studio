@@ -760,12 +760,22 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
       - name: Build database test dependencies
         run: bun run build -- --scope pstdio-db --include-dependencies
+      - name: Build quarantined API dependencies
+        if: runner.os == 'Windows'
+        run: bun run build -- --scope pstdio-api --include-dependencies
       - name: Run quarantined database cases with their existing limits
         continue-on-error: true
         run: bun run --cwd packages/pstdio-db test ${{ runner.os == 'Windows' && '--timeout=15000' || '' }}
       - name: Run quarantined release cases with their existing limits
         continue-on-error: true
         run: bun run --cwd scripts test
+      - name: Run quarantined API cases with their existing limits
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        env:
+          PSTDIO_DEFAULT_EXTENSIONS: "[]"
+          PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0"
+        run: bun --cwd packages/pstdio-api ../../scripts/ci/run-bun-tests.ts --conditions=source --timeout 30000 --silent
       - name: Require every registered case to have executed
         run: bun scripts/ci/verify-quarantine-reports.ts bun
       - name: Preserve quarantine test reports

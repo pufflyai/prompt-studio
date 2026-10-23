@@ -61,7 +61,7 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
     if (next) {
       stopObserver ??= observeSlowFrames(host.reportFrames);
       stopStateReports ??= reportStateChanges();
-      stopSnapshots ??= startSnapshots();
+      if (snapshotListeners.size) stopSnapshots ??= startSnapshots();
     } else {
       stopObserver?.();
       stopObserver = undefined;
@@ -107,8 +107,13 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
     },
     subscribeSnapshots: (listener: (snapshot: PerformanceSnapshot | null) => void) => {
       snapshotListeners.add(listener);
+      if (enabled && !disposed) stopSnapshots ??= startSnapshots();
       return () => {
         snapshotListeners.delete(listener);
+        if (!snapshotListeners.size) {
+          stopSnapshots?.();
+          stopSnapshots = undefined;
+        }
       };
     },
     subscribe: (listener: () => void) => {

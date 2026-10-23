@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Import an upgraded database in one transaction to avoid repeated disk flushes and roll back a failed transfer.
+Preserve upgrade data atomically and avoid unused snapshot polling and hidden performance-popover work.

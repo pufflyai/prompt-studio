@@ -12,6 +12,28 @@ const cases = [
   { runner: "playwright", file: "packages/e2e/a.spec.ts", name: "browser saves", platforms: ["linux"] },
 ];
 
+test("compiled CLI quarantine uses the built binary without selecting source Bun cases", () => {
+  const entries = [
+    {
+      runner: "packaged-bun",
+      file: "packages/e2e/src/packaged/native.test.ts",
+      name: "starts browser",
+      platforms: ["win32"],
+    },
+    { runner: "bun", file: "packages/e2e/src/source.test.ts", name: "source behavior", platforms: ["win32"] },
+  ];
+  const selected = bunTestSelection(entries, "packages/e2e", "win32", true, "packaged-bun");
+  expect(selected.files).toEqual(["src/packaged/native.test.ts"]);
+  expect(new RegExp(selected.pattern!).test("starts browser")).toBe(true);
+  expect(new RegExp(selected.pattern!).test("source behavior")).toBe(false);
+  expect(
+    new RegExp(bunTestSelection(entries, "packages/e2e", "win32", false, "packaged-bun").pattern!).test(
+      "starts browser",
+    ),
+  ).toBe(false);
+  expect(bunTestSelection(entries, "packages/e2e", "linux", true, "packaged-bun").files).toEqual([]);
+});
+
 test("quarantine selection is limited to its runner, platform and package", () => {
   const selected = bunTestSelection(cases, "packages/db", "linux", false);
   expect(new RegExp(selected.pattern!).test("keeps data (cold)")).toBe(false);

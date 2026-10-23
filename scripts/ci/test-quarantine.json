@@ -67,6 +67,32 @@
     "removeWhen": "Reproduce and fix preview state propagation after reload, then pass ten independent Chromium runs without retries."
   },
   {
+    "runner": "playwright",
+    "file": "packages/e2e/src/packaged/packaged-editing-sessions.spec.ts",
+    "name": "packaged editing sessions preview, coalesce saves and cancel gestures in webkit",
+    "platforms": ["linux"],
+    "owner": "PS-907 / extension page routing",
+    "reason": "The initial editing deep link intermittently lands on project Home in WebKit, so no editing frame exists. The same compiled code passes in other first-attempt runs. Retain the failed navigation trace; Firefox remains blocking.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40010406106/job/120620770154",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913/job/120606435213"
+    ],
+    "removeWhen": "Reproduce and fix initial extension-route restoration in WebKit, then pass ten independent WebKit runs without retries."
+  },
+  {
+    "runner": "playwright",
+    "file": "packages/e2e/src/packaged/packaged-webview-browsers.spec.ts",
+    "name": "persists commands and settings through authenticated opaque webviews in WebKit (Safari engine)",
+    "platforms": ["linux"],
+    "owner": "PS-907 / extension settings lifecycle",
+    "reason": "WebKit intermittently retains a visible settings dialog after its close button is activated. The same fixture passes in other independent runs and other engines. Preserve the existing close and reload assertions and first-attempt trace.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40010401259/job/120625850242",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913/job/120606435213"
+    ],
+    "removeWhen": "Reproduce and fix the WebKit settings-close lifecycle, then pass ten independent WebKit runs without retries."
+  },
+  {
     "runner": "packaged-desktop",
     "file": "clients/desktop/src/e2e/packaged-project-tabs.spec.ts",
     "name": "opens and closes project tabs while preserving pages and terminals",
@@ -79,5 +105,44 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913/job/120606435577"
     ],
     "removeWhen": "Identify and fix the slow phase and pass ten independent Apple Silicon runs within 30 seconds, preserving cold startup and all lifecycle assertions."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/codex-transport.test.ts",
+    "name": "the packaged Codex harness preserves protocol loss and independent provider failure",
+    "platforms": ["win32"],
+    "owner": "PS-907 / Codex transport",
+    "reason": "The Windows cold compiled-runtime fixture intermittently exhausts 30 seconds after its runtime becomes ready at 8.8 seconds. The same case completes on other independent Windows runs. Preserve both protocol and provider-failure assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40010401259/job/120625850645",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913"
+    ],
+    "removeWhen": "Identify and fix the slow phase, then pass ten independent Windows runs within the existing 30 second allowance, without retries."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/extension-browser-install.test.ts",
+    "name": "installs the smoke browser without external JavaScript runtimes",
+    "platforms": ["win32"],
+    "owner": "PS-907 / packaged browser installation",
+    "reason": "The Windows packaged browser installs successfully, then intermittently fails to finish browser validation and cleanup within 30 seconds. Other independent Windows runs pass. Preserve the empty-PATH installation and real Chromium page checks.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40010401259/job/120625850645",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913"
+    ],
+    "removeWhen": "Identify and fix the slow phase, then pass ten independent Windows runs within the existing 30 second allowance, without retries."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/features/sessions/endpoints/get-session-conversation.test.ts",
+    "name": "preserves conversation history before the persisted queued follow-up prompt",
+    "platforms": ["win32"],
+    "owner": "PS-907 / session conversation",
+    "reason": "One Windows first-attempt run exhausted the fixture's 30 status polls before the harness completion was persisted. Other independent runs passed. Keep the conversation ordering and queued follow-up assertions and the existing test limit.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40010401259/job/120625850796",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913"
+    ],
+    "removeWhen": "Fix completion synchronization and pass ten independent Windows runs at the existing limits."
   }
 ]

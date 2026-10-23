@@ -48,7 +48,7 @@ export const resolvePackagedRuntimeTestArgs = (platformPackage: PlatformPackage)
   // the distributed CLI and package consumers without repeating that browser workload.
   if (platformPackage.pkg.startsWith("cli-linux-")) return ["run", "test:packaged:cli"];
   if (platformPackage.pkg === "cli-darwin-x64")
-    return ["test", ...INTEL_MAC_ESSENTIAL_TESTS, "--timeout", "60000", "--silent"];
+    return ["../../scripts/ci/run-bun-tests.ts", ...INTEL_MAC_ESSENTIAL_TESTS, "--timeout", "60000", "--silent"];
   if (!platformPackage.pkg.startsWith("cli-win-")) return ["run", "test:packaged"];
 
   const tests = [
@@ -59,5 +59,5 @@ export const resolvePackagedRuntimeTestArgs = (platformPackage: PlatformPackage)
     "src/packaged/codex-transport.test.ts",
   ];
   if (platformPackage.pkg === "cli-win-x64") tests.push("src/packaged/extension-browser-install.test.ts");
-  return ["test", ...tests, "--timeout", "30000", "--silent"];
+  return ["../../scripts/ci/run-bun-tests.ts", ...tests, "--timeout", "30000", "--silent"];
 };
