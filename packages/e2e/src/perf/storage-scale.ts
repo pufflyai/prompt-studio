@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync } from "node:fs";
 import { arch, cpus, freemem, platform, release, totalmem } from "node:os";
 import { join, resolve } from "node:path";
@@ -15,6 +15,36 @@ const option = (flag: string, fallback?: string) => {
   return process.argv[at + 1];
 };
 
+export const runScaleLayerCase = async (layer: string, input: Parameters<typeof runBenchmarkCase>[0]) => {
+  if (layer !== "database") {
+    const run = await runBenchmarkCase(input);
+    if (!run.complete) throw new Error(`Layer case ${run.status}; partial output retained in ${layer}.jsonl`);
+    return;
+  }
+  // The database entrypoint prepares and copies its fixture before supervising a fresh sample worker.
+  const child = spawn(input.command, input.args, {
+    cwd: input.cwd,
+    stdio: ["ignore", input.stdout ?? "inherit", input.stderr ?? "inherit"],
+  });
+  const interrupt = () => child.kill("SIGINT");
+  const terminate = () => child.kill("SIGTERM");
+  process.once("SIGINT", interrupt);
+  process.once("SIGTERM", terminate);
+  try {
+    const result = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((done, reject) => {
+      child.once("error", reject);
+      child.once("close", (code, signal) => done({ code, signal }));
+    });
+    if (result.code !== 0)
+      throw new Error(
+        `Database controller exited with ${result.signal ?? result.code}; partial output retained in database.jsonl`,
+      );
+  } finally {
+    process.off("SIGINT", interrupt);
+    process.off("SIGTERM", terminate);
+  }
+};
+
 const runLayer = async (kind: Workload, root: string, layer: string, emit: (data: object) => void) => {
   if (!["sync", "database"].includes(layer)) throw new Error("Unknown layer");
   const count = Number(option("--rows"));
@@ -24,22 +54,20 @@ const runLayer = async (kind: Workload, root: string, layer: string, emit: (data
     layer === "sync"
       ? "packages/pstdio-sync/src/relay/document-scale.bench.ts"
       : "packages/pstdio-db/src/services/extension-storage/document-scale.bench.ts";
-  const phases =
-    layer === "sync"
-      ? ["owner"]
-      : ["seed", ...(process.argv.includes("--churn") ? ["churn"] : []), ...Array(10).fill("sample")];
-  for (const phase of phases) {
+  const phases = layer === "sync" ? ["owner"] : ["prepare", ...Array(10).fill("sample")];
+  for (const [index, phase] of phases.entries()) {
     const args = [script, kind, String(count)];
     const snapshot = join(root, "database-work");
-    const sampleRoot = join(root, "database-sample");
+    const sampleRoot = join(root, `database-sample-${index}`);
     if (layer === "database") {
       args.push(phase === "sample" ? sampleRoot : snapshot, phase);
       if (phase === "sample") args.push(snapshot);
+      if (process.argv.includes("--churn")) args.push("churn");
     } else if (process.argv.includes("--churn")) args.push("churn");
     const stdout = openSync(join(root, `${layer}.jsonl`), "a");
     const stderr = openSync(join(root, `${layer}.stderr.log`), "a");
     try {
-      const run = await runBenchmarkCase({
+      await runScaleLayerCase(layer, {
         name: `${layer}-${kind}-${count}-${phase}`,
         command: process.execPath,
         args,
@@ -48,7 +76,6 @@ const runLayer = async (kind: Workload, root: string, layer: string, emit: (data
         stderr,
         emit,
       });
-      if (!run.complete) throw new Error(`Layer case ${run.status}; partial output retained in ${layer}.jsonl`);
     } finally {
       closeSync(stdout);
       closeSync(stderr);
@@ -103,8 +130,11 @@ export const runScaleDiagnostic = async () => {
   --fixture rich|small --output <directory> --layer sync|database --rows 1000|10000|100000
   Every heavy command also requires --timing-owner <acknowledged-window-owner.json>.
 
-Full fixtures, samples and the 1,000 ms ceiling are fixed. Each case has an external 60-second cap,
-including worker startup/setup/cleanup. Build separately; preparation is also capped. Timeout is incomplete failure.
+Full fixtures and sample counts are fixed; the approved operation ceiling is 1,250 ms.
+Database fixture preparation and copying
+finish before a fresh sample worker starts its external 60-second cap. Build separately.
+Sync and application paths still include setup in their 60-second cap; separating their preparation
+remains follow-up work. Timeout is incomplete failure.
 Layer measurements are not user-visible acceptance. Runtime quota profiles require isolated runtime control;
 unsupported controls and missing phase evidence remain explicit coverage failures. See performance reference 0005.`);
     return;
