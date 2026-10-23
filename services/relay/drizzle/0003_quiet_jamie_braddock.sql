@@ -1,1 +1,0 @@
-ALTER TABLE "relay_sync_blobs" ADD COLUMN "children" text[] DEFAULT '{}'::text[] NOT NULL;

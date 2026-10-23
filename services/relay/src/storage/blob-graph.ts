@@ -30,15 +30,17 @@ export const requireBlobChildren = async (transaction: RelayTransaction, address
 };
 
 /** Retained roots and uploads inside their existing grace protect the complete immutable DAG. */
-export const protectedBlobGraph = (cutoff: Date) => sql`
-  WITH RECURSIVE protected("projectKey", "blobId") AS (
-    SELECT "projectKey", unnest("blobIds") FROM relay_sync_updates
+export const protectedBlobGraph = (cutoff: Date, accountId: string) => sql`
+  WITH RECURSIVE owned AS MATERIALIZED (
+    SELECT "projectKey" FROM relay_sync_projects WHERE "accountId" = ${accountId}
+  ), protected("projectKey", "blobId") AS (
+    SELECT u."projectKey", unnest(u."blobIds") FROM relay_sync_updates u JOIN owned USING ("projectKey")
     UNION
-    SELECT "projectKey", unnest("blobIds") FROM relay_sync_states
+    SELECT s."projectKey", unnest(s."blobIds") FROM relay_sync_states s JOIN owned USING ("projectKey")
     UNION
-    SELECT "projectKey", "blobId" FROM relay_sync_blobs
-      WHERE ("status" = 'open' AND "createdAt" > ${cutoff})
-        OR ("status" = 'completed' AND coalesce("lastUsedAt", "completedAt") > ${cutoff})
+    SELECT b."projectKey", b."blobId" FROM relay_sync_blobs b JOIN owned USING ("projectKey")
+      WHERE (b."status" = 'open' AND b."createdAt" > ${cutoff})
+        OR (b."status" = 'completed' AND coalesce(b."lastUsedAt", b."completedAt") > ${cutoff})
     UNION
     SELECT b."projectKey", unnest(b."children") FROM relay_sync_blobs b
       JOIN protected p ON p."projectKey" = b."projectKey" AND p."blobId" = b."blobId"

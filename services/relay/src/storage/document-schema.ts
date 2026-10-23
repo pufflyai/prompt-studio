@@ -99,7 +99,10 @@ export const syncBlobs = pgTable(
     // Set when a stored update or latest state that listed this blob is removed.
     lastUsedAt: timestamp({ withTimezone: true, mode: "date" }),
   },
-  (table) => [primaryKey({ columns: [table.projectKey, table.blobId] })],
+  (table) => [
+    primaryKey({ columns: [table.projectKey, table.blobId] }),
+    index("relay_sync_blobs_children").using("gin", table.children),
+  ],
 );
 
 // Payload objects that may have lost their row. Cleanup deletes those no row points at.

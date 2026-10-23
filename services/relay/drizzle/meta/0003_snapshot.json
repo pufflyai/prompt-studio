@@ -1,5 +1,5 @@
 {
-  "id": "df722f0c-7525-4c61-b193-af57999ef9de",
+  "id": "e3c5d76a-67bb-4275-938c-2e4a3df4e83f",
   "prevId": "5d3bb3fb-e4c7-41c3-8bff-01ecb5e18b05",
   "version": "7",
   "dialect": "postgresql",
@@ -392,7 +392,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "relay_sync_blobs_children": {
+          "name": "relay_sync_blobs_children",
+          "columns": [
+            {
+              "expression": "children",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "relay_sync_blobs_projectKey_relay_sync_projects_projectKey_fk": {
           "name": "relay_sync_blobs_projectKey_relay_sync_projects_projectKey_fk",

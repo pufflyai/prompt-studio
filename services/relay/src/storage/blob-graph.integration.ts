@@ -167,3 +167,118 @@ test("a shared descendant remains live until the last retained manifest retires"
   for (const blob of [child, second])
     expect(await sync.blobs.read(blob, 0).catch((error: unknown) => error)).toMatchObject({ status: 404 });
 });
+
+test("retention closure is isolated to the account whose cleanup lock is held", async () => {
+  const { protectedBlobGraph } = await import("./blob-graph");
+  const { connectRelay } = await import("./database");
+  const { sql } = await import("drizzle-orm");
+  const { sync } = fixture.open();
+  const owners = Array.from({ length: 2 }, () => ({
+    address: { projectKey: randomId("project"), spaceOwner: null, blobId: randomId("blob") },
+    caller: { accountId: randomId("account"), deviceId: randomId("device") },
+  }));
+  for (const { address, caller } of owners) {
+    const bytes = new Uint8Array([1]);
+    const input = { sha256: sha256(bytes), byteLength: bytes.length };
+    await sync.blobs.begin(address, caller, input);
+    await sync.blobs.writePart(address, 1, { ...input, body: body(bytes) });
+    await sync.blobs.finish(address);
+  }
+  const connection = connectRelay(fixture.databaseUrl);
+  try {
+    const rows = await connection.db.execute<{ projectKey: string; blobId: string }>(sql`
+      ${protectedBlobGraph(later(-1), owners[0]!.caller.accountId)} SELECT * FROM protected`);
+    expect(rows.rows).toEqual([{ projectKey: owners[0]!.address.projectKey, blobId: owners[0]!.address.blobId }]);
+  } finally {
+    await connection.close();
+  }
+});
+
+test("cleanup retires uploads in bounded SQL batches", async () => {
+  const { connectRelay } = await import("./database");
+  const { sql } = await import("drizzle-orm");
+  const { sync } = fixture.open({ gracePeriodMs: day });
+  const project = randomId("project");
+  const account = randomId("account");
+  const connection = connectRelay(fixture.databaseUrl);
+  try {
+    // Open uploads can exist before any object was sent. Seed that valid state without 501 HTTP transfers.
+    await connection.db.execute(sql`INSERT INTO relay_sync_projects ("projectKey", "accountId", "createdAt")
+      VALUES (${project}, ${account}, ${later(-2)})`);
+    await connection.db.execute(sql`INSERT INTO relay_sync_blobs
+      ("projectKey", "blobId", "sha256", "byteLength", "status", "createdAt")
+      SELECT ${project}, 'unfinished-upload-' || n, ${sha256(new Uint8Array([1]))}, 1, 'open', ${later(-2)}
+      FROM generate_series(1, 501) n`);
+    const remaining = async () =>
+      (
+        await connection.db.execute<{ count: number }>(sql`
+      SELECT count(*)::int AS count FROM relay_sync_blobs WHERE "projectKey" = ${project}`)
+      ).rows[0]!.count;
+    await connection.db.execute(
+      sql.raw(`CREATE FUNCTION assert_retirement_batch() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF (SELECT count(*) FROM changed WHERE status = 'deleting') > 500 THEN
+        RAISE EXCEPTION 'Retirement batch exceeds 500'; END IF; RETURN NULL; END $$`),
+    );
+    await connection.db.execute(
+      sql.raw(`CREATE TRIGGER assert_retirement_batch AFTER UPDATE ON relay_sync_blobs
+      REFERENCING NEW TABLE AS changed FOR EACH STATEMENT EXECUTE FUNCTION assert_retirement_batch()`),
+    );
+    try {
+      await sync.cleanup();
+      expect(await remaining()).toBe(0);
+    } finally {
+      await connection.db.execute(sql.raw("DROP TRIGGER assert_retirement_batch ON relay_sync_blobs"));
+      await connection.db.execute(sql.raw("DROP FUNCTION assert_retirement_batch()"));
+    }
+  } finally {
+    await connection.close();
+  }
+});
+
+test("partial retirement cannot leave a completed parent whose child is already deleted", async () => {
+  const { connectRelay } = await import("./database");
+  const { sql } = await import("drizzle-orm");
+  const { sync } = fixture.open({ gracePeriodMs: day });
+  const project = randomId("project");
+  const account = randomId("account");
+  const connection = connectRelay(fixture.databaseUrl);
+  try {
+    await connection.db.execute(sql`INSERT INTO relay_sync_projects ("projectKey", "accountId", "createdAt")
+      VALUES (${project}, ${account}, ${later(-2)})`);
+    await connection.db.execute(sql`INSERT INTO relay_sync_blobs
+      ("projectKey", "blobId", "sha256", "byteLength", "status", "createdAt", "completedAt")
+      SELECT ${project}, 'a-child-manifest-' || n, ${sha256(new Uint8Array([1]))}, 1, 'completed', ${later(-2)}, ${later(-2)}
+      FROM generate_series(1, 500) n`);
+    await connection.db.execute(sql`INSERT INTO relay_sync_blobs
+      ("projectKey", "blobId", "sha256", "byteLength", "status", "createdAt", "completedAt", "children")
+      VALUES (${project}, 'z-parent-manifest', ${sha256(new Uint8Array([1]))}, 1, 'completed', ${later(-2)}, ${later(-2)}, ARRAY['a-child-manifest-1'])`);
+    await connection.db.execute(
+      sql.raw(`CREATE FUNCTION assert_complete_manifest_graph() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF EXISTS (
+        SELECT 1 FROM relay_sync_blobs parent CROSS JOIN LATERAL unnest(parent.children) edge(id)
+        LEFT JOIN relay_sync_blobs child ON child."projectKey" = parent."projectKey" AND child."blobId" = edge.id
+        WHERE parent.status = 'completed' AND (child."blobId" IS NULL OR child.status <> 'completed')
+      ) THEN RAISE EXCEPTION 'Completed manifest has an incomplete child'; END IF; RETURN NULL; END $$`),
+    );
+    await connection.db.execute(
+      sql.raw(`CREATE TRIGGER assert_complete_manifest_graph AFTER UPDATE ON relay_sync_blobs
+      FOR EACH STATEMENT EXECUTE FUNCTION assert_complete_manifest_graph()`),
+    );
+    try {
+      await sync.cleanup();
+    } finally {
+      await connection.db.execute(sql.raw("DROP TRIGGER assert_complete_manifest_graph ON relay_sync_blobs"));
+      await connection.db.execute(sql.raw("DROP FUNCTION assert_complete_manifest_graph()"));
+    }
+    const result = await sync.documents
+      .appendUpdate(
+        { projectKey: project, spaceOwner: null, documentId: randomId("doc") },
+        { accountId: account, deviceId: randomId("device") },
+        { updateId: randomId("update"), payload: encode(new Uint8Array([1])), blobIds: ["z-parent-manifest"] },
+      )
+      .catch((error: unknown) => error);
+    expect(result).toMatchObject({ status: 409 });
+  } finally {
+    await connection.close();
+  }
+});
