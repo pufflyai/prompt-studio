@@ -1,3 +1,4 @@
+import type { JsonObject } from "@pstdio/sdk/extensions";
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { requireRunning } from "../run-lifecycle";
 import { isNewPost, type NewPost, saveThread, type Thread, threadStatus, updateThread } from "../schemas";
@@ -14,7 +15,7 @@ export const saveThreadCommand = defineCommand({
   id: "save-thread",
   title: "Save a thread or new post",
   cli: true,
-  params: { input: params.json({ required: true }) },
+  params: { input: params.json<JsonObject, { required: true }>({ required: true }) },
   async run(ctx, { input }) {
     const data = saveThread.parse(input);
     await requireRunning(ctx, data.runId);
@@ -126,6 +127,26 @@ export const recordOutcome = defineCommand({
     await changed(ctx, thread.id);
     return { id: thread.id };
   },
+});
+
+export const setCurrentThreadStatus = defineCommand({
+  id: "set-current-thread-status",
+  title: setThreadStatus.title,
+  mutating: true,
+  params: {
+    resource: params.resource({ resourceType: "thread", required: true, resolvedFrom: "resource" }),
+    status: params.select({
+      required: true,
+      options: [
+        { value: "new", label: "New" },
+        { value: "idea", label: "Ideas" },
+        { value: "answered", label: "Answered" },
+        { value: "skipped", label: "Skipped" },
+      ],
+    }),
+    url: params.text({ description: "The posted link. Required to mark a new post answered." }),
+  },
+  run: (ctx, input) => setThreadStatus.run(ctx, { id: input.resource.id, status: input.status, url: input.url }),
 });
 
 export const getThread = defineCommand({

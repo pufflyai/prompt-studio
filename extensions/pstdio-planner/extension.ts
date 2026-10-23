@@ -14,16 +14,17 @@ import { plannerCommands } from "./src/commands";
 import { mergedPullRequestsSchedule } from "./src/commands/check-merged-pull-requests";
 import { implementationTargetsCommand } from "./src/commands/implementation-targets";
 import { newTicketCommand } from "./src/commands/new-ticket";
-import { openTicketsCommand } from "./src/commands/open-tickets";
 import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
+import { ticketsPageTarget } from "./src/data/ticket-page-target";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
 import { autoBuildHooks, autoBuildSchedule } from "./src/hooks/auto-build";
 import { dependencyBlockerHooks } from "./src/hooks/dependency-blockers";
 import { gitMergedHook } from "./src/hooks/git-merged";
 import { reviewRequestCleanupHook } from "./src/hooks/review-request-cleanup";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
+import { plannerKeyboardCommands, plannerShortcuts } from "./src/keyboard";
 import { notifyBlocked } from "./src/planner-notifications";
 import { readStatusSettings, saveStatusSettings } from "./src/ticket-status-settings";
 import { commands as timelineCommands } from "./src/timeline/commands";
@@ -136,17 +137,24 @@ export default defineExtension({
     "zh-Hant": packageAsset("./l10n/zh-Hant.json", import.meta.url),
   },
 
-  commands: [...plannerCommands, ...Object.values(timelineCommands), readStatusSettings, saveStatusSettings],
+  commands: [
+    ...plannerCommands,
+    ...plannerKeyboardCommands,
+    ...Object.values(timelineCommands),
+    readStatusSettings,
+    saveStatusSettings,
+  ],
   views: [...plannerUi.views, timelineView],
   pages: [...plannerUi.pages, timelinePage],
   viewMenus: plannerUi.viewMenus,
   resourceKinds: [ticketResourceKind],
   navigationItems: [...plannerUi.navigationItems, timelineNavigation],
   keybindings: [
+    ...plannerShortcuts,
     defineKeybinding({
       id: "open-tickets",
       key: "Alt+Shift+P",
-      action: { kind: "command", target: { command: openTicketsCommand.ref } },
+      action: ticketsPageTarget,
     }),
     defineKeybinding({
       id: "new-ticket",

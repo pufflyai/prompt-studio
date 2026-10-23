@@ -1,4 +1,12 @@
-import { defineCommand, defineExtension, l10n, packageAsset, params, projectSlots } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  defineExtension,
+  defineKeybinding,
+  l10n,
+  packageAsset,
+  params,
+  projectSlots,
+} from "@pstdio/sdk/extensions";
 import { remoteHarness } from "./harness";
 import { pocketCoder } from "./pocketcoder";
 import { remoteWorkspace, workspaceParams } from "./workspace";
@@ -44,4 +52,12 @@ export default defineExtension({
   workspaceTypes: [remoteWorkspace],
   harnesses: [remoteHarness],
   commands: [launch],
+  keybindings: [
+    defineKeybinding({
+      id: "keyboard-launch",
+      layer: "extensions",
+      key: "N",
+      action: { kind: "command", target: { command: launch.ref } },
+    }),
+  ],
 });

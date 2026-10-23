@@ -9,6 +9,7 @@ import { fixture } from "./auto-build.fixture";
 import { nextTicketsCommand } from "./next-tickets";
 import { runAttemptCommand } from "./run-attempt";
 import { sessionQuery } from "./session-query.fixture";
+import { sessionRecord } from "./session-record.fixture";
 
 const run = async (command: string[]) => {
   const child = Bun.spawn(command, { stdout: "pipe", stderr: "pipe" });
@@ -54,7 +55,8 @@ test.each([
     const f = await fixture();
     await f.ctx.settings.set("implementation.defaultTargetBranch", "main");
     const ticket = await f.ticket("Continue previous work");
-    const old = await runAttemptCommand.run(f.ctx, { ticket: ticket.id });
+    const started = await runAttemptCommand.run(f.ctx, { ticket: ticket.id });
+    const old = { ...started, session: sessionRecord(started.session) };
     const previous = { ...old.variant, base: { workspaceId: null, headSha: head } };
     await putAttempt(f.storage, previous);
     const ready = await f.ticket("Independent ready work");

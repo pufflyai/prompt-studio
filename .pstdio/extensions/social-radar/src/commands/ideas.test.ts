@@ -4,6 +4,20 @@ import { commands } from ".";
 import { foundThread, newPost, setup } from "./test-context";
 
 describe("social radar reply ideas", () => {
+  test("the current-thread action fixes the selected thread and run before saving the idea", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const thread = await commands["save-thread"].run(ctx, { input: foundThread(run.runId) });
+    const idea = await commands["save-current-idea"].run(ctx, {
+      resource: { type: "thread", id: thread.id },
+      body: "A shared workbench helps.",
+    });
+    expect(await storage.collection<Idea>("ideas").get(idea.id)).toMatchObject({
+      threadId: thread.id,
+      runId: run.runId,
+      body: "A shared workbench helps.",
+    });
+  });
   test("a reply idea answers a comment in the thread's snapshot", async () => {
     const { ctx, storage } = setup();
     const run = await commands["run-daily"].run(ctx, {});

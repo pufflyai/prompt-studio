@@ -1,6 +1,7 @@
 import { defineExtension, defineKeybinding } from "@pstdio/sdk/extensions";
 import { createNoteCommand, deleteNoteCommand, renameNoteCommand, resolveNoteCommand } from "./src/commands";
 import { createFolderCommand, deleteFolderCommand, moveNoteCommand, renameFolderCommand } from "./src/folder-commands";
+import { noteShortcuts } from "./src/keyboard";
 import { documents } from "./src/mounts";
 import { editor, note, notesPage } from "./src/pages";
 import { resolveNotePathCommand } from "./src/resolve-note-path";
@@ -25,6 +26,7 @@ export default defineExtension({
     moveNoteCommand,
   ],
   keybindings: [
+    ...noteShortcuts,
     defineKeybinding({ id: "open-notes", key: "Alt+Shift+O", action: { kind: "page", page: notesPage.ref } }),
     defineKeybinding({
       id: "new-note",

@@ -1,6 +1,36 @@
 import { expect, type Frame, test } from "@playwright/test";
 import { startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
+test("artifact sandbox relays keyboard entry and tab chords while preserving editing", async ({ page }) => {
+  const storyId = "extensions-artifacts-htmlpreview--keyboard-handoff";
+  const { baseUrl, storybook } = await startStorybook(storyId, "pstdio-dashboard");
+  try {
+    await page.goto(storyUrl(baseUrl, storyId));
+    const editor = page
+      .frameLocator('iframe[title="Nested keyboard editor"]')
+      .frameLocator("iframe")
+      .getByRole("textbox", { name: "Artifact draft" });
+    await editor.fill("Keep this unsaved draft");
+    await editor.press("ArrowLeft");
+    await expect.poll(() => editor.evaluate((input: HTMLTextAreaElement) => input.selectionStart)).toBe(22);
+    await editor.press("Alt+Shift+Space");
+    await expect(page.getByLabel("Keyboard request")).toHaveText("leader");
+    await expect(page.getByRole("heading", { name: "Keyboard handoff" })).toBeFocused();
+    await page.keyboard.press("v");
+    await expect(editor).toHaveValue("Keep this unsaved draft");
+    await page.getByRole("button", { name: "Restore editor" }).click();
+    await expect(editor).toBeFocused();
+    expect(await editor.evaluate((input: HTMLTextAreaElement) => input.selectionStart)).toBe(22);
+    await editor.press("Alt+Shift+4");
+    await expect(page.getByLabel("Keyboard request")).toHaveText("tab-four");
+    await editor.press("Alt+Shift+X");
+    await expect(page.getByLabel("Keyboard request")).toHaveText("tab-four");
+    await expect(editor).toHaveValue("Keep this unsaved draft");
+  } finally {
+    await stopStorybook(storybook);
+  }
+});
+
 for (const action of ["Script navigation", "Link navigation", "Meta refresh"]) {
   test(`blocks remote preview requests from ${action.toLowerCase()}`, async ({ page }) => {
     const storyId = "extensions-artifacts-htmlpreview--navigation-isolation";
