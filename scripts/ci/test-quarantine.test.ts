@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { join } from "node:path";
 import {
   bunTestSelection,
   quarantinePattern,
@@ -23,7 +24,7 @@ test("compiled CLI quarantine uses the built binary without selecting source Bun
     { runner: "bun", file: "packages/e2e/src/source.test.ts", name: "source behavior", platforms: ["win32"] },
   ];
   const selected = bunTestSelection(entries, "packages/e2e", "win32", true, "packaged-bun");
-  expect(selected.files).toEqual(["src/packaged/native.test.ts"]);
+  expect(selected.files).toEqual([join("src", "packaged", "native.test.ts")]);
   expect(new RegExp(selected.pattern!).test("starts browser")).toBe(true);
   expect(new RegExp(selected.pattern!).test("source behavior")).toBe(false);
   expect(

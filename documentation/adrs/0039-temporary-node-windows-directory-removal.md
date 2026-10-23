@@ -48,6 +48,12 @@ on its copied executable. That Bun test failure establishes a transient file loc
 it does not establish that Bun shares Node's implementation defect. Keep the same
 retry values, await removal, and propagate the final error.
 
+The source-default refresh scenario follows this policy after
+[Windows run 40024366194](https://github.com/pufflyai/prompt-studio/actions/runs/40024366194/job/120656896879)
+finished its refresh assertions and awaited application shutdown, then failed
+synchronous temporary-directory removal with `EPERM`. Application shutdown already
+awaits startup background tasks. The fixture still propagates exhausted cleanup.
+
 ## Removal
 
 Recheck the upstream implementation when the CI Node version changes. Once both
