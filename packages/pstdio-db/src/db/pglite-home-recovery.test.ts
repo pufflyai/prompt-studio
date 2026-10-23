@@ -6,13 +6,10 @@ import { preparePgliteHome } from "./pglite-home-recovery";
 import { acquirePgliteLock } from "./pglite-lock";
 
 const run = async (active: string, phase = "") => {
-  const child = Bun.spawn(
-    [process.execPath, join(import.meta.dir, "pglite-home-recovery.fixture.ts"), active, phase],
-    {
-      stdout: "pipe",
-      stderr: "pipe",
-    },
-  );
+  const child = Bun.spawn([process.execPath, join(import.meta.dir, "pglite-home-recovery.fixture.ts"), active, phase], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
   const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
   return { exitCode, stderr };
 };
