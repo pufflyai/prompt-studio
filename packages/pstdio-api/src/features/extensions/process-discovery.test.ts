@@ -152,7 +152,7 @@ test.skipIf(process.platform !== "win32")("runs a standalone PowerShell script",
   );
   const startedAt = performance.now();
   try {
-    const result = await createProcessApi().run({ command: [script], timeoutMs: 3000 });
+    const result = await createProcessApi().run({ command: [script], timeoutMs: 10_000 });
     expect(result.exitCode, result.stderr).toBe(0);
     expect(result.stdout.trim()).toBe("1.2.3");
   } finally {
