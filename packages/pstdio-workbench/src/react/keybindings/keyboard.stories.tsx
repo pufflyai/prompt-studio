@@ -17,7 +17,7 @@ conflict.keyboard.open();
 void conflict.keyboard.press("a").then(() => conflict.keyboard.press("s"));
 export const TargetSelection: Story = { args: { workbench: conflict } };
 const management = createKeyboardWorkbench();
-export const Management: Story = {
+export const ShortcutReference: Story = {
   args: { workbench: management },
   render: () => <WorkbenchKeyboardShortcutsPanel workbench={management} />,
 };

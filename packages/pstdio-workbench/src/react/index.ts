@@ -25,6 +25,7 @@ export { useCommandOptions } from "./command-palette/use-command-options";
 export { WorkbenchFocusRegion } from "./focus/focus-region";
 export { WorkbenchHeaderActions } from "./header/header-actions";
 export { WorkbenchKeyboardShortcutsPanel } from "./keybindings/keyboard-shortcuts-panel";
+export { WorkbenchShortcutKeys } from "./keybindings/shortcut-keys";
 export { useShortcutCatalog } from "./keybindings/use-shortcut-catalog";
 export { useWebviewKeyboardShortcuts } from "./keybindings/use-webview-keyboard-shortcuts";
 export type { WorkbenchHotkeyRegistration } from "./keybindings/workbench-keybinding-dispatcher";

@@ -52,6 +52,8 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await expect(guest.getByRole("heading", { name: "Sandbox webview", exact: true })).toBeVisible();
     await guest.locator("body").press("Alt+Shift+Space");
     await expect(page.getByRole("dialog", { name: "Keyboard menu", exact: true })).toBeVisible();
+    await page.keyboard.press("V");
+    await expect(page.getByRole("dialog", { name: "Keyboard menu / View", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog", { name: "Keyboard menu", exact: true })).toBeHidden();
     await expect(page.locator('iframe[title="Lab"]')).toBeFocused();

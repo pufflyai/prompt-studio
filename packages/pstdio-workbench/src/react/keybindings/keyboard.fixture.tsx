@@ -3,6 +3,14 @@ import { createWorkbench } from "../../core";
 
 export const createKeyboardWorkbench = (count = 4) => {
   const workbench = createWorkbench({ initialSidePanelMode: "attached" });
+  workbench.commands.registerCommand({ id: "lab.open", label: "Open lab" }, { execute() {} });
+  workbench.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "lab.open" },
+    keybinding: "O",
+    layer: "extensions",
+    sourceExtensionId: "pstdio.extension-lab",
+    sourceExtensionLabel: "Extension Lab",
+  });
   workbench.commands.registerCommand(
     { id: "find.inactive", label: "Find inactive action" },
     { isVisible: () => false, execute() {} },

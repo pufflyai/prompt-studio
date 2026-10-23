@@ -21,6 +21,7 @@ export interface Keybinding {
   sticky?: boolean;
   /** Extension that authored this binding, when registered by an extension host. */
   sourceExtensionId?: string;
+  sourceExtensionLabel?: string;
   /** Action the chord executes through the shared navigation executor. */
   action: NavigationTarget;
   keybinding: KeybindingSequence;

@@ -217638,7 +217638,7 @@
                       "id": "HCuKr",
                       "name": "Leader / View",
                       "fill": "$ds-fg",
-                      "content": "Leader / View",
+                      "content": "Keyboard menu / View",
                       "fontFamily": "$font-label",
                       "fontSize": 14,
                       "fontWeight": "normal"
@@ -218033,7 +218033,7 @@
                           "enabled": true,
                           "descendants": {
                             "xvAGG": {
-                              "content": "A S"
+                              "content": "Alt+Shift+Space → A → S"
                             },
                             "uD3AU": {
                               "enabled": false
@@ -218063,7 +218063,7 @@
                           "enabled": true,
                           "descendants": {
                             "xvAGG": {
-                              "content": "V N"
+                              "content": "Alt+Shift+Space → V → N"
                             },
                             "uD3AU": {
                               "enabled": false
@@ -218093,7 +218093,7 @@
                           "enabled": true,
                           "descendants": {
                             "xvAGG": {
-                              "content": "G P"
+                              "content": "Alt+Shift+Space → G → P"
                             },
                             "uD3AU": {
                               "enabled": false
@@ -218113,7 +218113,7 @@
                           "enabled": false
                         },
                         "h0cJn": {
-                          "content": "Unassigned action · Assign shortcut"
+                          "content": "Unassigned action"
                         },
                         "E8VVm": {
                           "id": "vifeO",
@@ -218135,7 +218135,7 @@
                   ]
                 },
                 "Q7Vu5t": {
-                  "content": "Search · assign · disable · reset · personal choices persist"
+                  "content": "Search actions and keyboard shortcuts"
                 },
                 "AmksO": {
                   "enabled": false
