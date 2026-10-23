@@ -2,7 +2,7 @@
 
 ## Validation
 
-Use Bun 1.4.2 and Node 24, matching CI. Install dependencies with `bun install --frozen-lockfile`. The root pins `node-gyp` so native addon install scripts use the local build tool instead of a temporary `bunx node-gyp@latest` download.
+Use Bun 1.4.2 and Node 24, matching CI. Install dependencies with `bun install --frozen-lockfile`. The database workspace installation generates an empty engine image matched to the installed PGlite version. Source runtimes and migration workers restore this image instead of running PostgreSQL initialization for every open. It contains no application schema or user data; source startup still runs application migrations. Installations that use `--ignore-scripts` must run `bun run --cwd packages/pstdio-db postinstall` before starting the source API. The root pins `node-gyp` so native addon install scripts use the local build tool instead of a temporary `bunx node-gyp@latest` download.
 
 When upgrading Bun, align the root `packageManager` pin, Bun engine requirements, all `@types/bun` dependencies, the lockfile, and every Docker image, including `infra/local/Dockerfile`. Update the local Bun executable and current setup documentation to the same version before validating.
 

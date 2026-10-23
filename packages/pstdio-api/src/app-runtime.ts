@@ -118,6 +118,7 @@ const createAppCloser = (input: {
   automationService: { close(): Promise<void> };
   terminalSupervisor: { dispose(): Promise<void> };
   closeDb: () => Promise<void>;
+  closeSessionHooks: () => Promise<void>;
   stopQueueReadiness: () => Promise<void>;
   sessionQueueLifecycle: RouteDeps["sessionQueueLifecycle"];
   harnessRegistry: RouteDeps["harnessRegistry"];
@@ -125,6 +126,7 @@ const createAppCloser = (input: {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
+      const hooksStopped = input.closeSessionHooks();
       try {
         input.startupAbort.abort();
         const queueStopped = input.sessionQueueLifecycle.close();
@@ -136,6 +138,7 @@ const createAppCloser = (input: {
         await queueStopped;
         await input.startupDone;
         await input.getStartupBackgroundDone();
+        await hooksStopped;
         clearInterval(input.notificationWakeTimer);
         input.unsubscribeExtensionEvents();
         await input.extensionRuntime.dispose();
@@ -146,7 +149,11 @@ const createAppCloser = (input: {
         await harnessesStopped;
       } finally {
         // A part that fails to stop must not leave PGlite open (lessons 0002 and 0011).
-        await input.closeDb();
+        try {
+          await hooksStopped;
+        } finally {
+          await input.closeDb();
+        }
       }
     })();
     await closePromise;
@@ -164,6 +171,7 @@ export const startAppLifecycle = async (input: {
   automationService: Pick<RouteDeps["automationService"], "close" | "recoverQueuedRuns">;
   terminalSupervisor: { dispose(): Promise<void> };
   closeDb: () => Promise<void>;
+  closeSessionHooks: () => Promise<void>;
 }) => {
   const unsubscribeProjectActivation = input.deps.extensionRuntimeCatalog.subscribeActivation((projectId) =>
     fireExtensionEvent(input.deps, projectId, projectEvents.opened, { projectId }),
