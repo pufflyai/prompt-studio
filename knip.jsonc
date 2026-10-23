@@ -78,6 +78,7 @@
         "src/cli/run-pstdio.ts",
         "src/**/*.spec.ts",
         "src/**/*.perf.ts",
+        "src/**/*.bench.ts",
         "src/perf/planner-moves.stress.ts",
         "src/perf/planner-moves.validation.ts",
         // These diagnostics compile or launch fixture modules by path.

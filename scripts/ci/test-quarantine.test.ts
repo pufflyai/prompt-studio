@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { bunTestSelection, quarantinePattern, verifyQuarantineReport } from "./test-quarantine";
+import {
+  bunTestSelection,
+  quarantinePattern,
+  verifyPlaywrightQuarantineReport,
+  verifyQuarantineReport,
+} from "./test-quarantine";
 
 const cases = [
   { runner: "bun", file: "packages/db/a.test.ts", name: "keeps data (cold)", platforms: ["linux"] },
@@ -16,6 +21,24 @@ test("quarantine selection is limited to its runner, platform and package", () =
   expect(new RegExp(quarantinePattern(cases, "playwright", "linux")!).test("browser saves")).toBe(true);
 });
 
+test("a native architecture quarantine leaves other machines blocking", () => {
+  const cases = [
+    {
+      runner: "packaged-desktop",
+      file: "clients/desktop/a.spec.ts",
+      name: "tabs retain pages",
+      platforms: ["darwin"],
+      arch: "arm64",
+    },
+  ];
+  expect(quarantinePattern(cases, "packaged-desktop", "darwin", "arm64")).toBeDefined();
+  expect(
+    new RegExp(quarantinePattern(cases, "packaged-desktop", "darwin", "arm64")!).test("tabs retain pages @essential"),
+  ).toBe(true);
+  expect(quarantinePattern(cases, "packaged-desktop", "darwin", "x64")).toBeUndefined();
+  expect(quarantinePattern(cases, "packaged-desktop", "linux", "arm64")).toBeUndefined();
+});
+
 test("the quarantine lane runs only registered cases and never falls back to the full suite", () => {
   const selected = bunTestSelection(cases, "packages/db", "linux", true);
   expect(selected.files).toEqual(["a.test.ts"]);
@@ -29,4 +52,18 @@ test("a renamed or skipped quarantine case cannot produce a passing empty report
   expect(() => verifyQuarantineReport('<testsuites tests="4" skipped="4">', 2)).toThrow();
   expect(() => verifyQuarantineReport('<testsuites tests="4" skipped="3">', 2)).toThrow();
   expect(() => verifyQuarantineReport("", 2)).toThrow();
+});
+
+test("browser quarantine accepts a first-attempt failure but rejects skipped, retried or missing execution", () => {
+  const report = (results: { status: string }[]) => ({
+    suites: [{ specs: [{ title: "browser saves", tests: [{ results }] }] }],
+  });
+  expect(() => verifyPlaywrightQuarantineReport(report([{ status: "failed" }]), ["browser saves"])).not.toThrow();
+  expect(() => verifyPlaywrightQuarantineReport(report([{ status: "passed" }]), ["browser saves"])).not.toThrow();
+  expect(() => verifyPlaywrightQuarantineReport(report([{ status: "skipped" }]), ["browser saves"])).toThrow();
+  expect(() =>
+    verifyPlaywrightQuarantineReport(report([{ status: "failed" }, { status: "passed" }]), ["browser saves"]),
+  ).toThrow();
+  expect(() => verifyPlaywrightQuarantineReport(report([]), ["browser saves"])).toThrow();
+  expect(() => verifyPlaywrightQuarantineReport({ suites: [], errors: ["setup failed"] }, ["browser saves"])).toThrow();
 });

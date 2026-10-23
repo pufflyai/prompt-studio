@@ -51,14 +51,14 @@ test("missing required results fail while intentionally unselected jobs may skip
   ).not.toThrow();
 });
 
-test("only the named quarantine lanes can report failures without blocking stable CI", () => {
+test("quarantine setup failures remain blocking", () => {
   const results = {
     scope: { result: "success" },
     static_checks: { result: "success" },
     quarantined_bun_tests: { result: "failure" },
     quarantined_browser_tests: { result: "failure" },
   };
-  expect(() => requireCiJobs(["scope", "static_checks"], results)).not.toThrow();
+  expect(() => requireCiJobs(["scope", "static_checks"], results)).toThrow();
   expect(() => requireCiJobs(["scope", "static_checks", "quarantined_bun_tests"], results)).toThrow();
 });
 

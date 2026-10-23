@@ -3,14 +3,16 @@
     "runner": "bun",
     "file": "packages/pstdio-db/src/db/pglite-engine-upgrade.test.ts",
     "name": "createDb upgrades a closed legacy home and preserves records, retry receipts and later writes",
-    "platforms": ["linux"],
+    "platforms": ["linux", "win32"],
     "owner": "PS-907 / pstdio-db",
-    "reason": "Cold old-engine creation, transfer, restart and cleanup vary beyond the existing 5 second allowance.",
+    "reason": "Cold old-engine creation, transfer, restart and cleanup exceed Linux's 5 second allowance and intermittently exceed Windows's 15 seconds. The same Windows commit passed at 6.573 seconds and timed out at 15.011 seconds after its final reopen.",
     "evidence": [
       "https://github.com/pufflyai/prompt-studio/actions/runs/40002393505",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40004464723"
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40004464723",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40009587515/job/120606412298",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913/job/120606436837"
     ],
-    "removeWhen": "Fix the slow phase and pass ten independent Linux runs at the existing limit, or obtain explicit approval for a measured new allowance."
+    "removeWhen": "Fix the slow phase and pass ten independent runs on both Linux and Windows at their existing limits, or obtain explicit approval for measured new allowances."
   },
   {
     "runner": "bun",
@@ -63,5 +65,19 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/39988648451"
     ],
     "removeWhen": "Reproduce and fix preview state propagation after reload, then pass ten independent Chromium runs without retries."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-project-tabs.spec.ts",
+    "name": "opens and closes project tabs while preserving pages and terminals",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-907 / desktop project tabs",
+    "reason": "One Apple Silicon cold startup consumed about 18 seconds of this 30 second lifecycle test; it timed out at the first Lab frame at 30.434 seconds. The same commit passed at 15.719 seconds in another native job. Keep Linux, Windows and Intel coverage blocking.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40009596969/job/120607953987",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913/job/120606435577"
+    ],
+    "removeWhen": "Identify and fix the slow phase and pass ten independent Apple Silicon runs within 30 seconds, preserving cold startup and all lifecycle assertions."
   }
 ]

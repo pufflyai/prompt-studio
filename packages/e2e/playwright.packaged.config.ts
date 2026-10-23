@@ -7,10 +7,16 @@ const cases = JSON.parse(readFileSync(new URL("../../scripts/ci/test-quarantine.
   runner: string;
   name: string;
   platforms: string[];
+  arch?: string;
 }[];
-const names = cases.filter((entry) => entry.runner === "playwright" && entry.platforms.includes(process.platform));
+const names = cases.filter(
+  (entry) =>
+    entry.runner === "playwright" &&
+    entry.platforms.includes(process.platform) &&
+    (!entry.arch || entry.arch === process.arch),
+);
 const pattern = new RegExp(
-  `(?:${names.map((entry) => entry.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") || "(?!)"})$`,
+  `(?:${names.map((entry) => entry.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") || "(?!)"})(?:\\s+@\\S+)*$`,
 );
 
 export default defineConfig({
@@ -38,5 +44,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   use: { trace: "retain-on-failure" },
   outputDir: `test-results/${reportName}`,
-  reporter: [["line"], ["html", { open: "never", outputFolder: `playwright-report/${reportName}` }]],
+  reporter: [
+    ["line"],
+    ["html", { open: "never", outputFolder: `playwright-report/${reportName}` }],
+    ["json", { outputFile: `test-results/${reportName}/results.json` }],
+  ],
 });

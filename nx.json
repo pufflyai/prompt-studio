@@ -30,7 +30,7 @@
       "outputs": ["{projectRoot}/dist", "{projectRoot}/.publish"]
     },
     "test": {
-      "cache": true,
+      "cache": false,
       "dependsOn": ["^build"],
       "inputs": [
         "default",
@@ -46,6 +46,12 @@
           "runtime": "bun --version"
         }
       ]
+    },
+    "test:conformance": {
+      "cache": false
+    },
+    "test:coverage": {
+      "cache": false
     },
     "lint": {
       "cache": true,

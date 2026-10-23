@@ -3,6 +3,7 @@ import type { resolveCiScope } from "./pull-request-ci-scope";
 export const requiredCiJobs = (scope: ReturnType<typeof resolveCiScope>) => {
   const jobs = ["scope", "static_checks"];
   if (scope.packageChecks) jobs.push("lint", "unit_tests");
+  if (scope.stage === "full" || scope.packageChecks) jobs.push("quarantined_bun_tests");
   const selected = {
     build_docker: scope.dockerBuild,
     relay_smoke: scope.relaySmoke,
@@ -25,6 +26,7 @@ export const requiredCiJobs = (scope: ReturnType<typeof resolveCiScope>) => {
       "e2e_cli",
       "packaged_and_vite_e2e",
       "packaged_toolchain",
+      "quarantined_browser_tests",
     );
   }
   return jobs;
@@ -34,7 +36,6 @@ export const requireCiJobs = (required: string[], results: Record<string, { resu
   if (!required.includes("scope") || !required.includes("static_checks"))
     throw new Error("Required CI scope is incomplete");
   for (const [name, job] of Object.entries(results)) {
-    if (["quarantined_bun_tests", "quarantined_browser_tests"].includes(name)) continue;
     if (["failure", "cancelled"].includes(job.result)) throw new Error(`${name}: ${job.result}`);
   }
   for (const name of required) {
