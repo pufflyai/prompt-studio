@@ -97,6 +97,8 @@ export const registerStorageUpgradeSmokeTests = (releasedBinary: () => string) =
         expect(before.removed).toMatchObject({ deleted: true, value: null });
         expect(before.asset).toBe("retained asset bytes");
         await stopProcess(host.child);
+        const identity = Bun.file(join(root, "db.sqlite", ".pstdio-engine.json"));
+        expect(await identity.exists()).toBe(false);
         const upgradedSource = join(root, "upgraded-source");
         await mkdir(upgradedSource);
         await writeFixture(upgradedSource, true);
@@ -115,6 +117,7 @@ export const registerStorageUpgradeSmokeTests = (releasedBinary: () => string) =
         await disk.sample();
         const upgradeStarted = performance.now();
         host = await startPackagedServe(root, env);
+        expect(await identity.json()).toEqual({ format: 1, engine: "pglite-0.4" });
         const upload = new FormData();
         upload.set("kind", "upload");
         upload.set("installName", "storage-upgrade");
@@ -145,6 +148,7 @@ export const registerStorageUpgradeSmokeTests = (releasedBinary: () => string) =
         await stopProcess(host.child);
         const restartStarted = performance.now();
         host = await startPackagedServe(root, env);
+        expect(await identity.json()).toEqual({ format: 1, engine: "pglite-0.4" });
         expect((await exercise("indexed")).removed).toEqual(restored.removed);
         const restartMs = performance.now() - restartStarted;
         console.log(
