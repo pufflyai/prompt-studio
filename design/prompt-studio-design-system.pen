@@ -217609,245 +217609,588 @@
           "gap": 24,
           "children": [
             {
-              "id": "fR0AZ",
-              "type": "ref",
-              "ref": "hkUeJ",
-              "name": "Keyboard menu",
+              "type": "frame",
+              "id": "AUyMV",
+              "name": "Keyboard bubble states",
               "width": 704,
               "layout": "vertical",
-              "height": "fit_content",
-              "descendants": {
-                "Ow45W": {
+              "gap": 16,
+              "children": [
+                {
                   "type": "frame",
-                  "id": "J26pX",
-                  "name": "Keyboard menu heading",
-                  "width": "fill_container",
-                  "height": 48,
-                  "stroke": "$ds-border-subtle",
-                  "strokeWidth": {
-                    "bottom": 1
-                  },
-                  "padding": [
-                    0,
-                    12
-                  ],
-                  "alignItems": "center",
+                  "id": "cd9T4",
+                  "name": "Keyboard bubble · collapsed",
+                  "width": 704,
+                  "height": 320,
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 8,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "layout": "none",
                   "children": [
                     {
-                      "type": "text",
-                      "id": "HCuKr",
-                      "name": "Keyboard menu / View",
-                      "fill": "$ds-fg",
-                      "content": "Keyboard menu / View",
-                      "fontFamily": "$font-label",
-                      "fontSize": 14,
-                      "fontWeight": "normal"
+                      "type": "frame",
+                      "id": "GTgcX",
+                      "x": 16,
+                      "y": 16,
+                      "name": "Visible panel tabs",
+                      "width": 672,
+                      "gap": 16,
+                      "children": [
+                        {
+                          "id": "RhkiC",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Keyboard-selected Tickets tab",
+                          "fill": "$ds-bg-active",
+                          "stroke": "$ds-border-accent",
+                          "strokeWidth": 2,
+                          "descendants": {
+                            "w7NkD3": {
+                              "enabled": false
+                            },
+                            "k9XlqC": {
+                              "content": "Tickets",
+                              "fill": "$ds-fg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "Vl6Uu",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Secondary selected session tab",
+                          "fill": "$ds-bg-active",
+                          "stroke": "$ds-border-accent",
+                          "strokeWidth": 0,
+                          "descendants": {
+                            "w7NkD3": {
+                              "enabled": false
+                            },
+                            "k9XlqC": {
+                              "content": "New session",
+                              "fill": "$ds-fg"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "LwbgO",
+                      "x": 244,
+                      "y": 276,
+                      "name": "Shortcut sequence bubble",
+                      "width": 216,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "MwmVz",
+                          "name": "Pressed shortcut sequence",
+                          "width": "fill_container",
+                          "height": 32,
+                          "gap": 4,
+                          "padding": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "hFghD",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "y5A7ZO",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Alt",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Alt"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "SkYfN",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Shift",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Shift"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "isvAC",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Space",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Space"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "icon",
+                              "id": "lgr4Y",
+                              "name": "Next shortcut step",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "redo",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "jH8Lv",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "CwLWP",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "V",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "V"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 },
-                "BtzIp": {
+                {
                   "type": "frame",
-                  "id": "eOebF",
-                  "name": "Keyboard menu entries",
-                  "width": "fill_container",
-                  "layout": "vertical",
-                  "padding": [
-                    8,
-                    0
-                  ],
+                  "id": "UXI0S",
+                  "name": "Keyboard bubble · hover",
+                  "width": 704,
+                  "height": 320,
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 8,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "layout": "none",
                   "children": [
                     {
-                      "id": "TcYAd",
-                      "type": "ref",
-                      "ref": "hIyB7",
-                      "name": "Previous tab",
-                      "width": "fill_container",
-                      "descendants": {
-                        "vsjz1": {
-                          "enabled": false
-                        },
-                        "h0cJn": {
-                          "content": "Previous tab"
-                        },
-                        "E8VVm": {
-                          "id": "WvCrg",
+                      "type": "frame",
+                      "id": "CDZS1",
+                      "x": 16,
+                      "y": 16,
+                      "name": "Visible panel tabs",
+                      "width": 672,
+                      "gap": 16,
+                      "children": [
+                        {
+                          "id": "k1Ms2",
                           "type": "ref",
-                          "ref": "XpOTN",
-                          "name": "Shortcut ←",
-                          "enabled": true,
+                          "ref": "TwCXd",
+                          "name": "Keyboard-selected Tickets tab",
+                          "fill": "$ds-bg-active",
+                          "stroke": "$ds-border-accent",
+                          "strokeWidth": 2,
                           "descendants": {
-                            "xvAGG": {
-                              "content": "←"
-                            },
-                            "uD3AU": {
+                            "w7NkD3": {
                               "enabled": false
+                            },
+                            "k9XlqC": {
+                              "content": "Tickets",
+                              "fill": "$ds-fg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "zxl29",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Secondary selected session tab",
+                          "fill": "$ds-bg-active",
+                          "stroke": "$ds-border-accent",
+                          "strokeWidth": 0,
+                          "descendants": {
+                            "w7NkD3": {
+                              "enabled": false
+                            },
+                            "k9XlqC": {
+                              "content": "New session",
+                              "fill": "$ds-fg"
                             }
                           }
                         }
-                      }
+                      ]
                     },
                     {
-                      "id": "e09WX",
-                      "type": "ref",
-                      "ref": "hIyB7",
-                      "name": "Next tab",
-                      "width": "fill_container",
-                      "descendants": {
-                        "vsjz1": {
-                          "enabled": false
+                      "type": "frame",
+                      "id": "Jzevl",
+                      "x": 192,
+                      "y": 64,
+                      "name": "Expanded shortcut bubble",
+                      "width": 320,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "B83JrK",
+                          "name": "Current shortcut group",
+                          "width": "fill_container",
+                          "height": 32,
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "uXhwt",
+                              "name": "View",
+                              "fill": "$ds-fg-muted",
+                              "content": "View",
+                              "fontFamily": "$font-label",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
-                        "h0cJn": {
-                          "content": "Next tab"
-                        },
-                        "E8VVm": {
-                          "id": "k4OGWp",
+                        {
+                          "id": "h983E",
                           "type": "ref",
-                          "ref": "XpOTN",
-                          "name": "Shortcut →",
-                          "enabled": true,
+                          "ref": "hIyB7",
+                          "name": "Previous tab",
+                          "width": "fill_container",
                           "descendants": {
-                            "xvAGG": {
-                              "content": "→"
-                            },
-                            "uD3AU": {
+                            "vsjz1": {
                               "enabled": false
+                            },
+                            "h0cJn": {
+                              "content": "Previous tab"
+                            },
+                            "lTPwv": {
+                              "enabled": false
+                            },
+                            "E8VVm": {
+                              "id": "Rqbhx",
+                              "type": "ref",
+                              "ref": "XpOTN",
+                              "name": "Shortcut ←",
+                              "enabled": true,
+                              "descendants": {
+                                "xvAGG": {
+                                  "content": "←"
+                                },
+                                "uD3AU": {
+                                  "enabled": false
+                                },
+                                "MuHox": {
+                                  "enabled": false
+                                }
+                              }
                             }
                           }
-                        }
-                      }
-                    },
-                    {
-                      "id": "YYWQg",
-                      "type": "ref",
-                      "ref": "hIyB7",
-                      "name": "New tab…",
-                      "width": "fill_container",
-                      "descendants": {
-                        "vsjz1": {
-                          "enabled": false
                         },
-                        "h0cJn": {
-                          "content": "New tab…"
-                        },
-                        "E8VVm": {
-                          "id": "qCIB8",
+                        {
+                          "id": "W7qcJk",
                           "type": "ref",
-                          "ref": "XpOTN",
-                          "name": "Shortcut N",
-                          "enabled": true,
+                          "ref": "hIyB7",
+                          "name": "Next tab",
+                          "width": "fill_container",
                           "descendants": {
-                            "xvAGG": {
-                              "content": "N"
-                            },
-                            "uD3AU": {
+                            "vsjz1": {
                               "enabled": false
+                            },
+                            "h0cJn": {
+                              "content": "Next tab"
+                            },
+                            "lTPwv": {
+                              "enabled": false
+                            },
+                            "E8VVm": {
+                              "id": "angfA",
+                              "type": "ref",
+                              "ref": "XpOTN",
+                              "name": "Shortcut →",
+                              "enabled": true,
+                              "descendants": {
+                                "xvAGG": {
+                                  "content": "→"
+                                },
+                                "uD3AU": {
+                                  "enabled": false
+                                },
+                                "MuHox": {
+                                  "enabled": false
+                                }
+                              }
                             }
                           }
-                        }
-                      }
-                    },
-                    {
-                      "id": "OPmaF",
-                      "type": "ref",
-                      "ref": "hIyB7",
-                      "name": "Move tab…",
-                      "width": "fill_container",
-                      "descendants": {
-                        "vsjz1": {
-                          "enabled": false
                         },
-                        "h0cJn": {
-                          "content": "Move tab…"
-                        },
-                        "E8VVm": {
-                          "id": "QsIMJ",
+                        {
+                          "id": "kBADC",
                           "type": "ref",
-                          "ref": "XpOTN",
-                          "name": "Shortcut O",
-                          "enabled": true,
+                          "ref": "hIyB7",
+                          "name": "New tab…",
+                          "width": "fill_container",
                           "descendants": {
-                            "xvAGG": {
-                              "content": "O"
-                            },
-                            "uD3AU": {
+                            "vsjz1": {
                               "enabled": false
+                            },
+                            "h0cJn": {
+                              "content": "New tab…"
+                            },
+                            "lTPwv": {
+                              "enabled": false
+                            },
+                            "E8VVm": {
+                              "id": "HmOq1",
+                              "type": "ref",
+                              "ref": "XpOTN",
+                              "name": "Shortcut N",
+                              "enabled": true,
+                              "descendants": {
+                                "xvAGG": {
+                                  "content": "N"
+                                },
+                                "uD3AU": {
+                                  "enabled": false
+                                },
+                                "MuHox": {
+                                  "enabled": false
+                                }
+                              }
                             }
                           }
-                        }
-                      }
-                    },
-                    {
-                      "id": "WlkQw",
-                      "type": "ref",
-                      "ref": "hIyB7",
-                      "name": "Reposition panel…",
-                      "width": "fill_container",
-                      "descendants": {
-                        "vsjz1": {
-                          "enabled": false
                         },
-                        "h0cJn": {
-                          "content": "Reposition panel…"
-                        },
-                        "E8VVm": {
-                          "id": "s2gWH",
+                        {
+                          "id": "yr7Iq",
                           "type": "ref",
-                          "ref": "XpOTN",
-                          "name": "Shortcut R",
-                          "enabled": true,
+                          "ref": "hIyB7",
+                          "name": "Move tab…",
+                          "width": "fill_container",
                           "descendants": {
-                            "xvAGG": {
-                              "content": "R"
-                            },
-                            "uD3AU": {
+                            "vsjz1": {
                               "enabled": false
+                            },
+                            "h0cJn": {
+                              "content": "Move tab…"
+                            },
+                            "lTPwv": {
+                              "enabled": false
+                            },
+                            "E8VVm": {
+                              "id": "ULoSP",
+                              "type": "ref",
+                              "ref": "XpOTN",
+                              "name": "Shortcut O",
+                              "enabled": true,
+                              "descendants": {
+                                "xvAGG": {
+                                  "content": "O"
+                                },
+                                "uD3AU": {
+                                  "enabled": false
+                                },
+                                "MuHox": {
+                                  "enabled": false
+                                }
+                              }
                             }
                           }
-                        }
-                      }
-                    },
-                    {
-                      "id": "QsgRT",
-                      "type": "ref",
-                      "ref": "hIyB7",
-                      "name": "Select tab beyond nine",
-                      "width": "fill_container",
-                      "descendants": {
-                        "vsjz1": {
-                          "enabled": false
                         },
-                        "h0cJn": {
-                          "content": "Select tab beyond nine"
-                        },
-                        "E8VVm": {
-                          "id": "O8T9B",
+                        {
+                          "id": "D7dYEH",
                           "type": "ref",
-                          "ref": "XpOTN",
-                          "name": "Shortcut T",
-                          "enabled": true,
+                          "ref": "hIyB7",
+                          "name": "Select tab beyond nine",
+                          "width": "fill_container",
                           "descendants": {
-                            "xvAGG": {
-                              "content": "T"
-                            },
-                            "uD3AU": {
+                            "vsjz1": {
                               "enabled": false
+                            },
+                            "h0cJn": {
+                              "content": "Select tab beyond nine"
+                            },
+                            "lTPwv": {
+                              "enabled": false
+                            },
+                            "E8VVm": {
+                              "id": "QE0up",
+                              "type": "ref",
+                              "ref": "XpOTN",
+                              "name": "Shortcut T",
+                              "enabled": true,
+                              "descendants": {
+                                "xvAGG": {
+                                  "content": "T"
+                                },
+                                "uD3AU": {
+                                  "enabled": false
+                                },
+                                "MuHox": {
+                                  "enabled": false
+                                }
+                              }
                             }
                           }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "aJlbN",
+                          "name": "Pressed shortcut sequence",
+                          "width": "fill_container",
+                          "height": 32,
+                          "gap": 4,
+                          "padding": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "WAZ6A",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "v57wlQ",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Alt",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Alt"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "gBGW6",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Shift",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Shift"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "ZlHBQ",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "Space",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "Space"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "icon",
+                              "id": "Gaqv6",
+                              "name": "Next shortcut step",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "redo",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "J6nyvq",
+                              "name": "Shortcut chord",
+                              "gap": 1,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "bL1f7",
+                                  "type": "ref",
+                                  "ref": "XpOTN",
+                                  "name": "V",
+                                  "descendants": {
+                                    "xvAGG": {
+                                      "content": "V"
+                                    },
+                                    "uD3AU": {
+                                      "enabled": false
+                                    },
+                                    "MuHox": {
+                                      "enabled": false
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
                         }
-                      }
+                      ]
                     }
                   ]
-                },
-                "TK6pL": {
-                  "enabled": false
-                },
-                "Q7Vu5t": {
-                  "content": "Navigation stays active · Enter/Escape finishes in selected tab"
-                },
-                "AmksO": {
-                  "enabled": false
                 }
-              }
+              ]
             },
             {
               "id": "gwuvY",

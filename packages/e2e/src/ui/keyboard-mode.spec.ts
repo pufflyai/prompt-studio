@@ -27,10 +27,10 @@ test("fast entry owns keys, global navigation stays active and exits into Second
   });
   await page.keyboard.press("v");
   await page.keyboard.press("ArrowLeft");
-  await expect(page.getByRole("dialog", { name: "Keyboard menu / View", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
   await expect(draft).toHaveValue("Unsaved Secondary");
   await page.keyboard.press("Alt+Shift+4");
-  await expect(page.getByRole("dialog", { name: "Keyboard menu / View", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "PS-4", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("Enter");
   await expect(draft).toBeFocused();
@@ -84,7 +84,7 @@ test("tabs beyond nine use the picker and repeated arrows wrap", async ({ page }
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("dialog", { name: "Keyboard menu / View", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(
     page.getByRole("textbox", { name: `Draft ${firstLabel?.replace("PS-", "")}`, exact: true }),
@@ -102,6 +102,6 @@ test("search arrows skip inactive actions and leave text arrows in the input", a
   await expect(search).toBeFocused();
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("button", { name: "Find available action", exact: true })).toBeFocused();
-  await expect(page.getByRole("dialog").locator("kbd")).toHaveCount(0);
+  await expect(page.locator("[data-keyboard-choice] kbd")).toHaveCount(0);
   await page.keyboard.press("Escape");
 });

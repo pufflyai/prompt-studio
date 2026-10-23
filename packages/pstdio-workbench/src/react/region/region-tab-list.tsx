@@ -12,7 +12,7 @@ interface RegionTabListProps {
 }
 export const RegionTabList = (props: RegionTabListProps) => {
   const { activeWidgetId, disabled, panelRegion, placements, workbench } = props;
-  const { active, tabs } = useKeyboardTabs(workbench);
+  const { active, selectedId, tabs } = useKeyboardTabs(workbench);
   const numbers = new Map(tabs.map((tab) => [tab.id, tab.number]));
   return (
     <Tabs.List h="full" minH="0" w="full" alignItems="center" gap="2xs" justifyContent="flex-start">
@@ -22,6 +22,7 @@ export const RegionTabList = (props: RegionTabListProps) => {
           workbench={workbench}
           placement={placement}
           shortcutNumber={active ? numbers.get(placement.widgetId) : undefined}
+          keyboardSelected={active && selectedId === placement.widgetId}
           activeWidgetId={activeWidgetId}
           disabled={disabled}
           region={panelRegion}

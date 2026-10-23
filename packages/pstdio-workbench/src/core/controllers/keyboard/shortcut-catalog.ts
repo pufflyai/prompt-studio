@@ -8,6 +8,13 @@ import { type KeyboardPresentation, presentationResourceKey, visibleKeyboardTarg
 import { shortcutCommandArgs } from "./shortcut-command-args";
 import { shortcutActionLabel } from "./shortcut-label";
 
+const navigationLabel = (label: string) => {
+  const direction = /^(?:navigate|go) (back|forward)$/i.exec(label);
+  if (direction) return `Go ${direction[1]!.toLowerCase()}`;
+  const destination = label.replace(/^(?:open|go to)\s+/i, "");
+  return `Go to ${destination.charAt(0).toLowerCase()}${destination.slice(1)}`;
+};
+
 export interface ResolvedShortcut {
   id: string;
   label: string;
@@ -39,9 +46,18 @@ export const extensionShortcutAlias = (core: WorkbenchCore, extensionId: string)
 export const resolveShortcutCatalog = (
   core: WorkbenchCore,
   visibleTargets = visibleKeyboardTargets(core),
-): ResolvedShortcut[] =>
-  core.keybindings.listCatalog().map((declared) => {
-    const binding = core.keybindings.resolve(declared);
+): ResolvedShortcut[] => {
+  const bindings = core.keybindings.listCatalog().map((declared) => ({
+    declared,
+    binding: core.keybindings.resolve(declared),
+  }));
+  const navigation = new Set(
+    bindings
+      .filter(({ binding }) => binding.layer === "go")
+      .map(({ binding }) => getNavigationTargetKey(binding.action)),
+  );
+  return bindings.map(({ declared, binding }) => {
+    const navigates = navigation.has(getNavigationTargetKey(binding.action));
     const prefix: string[] = [];
     if (binding.layer) prefix.push(shortcutLayers[binding.layer]);
     if (binding.layer === "extensions" && binding.sourceExtensionId) {
@@ -66,13 +82,14 @@ export const resolveShortcutCatalog = (
     const contextual = Boolean(binding.targetScope && binding.targetScope !== "project") || binding.layer === "current";
     return {
       id: core.keybindings.getId(declared),
-      label: shortcutLabel(core, binding),
-      binding,
+      label: navigates ? navigationLabel(shortcutLabel(core, binding)) : shortcutLabel(core, binding),
+      binding: { ...binding, sticky: binding.sticky ?? navigates },
       keys: [...prefix, ...getKeybindingSteps(binding.keybinding).map((key) => key.toUpperCase())],
       disabled: binding.disabled || (contextual ? !targets.length : !applicable(core, binding)),
       targets,
     };
   });
+};
 export const isShortcutTargetAvailable = (
   core: WorkbenchCore,
   shortcut: ResolvedShortcut,

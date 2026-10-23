@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { getNavigationTargetKey } from "../../registries/navigation/navigation-target-key";
 import { createWorkbench } from "../../workbench-core";
+import { shortcutOpeningChord } from "./shortcut-menu";
 
 test("many shortcut hints share availability evaluation until their context changes", () => {
   const core = createWorkbench();
@@ -72,6 +73,55 @@ test("shortcut hints show the configured opening chord", async () => {
   core.keybindings.registerKeybinding({ action, keybinding: "Q", layer: "go" });
   await core.keyboard.setAssignment("workbench.keyboard.leader", { keybinding: "Alt+K" });
   core.keyboard.open();
+  expect(shortcutOpeningChord(core.keyboard.catalog())).toBe("Alt+K");
+  expect(core.keyboard.hints().get(getNavigationTargetKey(action))).toBe("G → Q");
   await core.keyboard.press("V");
-  expect(core.keyboard.hints().get(getNavigationTargetKey(action))).toBe("Alt+K → G → Q");
+  expect(core.keyboard.hints().get(getNavigationTargetKey(action))).toBeUndefined();
+});
+
+test("navigation aliases stay in shortcut mode and use the same destination label", async () => {
+  const core = createWorkbench();
+  let calls = 0;
+  core.commands.registerCommand(
+    { id: "tickets", label: "Open tickets" },
+    {
+      execute() {
+        calls++;
+      },
+    },
+  );
+  const action = { kind: "command" as const, commandId: "tickets" };
+  core.keybindings.registerKeybinding({ id: "go-tickets", action, keybinding: "P", layer: "go", sticky: true });
+  core.keybindings.registerKeybinding({ id: "direct-tickets", action, keybinding: "Alt+T" });
+  core.keyboard.open();
+  expect(
+    core.keyboard
+      .catalog()
+      .filter((entry) => entry.binding.action.kind === "command" && entry.binding.action.commandId === "tickets")
+      .map((entry) => entry.label),
+  ).toEqual(["Go to tickets", "Go to tickets"]);
+  await core.keyboard.invoke("direct-tickets");
+  expect(calls).toBe(1);
+  expect(core.keyboard.store.getState().active).toBe(true);
+  core.keybindings.registerKeybinding({ id: "one-shot", action, keybinding: "Alt+O", sticky: false });
+  await core.keyboard.invoke("one-shot");
+  expect(core.keyboard.store.getState().active).toBe(false);
+});
+
+test("the current sequence includes a completed navigation key and keeps its continuation prefix", async () => {
+  const core = createWorkbench();
+  core.commands.registerCommand({ id: "sessions", label: "Sessions" }, { execute() {} });
+  core.keybindings.registerKeybinding({
+    id: "go-sessions",
+    action: { kind: "command", commandId: "sessions" },
+    keybinding: "S",
+    layer: "go",
+  });
+  core.keyboard.open();
+  await core.keyboard.press("G");
+  await core.keyboard.press("S");
+  expect(core.keyboard.store.getState()).toMatchObject({ active: true, path: ["G"], lastKey: "S" });
+  await core.keyboard.press("Backspace");
+  expect(core.keyboard.store.getState().path).toEqual([]);
+  expect(core.keyboard.store.getState().lastKey).toBeUndefined();
 });

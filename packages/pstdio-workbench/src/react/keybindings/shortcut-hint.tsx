@@ -21,7 +21,7 @@ const ResolvedShortcutHint = (props: ShortcutHintProps) => {
   return (
     <HStack gap="xs">
       {children}
-      <PaletteShortcut binding={hint} />
+      <PaletteShortcut binding={hint.split(" → ")} />
     </HStack>
   );
 };

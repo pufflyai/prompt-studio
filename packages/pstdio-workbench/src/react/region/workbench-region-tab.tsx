@@ -63,6 +63,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
             disabled={disabled}
             aria-haspopup="menu"
             aria-expanded={behavior.menu.api.open}
+            data-keyboard-selected={props.keyboardSelected ? "" : undefined}
             aria-keyshortcuts={sortable ? "Alt+ArrowLeft Alt+ArrowRight Shift+F10" : "Shift+F10"}
             fontStyle={placement.tabRetention === "preview" ? "italic" : undefined}
             opacity={drag.isDragging ? 0.5 : undefined}

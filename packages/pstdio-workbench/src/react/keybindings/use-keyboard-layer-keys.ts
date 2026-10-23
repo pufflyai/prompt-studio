@@ -8,10 +8,10 @@ const ownsKeyboardEvent = (event: KeyboardEvent, content: HTMLElement | null, he
   const inside = Boolean(target && content?.contains(target));
   if (!inside) return !target?.closest('[role="dialog"],[role="menu"]');
   if (target?.closest('input,textarea,[contenteditable="true"]'))
-    return event.key === "ArrowUp" || event.key === "ArrowDown";
+    return event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "Escape";
   return event.key !== "Enter" || target === heading;
 };
-const focusChoice = (content: HTMLElement | null, key: string) => {
+export const focusKeyboardChoice = (content: HTMLElement | null, key: string) => {
   const rows = [
     ...(content?.querySelectorAll<HTMLElement>(
       '[data-keyboard-choice]:not([aria-disabled="true"]):not(:disabled):not([disabled])',
@@ -26,10 +26,11 @@ const focusChoice = (content: HTMLElement | null, key: string) => {
 export const useKeyboardLayerKeys = (input: {
   workbench: WorkbenchCore;
   content: RefObject<HTMLDivElement | null>;
-  heading: RefObject<HTMLHeadingElement | null>;
+  heading: RefObject<HTMLElement | null>;
   search(): void;
+  browse(direction: string, choicesVisible: boolean): void;
 }) => {
-  const { workbench, content, heading, search } = input;
+  const { workbench, content, heading, search, browse } = input;
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (!workbench.keyboard.store.getState().active || !ownsKeyboardEvent(event, content.current, heading.current))
@@ -38,7 +39,9 @@ export const useKeyboardLayerKeys = (input: {
       event.stopImmediatePropagation();
       if (event.repeat && event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-        focusChoice(content.current, event.key);
+        const choicesVisible = Boolean(content.current?.querySelector("[data-keyboard-choice]"));
+        if (choicesVisible) focusKeyboardChoice(content.current, event.key);
+        browse(event.key, choicesVisible);
         return;
       }
       if (event.key === "/") {
@@ -49,5 +52,5 @@ export const useKeyboardLayerKeys = (input: {
     };
     document.addEventListener("keydown", keydown, true);
     return () => document.removeEventListener("keydown", keydown, true);
-  }, [workbench, content, heading, search]);
+  }, [workbench, content, heading, search, browse]);
 };
