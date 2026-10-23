@@ -1,4 +1,4 @@
-import { Button, Dialog, HStack, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Dialog, Input, Text, useSlotRecipe } from "@chakra-ui/react";
 import { ListRow, PaletteShortcut, ScrollArea } from "@pstdio/ui";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
@@ -206,28 +206,11 @@ export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
               ) : null}
             </ScrollArea>
           </Dialog.Body>
-          <Dialog.Footer>
-            <Stack gap="2xs" flex="1">
-              <Text textStyle="label/XS/regular" color="fg.muted">
-                {selection
-                  ? "Choose a target · nothing is selected initially"
-                  : "← / → circulate · navigation stays active · Enter/Escape finishes"}
-              </Text>
-              {state.message ? (
-                <Text role="status" textStyle="label/XS/regular">
-                  {state.message}
-                </Text>
-              ) : null}
-            </Stack>
-            <HStack>
-              <Button size="xs" variant="ghost" onClick={() => workbench.keyboard.back()}>
-                Back
-              </Button>
-              <Button size="xs" variant="ghost" onClick={() => workbench.keyboard.finish()}>
-                {selection ? "Cancel" : "Exit"}
-              </Button>
-            </HStack>
-          </Dialog.Footer>
+          {state.message ? (
+            <Text role="status" px="sm" py="sm" textStyle="label/XS/regular">
+              {state.message}
+            </Text>
+          ) : null}
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>

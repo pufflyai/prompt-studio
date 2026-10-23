@@ -5,6 +5,7 @@ const normalizeKey = (key: string) => (key === " " ? "SPACE" : key.toUpperCase()
 export const matchesKeyboardShortcut = (event: KeyboardEvent, shortcut: WebviewKeyboardShortcut) =>
   !(event.isComposing || event.getModifierState?.("AltGraph")) &&
   (normalizeKey(event.key) === normalizeKey(shortcut.key) ||
+    (normalizeKey(shortcut.key) === "SPACE" && event.code === "Space") ||
     (/^[0-9]$/.test(shortcut.key) && event.code === `Digit${shortcut.key}`)) &&
   event.ctrlKey === Boolean(shortcut.ctrlKey) &&
   event.metaKey === Boolean(shortcut.metaKey) &&

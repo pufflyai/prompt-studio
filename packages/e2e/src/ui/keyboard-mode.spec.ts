@@ -17,7 +17,14 @@ test("fast entry owns keys, global navigation stays active and exits into Second
   await waitForStoryPlayback(page);
   const draft = page.getByRole("textbox", { name: "Draft 4", exact: true });
   await draft.fill("Unsaved Secondary");
-  await draft.press("Alt+Shift+Space");
+  await draft.dispatchEvent("keydown", {
+    key: "\u00a0",
+    code: "Space",
+    altKey: true,
+    shiftKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
   await page.keyboard.press("v");
   await page.keyboard.press("ArrowLeft");
   await expect(page.getByRole("dialog", { name: "Keyboard menu / View", exact: true })).toBeVisible();
