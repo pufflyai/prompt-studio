@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { buildPlan } from "../model/build-plan";
 import { buildTracks } from "../model/tracks";
 import type { DropTarget } from "./drag";
@@ -115,6 +115,36 @@ export const DropPreview: Story = {
 };
 export const DropOnEmptyMilestone: Story = {
   args: { preview: { dragId: "launch", dropTarget: { deadlineId: "empty" } } },
+};
+export const SharedCanvasNavigation: Story = {
+  args: { dense: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const viewport = canvas.getByRole("region", { name: "Project Timeline canvas" });
+    await expect(canvas.getByRole("group", { name: "Canvas zoom" })).toBeVisible();
+    viewport.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(viewport.scrollTop).toBeGreaterThan(0);
+    await userEvent.click(canvas.getByRole("button", { name: "Zoom out" }));
+    await expect(canvas.getByRole("button", { name: /Reset zoom to/ })).toHaveTextContent("90%");
+    await userEvent.click(canvas.getByRole("button", { name: /Reset zoom to/ }));
+    await expect(canvas.getByRole("button", { name: /Reset zoom to/ })).toHaveTextContent("100%");
+    viewport.scrollTo({ top: 0 });
+    const bounds = viewport.getBoundingClientRect();
+    for (const deltaY of [100, 100, -100]) {
+      viewport.dispatchEvent(
+        new WheelEvent("wheel", {
+          bubbles: true,
+          cancelable: true,
+          ctrlKey: true,
+          deltaY,
+          clientX: bounds.left + 300,
+          clientY: bounds.top + 300,
+        }),
+      );
+    }
+    await waitFor(() => expect(viewport.scrollTop).toBeGreaterThan(25));
+  },
 };
 // Panning focuses the canvas for arrow keys without drawing a keyboard focus ring.
 export const PanWithoutFocusRing: Story = {

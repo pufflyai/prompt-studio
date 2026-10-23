@@ -87,10 +87,9 @@ export function registerPackagedShowcaseSmokeTests() {
           existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "milestone-eta.tsx")),
         ).toBe(true);
         expect(
-          existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "use-canvas-pan.ts")),
-        ).toBe(true);
-        expect(
-          existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "use-canvas-zoom.ts")),
+          existsSync(
+            join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "use-timeline-camera.ts"),
+          ),
         ).toBe(true);
         expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "views", "workflow-settings.ts"))).toBe(
           true,

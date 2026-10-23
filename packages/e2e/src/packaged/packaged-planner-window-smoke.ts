@@ -16,6 +16,9 @@ export async function expectPlannerWindow(timeline: FrameLocator, execute: Execu
   const search = timeline.getByRole("textbox", { name: "Search this view", exact: true });
   await search.fill("Windowed");
   const viewport = timeline.locator("[data-timeline-viewport]");
+  const zoomControls = timeline.getByRole("group", { name: "Canvas zoom", exact: true });
+  await expect(zoomControls).toBeVisible();
+  const controlsPosition = await zoomControls.boundingBox();
   const cards = timeline.locator("[data-ticket]");
   const first = timeline.locator(`[data-ticket="${tickets[0]!.id}"]`);
   await expect(first).toBeInViewport();
@@ -27,6 +30,7 @@ export async function expectPlannerWindow(timeline: FrameLocator, execute: Execu
   await viewport.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
   const last = timeline.locator(`[data-ticket="${tickets.at(-1)!.id}"]`);
   await expect(last).toBeInViewport();
+  await expect.poll(() => zoomControls.boundingBox()).toEqual(controlsPosition);
   await expect
     .poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop))
     .toBeLessThanOrEqual(1);
@@ -50,5 +54,23 @@ export async function expectPlannerWindow(timeline: FrameLocator, execute: Execu
   await expect(first).toBeAttached();
   await expect.poll(() => first.evaluate((card) => card.contains(card.ownerDocument.activeElement))).toBe(true);
   await viewport.focus();
+  await timeline.getByRole("button", { name: /Reset zoom to/ }).click();
+  await viewport.evaluate((element) => {
+    element.scrollTo({ top: 0 });
+    const bounds = element.getBoundingClientRect();
+    for (const deltaY of [100, 100, -100]) {
+      element.dispatchEvent(
+        new WheelEvent("wheel", {
+          bubbles: true,
+          cancelable: true,
+          ctrlKey: true,
+          deltaY,
+          clientX: bounds.left + 300,
+          clientY: bounds.top + 300,
+        }),
+      );
+    }
+  });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(25);
   await search.press("Escape");
 }

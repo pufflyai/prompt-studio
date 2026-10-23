@@ -27,6 +27,7 @@ export function InlineText(props: InlineTextProps) {
 
   return (
     <Editable.Root
+      data-canvas-control
       value={draft}
       placeholder={placeholder}
       activationMode="click"
