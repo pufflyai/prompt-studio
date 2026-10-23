@@ -3,4 +3,4 @@
 "@pstdio/workbench": patch
 ---
 
-Preserve hidden collection page state while deferring its rendering and subscriptions until the page is visible.
+Reuse installed default extensions and preserve hidden collection page state while deferring rendering until the page is visible.
