@@ -3,4 +3,4 @@
 "@pstdio/ui": minor
 ---
 
-Add a shared Canvas viewport with pan, anchored zoom, keyboard navigation, and live-content interaction routing.
+Add a shared dotted Canvas viewport with floating zoom controls, configurable scale limits, and shared navigation gestures.

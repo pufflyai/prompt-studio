@@ -89,7 +89,7 @@ import { createElement } from "react";
 import { BubblePanel, Canvas, ListRow, TreeList, zoomCanvas, type CanvasCamera } from "@pstdio/ui";
 let camera: CanvasCamera = { x: 0, y: 0, zoom: 1 };
 const canvas = createElement(Canvas, {
-  "aria-label": "Design canvas", variant: "pan",
+  "aria-label": "Design canvas", variant: "pan", zoom: camera.zoom, minZoom: 0.1, maxZoom: 4,
   onPan: (delta) => { camera = { ...camera, x: camera.x + delta.x, y: camera.y + delta.y }; },
   onZoom: (change) => { camera = zoomCanvas(camera, change, { minZoom: 0.1, maxZoom: 4 }); },
 });

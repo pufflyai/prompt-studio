@@ -2,7 +2,7 @@ import { Box, Button, Dialog, Flex, Input, Popover, Portal, Stack, Text } from "
 import { useLayoutEffect, useRef, useState } from "react";
 import { ScrollArea } from "../primitives/scroll-area";
 import { Canvas } from "./canvas";
-import type { CanvasCamera, CanvasPoint, CanvasZoomChange } from "./canvas.types";
+import type { CanvasCamera, CanvasPoint, CanvasProps, CanvasZoomChange } from "./canvas.types";
 import { zoomCanvas } from "./canvas-geometry";
 
 const PreviewControls = () => {
@@ -53,12 +53,14 @@ const PreviewControls = () => {
   );
 };
 
-export const FreeformCanvasExample = () => {
+export const FreeformCanvasExample = (props: Pick<CanvasProps, "minZoom" | "maxZoom">) => {
+  const { minZoom = 0.1, maxZoom = 4 } = props;
   const viewport = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const camera = useRef<CanvasCamera>({ x: 24, y: 24, zoom: 1 });
   const frame = useRef(0);
   const [ended, setEnded] = useState(0);
+  const [scale, setScale] = useState(1);
   const paint = () => {
     if (frame.current) return;
     frame.current = requestAnimationFrame(() => {
@@ -72,16 +74,22 @@ export const FreeformCanvasExample = () => {
     paint();
   };
   const zoom = (change: CanvasZoomChange) => {
-    camera.current = zoomCanvas(camera.current, change, { minZoom: 0.1, maxZoom: 4 });
+    camera.current = zoomCanvas(camera.current, change, { minZoom, maxZoom });
+    setScale(camera.current.zoom);
     paint();
   };
   const reset = () => {
     camera.current = { x: 24, y: 24, zoom: 1 };
+    setScale(1);
     paint();
   };
   const fit = () => {
-    const scale = Math.min((viewport.current!.clientWidth - 48) / 800, (viewport.current!.clientHeight - 48) / 380, 1);
+    const scale = Math.max(
+      minZoom,
+      Math.min((viewport.current!.clientWidth - 48) / 800, (viewport.current!.clientHeight - 48) / 380, maxZoom),
+    );
     camera.current = { x: 24, y: 24, zoom: scale };
+    setScale(scale);
     paint();
   };
   useLayoutEffect(() => {
@@ -92,12 +100,6 @@ export const FreeformCanvasExample = () => {
   return (
     <Flex direction="column" h="600px" minW="0">
       <Flex gap="xs" align="center" p="xs" wrap="wrap">
-        <Button size="xs" onClick={() => zoom({ factor: 0.8, anchor: { x: 400, y: 250 } })}>
-          Zoom out
-        </Button>
-        <Button size="xs" onClick={() => zoom({ factor: 1.25, anchor: { x: 400, y: 250 } })}>
-          Zoom in
-        </Button>
         <Button size="xs" onClick={fit}>
           Fit all
         </Button>
@@ -112,6 +114,9 @@ export const FreeformCanvasExample = () => {
         ref={viewport}
         flex="1"
         aria-label="Live designs canvas"
+        zoom={scale}
+        minZoom={minZoom}
+        maxZoom={maxZoom}
         onPan={pan}
         onZoom={zoom}
         onFit={fit}
@@ -161,7 +166,8 @@ export const FreeformCanvasExample = () => {
   );
 };
 
-export const ScrollCanvasExample = () => {
+export const ScrollCanvasExample = (props: Pick<CanvasProps, "onScroll">) => {
+  const { onScroll } = props;
   const viewport = useRef<HTMLDivElement>(null);
   const pending = useRef<CanvasCamera | undefined>(undefined);
   const currentZoom = useRef(1);
@@ -190,18 +196,16 @@ export const ScrollCanvasExample = () => {
   };
   return (
     <Flex h="600px" direction="column" minW="0">
-      <Flex gap="xs" p="xs" align="center">
-        <Button size="xs" onClick={() => changeZoom({ factor: 0.8, anchor: { x: 400, y: 250 } })}>
-          Zoom out
-        </Button>
-        <Button size="xs" onClick={() => changeZoom({ factor: 1.25, anchor: { x: 400, y: 250 } })}>
-          Zoom in
-        </Button>
-        <Text textStyle="label/XS" role="status">
-          {Math.round(zoom * 100)}%
-        </Text>
-      </Flex>
-      <Canvas ref={viewport} flex="1" variant="pan" aria-label="Timeline canvas" onPan={pan} onZoom={changeZoom}>
+      <Canvas
+        ref={viewport}
+        flex="1"
+        variant="pan"
+        aria-label="Timeline canvas"
+        zoom={zoom}
+        onPan={pan}
+        onZoom={changeZoom}
+        onScroll={onScroll}
+      >
         <Box position="relative" w="2000px" h="1600px" css={{ zoom }} data-example-scroll-content>
           <Flex
             position="sticky"
@@ -238,9 +242,16 @@ export const ScrollCanvasExample = () => {
 
 export const FlowCanvasExample = () => {
   const [clicked, setClicked] = useState(false);
+  const [zoom, setZoom] = useState(1);
   return (
-    <Canvas aria-label="Flow canvas" onPan={() => {}} onZoom={() => {}} h="400px">
-      <Stack gap="md" p="md" maxW="sm" data-canvas-control>
+    <Canvas
+      aria-label="Flow canvas"
+      zoom={zoom}
+      onPan={() => {}}
+      onZoom={(change) => setZoom((value) => value * change.factor)}
+      h="400px"
+    >
+      <Stack gap="md" p="md" maxW="sm" css={{ zoom }} data-canvas-control>
         <Input aria-label="Flow draft" placeholder="Normal-flow content" />
         <Button onClick={() => setClicked(true)}>{clicked ? "Clicked" : "Click me"}</Button>
       </Stack>

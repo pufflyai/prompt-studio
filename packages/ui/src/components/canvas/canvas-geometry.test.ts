@@ -1,5 +1,21 @@
 import { expect, test } from "bun:test";
-import { zoomCanvas } from "./canvas-geometry";
+import { constrainCanvasZoom, zoomCanvas } from "./canvas-geometry";
+
+test("canvas navigation constrains every zoom request and keeps moving anchors at a limit", () => {
+  const anchor = { x: 100, y: 50 };
+  const targetAnchor = { x: 120, y: 70 };
+  const limits = { minZoom: 0.5, maxZoom: 2 };
+  expect(constrainCanvasZoom(1, { factor: 10, anchor }, limits)).toEqual({
+    zoom: 2,
+    change: { factor: 2, anchor },
+  });
+  expect(constrainCanvasZoom(1, { factor: 0.01, anchor }, limits)?.zoom).toBe(0.5);
+  expect(constrainCanvasZoom(2, { factor: 2, anchor, targetAnchor }, limits)).toEqual({
+    zoom: 2,
+    change: { factor: 1, anchor, targetAnchor },
+  });
+  expect(constrainCanvasZoom(1, { factor: Number.NaN, anchor }, limits)).toBeUndefined();
+});
 
 test("canvas zoom preserves the world point beneath the pointer in both directions", () => {
   const camera = { x: 100, y: -50, zoom: 0.5 };

@@ -37,8 +37,14 @@ type OwnedHandlers =
   | "onClickCapture"
   | "onAuxClickCapture";
 export interface CanvasProps
-  extends Omit<BoxProps, OwnedHandlers | keyof CanvasNavigation>,
+  extends Omit<BoxProps, OwnedHandlers | keyof CanvasNavigation | "zoom">,
     CanvasNavigation,
     RecipeVariantProps<typeof canvasRecipe> {
   ref?: Ref<HTMLDivElement>;
+  /** Controlled current scale. Update this when onZoom changes the caller's camera. */
+  zoom: number;
+  /** Positive lower scale bound. Defaults to 0.25 (25%). */
+  minZoom?: number;
+  /** Upper scale bound, at least minZoom. Defaults to 1 (100%). */
+  maxZoom?: number;
 }
