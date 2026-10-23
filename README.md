@@ -11,7 +11,6 @@
   <a href="https://github.com/pufflyai/prompt-studio/actions/workflows/coverage.yml"><img alt="Coverage" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpufflyai%2Fprompt-studio%2Fbadges%2Fcoverage.json&style=flat-square" /></a>
   <a href="https://github.com/pufflyai/prompt-studio/blob/main/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" /></a>
   <img alt="Status: alpha" src="https://img.shields.io/badge/status-alpha-d69e2e?style=flat-square" />
-  <a href="https://coderabbit.ai"><img alt="CodeRabbit Pull Request Reviews" src="https://img.shields.io/coderabbit/prs/github/pufflyai/prompt-studio?utm_source=oss&utm_medium=github&utm_campaign=pufflyai%2Fprompt-studio&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews" /></a>
 </p>
 
 <p align="center">
