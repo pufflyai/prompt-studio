@@ -82,11 +82,16 @@ const updateIgnore = async (repoRoot: string, owners: readonly ExtensionStorageO
   const existing = (await exists(ignorePath)) ? await readFile(ignorePath, "utf8") : "";
   const rules = new Set(existing.split("\n").filter(Boolean));
   for (const owner of owners) {
-    const name = owner.extensionId.split(".")[1]!;
+    const [publisher, name] = owner.extensionId.split(".") as [string, string];
+    const directory = `/extension-storage/${extensionStorageDirectory(owner.extensionId)}/`;
     rules.add(`/extension-storage/${name}`);
-    rules.add(`/extension-storage/${extensionStorageDirectory(owner.extensionId)}/.publishers/`);
-    if (rules.has(`/extension-storage/${name}/`)) {
-      rules.add(`/extension-storage/${extensionStorageDirectory(owner.extensionId)}/`);
+    rules.add(`${directory}.publishers/`);
+    if (rules.has(`/extension-storage/${name}/`)) rules.add(directory);
+    // Private files moved from the publisher folder into the full-ID folder keep their
+    // exclusion, in the owned form that ctx.extensionFiles maintains.
+    if (rules.has(`/extension-storage/${name}/.publishers/${publisher}/`) && !rules.has(directory)) {
+      rules.add(`# pstdio:ignore-owned ${directory}`);
+      rules.add(directory);
     }
   }
   const next = `${[...rules].join("\n")}\n`;

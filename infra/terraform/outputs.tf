@@ -9,7 +9,7 @@ output "relay_url" {
 }
 
 output "psx_url" {
-  value = "https://${var.host}${var.psx_path}"
+  value = contains(var.services, "psx") ? "https://${var.host}${var.psx_path}" : null
 }
 
 output "app_id" {

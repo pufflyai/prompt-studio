@@ -47,6 +47,6 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
   // Advancing the owner revision rejects cursors issued before the purge.
   await tx
     .update(storage_record_projections)
-    .set({ revision: sql`${storage_record_projections.revision} + 1` })
+    .set({ revision: sql`${storage_record_projections.revision} + 1`, live_count: 0 })
     .where(ownerWhere(storage_record_projections));
 };

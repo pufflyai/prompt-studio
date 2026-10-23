@@ -61,3 +61,14 @@ test("preserves every persisted publisher when only one owner is enabled", async
     readFile(join(root, ".pstdio/extension-storage/alice.notes/.publishers/bob/private.json")),
   ).rejects.toThrow();
 });
+test("keeps moved private files excluded from Git", async () => {
+  const root = await fixture();
+  const git = (...args: string[]) => Bun.spawnSync(["git", ...args], { cwd: root });
+  git("init", "-q");
+  await mkdir(join(root, ".pstdio/extension-storage/notes/.publishers/alice"), { recursive: true });
+  await writeFile(join(root, ".pstdio/extension-storage/notes/.publishers/alice/draft.md"), "private");
+  const previousRule = "/extension-storage/notes/.publishers/alice/";
+  await writeFile(join(root, ".pstdio/.gitignore"), `# pstdio:ignore-owned ${previousRule}\n${previousRule}\n`);
+  await migrateExtensionStorage(root, [{ name: "notes", extensionId: "alice.notes" }]);
+  expect(git("check-ignore", "-q", ".pstdio/extension-storage/alice.notes/draft.md").exitCode).toBe(0);
+});
