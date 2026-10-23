@@ -1,21 +1,34 @@
 import { defineCommand, type ExtensionStorageApi, l10n, params } from "@pstdio/sdk/extensions";
-import type { MarmaladeAction, MarmaladeState } from "./marmalade.types";
+import type { MarmaladeAction, MarmaladeState, MarmaladeViewState } from "./marmalade.types";
 import { createMarmaladeState } from "./marmalade-data";
-import { applyMarmaladeAction } from "./marmalade-document";
 import { marmaladeChanged } from "./marmalade-events";
+import { applyMarmaladeHistory, type MarmaladeHistory } from "./marmalade-history";
 
-const writes = new Map<string, Promise<MarmaladeState>>();
+const writes = new Map<string, Promise<MarmaladeViewState>>();
 const read = async (storage: ExtensionStorageApi) => {
-  const record = await storage.records.read(storage.records.id("marmalade:great-wave"));
-  return record.exists && !record.deleted ? (record.value as unknown as MarmaladeState) : createMarmaladeState();
+  const [record, savedHistory] = await Promise.all([
+    storage.records.read(storage.records.id("marmalade:great-wave")),
+    storage.records.read(storage.records.id("marmalade:history")),
+  ]);
+  const state = record.exists && !record.deleted ? (record.value as unknown as MarmaladeState) : createMarmaladeState();
+  const history: MarmaladeHistory =
+    savedHistory.exists && !savedHistory.deleted
+      ? (savedHistory.value as unknown as MarmaladeHistory)
+      : { past: [], future: [] };
+  return { state, history };
 };
+const viewState = (state: MarmaladeState, history: MarmaladeHistory) => ({
+  ...state,
+  history: { undo: history.past.length, redo: history.future.length },
+});
 export const readMarmalade = defineCommand({
   id: "marmalade.read",
   title: l10n("commands.marmaladeRead", "Read Marmalade document"),
   cli: { path: ["marmalade", "read"] },
   async run(ctx) {
     await writes.get(ctx.projectId)?.catch(() => undefined);
-    return read(ctx.storage);
+    const { state, history } = await read(ctx.storage);
+    return viewState(state, history);
   },
 });
 export const editMarmalade = defineCommand({
@@ -29,16 +42,24 @@ export const editMarmalade = defineCommand({
     const pending = (writes.get(ctx.projectId) ?? Promise.resolve())
       .catch(() => undefined)
       .then(async () => {
-        const next = applyMarmaladeAction(await read(ctx.storage), input.action);
+        const { state, history } = await read(ctx.storage);
+        const next = applyMarmaladeHistory(state, history, input.action);
         const outcome = await ctx.storage.records.commit({
           operationId: ctx.storage.ids.create(),
           edits: [
-            { recordId: ctx.storage.records.id("marmalade:great-wave"), replace: JSON.parse(JSON.stringify(next)) },
+            {
+              recordId: ctx.storage.records.id("marmalade:great-wave"),
+              replace: JSON.parse(JSON.stringify(next.state)),
+            },
+            {
+              recordId: ctx.storage.records.id("marmalade:history"),
+              replace: JSON.parse(JSON.stringify(next.history)),
+            },
           ],
         });
         if (outcome.state === "needs-attention") throw new Error(outcome.reason ?? "The document could not be saved");
         await ctx.events.emit(marmaladeChanged, {});
-        return next;
+        return viewState(next.state, next.history);
       });
     writes.set(ctx.projectId, pending);
     try {

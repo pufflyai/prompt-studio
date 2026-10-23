@@ -51,6 +51,12 @@ test("Marmalade shares layer edits across its views, public commands, and reopen
     await inspector.getByRole("textbox", { name: "Layer text" }).blur();
     await expect(canvas.getByText("Ocean study", { exact: true })).toBeVisible();
 
+    // A command can replace the focused property panel before its draft timer fires.
+    await inspector.getByRole("textbox", { name: "Layer text" }).fill("Remote selection draft");
+    await edit(request, projectId, { type: "select", ids: ["credit"] });
+    await expect(canvas.getByText("Remote selection draft", { exact: true })).toBeVisible();
+    await edit(request, projectId, { type: "select", ids: ["title"] });
+
     await inspector.getByRole("option", { name: "Credit", exact: true }).click({ modifiers: ["ControlOrMeta"] });
     await expect(title).toHaveAttribute("aria-selected", "true");
     await title.focus();
@@ -131,7 +137,7 @@ test("Marmalade pointer tools use document coordinates and layer controls do not
     await rail.getByRole("button", { name: "Hand tool" }).click();
     await expect(rail.getByRole("button", { name: "Hand tool" })).toHaveAttribute("aria-pressed", "true");
     const outerScale = await canvas
-      .locator("svg[role=img]")
+      .locator('svg[aria-label="Marmalade document canvas"]')
       .evaluate((element) => (element as SVGSVGElement).getScreenCTM()!.a);
     const before = await layer.boundingBox();
     await page.mouse.move(before!.x + 8, before!.y + 8);
@@ -187,6 +193,176 @@ test("Marmalade pointer tools use document coordinates and layer controls do not
     await expect(inspector.getByRole("option", { name: "Credit", exact: true })).toHaveAttribute("aria-level", "1");
     await expect(artwork).toBeFocused();
     await test.info().attach("Marmalade pointer tools", { body: await page.screenshot(), contentType: "image/png" });
+  } finally {
+    if (ownProject) await request.delete(`/v1/projects/${projectId}`);
+  }
+});
+
+test("Marmalade creates artwork, edits properties, groups layers, and shares undo history", async ({
+  page,
+  request,
+}) => {
+  let projectId = process.env.MARMALADE_PROJECT_ID;
+  const ownProject = !projectId;
+  if (!projectId) {
+    const created = await request.post("/v1/projects", { data: folderProjectInput({ name: "Marmalade authoring" }) });
+    expect(created.ok()).toBe(true);
+    projectId = (await created.json()).id as string;
+  }
+  try {
+    await edit(request, projectId, { type: "reset" });
+    await page.addInitScript(() => {
+      if (window === window.top) localStorage.setItem("onboarding-complete", "true");
+    });
+    await page.goto(`/projects/${projectId}`);
+    await page.getByRole("option", { name: "Marmalade", exact: true }).click();
+    const inspector = page.frameLocator('iframe[title="Properties and layers"]');
+    const canvas = page.frameLocator('iframe[title="Great Wave"]');
+    const rail = page.frameLocator('iframe[title="Marmalade tools"]');
+    const drawing = canvas.locator('svg[aria-label="Marmalade document canvas"]');
+    await drawing.waitFor();
+    await rail.getByRole("button", { name: "Rectangle tool" }).click();
+    await expect(rail.getByRole("button", { name: "Rectangle tool" })).toHaveAttribute("aria-pressed", "true");
+    const bounds = await drawing.boundingBox();
+    await page.mouse.move(bounds!.x + bounds!.width * 0.2, bounds!.y + bounds!.height * 0.3);
+    await page.mouse.down();
+    await page.mouse.move(bounds!.x + bounds!.width * 0.4, bounds!.y + bounds!.height * 0.45, { steps: 8 });
+    await page.mouse.up();
+    await expect(inspector.getByRole("option", { name: "Rectangle", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await inspector.getByRole("spinbutton", { name: "Layer width", exact: true }).fill("260");
+    await inspector.getByRole("spinbutton", { name: "Layer width", exact: true }).blur();
+    await inspector.getByRole("spinbutton", { name: "Layer rotation", exact: true }).fill("25");
+    await inspector.getByRole("spinbutton", { name: "Layer rotation", exact: true }).blur();
+    await expect(canvas.getByRole("button", { name: "Canvas layer: Rectangle", exact: true })).toHaveAttribute(
+      "transform",
+      /rotate\(25 /,
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Canvas layer: Rectangle", exact: true }).locator("rect").first(),
+    ).toHaveAttribute("width", "260");
+    await inspector.getByRole("button", { name: "Duplicate layers", exact: true }).click();
+    await expect(inspector.getByRole("option", { name: "Rectangle copy", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await inspector.getByRole("option", { name: "Rectangle", exact: true }).click({ modifiers: ["ControlOrMeta"] });
+    await inspector.getByRole("button", { name: "Group layers", exact: true }).click();
+    await expect(inspector.getByRole("option", { name: "Group", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await inspector.getByRole("button", { name: "Ungroup layers", exact: true }).click();
+    await expect(inspector.getByRole("option", { name: "Group", exact: true })).toHaveCount(0);
+    await inspector.getByRole("button", { name: "Delete layers", exact: true }).click();
+    await expect(canvas.getByRole("button", { name: "Canvas layer: Rectangle", exact: true })).toHaveCount(0);
+    await canvas.getByRole("button", { name: "Undo", exact: true }).click();
+    await expect(canvas.getByRole("button", { name: "Canvas layer: Rectangle", exact: true })).toBeVisible();
+    await canvas.getByRole("button", { name: "Redo", exact: true }).click();
+    await expect(canvas.getByRole("button", { name: "Canvas layer: Rectangle", exact: true })).toHaveCount(0);
+
+    await rail.getByRole("button", { name: "Brush tool" }).click();
+    await expect(rail.getByRole("button", { name: "Brush tool" })).toHaveAttribute("aria-pressed", "true");
+    await page.mouse.move(bounds!.x + 100, bounds!.y + 100);
+    await page.mouse.down();
+    await page.mouse.move(bounds!.x + 180, bounds!.y + 140, { steps: 6 });
+    await page.mouse.move(bounds!.x + 240, bounds!.y + 110, { steps: 6 });
+    await page.mouse.up();
+    const stroke = canvas.getByRole("button", { name: "Canvas layer: Brush stroke", exact: true });
+    await expect(stroke.locator("polyline")).toBeVisible();
+    await inspector.getByRole("spinbutton", { name: "Layer stroke width" }).fill("16");
+    await inspector.getByRole("spinbutton", { name: "Layer stroke width" }).blur();
+    await expect(stroke.locator("polyline")).toHaveAttribute("stroke-width", "16");
+    await stroke.focus();
+    await page.keyboard.press("ControlOrMeta+z");
+    await expect(stroke.locator("polyline")).toHaveAttribute("stroke-width", "8");
+    await page.keyboard.press("ControlOrMeta+Shift+z");
+    await expect(stroke.locator("polyline")).toHaveAttribute("stroke-width", "16");
+
+    await inspector.getByRole("button", { name: "Add text layer", exact: true }).click();
+    await inspector.getByRole("textbox", { name: "Layer text", exact: true }).fill("Marmalade studio");
+    await inspector.getByRole("textbox", { name: "Layer text", exact: true }).blur();
+    await inspector.getByRole("spinbutton", { name: "Layer font size", exact: true }).fill("64");
+    await inspector.getByRole("spinbutton", { name: "Layer font size", exact: true }).blur();
+    await expect(canvas.getByText("Marmalade studio", { exact: true })).toHaveCSS("font-size", "64px");
+    await page.reload();
+    await expect(canvas.getByText("Marmalade studio", { exact: true })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Undo", exact: true })).toBeEnabled();
+    await inspector.getByRole("option", { name: "Great Wave", exact: true }).click();
+    const image = canvas.locator("image");
+    const before = await image.screenshot();
+    await inspector.getByRole("spinbutton", { name: "Layer saturation", exact: true }).fill("0");
+    await inspector.getByRole("spinbutton", { name: "Layer saturation", exact: true }).blur();
+    await expect(canvas.locator("feColorMatrix")).toHaveAttribute("values", "0");
+    const after = await image.screenshot();
+    expect(after.equals(before)).toBe(false);
+    await inspector.getByRole("button", { name: "Reset adjustments", exact: true }).click();
+    await expect(image).not.toHaveAttribute("filter");
+    await page.setViewportSize({ width: 900, height: 900 });
+    await expect(inspector.getByRole("spinbutton", { name: "Layer brightness", exact: true })).toBeVisible();
+    await test.info().attach("Marmalade authoring", { body: await page.screenshot(), contentType: "image/png" });
+  } finally {
+    if (ownProject) await request.delete(`/v1/projects/${projectId}`);
+  }
+});
+
+test("Marmalade draws ellipses and creates styled type directly on the canvas", async ({ page, request }) => {
+  let projectId = process.env.MARMALADE_PROJECT_ID;
+  const ownProject = !projectId;
+  if (!projectId) {
+    const created = await request.post("/v1/projects", {
+      data: folderProjectInput({ name: "Marmalade type and shape" }),
+    });
+    expect(created.ok()).toBe(true);
+    projectId = (await created.json()).id as string;
+  }
+  try {
+    await edit(request, projectId, { type: "reset" });
+    await page.addInitScript(() => {
+      if (window === window.top) localStorage.setItem("onboarding-complete", "true");
+    });
+    await page.goto(`/projects/${projectId}`);
+    await page.getByRole("option", { name: "Marmalade", exact: true }).click();
+    const inspector = page.frameLocator('iframe[title="Properties and layers"]');
+    const canvas = page.frameLocator('iframe[title="Great Wave"]');
+    const rail = page.frameLocator('iframe[title="Marmalade tools"]');
+    const drawing = canvas.locator('svg[aria-label="Marmalade document canvas"]');
+    await drawing.waitFor();
+    await rail.getByRole("button", { name: "Ellipse tool" }).click();
+    await expect(rail.getByRole("button", { name: "Ellipse tool" })).toHaveAttribute("aria-pressed", "true");
+    const bounds = await drawing.boundingBox();
+    await page.mouse.move(bounds!.x + 100, bounds!.y + 100);
+    await page.mouse.down();
+    await page.mouse.move(bounds!.x + 260, bounds!.y + 220, { steps: 8 });
+    await page.mouse.up();
+    const ellipse = canvas.getByRole("button", { name: "Canvas layer: Ellipse", exact: true }).locator("ellipse");
+    await expect(ellipse).toBeVisible();
+    const color = inspector.locator('[data-scope="color-picker"][data-part="channel-input"]');
+    await color.fill("#ff8800");
+    await color.blur();
+    await expect(ellipse).toHaveAttribute("fill", /#ff8800/i);
+    await rail.getByRole("button", { name: "Text tool" }).click();
+    await expect(rail.getByRole("button", { name: "Text tool" })).toHaveAttribute("aria-pressed", "true");
+    await drawing.click({ position: { x: 300, y: 260 } });
+    await expect(inspector.getByRole("option", { name: "Text", exact: true })).toHaveAttribute("aria-selected", "true");
+    await inspector.getByRole("textbox", { name: "Layer text", exact: true }).fill("Brush and type");
+    await inspector.getByRole("textbox", { name: "Layer text", exact: true }).blur();
+    await expect(rail.getByRole("button", { name: "Text tool" })).toHaveAttribute("aria-pressed", "true");
+    await inspector.getByRole("button", { name: "Regular", exact: true }).click();
+    await inspector.getByRole("menuitemradio", { name: "Bold", exact: true }).click();
+    await inspector.getByRole("button", { name: "Sans serif", exact: true }).click();
+    await inspector.getByRole("menuitemradio", { name: "Serif", exact: true }).click();
+    await inspector.getByRole("button", { name: "Left", exact: true }).click();
+    await inspector.getByRole("menuitemradio", { name: "Center", exact: true }).click();
+    const text = canvas.getByText("Brush and type", { exact: true });
+    await expect(text).toHaveAttribute("font-weight", "700");
+    await expect(text).toHaveAttribute("font-family", "serif");
+    await expect(text).toHaveAttribute("text-anchor", "middle");
+    await page.reload();
+    await expect(text).toHaveAttribute("font-weight", "700");
+    await expect(ellipse).toHaveAttribute("fill", /#ff8800/i);
   } finally {
     if (ownProject) await request.delete(`/v1/projects/${projectId}`);
   }

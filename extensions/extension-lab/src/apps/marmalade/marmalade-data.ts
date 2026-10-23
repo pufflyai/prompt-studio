@@ -30,6 +30,7 @@ export const createMarmaladeState = () => {
           width: 630,
           height: 54,
           text: "The Great Wave",
+          fontSize: 48,
         }),
         layer({
           id: "credit",
@@ -41,6 +42,7 @@ export const createMarmaladeState = () => {
           width: 630,
           height: 30,
           text: "Katsushika Hokusai · c. 1831 · public domain",
+          fontSize: 23,
         }),
         layer({
           id: "card",

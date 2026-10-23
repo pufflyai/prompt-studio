@@ -1,10 +1,10 @@
-import { Box, Button, chakra, HStack, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, ScrollArea, TreeList, type TreeListNode } from "@pstdio/ui";
+import { Button, HStack, IconButton, Stack, Text, useRecipe } from "@chakra-ui/react";
+import { EmptyState, psTheme, ScrollArea, Tooltip, TreeList, type TreeListNode } from "@pstdio/ui";
 import { ExampleIcon } from "../../icon";
-import type { MarmaladeAction, MarmaladeLayer, MarmaladeState } from "./marmalade.types";
-import { marmaladeLocked } from "./marmalade-document";
+import type { MarmaladeAction, MarmaladeState } from "./marmalade.types";
+import { marmaladeLocked, selectedBlock, selectedRoots } from "./marmalade-layers";
 import { MarmaladePreview } from "./marmalade-preview";
-import { MarmaladePropertyInput } from "./marmalade-property-input";
+import { MarmaladeProperties } from "./marmalade-properties";
 import { marmaladeStore, useMarmalade } from "./marmalade-store";
 
 const layerNodes = (state: MarmaladeState, dispatch: (action: MarmaladeAction) => void, parentId?: string) => {
@@ -47,94 +47,60 @@ const layerNodes = (state: MarmaladeState, dispatch: (action: MarmaladeAction) =
   return nodes;
 };
 
-const MarmaladeProperties = (props: { state: MarmaladeState; layer: MarmaladeLayer }) => {
-  const { state, layer } = props;
-  const disabled = marmaladeLocked(state, layer);
-  const dispatch = (action: MarmaladeAction) => {
-    void marmaladeStore.dispatch(action);
-  };
-  return (
-    <Stack gap="sm" p="sm" borderBottomWidth="1px" borderColor="border.subtle">
-      <Text textStyle="label/S/medium">Properties · {layer.name}</Text>
-      <HStack gap="sm">
-        {(["x", "y"] as const).map((axis) => (
-          <Stack key={axis} gap="2xs" flex="1" minW="0">
-            <chakra.label htmlFor={`photo-${axis}`} color="fg.muted" textStyle="label/XS">
-              {axis.toUpperCase()}
-            </chakra.label>
-            <MarmaladePropertyInput
-              id={`photo-${axis}`}
-              label={`Layer ${axis.toUpperCase()}`}
-              type="number"
-              value={layer[axis]}
-              disabled={disabled}
-              onEdit={(raw) => {
-                const value = Number(raw);
-                if (raw && Number.isFinite(value)) dispatch({ type: "position", id: layer.id, [axis]: value });
-              }}
-            />
-          </Stack>
-        ))}
-      </HStack>
-      <HStack gap="sm">
-        <chakra.label htmlFor="photo-opacity" textStyle="label/XS" color="fg.muted">
-          Opacity
-        </chakra.label>
-        <MarmaladePropertyInput
-          id="photo-opacity"
-          label="Layer opacity"
-          type="number"
-          min={0}
-          max={100}
-          value={Math.round(layer.opacity * 100)}
-          disabled={disabled}
-          onEdit={(raw) => {
-            const value = Number(raw);
-            if (raw && Number.isFinite(value)) dispatch({ type: "opacity", id: layer.id, opacity: value / 100 });
-          }}
-        />
-        <Text textStyle="label/XS" color="fg.muted">
-          %
-        </Text>
-      </HStack>
-      {layer.kind === "text" ? (
-        <Stack gap="2xs">
-          <chakra.label htmlFor="photo-text" textStyle="label/XS" color="fg.muted">
-            Text
-          </chakra.label>
-          <MarmaladePropertyInput
-            id="photo-text"
-            label="Layer text"
-            value={layer.text ?? ""}
-            disabled={disabled}
-            onEdit={(text) => dispatch({ type: "text", id: layer.id, text })}
-          />
-        </Stack>
-      ) : null}
-      {disabled ? (
-        <Text textStyle="label/XS" color="fg.muted">
-          Locked layers remain readable. Unlock their group to edit.
-        </Text>
-      ) : null}
-    </Stack>
-  );
-};
-
 export const MarmaladeInspector = () => {
   const { state, error } = useMarmalade();
+  const buttonRecipe = useRecipe({ recipe: psTheme.getRecipe("button") });
   const layer = state.document.layers.find((item) => item.id === state.selectedIds[0]);
   const dispatch = (action: MarmaladeAction) => {
     void marmaladeStore.dispatch(action);
   };
+  const roots = selectedRoots(state);
+  const protectedSelection = selectedBlock(state).some((item) => marmaladeLocked(state, item));
+  const actions = [
+    { type: "duplicate", label: "Duplicate layers", icon: "Copy", disabled: !roots.length || protectedSelection },
+    { type: "group", label: "Group layers", icon: "FolderPlus", disabled: roots.length < 2 || protectedSelection },
+    {
+      type: "ungroup",
+      label: "Ungroup layers",
+      icon: "Ungroup",
+      disabled: !roots.length || !roots.every((item) => item.kind === "group") || protectedSelection,
+    },
+    { type: "delete", label: "Delete layers", icon: "Trash2", disabled: !roots.length || protectedSelection },
+  ] as const;
   return (
     <Stack h="full" minH="0" gap="0" bg="bg.panel" aria-label="Marmalade inspector">
       <ScrollArea flex="1" minH="0">
         {layer ? <MarmaladeProperties key={layer.id} state={state} layer={layer} /> : null}
-        <HStack px="sm" py="sm" justify="space-between">
+        <HStack px="sm" py="sm" gap="2xs">
           <Text textStyle="label/S/medium">Layers</Text>
-          <Text color="fg.muted" textStyle="label/XS">
-            {state.selectedIds.length} selected
-          </Text>
+          <HStack flex="1" justify="flex-end" gap="2xs">
+            <Tooltip content="Add text layer">
+              <IconButton
+                aria-label="Add text layer"
+                variant="ghost"
+                size="xs"
+                onClick={() => dispatch({ type: "create", kind: "text", x: 100, y: 100 })}
+              >
+                <ExampleIcon name="Type" />
+              </IconButton>
+            </Tooltip>
+            {actions.map((action) => (
+              <Tooltip key={action.type} content={action.label}>
+                <IconButton
+                  aria-label={action.label}
+                  size="xs"
+                  variant="ghost"
+                  css={
+                    action.type === "delete" ? buttonRecipe({ variant: "destructive-ghost", size: "xs" }) : undefined
+                  }
+                  disabled={action.disabled}
+                  onClick={() => dispatch({ type: action.type })}
+                >
+                  <ExampleIcon name={action.icon} />
+                </IconButton>
+              </Tooltip>
+            ))}
+          </HStack>
         </HStack>
         {error ? (
           <Text role="alert" px="sm" color="fg.error" textStyle="label/XS">
@@ -154,16 +120,10 @@ export const MarmaladeInspector = () => {
             }
           />
         ) : (
-          <EmptyState title="No layers" description="Restore the sample to start editing.">
+          <EmptyState title="No layers">
             <Button onClick={() => dispatch({ type: "reset" })}>Restore sample</Button>
           </EmptyState>
         )}
-        <Box p="sm">
-          <Text color="fg.muted" textStyle="label/XS">
-            Ctrl/Cmd-click to select several layers. Shift-click selects a visible range. Alt+↑/↓ moves the selected
-            layers together. Drag to an edge or inside a group.
-          </Text>
-        </Box>
       </ScrollArea>
     </Stack>
   );

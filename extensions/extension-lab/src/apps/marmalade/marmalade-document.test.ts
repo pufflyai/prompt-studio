@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMarmaladeState } from "./marmalade-data";
-import { applyMarmaladeAction, marmaladeLayers } from "./marmalade-document";
+import { applyMarmaladeAction } from "./marmalade-document";
+import { marmaladeLayers } from "./marmalade-layers";
 
 test("visibility and lock actions keep document selection unchanged", () => {
   const initial = createMarmaladeState();

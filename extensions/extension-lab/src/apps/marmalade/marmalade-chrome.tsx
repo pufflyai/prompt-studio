@@ -28,6 +28,9 @@ export const MarmaladeNav = () => {
 const tools: { id: MarmaladeTool; label: string; icon: string }[] = [
   { id: "move", label: "Move tool", icon: "Move" },
   { id: "text", label: "Text tool", icon: "Type" },
+  { id: "rectangle", label: "Rectangle tool", icon: "Square" },
+  { id: "ellipse", label: "Ellipse tool", icon: "Circle" },
+  { id: "brush", label: "Brush tool", icon: "Paintbrush" },
   { id: "hand", label: "Hand tool", icon: "Hand" },
   { id: "zoom", label: "Zoom tool", icon: "ZoomIn" },
 ];

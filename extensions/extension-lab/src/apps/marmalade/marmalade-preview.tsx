@@ -21,7 +21,17 @@ export const MarmaladePreview = (props: { layer: MarmaladeLayer }) => {
         {layer.kind === "image" && !layer.disabled ? (
           <Image src={greatWaveImage} alt="" boxSize="full" objectFit="cover" />
         ) : (
-          <ExampleIcon name={layer.kind === "group" ? "Folder" : "Type"} />
+          <ExampleIcon
+            name={
+              {
+                group: "Folder",
+                text: "Type",
+                shape: layer.shape === "ellipse" ? "Circle" : "Square",
+                brush: "Paintbrush",
+                image: "Image",
+              }[layer.kind]
+            }
+          />
         )}
       </Box>
       {layer.mask ? (

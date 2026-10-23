@@ -1,33 +1,8 @@
-import type { MarmaladeAction, MarmaladeLayer, MarmaladeState } from "./marmalade.types";
+import type { MarmaladeAction, MarmaladeState } from "./marmalade.types";
+import { applyMarmaladeAuthoring } from "./marmalade-authoring";
 import { createMarmaladeState } from "./marmalade-data";
+import { editable, findLayer, finite, marmaladeAncestors, range } from "./marmalade-layers";
 
-const findLayer = (state: MarmaladeState, id: string) => {
-  const layer = state.document.layers.find((item) => item.id === id);
-  if (!layer) throw new Error(`Unknown layer: ${id}`);
-  return layer;
-};
-export const marmaladeAncestors = (state: MarmaladeState, layer: MarmaladeLayer) => {
-  const ancestors: MarmaladeLayer[] = [];
-  let parentId = layer.parentId;
-  while (parentId) {
-    const parent = findLayer(state, parentId);
-    ancestors.push(parent);
-    parentId = parent.parentId;
-  }
-  return ancestors;
-};
-export const marmaladeLocked = (state: MarmaladeState, layer: MarmaladeLayer) =>
-  [layer, ...marmaladeAncestors(state, layer)].some((item) => item.locked || item.disabled);
-const editable = (state: MarmaladeState, layer: MarmaladeLayer) => {
-  if (marmaladeLocked(state, layer)) throw new Error(`${layer.name} is locked or unavailable`);
-};
-const finite = (value: number) => {
-  if (!Number.isFinite(value)) throw new Error("Use a finite number");
-};
-const range = (value: number, min: number, max: number) => {
-  finite(value);
-  if (value < min || value > max) throw new Error(`Use a value between ${min} and ${max}`);
-};
 const translate = (state: MarmaladeState, ids: string[], dx: number, dy: number) => {
   finite(dx);
   finite(dy);
@@ -124,7 +99,8 @@ export const applyMarmaladeAction = (current: MarmaladeState, action: MarmaladeA
       }
       break;
     case "tool":
-      if (!["move", "text", "hand", "zoom"].includes(action.tool)) throw new Error("Unknown tool");
+      if (!["move", "text", "rectangle", "ellipse", "brush", "hand", "zoom"].includes(action.tool))
+        throw new Error("Unknown tool");
       state.tool = action.tool;
       break;
     case "viewport":
@@ -165,15 +141,7 @@ export const applyMarmaladeAction = (current: MarmaladeState, action: MarmaladeA
       reorder(state, action);
       break;
     default:
-      throw new Error("Unknown Marmalade action");
+      applyMarmaladeAuthoring(state, action);
   }
   return state;
 };
-
-/** Paint bottom to top; hidden groups suppress their descendants and opacity multiplies through groups. */
-export const marmaladeLayers = (state: MarmaladeState) =>
-  [...state.document.layers].reverse().flatMap((layer) => {
-    const parents = marmaladeAncestors(state, layer);
-    if (layer.kind === "group" || [layer, ...parents].some((item) => !item.visible || item.disabled)) return [];
-    return [{ ...layer, opacity: parents.reduce((value, parent) => value * parent.opacity, layer.opacity) }];
-  });

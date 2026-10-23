@@ -1,13 +1,14 @@
 import { createWebviewClient, type GuestHost, type PropsStore } from "@pstdio/sdk/extensions";
 import { useSyncExternalStore } from "react";
 import type { ExampleProps } from "../../view-context";
-import type { MarmaladeAction } from "./marmalade.types";
+import type { MarmaladeAction, MarmaladeViewState } from "./marmalade.types";
 import type { marmaladeCommands } from "./marmalade-commands";
 import { createMarmaladeState } from "./marmalade-data";
 import { marmaladeChanged } from "./marmalade-events";
+import { connectMarmaladeShortcuts } from "./marmalade-shortcuts";
 
 export const createMarmaladeStore = () => {
-  let state = createMarmaladeState();
+  let state: MarmaladeViewState = { ...createMarmaladeState(), history: { undo: 0, redo: 0 } };
   let error = "";
   let snapshot = { state, error };
   const listeners = new Set<() => void>();
@@ -81,12 +82,14 @@ export const createMarmaladeStore = () => {
           }
         }
       };
+      const disconnectShortcuts = connectMarmaladeShortcuts((action) => send?.(action) ?? Promise.resolve());
       void refresh();
       return () => {
         active = false;
         send = undefined;
         pendingSelection = undefined;
         unsubscribe();
+        disconnectShortcuts();
       };
     },
   };

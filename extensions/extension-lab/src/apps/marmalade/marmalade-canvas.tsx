@@ -1,148 +1,56 @@
-import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import { EmptyState } from "@pstdio/ui";
+import { Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { EmptyState, Tooltip } from "@pstdio/ui";
 import { type PointerEvent, useRef, useState } from "react";
-import type { MarmaladeLayer, MarmaladeState } from "./marmalade.types";
-import { marmaladeLayers, marmaladeLocked } from "./marmalade-document";
-import { greatWaveImage } from "./marmalade-preview";
+import { ExampleIcon } from "../../icon";
+import type { MarmaladeTool } from "./marmalade.types";
+import { MarmaladeCanvasLayer } from "./marmalade-canvas-layer";
+import { marmaladeLayers } from "./marmalade-layers";
 import { marmaladeStore, useMarmalade } from "./marmalade-store";
 
-const CanvasLayer = (props: { layer: MarmaladeLayer; state: MarmaladeState }) => {
-  const { layer, state } = props;
-  const selected = state.selectedIds.includes(layer.id);
-  const locked = marmaladeLocked(state, layer);
-  const pointer = useRef<{ x: number; y: number } | null>(null);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const point = (event: PointerEvent<SVGGElement>) => {
-    const matrix = (event.currentTarget.parentElement as unknown as SVGGElement)?.getScreenCTM();
-    return matrix ? new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse()) : { x: 0, y: 0 };
-  };
-  const start = (event: PointerEvent<SVGGElement>) => {
-    if (state.tool === "hand" || state.tool === "zoom" || locked) return;
-    event.stopPropagation();
-    const ids = new Set(state.selectedIds);
-    if (event.ctrlKey || event.metaKey) {
-      if (ids.has(layer.id)) ids.delete(layer.id);
-      else ids.add(layer.id);
-    } else if (!ids.has(layer.id)) {
-      ids.clear();
-      ids.add(layer.id);
-    }
-    void marmaladeStore.dispatch({ type: "select", ids: [...ids] });
-    if (state.tool === "move") {
-      pointer.current = point(event);
-      event.currentTarget.setPointerCapture(event.pointerId);
-    }
-  };
-  const end = (event: PointerEvent<SVGGElement>) => {
-    if (!pointer.current) return;
-    const current = point(event);
-    const dx = Math.round(current.x - pointer.current.x);
-    const dy = Math.round(current.y - pointer.current.y);
-    pointer.current = null;
-    setOffset({ x: 0, y: 0 });
-    if (dx || dy)
-      void marmaladeStore.dispatch({
-        type: "transform",
-        ids: state.selectedIds.includes(layer.id) ? state.selectedIds : [layer.id],
-        dx,
-        dy,
-      });
-  };
-  return (
-    // SVG layers need button semantics; HTML buttons cannot wrap SVG artwork.
-    // biome-ignore lint/a11y/useSemanticElements: interactive SVG document layer.
-    <g
-      role="button"
-      aria-label={`Canvas layer: ${layer.name}`}
-      aria-pressed={selected}
-      aria-disabled={locked}
-      tabIndex={locked ? -1 : 0}
-      transform={`translate(${layer.x + offset.x} ${layer.y + offset.y})`}
-      opacity={layer.opacity}
-      onPointerDown={start}
-      onPointerMove={(event) => {
-        if (pointer.current) {
-          const next = point(event);
-          setOffset({ x: next.x - pointer.current.x, y: next.y - pointer.current.y });
-        }
-      }}
-      onPointerUp={end}
-      onPointerCancel={() => {
-        pointer.current = null;
-        setOffset({ x: 0, y: 0 });
-      }}
-      onKeyDown={(event) => {
-        if (locked) return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          void marmaladeStore.dispatch({ type: "select", ids: [layer.id] });
-        }
-        const directions: Record<string, [number, number]> = {
-          ArrowLeft: [-1, 0],
-          ArrowRight: [1, 0],
-          ArrowUp: [0, -1],
-          ArrowDown: [0, 1],
-        };
-        const delta = directions[event.key];
-        if (delta && state.tool === "move") {
-          event.preventDefault();
-          void marmaladeStore.dispatch({
-            type: "transform",
-            ids: [layer.id],
-            dx: delta[0] * (event.shiftKey ? 10 : 1),
-            dy: delta[1] * (event.shiftKey ? 10 : 1),
-          });
-        }
-      }}
-    >
-      <title>
-        {layer.name}
-        {locked ? " (locked)" : ""}
-      </title>
-      {layer.kind === "image" ? (
-        <image href={greatWaveImage} width={layer.width} height={layer.height} preserveAspectRatio="none" />
-      ) : null}
-      {layer.kind === "shape" ? <rect width={layer.width} height={layer.height} rx={12} fill="#10263b" /> : null}
-      {layer.kind === "text" ? (
-        <text
-          x={0}
-          y={layer.height * 0.8}
-          fontFamily="sans-serif"
-          style={{ fontSize: layer.id === "title" ? 48 : 23 }}
-          fill="#fff"
-        >
-          {layer.text}
-        </text>
-      ) : null}
-      <rect
-        width={layer.width}
-        height={layer.height}
-        fill="transparent"
-        stroke={selected ? "var(--chakra-colors-border-accent)" : "none"}
-        strokeWidth={2}
-        vectorEffect="non-scaling-stroke"
-      />
-    </g>
-  );
-};
-
+interface Drawing {
+  tool: Extract<MarmaladeTool, "rectangle" | "ellipse" | "brush">;
+  points: [number, number][];
+}
 export const MarmaladeCanvas = () => {
   const { state, error } = useMarmalade();
   const svg = useRef<SVGSVGElement>(null);
+  const documentGroup = useRef<SVGGElement>(null);
+  const drawing = useRef<Drawing | null>(null);
+  const [draft, setDraft] = useState<Drawing>();
   const [pan, setPan] = useState<{ startX: number; startY: number; x: number; y: number; dx: number; dy: number }>();
-  const panPoint = (event: PointerEvent<HTMLElement>) => {
-    const matrix = svg.current?.getScreenCTM();
+  const point = (event: PointerEvent, target: SVGSVGElement | SVGGElement | null) => {
+    const matrix = target?.getScreenCTM();
     return matrix ? new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse()) : { x: 0, y: 0 };
   };
+  const zoomKey = (event: import("react").KeyboardEvent) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key === "+" || event.key === "=") {
+      event.preventDefault();
+      void marmaladeStore.dispatch({ type: "viewport", zoom: Math.min(4, state.zoom + 0.25) });
+    }
+    if (event.key === "-") {
+      event.preventDefault();
+      void marmaladeStore.dispatch({ type: "viewport", zoom: Math.max(0.25, state.zoom - 0.25) });
+    }
+  };
+  const draftStart = draft?.points[0];
+  const draftEnd = draft?.points.at(-1);
   return (
     <Stack h="full" minH="0" gap="0" bg="bg.subtle">
-      <HStack px="sm" py="xs" gap="sm" borderBottomWidth="1px" borderColor="border.subtle" flexWrap="wrap">
-        <Text textStyle="label/S/medium">{state.document.title}</Text>
-        <Text textStyle="label/XS" color="fg.muted">
-          {state.tool === "text"
-            ? "Select a text layer, then edit Text in Properties"
-            : "Move · drag selected layers · arrow keys for precision"}
-        </Text>
+      <HStack px="sm" py="xs" gap="xs" borderBottomWidth="1px" borderColor="border.subtle">
+        {(["undo", "redo"] as const).map((type) => (
+          <Tooltip key={type} content={type === "undo" ? "Undo" : "Redo"}>
+            <IconButton
+              aria-label={type === "undo" ? "Undo" : "Redo"}
+              size="xs"
+              variant="ghost"
+              disabled={!state.history[type]}
+              onClick={() => void marmaladeStore.dispatch({ type })}
+            >
+              <ExampleIcon name={type === "undo" ? "Undo2" : "Redo2"} />
+            </IconButton>
+          </Tooltip>
+        ))}
         <Box flex="1" />
         <Button
           variant="ghost"
@@ -163,55 +71,141 @@ export const MarmaladeCanvas = () => {
         minW="0"
         p="lg"
         overflow="hidden"
-        onPointerDown={(event) => {
-          if (state.tool !== "hand") return;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          const point = panPoint(event);
-          setPan({ startX: point.x, startY: point.y, ...state.pan, dx: 0, dy: 0 });
-        }}
-        onPointerMove={(event) => {
-          if (!pan) return;
-          const point = panPoint(event);
-          setPan({ ...pan, dx: point.x - pan.startX, dy: point.y - pan.startY });
-        }}
-        onPointerUp={(event) => {
-          if (!pan) return;
-          const point = panPoint(event);
-          void marmaladeStore.dispatch({
-            type: "viewport",
-            pan: { x: pan.x + point.x - pan.startX, y: pan.y + point.y - pan.startY },
-          });
-          setPan(undefined);
-        }}
-        onPointerCancel={() => setPan(undefined)}
-        onClick={(event) => {
-          if (state.tool === "zoom")
-            void marmaladeStore.dispatch({
-              type: "viewport",
-              zoom: Math.min(4, Math.max(0.25, state.zoom + (event.altKey ? -0.25 : 0.25))),
-            });
-        }}
+        position="relative"
+        role="region"
+        aria-label="Drawing workspace"
+        tabIndex={0}
+        onKeyDown={zoomKey}
       >
-        {state.document.layers.length ? (
-          <svg
-            ref={svg}
-            role="img"
-            aria-label="Marmalade document canvas"
-            width="100%"
-            height="100%"
-            viewBox={`0 0 ${state.document.width} ${state.document.height}`}
+        <svg
+          ref={svg}
+          role="application"
+          aria-label="Marmalade document canvas"
+          width="100%"
+          height="100%"
+          viewBox={`0 0 ${state.document.width} ${state.document.height}`}
+          onPointerDown={(event) => {
+            event.currentTarget.parentElement?.focus();
+            if (state.tool === "hand") {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              const next = point(event, svg.current);
+              setPan({ startX: next.x, startY: next.y, ...state.pan, dx: 0, dy: 0 });
+            } else if (state.tool === "text") {
+              const next = point(event, documentGroup.current);
+              void marmaladeStore.dispatch({
+                type: "create",
+                kind: "text",
+                x: Math.round(next.x),
+                y: Math.round(next.y),
+              });
+            } else if (state.tool === "rectangle" || state.tool === "ellipse" || state.tool === "brush") {
+              const next = point(event, documentGroup.current);
+              event.currentTarget.setPointerCapture(event.pointerId);
+              drawing.current = { tool: state.tool, points: [[next.x, next.y]] };
+              setDraft(drawing.current);
+            }
+          }}
+          onPointerMove={(event) => {
+            if (pan) {
+              const next = point(event, svg.current);
+              setPan({ ...pan, dx: next.x - pan.startX, dy: next.y - pan.startY });
+            }
+            if (drawing.current) {
+              const next = point(event, documentGroup.current);
+              const prior = drawing.current;
+              const points: [number, number][] =
+                prior.tool === "brush" ? [...prior.points, [next.x, next.y]] : [prior.points[0], [next.x, next.y]];
+              drawing.current = { ...prior, points };
+              setDraft(drawing.current);
+            }
+          }}
+          onPointerUp={(event) => {
+            if (pan) {
+              const next = point(event, svg.current);
+              void marmaladeStore.dispatch({
+                type: "viewport",
+                pan: { x: pan.x + next.x - pan.startX, y: pan.y + next.y - pan.startY },
+              });
+              setPan(undefined);
+            }
+            const current = drawing.current;
+            if (!current) return;
+            const next = point(event, documentGroup.current);
+            const points: [number, number][] = [...current.points, [next.x, next.y]];
+            const xs = points.map((p) => p[0]);
+            const ys = points.map((p) => p[1]);
+            const x = Math.min(...xs);
+            const y = Math.min(...ys);
+            void marmaladeStore.dispatch({
+              type: "create",
+              kind: current.tool,
+              x,
+              y,
+              width: Math.max(1, Math.max(...xs) - x),
+              height: Math.max(1, Math.max(...ys) - y),
+              points: current.tool === "brush" ? points.map((p) => [p[0] - x, p[1] - y]) : undefined,
+            });
+            drawing.current = null;
+            setDraft(undefined);
+          }}
+          onPointerCancel={() => {
+            drawing.current = null;
+            setDraft(undefined);
+            setPan(undefined);
+          }}
+          onKeyDown={zoomKey}
+          onClick={(event) => {
+            if (state.tool === "zoom")
+              void marmaladeStore.dispatch({
+                type: "viewport",
+                zoom: Math.min(4, Math.max(0.25, state.zoom + (event.altKey ? -0.25 : 0.25))),
+              });
+          }}
+        >
+          <g
+            ref={documentGroup}
+            transform={`translate(${pan ? pan.x + pan.dx : state.pan.x} ${pan ? pan.y + pan.dy : state.pan.y}) scale(${state.zoom})`}
           >
-            <g
-              transform={`translate(${pan ? pan.x + pan.dx : state.pan.x} ${pan ? pan.y + pan.dy : state.pan.y}) scale(${state.zoom})`}
-            >
-              {marmaladeLayers(state).map((layer) => (
-                <CanvasLayer key={layer.id} layer={layer} state={state} />
-              ))}
-            </g>
-          </svg>
-        ) : (
-          <EmptyState title="Your canvas is empty" description="Restore the Great Wave sample from the inspector." />
-        )}
+            {marmaladeLayers(state).map((layer) => (
+              <MarmaladeCanvasLayer key={layer.id} layer={layer} state={state} />
+            ))}
+            {draftStart && draftEnd && draft?.tool === "brush" ? (
+              <polyline
+                points={draft.points.map((p) => p.join(",")).join(" ")}
+                stroke="#f4b860"
+                strokeWidth={8}
+                fill="none"
+                strokeLinecap="round"
+                pointerEvents="none"
+              />
+            ) : null}
+            {draftStart && draftEnd && draft?.tool === "rectangle" ? (
+              <rect
+                x={Math.min(draftStart[0], draftEnd[0])}
+                y={Math.min(draftStart[1], draftEnd[1])}
+                width={Math.abs(draftStart[0] - draftEnd[0])}
+                height={Math.abs(draftStart[1] - draftEnd[1])}
+                fill="#f4b860"
+                pointerEvents="none"
+              />
+            ) : null}
+            {draftStart && draftEnd && draft?.tool === "ellipse" ? (
+              <ellipse
+                cx={(draftStart[0] + draftEnd[0]) / 2}
+                cy={(draftStart[1] + draftEnd[1]) / 2}
+                rx={Math.abs(draftStart[0] - draftEnd[0]) / 2}
+                ry={Math.abs(draftStart[1] - draftEnd[1]) / 2}
+                fill="#f4b860"
+                pointerEvents="none"
+              />
+            ) : null}
+          </g>
+        </svg>
+        {!state.document.layers.length ? (
+          <Box position="absolute" inset="0" display="grid" placeItems="center" pointerEvents="none">
+            <EmptyState title="No layers" />
+          </Box>
+        ) : null}
       </Box>
     </Stack>
   );
