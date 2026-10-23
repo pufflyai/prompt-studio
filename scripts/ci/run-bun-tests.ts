@@ -1,5 +1,6 @@
+import { mkdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { bunTestSelection } from "./test-quarantine";
+import { bunTestSelection, verifyQuarantineReport } from "./test-quarantine";
 import cases from "./test-quarantine.json";
 
 const root = resolve(import.meta.dir, "../..");
@@ -31,6 +32,5 @@ if (quarantine && !selection.files.length) {
     { stdin: "inherit", stdout: "inherit", stderr: "inherit" },
   );
   process.exitCode = await child.exited;
+  if (quarantine && process.exitCode === 0) verifyQuarantineReport(await Bun.file(report).text(), selection.count);
 }
-
-import { mkdirSync } from "node:fs";

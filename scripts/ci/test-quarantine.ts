@@ -23,6 +23,7 @@ export const bunTestSelection = (
   const selected = cases.filter((entry) => entry.runner === "bun" && entry.file.startsWith(`${packageDir}/`));
   const pattern = quarantinePattern(selected, "bun", platform);
   return {
+    count: selected.filter((entry) => entry.platforms.includes(platform)).length,
     pattern: quarantine ? pattern : pattern && `^(?!.*${pattern}).*$`,
     files: [
       ...new Set(
@@ -30,4 +31,15 @@ export const bunTestSelection = (
       ),
     ],
   };
+};
+
+export const verifyQuarantineReport = (xml: string, expected: number) => {
+  const summary = xml.match(/<testsuites\b[^>]*>/)?.[0] ?? "";
+  const tests = Number(summary.match(/\btests="(\d+)"/)?.[1]);
+  const skipped = Number(summary.match(/\bskipped="(\d+)"/)?.[1]);
+  if (tests - skipped !== expected) {
+    throw new Error(
+      `Quarantine expected ${expected} executed cases, got ${tests - skipped}. Check the register and report.`,
+    );
+  }
 };
