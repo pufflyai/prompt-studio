@@ -24,6 +24,7 @@ import { dependencyBlockerHooks } from "./src/hooks/dependency-blockers";
 import { gitMergedHook } from "./src/hooks/git-merged";
 import { reviewRequestCleanupHook } from "./src/hooks/review-request-cleanup";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
+import { plannerKeyboardCommands, plannerShortcuts } from "./src/keyboard";
 import { notifyBlocked } from "./src/planner-notifications";
 import { readStatusSettings, saveStatusSettings } from "./src/ticket-status-settings";
 import { commands as timelineCommands } from "./src/timeline/commands";
@@ -136,13 +137,20 @@ export default defineExtension({
     "zh-Hant": packageAsset("./l10n/zh-Hant.json", import.meta.url),
   },
 
-  commands: [...plannerCommands, ...Object.values(timelineCommands), readStatusSettings, saveStatusSettings],
+  commands: [
+    ...plannerCommands,
+    ...plannerKeyboardCommands,
+    ...Object.values(timelineCommands),
+    readStatusSettings,
+    saveStatusSettings,
+  ],
   views: [...plannerUi.views, timelineView],
   pages: [...plannerUi.pages, timelinePage],
   viewMenus: plannerUi.viewMenus,
   resourceKinds: [ticketResourceKind],
   navigationItems: [...plannerUi.navigationItems, timelineNavigation],
   keybindings: [
+    ...plannerShortcuts,
     defineKeybinding({
       id: "open-tickets",
       key: "Alt+Shift+P",

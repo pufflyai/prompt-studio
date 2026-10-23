@@ -1,4 +1,7 @@
 {
+  "commands.keyboardStatusOptions": "Lister les statuts des tâches",
+  "commands.keyboardStatus": "Changer le statut de la tâche",
+  "params.keyboardStatus": "Statut",
   "requests.navigation.label": "Attention requise",
   "navigation.files": "Fichiers",
   "navigation.workspaces": "Espaces de travail",

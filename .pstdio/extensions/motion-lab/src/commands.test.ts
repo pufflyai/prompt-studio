@@ -20,6 +20,41 @@ const fixture = async () => {
   );
   return { storage, projectFiles };
 };
+test("public playback actions update the chosen study's shared review state", async () => {
+  const context = await fixture();
+  const playing = await commands["review.playback"].run(
+    ...makeCommandArgs({
+      ...context,
+      overrides: { projectFiles: context.projectFiles },
+      params: { resource: { type: "motion-lab.animation", id: "tabs" }, operation: "toggle" as const },
+    }),
+  );
+  expect(playing.playing).toBe(true);
+  const restarted = await commands["review.playback"].run(
+    ...makeCommandArgs({
+      ...context,
+      overrides: { projectFiles: context.projectFiles },
+      params: { resource: { type: "motion-lab.animation", id: "tabs" }, operation: "restart" as const },
+    }),
+  );
+  expect(restarted).toMatchObject({ playing: false, frame: 0 });
+});
+test("concurrent playback toggles each use the latest shared review state", async () => {
+  const context = await fixture();
+  const toggle = () =>
+    commands["review.playback"].run(
+      ...makeCommandArgs({
+        ...context,
+        overrides: { projectFiles: context.projectFiles },
+        params: { resource: { type: "motion-lab.animation", id: "tabs" }, operation: "toggle" as const },
+      }),
+    );
+  await Promise.all([toggle(), toggle()]);
+  const state = await commands["review.read"].run(
+    ...makeCommandArgs({ ...context, overrides: { projectFiles: context.projectFiles }, params: { study: "tabs" } }),
+  );
+  expect(state.playing).toBe(false);
+});
 test("concurrent preview and parameter updates preserve both changes", async () => {
   const context = await fixture();
   await Promise.all([

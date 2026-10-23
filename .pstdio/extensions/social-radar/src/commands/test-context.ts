@@ -1,10 +1,11 @@
+import type { ExtensionSessionsApi } from "@pstdio/sdk/extensions";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 
 export const setup = () => {
   const storage = createMemoryStorage();
   const notifications: { title: string }[] = [];
   const events: unknown[] = [];
-  const sessions: { id: string; title: string; status: string }[] = [];
+  const sessions: NonNullable<Awaited<ReturnType<ExtensionSessionsApi["get"]>>>[] = [];
   const settings = new Map<string, unknown>();
   // Each artifact mount gets its own files, as the host gives each mount its own folder.
   const mounts = new Map<string, ReturnType<typeof createMemoryRepoFiles>>();
@@ -20,7 +21,35 @@ export const setup = () => {
     overrides: {
       sessions: {
         create: async (input) => {
-          const session = { ...input, id: crypto.randomUUID(), status: "queued" as const, type: "session" as const };
+          const session = {
+            ...input,
+            id: crypto.randomUUID(),
+            status: "queued" as const,
+            type: "session" as const,
+            projectId: "proj-1",
+            archived: false,
+            agent: null,
+            agentSessionId: null,
+            sessionFileId: null,
+            params: null,
+            cwd: null,
+            lastSelectedModel: null,
+            workspaceId: input.workspaceId ?? null,
+            originalSessionId: null,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+            lastRequestStarted: null,
+            lastRequestEnded: null,
+            usage: null,
+            last_selected_model: null,
+            workspace_id: input.workspaceId ?? null,
+            original_session_id: null,
+            created_at: "2026-01-01T00:00:00.000Z",
+            updated_at: "2026-01-01T00:00:00.000Z",
+            last_request_started: null,
+            last_request_ended: null,
+            anchors_json: [],
+          };
           sessions.push(session);
           return session;
         },

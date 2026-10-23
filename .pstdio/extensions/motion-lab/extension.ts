@@ -1,6 +1,7 @@
 import {
   defineExtension,
   defineHook,
+  defineKeybinding,
   defineNavigationItem,
   definePage,
   defineSkill,
@@ -56,6 +57,50 @@ const page = definePage({
 
 export default defineExtension({
   commands: Object.values(commands),
+  keybindings: [
+    defineKeybinding({
+      id: "keyboard-open",
+      layer: "extensions",
+      key: "O",
+      sticky: true,
+      action: { kind: "page", page: home.ref },
+    }),
+    ...(
+      [
+        ["study.create", "N"],
+        ["studies.refresh", "F"],
+        ["review.read", "V"],
+      ] as const
+    ).map(([id, key]) =>
+      defineKeybinding({
+        id: `keyboard-${id}`,
+        layer: "extensions",
+        key,
+        action: { kind: "command", target: { command: commands[id].ref } },
+      }),
+    ),
+    ...(
+      [
+        ["toggle", "P"],
+        ["restart", "R"],
+      ] as const
+    ).flatMap(([operation, key]) => [
+      defineKeybinding({
+        id: `keyboard-${operation}`,
+        layer: "extensions",
+        key,
+        action: { kind: "command", target: { command: commands["review.playback"].ref, params: { operation } } },
+      }),
+      defineKeybinding({
+        id: `current-${operation}`,
+        layer: "current",
+        key,
+        targetScope: "resource",
+        when: { resourceType: [animation.ref] },
+        action: { kind: "command", target: { command: commands["review.playback"].ref, params: { operation } } },
+      }),
+    ]),
+  ],
   hooks: [
     defineHook({
       id: "studies-after-turn",
