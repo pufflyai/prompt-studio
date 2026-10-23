@@ -146,7 +146,7 @@ const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) 
     addPageDiagnostic(runtime, {
       code: "extension_page_main_invalid",
       fieldPath: `pages.${record.localId}.parent`,
-      message: "A resource view page requires a parent to return to when its last tab closes",
+      message: "A resource view page requires a parent for breadcrumbs and the page hierarchy",
       record,
     });
   }

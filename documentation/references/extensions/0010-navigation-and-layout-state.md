@@ -23,7 +23,7 @@ there is no resource placement, and adds current-page actions such as Copy link.
 Selecting another tab changes the collection crumb without changing the page URL or
 history. Right-click, the Context Menu key, or Shift+F10 opens its actions.
 
-An explicit target parent supplies contextual breadcrumbs. Without one, navigation uses the page's declared parent. Closing the last routed resource view follows that declared parent. Closing an auxiliary panel preserves the route. `openOn: "page-resource"` opens a matching binding during page navigation; closing it keeps it closed until another navigation.
+An explicit target parent supplies contextual breadcrumbs. Without one, navigation uses the page's declared parent. Closing the last routed resource view keeps the page and resource active with an empty Main region. Reopen restores closed content; Move back restores content from another panel. Closing an auxiliary panel preserves the route. `openOn: "page-resource"` opens a matching binding during page navigation; closing it keeps it closed until another navigation.
 
 The browser owns history. Page location persistence stays at version 1. Layout cache version 5 stores resource identity keys, Main collections, and the Side Panel presentation in the `side` region. Incompatible layout cache entries are discarded, including their Side Panel presentation, while valid locations, resource data, tree state, and menu preferences remain intact. Collection state uses the existing location key to separate workspaces.
 
