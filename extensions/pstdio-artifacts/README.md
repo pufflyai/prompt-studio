@@ -47,7 +47,7 @@ Artifacts are also searchable resources. Search by their current name to open th
 
 When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio-artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens the artifact at its latest version instead of the raw file.
 
-The artifact list opens in a single Artifacts tab. Opening an artifact adds its own tab, so you can return to the list without closing your previews. Closing every tab shows the default Tools placeholder, which includes an Artifacts card contributed by this page. That card or Add panel reopens the same library tab. Search can open another artifact while tabs are open. Switching tabs keeps each interactive preview's state. A link to a published URL opens the matching artifact tab.
+The artifact list opens in a single Artifacts tab in Main. Opening an artifact adds its own tab, so you can return to the list without closing your previews. When the list is closed, the Main Tools placeholder and Add panel offer an Artifacts entry contributed by this page. The list cannot move to Side or Bottom, and it is omitted from their choices. Search can open another artifact while tabs are open. Switching tabs keeps each interactive preview's state. A link to a published URL opens the matching artifact tab.
 
 Use **Versions** in the reader header to pick a saved version. New versions appear in this menu without resetting the preview you are looking at. Use the action menu beside the breadcrumb to:
 

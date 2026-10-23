@@ -27,6 +27,7 @@ export const expectPackagedArtifacts = async (input: {
       slots: expect.arrayContaining([
         expect.objectContaining({
           id: "library",
+          movableTo: ["main"],
           item: expect.objectContaining({ kind: "view", presence: "open" }),
         }),
         expect.objectContaining({

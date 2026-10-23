@@ -26,6 +26,13 @@ test("the artifact library is a singleton tab that can close and reopen", async 
     const libraryTab = main.getByRole("tab", { name: "Artifacts", exact: true });
     await expect(libraryTab).toBeVisible();
     await expect(main.getByRole("tab")).toHaveCount(1);
+    await main.getByRole("button", { name: "Add panel", exact: true }).click();
+    await expect(page.getByRole("menuitem", { name: "Artifacts", exact: true })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await libraryTab.click({ button: "right" });
+    await expect(page.getByRole("menuitem", { name: "Move to Side", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: "Move to Bottom", exact: true })).toHaveCount(0);
+    await page.keyboard.press("Escape");
     writeFileSync(join(folder, "page.html"), "<title>Placeholder example</title><h1>Example content</h1>");
     const published = await request.post(
       `${uiOrigin}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-artifacts.command.publish/execute`,
@@ -56,12 +63,13 @@ test("the artifact library is a singleton tab that can close and reopen", async 
     await card.click();
     await expect(libraryTab).toBeVisible();
     await expect(main.getByRole("tab")).toHaveCount(1);
-    await libraryTab.click({ button: "right" });
-    await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
+    await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
     const side = page.locator('[data-workbench-panel="side"]:visible');
-    await expect(side.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
-    await card.click();
-    await expect(libraryTab).toBeVisible();
+    await expect(side.getByRole("group", { name: "Available tabs" })).toBeVisible();
+    await expect(side.getByRole("button", { name: "Artifacts", exact: true })).toHaveCount(0);
+    await side.getByRole("button", { name: "Add panel", exact: true }).click();
+    await expect(page.getByRole("menuitem", { name: "Artifacts", exact: true })).toHaveCount(0);
+    await page.keyboard.press("Escape");
     await expect(page.getByRole("tab", { name: "Artifacts", exact: true })).toHaveCount(1);
     await libraryTab.getByRole("button", { name: "Close Artifacts", exact: true }).click();
     await main.getByRole("button", { name: "Add panel", exact: true }).click();

@@ -27,6 +27,7 @@ export const library = definePage({
     {
       id: libraryPanelRef.id,
       region: "main",
+      movableTo: ["main"],
       order: 0,
       mountStrategy: "keep-mounted",
       item: { kind: "view", view: view.ref, presence: "open" },
