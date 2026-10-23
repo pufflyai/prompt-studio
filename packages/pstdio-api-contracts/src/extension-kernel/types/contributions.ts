@@ -264,8 +264,17 @@ export interface FileIconThemeContribution extends ContributionDefinition<"file-
  * and display labels are all delegated to `@tanstack/hotkeys`.
  */
 export type KeybindingChord = string;
+export type ShortcutLayer = "view" | "go" | "create" | "current" | "extensions" | "settings" | "help";
 
 export interface KeybindingContribution extends ContributionDefinition<"keybinding"> {
+  /** A sequence relative to Leader; sharing a key opens the common action/target chooser. */
+  layer?: ShortcutLayer;
+  /** Resource mutations deduplicate equal resources; panel actions retain presentation identity. */
+  targetScope?: "project" | "resource" | "panel";
+  /** Keep an active keyboard layer after execution until Enter or Escape. */
+  sticky?: boolean;
+  /** Reserve this chord for the workbench even while editing in a view. */
+  allowInInputs?: boolean;
   /** Default chord. Used on every platform unless an override is provided. */
   key: KeybindingChord;
   /** macOS override. */

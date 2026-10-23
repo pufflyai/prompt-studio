@@ -9,13 +9,23 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { CommandRegistry } from "../commands/command-registry";
 import type { NavigationTarget } from "../navigation/navigation-registry";
+import { getNavigationTargetKey } from "../navigation/navigation-target-key";
+import type { PreferenceRegistry } from "../preferences/preference-registry";
+import { readShortcutPreferences, type ShortcutLayer } from "./shortcut-preferences";
 
 export interface Keybinding {
+  id?: string;
+  label?: string;
+  layer?: ShortcutLayer;
+  targetScope?: "project" | "resource" | "panel";
+  sticky?: boolean;
   /** Extension that authored this binding, when registered by an extension host. */
   sourceExtensionId?: string;
   /** Action the chord executes through the shared navigation executor. */
   action: NavigationTarget;
   keybinding: KeybindingSequence;
+  /** Explicit workbench chord, including editors, terminals, and managed webviews. */
+  allowInInputs?: boolean;
   when?: string;
 }
 
@@ -26,6 +36,8 @@ export interface RegisteredKeybinding extends Keybinding, RegisteredContribution
 interface KeybindingRegistryDeps {
   commands: CommandRegistry;
   context: ContextKeyService;
+  preferences?: () => PreferenceRegistry;
+  actions?: () => { label: string; action: NavigationTarget; ownerId: string; aliasCommandId?: string }[];
 }
 
 export interface KeybindingRegistryStoreState {
@@ -36,6 +48,9 @@ export interface KeybindingRegistry {
   store: WorkbenchStore<KeybindingRegistryStoreState>;
   registerKeybinding(keybinding: Keybinding, metadata?: ContributionMetadata): Disposable;
   listKeybindings(): RegisteredKeybinding[];
+  listCatalog(): RegisteredKeybinding[];
+  resolve(binding: RegisteredKeybinding): RegisteredKeybinding & { disabled: boolean };
+  getId(binding: Keybinding): string;
   listActiveKeybindings(): RegisteredKeybinding[];
   /** Chords bound to plain command actions, for rendering shortcut hints beside commands. */
   listCommandKeybindings(): { commandId: string; keybinding: KeybindingSequence }[];
@@ -58,8 +73,60 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     initialState: { keybindings: [] },
   });
 
+  const getId = (binding: Keybinding) =>
+    binding.id ??
+    `${binding.sourceExtensionId ?? "workbench"}:${binding.layer ?? "direct"}:${getNavigationTargetKey(binding.action)}`;
+  const resolve = (binding: RegisteredKeybinding) => {
+    const override = readShortcutPreferences(deps.preferences?.()).overrides[getId(binding)];
+    return {
+      ...binding,
+      targetScope: binding.targetScope ?? (binding.layer === "current" ? "panel" : undefined),
+      keybinding: override?.keybinding ?? binding.keybinding,
+      layer: override?.layer === "direct" ? undefined : (override?.layer ?? binding.layer),
+      disabled: override?.disabled === true,
+    };
+  };
+  const listCatalog = () => {
+    const actions = deps.actions?.() ?? [];
+    const aliases = new Set(actions.flatMap((action) => (action.aliasCommandId ? [action.aliasCommandId] : [])));
+    const bindings = [...store.getState().keybindings].sort(byContributionPriority);
+    const bound = new Set(
+      bindings.flatMap((binding) => (binding.action.kind === "command" ? [binding.action.commandId] : [])),
+    );
+    const records: RegisteredKeybinding[] = [
+      ...bindings,
+      ...deps.commands
+        .listCommands()
+        .filter((record) => !bound.has(record.command.id) && !aliases.has(record.command.id))
+        .map((record) => ({
+          ...record,
+          id: record.command.id,
+          action: { kind: "command" as const, commandId: record.command.id },
+          keybinding: "",
+          label: record.command.label,
+          sourceExtensionId: record.source === "extension" ? record.ownerId : undefined,
+        })),
+    ];
+    const seen = new Set(records.map((binding) => getNavigationTargetKey(binding.action)));
+    for (const action of actions) {
+      const key = getNavigationTargetKey(action.action);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      records.push({
+        ...normalizeContributionMetadata({ ownerId: action.ownerId }),
+        ...action,
+        id: `action:${key}`,
+        keybinding: "",
+      });
+    }
+    return records;
+  };
+
   return {
     store,
+    getId,
+    resolve,
+    listCatalog,
 
     registerKeybinding(keybinding, metadata) {
       if (keybinding.action.kind === "command" && !deps.commands.getCommand(keybinding.action.commandId)) {
@@ -88,15 +155,22 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     },
 
     listActiveKeybindings() {
-      return store
-        .getState()
-        .keybindings.filter((keybinding) => deps.context.matches(keybinding.when))
-        .sort(byContributionPriority);
+      return listCatalog()
+        .map(resolve)
+        .filter(
+          (binding) =>
+            !binding.disabled &&
+            !binding.layer &&
+            getKeybindingSteps(binding.keybinding).length > 0 &&
+            ((binding.targetScope && binding.targetScope !== "project") || deps.context.matches(binding.when)),
+        );
     },
 
     listCommandKeybindings() {
       return [...store.getState().keybindings]
         .sort(byContributionPriority)
+        .map(resolve)
+        .filter((record) => !record.layer && !record.disabled)
         .flatMap((record) =>
           record.action.kind === "command"
             ? [{ commandId: record.action.commandId, keybinding: record.keybinding }]

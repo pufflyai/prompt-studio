@@ -1,10 +1,14 @@
-import type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
+import { installWebviewKeyboardRelay } from "@pstdio/sdk/extensions";
+import type { WebviewHostProps, WebviewKeyboardShortcut } from "pstdio-api-contracts/extension-kernel";
 import { guest } from "rimless";
 import type { HostApi, HostEventMessage, InitMessage, PropsUpdateMessage, ThemeUpdateMessage } from "../contract";
 import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
 import { installEscapeForwarder } from "./escape-forwarder";
+import { hasLocalKeyboardOwner } from "./keyboard-owner";
+import { installKeyboardShortcuts } from "./keyboard-shortcuts";
+import { installModifierForwarder } from "./modifier-forwarder";
 import { observeContentHeight } from "./observe-content-height";
 import { observeContentWidth } from "./observe-content-width";
 import { createViewLifecycle } from "./view-lifecycle";
@@ -89,12 +93,6 @@ const acceptBridgeMessagesOnlyFromHost = () => {
   );
 };
 
-const isEditableTarget = (target: EventTarget | null) =>
-  target instanceof HTMLInputElement ||
-  target instanceof HTMLTextAreaElement ||
-  target instanceof HTMLSelectElement ||
-  (target instanceof HTMLElement && target.isContentEditable);
-
 const start = async () => {
   installOpaqueOriginStorageFallbacks();
   acceptBridgeMessagesOnlyFromHost();
@@ -136,38 +134,46 @@ const start = async () => {
     };
   });
   let inputForwardersInstalled = false;
+  let keyboardShortcuts: readonly WebviewKeyboardShortcut[] = [];
+  const keyboardRelay = installWebviewKeyboardRelay({
+    shortcuts: () => keyboardShortcuts,
+    dispatch: (request) => {
+      if (keyboardShortcuts.find((shortcut) => shortcut.id === request.id)?.entry === "mode")
+        (document.activeElement as HTMLElement | null)?.blur();
+      void connection.remote.dispatchShortcut(request).catch(() => {});
+    },
+  });
 
   const connection = await guest.connect({
+    keyboardUpdate: (shortcuts: readonly WebviewKeyboardShortcut[]) => {
+      keyboardShortcuts = shortcuts;
+      keyboardRelay.update();
+    },
+    restoreFocus: () => {
+      keyboardRelay.restoreFocus();
+      if (document.activeElement === document.body)
+        document
+          .querySelector<HTMLElement>('[autofocus], [contenteditable="true"], textarea, input, button, [tabindex="0"]')
+          ?.focus();
+    },
     init: async (message: InitMessage) => {
       try {
+        keyboardShortcuts = message.keyboardShortcuts ?? [];
         applyTheme(message.theme, message.themeVariables);
         propsStore.set(message.props);
         await viewLifecycle.initialize(message);
 
         if (!inputForwardersInstalled) {
           inputForwardersInstalled = true;
-          installEscapeForwarder(document, (event) => connection.remote.dispatchKeyboardEvent(event));
-          document.addEventListener(
-            "keydown",
-            (event) => {
-              if (event.key === "Escape") return;
-              if (!event.ctrlKey && !event.metaKey && !event.altKey) return;
-              if (isEditableTarget(event.target) && !event.shiftKey) return;
-
-              connection.remote
-                .dispatchKeyboardEvent({
-                  key: event.key,
-                  code: event.code,
-                  ctrlKey: event.ctrlKey,
-                  metaKey: event.metaKey,
-                  altKey: event.altKey,
-                  shiftKey: event.shiftKey,
-                  repeat: event.repeat,
-                })
-                .catch(() => {});
+          installKeyboardShortcuts(
+            document,
+            () => (hasLocalKeyboardOwner(document) ? [] : keyboardShortcuts),
+            (request) => {
+              void connection.remote.dispatchShortcut(request).catch(() => {});
             },
-            true,
           );
+          installEscapeForwarder(document, (event) => connection.remote.dispatchKeyboardEvent(event));
+          installModifierForwarder(document, (event) => connection.remote.dispatchKeyboardEvent(event));
           for (const type of ["pointerdown", "click"] as const) {
             document.addEventListener(
               type,
@@ -211,6 +217,7 @@ const start = async () => {
   connection.remote.ready({});
 
   window.addEventListener("beforeunload", () => {
+    keyboardRelay.dispose();
     viewLifecycle.dispose();
   });
 };

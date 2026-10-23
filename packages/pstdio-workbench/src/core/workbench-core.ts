@@ -14,6 +14,8 @@ import {
   createMainFullscreen,
   isFullscreenRegionFocusable,
 } from "./controllers/fullscreen/main-fullscreen";
+import { createKeyboardController } from "./controllers/keyboard/keyboard-controller";
+import { registerKeyboardCommands } from "./controllers/keyboard/keyboard-registration";
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import { createWorkbenchPageLocationController } from "./controllers/page-location/page-location-controller";
 import {
@@ -80,6 +82,7 @@ import { createCoreViews } from "./workbench-core-views";
 import { createWorkbenchModuleRegistry } from "./workbench-module-registry";
 import { createPagePersistenceScopeHandler } from "./workbench-page-persistence";
 import { setWorkbenchRenderers } from "./workbench-renderers";
+import { workbenchShortcutActions } from "./workbench-shortcut-actions";
 
 export * from "./workbench-core-types";
 
@@ -270,7 +273,13 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     focus,
     fullscreen: createMainFullscreen(() => core),
     host: createWorkbenchHost(layout, layoutCache, pages.getContent),
-    keybindings: createKeybindingRegistry({ commands, context }),
+    keyboard: createKeyboardController(() => core),
+    keybindings: createKeybindingRegistry({
+      commands,
+      context,
+      preferences: () => core.preferences,
+      actions: () => workbenchShortcutActions(core),
+    }),
     layout,
     modes,
     modePlacements,
@@ -341,6 +350,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   setWorkbenchRenderers(core, renderers);
   const disposeFullscreen = connectMainFullscreen(core);
   registerArrangementCommands(core);
+  registerKeyboardCommands(core);
   connectModeLayoutCache(core, layoutCache);
   const breadcrumbSources = { breadcrumbs, locations: pageLocations, pages, navigationTrees, modes };
   connectWorkbenchPageBreadcrumbs({ ...breadcrumbSources, layout, resources: pageResources });

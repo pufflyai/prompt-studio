@@ -47,17 +47,19 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   }
   const dialog = page.getByRole("dialog").last();
   await testInfo.attach("shortcut-inventory", { body: await dialog.innerText(), contentType: "text/plain" });
-  await dialog.getByRole("menuitem", { name: /Open shortcut destination/ }).focus();
+  await dialog.getByRole("button", { name: "Rebind Open shortcut destination", exact: true }).focus();
   await page.keyboard.press("ArrowDown");
   await testInfo.attach("shortcut-reference", { body: await page.screenshot(), contentType: "image/png" });
-  await expect(dialog.getByRole("group", { name: "Shortcut reference", exact: true })).toBeVisible();
-  await expect(dialog.getByRole("menuitem", { name: /Open shortcut destination/ })).toContainText(/J/i);
+  await expect(dialog.getByRole("group", { name: "Open shortcut destination", exact: true })).toContainText(
+    "Shortcut reference",
+  );
+  await expect(dialog.getByRole("group", { name: "Open shortcut destination", exact: true })).toContainText(/J/i);
   for (const enabled of [false, true]) {
     const changed = await request.patch(`${apiBase}/v1/projects/${project.id}/extensions/${instanceId}`, {
       data: { enabled },
     });
     expect(changed.ok()).toBe(true);
-    const greeting = dialog.getByText("Shortcut greeting", { exact: true });
+    const greeting = dialog.getByRole("group", { name: "Shortcut greeting", exact: true });
     if (enabled) await expect(greeting).toHaveCount(1);
     else await expect(greeting).toHaveCount(0);
   }
@@ -74,7 +76,9 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   await page.goto(`/projects/${nextProject.id}/tickets`);
   await page.getByRole("button", { name: "Help", exact: true }).click();
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
-  await expect(page.getByRole("dialog").last().getByText("Shortcut greeting", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog").last().getByRole("group", { name: "Shortcut greeting", exact: true }),
+  ).toHaveCount(0);
 });
 
 test("the theme picker opens on the current theme and Escape keeps it", { tag: "@smoke" }, async ({
@@ -183,8 +187,9 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.getByRole("button", { name: "Help", exact: true }).click();
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
   const reference = page.getByRole("dialog").last();
-  await expect(reference.getByRole("group", { name: "Notes", exact: true })).toBeVisible();
-  for (const row of await reference.getByRole("menuitem").all()) {
-    await expect(row.locator("kbd").first()).toBeVisible();
-  }
+  await reference.getByRole("textbox", { name: "Search keyboard shortcuts" }).fill("New note");
+  await expect(reference.getByRole("group", { name: "New note", exact: true }).first()).toContainText("Notes");
+  await expect(
+    reference.getByRole("group", { name: "New note", exact: true }).first().locator("kbd").first(),
+  ).toBeVisible();
 });

@@ -1,10 +1,20 @@
 import { Dialog } from "@chakra-ui/react";
+import { createWorkbench } from "@pstdio/workbench";
+import { WorkbenchKeyboardShortcutsPanel } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ShortcutReference } from "./keyboard-shortcuts-widget";
 
+const workbench = createWorkbench();
+workbench.commands.registerCommand({ id: "notes.create", label: "New note" }, { execute() {} });
+workbench.keybindings.registerKeybinding({
+  sourceExtensionId: "pstdio.pstdio-notes",
+  action: { kind: "command", commandId: "notes.create" },
+  keybinding: "N",
+  layer: "create",
+});
 const meta = {
   title: "Help/Keyboard shortcuts",
-  component: ShortcutReference,
+  component: WorkbenchKeyboardShortcutsPanel,
+  args: { workbench },
   decorators: [
     (Story) => (
       <Dialog.Root open>
@@ -16,23 +26,7 @@ const meta = {
       </Dialog.Root>
     ),
   ],
-} satisfies Meta<typeof ShortcutReference>;
+} satisfies Meta<typeof WorkbenchKeyboardShortcutsPanel>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-export const AssignedShortcuts: Story = {
-  args: {
-    shortcuts: [
-      { id: "palette", label: "Toggle Command Palette", category: "Workbench", keybindings: ["Mod+P"] },
-      {
-        id: "document",
-        label: "Open a document with a very long name in the project workspace",
-        category: "Notes",
-        keybindings: [["Mod+K", "Mod+O"], ["Mod+K", "Mod+N"], ["Mod+K", "Mod+D"], "Alt+O"],
-      },
-      { id: "note", label: "New note", category: "Notes", keybindings: ["Alt+Shift+C"] },
-      { id: "link", label: "https://example.com/documentation", category: "Notes", keybindings: ["Mod+Shift+H"] },
-      { id: "panel", label: "Notes + Inspector", category: "Notes", keybindings: ["Alt+Shift+N"] },
-    ],
-  },
-};
+export const AssignedShortcuts: Story = {};

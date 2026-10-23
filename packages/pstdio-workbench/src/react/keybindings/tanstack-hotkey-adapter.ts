@@ -1,5 +1,5 @@
 import { type UseHotkeyDefinition, useHotkeys } from "@tanstack/react-hotkeys";
-import type { WorkbenchHotkeyRegistration } from "./workbench-keybinding-dispatcher";
+import type { WorkbenchHotkeyRegistration } from "./workbench-hotkey-registrations";
 
 export const useTanStackWorkbenchHotkeys = (registrations: WorkbenchHotkeyRegistration[]) => {
   const hotkeys: UseHotkeyDefinition[] = registrations.map((registration) => ({

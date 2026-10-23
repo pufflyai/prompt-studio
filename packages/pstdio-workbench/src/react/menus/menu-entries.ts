@@ -1,5 +1,6 @@
 import type { MenuPath, WorkbenchCommandExecutionContext, WorkbenchCoreContributionContext } from "../../core";
 import { scopeWorkbenchResourceContextValues } from "../../core";
+import { getNavigationTargetKey } from "../../core/registries/navigation/navigation-target-key";
 import { hasCommandParameters, resolveCommandResourceParams } from "../command-palette/command-palette-params";
 import type { TreeActionParamsRequest } from "../renderers/tree/tree-actions";
 import { resolveMenuItemState } from "./menu-item-state";
@@ -37,7 +38,7 @@ export const resolveMenuEntries = (input: ResolveMenuEntriesInput) => {
     ...input.context,
   };
   const contextValues = commandContextValues(workbench, context);
-  const shortcuts = new Map(workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]));
+  const hints = workbench.keyboard.hints();
 
   return workbench.layout.listMenuItems(menuPath).flatMap((action) => {
     const record = workbench.commands.getCommand(action.commandId);
@@ -73,6 +74,7 @@ export const resolveMenuEntries = (input: ResolveMenuEntriesInput) => {
     return [
       {
         id: action.id,
+        action: { kind: "command" as const, commandId: record.command.id, ...(args === undefined ? {} : { args }) },
         label,
         group: action.resourceGroup,
         commandId: action.sourceCommandId ?? record.command.id,
@@ -80,7 +82,13 @@ export const resolveMenuEntries = (input: ResolveMenuEntriesInput) => {
         icon: action.icon ?? record.command.icon,
         iconSrc: action.iconSrc,
         external: action.external,
-        binding: shortcuts.get(record.command.id),
+        binding: hints.get(
+          getNavigationTargetKey({
+            kind: "command",
+            commandId: record.command.id,
+            ...(args === undefined ? {} : { args }),
+          }),
+        ),
         kernel: action.group === "kernel",
         disabled: state.disabled,
         readOnly: state.readOnly,

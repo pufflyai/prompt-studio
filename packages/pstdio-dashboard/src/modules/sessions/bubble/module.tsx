@@ -18,6 +18,7 @@ import {
   createDashboardWorkspaceOptions,
 } from "@/shared/workspaces/workspace-options";
 import { openDashboardSessionPanel, openSessionBubbleWidgets } from "./session-bubble";
+import { registerSessionKeyboard } from "./session-keyboard";
 import { registerSessionPanelPlacements } from "./session-panel-placements";
 import { registerSessionPicker } from "./session-picker";
 
@@ -201,6 +202,7 @@ export const createSessionBubbleModule = (input: CreateSessionBubbleModuleInput 
     activate(ctx) {
       registerSessionBubbleWidgets(ctx, input.sessionDraftPersistence);
       registerSessionBubbleCommands(ctx);
+      registerSessionKeyboard(ctx);
       registerSessionPicker(ctx);
       return registerSessionPanelPlacements(ctx);
     },

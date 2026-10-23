@@ -72,6 +72,7 @@ const registerCommands = (
             placement: executionContext?.placement,
           }),
       },
+      { ownerId: command.extensionId, source: "extension" },
     ),
   );
 const menuCommandResource = (

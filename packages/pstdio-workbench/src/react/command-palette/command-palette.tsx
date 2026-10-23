@@ -12,6 +12,7 @@ import {
   workbenchCommandPaletteMenuPath,
 } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
+import { useShortcutCatalog } from "../keybindings/use-shortcut-catalog";
 import { WorkbenchActionErrors } from "../notifications/action-errors";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
@@ -64,12 +65,7 @@ interface WorkbenchCommandPaletteRecord {
 const getCommandSearchText = (command: Command, label: string) =>
   [label, command.id, command.description, command.category].filter(Boolean).join(" ");
 
-const createShortcutByAction = (workbench: WorkbenchCore) =>
-  new Map(
-    workbench.keybindings
-      .listKeybindings()
-      .map((binding) => [getNavigationTargetKey(binding.action), binding.keybinding]),
-  );
+const createShortcutByAction = (workbench: WorkbenchCore) => workbench.keyboard.hints();
 
 const getShortcut = (binding: KeybindingSequence | undefined): ReactNode =>
   binding ? <PaletteShortcut binding={binding} /> : undefined;
@@ -175,9 +171,10 @@ export const createWorkbenchCommandPaletteEntries = (input: {
   menuPath?: MenuPath;
   onClose: () => void;
   onRequestParams?: (request: CommandParamsRequest) => void;
+  shortcutByAction?: Map<string, KeybindingSequence>;
 }) => {
   const { menuPath, onClose, onRequestParams, workbench } = input;
-  const shortcutByAction = createShortcutByAction(workbench);
+  const shortcutByAction = input.shortcutByAction ?? createShortcutByAction(workbench);
 
   return listCommandRecords(workbench, menuPath)
     .sort(byCommandPaletteGroup)
@@ -203,6 +200,7 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   } = props;
   const { chosenThemePreference, themePreferences, setThemePreference, previewThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
+  const { hints } = useShortcutCatalog(workbench);
   const requestId = useWorkbenchStore(workbench.commandPalette.store, (state) => state.requestId);
   useWorkbenchStore(workbench.keybindings.store, (state) => state.keybindings);
   useWorkbenchStore(workbench.commands.store, (state) => state.commands);
@@ -231,6 +229,7 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
     workbench,
     menuPath,
     onClose,
+    shortcutByAction: hints,
     onRequestParams: (request) => workbench.commandPalette.requestParams(request),
   });
   const resourceEntries = createWorkbenchResourcePaletteEntries({ workbench, query: initialQuery, onClose });

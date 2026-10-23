@@ -61,6 +61,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@pstdio/sdk": "workspace:^",
     "@pstdio/ui": "workspace:^",
+    "@tanstack/hotkeys": "0.8.0",
     "@tanstack/react-hotkeys": "0.10.0",
     "lucide-react": "^0.557.0",
     "rimless": "0.8.3",

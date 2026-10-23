@@ -19,7 +19,9 @@ describe("workbench built-ins", () => {
     await workbench.commands.executeCommand("workbench.action.showCommands");
     expect(workbench.commandPalette.getInitialQuery()).toBe("> ");
 
-    const keybindings = workbench.keybindings.listCommandKeybindings();
+    const keybindings = workbench.keybindings
+      .listCommandKeybindings()
+      .filter((binding) => !binding.commandId.startsWith("workbench.keyboard."));
 
     expect(keybindings).toMatchObject([
       { commandId: "workbench.toggleCommandPalette" },
@@ -76,7 +78,9 @@ describe("workbench built-ins", () => {
 
   test("built-in keybindings are not ambiguous sequence prefixes", () => {
     const workbench = createWorkbench();
-    const keybindings = workbench.keybindings.listCommandKeybindings();
+    const keybindings = workbench.keybindings
+      .listCommandKeybindings()
+      .filter((binding) => !binding.commandId.startsWith("workbench.keyboard."));
 
     for (const keybinding of keybindings) {
       const sequence = Array.isArray(keybinding.keybinding) ? keybinding.keybinding : [keybinding.keybinding];
