@@ -31,7 +31,7 @@ export const TreeModeReturn = (props: { workbench: WorkbenchCore }) => {
       <ListRow
         id="workbench.navigation.root"
         role="button"
-        label={mode.label ?? mode.id}
+        label={`Back to ${(mode.label ?? mode.id).toLocaleLowerCase()}`}
         icon={<WorkbenchIcon name="ArrowLeft" size={14} />}
         variant="compact"
         onActivate={() => workbench.pageLocations.navigateToRootLevel()}

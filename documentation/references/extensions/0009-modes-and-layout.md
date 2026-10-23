@@ -80,6 +80,8 @@ During the deprecation window, older extension collections keep their first `fix
 
 Default tab cards wait until a declared mode has been selected, so startup never presents unrelated tools before the page resolves.
 
+Tool cards use the compact action-card style: small body padding, the standard row label, and a 14 px icon, matching the density of Home's Recent rows.
+
 Start uses its home content as `main.empty`, with no initial tabs or landing slot. Its Main header defaults to hidden. A saved user header choice still wins, and dropping a tool tab into Main reveals the header through the shared move behavior.
 
 Sessions uses the new-session composer as its empty Main placeholder. Its current breadcrumb is **New session** with session actions. `workbenchPages.newSession` is the routed draft page at `sessions/new`; it accepts a `session-draft` resource without creating a draft tab. Creating the session navigates to `workbenchPages.session` and opens the real session tab. A completed creation does not change navigation if its original draft page is no longer open. Closing the final session tab restores the composer and its breadcrumb.

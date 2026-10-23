@@ -32643,7 +32643,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 658
+                  "y": 665
                 },
                 {
                   "type": "frame",
@@ -77355,7 +77355,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 72,
+                                      "x": 70,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -98054,7 +98054,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 696,
+              "y": 701,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -127058,7 +127058,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 40,
+                                          "y": 41,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -153552,7 +153552,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153574,7 +153574,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154298,7 +154298,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154320,7 +154320,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154934,7 +154934,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154956,7 +154956,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -156301,7 +156301,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -156323,7 +156323,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -217026,7 +217026,7 @@
                           "icon": "arrow-left"
                         },
                         "ROY2j": {
-                          "content": "Project"
+                          "content": "Back to project"
                         }
                       }
                     },
@@ -217175,7 +217175,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "The first entry in the main navigation content shows ← and the current mode name, with the same spacing as other entries. It cannot be moved or hidden. Selecting it returns to the last root-level page.",
+          "content": "The first entry in the main navigation content shows an arrow and Back to followed by the current mode name, with the same spacing as other entries. It cannot be moved or hidden. Selecting it returns to the last root-level page.",
           "lineHeight": 1.4,
           "fontFamily": "$font-body",
           "fontSize": 12,
@@ -217622,21 +217622,22 @@
                   "type": "frame",
                   "id": "U8NHW",
                   "name": "cmp/SimpleCard · Action",
-                  "context": "SimpleCard action variant: borderless surface, radius xs, body padding md, label/M/regular. Hover uses bg.hover; pressed uses bg.active; focus has an outside ring. Default panel grid has two columns and collapses in narrow panels. Page-owned panels contribute entries through Add panel.",
+                  "context": "Compact SimpleCard action variant: borderless surface, radius xs, body padding xs, label/M/regular, 14 px icon. Match Start Recent row density. Hover uses bg.hover; pressed uses bg.active; focus has an outside ring. Default panel grid stays two columns and collapses in narrow panels.",
                   "reusable": true,
                   "width": "fill_container",
+                  "height": 37,
                   "fill": "$ds-surface",
                   "cornerRadius": 4,
-                  "gap": 12,
-                  "padding": 16,
+                  "gap": 8,
+                  "padding": 8,
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "icon",
                       "id": "Juuks",
                       "name": "Icon",
-                      "width": 20,
-                      "height": 20,
+                      "width": 14,
+                      "height": 14,
                       "icon": "file-diff",
                       "library": "lucide",
                       "fill": "$ds-fg-muted"
@@ -217647,8 +217648,9 @@
                       "name": "Label",
                       "fill": "$ds-fg",
                       "content": "Changes",
+                      "lineHeight": 1.5,
                       "fontFamily": "$font-body",
-                      "fontSize": 16,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]

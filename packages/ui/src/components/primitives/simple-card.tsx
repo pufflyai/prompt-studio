@@ -21,7 +21,7 @@ export const SimpleCardBody = (props: SimpleCardBodyProps) => {
   const { children, ...rest } = props;
 
   return (
-    <Box p="md" {...rest}>
+    <Box p="var(--simple-card-body-padding, var(--chakra-spacing-md))" {...rest}>
       {children}
     </Box>
   );

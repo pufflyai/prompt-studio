@@ -45,9 +45,9 @@ export const EmptyPanel = (props: EmptyPanelProps) => {
               }
             >
               <SimpleCardBody>
-                <HStack gap="sm">
+                <HStack gap="xs">
                   {panel.contribution.icon ? (
-                    <WorkbenchIcon name={panel.contribution.icon} size={20} color="fg.muted" />
+                    <WorkbenchIcon name={panel.contribution.icon} size={14} color="fg.muted" />
                   ) : null}
                   <Text textStyle="label/M/regular" truncate>
                     {panel.contribution.title}

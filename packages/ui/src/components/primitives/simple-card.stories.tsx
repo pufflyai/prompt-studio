@@ -19,8 +19,8 @@ export const Action: Story = {
     <SimpleCard variant="action" asChild>
       <button type="button">
         <SimpleCardBody>
-          <HStack gap="sm">
-            <Terminal size={20} />
+          <HStack gap="xs">
+            <Terminal size={14} />
             <Text textStyle="label/M/regular">Terminal</Text>
           </HStack>
         </SimpleCardBody>

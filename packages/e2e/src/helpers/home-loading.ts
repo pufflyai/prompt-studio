@@ -38,7 +38,7 @@ export const verifyPageHeaderChoices = async (page: Page) => {
   await edge.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
   await expect(header).toBeVisible();
-  await page.getByRole("button", { name: "Project", exact: true }).click();
+  await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Home", exact: true }).click();
   await expect(page.getByTestId("start-page")).toBeVisible();
   await expect(edge).toBeVisible();
@@ -46,7 +46,7 @@ export const verifyPageHeaderChoices = async (page: Page) => {
   await expect(edge).toBeVisible();
   await page.getByRole("option", { name: "Sessions", exact: true }).click();
   await expect(header).toBeVisible();
-  await page.getByRole("button", { name: "Project", exact: true }).click();
+  await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Home", exact: true }).click();
   await expect(edge).toBeVisible();
 };
@@ -62,7 +62,7 @@ export const verifyFastHeaderNavigation = async (page: Page) => {
   await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
   await page.getByRole("option", { name: "Sessions", exact: true }).click();
   await expect(header).toBeVisible();
-  await page.getByRole("button", { name: "Project", exact: true }).click();
+  await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Home", exact: true }).click();
   await expect(edge).toBeVisible();
 };
