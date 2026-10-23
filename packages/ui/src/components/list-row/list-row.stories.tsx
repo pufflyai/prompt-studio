@@ -25,7 +25,7 @@ const meta: Meta<typeof ListRow> = {
     docs: {
       description: {
         component:
-          "Reusable row item surface for lists, menus, trees, and dense navigation. RULE: Subtitles/descriptions must add distinct context and never contain the same information as the title.",
+          "Reusable row item surface for lists, menus, trees, and dense navigation. Authoring rows compose startContent previews, actionsVisibility=always, pressed/disabled toggle actions, and expandOnClick=false for separate group expansion. Tree List / Outliner demonstrates controlled multiselection and keyboard reordering. Descriptions remain available to assistive technology. RULE: Subtitles/descriptions must add distinct context and never contain the same information as the title.",
       },
     },
   },

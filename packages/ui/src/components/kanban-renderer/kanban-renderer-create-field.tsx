@@ -3,6 +3,7 @@ import { Paperclip } from "lucide-react";
 import { useRef } from "react";
 import { AttachmentChip } from "@/components/overlays/attachment-chip";
 import { SelectionInput } from "@/components/param-editor/inputs/selection-input";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { LazyMarkdownEditor } from "@/components/rich-text/lazy-markdown-editor";
 import type { KanbanRendererCreateField } from "./types";
 
@@ -17,14 +18,17 @@ const MarkdownControl = (props: {
   const { disabled, field, value, onChange } = props;
 
   return (
-    <LazyMarkdownEditor
-      // Lexical reads its seed once on mount. Use the retained draft when reopening.
-      defaultState={typeof value === "string" ? value : ""}
-      isEditable={!disabled}
-      placeholder={field.placeholder}
-      autoFocus
-      onChange={(next) => onChange(next)}
-    />
+    <ScrollArea height="auto" minH="kanban-create-editor-min" maxH="kanban-create-editor-max" flexShrink="0">
+      <LazyMarkdownEditor
+        // Lexical reads its seed once on mount. Use the retained draft when reopening.
+        defaultState={typeof value === "string" ? value : ""}
+        isEditable={!disabled}
+        placeholder={field.placeholder}
+        scrollable={false}
+        autoFocus
+        onChange={(next) => onChange(next)}
+      />
+    </ScrollArea>
   );
 };
 
