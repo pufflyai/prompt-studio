@@ -30,6 +30,8 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   const firstRow = sidenav.locator("[data-tree-list-node-id]").first();
 
   // Users pin a project row by dragging it into the header.
+  // Extension rows such as Tickets render after the built-in rows, and boundingBox does not wait for them.
+  await expect(row("Tickets")).toBeVisible();
   const from = (await row("Tickets").boundingBox())!;
   const to = (await row("Search").boundingBox())!;
   await page.mouse.move(from.x + 40, from.y + from.height / 2);
