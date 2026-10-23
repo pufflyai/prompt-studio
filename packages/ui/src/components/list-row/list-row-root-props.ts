@@ -55,6 +55,7 @@ const rowLabelIds = (labelId: string, hasEndContent: boolean) =>
 export const createListRowRootProps = (input: {
   rootProps: ListRowRootProps;
   labelId: string;
+  hasDescription?: boolean;
   hasEndContent: boolean;
   rowRole: ListRowRootProps["role"];
   className?: string;
@@ -74,6 +75,7 @@ export const createListRowRootProps = (input: {
   const interactiveCursor = input.isDisabled ? "not-allowed" : "pointer";
   const props: ListRowRootProps = {
     "aria-labelledby": input.rootProps["aria-label"] ? undefined : rowLabelIds(input.labelId, input.hasEndContent),
+    "aria-describedby": input.hasDescription ? `${input.labelId}-description` : undefined,
     ...input.rootProps,
     role: input.rowRole,
     "aria-selected": input.rootProps["aria-selected"] ?? (input.rowRole === "option" ? input.isSelected : undefined),

@@ -20,6 +20,7 @@ import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
 // Explicit live follow-ups capture their active run and never fall back to ordinary queued work.
 import { registerCliSteeringSmokeTests } from "./packaged-cli-steering-smoke";
 // Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
+// scripts/verify/public-package-consumer.ts checks packaged authoring row previews, persistent actions and controlled TreeList selection.
 import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 // OpenAPI publishes recursive command causes without expanding forever.
 // Canonical and deprecated streams preserve full rejections through the SDK and compiled CLI.

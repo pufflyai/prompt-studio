@@ -36727,7 +36727,7 @@
                       "type": "frame",
                       "id": "vmzs5",
                       "name": "cmp/KanbanRendererCreateDialog",
-                      "context": "The shared create dialog. Every control in it is declared rather than hand-built, and the host renders the whole surface — there is no extension webview here.\n\nTwo zones, two sources.\n\nPROPERTIES are derived. They are the resource's own editable attributes, already declared once by the renderer's attribute schema and delivered live with every query. Nothing re-declares them: the form filters on editable and seeds whichever attribute the board groups by from the selected column. Add a tag to the project and the form grows a selector on its own.\n\nCONTENT is declared. The create contribution names its typed params — markdown, text, number, boolean, files — and each type maps to exactly one @pstdio/ui control. When an extension needs a control the vocabulary lacks, the answer is to add the type, here and in the component library, the same way a visual the recipes cannot express means a recipe is missing. The vocabulary is the design system's form surface enumerated; it is not a per-extension escape hatch.\n\nThis is a form, and forms are declarable. Rich per-resource editing is a different surface — the resource editor view — and that one stays a webview.\n\nThree things to hold: status appears once, as the first control under Properties, disabled because the column already chose it. The attach affordance sits under the field it applies to, so the footer stays a pure commit bar. And all copy, chrome included, arrives as Localizable — the dialog ships no English of its own. Creation starts with matching editable view properties. Clicking the backdrop does not dismiss the form. Escape and Cancel keep the draft; only Close discards it, and a successful create clears it. The submit split button offers Create ticket and Create without opening.",
+                      "context": "The shared create dialog. Every control in it is declared rather than hand-built, and the host renders the whole surface — there is no extension webview here.\n\nTwo zones, two sources.\n\nPROPERTIES are derived. They are the resource's own editable attributes, already declared once by the renderer's attribute schema and delivered live with every query. Nothing re-declares them: the form filters on editable and seeds whichever attribute the board groups by from the selected column. Add a tag to the project and the form grows a selector on its own.\n\nCONTENT is declared. The create contribution names its typed params — markdown, text, number, boolean, files — and each type maps to exactly one @pstdio/ui control. When an extension needs a control the vocabulary lacks, the answer is to add the type, here and in the component library, the same way a visual the recipes cannot express means a recipe is missing. The vocabulary is the design system's form surface enumerated; it is not a per-extension escape hatch.\n\nThis is a form, and forms are declarable. Rich per-resource editing is a different surface — the resource editor view — and that one stays a webview.\n\nThree things to hold: status appears once, as the first control under Properties, disabled because the column already chose it. The attach affordance sits under the field it applies to, so the footer stays a pure commit bar. And all copy, chrome included, arrives as Localizable — the dialog ships no English of its own. Creation starts with matching editable view properties. Clicking the backdrop does not dismiss the form. Escape and Cancel keep the draft; only Close discards it, and a successful create clears it. The submit split button offers Create ticket and Create without opening.\n\nKeep long content inside the form: the markdown field starts at 144 px and grows to at most 320 px or 40% of the viewport height, whichever is smaller. It uses the shared ScrollArea so attachments and properties stay below it. The body uses a separate shared ScrollArea when a short viewport cannot fit all fields; the header and commit footer stay visible. The dialog leaves 24 px above and below the viewport; its header and footer do not shrink.",
                       "reusable": true,
                       "clip": true,
                       "width": 600,
@@ -36826,6 +36826,7 @@
                                     "size": "sm",
                                     "field": "default"
                                   },
+                                  "context": "Grow with short content from 144 px to a maximum of min(320 px, 40dvh). Longer content scrolls inside the shared ScrollArea with the standard thin scrollbar.",
                                   "descendants": {
                                     "o89C2": {
                                       "content": "Describe the ticket…"
@@ -217184,9 +217185,404 @@
     },
     {
       "type": "frame",
-      "id": "xFzwn",
+      "id": "NbFdB",
       "x": 0,
       "y": 33516,
+      "name": "Outliner composition · PS-861",
+      "width": 840,
+      "height": 420,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "UJGkI",
+          "name": "Heading",
+          "fill": "$ds-fg",
+          "content": "Outliner · controlled authoring rows",
+          "fontFamily": "$font-heading",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "wOi8H",
+          "name": "Contract",
+          "fill": "$ds-fg-muted",
+          "content": "TreeList rows · 28 px · extension previews · persistent visibility and lock · separate expansion",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "KcJtW",
+          "name": "Caption group",
+          "width": 360,
+          "height": 28,
+          "fill": "$ds-bg",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "BRZ1a",
+              "name": "Expand control",
+              "width": 12,
+              "height": 12,
+              "icon": "chevron-right",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "frame",
+              "id": "mDAVx",
+              "name": "Extension thumbnail slot",
+              "width": 20,
+              "height": 20,
+              "fill": "$ds-surface",
+              "cornerRadius": 2
+            },
+            {
+              "type": "text",
+              "id": "U1DAHD",
+              "name": "Label",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Caption group",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "icon",
+              "id": "b9Al9S",
+              "name": "eye",
+              "width": 16,
+              "height": 16,
+              "icon": "eye",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "icon",
+              "id": "B541GE",
+              "name": "lock-open",
+              "width": 16,
+              "height": 16,
+              "icon": "lock-open",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "wGq3o",
+          "name": "Selected image + mask",
+          "width": 360,
+          "height": 28,
+          "fill": "$ds-bg-active",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "N3mz2",
+              "name": "Expand control",
+              "width": 12,
+              "height": 12,
+              "icon": "chevron-right",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "frame",
+              "id": "YMtxf",
+              "name": "Extension thumbnail slot",
+              "width": 20,
+              "height": 20,
+              "fill": "$ds-surface",
+              "cornerRadius": 2
+            },
+            {
+              "type": "frame",
+              "id": "u2vABM",
+              "name": "Mask thumbnail slot",
+              "width": 16,
+              "height": 20,
+              "fill": "$ds-fg-muted",
+              "cornerRadius": 2
+            },
+            {
+              "type": "text",
+              "id": "IAsQ8",
+              "name": "Label",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Selected image + mask",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "icon",
+              "id": "I4vYoq",
+              "name": "eye",
+              "width": 16,
+              "height": 16,
+              "icon": "eye",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "icon",
+              "id": "jblqm",
+              "name": "lock-open",
+              "width": 16,
+              "height": 16,
+              "icon": "lock-open",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "eNxk5",
+          "name": "Hidden layer",
+          "width": 360,
+          "height": 28,
+          "fill": "$ds-bg",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "K1mfix",
+              "name": "Expand control",
+              "width": 12,
+              "height": 12,
+              "icon": "chevron-right",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "frame",
+              "id": "RkJ1b",
+              "name": "Extension thumbnail slot",
+              "width": 20,
+              "height": 20,
+              "fill": "$ds-surface",
+              "cornerRadius": 2
+            },
+            {
+              "type": "text",
+              "id": "P9BSHL",
+              "name": "Label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Hidden layer",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "icon",
+              "id": "fBSz6",
+              "name": "eye-off",
+              "width": 16,
+              "height": 16,
+              "icon": "eye-off",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "icon",
+              "id": "QiJk7",
+              "name": "lock-open",
+              "width": 16,
+              "height": 16,
+              "icon": "lock-open",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "pXIGB",
+          "name": "Locked layer",
+          "width": 360,
+          "height": 28,
+          "fill": "$ds-bg",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "Zqlta",
+              "name": "Expand control",
+              "width": 12,
+              "height": 12,
+              "icon": "chevron-right",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "frame",
+              "id": "gLWwc",
+              "name": "Extension thumbnail slot",
+              "width": 20,
+              "height": 20,
+              "fill": "$ds-surface",
+              "cornerRadius": 2
+            },
+            {
+              "type": "text",
+              "id": "LGYRv",
+              "name": "Label",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Locked layer",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "icon",
+              "id": "uB6JL",
+              "name": "eye",
+              "width": 16,
+              "height": 16,
+              "icon": "eye",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "icon",
+              "id": "q5nTxi",
+              "name": "lock",
+              "width": 16,
+              "height": 16,
+              "icon": "lock",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "q1JYau",
+          "name": "Unavailable layer",
+          "opacity": 0.4,
+          "width": 360,
+          "height": 28,
+          "fill": "$ds-bg",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "Ilzro",
+              "name": "Expand control",
+              "width": 12,
+              "height": 12,
+              "icon": "chevron-right",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "frame",
+              "id": "a2Y5Ac",
+              "name": "Extension thumbnail slot",
+              "width": 20,
+              "height": 20,
+              "fill": "$ds-surface",
+              "cornerRadius": 2
+            },
+            {
+              "type": "text",
+              "id": "c5aM2y",
+              "name": "Label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Unavailable layer",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "icon",
+              "id": "PptM3",
+              "name": "eye-off",
+              "width": 16,
+              "height": 16,
+              "icon": "eye-off",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "icon",
+              "id": "HceRa",
+              "name": "lock",
+              "width": 16,
+              "height": 16,
+              "icon": "lock",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "yRpWx",
+          "name": "Keyboard contract",
+          "fill": "$ds-fg-muted",
+          "content": "Click replaces · Ctrl/Cmd toggles · Shift selects visible range · Alt+↑/↓ moves siblings",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Vc07U",
+      "x": 0,
+      "y": 34016,
       "name": "Keyboard shortcuts · PS-894",
       "clip": true,
       "width": 2256,
@@ -217197,7 +217593,7 @@
       "children": [
         {
           "type": "text",
-          "id": "i9odcJ",
+          "id": "GMwV5",
           "name": "Keyboard shortcuts title",
           "fill": "$ds-fg",
           "content": "Keyboard shortcuts · every visible panel",
@@ -217207,13 +217603,13 @@
         },
         {
           "type": "frame",
-          "id": "AbaT0",
+          "id": "iNPhE",
           "name": "Keyboard interaction surfaces",
           "width": "fill_container",
           "gap": 24,
           "children": [
             {
-              "id": "HscM2",
+              "id": "fR0AZ",
               "type": "ref",
               "ref": "hkUeJ",
               "name": "Keyboard menu",
@@ -217223,7 +217619,7 @@
               "descendants": {
                 "Ow45W": {
                   "type": "frame",
-                  "id": "X2NsH",
+                  "id": "J26pX",
                   "name": "Keyboard menu heading",
                   "width": "fill_container",
                   "height": 48,
@@ -217239,7 +217635,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "YrCMi",
+                      "id": "HCuKr",
                       "name": "Leader / View",
                       "fill": "$ds-fg",
                       "content": "Leader / View",
@@ -217251,7 +217647,7 @@
                 },
                 "BtzIp": {
                   "type": "frame",
-                  "id": "on6k3",
+                  "id": "eOebF",
                   "name": "Keyboard menu entries",
                   "width": "fill_container",
                   "layout": "vertical",
@@ -217261,7 +217657,7 @@
                   ],
                   "children": [
                     {
-                      "id": "i9jAw1",
+                      "id": "TcYAd",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "Previous tab",
@@ -217274,7 +217670,7 @@
                           "content": "Previous tab"
                         },
                         "E8VVm": {
-                          "id": "NcNKN",
+                          "id": "WvCrg",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut ←",
@@ -217291,7 +217687,7 @@
                       }
                     },
                     {
-                      "id": "f0mGn",
+                      "id": "e09WX",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "Next tab",
@@ -217304,7 +217700,7 @@
                           "content": "Next tab"
                         },
                         "E8VVm": {
-                          "id": "WbkHy",
+                          "id": "k4OGWp",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut →",
@@ -217321,7 +217717,7 @@
                       }
                     },
                     {
-                      "id": "fc8Nr",
+                      "id": "YYWQg",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "New tab…",
@@ -217334,7 +217730,7 @@
                           "content": "New tab…"
                         },
                         "E8VVm": {
-                          "id": "dST0k",
+                          "id": "qCIB8",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut N",
@@ -217351,7 +217747,7 @@
                       }
                     },
                     {
-                      "id": "gZ0oj",
+                      "id": "OPmaF",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "Move tab…",
@@ -217364,7 +217760,7 @@
                           "content": "Move tab…"
                         },
                         "E8VVm": {
-                          "id": "X9jG7A",
+                          "id": "QsIMJ",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut O",
@@ -217381,7 +217777,7 @@
                       }
                     },
                     {
-                      "id": "ICrlD",
+                      "id": "WlkQw",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "Reposition panel…",
@@ -217394,7 +217790,7 @@
                           "content": "Reposition panel…"
                         },
                         "E8VVm": {
-                          "id": "aHNu2",
+                          "id": "s2gWH",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut R",
@@ -217411,7 +217807,7 @@
                       }
                     },
                     {
-                      "id": "JL7yP",
+                      "id": "QsgRT",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "Select tab beyond nine",
@@ -217424,7 +217820,7 @@
                           "content": "Select tab beyond nine"
                         },
                         "E8VVm": {
-                          "id": "IiwrQ",
+                          "id": "O8T9B",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut T",
@@ -217451,7 +217847,7 @@
               }
             },
             {
-              "id": "kzkF4",
+              "id": "gwuvY",
               "type": "ref",
               "ref": "hkUeJ",
               "name": "Target selection",
@@ -217461,7 +217857,7 @@
               "descendants": {
                 "Ow45W": {
                   "type": "frame",
-                  "id": "PCLe8",
+                  "id": "xEwXs",
                   "name": "Target selection heading",
                   "width": "fill_container",
                   "height": 48,
@@ -217477,7 +217873,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "p39N1",
+                      "id": "SJUcU",
                       "name": "Change ticket status",
                       "fill": "$ds-fg",
                       "content": "Change ticket status",
@@ -217489,7 +217885,7 @@
                 },
                 "BtzIp": {
                   "type": "frame",
-                  "id": "CUJwb",
+                  "id": "hg7ck",
                   "name": "Target selection entries",
                   "width": "fill_container",
                   "layout": "vertical",
@@ -217499,7 +217895,7 @@
                   ],
                   "children": [
                     {
-                      "id": "w9u9Eb",
+                      "id": "uocH3",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "PS-894 · Main",
@@ -217512,7 +217908,7 @@
                           "content": "PS-894 · Main"
                         },
                         "E8VVm": {
-                          "id": "AEatt",
+                          "id": "I4Gi8n",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut 1",
@@ -217529,7 +217925,7 @@
                       }
                     },
                     {
-                      "id": "y6Tfc",
+                      "id": "T9j1Uy",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "PS-887 · Secondary",
@@ -217542,7 +217938,7 @@
                           "content": "PS-887 · Secondary"
                         },
                         "E8VVm": {
-                          "id": "WojkM",
+                          "id": "TAfut",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut 2",
@@ -217569,7 +217965,7 @@
               }
             },
             {
-              "id": "POWGE",
+              "id": "i9MtmG",
               "type": "ref",
               "ref": "hkUeJ",
               "name": "Shortcut management",
@@ -217579,7 +217975,7 @@
               "descendants": {
                 "Ow45W": {
                   "type": "frame",
-                  "id": "ojI5h",
+                  "id": "aZyPw",
                   "name": "Shortcut management heading",
                   "width": "fill_container",
                   "height": 48,
@@ -217595,7 +217991,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "ZZVBf",
+                      "id": "i5t1oL",
                       "name": "Keyboard shortcuts",
                       "fill": "$ds-fg",
                       "content": "Keyboard shortcuts",
@@ -217607,7 +218003,7 @@
                 },
                 "BtzIp": {
                   "type": "frame",
-                  "id": "m4Gh5",
+                  "id": "m8Q52j",
                   "name": "Shortcut management entries",
                   "width": "fill_container",
                   "layout": "vertical",
@@ -217617,7 +218013,7 @@
                   ],
                   "children": [
                     {
-                      "id": "Mcc4Q",
+                      "id": "NhRmE",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "Change ticket status · Planner · Resource",
@@ -217630,7 +218026,7 @@
                           "content": "Change ticket status · Planner · Resource"
                         },
                         "E8VVm": {
-                          "id": "KFLOn",
+                          "id": "t2Mw1Z",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut A S",
@@ -217647,7 +218043,7 @@
                       }
                     },
                     {
-                      "id": "XzSHF",
+                      "id": "FWSth",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "New tab · Core · Panel",
@@ -217660,7 +218056,7 @@
                           "content": "New tab · Core · Panel"
                         },
                         "E8VVm": {
-                          "id": "O5RhS",
+                          "id": "kE6VO",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut V N",
@@ -217677,7 +218073,7 @@
                       }
                     },
                     {
-                      "id": "ErWwr",
+                      "id": "XTsxq",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "Tickets · Planner · Sticky",
@@ -217690,7 +218086,7 @@
                           "content": "Tickets · Planner · Sticky"
                         },
                         "E8VVm": {
-                          "id": "f6TiRt",
+                          "id": "cFGo5",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut G P",
@@ -217707,7 +218103,7 @@
                       }
                     },
                     {
-                      "id": "rZZ0e",
+                      "id": "TRQ7H",
                       "type": "ref",
                       "ref": "hIyB7",
                       "name": "Unassigned action · Assign shortcut",
@@ -217720,7 +218116,7 @@
                           "content": "Unassigned action · Assign shortcut"
                         },
                         "E8VVm": {
-                          "id": "i5HsSG",
+                          "id": "vifeO",
                           "type": "ref",
                           "ref": "XpOTN",
                           "name": "Shortcut —",
