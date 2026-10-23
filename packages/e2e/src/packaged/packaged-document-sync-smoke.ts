@@ -14,7 +14,8 @@ const waitFor = async (condition: () => Promise<boolean> | boolean) => {
   while (!(await condition())) await Bun.sleep(25);
 };
 export const registerDocumentSyncSmokeTests = () =>
-  test(
+  // ADR 0100 pauses record relay sync until per-resource synchronization exists.
+  test.todo(
     "compiled host uploads encrypted states and blobs and sets aside unreadable updates",
     async () => {
       const root = await mkdtemp(join(tmpdir(), "packaged-document-sync-"));

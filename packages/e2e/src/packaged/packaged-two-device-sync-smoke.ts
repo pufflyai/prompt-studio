@@ -87,7 +87,8 @@ const write = (device: Awaited<ReturnType<typeof startDevice>>, projectId: strin
   );
 
 export const registerTwoDeviceSyncSmokeTests = () =>
-  test(
+  // ADR 0100 pauses record relay sync until per-resource synchronization exists.
+  test.todo(
     "two compiled hosts report honest sync states through an interrupted download, offline, local and synced again",
     async () => {
       const root = await mkdtemp(join(tmpdir(), "packaged-two-device-sync-"));

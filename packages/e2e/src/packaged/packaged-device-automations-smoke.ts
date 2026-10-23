@@ -10,7 +10,8 @@ import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 export const registerDeviceAutomationSmokeTests = () =>
-  test(
+  // ADR 0100 pauses record relay sync until per-resource synchronization exists.
+  test.todo(
     "compiled hosts sync device assignments as encrypted documents and retain them after restart",
     async () => {
       const root = await mkdtemp(join(tmpdir(), "packaged-device-automations-"));

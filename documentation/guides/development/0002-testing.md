@@ -183,6 +183,8 @@ The UI and Vite launchers also remove inherited runtime settings. Each run alloc
 
 The packaged Planner runtime spec (`packages/e2e/src/packaged/packaged-planner-runtime.spec.ts`) installs the current Planner into a running host and seeds populated projects. It covers saved views, filter controls, Track conflicts, missing caches, and webview reload recovery. The install downloads the Planner's locked dependencies into the test home.
 
+Three packaged record-relay checks are marked `todo` while per-resource relay sync is unavailable, as specified by [ADR 0100](../../adrs/0100-one-document-per-resource.md). They cover device assignments, encrypted record documents, and two-device record sync. Re-enable them when per-resource sync ships; the remaining relay checks stay active.
+
 Nx test inputs include the shared preload, root Bun configuration, lockfile, and Bun version. Changing these invalidates cached test results.
 
 Global preferences survive project deletion. Browser specs that read or change notifications use the test fixture in `src/ui/helpers/notification-settings.ts` and opt in with `test.use({ notificationsEnabled: true })` when needed. The fixture restores the previous preference during teardown.
