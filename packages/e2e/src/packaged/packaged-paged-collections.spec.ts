@@ -234,7 +234,11 @@ test("paged tables request discovered and changed columns", async () => {
       await page.getByRole("textbox", { name: "Search this view", exact: true }).fill("pending");
       await held.promise;
       await page.getByRole("button", { name: "Switch project", exact: true }).click();
-      await page.getByRole("option", { name: /^Other column scope / }).click();
+      await page
+        .getByRole("dialog", { name: "Projects", exact: true })
+        .getByRole("option")
+        .filter({ has: page.getByText("Other column scope", { exact: true }) })
+        .click();
       await page.getByRole("option", { name: "Discovered columns", exact: true }).click();
       await expect(page.getByRole("cell", { name: `${other.id} discovered field value`, exact: true })).toBeVisible();
       release.resolve();
