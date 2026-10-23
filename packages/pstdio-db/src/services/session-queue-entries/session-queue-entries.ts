@@ -33,7 +33,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
       .where(eq(session_queue_entries.queue_position, queuePosition));
     return entry ?? null;
   };
-  const create = async (input: CreateInput) => {
+  const insert = async (input: CreateInput, delivery?: { id: string; runStartedAt: string }) => {
     const timestamp = input.created_at ?? nowTimestamp();
     const [created] = await db
       .insert(session_queue_entries)
@@ -47,12 +47,19 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
         attachments_json: input.attachments_json ?? null,
         params_json: input.params_json ?? null,
         dispatch_started_at: input.dispatch_started_at ?? null,
+        steering_delivery_json: delivery ?? null,
         created_at: timestamp,
         updated_at: timestamp,
       })
       .returning();
     return created;
   };
+
+  const create = (input: CreateInput) => insert(input);
+  const createSteeringDelivery = (
+    input: Omit<CreateInput, "dispatch_started_at">,
+    delivery: { id: string; runStartedAt: string },
+  ) => insert(input, delivery);
 
   const createDispatchStarted = async (input: Omit<CreateInput, "dispatch_started_at">) => {
     const timestamp = nowTimestamp();
@@ -198,6 +205,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     ...createSteeringDeliveryOperations(db),
     combinePending: (input: Parameters<typeof combinePending>[1]) => combinePending(db, input),
     create,
+    createSteeringDelivery,
     createDispatchStarted,
     listPending,
     listPendingBySession,
