@@ -86,6 +86,7 @@ import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
 // Composer coverage recalls saved prompts, preserves route-group file paths, and keeps web references clickable.
 // Queue drag targets follow live-input support and retain padded delete actions.
+// Extension commands stop active work and cancel remaining queued follow-ups through the public SDK.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
