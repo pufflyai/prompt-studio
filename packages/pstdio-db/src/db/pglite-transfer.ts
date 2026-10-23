@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
+import type { PGlite } from "@electric-sql/pglite";
 import {
   quoteIdentifier,
   type TransferArchive,
@@ -10,7 +11,7 @@ import {
 export { exportPgliteDatabase } from "./pglite-transfer-export";
 
 // The destination is private staging, never the active application database.
-export const importPgliteDatabase = async (db: TransferDatabase, directory: string) => {
+const importArchive = async (db: TransferDatabase, directory: string) => {
   const archive = (await Bun.file(join(directory, "manifest.json")).json()) as TransferArchive;
   const copy = async (table: string, file: TransferFile) => {
     const bytes = await Bun.file(join(directory, file.name)).arrayBuffer();
@@ -61,3 +62,8 @@ export const importPgliteDatabase = async (db: TransferDatabase, directory: stri
   await db.exec(await Bun.file(join(directory, "post-data.sql")).text());
   await db.exec("set search_path=public");
 };
+
+// Verify and publish the private import in one transaction. Committing each COPY
+// separately flushes the database repeatedly, especially on Windows filesystems.
+export const importPgliteDatabase = (db: Pick<PGlite, "transaction">, directory: string) =>
+  db.transaction((transaction) => importArchive(transaction, directory));
