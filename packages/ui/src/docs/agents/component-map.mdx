@@ -22,6 +22,13 @@ Use this map to choose the first component to inspect through Storybook MCP.
 - `ColumnFileBrowser`, `Sidenav`, `TreeList`, and `ListRow` cover navigable resource structures.
 - Use `TreeList` for hierarchical sections and `ListRow` for individual row composition.
 
+## Pannable workspaces
+
+- Use `Canvas` for the shared background, pointer pan, wheel/pinch zoom, and keyboard navigation of a timeline or live-design workspace.
+- Callers own their content, camera, zoom limits, and saved layout. `onPan` receives content movement in screen pixels; native-scroll callers negate it. `zoomCanvas` applies anchored zoom to a camera.
+- Mark interactive content or separate drag targets with `data-canvas-control`. This preserves native input while Space-drag and middle-drag still pan over those regions. Keep portals in their native roots.
+- Start from `Components/Layout/Canvas` stories for both native scrolling with sticky headers and transformed live previews. Ordinary lists and documents still use `ScrollArea`.
+
 ## Data display
 
 - `DataTable` handles tabular data.
