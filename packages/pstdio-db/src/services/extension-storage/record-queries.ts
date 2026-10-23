@@ -199,6 +199,10 @@ export const createRecordQueries = (
         const index = await getIndex(tx, query.index);
         const revision = await getRevision(tx);
         validatePredicate(index, query.where);
+        if (query.where === undefined && query.groupBy === undefined && index.prefix === undefined) {
+          const [projection] = await tx.select().from(projections).where(ownerWhere(projections));
+          return { revision, count: projection?.live_count ?? 0, groups: [] };
+        }
         const group =
           query.groupBy === undefined
             ? sql`NULL::jsonb`

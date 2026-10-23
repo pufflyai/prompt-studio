@@ -39,7 +39,8 @@ export const createViewReader = (
       index,
       where: scaleScopePredicate(false, scaleSelectionPredicate(count, selection)),
     });
-    const total = await records.aggregate({ index, where: scaleScopePredicate(false) });
+    // A view without a filter asks for every live record, which the owner's stored count answers.
+    const total = await records.aggregate({ index });
     assert.equal(selected.revision, total.revision, "Counts changed while reading them");
     assert.equal(total.count, count);
     return { selected: selected.count, total: total.count };
