@@ -11,9 +11,9 @@ import {
   listKeyboardTabs,
   visibleKeyboardTargets,
 } from "./keyboard-presentations";
-import { createShortcutCatalogReader } from "./shortcut-catalog-reader";
+import { createShortcutCatalogReader, createShortcutHintReader } from "./shortcut-catalog-reader";
 import { runShortcutMatches } from "./shortcut-matches";
-import { matchShortcutPath, shortcutHints, shortcutMenuEntries } from "./shortcut-menu";
+import { matchShortcutPath, shortcutMenuEntries } from "./shortcut-menu";
 
 export interface KeyboardChoice {
   key: string;
@@ -58,19 +58,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
   };
   const catalogReader = createShortcutCatalogReader(getCore, visibleTargets);
   const catalog = (fresh = false) => catalogReader.read(fresh);
-  let hintCatalog: ReturnType<typeof catalog> | undefined;
-  let hintState: KeyboardState | undefined;
-  let hintSnapshot = new Map<string, string>();
-  const hints = () => {
-    const currentCatalog = catalog();
-    const currentState = store.getState();
-    if (hintCatalog !== currentCatalog || hintState !== currentState) {
-      hintSnapshot = shortcutHints(currentCatalog, currentState);
-      hintCatalog = currentCatalog;
-      hintState = currentState;
-    }
-    return hintSnapshot;
-  };
+  const hints = createShortcutHintReader(catalog, store.getState);
   const presentations = () => [...listTabs(), ...visibleTargets()];
   const stop = (restore = true) => {
     choices = [];

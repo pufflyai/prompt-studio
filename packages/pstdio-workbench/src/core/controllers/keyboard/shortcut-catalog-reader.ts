@@ -1,6 +1,24 @@
 import type { WorkbenchCore } from "../../workbench-core-types";
+import type { KeyboardState } from "./keyboard-controller";
 import type { KeyboardPresentation } from "./keyboard-presentations";
 import { type ResolvedShortcut, resolveShortcutCatalog } from "./shortcut-catalog";
+import { shortcutHints } from "./shortcut-menu";
+
+export const createShortcutHintReader = (catalog: () => ResolvedShortcut[], readState: () => KeyboardState) => {
+  let hintCatalog: ResolvedShortcut[] | undefined;
+  let hintState: KeyboardState | undefined;
+  let snapshot = new Map<string, string>();
+  return () => {
+    const currentCatalog = catalog();
+    const currentState = readState();
+    if (hintCatalog !== currentCatalog || hintState !== currentState) {
+      snapshot = shortcutHints(currentCatalog, currentState);
+      hintCatalog = currentCatalog;
+      hintState = currentState;
+    }
+    return snapshot;
+  };
+};
 
 /** Every hint in a render shares one derived catalog for the same workbench inputs. */
 export const createShortcutCatalogReader = (
