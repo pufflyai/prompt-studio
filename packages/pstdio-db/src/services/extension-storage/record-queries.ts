@@ -160,6 +160,7 @@ export const createRecordQueries = (
             sql`${visible(index)} AND ${predicateSql(index, query.where)} AND ${pageAfterSql(index, page.after)}`,
             // One extra row shows whether a next page exists without a second scan.
             page.limit + 1,
+            page.offset,
           ),
         );
         const rows = result.rows.slice(0, page.limit);
