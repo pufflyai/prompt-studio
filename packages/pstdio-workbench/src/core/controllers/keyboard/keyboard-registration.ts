@@ -7,6 +7,8 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 import { registerKeyboardPanelCommands } from "./keyboard-panel-commands";
 
 export const registerKeyboardCommands = (core: WorkbenchCore) => {
+  core.navigationTrees.onDidChange(() => core.keyboard.refresh());
+  core.layout.menuStore.subscribe(() => core.keyboard.refresh());
   core.preferences.registerSchema({
     properties: {
       [SHORTCUT_PREFERENCE_KEY]: {

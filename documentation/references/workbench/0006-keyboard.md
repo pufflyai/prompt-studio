@@ -1,6 +1,12 @@
 # Keyboard shortcuts
 
+Navigate visible panels, choose an action's target, and customize shortcuts through one shared keyboard catalog.
+
+## Open the keyboard menu
+
 Press **Alt+Shift+Space** to enter the keyboard menu. Choose View (V), Go (G), Create (C), Current view (A), Extensions (E), Settings (S), or Help (H). Press `/` to search actions. Backspace returns one level; Enter or Escape finishes. Keyboard Shortcuts under Help lists assigned, inactive, disabled, and unassigned actions. Rebind, disable, reset, change Leader, or pin an extension alias there. Personal choices persist in the host's user preference adapter.
+
+Unaliased extensions appear under E as selectable rows. Use Up/Down and Enter to choose one, or pin an alias in Keyboard Shortcuts for a shorter path.
 
 ## Navigation
 

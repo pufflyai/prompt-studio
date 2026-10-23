@@ -8,6 +8,39 @@ import { changeThemeThroughCommandPalette } from "./helpers/theme-picker";
 
 test.use({ notificationsEnabled: true });
 
+test("typed session creation adds a Secondary tab and Close selects that instance", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Typed session tabs" }),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+  await page.goto(`/projects/${project.id}/sessions`);
+  await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
+  const secondary = page.locator('[data-workbench-region="secondary"]');
+  const before = await secondary.getByRole("tab").count();
+  await page.keyboard.press("Alt+Shift+Space");
+  await page.keyboard.press("c");
+  await page.keyboard.press("s");
+  await page
+    .getByRole("dialog", { name: "New tab · destination", exact: true })
+    .getByRole("button", { name: /Secondary/ })
+    .click();
+  await page
+    .getByRole("dialog", { name: "New tab · panel type", exact: true })
+    .getByRole("button", { name: /Session/ })
+    .click();
+  await expect(secondary.getByRole("tab")).toHaveCount(before + 1);
+  await page.keyboard.press("Alt+Shift+Space");
+  await page.keyboard.press("v");
+  await page.keyboard.press("x");
+  await page
+    .getByRole("dialog", { name: "Close tab", exact: true })
+    .getByRole("button", { name: /Secondary/ })
+    .click();
+  await expect(secondary.getByRole("tab")).toHaveCount(before);
+});
+
 test("lists every registered keyboard shortcut", async ({ page, request }, testInfo) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "PS-299 Keyboard Shortcuts" }),
