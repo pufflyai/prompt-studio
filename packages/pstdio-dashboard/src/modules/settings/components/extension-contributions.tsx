@@ -1,5 +1,6 @@
 import { Code, HStack, Icon, IconButton, Kbd, Stack, Text } from "@chakra-ui/react";
 import type { WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
+import type { WorkbenchCore } from "@pstdio/workbench";
 import type { LucideIcon } from "lucide-react";
 import {
   Bot,
@@ -21,6 +22,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
+import { ExtensionShortcutContributions } from "./extension-shortcut-contributions";
 
 export interface ContributionRecordRow {
   id: string;
@@ -51,13 +53,6 @@ const row = (id: string, title: string, meta?: string) => ({ id, title: title ||
 // Flattens the workbench metadata into the design's grouped record list: one
 // group per contribution kind, one row per record (title · id · placement meta).
 export const buildContributionGroups = (metadata: DashboardExtensionMetadata | undefined, extensionId: string) => {
-  // Keybindings attach to commands, so they render as a column on the command rows.
-  const commandKeys = new Map(
-    forExtension(metadata?.keybindings, extensionId).flatMap((record) =>
-      typeof record.key === "string" ? [[String(record.commandId), record.key] as const] : [],
-    ),
-  );
-
   const groups: ContributionGroup[] = [
     {
       key: "harnesses",
@@ -72,7 +67,6 @@ export const buildContributionGroups = (metadata: DashboardExtensionMetadata | u
       rows: forExtension(metadata?.commands, extensionId).map((record) => ({
         ...row(String(record.id), text(record.title, extensionId)),
         cli: typeof record.cliPath === "string" ? `pst ${record.cliPath}` : undefined,
-        keys: commandKeys.get(String(record.id)),
       })),
     },
     {
@@ -246,6 +240,7 @@ const RecordRow = (props: { record: ContributionRecordRow; endContent?: React.Re
 };
 
 export interface ExtensionContributionsProps {
+  workbench?: WorkbenchCore;
   metadata: DashboardExtensionMetadata | undefined;
   extensionId: string;
   automations: WorkbenchExtensionAutomationRecord[];
@@ -260,6 +255,7 @@ export const ExtensionContributions = (props: ExtensionContributionsProps) => {
 
   return (
     <Stack gap="0">
+      <ExtensionShortcutContributions workbench={props.workbench} metadata={metadata} extensionId={extensionId} />
       {automations.length > 0 && (
         <Stack gap="0">
           <GroupLabel

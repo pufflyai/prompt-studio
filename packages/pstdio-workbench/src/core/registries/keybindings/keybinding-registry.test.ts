@@ -4,6 +4,26 @@ import { createCommandRegistry } from "../commands/command-registry";
 import { createKeybindingRegistry } from "./keybinding-registry";
 
 describe("createKeybindingRegistry", () => {
+  test("menu aliases share the source action's catalog entry", () => {
+    const commands = createCommandRegistry();
+    const context = createContextKeyService();
+    commands.registerCommand({ id: "greet", label: "Greeting" }, { execute() {} });
+    commands.registerCommand({ id: "palette-greet", label: "Greeting" }, { execute() {} });
+    const keybindings = createKeybindingRegistry({
+      commands,
+      context,
+      actions: () => [
+        {
+          label: "Greeting",
+          ownerId: "test",
+          aliasCommandId: "palette-greet",
+          action: { kind: "command", commandId: "greet" },
+        },
+      ],
+    });
+    keybindings.registerKeybinding({ action: { kind: "command", commandId: "greet" }, keybinding: "Alt+G" });
+    expect(keybindings.listCatalog()).toHaveLength(1);
+  });
   test("registers keybindings against commands and filters by context", () => {
     const commands = createCommandRegistry();
     const context = createContextKeyService();

@@ -252,6 +252,12 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         action: { kind: "command", commandId: dashboardCommandIds.openSessions },
         keybinding: "Alt+Shift+S",
       });
+      ctx.keybindings.registerKeybinding({
+        action: { kind: "page", page: workbenchPages.sessions },
+        keybinding: "S",
+        layer: "go",
+        sticky: true,
+      });
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: dashboardCommandIds.openSessions,
         order: 30,

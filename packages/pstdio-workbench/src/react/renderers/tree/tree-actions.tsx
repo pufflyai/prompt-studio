@@ -119,11 +119,15 @@ const isTreeActionEnabled = (
   return record ? workbench.commands.isCommandEnabled(record.command.id, action.args, context) : true;
 };
 
+const treeActionHint = (workbench: WorkbenchCoreContributionContext, action: TreeAction) =>
+  action.commandId
+    ? workbench.keyboard.hint({ kind: "command", commandId: action.commandId, args: action.args })
+    : undefined;
+
 const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
   const { actions = [], context, onCommandError, onRequestParams, workbench } = input;
   if (actions.length === 0) return [];
   const contextValues = commandContextValues(workbench, context);
-  const shortcuts = new Map(workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListActionMenuItem[] = [];
 
   for (const action of actions) {
@@ -135,7 +139,7 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
 
     const icon = action.icon ?? record?.command.icon;
     const disabled = !isTreeActionEnabled(workbench, action, context);
-    const binding = action.commandId ? shortcuts.get(action.commandId) : undefined;
+    const binding = treeActionHint(workbench, action);
     const requestParams =
       hasCommandParameters(action.params) && onRequestParams
         ? () =>
@@ -192,7 +196,6 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
   const { actions = [], context, onCommandError, onRequestParams, workbench } = input;
   if (actions.length === 0) return [];
   const contextValues = commandContextValues(workbench, context);
-  const shortcuts = new Map(workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListAction[] = [];
 
   for (const action of actions) {
@@ -207,7 +210,7 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
     if (!label) continue;
 
     const icon = action.icon ?? record?.command.icon;
-    const binding = action.commandId ? shortcuts.get(action.commandId) : undefined;
+    const binding = treeActionHint(workbench, action);
     const requestParams =
       hasCommandParameters(action.params) && onRequestParams
         ? () =>

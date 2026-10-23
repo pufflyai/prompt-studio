@@ -70,6 +70,7 @@ const registerCommands = (
             region: executionContext?.region,
           }),
       },
+      { ownerId: command.extensionId, source: "extension" },
     ),
   );
 const menuCommandResource = (

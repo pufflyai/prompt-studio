@@ -217181,6 +217181,574 @@
           "fontWeight": "normal"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "xFzwn",
+      "x": 0,
+      "y": 33516,
+      "name": "Keyboard shortcuts · PS-894",
+      "clip": true,
+      "width": 2256,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "i9odcJ",
+          "name": "Keyboard shortcuts title",
+          "fill": "$ds-fg",
+          "content": "Keyboard shortcuts · every visible panel",
+          "fontFamily": "$font-heading",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "AbaT0",
+          "name": "Keyboard interaction surfaces",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "id": "HscM2",
+              "type": "ref",
+              "ref": "hkUeJ",
+              "name": "Keyboard menu",
+              "width": 704,
+              "layout": "vertical",
+              "height": "fit_content",
+              "descendants": {
+                "Ow45W": {
+                  "type": "frame",
+                  "id": "X2NsH",
+                  "name": "Keyboard menu heading",
+                  "width": "fill_container",
+                  "height": 48,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "YrCMi",
+                      "name": "Leader / View",
+                      "fill": "$ds-fg",
+                      "content": "Leader / View",
+                      "fontFamily": "$font-label",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                "BtzIp": {
+                  "type": "frame",
+                  "id": "on6k3",
+                  "name": "Keyboard menu entries",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    8,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "i9jAw1",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Previous tab",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "Previous tab"
+                        },
+                        "E8VVm": {
+                          "id": "NcNKN",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut ←",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "←"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "f0mGn",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Next tab",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "Next tab"
+                        },
+                        "E8VVm": {
+                          "id": "WbkHy",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut →",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "→"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "fc8Nr",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "New tab…",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "New tab…"
+                        },
+                        "E8VVm": {
+                          "id": "dST0k",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut N",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "N"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "gZ0oj",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Move tab…",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "Move tab…"
+                        },
+                        "E8VVm": {
+                          "id": "X9jG7A",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut O",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "O"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "ICrlD",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Reposition panel…",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "Reposition panel…"
+                        },
+                        "E8VVm": {
+                          "id": "aHNu2",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut R",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "R"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "JL7yP",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Select tab beyond nine",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "Select tab beyond nine"
+                        },
+                        "E8VVm": {
+                          "id": "IiwrQ",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut T",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "T"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "Q7Vu5t": {
+                  "content": "Navigation stays active · Enter/Escape finishes in selected tab"
+                },
+                "AmksO": {
+                  "enabled": false
+                }
+              }
+            },
+            {
+              "id": "kzkF4",
+              "type": "ref",
+              "ref": "hkUeJ",
+              "name": "Target selection",
+              "width": 704,
+              "layout": "vertical",
+              "height": "fit_content",
+              "descendants": {
+                "Ow45W": {
+                  "type": "frame",
+                  "id": "PCLe8",
+                  "name": "Target selection heading",
+                  "width": "fill_container",
+                  "height": 48,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "p39N1",
+                      "name": "Change ticket status",
+                      "fill": "$ds-fg",
+                      "content": "Change ticket status",
+                      "fontFamily": "$font-label",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                "BtzIp": {
+                  "type": "frame",
+                  "id": "CUJwb",
+                  "name": "Target selection entries",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    8,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "w9u9Eb",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "PS-894 · Main",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "PS-894 · Main"
+                        },
+                        "E8VVm": {
+                          "id": "AEatt",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut 1",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "1"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "y6Tfc",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "PS-887 · Secondary",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "PS-887 · Secondary"
+                        },
+                        "E8VVm": {
+                          "id": "WojkM",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut 2",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "2"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "Q7Vu5t": {
+                  "content": "Choose a target · no initial selection · Escape cancels"
+                },
+                "AmksO": {
+                  "enabled": false
+                }
+              }
+            },
+            {
+              "id": "POWGE",
+              "type": "ref",
+              "ref": "hkUeJ",
+              "name": "Shortcut management",
+              "width": 704,
+              "layout": "vertical",
+              "height": "fit_content",
+              "descendants": {
+                "Ow45W": {
+                  "type": "frame",
+                  "id": "ojI5h",
+                  "name": "Shortcut management heading",
+                  "width": "fill_container",
+                  "height": 48,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ZZVBf",
+                      "name": "Keyboard shortcuts",
+                      "fill": "$ds-fg",
+                      "content": "Keyboard shortcuts",
+                      "fontFamily": "$font-label",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                "BtzIp": {
+                  "type": "frame",
+                  "id": "m4Gh5",
+                  "name": "Shortcut management entries",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    8,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "Mcc4Q",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Change ticket status · Planner · Resource",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "Change ticket status · Planner · Resource"
+                        },
+                        "E8VVm": {
+                          "id": "KFLOn",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut A S",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "A S"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "XzSHF",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "New tab · Core · Panel",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "New tab · Core · Panel"
+                        },
+                        "E8VVm": {
+                          "id": "O5RhS",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut V N",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "V N"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "ErWwr",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Tickets · Planner · Sticky",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "Tickets · Planner · Sticky"
+                        },
+                        "E8VVm": {
+                          "id": "f6TiRt",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut G P",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "G P"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "rZZ0e",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Unassigned action · Assign shortcut",
+                      "width": "fill_container",
+                      "descendants": {
+                        "vsjz1": {
+                          "enabled": false
+                        },
+                        "h0cJn": {
+                          "content": "Unassigned action · Assign shortcut"
+                        },
+                        "E8VVm": {
+                          "id": "i5HsSG",
+                          "type": "ref",
+                          "ref": "XpOTN",
+                          "name": "Shortcut —",
+                          "enabled": true,
+                          "descendants": {
+                            "xvAGG": {
+                              "content": "—"
+                            },
+                            "uD3AU": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "Q7Vu5t": {
+                  "content": "Search · assign · disable · reset · personal choices persist"
+                },
+                "AmksO": {
+                  "enabled": false
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

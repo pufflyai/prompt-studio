@@ -1,5 +1,5 @@
 import { Box, CloseButton, Tabs, Text, useTabsContext } from "@chakra-ui/react";
-import { DropIndicator, Tooltip } from "@pstdio/ui";
+import { DropIndicator, PaletteShortcut, Tooltip } from "@pstdio/ui";
 import { useRef } from "react";
 import { WorkbenchIcon } from "../shared/icon";
 import { RegionTabMenu } from "./region-tab-menu";
@@ -76,6 +76,11 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
             onPointerCancel={behavior.onPointerCancel}
             onClickCapture={behavior.onClick}
           >
+            {props.shortcutNumber !== undefined ? (
+              <span aria-hidden="true" data-keyboard-tab-number={props.shortcutNumber}>
+                <PaletteShortcut binding={String(props.shortcutNumber)} />
+              </span>
+            ) : null}
             <TabIcon indicator={snapshot.indicator} icon={icon} />
             <Text asChild>
               <span ref={labelRef} id={labelId} data-tab-label>

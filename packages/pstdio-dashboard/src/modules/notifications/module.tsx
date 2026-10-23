@@ -91,6 +91,11 @@ export const createNotificationsModule = () =>
             ),
             ctx.keybindings.registerKeybinding({
               action: { kind: "command", commandId: dashboardCommandIds.openNotifications },
+              keybinding: "I",
+              layer: "go",
+            }),
+            ctx.keybindings.registerKeybinding({
+              action: { kind: "command", commandId: dashboardCommandIds.openNotifications },
               keybinding: DASHBOARD_NOTIFICATIONS_KEYBINDING,
               when: "!inputFocus",
             }),

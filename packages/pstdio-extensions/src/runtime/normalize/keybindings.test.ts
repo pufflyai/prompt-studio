@@ -19,6 +19,24 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
 });
 
 describe("normalizeExtensionSources keybindings", () => {
+  test("validates every layered platform override", () => {
+    const command = defineCommand({ id: "hello", title: "Hello", async run() {} });
+    const definition = defineExtension({
+      commands: [command],
+      keybindings: [
+        defineKeybinding({
+          id: "layer",
+          layer: "go",
+          key: "P",
+          mac: "Ctrl+K",
+          action: { kind: "command", target: { command: command.ref } },
+        }),
+      ],
+    });
+    const runtime = normalizeExtensionSources([source(definition)]);
+    expect(runtime.keybindings).toHaveLength(0);
+    expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "invalid_keybinding" }));
+  });
   test("normalizes typed command refs and canonical chords", () => {
     const command = defineCommand({ id: "hello", title: "Hello", async run() {} });
     const definition = defineExtension({
@@ -61,4 +79,50 @@ describe("normalizeExtensionSources keybindings", () => {
     expect(runtime.keybindings[0]?.localId).toBe("first");
     expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "duplicate_keybinding_chord" }));
   });
+});
+
+test("layered suggestions keep shared keys as resolver candidates", () => {
+  const first = defineCommand({ id: "first", title: "First", async run() {} });
+  const second = defineCommand({ id: "second", title: "Second", async run() {} });
+  const definition = defineExtension({
+    commands: [first, second],
+    keybindings: [
+      defineKeybinding({
+        id: "first",
+        key: "S",
+        layer: "current",
+        targetScope: "resource",
+        action: { kind: "command", target: { command: first.ref } },
+      }),
+      defineKeybinding({
+        id: "second",
+        key: "S",
+        layer: "current",
+        targetScope: "panel",
+        sticky: true,
+        action: { kind: "command", target: { command: second.ref } },
+      }),
+    ],
+  });
+  const runtime = normalizeExtensionSources([source(definition)]);
+  expect(runtime.keybindings).toHaveLength(2);
+  expect(runtime.diagnostics).not.toContainEqual(expect.objectContaining({ code: "duplicate_keybinding_chord" }));
+});
+
+test("layer sequences stay distinct from direct operating-system chords", () => {
+  const command = defineCommand({ id: "first", title: "First", async run() {} });
+  const definition = defineExtension({
+    commands: [command],
+    keybindings: [
+      defineKeybinding({
+        id: "nested",
+        key: "N S",
+        layer: "extensions",
+        action: { kind: "command", target: { command: command.ref } },
+      }),
+    ],
+  });
+  const runtime = normalizeExtensionSources([source(definition)]);
+  expect(runtime.keybindings).toHaveLength(1);
+  expect(runtime.diagnostics).toEqual([]);
 });

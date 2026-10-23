@@ -70,6 +70,14 @@ const builtinCommands: BuiltinCommand[] = [
 ];
 
 export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
+  const layers: Record<string, { layer: "view" | "go" | "help" | "settings"; keybinding: string; sticky?: boolean }> = {
+    "workbench.toggleCommandPalette": { layer: "help", keybinding: "P" },
+    "workbench.action.showCommands": { layer: "help", keybinding: "C" },
+    "workbench.action.changeTheme": { layer: "settings", keybinding: "T" },
+    "workbench.action.navigateBack": { layer: "go", keybinding: "B", sticky: true },
+    "workbench.action.navigateForward": { layer: "go", keybinding: "F", sticky: true },
+    "workbench.toggleSideBar": { layer: "view", keybinding: "B", sticky: true },
+  };
   for (const command of builtinCommands) {
     workbench.commands.registerCommand(
       {
@@ -86,6 +94,9 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       keybinding: command.keybinding,
       when: "!inputFocus",
     });
+    const layer = layers[command.id];
+    if (layer)
+      workbench.keybindings.registerKeybinding({ action: { kind: "command", commandId: command.id }, ...layer });
     workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: command.id,
       group: "Workbench",

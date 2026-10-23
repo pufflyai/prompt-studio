@@ -108,6 +108,11 @@ export {
   type WebviewFilesClient,
 } from "./define-extension-view";
 export { resolveEventReferenceId } from "./event-reference";
+export {
+  installWebviewKeyboardRelay,
+  type WebviewKeyboardRelayHost,
+  webviewKeyboardRelayDocument,
+} from "./keyboard-relay";
 export { defaultPageResourceCodec } from "./page-resource-codec";
 export {
   isWorkbenchProjectUrl,

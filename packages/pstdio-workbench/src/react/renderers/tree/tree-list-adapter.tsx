@@ -13,6 +13,7 @@ import {
   type TreeViewSection,
   type WorkbenchCore,
 } from "../../../core";
+import { WorkbenchShortcutHint } from "../../keybindings/shortcut-hint";
 import { createWorkbenchResourceActions } from "../../menus/resource-actions";
 import { WorkbenchIcon } from "../../shared/icon";
 import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParamsRequest } from "./tree-actions";
@@ -288,7 +289,18 @@ const toTreeListNode = (
       onCommandError: context.onCommandError,
       onRequestParams: context.onRequestParams,
     }),
-    endContent: resolveTreeNodeEndContent(node, resource),
+    get endContent() {
+      const existing = resolveTreeNodeEndContent(node, resource);
+      const action =
+        node.target ?? (node.commandId ? { kind: "command" as const, commandId: node.commandId } : undefined);
+      return action ? (
+        <WorkbenchShortcutHint workbench={context.workbench} action={action} modeOnly>
+          {existing}
+        </WorkbenchShortcutHint>
+      ) : (
+        existing
+      );
+    },
     get menuItems() {
       if (!node.menuPath) return undefined;
       const items = resolveMenuItems();

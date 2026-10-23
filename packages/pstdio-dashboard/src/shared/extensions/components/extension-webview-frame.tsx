@@ -178,6 +178,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     <>
       {errorNotice}
       <BridgedWebviewSurface
+        workbench={props.workbench}
         sizing={props.sizing}
         key={view.id}
         view={view}
