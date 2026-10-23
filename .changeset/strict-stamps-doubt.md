@@ -2,4 +2,4 @@
 "pstdio-artifacts": patch
 ---
 
-Keep the artifact list in one Main-only tab and offer its tool entry only while closed.
+Keep one artifact list tab, offer it in Main while closed, and let users move it between panels.
