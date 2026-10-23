@@ -17,6 +17,8 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 import { registerPackagedChatMotionSmokeTests } from "./packaged-chat-motion-smoke";
 // Localized parameter guidance is readable in compiled CLI help.
 import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
+// Explicit live follow-ups capture their active run and never fall back to ordinary queued work.
+import { registerCliSteeringSmokeTests } from "./packaged-cli-steering-smoke";
 // Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
 import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 // OpenAPI publishes recursive command causes without expanding forever.
@@ -70,9 +72,12 @@ import { registerNotificationStatusSmokeTests } from "./packaged-notification-st
 // The browser suite checks typed host props, page updates, structured capability errors and saved settings.
 // packaged-editing-sessions.spec.ts checks shared local edits, coalesced writes and cancelled previews across opaque views.
 // Real React Query subscriptions cover matching events, reconnect deduplication and unmount cleanup.
+// The built workbench/SDK lifetime fixture checks independent embedded frames, StrictMode, context replacement and disconnect disposal.
 // Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Private history stays readable offline and appears in the initial live-sync snapshot after restart.
+// Native backend observers use the compiled Bun ABI on every release target.
+// performance-observer.test.ts also runs on reduced Intel and Windows release targets.
 import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
 // Planner covers supervisor choices and Resume wakes, idle/startup waiting reasons, timeline review indicators, board moves, missing folders/Git metadata, and dependency recovery.
@@ -310,6 +315,7 @@ registerResourceRemovalSmokeTests();
 registerQueuedRequestSmokeTests();
 
 registerSessionQuerySmokeTests();
+registerCliSteeringSmokeTests();
 // Migration smoke also checks stable import IDs, random UUIDv7 IDs, and core order positions.
 registerStorageMigrationSmokeTests();
 

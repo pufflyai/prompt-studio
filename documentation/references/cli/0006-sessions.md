@@ -41,6 +41,21 @@ pst sessions follow-up --id <session-id> --summary-of <source-session-id> --summ
 
 `--summary-format` accepts `brief` (the default) or `detailed`. `--summary-role` accepts `assistant` (the default) or `all`.
 
+### Steer active work
+
+Add `--steer` to send the prompt into the current run without starting another turn:
+
+```sh
+pst sessions follow-up --id <session-id> --prompt "Focus on the tests first" --steer
+pst sessions follow-up --id <session-id> --summary-of <source-session-id> --attach notes.txt --steer
+```
+
+The command captures the active run before uploading files. The host checks that run again before native delivery. Idle sessions, unsupported harnesses, open questions or approvals, and changed runs fail without queuing the prompt. `--agent` and `--model` cannot be combined with `--steer`; live input uses the current execution settings.
+
+Submitted live requests print a JSON outcome with `status` set to `accepted`, `rejected`, or `uncertain`. Acceptance exits with code 0. Rejection, uncertainty, and unavailable steering exit unsuccessfully. Uncertain delivery includes a `deliveryId` and retains the prompt and attachments as held delivery evidence. A lost HTTP response can also mean delivery is uncertain. Inspect the conversation and `sessions queue` before taking another action; never automatically retry.
+
+Without `--steer`, follow-up dispatch and queue behavior is unchanged. The separate `sessions steer` command below sends a request that is already saved in the queue.
+
 ## Inspect and control sessions
 
 `list` can filter by `--project-id`, `--status`, `--agent`, and `--workspace-id`. Add `--archived` to include archived sessions.

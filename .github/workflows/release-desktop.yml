@@ -117,6 +117,9 @@ jobs:
       - name: Install dependencies
         run: node scripts/ci/install-native-dependencies.ts
 
+      - name: Test device performance lifecycle and file authorization
+        run: bun test clients/desktop/src/performance
+
       - name: Test native DMG attachment cleanup
         if: matrix.platform == 'darwin'
         run: bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts

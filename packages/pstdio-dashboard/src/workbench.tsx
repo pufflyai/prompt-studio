@@ -1,4 +1,4 @@
-import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
+import { createWorkbench, type SettingsRegistry, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
 import { createWorkbenchTerminalModule, WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
@@ -55,7 +55,7 @@ type CreateDashboardModulesInput = {
   sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
 };
 
-export const createDashboardModules = (input: CreateDashboardModulesInput = {}) => [
+export const createDashboardModules = (input: CreateDashboardModulesInput & { settings: SettingsRegistry }) => [
   createSidenavModule(),
   createWorkspacesModule(),
   createExtensionsModule(),
@@ -76,7 +76,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   }),
   createNotificationsModule(),
   createSettingsModule(),
-  createPerformanceModule(),
+  createPerformanceModule(input.settings),
   createUpdatesModule(),
   createStartModule(),
   createWorkbenchTerminalModule(),
@@ -132,6 +132,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     },
   });
   const modules = createDashboardModules({
+    settings: workbench.settings,
     initialProjectId: urlProjectId,
     projectTabs: input.projectTabs,
     projectSelectionPersistence,

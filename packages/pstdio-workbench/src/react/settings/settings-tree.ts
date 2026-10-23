@@ -107,7 +107,10 @@ export const buildSettingsTreeBody = async (input: BuildSettingsTreeInput): Prom
   const sectionsById = new Map(sections.map((section) => [section.id, section]));
   const panels = settings
     .listPanels()
-    .filter((panel) => isSettingsScopeVisible(panel.scope, hasProjectScope) && matchesWhen(panel.when));
+    .filter(
+      (panel) =>
+        !panel.parentPanelId && isSettingsScopeVisible(panel.scope, hasProjectScope) && matchesWhen(panel.when),
+    );
   const bySection = new Map<string, RegisteredSettingsPanel[]>();
   for (const panel of panels) {
     const sectionId = panel.section && sectionsById.has(panel.section) ? panel.section : FALLBACK_SECTION_ID;

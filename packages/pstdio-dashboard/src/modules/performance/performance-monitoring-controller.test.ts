@@ -133,3 +133,34 @@ describe("browser performance monitoring", () => {
     controller.dispose();
   });
 });
+
+test("shares enabled snapshot reads and drops in-flight delivery after disabling", async () => {
+  let reads = 0;
+  const pending = Promise.withResolvers<null>();
+  const controller = createPerformanceMonitoringController({
+    kind: "desktop",
+    isEnabled: async () => false,
+    setEnabled: async () => {},
+    snapshot: () => {
+      reads++;
+      return pending.promise;
+    },
+    reportFrames: () => {},
+    reportState: () => {},
+  });
+  const values: unknown[] = [];
+  const first = controller.subscribeSnapshots((value) => values.push(value));
+  const second = controller.subscribeSnapshots((value) => values.push(value));
+  await controller.load();
+  expect(reads).toBe(0);
+  await controller.setEnabled(true);
+  expect(reads).toBe(1);
+  await controller.setEnabled(false);
+  const count = values.length;
+  pending.resolve(null);
+  await Promise.resolve();
+  expect(values).toHaveLength(count);
+  first();
+  second();
+  controller.dispose();
+});

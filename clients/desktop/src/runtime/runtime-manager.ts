@@ -42,6 +42,7 @@ type RuntimeManagerOptions = {
 };
 
 type RuntimeProcess = {
+  pid?: number;
   kill: (signal?: NodeJS.Signals | number) => boolean;
   readOutput: () => string;
   once: EventEmitter["once"];
@@ -107,6 +108,7 @@ export class DesktopRuntimeManager {
   // The most recent runtime, kept after it exits so diagnostics can name it and redact its token.
   #lastDescriptor: RuntimeDescriptor | null = null;
   #runtime: ManagedRuntime | null = null;
+  #spawnedIdentity: { pid: number; instanceId: string } | null = null;
   readonly #deps: RuntimeManagerDeps;
   readonly #options: RuntimeManagerOptions;
 
@@ -117,6 +119,11 @@ export class DesktopRuntimeManager {
 
   get runtime() {
     return this.#runtime;
+  }
+
+  get processIdentity() {
+    const descriptor = this.#runtime?.descriptor;
+    return descriptor ? { pid: descriptor.pid, instanceId: descriptor.instanceId } : this.#spawnedIdentity;
   }
 
   get lastDescriptor() {
@@ -204,6 +211,7 @@ export class DesktopRuntimeManager {
       outputPath: join(dirname(this.#options.descriptorPath), "desktop-runtime.log"),
     });
     this.#readOutput = child.readOutput;
+    this.#spawnedIdentity = child.pid === undefined ? null : { pid: child.pid, instanceId };
 
     let ready: RuntimeDescriptor | null = null;
     let markChildTerminated: () => void = () => {};
@@ -212,6 +220,7 @@ export class DesktopRuntimeManager {
     });
     const childExit = new Promise<never>((_resolve, reject) => {
       child.once("exit", (code, signal) => {
+        this.#spawnedIdentity = null;
         markChildTerminated();
         const detail =
           child.readOutput() || `Runtime exited with ${code === null ? `signal ${signal}` : `code ${code}`}`;
@@ -276,6 +285,7 @@ export class DesktopRuntimeManager {
   #forgetRuntime() {
     this.#eventAbort?.abort();
     this.#runtime = null;
+    this.#spawnedIdentity = null;
   }
 
   #handleIntentionalShutdown() {
