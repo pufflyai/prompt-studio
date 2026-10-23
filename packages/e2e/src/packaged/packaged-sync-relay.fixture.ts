@@ -1,5 +1,12 @@
 import { expect } from "bun:test";
 
+const validateLeafBegin = async (request: Request) => {
+  const input = (await request.json()) as { sha256: string; byteLength: number };
+  expect(Object.keys(input).sort()).toEqual(["byteLength", "sha256"]);
+  expect(input.sha256).toMatch(/^[a-f0-9]{64}$/);
+  expect(input.byteLength).toBeGreaterThan(0);
+};
+
 const privateSpaceOwner = (parts: string[]) => {
   if (parts[4] !== "spaces") return null;
   const owner = decodeURIComponent(parts[5]!.slice(1));
@@ -99,6 +106,7 @@ export const createPackagedSyncPeer = (
     const id = parts[5]!;
     let blob = blobs.get(id);
     if (path.endsWith("/begin")) {
+      await validateLeafBegin(request);
       blob ??= { parts: new Set(), complete: false };
       blobs.set(id, blob);
       return json({ partSize: 1_048_576, completed: blob.complete, parts: [] });

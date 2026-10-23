@@ -19,7 +19,7 @@ const routeSchema = z.discriminatedUnion("kind", [
     kind: z.literal("blob"),
     ...space,
     blobId: syncIdSchema,
-    operation: z.enum(["begin", "finish", "read"]),
+    operation: z.enum(["begin", "begin-manifest", "finish", "read"]),
   }),
   z.strictObject({
     kind: z.literal("part"),
@@ -28,6 +28,7 @@ const routeSchema = z.discriminatedUnion("kind", [
     number: z.number().int().min(1).max(10_000),
   }),
   z.strictObject({ kind: z.literal("live"), projectId: identitySchema }),
+  z.strictObject({ kind: z.literal("capabilities"), projectId: identitySchema }),
 ]);
 export type SyncRoute = z.infer<typeof routeSchema>;
 
@@ -38,6 +39,7 @@ export const syncPath = (input: SyncRoute) => {
   const route = routeSchema.parse(input);
   const project = `/sync/projects/${segment(route.projectId)}`;
   if (route.kind === "live") return `${project}/live`;
+  if (route.kind === "capabilities") return `${project}/capabilities`;
   const base = route.spaceOwner === null ? project : `${project}/spaces/${segment(route.spaceOwner)}`;
   if (route.kind === "document") return `${base}/documents/${segment(route.documentId)}/${route.operation}`;
   if (route.kind === "state") return `${base}/documents/${segment(route.documentId)}/states/${segment(route.stateId)}`;
@@ -46,12 +48,12 @@ export const syncPath = (input: SyncRoute) => {
 };
 
 const pattern =
-  /^\/sync\/projects\/~([^/]+)(?:\/spaces\/~([^/]+))?(?:\/(documents|blobs)\/~([^/]+)\/(updates|read|state|begin|finish|states\/~[^/]+|parts\/\d+)|\/(live))$/;
+  /^\/sync\/projects\/~([^/]+)(?:\/spaces\/~([^/]+))?(?:\/(documents|blobs)\/~([^/]+)\/(updates|read|state|begin|begin-manifest|finish|states\/~[^/]+|parts\/\d+)|\/(live|capabilities))$/;
 
 const parse = (match: RegExpExecArray) => {
-  const [, project, owner, collection, id, operation, live] = match;
+  const [, project, owner, collection, id, operation, projectOperation] = match;
   const projectId = decodeURIComponent(project!);
-  if (live) return owner ? null : { kind: "live", projectId };
+  if (projectOperation) return owner ? null : { kind: projectOperation, projectId };
   const base = { projectId, spaceOwner: owner === undefined ? null : decodeURIComponent(owner) };
   const target = decodeURIComponent(id!);
   if (collection === "documents") {
