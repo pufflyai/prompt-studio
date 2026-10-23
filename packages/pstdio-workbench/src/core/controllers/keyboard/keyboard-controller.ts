@@ -58,6 +58,19 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
   };
   const catalogReader = createShortcutCatalogReader(getCore, visibleTargets);
   const catalog = (fresh = false) => catalogReader.read(fresh);
+  let hintCatalog: ReturnType<typeof catalog> | undefined;
+  let hintState: KeyboardState | undefined;
+  let hintSnapshot = new Map<string, string>();
+  const hints = () => {
+    const currentCatalog = catalog();
+    const currentState = store.getState();
+    if (hintCatalog !== currentCatalog || hintState !== currentState) {
+      hintSnapshot = shortcutHints(currentCatalog, currentState);
+      hintCatalog = currentCatalog;
+      hintState = currentState;
+    }
+    return hintSnapshot;
+  };
   const presentations = () => [...listTabs(), ...visibleTargets()];
   const stop = (restore = true) => {
     choices = [];
@@ -244,9 +257,9 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       if (shortcut && !shortcut.disabled) await run(shortcut);
     },
     ...createKeyboardPreferences(getCore, refresh),
-    hints: () => shortcutHints(catalog(), store.getState()),
+    hints,
     hint(action: import("../../registries/navigation/navigation-registry").NavigationTarget) {
-      return shortcutHints(catalog(), store.getState()).get(getNavigationTargetKey(action));
+      return hints().get(getNavigationTargetKey(action));
     },
     visibleTargets,
   };
