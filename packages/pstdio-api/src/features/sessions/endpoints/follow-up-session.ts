@@ -1,10 +1,9 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { FollowUpDecision, HarnessAttachment, HarnessParams } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
-import { composeSummary } from "../compose-summary";
 import type { SessionsRouteDeps } from "../deps";
 import { followUpBodySchema, followUpResponseSchema, notFoundResponseSchema } from "../dto";
-import { getSessionMessages } from "../get-session-messages";
+import { buildFollowUpPrompt } from "../follow-up-prompt";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
 import { questionReplyRejection, replyToLiveSessionQuestion } from "../live-question-reply";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
@@ -41,33 +40,6 @@ export const followUpSessionRoute = createRoute({
 });
 
 type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["sessionService"]["get"]>>>;
-
-const buildFollowUpPrompt = async (
-  input: {
-    prompt?: string;
-    summary_from_session_id?: string;
-    summary_format?: "brief" | "detailed";
-    summary_role?: "assistant" | "all";
-  },
-  deps: SessionsRouteDeps,
-) => {
-  let prompt = input.prompt ?? "";
-
-  if (input.summary_from_session_id) {
-    const messages = await getSessionMessages(input.summary_from_session_id, deps);
-    const summary = composeSummary(messages, {
-      format: input.summary_format ?? "brief",
-      role: input.summary_role ?? "assistant",
-    });
-
-    if (summary) {
-      const block = `<session-summary>\n${summary}\n</session-summary>`;
-      prompt = prompt ? `${prompt}\n\n${block}` : block;
-    }
-  }
-
-  return prompt;
-};
 
 const resolveFollowUpParams = async (
   deps: SessionsRouteDeps,
