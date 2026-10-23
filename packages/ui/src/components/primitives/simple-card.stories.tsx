@@ -15,6 +15,11 @@ export const Outline: Story = {
   ),
 };
 export const Action: Story = {
+  parameters: {
+    docs: {
+      description: { story: "Hover and pressed feedback changes immediately, including when the pointer leaves." },
+    },
+  },
   render: () => (
     <SimpleCard variant="action" asChild>
       <button type="button">

@@ -65,7 +65,7 @@ test("closes and keyboard-restores the same full-height Side Panel", async ({ pa
   await controls.getByRole("button", { name: "Show Side Panel" }).click();
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
-  await page.getByRole("menuitem", { name: "Session", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
   await expectDashboardAttachedBounds(page);
 
   const mainNode = await page.locator('[data-workbench-region="main"]').elementHandle();

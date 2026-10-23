@@ -16,6 +16,7 @@ import {
   type PlacementDestination,
   placementIdentityKey,
   type ResolvedOwnedPlacement,
+  resolvePlacementRegion,
 } from "./placement-reconciliation";
 import { planTrayTabs } from "./tray-tabs";
 
@@ -173,7 +174,7 @@ export const renderDesiredPlacements = (
     const ownerResourceKey = resolveOwnerResourceKey(desired, exact?.placement, transfer?.[1].placement);
     rendered.push({
       identity: desired.identity,
-      region: destinations.get(key) ?? exact?.region ?? desired.region,
+      region: resolvePlacementRegion(desired, destinations.get(key) ?? exact?.region ?? desired.region),
       placement: {
         ...desired.value,
         widgetId,

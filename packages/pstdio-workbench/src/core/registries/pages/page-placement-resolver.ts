@@ -43,6 +43,8 @@ const validatePageSlots = (page: WorkbenchPageContribution) => {
     if (slot.id === PAGE_MAIN_SLOT_ID || ids.has(slot.id))
       throw new Error(`Page "${page.id}" declares duplicate or reserved slot "${slot.id}"`);
     ids.add(slot.id);
+    if (slot.movableTo && !slot.movableTo.includes(slot.region))
+      throw new Error(`Page slot "${slot.id}" must include its initial region in movableTo`);
     if (slot.item.kind === "binding" && slot.item.binding.kinds.length === 0)
       throw new Error(`Page slot "${slot.id}" must bind at least one resource kind`);
     if (slot.openOn && slot.item.kind !== "binding")
@@ -91,6 +93,7 @@ const placementFor = <Value>(input: {
   return {
     identity,
     region: input.slot.region,
+    ...(input.slot.movableTo ? { movableTo: input.slot.movableTo } : {}),
     order: input.slot.order ?? 0,
     value: input.resolvePagePlacement({
       identity,

@@ -66,7 +66,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: Dash
   ctx.views.registerView(
     {
       id: dashboardWidgetIds.sessionBubble,
-      title: "Session",
+      title: "New session",
       icon: "MessageCircle",
       body: {
         kind: "react",
@@ -186,7 +186,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
         await openNewSessionDraft(ctx, {
           workspace,
           replacePanel: isNewTab ? undefined : replacePanel,
-          sidePanel: sidePanel || isNewTab,
+          sidePanel: sidePanel || (isNewTab && context?.region !== "main"),
           tabRetention: isNewTab ? "persistent" : undefined,
           region: context?.region,
         });

@@ -217584,7 +217584,7 @@
       "x": 62710,
       "y": 0,
       "name": "Empty panel · Tools cards",
-      "context": "Default tool chooser centered horizontally and vertically in its panel. Width is capped at the lg size token (512 px); cards retain two columns and collapse in narrow panels.",
+      "context": "Default tool chooser aligned to the top with 32 px comfortable padding and centered horizontally. Width is capped at the lg token (512 px); cards keep two columns and collapse in narrow panels. Hover entry and exit are immediate.",
       "theme": {
         "mode": "dark"
       },
@@ -217593,14 +217593,13 @@
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 16,
-      "padding": 16,
-      "justifyContent": "center",
+      "padding": 32,
       "alignItems": "center",
       "children": [
         {
           "type": "frame",
           "id": "RUgE0",
-          "name": "Centered tool chooser",
+          "name": "Top-aligned centered tool chooser",
           "width": 512,
           "layout": "vertical",
           "gap": 16,

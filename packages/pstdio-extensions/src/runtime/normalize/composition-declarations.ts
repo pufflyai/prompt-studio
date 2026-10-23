@@ -53,10 +53,13 @@ const slot = z
     item,
     order: z.number().optional(),
     openOn: z.literal("page-resource").optional(),
+    movableTo: z.array(region).optional(),
     ...presentation,
   })
   .strict()
   .superRefine((value, ctx) => {
+    if (value.movableTo && !value.movableTo.includes(value.region))
+      ctx.addIssue({ code: "custom", path: ["movableTo"], message: "an array including the initial region" });
     if (value.openOn && value.item.kind !== "binding")
       ctx.addIssue({ code: "custom", path: ["openOn"], message: "a resource-binding item for page-resource" });
   });

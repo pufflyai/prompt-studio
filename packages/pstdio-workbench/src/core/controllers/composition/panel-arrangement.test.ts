@@ -149,7 +149,7 @@ test("moving a location keeps the source's next tab selected", () => {
   expect(w.layout.getLayout().regions.secondary.activeWidgetId).toBe(second!.widgetId);
 });
 
-test("Add reuses a single panel from another region and follows move restrictions", async () => {
+test("moving a singleton preserves its identity and follows move restrictions", async () => {
   const w = harness();
   w.modePlacements.registerPlacement({
     id: "notes",
@@ -163,9 +163,7 @@ test("Add reuses a single panel from another region and follows move restriction
   const original = w.layout.getLayout().regions.secondary.widgets[0]!;
   expect(w.getPanelDestinations(original.widgetId)).toEqual(["secondary", "side"]);
   expect(() => w.movePanel(original.widgetId, "main")).toThrow("cannot move");
-  const add = w.composition.panelsFor("side").addable.find((p) => p.contribution.title === "editor");
-  expect(add).toBeDefined();
-  await add?.open?.();
+  w.movePanel(original.widgetId, "side");
   expect(w.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(original.widgetId);
   expect(w.layout.getLayout().regions.secondary.widgets).toEqual([]);
 });

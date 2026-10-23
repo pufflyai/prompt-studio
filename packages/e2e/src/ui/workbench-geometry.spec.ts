@@ -122,7 +122,7 @@ test("aligns an attached Side Panel with the active Location Panel", async ({ pa
   const controls = page.getByRole("group", { name: "Panel controls" });
   await controls.getByRole("button", { name: "Show Side Panel" }).click();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
-  await page.getByRole("menuitem", { name: "Session", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
 
   await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "visible" });
 });

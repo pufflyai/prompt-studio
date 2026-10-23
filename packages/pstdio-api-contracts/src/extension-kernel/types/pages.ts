@@ -48,6 +48,8 @@ export type PageMain = PageMainView | PageMainPanels;
 export interface PageSlot extends PlacementPresentation {
   readonly id: string;
   readonly region: PageSlotRegion;
+  /** Allowed panel destinations, including the initial region. Omit to allow every panel. */
+  readonly movableTo?: readonly ExtensionPanelRegion[];
   readonly order?: number;
   readonly item: PlacementItem;
   readonly openOn?: "page-resource";

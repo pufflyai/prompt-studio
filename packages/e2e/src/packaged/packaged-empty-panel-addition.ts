@@ -42,7 +42,9 @@ export const verifyEmptyPanelAddition = async (page: Page) => {
     sideContent.getByRole("group", { name: "Available tabs" }).getByRole("button", { name: "Terminal", exact: true }),
   ).toBeVisible();
   await expect(
-    bottomContent.getByRole("group", { name: "Available tabs" }).getByRole("button", { name: "Session", exact: true }),
+    bottomContent
+      .getByRole("group", { name: "Available tabs" })
+      .getByRole("button", { name: "New session", exact: true }),
   ).toBeVisible();
   const bottomTabs = await watchNewTabs(bottom);
   await side.getByRole("button", { name: "Add panel", exact: true }).click();
@@ -64,7 +66,7 @@ export const verifyEmptyPanelAddition = async (page: Page) => {
   const sideTabs = await watchNewTabs(side);
   await bottomContent
     .getByRole("group", { name: "Available tabs" })
-    .getByRole("button", { name: "Session", exact: true })
+    .getByRole("button", { name: "New session", exact: true })
     .click();
   await expect(bottom.getByRole("tab", { selected: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Hide Side Panel", exact: true })).toBeVisible();

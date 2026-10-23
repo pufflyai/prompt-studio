@@ -122,7 +122,7 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
     .getByRole("menu", { name: "Add panel" })
-    .getByRole("menuitem", { name: "Session", exact: true });
+    .getByRole("menuitem", { name: "New session", exact: true });
   if (await sessionChoice.isVisible()) await sessionChoice.click();
   const sessionTabs = sideHeader.getByRole("tab");
   await expect(sessionTabs).toHaveCount(2);
@@ -203,7 +203,7 @@ test("switches a pinned Session tab in place from its menu", async ({ page, requ
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
     .getByRole("menu", { name: "Add panel" })
-    .getByRole("menuitem", { name: "Session", exact: true });
+    .getByRole("menuitem", { name: "New session", exact: true });
   if (await sessionChoice.isVisible()) await sessionChoice.click();
   await expect(sessionTabs).toHaveCount(2);
   const pinned = sideHeader.locator(`[role="tab"]:not([id="${previewId}"])`);
@@ -243,7 +243,7 @@ test("updates a New session Sub Panel in place after the first message", async (
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
     .getByRole("menu", { name: "Add panel" })
-    .getByRole("menuitem", { name: "Session", exact: true });
+    .getByRole("menuitem", { name: "New session", exact: true });
   if (await sessionChoice.isVisible()) await sessionChoice.click();
   const sessionTabs = sideHeader.getByRole("tab");
   const activeTab = sideHeader.getByRole("tab", { selected: true });

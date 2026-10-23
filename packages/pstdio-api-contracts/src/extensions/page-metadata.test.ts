@@ -43,3 +43,9 @@ test("preserves the selected document declaration in page metadata", () => {
     false,
   );
 });
+
+test("preserves a page slot's allowed panel destinations", () => {
+  const slot = { id: "library", region: "main", movableTo: ["main"], item: { kind: "view", view, presence: "open" } };
+  const record = { ...page({ kind: "panels" }), slots: [slot] };
+  expect(workbenchExtensionPageRecordSchema.parse(record).slots[0]?.movableTo).toEqual(["main"]);
+});

@@ -50,9 +50,9 @@ A page can declare `regionSettings: { main: { showHeader: false } }`, or header 
 
 A declared region is the starting position. Users can move content tabs between Main, Side, and Secondary with drag and drop or the tab context menu. Explicit `movableTo` restrictions and the mode's supported panels remain hard limits. Navigation chrome and the Sidenav do not become tabs.
 
-The + control follows the scrolling tab group. Its choices include active panels from other regions that are allowed in this destination. Main also offers the page's own content when absent. A single-instance panel is reused. Resource bindings retain their declared Add action. Panel menu openers stay at the far right.
+The + control follows the scrolling tab group. Its choices create or reopen tools allowed in that destination. An open singleton is omitted from every panel's choices. Resource bindings appear only when they declare an explicit `add` action; the current page resource never creates an individual-resource choice. Open existing resources through navigation or resource search. Panel menu openers stay at the far right.
 
-An empty Main, Side, or Bottom panel without a custom placeholder shows a **Tools** card grid of the same available tabs as **Add panel**. The grid uses two columns in a wide panel and one in a narrow panel. Cards share hover, pressed, and keyboard focus states. Page-owned `slots`, including bindings with command-backed Add actions, contribute entries through that same contract. Choosing a card uses the same opening action, resource context, and permissions. If that content is already open in another panel, the action moves the existing tab instead of creating a copy. Navigating to a page again reopens its declared Main content.
+An empty Main, Side, or Bottom panel without a custom placeholder shows a **Tools** card grid of the same available tabs as **Add panel**. The grid uses two columns in a wide panel and one in a narrow panel. Cards share hover, pressed, and keyboard focus states. Page-owned `slots`, including bindings with command-backed Add actions, contribute entries through that same contract. Choosing a card uses the same opening action and permissions. Page slots can declare `movableTo`, including their initial region, to restrict Add, moves, direct panel opens, and saved positions. Navigating to a page again reopens its declared Main content.
 
 Either kind of page can declare `main.empty: view.ref` instead of the host placeholder. To supply a breadcrumb label and menu while Main has no tabs, use the `PagePlaceholder` object form:
 
@@ -76,17 +76,17 @@ main: {
 
 Explicit collection navigation selects its available landing slot. Restoring saved page state preserves the saved selection.
 
-Page header defaults, optional `main.empty` on single-view pages, `main.landing`, and closable fixed tabs describe APIs from `main`. Their first extension API version is 0.2.2.
+Page header defaults, optional `main.empty` on single-view pages, `main.landing`, slot `movableTo`, and closable fixed tabs describe APIs from `main`. Their first extension API version is 0.2.2.
 
 During the deprecation window, older extension collections keep their first `fixed` Main slot as their landing slot. New declarations should name `main.landing` explicitly.
 
 Default tab cards wait until a declared mode has been selected, so startup never presents unrelated tools before the page resolves.
 
-Tool cards use the compact action-card style: small body padding, the standard row label, and a 14 px icon, matching the density of Home's Recent rows. The chooser is centered in its panel and capped at the `lg` size token, so wide panels keep compact cards. Narrow panels use the available width and collapse to one column.
+Tool cards use the compact action-card style: small body padding, the standard row label, and a 14 px icon, matching the density of Home's Recent rows. Hover entry and exit are immediate. The chooser is top-aligned with `xl` panel padding, centered horizontally, and capped at the `lg` size token. Narrow panels use the available width and collapse to one column.
 
 Start uses its home content as `main.empty`, with no initial tabs or landing slot. Its Main header defaults to hidden. A saved user header choice still wins, and dropping a tool tab into Main reveals the header through the shared move behavior.
 
-Sessions uses the new-session composer as its empty Main placeholder. Its current breadcrumb is **New session** with session actions. `workbenchPages.newSession` is the routed draft page at `sessions/new`; it accepts a `session-draft` resource without creating a draft tab. Creating the session navigates to `workbenchPages.session` and opens the real session tab. A completed creation does not change navigation if its original draft page is no longer open. Closing the final session tab restores the composer and its breadcrumb.
+Sessions uses the default Tools placeholder. Its **New session** tool opens a real tab through an explicit creation action. `workbenchPages.newSession` is the routed draft page at `sessions/new`; it accepts a `session-draft` resource and displays that tab. Creating from a routed Main draft navigates to `workbenchPages.session`. A draft moved into a shared panel becomes one session tab there and preserves the current page. A completed creation does not change navigation after its draft has left the current layout. Closing the final tab restores the default Tools placeholder.
 
 Right-click, Shift+F10, the Context Menu key, and touch long-press open the same grouped tab menu. Normal clicks select. Preview and pinned tabs can appear in any order. Pin and Unpin change retention without changing position. Alt+Left and Alt+Right reorder the focused tab.
 

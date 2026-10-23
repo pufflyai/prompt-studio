@@ -78,7 +78,7 @@ export const AvailableTabs: Story = { args: { workbench: createEmptyWorkbench() 
 export const HiddenHeader: Story = { args: { workbench: createEmptyWorkbench(true) } };
 export const PageEntries: Story = { args: { workbench: createEmptyWorkbench(false, true) } };
 
-export const CenteredTools: Story = {
+export const TopAlignedTools: Story = {
   args: {
     workbench: (() => {
       const workbench = createEmptyWorkbench(false, true);

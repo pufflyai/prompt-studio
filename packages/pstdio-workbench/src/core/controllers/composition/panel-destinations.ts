@@ -1,7 +1,8 @@
 import { type WorkbenchRegion, workbenchPanelRegions } from "../../registries/layout/layout-types";
 import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import type { WorkbenchModeContribution } from "../../registries/modes/mode-registry";
-import { modePlacementContributionId } from "../../registries/views/view-placement";
+import { pageSlots } from "../../registries/pages/page-main";
+import { modePlacementContributionId, pagePlacementContributionId } from "../../registries/views/view-placement";
 import type { WorkbenchCore } from "../../workbench-core-types";
 
 interface PanelDestinationPolicy {
@@ -30,9 +31,14 @@ export const panelDestinations = (core: WorkbenchCore, contributionId: string) =
   const legacyPanel = mode
     ?.listAddablePanels?.({ layout: core.layout.getLayout(), resource: core.getPrimaryResource() })
     .find((p) => p.panelId === contributionId);
+  const pageSlot = core.pages
+    .listPages()
+    .flatMap((page) =>
+      pageSlots(page).filter((slot) => pagePlacementContributionId(page.id, slot.id) === contributionId),
+    )[0];
   return allowedPanelDestinations({
     mode,
-    movableTo: declaration?.movableTo,
+    movableTo: declaration?.movableTo ?? pageSlot?.movableTo,
     allowedRegions: legacyPanel?.allowedRegions,
   }).filter((region) => {
     const policy = core.shell.getPanelPolicy(region);

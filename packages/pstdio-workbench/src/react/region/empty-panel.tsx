@@ -21,7 +21,7 @@ export const EmptyPanel = (props: EmptyPanelProps) => {
   if (!activeModeId && Object.keys(modes).length > 0) return null;
   if (!panels.length) return <EmptyState title="No tabs available" />;
   return (
-    <Stack flex="1" justifyContent="center" p="md">
+    <Stack flex="1" p="xl">
       <Stack w="full" maxW="lg" mx="auto" gap="md">
         <Text textStyle="label/M/medium">Tools</Text>
         <SimpleGrid

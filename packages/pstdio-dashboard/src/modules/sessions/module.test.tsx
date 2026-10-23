@@ -11,7 +11,7 @@ import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionBubbleModule } from "./bubble/module";
 import { createSessionsModule } from "./module";
 
-test("the Sessions landing page owns a new-session placeholder and breadcrumb without a tab", () => {
+test("Sessions Add opens a new session tab without offering the routed session resource", async () => {
   const workbench = createWorkbench();
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -19,11 +19,18 @@ test("the Sessions landing page owns a new-session placeholder and breadcrumb wi
   workbench.registerModule(createSessionsModule());
   openSessionsPage(workbench);
   expect(workbench.layout.listPanelInstances("main")).toHaveLength(0);
-  expect(workbench.pages.getPage(dashboardViews.sessions.id)?.main).toMatchObject({
-    kind: "panels",
-    empty: { view: { kind: "view" } },
-  });
-  expect(workbench.breadcrumbs.getItems()?.at(-1)).toMatchObject({ title: "New session", menu: expect.any(Array) });
+  await workbench.composition
+    .panelsFor("main")
+    .addable.find((entry) => entry.contribution.rendererId === dashboardWidgetIds.sessionBubble)!.open!();
+  expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.newSession);
+  expect(workbench.layout.listPanelInstances("main")).toEqual([
+    expect.objectContaining({ viewId: dashboardWidgetIds.newSession }),
+  ]);
+  openSessionsPage(workbench, createDashboardSessionResource("session-1", "Existing session", "project-1"));
+  workbench.closePlacement(workbench.layout.getActivePanel("main")!.placementIdentity!);
+  expect(workbench.composition.panelsFor("main").addable.map((entry) => entry.contribution.rendererId)).toEqual([
+    dashboardWidgetIds.sessionBubble,
+  ]);
 });
 describe("createSessionsModule", () => {
   test("registers the session resource kind", () => {
@@ -115,7 +122,7 @@ describe("createSessionsModule", () => {
     await workbench.commands.executeCommand(dashboardCommandIds.createSession);
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions", "New session"]);
     expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.newSession);
-    expect(workbench.layout.listPanelInstances("main")).toHaveLength(0);
+    expect(workbench.layout.listPanelInstances("main")).toHaveLength(1);
   });
   test("navigates back from a session to the sessions root", async () => {
     const workbench = createWorkbench();
@@ -159,7 +166,7 @@ describe("createSessionsModule", () => {
     expect(workbench.layout.getActivePanel("main")).toBeUndefined();
     expect(workbench.layout.getLayout().activeResourceKey).toBeUndefined();
     expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(0);
-    expect(workbench.breadcrumbs.getItems()?.at(-1)?.title).toBe("New session");
+    expect(workbench.breadcrumbs.getItems()?.at(-1)?.title).toBe("Sessions");
     workbench.pageLocations.goForward();
     await Promise.resolve();
     expect(workbench.pages.store.getState().location?.resource).toMatchObject({ type: "session", id: "session-2" });
@@ -176,7 +183,7 @@ describe("createSessionsModule", () => {
     workbench.registerModule(createSessionsModule());
     await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
     expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(0);
-    expect(workbench.breadcrumbs.getItems()?.at(-1)?.title).toBe("New session");
+    expect(workbench.breadcrumbs.getItems()?.at(-1)?.title).toBe("Sessions");
     expect(workbench.getPrimaryResource()).toBeUndefined();
   });
   test("returns to the last opened session from global navigation", async () => {

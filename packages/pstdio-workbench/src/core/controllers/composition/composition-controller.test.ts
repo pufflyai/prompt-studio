@@ -1,5 +1,70 @@
 import { describe, expect, test } from "bun:test";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../workbench-core";
+
+test.each(["registered", "mode"] as const)("%s resource panels need an explicit construction command", (owner) => {
+  const workbench = createWorkbench();
+  workbench.modes.registerMode({
+    id: "project",
+    activate() {},
+    listAddablePanels:
+      owner === "mode"
+        ? () => [
+            { panelId: "resource", region: "side" },
+            { panelId: "new-tool", region: "side" },
+          ]
+        : undefined,
+  });
+  const page = { kind: "page" as const, id: "tools", extensionId: "test" };
+  workbench.views.registerView({ id: "tool", title: "Tool", body: { kind: "react", render: () => null } });
+  workbench.pages.registerPage({
+    id: "home",
+    ref: { ...page, id: "home" },
+    path: "",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [],
+  });
+  workbench.pages.registerPage({
+    id: page.id,
+    ref: page,
+    path: "tools",
+    modeId: "project",
+    parentId: "home",
+    resource: { kinds: [{ kind: "resource-kind", id: "tool" }] },
+    main: { kind: "view", view: { kind: "view", id: "tool" }, cardinality: "one" },
+    slots: [],
+  });
+  workbench.pageLocations.setProject("project");
+  workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "tool", id: "current" } });
+  workbench.commands.registerCommand({ id: "create-tool", label: "Create tool" }, { execute() {} });
+  for (const id of ["resource", "new-tool"])
+    workbench.layout.registerPanel({
+      id,
+      title: id,
+      region: "side",
+      rendererId: id,
+      singleton: true,
+      resourceKinds: ["tool"],
+      eligibleLocations: {},
+      ...(id === "new-tool" ? { openCommand: { commandId: "create-tool" } } : {}),
+    });
+  expect(workbench.composition.panelsFor("side").addable.map((entry) => entry.panelId)).toEqual(["new-tool"]);
+  workbench.layout.openWidget("new-tool", {
+    region: "side",
+    resource: { type: "tool", id: "current" },
+    role: "sub-panel",
+    tabRetention: "persistent",
+  });
+  workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "tool", id: "another" } });
+  expect(workbench.layout.listPanelInstances("side")).toHaveLength(1);
+  expect(workbench.getPrimaryResource()?.id).toBe("another");
+  expect(workbench.layout.getLayout().regions.side.widgets[0]?.ownerResourceKey).toBe(
+    resourceKey({ type: "tool", id: "current" }),
+  );
+  expect(workbench.composition.panelsFor("main").addable).toEqual([]);
+  expect(workbench.composition.panelsFor("secondary").addable).toEqual([]);
+});
 
 describe("workbench composition query", () => {
   test("returns open, addable, and closable panels for one region", () => {

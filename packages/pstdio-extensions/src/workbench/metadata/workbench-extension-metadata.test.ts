@@ -263,6 +263,7 @@ describe("createWorkbenchExtensionMetadata pages", () => {
         {
           id: "tools",
           region: "side",
+          movableTo: ["side"],
           item: {
             kind: "view",
             view: view.ref,
@@ -306,6 +307,7 @@ describe("createWorkbenchExtensionMetadata pages", () => {
         {
           id: "tools",
           region: "side",
+          movableTo: ["side"],
           item: { kind: "view", presence: "open", view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
         },
       ],

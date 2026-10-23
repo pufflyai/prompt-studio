@@ -104,6 +104,7 @@ export const previewPage = (
         },
   slots: page.slots.map((slot) => ({
     ...slot,
+    movableTo: slot.movableTo ? [...slot.movableTo] : undefined,
     item: previewItem(slot.item),
     tab: tab(`${page.id}.${slot.id}`, slot.tab),
   })),

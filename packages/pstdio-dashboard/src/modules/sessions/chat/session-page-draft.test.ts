@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
+import { createSessionBubbleModule } from "../bubble/module";
 import { openCreatedSessionFromDraft } from "./session-chat-actions";
 
 const createPageDraft = () => {
   const workbench = createWorkbench();
   workbench.modes.registerMode({ id: "project", activate() {} });
+  workbench.registerModule(createSessionBubbleModule());
   workbench.views.registerView({ id: "session", title: "Session", body: { kind: "react", render: () => null } });
   workbench.pages.registerPage({
     id: "sessions",
@@ -13,7 +15,18 @@ const createPageDraft = () => {
     title: "Sessions",
     path: "sessions",
     modeId: "project",
-    main: { kind: "panels", empty: { kind: "view", id: "session" } },
+    main: { kind: "panels" },
+    slots: [],
+  });
+  workbench.pages.registerPage({
+    id: "newSession",
+    ref: workbenchPages.newSession,
+    title: "New session",
+    path: "sessions/new",
+    modeId: "project",
+    parentId: "sessions",
+    resource: { kinds: [{ kind: "resource-kind", id: "session-draft" }] },
+    main: { kind: "view", view: { kind: "view", id: "session" }, cardinality: "one" },
     slots: [],
   });
   workbench.pages.registerPage({
@@ -28,18 +41,22 @@ const createPageDraft = () => {
     slots: [],
   });
   workbench.pageLocations.setProject("project-1");
-  workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.sessions });
+  workbench.pageLocations.navigate({
+    kind: "page",
+    page: workbenchPages.newSession,
+    resource: { type: "session-draft", id: "draft" },
+  });
   const input = {
     workbench,
     region: "main" as const,
-    owner: { kind: "page" as const, projectId: "project-1", location: workbench.pages.store.getState().location! },
+    instance: workbench.layout.getActivePanel("main")!,
   };
   return { workbench, input };
 };
 
-test("a page placeholder opens the created session without a draft tab", () => {
+test("the New session tab opens the created session", () => {
   const { workbench, input } = createPageDraft();
-  expect(workbench.layout.listPanelInstances("main")).toHaveLength(0);
+  expect(workbench.layout.listPanelInstances("main")).toHaveLength(1);
   openCreatedSessionFromDraft({
     input,
     draftKey: "draft",
@@ -67,4 +84,26 @@ test("creating a session does not leave a page the user opened while creation wa
     projectId: "project-1",
   });
   expect(workbench.pages.store.getState().location?.resource?.id).toBe("other");
+});
+
+test.each([
+  "side",
+  "secondary",
+] as const)("a draft moved to %s becomes one session without leaving the current page", (region) => {
+  const { workbench, input } = createPageDraft();
+  workbench.movePanel(input.instance.instanceId, region);
+  workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.sessions });
+  const location = workbench.pages.store.getState().location;
+  openCreatedSessionFromDraft({
+    input,
+    draftKey: "draft",
+    sessionId: "created",
+    prompt: "Build the tool",
+    projectId: "project-1",
+  });
+  expect(workbench.pages.store.getState().location).toEqual(location);
+  expect(workbench.layout.listPanelInstances("main")).toHaveLength(0);
+  expect(workbench.layout.listPanelInstances(region)).toEqual([
+    expect.objectContaining({ resource: expect.objectContaining({ type: "session", id: "created" }) }),
+  ]);
 });

@@ -5,11 +5,11 @@ import { join } from "node:path";
 import { type Browser, chromium, expect, test } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-import { verifySessionPlaceholder } from "../helpers/session-placeholder";
+import { verifySessionTools } from "../helpers/session-tools";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
-test("the packaged Sessions placeholder creates and reopens a real session tab", async () => {
+test("packaged Sessions creates sessions from the default tools and Add menu", async () => {
   const root = mkdtempSync(join(tmpdir(), "packaged-session-placeholder-"));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
@@ -31,7 +31,7 @@ test("the packaged Sessions placeholder creates and reopens a real session tab",
     });
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}/sessions`);
-    await verifySessionPlaceholder(page);
+    await verifySessionTools(page);
     await page.screenshot({ path: test.info().outputPath("session-created.png") });
   } finally {
     await browser?.close();

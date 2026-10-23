@@ -56,8 +56,7 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 ## 8. Hover
 
 1. Feedback is immediate.
-2. Button hover exits wait 150 ms; menu items and button groups do not.
-3. Explanatory tooltips wait 300 ms.
+2. Explanatory tooltips wait 300 ms.
 
 ## 9. Chat composer
 

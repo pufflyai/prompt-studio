@@ -10,8 +10,12 @@ export interface ResolvedOwnedPlacement<Value = unknown> {
   identity: PlacementIdentity;
   region: WorkbenchRegion;
   order: number;
+  movableTo?: readonly WorkbenchRegion[];
   value: Value;
 }
+
+export const resolvePlacementRegion = (desired: ResolvedOwnedPlacement, requestedRegion: WorkbenchRegion) =>
+  desired.movableTo && !desired.movableTo.includes(requestedRegion) ? desired.region : requestedRegion;
 
 export interface ComposeOwnedPlacementsInput<Value> {
   shell: readonly ResolvedOwnedPlacement<Value>[];

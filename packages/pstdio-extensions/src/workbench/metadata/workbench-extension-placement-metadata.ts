@@ -55,6 +55,7 @@ const mainRecord = (main: RuntimePageMain, extensionId: string) => {
 };
 const slotRecord = (slot: RuntimePageSlot, extensionId: string) => ({
   ...slot,
+  movableTo: slot.movableTo ? [...slot.movableTo] : undefined,
   item: itemRecord(slot.item, extensionId),
   tab: tabRecord(slot.tab, extensionId),
 });

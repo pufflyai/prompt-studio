@@ -5,4 +5,4 @@
 "@pstdio/ui": minor
 ---
 
-Show closable tabs, compact centered tool placeholders and page breadcrumb actions, session creation from empty pages, and page-scoped header choices with clear mode return labels.
+Show closable tabs, page-scoped headers, top-aligned tool cards with immediate hover and explicit creation actions, and new-session tabs with declared panel destinations.

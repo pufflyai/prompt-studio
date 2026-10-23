@@ -36,19 +36,17 @@ import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./se
 const SessionWidget = lazy(() =>
   import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionWidget })),
 );
-const NewSessionPage = lazy(() =>
-  import("./components/new-session-page").then((module) => ({ default: module.NewSessionPage })),
-);
 
 const registerSessionWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardSessionDraftPersistence) => {
   ctx.views.registerView({
     id: dashboardWidgetIds.newSession,
     title: "New session",
+    icon: "MessageSquarePlus",
     body: {
       kind: "react",
       render: (input) => (
         <Suspense fallback={<Spinner />}>
-          <NewSessionPage workbench={input.workbench} drafts={drafts} />
+          <SessionWidget input={input} drafts={drafts} />
         </Suspense>
       ),
     },

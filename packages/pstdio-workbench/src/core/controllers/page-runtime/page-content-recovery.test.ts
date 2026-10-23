@@ -80,7 +80,7 @@ test("collection navigation leaves an unavailable landing tab closed", () => {
 });
 
 for (const page of ["alpha", "document"]) {
-  test(`closing ${page} Main keeps the page open and Add reopens its content`, async () => {
+  test(`closing ${page} Main keeps the page open and its content can reopen`, async () => {
     const { w, navigate } = modePanelFixture();
     navigate(page, page === "document" ? "one" : undefined);
     const tab = w.layout.getActivePanel("main")!;
@@ -88,24 +88,26 @@ for (const page of ["alpha", "document"]) {
     w.closePlacement(tab.placementIdentity!);
     expect(w.pages.store.getState().activePageId).toBe(page);
     expect(w.layout.listPanelInstances("main")).toEqual([]);
-    const addable = createOwnedAddablePanels(w, {
-      region: "main",
-      layout: w.layout.getLayout(),
-      resource: w.pages.store.getState().location?.resource,
-    });
-    await addable.find((entry) => entry.panelId === tab.panelId)!.open!();
+    if (page === "document") navigate(page, "one");
+    else {
+      const addable = createOwnedAddablePanels(w, {
+        region: "main",
+        layout: w.layout.getLayout(),
+        resource: w.pages.store.getState().location?.resource,
+      });
+      await addable.find((entry) => entry.panelId === tab.panelId)!.open!();
+    }
     expect(w.layout.listPanelInstances("main")).toHaveLength(1);
     expect(w.layout.getActivePanel("main")!.placementIdentity).toEqual(tab.placementIdentity);
   });
 }
 
-test("Add moves the page's existing content back from Side without making a copy", async () => {
+test("moving a page tab back from Side keeps its identity", () => {
   const { w, navigate } = modePanelFixture();
   navigate("document", "one");
   const tab = w.layout.getActivePanel("main")!;
   w.movePanel(tab.instanceId, "side");
-  const addable = createOwnedAddablePanels(w, { region: "main", layout: w.layout.getLayout(), resource: tab.resource });
-  await addable.find((entry) => entry.panelId === tab.panelId)!.open!();
+  w.movePanel(tab.instanceId, "main");
   expect(w.layout.listPanelInstances("side")).toEqual([]);
   expect(w.layout.getActivePanel("main")!.instanceId).toBe(tab.instanceId);
 });

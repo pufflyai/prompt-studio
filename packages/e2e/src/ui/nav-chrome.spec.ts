@@ -148,7 +148,7 @@ test("keeps history, breadcrumbs and panel controls in the navigation header", a
   await expect.poll(() => backgroundColor(openSide)).not.toBe(closedPanelBackground);
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
-  await page.getByRole("menuitem", { name: "Session", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
   const draft = "Keep this draft while the Side Panel moves";
   const attachedSession = page.getByTestId("workbench-side-panel-attached");
   const chatInput = attachedSession.locator("[data-testid='content-editable'][contenteditable='true']").last();

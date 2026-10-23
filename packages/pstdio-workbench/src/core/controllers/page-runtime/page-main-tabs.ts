@@ -174,7 +174,17 @@ export const scopePageMainTabs = (input: PageTabsInput) => {
     const key = placementIdentityKey(entry.identity);
     return !changingPage || !departing.has(key) || shared.has(key) || activated.has(key);
   });
-  const placements = restoreSharedPageTabs(input, restoreMainTabs(input, retained, shared), sharedLayout);
+  const placements = restoreSharedPageTabs(input, restoreMainTabs(input, retained, shared), sharedLayout).map(
+    (entry) => {
+      const identity = entry.identity;
+      if (identity.kind !== "page") return entry;
+      const page = state.pages[identity.pageId];
+      const slot = page && pageSlots(page).find((slot) => slot.id === identity.slotId);
+      if (!slot?.movableTo) return entry;
+      // Saved positions cannot override the owning slot's current destination policy.
+      return { ...entry, region: slot.region, movableTo: slot.movableTo };
+    },
+  );
   return {
     ...state,
     placements,

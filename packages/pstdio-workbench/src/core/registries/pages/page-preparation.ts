@@ -175,6 +175,8 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     const page = requirePage(current, target.pageId);
     const resourceKey = (resource: ResourceRef) => pageResourceInstanceKey(page, resource, input.resources);
     const slot = requirePageSlot(page, target.slotId);
+    if (target.region && slot.movableTo && !slot.movableTo.some((region) => region === target.region))
+      throw new Error(`Page slot "${slot.id}" cannot open in ${target.region}`);
     const stateKey = pageStateKey(page, current.location, input.resources);
     let pageState = current.pageStates[stateKey] ?? emptyPageState(page);
     let instanceKey = staticPageInstanceKey(page, current.location?.resource, input.resources);

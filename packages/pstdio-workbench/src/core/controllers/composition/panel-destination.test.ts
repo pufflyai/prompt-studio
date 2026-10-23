@@ -3,7 +3,7 @@ import type { PlacementItem } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../workbench-core";
 import { createOwnedAddablePanels } from "./owned-addable-panels";
 
-test("command-backed singleton Add opens the existing tab in the chosen panel", async () => {
+test("command-backed singleton Add can create a tab again after it closes", async () => {
   const w = createWorkbench();
   w.views.registerView({ id: "tool", title: "Tool", body: { kind: "react", render: () => null } });
   w.commands.registerCommand(
@@ -33,6 +33,7 @@ test("command-backed singleton Add opens the existing tab in the chosen panel", 
   });
   await w.commands.executeCommand("open-tool");
   const original = w.layout.getActivePanel("side")!;
+  w.closePlacement(original.placementIdentity!);
   const add = w.composition.panelsFor("secondary").addable.find((panel) => panel.contribution.title === "Tool")!;
   await add.open!();
   expect(w.layout.getActivePanel("secondary")?.instanceId).toBe(original.instanceId);
@@ -46,6 +47,22 @@ for (const owner of ["shell", "mode", "page"] as const) {
       const w = createWorkbench();
       w.views.registerView({ id: "tool", title: "Tool", body: { kind: "react", render: () => null } });
       w.modes.registerMode({ id: "project", activate() {} });
+      w.commands.registerCommand(
+        { id: "create-tool", label: "Create tool" },
+        {
+          execute: (_args, context) => {
+            const target = { resource: { type: "tool", id: "new" }, region: context?.region };
+            if (owner === "shell") w.shellPlacements.openPlacement({ ...target, placementId: "tool", open: "pin" });
+            if (owner === "mode")
+              w.modePlacements.openPlacement({
+                ...target,
+                panel: { kind: "placement", extensionId: "test", id: "tool" },
+                open: "pin",
+              });
+            if (owner === "page") w.pages.openSlot({ ...target, pageId: "home", slotId: "tool", open: "pin" });
+          },
+        },
+      );
       const item: PlacementItem =
         kind === "view"
           ? { kind: "view", view: { kind: "view", id: "tool" }, presence: "closed" }
@@ -55,6 +72,7 @@ for (const owner of ["shell", "mode", "page"] as const) {
                 kinds: [{ kind: "resource-kind", id: "tool" }],
                 view: { kind: "view", id: "tool" },
                 cardinality: "many",
+                add: { kind: "command", target: { command: { kind: "command", id: "create-tool" } } },
               },
             };
       const placement = { id: "tool", region: "side" as const, item };
