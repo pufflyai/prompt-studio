@@ -5,6 +5,7 @@ import { scopeWorkbenchResourceContextValues } from "../../registries/resources/
 import { matchesContextExpression } from "../../shared/context/context-key-service";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { type KeyboardPresentation, presentationResourceKey, visibleKeyboardTargets } from "./keyboard-presentations";
+import { shortcutCommandArgs } from "./shortcut-command-args";
 import { shortcutActionLabel } from "./shortcut-label";
 
 export interface ResolvedShortcut {
@@ -23,10 +24,12 @@ const applicable = (core: WorkbenchCore, binding: RegisteredKeybinding, target?:
   if (!matchesContextExpression(values, binding.when)) return false;
   if (binding.action.kind !== "command") return true;
   const context = target ? { resource: target.resource, region: target.region } : undefined;
+  const record = core.commands.getCommand(binding.action.commandId);
+  if (!record) return false;
+  const args = shortcutCommandArgs(record.command.params, binding.action.args, context);
   return (
-    Boolean(core.commands.getCommand(binding.action.commandId)) &&
-    core.commands.isCommandVisible(binding.action.commandId, binding.action.args, context) &&
-    core.commands.isCommandEnabled(binding.action.commandId, binding.action.args, context)
+    core.commands.isCommandVisible(binding.action.commandId, args, context) &&
+    core.commands.isCommandEnabled(binding.action.commandId, args, context)
   );
 };
 export const extensionShortcutAlias = (core: WorkbenchCore, extensionId: string) =>
