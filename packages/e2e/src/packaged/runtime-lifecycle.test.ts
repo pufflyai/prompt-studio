@@ -87,16 +87,32 @@ const waitForDescriptor = async (path: string) => {
 const waitForOwner = async (path: string, child: ChildProcess) => {
   const deadline = Date.now() + TEST_TIMEOUT - 5_000;
   while (Date.now() < deadline) {
-    if (existsSync(path) && readDescriptor(path).pid === child.pid) return readDescriptor(path);
+    if (child.exitCode !== null || child.signalCode !== null)
+      throw new Error(`Packaged runtime ${child.pid} exited before readiness.`);
+    if (existsSync(path)) {
+      const descriptor = readDescriptor(path);
+      if (descriptor.pid === child.pid) {
+        try {
+          // Ownership is published while the database is still initializing.
+          await assertAuthenticatedReady(descriptor, AbortSignal.timeout(Math.max(1, deadline - Date.now())));
+          return descriptor;
+        } catch {
+          // A resetting startup socket is not readiness; process exit still fails the wait.
+        }
+      }
+    }
     await Bun.sleep(50);
   }
-  throw new Error(`Packaged runtime ${child.pid} did not publish its descriptor.`);
+  throw new Error(
+    `Packaged runtime ${child.pid} did not become ready. Runtime log:\n${readRuntimeLogs(join(path, ".."))}`,
+  );
 };
 
-const assertAuthenticatedReady = async (descriptor: RuntimeDescriptor) => {
+const assertAuthenticatedReady = async (descriptor: RuntimeDescriptor, signal?: AbortSignal) => {
   logTestPhase("query runtime health");
   const response = await fetch(`${descriptor.origin}/runtime/ready`, {
     headers: { authorization: `Bearer ${descriptor.token}` },
+    signal,
   });
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({
@@ -182,7 +198,6 @@ describe("packaged runtime lifecycle", () => {
       };
       let child = start();
       let descriptor = await waitForOwner(descriptorPath, child);
-      await assertAuthenticatedReady(descriptor);
       const request = (path: string, body?: unknown) =>
         fetch(`${descriptor.origin}${path}`, {
           method: body === undefined ? "GET" : "POST",
@@ -216,7 +231,6 @@ describe("packaged runtime lifecycle", () => {
       child = start();
       const exited = new Promise((resolve) => child.once("exit", resolve));
       descriptor = await waitForOwner(descriptorPath, child);
-      await assertAuthenticatedReady(descriptor);
       let jobs: unknown[] = [];
       for (let attempt = 0; attempt < 50; attempt++) {
         jobs = ((await (await request("/runtime/activity")).json()) as { jobs: unknown[] }).jobs;
@@ -274,9 +288,8 @@ describe("packaged runtime lifecycle", () => {
       children.push(child);
       const exited = new Promise<number | null>((resolve) => child.once("exit", resolve));
 
-      const desktop = await waitForDescriptor(descriptorPath);
+      const desktop = await waitForOwner(descriptorPath, child);
       expect(desktop.ownerType).toBe("desktop");
-      await assertAuthenticatedReady(desktop);
 
       runBinary(["serve"], home, env);
       expect(readDescriptor(descriptorPath)).toMatchObject({
@@ -321,7 +334,7 @@ describe("packaged runtime lifecycle", () => {
       await firstExited;
 
       const retry = startRuntime();
-      await assertAuthenticatedReady(await waitForOwner(descriptorPath, retry));
+      await waitForOwner(descriptorPath, retry);
       await runBinaryAsync(["close"], home, env);
     },
     TEST_TIMEOUT,
