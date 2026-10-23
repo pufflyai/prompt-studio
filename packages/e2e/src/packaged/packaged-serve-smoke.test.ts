@@ -34,12 +34,13 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // packaged-command-palette.spec.ts checks theme selection from the palette and persistence after reload.
 // packaged-main-fullscreen.spec.ts checks Main fullscreen, its minimized Side bubble, keyboard exit and reload state.
-// It also verifies packaged managed-webview keyboard entry, exit, and focus return.
 // Desktop packaged-project-tabs.spec.ts checks the title-bar maximize control and focus after fullscreen exit.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 // Document sync checks local, synced and needs-attention states plus strict leaf uploads to an older relay.
+import { registerDeviceAutomationSmokeTests } from "./packaged-device-automations-smoke";
+import { registerDocumentSyncSmokeTests } from "./packaged-document-sync-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 // Includes linked dependency loading and missing dependency diagnostics.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
@@ -148,6 +149,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // The packaged empty-panel browser flow also checks nearby tab targets, mirrored Navigation, panel handles and reload.
 
 // Two hosts check an interrupted first download, offline and back, and local edits that merge when sync restarts.
+import { registerTwoDeviceSyncSmokeTests } from "./packaged-two-device-sync-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";
 
@@ -332,6 +334,9 @@ registerPageParamsSmokeTests();
 
 registerResourcePageSmokeTests();
 
+registerDeviceAutomationSmokeTests();
+registerDocumentSyncSmokeTests();
 registerPersonalHistorySmokeTests();
+registerTwoDeviceSyncSmokeTests();
 
 registerPagedCollectionSmokeTests();
