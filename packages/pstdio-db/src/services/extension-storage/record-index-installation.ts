@@ -14,5 +14,7 @@ export const installRecordIndexes = (
     // can expose a provisional import or backfill before the whole installation commits.
     const documents = createDocumentStorageDBService(tx);
     for (const { owner, definitions } of owners) await documents.open({ owner }).records.defineIndexes(definitions);
+    // Private background work must finish while its transaction is still open.
+    await documents.flushStatistics();
     validate();
   });
