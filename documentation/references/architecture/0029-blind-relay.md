@@ -49,6 +49,8 @@ token's account. Blob ID lists hold at most 100,000 IDs.
 
 Manifest upload requires discovery of `blob-references-v1` first. `createDocumentRelay().manifestBlobs()` performs that discovery and returns an uploader bound to the same project and space. Unknown future feature names are allowed. An old relay or a relay without this feature cannot accept manifests; the client never falls back to an ordinary upload for a manifest. Manifest children are immutable, unique, and limited to 256 opaque IDs. They must already be complete in the same project and space. Ordinary `/begin` accepts no child list.
 
+Manifest downloads require the exact authenticated ciphertext length: `manifestBlobs().get(blobId, byteLength)`. The caller first checks that length against its node size limit. The client rejects a conflicting advertised length before reading the body, reads into a buffer of exactly that size, cancels an oversized stream immediately, and rejects a truncated body. Ordinary blob downloads keep their existing API.
+
 Errors use the `syncErrorSchema` shapes. `missing-blobs` lists blob IDs that an update or latest
 state names before they finished uploading (R21).
 

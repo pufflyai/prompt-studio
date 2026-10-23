@@ -394,8 +394,9 @@ test("capability negotiation uploads a manifest graph and retains its children t
     expect(legacy.status).toBe(400);
     await client.update({ updateId: randomId("update"), payload: encode(bytes), blobIds: [rootId] });
     await relay.context.sync.cleanup(new Date(Date.now() + 365 * 86_400_000));
-    expect(await manifests.get(leafId)).toEqual(bytes);
-    expect(await manifests.get(rootId)).toEqual(bytes);
+    expect(await manifests.get(leafId, bytes.length)).toEqual(bytes);
+    expect(await manifests.get(rootId, bytes.length)).toEqual(bytes);
+    await expect(manifests.get(rootId, bytes.length - 1)).rejects.toThrow("length");
     const personal = createDocumentRelay({
       origin: relay.server.url.origin,
       space: { projectId, spaceOwner: relay.context.scope.accountId },

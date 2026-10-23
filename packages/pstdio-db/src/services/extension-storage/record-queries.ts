@@ -19,7 +19,6 @@ import {
   storage_current_records as current,
   storage_record_indexes as indexes,
   storage_record_projections as projections,
-  storage_documents,
 } from "../../db/schemas.pg";
 import { dropRecordIndexes } from "./record-index-lifecycle";
 import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
@@ -58,10 +57,40 @@ const asRecord = (row: Current) =>
     revision: row.revision,
   }) satisfies StorageRecord;
 
+type Reader = Pick<DbClient, "select">;
+const currentWhere = (owner: StorageOwner) =>
+  and(eq(current.workbench_id, owner.workbenchId), eq(current.extension_id, owner.extensionId));
+
+/** Point reads come from the projection; a missing row is a record that was never saved. */
+export const readProjectedRecords = async (connection: Reader, owner: StorageOwner, ids: string[]) => {
+  if (!ids.length) return [];
+  const rows = await connection
+    .select()
+    .from(current)
+    .where(and(currentWhere(owner), inArray(current.record_id, ids)));
+  const byId = new Map(rows.map((row) => [row.record_id, asRecord(row)]));
+  return Promise.all(ids.map((id) => byId.get(id) ?? missingRecord(id)));
+};
+
+/** Live records under an address prefix, in UTF-16 record ID order like the in-memory storage. */
+export const listProjectedRecords = async (connection: Reader, owner: StorageOwner, prefix = "") =>
+  (
+    await connection
+      .select()
+      .from(current)
+      .where(and(currentWhere(owner), eq(current.deleted, false), sql`starts_with(${current.record_id}, ${prefix})`))
+  )
+    .map(asRecord)
+    .sort((left, right) => {
+      if (left.recordId === right.recordId) return 0;
+      return left.recordId < right.recordId ? -1 : 1;
+    });
+
 export const createRecordQueries = (
   db: DbClient,
   owner: StorageOwner,
-  rebuild: () => Promise<void>,
+  /** Moves records out of an old owner document before indexes are built. */
+  upgrade: () => Promise<void>,
   diagnostics?: StorageDiagnostics,
 ) => {
   const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
@@ -76,29 +105,10 @@ export const createRecordQueries = (
     if (!index) throw new Error(`Storage index not installed: ${name}`);
     return decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex;
   };
-  const documentRevision = async (connection: Pick<DbClient, "select">) => {
-    const [document] = await connection
-      .select({ revision: storage_documents.revision })
-      .from(storage_documents)
-      .where(
-        and(
-          eq(storage_documents.workbench_id, owner.workbenchId),
-          eq(storage_documents.extension_id, owner.extensionId),
-          eq(storage_documents.document_id, "records"),
-        ),
-      );
-    return document?.revision;
-  };
-  const getRevision = async (connection: Pick<DbClient, "select">) => {
+  // The projection row is the owner's revision; an owner without one has no records yet.
+  const getRevision = async (connection: Reader) => {
     const [projection] = await connection.select().from(projections).where(ownerWhere(projections));
-    const revision = await documentRevision(connection);
-    if (!projection) {
-      if (revision === undefined) return "0";
-      throw new Error("Storage projection is unavailable; install or upgrade its indexes");
-    }
-    if (projection.revision !== revision)
-      throw new Error("Storage projection is out of date; install or upgrade its indexes");
-    return String(projection.revision);
+    return String(projection?.revision ?? 0);
   };
   const api: StorageRecordQueries = {
     defineIndexes: async (definitions) => {
@@ -113,11 +123,10 @@ export const createRecordQueries = (
       const [ready] = await db.select().from(projections).where(ownerWhere(projections));
       if (
         ready &&
-        ready.revision === (await documentRevision(db)) &&
         (await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json))
       )
         return;
-      await rebuild();
+      await upgrade();
       await db.transaction(async (tx) => {
         await dropRecordIndexes(tx, ownerWhere(indexes)!);
         await tx.delete(indexes).where(ownerWhere(indexes));
@@ -190,6 +199,10 @@ export const createRecordQueries = (
         const index = await getIndex(tx, query.index);
         const revision = await getRevision(tx);
         validatePredicate(index, query.where);
+        if (query.where === undefined && query.groupBy === undefined && index.prefix === undefined) {
+          const [projection] = await tx.select().from(projections).where(ownerWhere(projections));
+          return { revision, count: projection?.live_count ?? 0, groups: [] };
+        }
         const group =
           query.groupBy === undefined
             ? sql`NULL::jsonb`
@@ -210,16 +223,7 @@ export const createRecordQueries = (
       }),
     readMany: async (ids) => {
       if (ids.length > 100) throw new Error("A batch can read at most 100 records");
-      if (!ids.length) return [];
-      return db.transaction(async (tx) => {
-        await getRevision(tx);
-        const rows = await tx
-          .select()
-          .from(current)
-          .where(and(ownerWhere(current), inArray(current.record_id, ids)));
-        const byId = new Map(rows.map((row) => [row.record_id, asRecord(row)]));
-        return Promise.all(ids.map((id) => byId.get(id) ?? missingRecord(id)));
-      });
+      return readProjectedRecords(db, owner, ids);
     },
   };
   return {

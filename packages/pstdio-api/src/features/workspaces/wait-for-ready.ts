@@ -1,3 +1,4 @@
+import { setTimeout } from "node:timers/promises";
 import type { RouteDeps } from "../deps";
 
 type WaitForReadyDeps = Pick<RouteDeps, "workspaceSessionService">;
@@ -7,9 +8,7 @@ type WaitForReadyDeps = Pick<RouteDeps, "workspaceSessionService">;
 const WORKSPACE_READY_TIMEOUT_MS = 60_000;
 const WORKSPACE_READY_POLL_MS = 25;
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-type WaitOptions = { timeoutMs?: number; pollMs?: number };
+type WaitOptions = { timeoutMs?: number; pollMs?: number; signal?: AbortSignal };
 
 // Awaited provisioning sets `initializing` while harness hooks sync their dirs.
 // Sessions must not spawn until it clears so a worktree never launches with a
@@ -18,14 +17,16 @@ type WaitOptions = { timeoutMs?: number; pollMs?: number };
 export const waitForWorkspaceReady = async (deps: WaitForReadyDeps, sessionId: string, options?: WaitOptions) => {
   const timeoutMs = options?.timeoutMs ?? WORKSPACE_READY_TIMEOUT_MS;
   const pollMs = options?.pollMs ?? WORKSPACE_READY_POLL_MS;
+  options?.signal?.throwIfAborted();
 
   let workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(sessionId);
   const deadline = Date.now() + timeoutMs;
 
   while (workspace?.initializing && Date.now() < deadline) {
-    await wait(pollMs);
+    await setTimeout(pollMs, undefined, { signal: options?.signal });
     workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(sessionId);
   }
 
+  options?.signal?.throwIfAborted();
   return workspace;
 };

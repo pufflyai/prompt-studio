@@ -36727,7 +36727,7 @@
                       "type": "frame",
                       "id": "vmzs5",
                       "name": "cmp/KanbanRendererCreateDialog",
-                      "context": "The shared create dialog. Every control in it is declared rather than hand-built, and the host renders the whole surface — there is no extension webview here.\n\nTwo zones, two sources.\n\nPROPERTIES are derived. They are the resource's own editable attributes, already declared once by the renderer's attribute schema and delivered live with every query. Nothing re-declares them: the form filters on editable and seeds whichever attribute the board groups by from the selected column. Add a tag to the project and the form grows a selector on its own.\n\nCONTENT is declared. The create contribution names its typed params — markdown, text, number, boolean, files — and each type maps to exactly one @pstdio/ui control. When an extension needs a control the vocabulary lacks, the answer is to add the type, here and in the component library, the same way a visual the recipes cannot express means a recipe is missing. The vocabulary is the design system's form surface enumerated; it is not a per-extension escape hatch.\n\nThis is a form, and forms are declarable. Rich per-resource editing is a different surface — the resource editor view — and that one stays a webview.\n\nThree things to hold: status appears once, as the first control under Properties, disabled because the column already chose it. The attach affordance sits under the field it applies to, so the footer stays a pure commit bar. And all copy, chrome included, arrives as Localizable — the dialog ships no English of its own. Creation starts with matching editable view properties. Clicking the backdrop does not dismiss the form. Escape and Cancel keep the draft; only Close discards it, and a successful create clears it. The submit split button offers Create ticket and Create without opening.",
+                      "context": "The shared create dialog. Every control in it is declared rather than hand-built, and the host renders the whole surface — there is no extension webview here.\n\nTwo zones, two sources.\n\nPROPERTIES are derived. They are the resource's own editable attributes, already declared once by the renderer's attribute schema and delivered live with every query. Nothing re-declares them: the form filters on editable and seeds whichever attribute the board groups by from the selected column. Add a tag to the project and the form grows a selector on its own.\n\nCONTENT is declared. The create contribution names its typed params — markdown, text, number, boolean, files — and each type maps to exactly one @pstdio/ui control. When an extension needs a control the vocabulary lacks, the answer is to add the type, here and in the component library, the same way a visual the recipes cannot express means a recipe is missing. The vocabulary is the design system's form surface enumerated; it is not a per-extension escape hatch.\n\nThis is a form, and forms are declarable. Rich per-resource editing is a different surface — the resource editor view — and that one stays a webview.\n\nThree things to hold: status appears once, as the first control under Properties, disabled because the column already chose it. The attach affordance sits under the field it applies to, so the footer stays a pure commit bar. And all copy, chrome included, arrives as Localizable — the dialog ships no English of its own. Creation starts with matching editable view properties. Clicking the backdrop does not dismiss the form. Escape and Cancel keep the draft; only Close discards it, and a successful create clears it. The submit split button offers Create ticket and Create without opening.\n\nKeep long content inside the form: the markdown field starts at 144 px and grows to at most 320 px or 40% of the viewport height, whichever is smaller. It uses the shared ScrollArea so attachments and properties stay below it. The body uses a separate shared ScrollArea when a short viewport cannot fit all fields; the header and commit footer stay visible. The dialog leaves 24 px above and below the viewport; its header and footer do not shrink.",
                       "reusable": true,
                       "clip": true,
                       "width": 600,
@@ -36826,6 +36826,7 @@
                                     "size": "sm",
                                     "field": "default"
                                   },
+                                  "context": "Grow with short content from 144 px to a maximum of min(320 px, 40dvh). Longer content scrolls inside the shared ScrollArea with the standard thin scrollbar.",
                                   "descendants": {
                                     "o89C2": {
                                       "content": "Describe the ticket…"
@@ -217184,8 +217185,403 @@
     },
     {
       "type": "frame",
-      "id": "W1BRFX",
-      "x": 62670,
+      "id": "NbFdB",
+      "x": 0,
+      "y": 33516,
+      "name": "Outliner composition · PS-861",
+      "width": 840,
+      "height": 420,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "UJGkI",
+          "name": "Heading",
+          "fill": "$ds-fg",
+          "content": "Outliner · controlled authoring rows",
+          "fontFamily": "$font-heading",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "wOi8H",
+          "name": "Contract",
+          "fill": "$ds-fg-muted",
+          "content": "TreeList rows · 28 px · extension previews · persistent visibility and lock · separate expansion",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "KcJtW",
+          "name": "Caption group",
+          "width": 360,
+          "height": 28,
+          "fill": "$ds-bg",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "BRZ1a",
+              "name": "Expand control",
+              "width": 12,
+              "height": 12,
+              "icon": "chevron-right",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "frame",
+              "id": "mDAVx",
+              "name": "Extension thumbnail slot",
+              "width": 20,
+              "height": 20,
+              "fill": "$ds-surface",
+              "cornerRadius": 2
+            },
+            {
+              "type": "text",
+              "id": "U1DAHD",
+              "name": "Label",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Caption group",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "icon",
+              "id": "b9Al9S",
+              "name": "eye",
+              "width": 16,
+              "height": 16,
+              "icon": "eye",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "icon",
+              "id": "B541GE",
+              "name": "lock-open",
+              "width": 16,
+              "height": 16,
+              "icon": "lock-open",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "wGq3o",
+          "name": "Selected image + mask",
+          "width": 360,
+          "height": 28,
+          "fill": "$ds-bg-active",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "N3mz2",
+              "name": "Expand control",
+              "width": 12,
+              "height": 12,
+              "icon": "chevron-right",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "frame",
+              "id": "YMtxf",
+              "name": "Extension thumbnail slot",
+              "width": 20,
+              "height": 20,
+              "fill": "$ds-surface",
+              "cornerRadius": 2
+            },
+            {
+              "type": "frame",
+              "id": "u2vABM",
+              "name": "Mask thumbnail slot",
+              "width": 16,
+              "height": 20,
+              "fill": "$ds-fg-muted",
+              "cornerRadius": 2
+            },
+            {
+              "type": "text",
+              "id": "IAsQ8",
+              "name": "Label",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Selected image + mask",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "icon",
+              "id": "I4vYoq",
+              "name": "eye",
+              "width": 16,
+              "height": 16,
+              "icon": "eye",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "icon",
+              "id": "jblqm",
+              "name": "lock-open",
+              "width": 16,
+              "height": 16,
+              "icon": "lock-open",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "eNxk5",
+          "name": "Hidden layer",
+          "width": 360,
+          "height": 28,
+          "fill": "$ds-bg",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "K1mfix",
+              "name": "Expand control",
+              "width": 12,
+              "height": 12,
+              "icon": "chevron-right",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "frame",
+              "id": "RkJ1b",
+              "name": "Extension thumbnail slot",
+              "width": 20,
+              "height": 20,
+              "fill": "$ds-surface",
+              "cornerRadius": 2
+            },
+            {
+              "type": "text",
+              "id": "P9BSHL",
+              "name": "Label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Hidden layer",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "icon",
+              "id": "fBSz6",
+              "name": "eye-off",
+              "width": 16,
+              "height": 16,
+              "icon": "eye-off",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "icon",
+              "id": "QiJk7",
+              "name": "lock-open",
+              "width": 16,
+              "height": 16,
+              "icon": "lock-open",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "pXIGB",
+          "name": "Locked layer",
+          "width": 360,
+          "height": 28,
+          "fill": "$ds-bg",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "Zqlta",
+              "name": "Expand control",
+              "width": 12,
+              "height": 12,
+              "icon": "chevron-right",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "frame",
+              "id": "gLWwc",
+              "name": "Extension thumbnail slot",
+              "width": 20,
+              "height": 20,
+              "fill": "$ds-surface",
+              "cornerRadius": 2
+            },
+            {
+              "type": "text",
+              "id": "LGYRv",
+              "name": "Label",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Locked layer",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "icon",
+              "id": "uB6JL",
+              "name": "eye",
+              "width": 16,
+              "height": 16,
+              "icon": "eye",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "icon",
+              "id": "q5nTxi",
+              "name": "lock",
+              "width": 16,
+              "height": 16,
+              "icon": "lock",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "q1JYau",
+          "name": "Unavailable layer",
+          "opacity": 0.4,
+          "width": 360,
+          "height": 28,
+          "fill": "$ds-bg",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "Ilzro",
+              "name": "Expand control",
+              "width": 12,
+              "height": 12,
+              "icon": "chevron-right",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "frame",
+              "id": "a2Y5Ac",
+              "name": "Extension thumbnail slot",
+              "width": 20,
+              "height": 20,
+              "fill": "$ds-surface",
+              "cornerRadius": 2
+            },
+            {
+              "type": "text",
+              "id": "c5aM2y",
+              "name": "Label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Unavailable layer",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "icon",
+              "id": "PptM3",
+              "name": "eye-off",
+              "width": 16,
+              "height": 16,
+              "icon": "eye-off",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            },
+            {
+              "type": "icon",
+              "id": "HceRa",
+              "name": "lock",
+              "width": 16,
+              "height": 16,
+              "icon": "lock",
+              "library": "lucide",
+              "fill": "$ds-fg-muted"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "yRpWx",
+          "name": "Keyboard contract",
+          "fill": "$ds-fg-muted",
+          "content": "Click replaces · Ctrl/Cmd toggles · Shift selects visible range · Alt+↑/↓ moves siblings",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "MvL0j",
+      "x": 62710,
       "y": 0,
       "name": "Empty panel · Tools cards",
       "theme": {
@@ -217199,7 +217595,7 @@
       "children": [
         {
           "type": "text",
-          "id": "AhIfI",
+          "id": "R31hE",
           "name": "Heading",
           "fill": "$ds-fg",
           "content": "Tools",
@@ -217209,7 +217605,7 @@
         },
         {
           "type": "frame",
-          "id": "TEcpI",
+          "id": "xOhJE",
           "name": "Two-column tool grid",
           "width": "fill_container",
           "layout": "vertical",
@@ -217217,14 +217613,14 @@
           "children": [
             {
               "type": "frame",
-              "id": "FSVd9",
+              "id": "E9enHE",
               "name": "Tools first row",
               "width": "fill_container",
               "gap": 8,
               "children": [
                 {
                   "type": "frame",
-                  "id": "Omm0B",
+                  "id": "U8NHW",
                   "name": "cmp/SimpleCard · Action",
                   "context": "SimpleCard action variant: borderless surface, radius xs, body padding md, label/M/regular. Hover uses bg.hover; pressed uses bg.active; focus has an outside ring. Default panel grid has two columns and collapses in narrow panels. Page-owned panels contribute entries through Add panel.",
                   "reusable": true,
@@ -217237,7 +217633,7 @@
                   "children": [
                     {
                       "type": "icon",
-                      "id": "TsHla",
+                      "id": "Juuks",
                       "name": "Icon",
                       "width": 20,
                       "height": 20,
@@ -217247,7 +217643,7 @@
                     },
                     {
                       "type": "text",
-                      "id": "t5C3I",
+                      "id": "Rhcur",
                       "name": "Label",
                       "fill": "$ds-fg",
                       "content": "Changes",
@@ -217258,17 +217654,17 @@
                   ]
                 },
                 {
-                  "id": "pFY2L",
+                  "id": "H7uL9",
                   "type": "ref",
-                  "ref": "Omm0B",
+                  "ref": "U8NHW",
                   "name": "Terminal hover",
                   "width": "fill_container",
                   "fill": "$ds-surface-hover",
                   "descendants": {
-                    "TsHla": {
+                    "Juuks": {
                       "icon": "terminal"
                     },
-                    "t5C3I": {
+                    "Rhcur": {
                       "content": "Terminal"
                     }
                   }
@@ -217277,37 +217673,37 @@
             },
             {
               "type": "frame",
-              "id": "g2IDu",
+              "id": "xoEgg",
               "name": "Tools second row",
               "width": "fill_container",
               "gap": 8,
               "children": [
                 {
-                  "id": "LoPk5",
+                  "id": "UOWPO",
                   "type": "ref",
-                  "ref": "Omm0B",
+                  "ref": "U8NHW",
                   "name": "Files",
                   "width": "fill_container",
                   "descendants": {
-                    "TsHla": {
+                    "Juuks": {
                       "icon": "folders"
                     },
-                    "t5C3I": {
+                    "Rhcur": {
                       "content": "Files"
                     }
                   }
                 },
                 {
-                  "id": "yT1qO",
+                  "id": "Mb2B3",
                   "type": "ref",
-                  "ref": "Omm0B",
+                  "ref": "U8NHW",
                   "name": "Page contribution",
                   "width": "fill_container",
                   "descendants": {
-                    "TsHla": {
+                    "Juuks": {
                       "icon": "file-plus"
                     },
-                    "t5C3I": {
+                    "Rhcur": {
                       "content": "New page"
                     }
                   }
@@ -217318,23 +217714,23 @@
         },
         {
           "type": "frame",
-          "id": "ThPKF",
+          "id": "Nq6Sw",
           "name": "Hover and focus",
           "width": "fill_container",
           "gap": 16,
           "children": [
             {
-              "id": "ERKlS",
+              "id": "g8ZrB",
               "type": "ref",
-              "ref": "Omm0B",
+              "ref": "U8NHW",
               "name": "Hover",
               "fill": "$ds-surface-hover",
               "width": "fill_container"
             },
             {
-              "id": "oFX5C",
+              "id": "djCRa",
               "type": "ref",
-              "ref": "Omm0B",
+              "ref": "U8NHW",
               "name": "Focus",
               "stroke": "$ds-accent",
               "strokeWidth": 2,
