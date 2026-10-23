@@ -17,6 +17,7 @@ import type { AttributeDescriptor, KanbanRendererRow, KanbanRendererSettings } f
 import { findAttribute, NO_GROUPING } from "./types";
 
 interface BuildKanbanRendererListItemsInput<TRow extends KanbanRendererRow> {
+  presorted?: boolean;
   settings: KanbanRendererSettings;
   sorts: ViewSort[];
   /** The view's search text, marked in each row title. */
@@ -52,7 +53,7 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
   // A sorted view decides its own order, so rows only accept drops that keep a manual order.
   const supportsManualReorder = sorts.length === 0;
   const sortFields = withTitleField(attributes);
-  const sorted = (rows: KanbanRendererRow[]) => sortRowsByView(rows, sorts, sortFields);
+  const sorted = (rows: KanbanRendererRow[]) => (input.presorted ? rows : sortRowsByView(rows, sorts, sortFields));
   const listDisplayProperties = settings.displayProperties.filter((property) => property !== "id");
   const getStatusPresentation = (attributeId: string, key: string) => {
     const descriptor = findAttribute(attributes, attributeId);
@@ -119,7 +120,7 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
   };
 
   const toGroupListItem = (
-    group: { key: string; label: string; rows: KanbanRendererRow[] },
+    group: { key: string; label: string; rows: KanbanRendererRow[]; count?: number },
     parent?: { columnKey: string },
   ): KanbanRendererListItem => {
     const groupingAttributeId = parent ? settings.rowGrouping : settings.columnGrouping;
@@ -127,7 +128,7 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
       id: parent ? `group::${parent.columnKey}::${group.key}` : `group::${group.key}`,
       title: group.label,
       isGroup: true,
-      countBadge: group.rows.length,
+      countBadge: group.count ?? group.rows.length,
       ...getStatusPresentation(groupingAttributeId, group.key),
       onDropRow:
         (onMove || onAttributeChange) && settings.columnGrouping !== NO_GROUPING
@@ -173,7 +174,7 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
           id: `group::${column.key}`,
           title: column.label,
           isGroup: true,
-          countBadge: column.rows.length,
+          countBadge: column.count ?? column.rows.length,
           ...getStatusPresentation(settings.columnGrouping, column.key),
           onDropRow:
             onMove || onAttributeChange

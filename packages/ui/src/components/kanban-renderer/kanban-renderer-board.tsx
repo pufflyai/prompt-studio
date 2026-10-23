@@ -24,12 +24,14 @@ export interface KanbanRendererBoardColumnAction {
 }
 
 export interface KanbanRendererBoardGroup {
+  count?: number;
   key: string;
   label: string;
   items: KanbanRendererBoardItem[];
 }
 
 export interface KanbanRendererBoardColumn {
+  count?: number;
   id: string;
   label: string;
   createLabel?: string;
@@ -48,6 +50,8 @@ export interface KanbanRendererBoardColumn {
 }
 
 interface KanbanRendererBoardProps {
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
   columns: KanbanRendererBoardColumn[];
   selectedItemId?: string | null;
   onMoveItem?: (
@@ -138,6 +142,8 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
           <ColumnHeader column={column} onCreateStart={onCreateStart} onColumnAction={onColumnAction} />
 
           <BoardColumnCards
+            onLoadMore={props.onLoadMore}
+            loadingMore={props.loadingMore}
             column={column}
             selectedItemId={selectedItemId}
             draggedKey={draggedKey}

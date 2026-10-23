@@ -28,6 +28,7 @@ import type { PageContribution } from "./pages";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { PackageAssetDescriptor } from "./resources";
 import type { StatusBarItemContribution } from "./status-bar";
+import type { StorageRecordIndex } from "./storage-records";
 import type {
   NavigationItemContribution,
   NavigationTreeContribution,
@@ -297,6 +298,8 @@ export interface ExtensionDefinition
     AssetContributions,
     ProviderContributions {
   settings?: ExtensionSettingsContribution;
+  /** Local query indexes. The host installs these before publishing this extension's runtime. */
+  storageIndexes?: StorageRecordIndex[];
 }
 
 export type ExtensionSourceKind = "local_path" | "git" | "registry";

@@ -1,4 +1,4 @@
-import type { KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
+import type { CollectionPage, KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import type { KanbanRendererCreateField, KanbanRendererCreateFieldType, ResourceRef } from "../../core";
 import type {
@@ -10,6 +10,7 @@ import { createExtensionSlot, executeWorkbenchExtensionCommand } from "../host/w
 export type KanbanRendererRow = Awaited<ReturnType<KanbanRendererContribution["executeQuery"]>>[number];
 export type RowAction = NonNullable<WorkbenchExtensionKanbanRendererRecord["rowActions"]>[number];
 export type QueryResult = {
+  page?: CollectionPage;
   attributes?: WorkbenchExtensionKanbanRendererRecord["attributes"];
   boardColumnConfigs?: Record<string, WireBoardColumnConfig>;
   rows?: unknown[];

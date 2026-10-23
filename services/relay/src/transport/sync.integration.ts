@@ -355,3 +355,58 @@ test("two devices exchange encrypted updates with keys from the account manager"
     await relay.close();
   }
 });
+
+test("capability negotiation uploads a manifest graph and retains its children through a root update", async () => {
+  const { createDocumentRelay } = await import("pstdio-sync/relay");
+  const relay = await open();
+  try {
+    const projectId = relay.context.scope.workbenchId;
+    const documentId = randomId("doc");
+    const capability = { kind: "capabilities", projectId } as const;
+    expect(await (await relay.request(capability)).json()).toEqual({
+      protocolVersion: 1,
+      features: ["blob-references-v1"],
+    });
+    expect((await relay.request(capability, { token: "invalid" })).status).toBe(401);
+    expect((await relay.request({ ...capability, projectId: randomId("other") })).status).toBe(401);
+    expect((await relay.request(capability, { version: "0" })).status).toBe(426);
+    expect((await relay.post(capability, {})).status).toBe(405);
+    const client = createDocumentRelay({
+      origin: relay.server.url.origin,
+      space: { projectId, spaceOwner: null },
+      documentId,
+      token: async () => relay.context.token,
+      signal: new AbortController().signal,
+    });
+    const manifests = await client.manifestBlobs();
+    const leafId = randomId("leaf");
+    const rootId = randomId("root");
+    const bytes = new Uint8Array([1, 3, 5]);
+    await manifests.put(leafId, bytes, []);
+    await manifests.put(rootId, bytes, [leafId]);
+    await manifests.put(rootId, bytes, [leafId]);
+    await expect(manifests.put(rootId, bytes, [])).rejects.toThrow("400");
+    await expect(manifests.put(randomId("missing-parent"), bytes, [randomId("missing-child")])).rejects.toThrow("409");
+    const legacy = await relay.post(
+      { kind: "blob", projectId, spaceOwner: null, blobId: randomId("legacy"), operation: "begin" },
+      { sha256: sha256(bytes), byteLength: bytes.length, children: [leafId] },
+    );
+    expect(legacy.status).toBe(400);
+    await client.update({ updateId: randomId("update"), payload: encode(bytes), blobIds: [rootId] });
+    await relay.context.sync.cleanup(new Date(Date.now() + 365 * 86_400_000));
+    expect(await manifests.get(leafId, bytes.length)).toEqual(bytes);
+    expect(await manifests.get(rootId, bytes.length)).toEqual(bytes);
+    await expect(manifests.get(rootId, bytes.length - 1)).rejects.toThrow("length");
+    const personal = createDocumentRelay({
+      origin: relay.server.url.origin,
+      space: { projectId, spaceOwner: relay.context.scope.accountId },
+      documentId,
+      token: async () => relay.context.token,
+      signal: new AbortController().signal,
+    });
+    const personalBlobs = await personal.manifestBlobs();
+    await expect(personalBlobs.put(randomId("personal"), bytes, [leafId])).rejects.toThrow("409");
+  } finally {
+    await relay.close();
+  }
+});

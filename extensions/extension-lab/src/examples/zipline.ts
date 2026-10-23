@@ -1,4 +1,4 @@
-import { defineExtension } from "@pstdio/sdk/extensions";
+import { defineExtension, defineStatusBarItem, workbenchSlots } from "@pstdio/sdk/extensions";
 import { defineExample, webview } from "../definition";
 import { board } from "./zipline-board";
 
@@ -13,7 +13,7 @@ const example = defineExample({
   label: "Zipline",
   icon: "Columns3",
   primary: board.ref,
-  chrome: { status: views.at(-1)!.ref, sidenav: views[1].ref, activity: views[2].ref },
+  chrome: { sidenav: views[1].ref, activity: views[2].ref },
   regionSettings: {
     sidenav: { size: { defaultPx: 225, minPx: 200, maxPx: 300 }, collapsible: false },
     side: { size: { defaultPx: 360, minPx: 310, maxPx: 440 } },
@@ -36,6 +36,14 @@ const example = defineExample({
   initialResource: false,
 });
 export default defineExtension({
+  statusBarItems: [
+    defineStatusBarItem({
+      id: "zipline-count",
+      view: views.at(-1)!.ref,
+      slot: workbenchSlots.statusBarLeading,
+      when: { mode: example.mode.ref },
+    }),
+  ],
   modes: [example.mode],
   themes: [example.theme],
   resourceKinds: [example.resourceKind],

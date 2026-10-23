@@ -28,6 +28,7 @@ interface ExampleDefinition {
   label: string;
   icon: string;
   primary: ViewRef;
+  regions?: ModeContribution["regions"];
   chrome?: ModeContribution["chrome"];
   floatingPanels?: ModeContribution["floatingPanels"];
   regionSettings?: ModeContribution["regionSettings"];
@@ -52,7 +53,7 @@ export const defineExample = (input: ExampleDefinition) => {
     id: name,
     label: l10n(`modes.${name}`, label),
     icon,
-    regions: ["main", "side", "secondary"],
+    regions: input.regions ?? ["main", "side", "secondary"],
     defaultTheme: theme.ref,
     chrome: input.chrome,
     floatingPanels: input.floatingPanels,

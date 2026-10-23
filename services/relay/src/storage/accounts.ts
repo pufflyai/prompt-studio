@@ -70,10 +70,15 @@ export const requireBlobs = async (transaction: RelayTransaction, key: string, b
  * listed start their grace period now, so a blob stays at least that long after its last use (R21).
  */
 export const removeRows = (table: "relay_sync_updates" | "relay_sync_states", where: SQL | undefined, now: Date) => sql`
-  WITH gone AS (
+  WITH RECURSIVE gone AS (
     DELETE FROM ${sql.identifier(table)} WHERE ${where} RETURNING "projectKey", "objectKey", "blobIds"
   ), queued AS (
     INSERT INTO relay_sync_object_deletions SELECT "objectKey" FROM gone ON CONFLICT DO NOTHING
+  ), descendants("projectKey", "blobId") AS (
+    SELECT "projectKey", unnest("blobIds") FROM gone
+    UNION
+    SELECT b."projectKey", unnest(b."children") FROM relay_sync_blobs b
+      JOIN descendants d ON d."projectKey" = b."projectKey" AND d."blobId" = b."blobId"
   )
-  UPDATE relay_sync_blobs b SET "lastUsedAt" = ${now} FROM gone
-  WHERE b."projectKey" = gone."projectKey" AND gone."blobIds" @> ARRAY[b."blobId"]`;
+  UPDATE relay_sync_blobs b SET "lastUsedAt" = ${now} FROM descendants d
+  WHERE b."projectKey" = d."projectKey" AND b."blobId" = d."blobId"`;

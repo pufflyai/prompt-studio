@@ -3,9 +3,10 @@ import * as Y from "yjs";
 import { captureCheckpoint } from "./checkpoint-capture";
 import { migrationAuthor } from "./document-author";
 import { applyDocumentEdit } from "./document-edits";
+import { readDocumentRecord } from "./document-record";
 import type { DocumentStore } from "./document-types";
 import { validateDocumentGroup } from "./document-validation";
-import { readValue } from "./document-values";
+import { createMemoryRecordQueries } from "./memory-record-queries";
 import type { AssetStore, GroupCommit, ResolutionCommit, StorageOwner } from "./types";
 
 const outcome = (operationId: string) => ({
@@ -13,31 +14,17 @@ const outcome = (operationId: string) => ({
   state: "saved-locally" as const,
   status: "saved-locally" as const,
 });
-const readRecord = async (document: Y.Doc, recordId: string) => {
-  const name = document.getMap<string>("records").get(recordId);
-  const record = name ? document.getMap(name) : undefined;
-  const deleted = !record && document.getMap("deleted").has(recordId);
-  const shared = record?.get("sharedKind") as "map" | "text" | "list" | undefined;
-  const value = record ? readValue(record.get("value"), document) : null;
-  const asset = structuredClone((record?.get("asset") ?? null) as StorageRecord["asset"]);
-  const sharedValue = shared
-    ? ({ kind: shared, value: readValue(record?.get("shared"), document) } as StorageRecord["shared"])
-    : null;
-  return {
-    recordId,
-    exists: !!record || deleted,
-    deleted,
-    value,
-    asset,
-    shared: sharedValue,
-    revision: await fingerprint({ value, asset, shared: sharedValue, deleted }),
-  } satisfies StorageRecord;
-};
+
+/** The record operations available while a transaction holds the owner lock. */
+export interface LockedRecords {
+  read(id: string): Promise<StorageRecord>;
+  commit(group: GroupCommit): Promise<{ operationId: string; state: "saved-locally"; status: "saved-locally" }>;
+}
 
 export const createDocumentStorage = (input: { owner: StorageOwner; store: DocumentStore; assets?: AssetStore }) => {
   const { owner, store } = input;
   const observed = async (document: Y.Doc, id: string) => {
-    const record = await readRecord(document, id);
+    const record = await readDocumentRecord(document, id);
     store.observer?.read(owner, record);
     return record;
   };
@@ -69,6 +56,17 @@ export const createDocumentStorage = (input: { owner: StorageOwner; store: Docum
       }
     },
     records: {
+      ...(store.queries?.(owner) ?? createMemoryRecordQueries(owner, store)),
+      /** Reads and commits inside one owner lock, for read-modify-write callers. */
+      transaction: <T>(run: (records: LockedRecords) => Promise<T>) =>
+        store.transaction(owner, (state) =>
+          run(
+            createDocumentStorage({
+              ...input,
+              store: { transaction: async (_owner, action) => action(state), observer: store.observer },
+            }).records,
+          ),
+        ),
       read: (id: string, _branch?: { operationId: string }) =>
         store.transaction(owner, async ({ document }) => observed(document, id)),
       list: (prefix = "") =>
@@ -112,7 +110,7 @@ export const createDocumentStorage = (input: { owner: StorageOwner; store: Docum
             });
           }
           state.remember(group.operationId, identity);
-          return Promise.all(group.edits.map((edit) => readRecord(doc, edit.recordId)));
+          return Promise.all(group.edits.map((edit) => readDocumentRecord(doc, edit.recordId)));
         });
         const result = outcome(group.operationId);
         store.observer?.committed(owner, saved, result);

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,8 +10,9 @@ import { removeArchivedWorkspaces } from "./archived-workspaces-migration";
 import { finishBoardViewRules, prepareBoardViewRules } from "./board-view-rules-migration";
 import { migrateThrough } from "./migrate-through";
 import { openPglite } from "./open-pglite";
-import { ensureDbDirectory, resolveDbPath } from "./paths";
+import { canonicalDbPath, resolveDbPath } from "./paths";
 import { acquirePgliteLock } from "./pglite-lock";
+import { prepareCurrentPgliteHome } from "./pglite-upgrade";
 import { snapshotLegacyQueuedRequests } from "./queued-request-migration";
 import * as schema from "./schemas.pg";
 import { removeSharedWorkspaceFolders } from "./shared-workspace-folders";
@@ -27,6 +29,7 @@ const DRIZZLE_EXTRACT_DIR = "pstdio-drizzle";
 const PGLITE_WASM_SUFFIX = "/pstdio-db/vendor/pglite/pglite.wasm";
 const PGLITE_DATA_SUFFIX = "/pstdio-db/vendor/pglite/pglite.data";
 const PGLITE_INITIAL_DATABASE_SUFFIX = "/pstdio-db/vendor/pglite/initial-database.tar.gz";
+const PGLITE_ICU_SUFFIX = "/pstdio-db/vendor/pglite/icu.76.tgz";
 
 const getEmbeddedFiles = (): EmbeddedFile[] => {
   try {
@@ -100,18 +103,33 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
   const initialDatabase = embeddedFiles.find((file) =>
     normalizeEmbeddedFileName(file.name).endsWith(PGLITE_INITIAL_DATABASE_SUFFIX),
   );
-
-  if (!wasmFile && !dataFile && !initialDatabase) return {};
-  if (!wasmFile || !dataFile || !initialDatabase) {
+  const icu = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_ICU_SUFFIX));
+  const identity = { database: "template1", username: "postgres" };
+  if (!wasmFile && !dataFile && !initialDatabase && !icu) {
+    const require = createRequire(import.meta.url);
+    const icuPath = path.join(path.dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
+    return {
+      ...identity,
+      icuDataDir: Bun.file(icuPath),
+      loadDataDir: Bun.file(path.join(import.meta.dirname, "../../vendor/pglite/empty-database.tar.gz")),
+    };
+  }
+  if (!wasmFile || !dataFile || !initialDatabase || !icu) {
     throw new Error(
-      "Partial PGlite embed: expected the WebAssembly module, filesystem bundle, and initial database image.",
+      "Partial PGlite embed: expected the WebAssembly module, filesystem bundle, full ICU data and initial database image.",
     );
   }
 
   const wasmBytes = await wasmFile.arrayBuffer();
   const wasmModule = await WebAssembly.compile(wasmBytes);
 
-  return { fsBundle: dataFile, wasmModule, loadDataDir: initialDatabase };
+  return {
+    ...identity,
+    fsBundle: dataFile,
+    pgliteWasmModule: wasmModule,
+    loadDataDir: initialDatabase,
+    icuDataDir: icu,
+  };
 };
 
 // Startup steps in order. The runtime publishes itself once the database is locked and logs every step.
@@ -122,19 +140,33 @@ export type DbOpenPhase =
   | "database_opened"
   | "database_migrated";
 
-export const createDb = async (options?: { path?: string; onPhase?: (phase: DbOpenPhase) => void }) => {
+export const createDb = async (options?: {
+  path?: string;
+  onPhase?: (phase: DbOpenPhase) => void;
+  signal?: AbortSignal;
+}) => {
   const onPhase = options?.onPhase ?? (() => {});
   const requestedPath = resolveDbPath(options?.path);
-  ensureDbDirectory(requestedPath);
-  const dbPath = requestedPath === ":memory:" ? requestedPath : fs.realpathSync(requestedPath);
+  const dbPath = canonicalDbPath(requestedPath);
 
   const releaseLock = dbPath === ":memory:" ? () => {} : acquirePgliteLock(dbPath);
 
   let pglite: PGlite | undefined;
   try {
     onPhase("database_locked");
-    const pgliteOpts = await resolvePgliteOptions();
+    options?.signal?.throwIfAborted();
+    const embedded = getEmbeddedFiles();
+    const pgliteOpts = await resolvePgliteOptions(embedded);
     onPhase("database_engine_loaded");
+    if (dbPath !== ":memory:")
+      await prepareCurrentPgliteHome({
+        activePath: dbPath,
+        runtime: pgliteOpts,
+        embedded,
+        signal: options?.signal,
+        onImageRestored: () => onPhase("database_image_restored"),
+      });
+    options?.signal?.throwIfAborted();
     pglite = await openPglite(dbPath, pgliteOpts, () => onPhase("database_image_restored"));
     const openedPglite = pglite;
     await openedPglite.waitReady;

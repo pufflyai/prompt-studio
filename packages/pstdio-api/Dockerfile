@@ -23,6 +23,7 @@ RUN bun run --cwd packages/sdk build:js
 FROM source AS deps
 
 RUN bun install --frozen-lockfile --ignore-scripts --production --filter pstdio-api
+RUN bun run --cwd packages/pstdio-db postinstall
 COPY --from=sdk /app/packages/sdk/dist /app/packages/sdk/dist
 
 

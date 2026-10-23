@@ -119,24 +119,32 @@ describe("resolvePgliteOptions", () => {
   // Minimal valid WebAssembly module bytes — magic header + version
   const EMPTY_WASM = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
 
-  it("returns no overrides when no PGlite assets are embedded (source mode)", async () => {
+  it("loads full locale data and the explicit database identity in source mode", async () => {
     const opts = await resolvePgliteOptions([]);
-    expect(opts).toEqual({});
+    expect(opts.database).toBe("template1");
+    expect(opts.username).toBe("postgres");
+    expect(opts.icuDataDir.size).toBeGreaterThan(0);
   });
 
   it("loads the embedded engine and initial database image", async () => {
     const wasmFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.wasm", EMPTY_WASM);
     const dataFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.data", new Uint8Array([1, 2, 3]));
     const initialDatabase = toEmbedded("../../pstdio-db/vendor/pglite/initial-database.tar.gz", new Uint8Array([4]));
+    const icu = toEmbedded("../../pstdio-db/vendor/pglite/icu.76.tgz", new Uint8Array([5]));
 
-    const opts = (await resolvePgliteOptions([wasmFile as never, dataFile as never, initialDatabase as never])) as {
+    const opts = (await resolvePgliteOptions([
+      wasmFile as never,
+      dataFile as never,
+      initialDatabase as never,
+      icu as never,
+    ])) as {
       fsBundle: typeof dataFile;
-      wasmModule: WebAssembly.Module;
+      pgliteWasmModule: WebAssembly.Module;
       loadDataDir: typeof initialDatabase;
     };
 
     expect(opts.fsBundle).toBe(dataFile);
-    expect(opts.wasmModule).toBeInstanceOf(WebAssembly.Module);
+    expect(opts.pgliteWasmModule).toBeInstanceOf(WebAssembly.Module);
     expect(opts.loadDataDir).toBe(initialDatabase);
   });
 
@@ -147,15 +155,21 @@ describe("resolvePgliteOptions", () => {
       "..\\..\\pstdio-db\\vendor\\pglite\\initial-database.tar.gz",
       new Uint8Array([4]),
     );
+    const icu = toEmbedded("..\\..\\pstdio-db\\vendor\\pglite\\icu.76.tgz", new Uint8Array([5]));
 
-    const opts = (await resolvePgliteOptions([wasmFile as never, dataFile as never, initialDatabase as never])) as {
+    const opts = (await resolvePgliteOptions([
+      wasmFile as never,
+      dataFile as never,
+      initialDatabase as never,
+      icu as never,
+    ])) as {
       fsBundle: typeof dataFile;
-      wasmModule: WebAssembly.Module;
+      pgliteWasmModule: WebAssembly.Module;
       loadDataDir: typeof initialDatabase;
     };
 
     expect(opts.fsBundle).toBe(dataFile);
-    expect(opts.wasmModule).toBeInstanceOf(WebAssembly.Module);
+    expect(opts.pgliteWasmModule).toBeInstanceOf(WebAssembly.Module);
     expect(opts.loadDataDir).toBe(initialDatabase);
   });
 

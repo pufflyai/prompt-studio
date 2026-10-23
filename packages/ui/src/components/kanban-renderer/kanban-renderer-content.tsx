@@ -16,6 +16,8 @@ interface KanbanRendererEmptyStateProps {
 }
 
 interface KanbanRendererContentProps {
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
   contentPlaceholder?: ReactNode;
   sourceCount: number;
   filteredCount: number;
@@ -102,6 +104,8 @@ export const KanbanRendererContent = (props: KanbanRendererContentProps) => {
         <Box flex="1" minH="0">
           {boardColumns.length > 0 ? (
             <KanbanRendererBoard
+              onLoadMore={props.onLoadMore}
+              loadingMore={props.loadingMore}
               columns={boardColumns}
               selectedItemId={selectedRowId}
               onMoveItem={onBoardMoveItem}
@@ -128,6 +132,8 @@ export const KanbanRendererContent = (props: KanbanRendererContentProps) => {
       <>
         {filterMessage}
         <KanbanRendererList
+          onLoadMore={props.onLoadMore}
+          loadingMore={props.loadingMore}
           key={listKey}
           items={listItems}
           selectedItemId={selectedRowId}

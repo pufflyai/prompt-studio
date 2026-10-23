@@ -15,13 +15,14 @@ export const SearchableActionMenu = (props: SearchableActionMenuProps) => {
     searchText: [item.label, item.description].filter(Boolean).join(" "),
     tooltipLabel: item.description,
     variant: "full-width" as const,
+    isDisabled: item.disabled || item.readOnly,
     onSelect: () => item.onAction?.(),
   }));
 
   return (
     <SearchableMenu
       trigger={
-        <IconButton variant="ghost" size="2xs" aria-label={action.label}>
+        <IconButton variant="ghost" size="2xs" aria-label={action.label} disabled={action.disabled}>
           {action.icon}
         </IconButton>
       }

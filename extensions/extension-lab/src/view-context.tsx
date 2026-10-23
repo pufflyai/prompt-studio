@@ -5,12 +5,6 @@ export interface ExampleProps {
   projectId?: string;
   resource?: ResourceRef;
   pageLocation?: PageLocation;
-  lastCommand?: {
-    commandId: string;
-    extensionId: string;
-    outcome: { ok: boolean; value?: unknown };
-    tick: number;
-  } | null;
 }
 export interface ExampleHost {
   navigate(target: NavigationTarget): Promise<unknown>;

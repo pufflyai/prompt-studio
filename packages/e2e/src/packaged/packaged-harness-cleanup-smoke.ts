@@ -150,7 +150,15 @@ export const registerHarnessCleanupSmokeTests = () => {
       expect(deleted.status).toBe(204);
       for (let attempt = 0; attempt < 50 && !releases().includes(second.id); attempt++) await Bun.sleep(20);
       expect(releases()).toEqual([first.id, second.id]);
+      const finalSession = await request("/sessions", "POST", {
+        project_id: projects[2].id,
+        title: "Finish before shutdown",
+        prompt: "Complete and release hook reads",
+        agent: "test.cleanup-smoke.harness.worker",
+      });
+      await expectEventually.poll(async () => (await request(`/sessions/${finalSession.id}`)).status).toBe("completed");
       await stopProcess(child);
+      expect(child.exitCode).toBe(0);
       child = undefined;
       expect(releases().sort()).toEqual(projects.map((project) => project.id).sort());
     } finally {

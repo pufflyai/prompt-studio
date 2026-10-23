@@ -31,7 +31,7 @@ export const DataTableHeader = (props: DataTableHeaderProps) => {
       optionsFor={noOptions}
       search={view.search}
       onSearchChange={view.setSearch}
-      searchResultLabel={searching ? `${view.shownRows.length} of ${view.filteredRows.length}` : undefined}
+      searchResultLabel={searching ? `${view.shownCount} of ${view.totalCount}` : undefined}
       displayControl={displayControl}
       actions={actions}
     />
