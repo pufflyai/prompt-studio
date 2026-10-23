@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { chromium } from "@playwright/test";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { signInBrowser } from "./packaged-serve-helpers";
+import { assertPagedCollectionBudget } from "./paged-collection-budget";
 import { exercisePagedCollections } from "./paged-collections-browser";
 
 const root = resolve(import.meta.dir, "../../../..");
@@ -48,11 +49,16 @@ try {
       );
       if (!(await response.json()).outcome?.ok) throw new Error("Move command failed");
     },
-  ).catch(async (error) => {
-    await page.screenshot({ path: resolve(root, "__test-tmp__/paged-collections-failure.png") });
-    console.error((await page.locator("body").innerText()).slice(0, 12000));
-    throw error;
-  });
+  )
+    .then((evidence) => {
+      assertPagedCollectionBudget(evidence);
+      return evidence;
+    })
+    .catch(async (error) => {
+      await page.screenshot({ path: resolve(root, "__test-tmp__/paged-collections-failure.png") });
+      console.error((await page.locator("body").innerText()).slice(0, 12000));
+      throw error;
+    });
   const path = resolve(root, "__test-tmp__/paged-collections-browser.json");
   await Bun.write(path, JSON.stringify(evidence, null, 2));
   await page.screenshot({ path: resolve(root, "__test-tmp__/paged-collections-final.png") });

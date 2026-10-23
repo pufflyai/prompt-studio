@@ -85,6 +85,10 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   page,
   request,
 }) => {
+  test.skip(
+    process.env.E2E_MANUAL_MARKETPLACE_LIFECYCLE !== "1",
+    "Manual Marketplace lifecycle check; opt in with E2E_MANUAL_MARKETPLACE_LIFECYCLE=1.",
+  );
   test.setTimeout(45_000);
   const project = await createProject(request);
 

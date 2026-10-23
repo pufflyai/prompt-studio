@@ -1,13 +1,15 @@
 import { afterEach, expect, test } from "bun:test";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import cmdShim from "cmd-shim";
 import { createProcessApi } from "./extension-process-api";
 
 const roots: string[] = [];
-afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+afterEach(async () => {
+  // Apply ADR 0039's asynchronous cleanup policy while Windows releases executable handles.
+  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 const fixture = (directory: string, name = "node", source = "console.log('fixture')") => {

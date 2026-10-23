@@ -46,7 +46,13 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
   };
   if (!["pull_request", "merge_group"].includes(event) || labels.includes(FULL_RUN_LABEL)) {
     // Full UI and Windows suites already include these targeted checks.
-    return { stage: "full", ...everyCheck, browserChecks: [] as string[], nativeChecks: [] as string[] };
+    return {
+      stage: "full",
+      ...everyCheck,
+      browserSmoke: false,
+      browserChecks: [] as string[],
+      nativeChecks: [] as string[],
+    };
   }
   const stage = event === "merge_group" ? "merge_queue" : "pull_request";
 

@@ -25,7 +25,6 @@ export const verifyPackagedWebviewDisposal = async (
   if (await tab.isVisible()) await tab.click();
   const iframe = page.locator('iframe[title="Lab"]');
   await expect(iframe.contentFrame().getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
-  const frame = await (await iframe.elementHandle())!.contentFrame();
   const host = await iframe.evaluateHandle((element) => element.closest("[data-workbench-instance]")!.parentElement!);
   const response = await page.request.get(`${baseUrl}/v1/projects/${projectId}/extensions`, { headers });
   expect(response.ok()).toBe(true);
@@ -37,7 +36,7 @@ export const verifyPackagedWebviewDisposal = async (
     data: { enabled: false },
   });
   expect(disabled.ok()).toBe(true);
-  await expect.poll(() => frame!.isDetached()).toBe(true);
+  await expect(iframe).toHaveCount(0);
   await expect.poll(() => host.evaluate((element) => element.isConnected)).toBe(false);
   expect(await host.evaluate((element) => element.hasChildNodes())).toBe(false);
   await host.dispose();

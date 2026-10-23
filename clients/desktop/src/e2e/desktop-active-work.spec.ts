@@ -94,7 +94,8 @@ test("shows each quit confirmation over the workbench and recovers from refused 
     await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.length),
   ).toBe(1);
 
-  await lifecycle.getByRole("button", { name: "Quit", exact: true }).click();
+  // This renderer deliberately has no animation frames; keyboard activation needs no frame-stability wait.
+  await lifecycle.getByRole("button", { name: "Quit", exact: true }).press("Enter");
   await expectConfirmationInWorkbench();
   await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.cancelQuit());
   await expect.poll(desktopState).toMatchObject({ kind: "workbench" });
