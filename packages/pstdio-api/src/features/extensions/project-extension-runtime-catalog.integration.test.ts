@@ -101,6 +101,44 @@ afterEach(async () => {
 });
 
 describe("project extension runtime snapshot integration", () => {
+  test("declared indexes are installed locally before a replacement runtime publishes", async () => {
+    const storage = await handle.deps.extensionStorageService.open({
+      owner: { workbenchId: projectId, extensionId: "pstdio.lab" },
+    });
+    await storage.records.commit({
+      operationId: "before-index-install",
+      edits: [{ recordId: "selected", replace: { title: "Saved before local index installation" } }],
+    });
+    // A migration received from another device must not skip local index installation.
+    await storage.setDataVersion(JSON.stringify(["project", projectId]), 2);
+    writeFileSync(
+      join(sourcePath, "extension.ts"),
+      `export default {
+      storageIndexes: [{ name: "titles", fields: { title: { path: ["title"], type: "string" } } }],
+      commands: [{ id: "query", ref: { kind: "command", id: "query" }, title: "Query titles",
+        async run(ctx) { return ctx.storage.records.query({ index: "titles", fields: ["title"] }); }
+      }],
+    };`,
+    );
+    await handle.deps.extensionService.reloadInstalledSourceBySourcePath(sourcePath);
+    const response = await app.request(
+      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.query/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ params: {} }),
+      },
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).outcome).toMatchObject({
+      ok: true,
+      value: {
+        records: [{ recordId: "selected", fields: { title: "Saved before local index installation" } }],
+        cursor: null,
+      },
+    });
+  });
+
   test("unchanged command and metadata volume reuses one snapshot generation", async () => {
     const warm = await handle.deps.extensionRuntimeCatalog.get(projectId);
 
