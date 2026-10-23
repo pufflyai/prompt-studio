@@ -57,6 +57,7 @@ import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smo
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
+// Shutdown also drains session lifecycle work after an immediately completed harness run.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { registerLinkIconsSmokeTests } from "./packaged-link-icons-smoke";

@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Preserve stored records while preparing locale-aware database upgrades.
+Preserve stored records through locale-aware database upgrades and drain session hooks before shutdown.
