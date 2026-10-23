@@ -1,9 +1,13 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
+import { sidecarExec } from "../runtime/sidecar-exec";
 import type { KernelProcessReading } from "./performance-capture";
 
 export const createProcessObserver = (input: { executable: string; args?: string[] }) => {
-  const child = spawn(input.executable, input.args ?? ["performance-observer"], {
+  // The observer outlives the spawn call, so it must not hold Electron's sockets open. See ADR 0076.
+  const launch = sidecarExec(input.args ?? ["performance-observer"], process.env);
+  const child = spawn(input.executable, launch.args, {
+    env: launch.env,
     stdio: ["pipe", "pipe", "ignore"],
     windowsHide: true,
   });

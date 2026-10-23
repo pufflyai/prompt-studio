@@ -9,7 +9,7 @@ Prompt Studio desktop is a private Electron client in `clients/desktop`. Electro
 - The visible workbench is the existing runtime-served dashboard. Electron bundles only small startup, recovery, and closing lifecycle surfaces. The quit confirmation is a dialog inside the dashboard.
 - The preload exposes a frozen typed capability object. It never exposes raw IPC, filesystem, shell, environment, process, or runtime credentials.
 
-On Linux, the temporary launch bootstrap in [ADR 0076](../../adrs/0076-temporary-linux-desktop-descriptor-isolation.md) prevents Electron's native file descriptors from reaching the sidecar. It replaces itself with the normal Bun command on the same PID. Standard streams, runtime ownership, promotion, and detach keep their existing contracts.
+On Linux, the temporary launch bootstrap in [ADR 0076](../../adrs/0076-temporary-linux-desktop-descriptor-isolation.md) prevents Electron's native file descriptors from reaching the runtime and the performance observer. It replaces itself with the normal Bun command on the same PID. Standard streams, runtime ownership, promotion, and detach keep their existing contracts.
 
 Before starting a new sidecar on macOS or Linux, desktop reads `PATH` from the user's configured interactive login shell. This lets Finder and desktop launchers find the same user-installed harnesses as a terminal, including tools configured in shell startup files. Only `PATH` is adopted; runtime settings and credentials remain those of the launching process. Windows keeps its inherited environment. Attaching to an existing runtime does not run a shell.
 

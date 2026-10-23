@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { closeSync, fstatSync, mkdirSync, openSync, readSync } from "node:fs";
 import { dirname } from "node:path";
-import { runtimeExec } from "./runtime-exec";
+import { sidecarExec } from "./sidecar-exec";
 
 const OUTPUT_LIMIT = 64 * 1024;
 
@@ -27,7 +27,7 @@ export const spawnRuntimeProcess = (
   // A new runtime replaces the previous launch log; diagnostics read only its bounded tail.
   const fd = openSync(options.outputPath, "w", 0o600);
   try {
-    const launch = runtimeExec(args, options.env);
+    const launch = sidecarExec(args, options.env);
     const child = spawn(path, launch.args, {
       detached: process.platform === "win32",
       env: launch.env,
