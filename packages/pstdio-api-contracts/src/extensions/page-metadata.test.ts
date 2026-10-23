@@ -18,6 +18,8 @@ const page = (main: object) => ({
 
 test.each([
   { kind: "view", view, cardinality: "many" },
+  { kind: "view", view, cardinality: "one", empty: view },
+  { kind: "panels" },
   { kind: "panels", empty: view },
 ])("preserves routed resource context with Main presentation %j", (main) => {
   const parsed = workbenchExtensionPageRecordSchema.parse(page(main));
@@ -28,7 +30,6 @@ test.each([
 test.each([
   [{ kind: "view", cardinality: "one" }, "view"],
   [{ kind: "view", view, cardinality: "several" }, "cardinality"],
-  [{ kind: "panels" }, "empty"],
 ])("reports missing or invalid Main content %j", (main, field) => {
   const result = workbenchExtensionPageRecordSchema.safeParse(page(main));
   expect(result.success).toBe(false);

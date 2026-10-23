@@ -30,5 +30,3 @@ export const requirePageSlot = (page: WorkbenchPageContribution, slotId: string)
   if (!slot) throw new Error(`Unknown page slot: ${page.id}.${slotId}`);
   return slot;
 };
-
-export const pagePlacementDeclarations = pageSlots;
