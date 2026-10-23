@@ -3,8 +3,17 @@
 // intentional architecture changes — update the docs when this map changes.
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-service-telemetry": [],
+  // The benchmark result writer is a dependency-free leaf. Packages declare it only as a development
+  // dependency for their benchmark files.
+  "pstdio-benchmarks": [],
   "pstdio-account-manager": ["pstdio-sync-contracts", "pstdio-service-telemetry"],
-  "pstdio-relay": ["pstdio-account-manager", "pstdio-sync", "pstdio-sync-contracts", "pstdio-service-telemetry"],
+  "pstdio-relay": [
+    "pstdio-account-manager",
+    "pstdio-sync",
+    "pstdio-sync-contracts",
+    "pstdio-service-telemetry",
+    "pstdio-benchmarks",
+  ],
   "pstdio-api-contracts": ["pstdio-sync-contracts"],
   "pstdio-sync-contracts": [],
   "storage-scale-fixture": [],
@@ -19,6 +28,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-sync",
     "pstdio-sync-contracts",
     "pstdio-relay",
+    "pstdio-benchmarks",
     "storage-scale-fixture",
   ],
   "pstdio-scheduler": [],
@@ -28,7 +38,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // pstdio-extensions also declares extension-lab, whose documented examples its tests load,
   // so changing an example marks pstdio-extensions as affected.
   "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths", "extension-lab"],
-  "pstdio-api-runtime-host": ["pstdio-api-contracts", "pstdio-extensions"],
+  "pstdio-api-runtime-host": ["pstdio-api-contracts", "pstdio-extensions", "pstdio-benchmarks"],
   // pstdio-api also declares the extensions and fixtures its tests install from source,
   // so changing one marks pstdio-api as affected.
   "pstdio-api": [
@@ -50,6 +60,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-notes",
     "pstdio-skills",
     "workbench-fixture",
+    "pstdio-benchmarks",
   ],
   pstdio: [
     "pstdio-api-contracts",
@@ -60,13 +71,14 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-paths",
     "pstdio-wt",
   ],
-  "@pstdio/ui": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-file-types"],
+  "@pstdio/ui": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-file-types", "pstdio-benchmarks"],
   "@pstdio/workbench": [
     "@pstdio/sdk",
     "@pstdio/ui",
     "pstdio-api-contracts",
     "pstdio-extensions",
     "pstdio-sync-contracts",
+    "pstdio-benchmarks",
   ],
   "pstdio-dashboard": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions", "@pstdio/workbench"],
   // The testbench also declares the extensions its tests load from source,
@@ -102,6 +114,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-skills",
     "remote-workspaces",
     "workbench-fixture",
+    "pstdio-benchmarks",
     "storage-scale-fixture",
   ],
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
@@ -112,6 +125,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-logging",
     "pstdio-paths",
     "workbench-fixture",
+    "pstdio-benchmarks",
   ],
   "@pstdio/landing-page": ["@pstdio/ui"],
   "motion-lab": ["@pstdio/sdk", "@pstdio/ui"],

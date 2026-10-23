@@ -39,6 +39,11 @@ layer-map change.
    dependency. That edge is confined to test fixtures; local database runtime code
    does not open PostgreSQL relay storage.
 
+   The private `pstdio-benchmarks` package writes benchmark measurements in the shared
+   result format and runs benchmark suites. It has no workspace dependencies. Packages
+   with benchmarks declare it as a development dependency; only benchmark and
+   performance test files import it.
+
    `storage-scale-fixture` is a private test utility with no workspace dependencies.
    The scale benchmarks in `pstdio-sync`, `pstdio-db` and `e2e` declare it as a
    development dependency. Production entry points do not import it. Its shared

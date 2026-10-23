@@ -284,6 +284,8 @@ Hosted Intel macOS runners run the packaged and desktop suites two to three time
 
 ## Desktop benchmarks
 
+Every benchmark, including these, also reports to the shared result format that the Benchmarks workflow and the Performance pages use. See [Benchmark results](../../references/performance/0006-benchmark-results.md).
+
 Desktop budgets live in `clients/desktop/src/e2e/*.bench.ts`. Run them against a packaged app:
 
 ```bash

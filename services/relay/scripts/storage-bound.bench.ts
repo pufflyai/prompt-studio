@@ -1,6 +1,8 @@
 // Manual benchmark for PRD 0014 R23: relay storage for one document after 10,000 updates.
 // Run with `bun run --cwd services/relay bench:storage-bound`. It is not part of CI.
 // It starts throwaway PostgreSQL and RustFS containers on loopback ports and removes them afterwards.
+
+import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { createSyncFixture, encode, randomId } from "../src/storage/sync-fixture";
 
 const updates = 10_000;
@@ -114,6 +116,15 @@ try {
   await fixture.close();
   console.table(samples);
   const passed = samples.every((sample) => sample.stored < sample.limit);
+  // Stored bytes must stay below the limit, so the budget for their ratio is 1.
+  recordMeasurement({
+    metric: "stored-to-limit",
+    label: "Peak stored bytes as a share of the limit",
+    unit: "share",
+    value: Math.max(...samples.map((sample) => sample.stored / sample.limit)),
+    budget: 1,
+  });
+  recordMeasurement({ metric: "updates", label: "Apply 10,000 updates", unit: "ms", value: elapsedMs });
   console.log(
     JSON.stringify(
       {

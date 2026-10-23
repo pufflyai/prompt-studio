@@ -2,11 +2,12 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import {
   afterTwoFrames,
+  budgetMisses,
   collectRepeatSamples,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
-  reportSamples,
+  reportPageMemory,
   resetInteraction,
   settleWhenVisible,
 } from "./perf-helpers";
@@ -78,15 +79,18 @@ test("resizes, closes, and reopens the Secondary Panel within the interaction bu
     ready: () => expect(separator).toBeVisible(),
   });
 
+  await reportPageMemory(page, "workbench-interactions");
+
   const results = collectRepeatSamples(testInfo, "workbench-interactions", [{ resize, close, reopen }]);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach);
-  for (const interaction of interactions) {
-    const summary = reportSamples(
+  const misses = interactions.flatMap((interaction) =>
+    budgetMisses(
       "workbench-interactions",
       interaction,
       results.map((result) => result[interaction]),
-    );
-    expect(summary.max).toBeLessThanOrEqual(150);
-  }
+      150,
+    ),
+  );
+  expect(misses).toEqual([]);
 });

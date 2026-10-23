@@ -2,11 +2,12 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import {
   afterTwoFrames,
+  budgetMisses,
   collectRepeatSamples,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
-  reportSamples,
+  reportPageMemory,
   resetInteraction,
 } from "./perf-helpers";
 
@@ -98,15 +99,18 @@ test("closes and reopens the live Side Panel within budget", async ({ page, requ
     expect(result.longTasks).toEqual([]);
   }
 
+  await reportPageMemory(page, "side-panel");
+
   const results = collectRepeatSamples(testInfo, "side-panel", [{ close: close.duration, reopen: reopen.duration }]);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach);
-  for (const action of ["close", "reopen"] as const) {
-    const summary = reportSamples(
+  const misses = (["close", "reopen"] as const).flatMap((action) =>
+    budgetMisses(
       "side-panel",
       action,
       results.map((result) => result[action]),
-    );
-    expect(summary.max).toBeLessThanOrEqual(150);
-  }
+      150,
+    ),
+  );
+  expect(misses).toEqual([]);
 });

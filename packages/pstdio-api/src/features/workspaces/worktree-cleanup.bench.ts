@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { git } from "pstdio-wt";
 import { cleanupWorkspaceWorktree } from "./worktree-cleanup";
 
@@ -165,6 +166,19 @@ try {
         throw new Error("Cleanup left a benchmark worktree on disk.");
       }
       console.log(JSON.stringify({ repeat, ...result }));
+      const workers = `${count} workspaces, ${limit} at a time`;
+      recordMeasurement({
+        metric: `cleanup-${limit}`,
+        label: `Clean up ${workers}`,
+        unit: "ms",
+        value: result.elapsedMs,
+      });
+      recordMeasurement({
+        metric: `cleanup-${limit}-memory`,
+        label: `Cleanup peak memory, ${workers}`,
+        unit: "bytes",
+        value: result.peakRssMiB * 1024 * 1024,
+      });
     }
   }
 } finally {

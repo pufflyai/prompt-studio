@@ -1,6 +1,6 @@
 # Prompt Studio Dev extension
 
-This repository-local extension prepares Prompt Studio worktrees, controls isolated development stacks, and discovers high-impact issues.
+This repository-local extension prepares Prompt Studio worktrees, controls isolated development stacks, discovers high-impact issues, and tracks benchmark performance.
 
 ## CLI commands
 
@@ -15,6 +15,17 @@ pst pstdio-dev workspace stop-isolation --workspace-id <id>
 The extension also installs dependencies and builds a new worktree after the workspace-ready event.
 
 At noon each day, it starts an evidence-gated search for one high-impact issue. It creates a planner ticket only when the search reproduces a valuable, untracked problem.
+
+## Performance
+
+The **Performance** item in the project navigation opens three pages. **Trends** shows every benchmark across releases, or every benchmark in one release. **Compare** compares two commits. **Runs** starts benchmark runs on GitHub Actions. Results are cached in extension storage; see [Benchmark results](../../../documentation/references/performance/0006-benchmark-results.md).
+
+```sh
+pst pstdio-dev benchmarks sync
+pst pstdio-dev benchmarks start-run --commits pstdio@0.45.0 --commits main
+```
+
+The pages use your GitHub CLI login. Run `gh auth login` in this repository first.
 
 ## Skills
 
