@@ -149,6 +149,16 @@ export { matchesResourceWhen } from "./when";
 export const projectPrefix = () => ({ $prefix: "project" as const });
 
 export type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
+export type {
+  PerformanceCapture,
+  PerformanceCaptureSample,
+  PerformanceMonitoringState,
+  PerformanceProcessSample,
+  PerformanceRecordingExport,
+  PerformanceResponseSample,
+  PerformanceRuntimeReading,
+  PerformanceSnapshot,
+} from "pstdio-api-contracts/performance-diagnostics";
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
   mergeOrderedHistory,
@@ -180,4 +190,5 @@ export type {
 } from "./resource-compat";
 export { isWebviewCapabilityError, type WebviewCapabilityError } from "./webview-capability-error";
 export type { WebviewPageClient } from "./webview-page-client";
+export type { WebviewPerformanceClient } from "./webview-performance-client";
 export type { CommandStream, CommandStreamOptions, WebviewStreamsClient } from "./webview-streams";
