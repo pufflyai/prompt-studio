@@ -219,6 +219,14 @@ bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.spec.ts --repeat-e
 
 To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=2/3`. Keep the same shard total when comparing runs.
 
+The Marketplace install/delete/disable/enable lifecycle is manual-only. Run it explicitly with:
+
+```bash
+E2E_MANUAL_MARKETPLACE_LIFECYCLE=1 bun run --cwd packages/e2e test:ui -- src/ui/marketplace-extension-lifecycle.spec.ts --grep "deletes, installs, disables, and enables a Marketplace extension"
+```
+
+Normal UI runs skip that lifecycle check. The separate extension automation toggle test still runs automatically.
+
 In CI, UI shards serve prebuilt `ui`, `pstdio-dashboard`, and `pstdio-workbench` Storybooks from the `storybook-static` artifact. The full stage builds that artifact once before starting the shards. Local `test:ui` keeps Storybook dev servers. To check static output locally, run `bun packages/e2e/src/scripts/build-storybooks.ts`, then use `CI=true` when starting the UI tests. Both paths load a real story before tests begin and keep the existing 60-second startup allowance.
 
 Read the first failure and its trace. Check setup, teardown, and server logs before attributing the failure to an assertion. Storybook startup failures include the tail of the server output. Readiness checks must cancel stalled HTTP requests within their deadline.
