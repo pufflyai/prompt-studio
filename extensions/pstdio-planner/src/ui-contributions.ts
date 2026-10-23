@@ -27,18 +27,15 @@ import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
 import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
 import { REVIEW_REQUEST_ICON } from "./data/review-request-summary";
-import { ticketBoard, timelineBoard } from "./data/ticket-board";
-import {
-  ticketDocumentPage,
-  ticketPageTarget,
-  ticketRequestsPage,
-  ticketRequestsTarget,
-} from "./data/ticket-page-target";
+import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES, ticketBoard, timelineBoard } from "./data/ticket-board";
+import { ticketActivationTarget, ticketDocumentPage, ticketRequestsPage } from "./data/ticket-page-target";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
+import { ticketNavigationStructure } from "./ticket-navigation-structure";
 import { timelineViewSchema } from "./timeline/commands/view-schema";
 import { planChanged } from "./timeline/contracts";
+import { queryWorkflowSettings, saveWorkflowSettings } from "./views/workflow-settings";
 
 export { ticketResourceKind } from "./resource-kinds";
 
@@ -100,6 +97,16 @@ export const createPlannerUi = (baseUrl: string) => {
       capabilities: ["commands.execute"],
     },
   });
+  const workflowSettings = defineView({
+    id: "workflow-settings",
+    title: l10n("views.workflowSettings.title", "Planner workflow"),
+    body: {
+      kind: "controls",
+      query: queryWorkflowSettings,
+      onValueChange: (ctx, input) => saveWorkflowSettings(ctx, input.values),
+      refreshEvents: [plannerTicketsChanged],
+    },
+  });
   const requests = defineView({
     id: "ticket-requests",
     title: l10n("requests.view.title", "Needs attention"),
@@ -139,7 +146,7 @@ export const createPlannerUi = (baseUrl: string) => {
       onRowActivate: async (ctx, { row }) => {
         if (!row.resource) return;
         const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, row.resource.id));
-        ctx.navigation.open(pending ? ticketRequestsTarget(row.resource) : ticketPageTarget(row.resource));
+        ctx.navigation.open(ticketActivationTarget(row.resource, pending));
       },
       onAttributeChange: setTicketAttribute,
       onMove: moveTicketOnBoard,
@@ -183,7 +190,11 @@ export const createPlannerUi = (baseUrl: string) => {
     id: timelineBoard.id,
     title: l10n("timeline.page.title", "Project Timeline"),
     icon: "chart-no-axes-gantt",
-    body: { ...tickets.body, query: timelineViewSchema },
+    body: {
+      ...tickets.body,
+      query: timelineViewSchema,
+      defaultSettings: { ...tickets.body.defaultSettings, displayProperties: DEFAULT_TIMELINE_DISPLAY_PROPERTIES },
+    },
   });
   const editor = defineView({
     id: "ticket-editor",
@@ -201,6 +212,7 @@ export const createPlannerUi = (baseUrl: string) => {
     icon: "Files",
     body: {
       kind: "tree",
+      structure: ticketNavigationStructure,
       body: listTicketFilesTree,
       refreshEvents: [plannerTicketsChanged, viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
       defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
@@ -219,7 +231,17 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [statusSettings, tickets, timelineTickets, editor, files, properties, tagSettings, requests],
+    views: [
+      statusSettings,
+      tickets,
+      timelineTickets,
+      editor,
+      files,
+      properties,
+      tagSettings,
+      requests,
+      workflowSettings,
+    ],
     pages: [ticketsPage, ticketDetailPage, requestsPage],
     viewMenus: [
       defineViewMenu({
@@ -261,6 +283,11 @@ export const createPlannerUi = (baseUrl: string) => {
         view: statusSettings.ref,
         slot: workbenchSlots.projectSettings,
         section: settingsSection.ref,
+      }),
+      defineSettingsPanel({
+        id: "workflow-settings",
+        view: workflowSettings.ref,
+        slot: workbenchSlots.extensionSettings,
       }),
       defineSettingsPanel({
         id: "ticket-tags",

@@ -1,7 +1,10 @@
+import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { withTitleField } from "@pstdio/ui/collection-view";
 import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import { localizeTicketFormValue } from "../../ticket-create-form";
 import type { readPlanCommand } from "../commands/read-plan";
+
+export type TimelineTicketRow = KanbanRendererRow & { resource?: ResourceRef };
 
 export function timelineQueryData(
   plan: Awaited<ReturnType<typeof readPlanCommand.run>>,
@@ -25,7 +28,7 @@ export function timelineQueryData(
     }
     return [{ ...attribute, label: localizeTicketFormValue(attribute.label, t), type }];
   });
-  const rows: KanbanRendererRow[] = plan.ticketRows;
+  const rows: TimelineTicketRow[] = plan.ticketRows;
   return {
     rows,
     attributes: withTitleField(attributes),

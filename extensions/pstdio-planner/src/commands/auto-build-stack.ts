@@ -1,6 +1,7 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { appendAttemptEvent, readAttempt } from "../data/attempt-storage";
+import { readAutoBuildMode } from "../data/auto-build-mode";
 import { readStackRepair } from "./update-stack";
 
 export async function resumeStackRepair(
@@ -9,11 +10,12 @@ export async function resumeStackRepair(
   beforeDispatch: (head?: string) => Promise<void>,
 ) {
   const attempt = await readAttempt(ctx.storage, workspaceId);
-  const repair = attempt ? await readStackRepair(ctx, attempt) : null;
+  const repair = attempt ? await readStackRepair(ctx, attempt, await readAutoBuildMode(ctx)) : null;
   if (!attempt || !repair) return { decision: "wait" as const, reason: "ticket-not-ready" };
   await beforeDispatch(repair.base.headSha);
   await ctx.sessions.followup({
     sessionId: attempt.implementationSessionId,
+    expectedRun: repair.expectedRun,
     prompt: [
       `Update the existing dependency stack for ${attempt.ticketShorthand} in this same workspace. Read the current implement-ticket skill, ticket, attempt history, and outstanding findings. Done status and confirmed answers do not prove dependency integration. Combining dependency revisions does not approve work or merge the target branch.`,
       `Run pst pstdio-planner update-stack --workspace-id ${attempt.workspaceId} --implementation-session-id ${attempt.implementationSessionId} --expected-head-sha ${repair.headSha}. Reconcile Git conflicts yourself, preserving the required behavior from both sides and this ticket's changes. Commit the resolution and retry. Do not request human review for code conflicts; ask only when features, concepts, requirements, plans, or architecture conflict and the instructions cannot decide the intended behavior.`,

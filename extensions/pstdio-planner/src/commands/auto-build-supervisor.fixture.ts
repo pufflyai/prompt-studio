@@ -4,6 +4,7 @@ import { sessionRecord } from "./session-record.fixture";
 
 export async function supervisorFixture(limit = 2) {
   const result = await fixture(limit);
+  await result.storage.delete("auto-build-supervisor");
   const sessions = new Map<string, ReturnType<typeof sessionRecord>>();
   const prompts: { sessionId: string; prompt?: string }[] = [];
   result.ctx.sessions.create = async (input) => {

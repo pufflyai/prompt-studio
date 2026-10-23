@@ -17,12 +17,13 @@ test("rediscovers a thread's native default without passing host model or parame
     prompt: "",
     events: sink(),
     model: "next-selection",
-    params: { model_reasoning_effort: "high" },
+    params: { model_reasoning_effort: "high", service_tier: "fast" },
   });
   expect(await worker.readModel("existing-thread")).toBe("native-default");
   const resume = calls.find((call) => call.method === "thread/resume")?.params;
   expect(resume?.threadId).toBe("existing-thread");
   expect(resume?.model).toBeUndefined();
+  expect(resume?.serviceTier).toBeUndefined();
   expect((resume?.config as Record<string, unknown>)?.model_reasoning_effort).toBeUndefined();
   expect(calls.some((call) => call.method === "turn/start")).toBe(false);
 });

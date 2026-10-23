@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { putAttempt, readAttempt } from "../data/attempt-storage";
+import { appendAttemptEvent, putAttempt, readAttempt } from "../data/attempt-storage";
 import { ticketsCollection } from "../data/collections";
 import { listTicketReviewRequests } from "../data/review-request-storage";
 import { loadAttemptReadiness } from "./attempt-readiness";
@@ -36,7 +36,6 @@ async function independentDependencies(conflict = false) {
       workspaceId: ticketId!,
       ticketId: ticketId!,
       ticketShorthand: ticketId!,
-      state: "review_ready",
       revisions: [
         {
           revision: 1,
@@ -62,7 +61,7 @@ async function independentDependencies(conflict = false) {
 test("repairs an unsubmitted child from Done dependency branches without changing main", async () => {
   const f = await independentDependencies();
   try {
-    expect(await readStackRepair(f.ctx, f.attempt)).toMatchObject({ needsIntegration: true });
+    expect(await readStackRepair(f.ctx, f.attempt, {})).toMatchObject({ needsIntegration: true });
     const updated = await updateStackCommand.run(f.ctx, f.input);
     expect(updated.base.workspaceId).toBeNull();
     await f.git("merge-base", "--is-ancestor", f.left, updated.base.headSha);
@@ -73,7 +72,29 @@ test("repairs an unsubmitted child from Done dependency branches without changin
     expect(await f.git("rev-parse", "main")).toBe(f.base);
     const submitted = await submitChangeRequestCommand.run(f.ctx, await f.params());
     expect(submitted.revisions.at(-1)?.baseSha).toBe(updated.base.headSha);
-    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!)).toBeNull();
+    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!, {})).toBeNull();
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("automatic stack repair honors the merge requirement and keeps stopped owners stopped", async () => {
+  const f = await independentDependencies();
+  try {
+    expect(await readStackRepair(f.ctx, f.attempt, {})).toMatchObject({ needsIntegration: true });
+    expect(await readStackRepair(f.ctx, f.attempt, { requireMergedDependencies: true })).toBeNull();
+    let cause = "user_stop";
+    f.ctx.sessions.get = async (id) =>
+      ({
+        type: "session",
+        id,
+        title: id,
+        status: "cancelled",
+        last_exit: { cause, startedAt: null, endedAt: null },
+      }) as never;
+    expect(await readStackRepair(f.ctx, f.attempt, {})).toBeNull();
+    cause = "request_aborted";
+    expect(await readStackRepair(f.ctx, f.attempt, {})).toBeNull();
   } finally {
     await f.cleanup();
   }
@@ -98,7 +119,7 @@ test("the owner can reconcile conflicting dependencies and submit without a huma
     expect(await f.git("status", "--porcelain")).toBe("");
     expect(updated.base.headSha).toBe(f.base);
     await submitChangeRequestCommand.run(f.ctx, await f.params());
-    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!)).toBeNull();
+    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!, {})).toBeNull();
     expect((await listTicketReviewRequests(f.storage, "Child")).requests).toHaveLength(0);
     expect(await f.git("rev-parse", "main")).toBe(f.base);
   } finally {
@@ -109,7 +130,18 @@ test("the owner can reconcile conflicting dependencies and submit without a huma
 test("conflicting dependency branches start a managed implementation owner", async () => {
   const f = await independentDependencies(true);
   try {
-    await putAttempt(f.storage, { ...f.attempt, state: "abandoned" });
+    await appendAttemptEvent(f.storage, {
+      workspaceId: f.attempt.workspaceId,
+      revision: null,
+      type: "attempt_abandoned",
+      actor: { type: "human", id: "user", displayName: "User" },
+      sessionId: null,
+      reportId: null,
+      reviewId: null,
+      threadId: null,
+      commitSha: null,
+      metadata: {},
+    });
     f.ctx.workspaces.create = async () => ({ id: "new-child", workspace_shorthand: "Child_A2" }) as never;
     f.ctx.sessions.create = async () => ({ id: "new-owner", title: "Resolve code", status: "queued" }) as never;
     const started = await runAttemptCommand.run(f.ctx, { ticket: "Child" });
@@ -129,7 +161,7 @@ test("a combined base preserves delivered target code alongside an unmerged depe
   const f = await independentDependencies();
   try {
     await f.git("update-ref", "refs/heads/main", f.left);
-    const { readiness } = await loadAttemptReadiness(f.ctx, "Child", { base: "main", dependencyReview: "submitted" });
+    const { readiness } = await loadAttemptReadiness(f.ctx, "Child", { base: "main" });
     expect(readiness).toMatchObject({ decision: "ready", mode: "stacked", baseHeadSha: f.left, baseWorkspaceId: null });
     if (readiness.decision !== "ready") throw new Error("Expected a dependency base");
     const base = await prepareDependencyBase(f.ctx, readiness);

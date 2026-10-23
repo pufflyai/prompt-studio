@@ -179,7 +179,6 @@ test.each([true, false])("GitHub merge evidence must match the submitted revisio
       ...f.attempt,
       workspaceId: "parent",
       ticketId: ticket.id,
-      state: "review_ready",
       revisions: [
         {
           revision: 1,
@@ -219,4 +218,49 @@ test.each([true, false])("GitHub merge evidence must match the submitted revisio
   } finally {
     await f.cleanup();
   }
+});
+
+test("an old merged PR cannot complete a later submitted correction", async () => {
+  const { fixture } = await import("./auto-build.fixture");
+  const { runAttemptCommand } = await import("./run-attempt");
+  const { putAttempt } = await import("../data/attempt-storage");
+  const { ctx, storage, ticket } = await fixture();
+  const task = await ticket("Correction");
+  const owner = await runAttemptCommand.run(ctx, { ticket: task.id });
+  await putAttempt(storage, {
+    ...owner.variant,
+    revisions: [
+      {
+        revision: 2,
+        baseSha: "main-sha",
+        headSha: "new-head",
+        changeRequestReportId: "report",
+        submittedAt: task.createdAt,
+        submittedBy: { type: "agent", id: "owner", displayName: "Owner" },
+        reviews: [],
+      },
+    ],
+  });
+  await ticketsCollection(storage).put(task.id, {
+    ...task,
+    reviewLinks: [
+      {
+        id: "pr",
+        provider: "github",
+        kind: "pull_request",
+        url: "https://github.com/acme/tools/pull/1",
+        externalId: "1",
+        title: null,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+      },
+    ],
+  });
+  ctx.sessions.get = async (id) => ({ id, title: id, status: "completed" }) as never;
+  ctx.process.run = async ({ command }) =>
+    command[0] === "git"
+      ? { exitCode: 0, stdout: "new-head", stderr: "" }
+      : { exitCode: 0, stdout: '{"state":"MERGED","headRefOid":"old-head"}', stderr: "" };
+  await checkMergedPullRequestsCommand.run(ctx, {});
+  expect((await ticketsCollection(storage).get(task.id))?.statusId).toBe(task.statusId);
 });

@@ -76,12 +76,17 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     expect(prompts.length).toBeGreaterThan(1);
     for (const prompt of prompts.slice(1)) expect(prompt.length).toBeLessThan(prompts[0].length / 4);
     expect(prompts.at(-1)).not.toContain("auto-build scope");
+    await execute("auto-build.pause");
+    await execute("auto-build.resume");
+    await execute("auto-build.check");
+    const afterResume = await completedSupervisor(resumed.last_request_started);
+    expect(afterResume.id).toBe(session.id);
     const updated = await execute("auto-build.configure", {
       enabled: true,
       prompt: "Choose changed work.",
-      blockOnReview: false,
+      requireMergedDependencies: false,
     });
-    expect((await completedSupervisor(resumed.last_request_started)).id).toBe(session.id);
+    expect((await completedSupervisor(afterResume.last_request_started)).id).toBe(session.id);
     const changed = await request(`/sessions/${session.id}/conversation`);
     const last = changed.messages.filter((message: { role: string }) => message.role === "user").at(-1);
     const text = last.parts
@@ -92,7 +97,10 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     expect(text).toContain("auto-build scope");
     expect(text).not.toContain(updated.prompt);
     expect(text.length).toBeLessThan(prompts[0].length / 4);
-    expect(await execute("auto-build.read")).toMatchObject({ prompt: updated.prompt, blockOnReview: false });
+    expect(await execute("auto-build.read")).toMatchObject({
+      prompt: updated.prompt,
+      requireMergedDependencies: false,
+    });
     await execute("auto-build.configure", { enabled: false });
     const restartedBrief = "Start a fresh packaged Auto Build run.";
     await execute("auto-build.configure", { enabled: true, prompt: restartedBrief });
@@ -110,15 +118,9 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     await execute("auto-build.configure", { enabled: false });
     const ticket = await execute("create-ticket", { content: "# Short managed implementation", status: "Todo" });
     const { attempt } = await execute("run-attempt", { ticket: ticket.id });
-    const expectStatus = async (statusId: string) => {
-      for (let check = 0; check < 100; check++) {
-        if ((await execute("get-ticket", { id: ticket.id })).statusId === statusId) return;
-        await Bun.sleep(50);
-      }
-      expect((await execute("get-ticket", { id: ticket.id })).statusId).toBe(statusId);
-    };
-    // The shipped lifecycle hook repairs the status after a real worker completes.
-    await expectStatus("ready");
+    const status = async () => (await execute("get-ticket", { id: ticket.id })).statusId;
+    // Planner leaves progress to the agent: starting, requesting input, and answering keep the chosen status.
+    expect(await status()).toBe("ready");
     const human = await execute("request-human", {
       ticket: ticket.id,
       workspaceId: attempt.workspaceId,
@@ -127,9 +129,9 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
       instructions: "Confirm before resuming the same attempt.",
       request: { kind: "task" },
     });
-    await expectStatus("blocked");
+    expect(await status()).toBe("ready");
     await execute("review", { requestId: human.id, response: { confirmed: true } });
-    await expectStatus("ready");
+    expect(await status()).toBe("ready");
     expect(
       (await execute("list-attempts")).filter((row: { ticketId: string }) => row.ticketId === ticket.id),
     ).toHaveLength(1);

@@ -1,5 +1,9 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { queuedFollowUpUpdateResponseSchema, updateQueuedFollowUpInputSchema } from "pstdio-api-contracts";
+import {
+  moveQueuedFollowUpInputSchema,
+  queuedFollowUpUpdateResponseSchema,
+  updateQueuedFollowUpInputSchema,
+} from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
@@ -59,14 +63,7 @@ export const moveQueuedFollowUpRoute = createRoute({
     body: {
       content: {
         "application/json": {
-          schema: z.object({
-            direction: z.enum(["up", "down"]),
-            expectedRevision: z.string().optional(),
-            steps: z.number().int().positive().default(1),
-            expectedOrder: z
-              .array(z.object({ queuePosition: z.number().int().positive(), revision: z.string() }))
-              .optional(),
-          }),
+          schema: moveQueuedFollowUpInputSchema,
         },
       },
     },

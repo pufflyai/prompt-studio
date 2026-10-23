@@ -31,6 +31,8 @@ export const createPackagedQueueFixture = async () => {
       `
       const harness={id:"worker",ref:{kind:"harness",id:"worker"},label:"Queue",capabilities:()=>[],
         params:{thinking:{type:"select",defaultValue:"high",options:[{label:"High",value:"high"},{label:"Low",value:"low"}]}},listModels:()=>[{id:"one"},{id:"two"}],
+        getCommandState(){return {slashCommands:true,commands:[{name:"/plan",description:"Plan"}],modes:[]};},
+        prepareOperation(){return {execution:"exclusive",invoke:async()=>({kind:"completed",message:"Native result"})};},
         start(_ctx,input){let finish;let index=0;const done=new Promise(resolve=>{finish=resolve;});
           const add=message=>input.events.push({op:"add",path:"/messages/"+index++,value:message});
           add({id:"initial",role:"user",parts:[{type:"text",text:input.prompt}]});
@@ -44,7 +46,48 @@ export const createPackagedQueueFixture = async () => {
       const queuedHarness={...harness,id:"queued-worker",ref:{kind:"harness",id:"queued-worker"},
         start(...args){const {steer,...handle}=harness.start(...args);return handle;}
       };
-      export default {harnesses:[harness,queuedHarness]};
+      export default {harnesses:[harness,queuedHarness],commands:[{
+        id:"interact",ref:{kind:"command",id:"interact"},title:"Interact with session",params:{sessionId:{type:"string",required:true}},
+        async run(ctx,input){
+          const id=input.sessionId;
+          const conversation=await ctx.sessions.getConversation(id);
+          const sources=await ctx.sessions.getConversationSources(id);
+          const queued=await ctx.sessions.getQueuedMessages(id);
+          const events=[];const controller=new AbortController();
+          await ctx.sessions.stream(id,event=>{events.push(event.event);if(event.event==="patch")controller.abort();},{signal:controller.signal});
+          const retention=await ctx.sessions.retainResources(id);retention.close();
+          await ctx.sessions.followup({sessionId:id,prompt:"Extension queued",harness:{harnessId:"test.queue-smoke.harness.worker",model:"two",params:{thinking:"low"}}});
+          const pending=(await ctx.sessions.getQueuedFollowUps(id)).requests;
+          const last=pending[pending.length-1];
+          const moved=await ctx.sessions.moveQueuedFollowUp(id,last.queuePosition,{direction:"up",expectedRevision:last.revision});
+          const current=(await ctx.sessions.getQueuedFollowUps(id)).requests.find(item=>item.queuePosition===moved.queuePosition);
+          await ctx.sessions.removeQueuedFollowUp(id,current.queuePosition,current.revision);
+          const file=await ctx.sessions.uploadAttachment({name:"extension.txt",data:new TextEncoder().encode("Extension attachment")});
+          const attachment=new TextDecoder().decode(await ctx.sessions.readAttachment(file.fileId));
+          await ctx.sessions.deleteAttachment(file.fileId);
+          const harness={harnessId:"test.queue-smoke.harness.worker"};
+          const draft=await ctx.sessions.getDraftHarnessCommands({harness});
+          const native=await ctx.sessions.getHarnessCommands(id);
+          const idle=await ctx.sessions.create({title:"Extension idle",harness,operation:{kind:"command",text:"/plan"}});
+          await ctx.sessions.stream(idle.id,()=>{});
+          await ctx.sessions.rename(idle.id,"Renamed by extension");
+          const operation=await ctx.sessions.invokeHarnessOperation(idle.id,{kind:"command",text:"/plan"},harness.harnessId);
+          await ctx.sessions.stream(idle.id,()=>{});
+          await ctx.sessions.updateStatus(idle.id,"completed");
+          await ctx.sessions.archive(idle.id);
+          const activity=await ctx.sessions.listActivity(idle.id);
+          await ctx.sessions.delete(idle.id);
+          return {messages:conversation.messages.length,sources,queued:queued.messages.length,events,attachment,
+            draft:draft.commands[0].name,native:native.commands[0].name,operation,
+            resolved:await ctx.sessions.resolveSessionId({harnessId:harness.harnessId,agentSessionId:"native"}),
+            archived:activity.items.some(item=>item.eventType==="session_archived"),deleted:await ctx.sessions.get(idle.id)};
+        }
+      },{
+        id:"stop",ref:{kind:"command",id:"stop"},title:"Stop session",params:{sessionId:{type:"string",required:true}},
+        async run(ctx,input){await ctx.sessions.stop(input.sessionId);return {
+          session:await ctx.sessions.get(input.sessionId),queue:await ctx.sessions.getQueuedFollowUps(input.sessionId)
+        };}
+      }]};
     `,
     );
 

@@ -2,7 +2,8 @@ import type { Workload } from "./fixture";
 
 export const contract = {
   samples: 10,
-  ceilingMs: 1_000,
+  // User-approved on 2026-10-23: allow 25% above the 1,000 ms target for this repair.
+  ceilingMs: 1_250,
   caseTimeoutMs: 60_000,
   atomicRows: 100,
   // Offered workload is fixed, even if the receiver falls behind.

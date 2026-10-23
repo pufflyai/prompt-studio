@@ -1,4 +1,5 @@
 import { defineCommand, params, type ResourceRef, type ResourceResolution } from "@pstdio/sdk/extensions";
+import { ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { TICKET_RESOURCE_ICON } from "../data/mappers";
 import {
@@ -16,12 +17,12 @@ export const resolveTicketResourcesCommand = defineCommand({
   params: { resources: params.json<ResourceRef[]>() },
   async run(ctx, input) {
     const resources = input.resources ?? [];
-    const parentLookup = await readTicketParentLookup(
-      ctx.storage,
-      resources.filter((resource) => resource.type === "ticket").map((resource) => resource.id),
-    );
+    const ids = new Set(resources.filter((resource) => resource.type === "ticket").map((resource) => resource.id));
+    const collection = ticketsCollection(ctx.storage);
+    const byId = new Map(await Promise.all([...ids].map(async (id) => [id, await collection.get(id)] as const)));
+    const parentLookup = await readTicketParentLookup(ctx.storage, byId);
     return resources.flatMap<ResourceResolution>((resource) => {
-      const ticket = resource.type === "ticket" ? parentLookup.get(resource.id) : undefined;
+      const ticket = resource.type === "ticket" ? byId.get(resource.id) : undefined;
       if (!ticket) return [];
       const reference = {
         ...ticketResourceReference(ticket, parentLookup),

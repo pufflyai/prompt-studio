@@ -37,6 +37,11 @@ export const verifyPackagedCollectionBreadcrumb = async (
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
   await expect(tab("secondary")).toBeVisible();
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  const home = await sidenav.getByRole("option", { name: "Home", exact: true }).boundingBox();
+  const sessionsEntry = await sidenav.getByRole("option", { name: "Sessions", exact: true }).boundingBox();
+  expect(home!.y + home!.height).toBeLessThanOrEqual(sessionsEntry!.y);
+  const searchBefore = await sidenav.getByRole("option", { name: "Search", exact: true }).elementHandle();
   const sessions = new URL(libraryUrl);
   sessions.pathname = `/projects/${projectId}/sessions`;
   await page.evaluate((url) => {
@@ -44,6 +49,46 @@ export const verifyPackagedCollectionBreadcrumb = async (
     dispatchEvent(new PopStateEvent("popstate"));
   }, sessions.href);
   await expect(breadcrumbs).toContainText("Sessions");
+  expect(await searchBefore!.evaluate((row) => row.isConnected)).toBe(true);
+  const modeReturn = sidenav.getByRole("button", { name: "Project", exact: true });
+  await expect(modeReturn).toBeVisible();
+  expect(await modeReturn.evaluate((button) => button.closest('[draggable="true"]'))).toBeNull();
+  expect(
+    await modeReturn.evaluate((button) => {
+      const navigation = button.closest("section");
+      return navigation?.querySelector('[data-scope="scroll-area"][data-part="viewport"]')?.contains(button);
+    }),
+  ).toBe(true);
+  const search = await sidenav.getByRole("option", { name: "Search", exact: true }).boundingBox();
+  const back = await modeReturn.boundingBox();
+  expect(back!.y).toBeGreaterThanOrEqual(search!.y + search!.height);
+  const returningRows = page.evaluate(
+    () =>
+      new Promise<Array<{ home: number | null; sessions: number | null }>>((resolve) => {
+        const frames: Array<{ home: number | null; sessions: number | null }> = [];
+        const sample = () => {
+          const nav = document.querySelector('[data-workbench-region="sidenav"]')!;
+          const leaving = [...nav.querySelectorAll('[role="button"]')].some(
+            (row) => row.textContent?.trim() === "Project",
+          );
+          if (!leaving) {
+            const rows = [...nav.querySelectorAll('[role="option"]')];
+            const top = (label: string) =>
+              rows.find((row) => row.textContent?.trim() === label)?.getBoundingClientRect().top ?? null;
+            frames.push({ home: top("Home"), sessions: top("Sessions") });
+          }
+          if (frames.length === 12) resolve(frames);
+          else requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      }),
+  );
+  await modeReturn.click();
+  for (const frame of await returningRows) expect(frame).toEqual({ home: home!.y, sessions: sessionsEntry!.y });
+  await expect(page).toHaveURL(libraryUrl);
+  await expect(modeReturn).toHaveCount(0);
+  await page.goBack();
+  await expect(modeReturn).toBeVisible();
   await page.goBack();
   await expect(tab("secondary")).toBeVisible();
   await expect(tab("main")).toHaveCount(0);
