@@ -3,9 +3,9 @@
     "runner": "bun",
     "file": "packages/pstdio-db/src/db/pglite-engine-upgrade.test.ts",
     "name": "createDb upgrades a closed legacy home and preserves records, retry receipts and later writes",
-    "platforms": ["linux", "win32"],
+    "platforms": ["win32"],
     "owner": "PS-907 / pstdio-db",
-    "reason": "Cold old-engine creation, transfer, restart and cleanup exceed Linux's 5 second allowance and intermittently exceed Windows's 15 seconds. The same Windows commit passed at 6.573 seconds and timed out at 15.011 seconds after its final reopen.",
+    "reason": "Cold old-engine creation, transfer, restart and cleanup intermittently exceed Windows's 15 seconds. Linux returned to the stable lane after the user approved a 15 second limit on 2026-10-23 for its measured 4.5-4.9 second workload. The same Windows commit passed at 6.573 seconds and timed out at 15.011 seconds after its final reopen.",
     "evidence": [
       "https://github.com/pufflyai/prompt-studio/actions/runs/40002393505",
       "https://github.com/pufflyai/prompt-studio/actions/runs/40004464723",

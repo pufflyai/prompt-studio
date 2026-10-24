@@ -71,10 +71,11 @@ Test and Build runs one stage per event. The `scope` job runs `scripts/ci/pull-r
 | Stage | Event | Runs | `ci_passed` requires |
 | --- | --- | --- | --- |
 | Pull request | Opening, reopening, a new push, or a new label on a pull request | Whole-repo static checks; parallel affected-package lint and unit tests; selected database shards, browser regressions, Windows contracts, compatibility and container checks | Every selected job succeeded; no job failed or was cancelled |
-| Merge queue | `merge_group` | At least the checks selected for every PR in the group, plus unsigned builds of every client | Every selected job and client build succeeded |
-| Full | A push to `main`, a manual run, or `ci:full` on a PR or any PR in a merge group | Full Windows, browser E2E, desktop and packaged suites, plus the package and compatibility checks | Every required full-stage job succeeded |
+| Full | A merge group, a push to `main`, a manual run, or `ci:full` on a PR | Full Windows, browser E2E, desktop and packaged suites, plus the package and compatibility checks | Every required full-stage job succeeded |
 
-A newer event on the same pull request cancels the older run. Every merge queue and `main` commit keeps its own run, so a red commit can always be traced.
+A newer event on the same pull request cancels the older run. Pull requests, including `ci:full`, and pushes to `main` finish every selected check so one run reports all errors. Merge queue matrices use fail-fast cancellation. A queue-only monitor also polls job results every ten seconds and cancels that same run after a job completes with failure, cancellation, or another terminal error. This stops unrelated suites while preserving the failed job and its logs. It does not cancel other queue candidates.
+
+The monitor uses Node without installing Bun or workspace dependencies. Only its queue-only job has Actions write permission. It checks the API event and run attempt before cancelling; an old monitor exits if a rerun has started. If monitoring is unavailable, it logs a warning and ordinary validation continues. The existing `ci_passed` gate still requires every selected check to succeed. The monitor is an optimization, not an additional success condition, and uses one Ubuntu runner while queue validation runs.
 
 ### Pull request stage
 
@@ -101,19 +102,19 @@ Add `ci:full` when the full Windows, browser, packaged or desktop suites are nee
 
 ### Merge queue stage
 
-The merge queue applies the same selection policy as PR checks to its combined result. It compares against `merge_group.base_sha`, rather than the last parent alone. It also reads the matching GitHub merge-queue entries and each member's original changed-file list and labels. This preserves a companion PR's `ci:full` and checks for changes that cancel each other in the final tree. Incomplete queue metadata fails scope selection instead of reducing coverage.
+The merge queue runs the full stage, the same jobs as a push to `main`. Before 2026-10-24 it ran only the checks its pull requests selected. The Windows, browser E2E, desktop and packaged suites then ran only after merge, and from 2026-10-12 to 2026-10-23 only 51 of 200 `main` runs passed. Running the full stage in the queue keeps those failures off `main`. A queue run takes about 20 minutes instead of about 7, and uses about as many runner minutes as the `main` run that follows it.
 
-- Static, package, database, browser, Windows, compatibility and container jobs use the same selection as PR checks.
-- `build_clients` builds without signing, because signing secrets are trusted only on `main` and release tags. The Linux row builds the monorepo, compiles the CLI for every platform with `bun run --cwd scripts build:all`, scaffolds the platform packages, and makes the Linux desktop app. The macOS arm64 (`macos-15`), macOS x64 (`macos-15-intel`), and Windows rows make their desktop apps. Desktop sidecars must be compiled on their own platform, so each desktop app needs a native runner.
-- Any group member with `ci:full` selects the complete full stage for the group.
+`build_clients` builds without signing, because signing secrets are trusted only on `main` and release tags. The Linux row builds the monorepo, compiles the CLI for every platform with `bun run --cwd scripts build:all`, scaffolds the platform packages, and makes the Linux desktop app. The macOS arm64 (`macos-15`), macOS x64 (`macos-15-intel`), and Windows rows make their desktop apps. Desktop sidecars must be compiled on their own platform, so each desktop app needs a native runner.
 
-The `main` ruleset turned the queue on on 2026-10-12, after the queue's jobs passed every `main` run since the stages were split. It squashes, builds up to five groups at once, merges up to five pull requests per group, and merges a group only when every pull request in it passed (`ALLGREEN`). `ci_passed` is the only required check, on pull requests and in the queue.
+The `main` ruleset turned the queue on on 2026-10-12, after the queue's jobs passed every `main` run since the stages were split. Each queued pull request gets a temporary merge candidate containing `main` and the changes ahead of it in the queue. Each candidate runs the full stage. The queue can build up to five candidates at once and squash up to five passing pull requests in one merge batch. Every pull request must pass (`ALLGREEN`); batching happens after the required candidate checks pass. `ci_passed` is the only required check, on pull requests and in the queue.
 
 When a pull request leaves the queue, a build or check failed on the merged result. Rebase, fix, and queue it again. If the failure is not caused by the pull request, the check is not deterministic; fix the check first.
 
+The **Merge queue removals** workflow (`.github/workflows/merge-queue-removals.yml`) labels every open pull request that GitHub removed from the queue with `removed-from-queue`. It posts one comment with the reason and, for failed checks, the failed merge group run and its failed jobs. The label goes away when the pull request is queued again, merged, or closed. Queue events and manual workflow dispatches update one pull request at a time, sharing its concurrency group. A manual dispatch requires the pull request number; there is no sweep. Find these pull requests with `gh pr list --label removed-from-queue`. The workflow reads each pull request's merge queue timeline through `scripts/ci/merge-queue-removals.ts`; like the area labels workflow, it loads that script from the trusted base commit and never checks out pull request code.
+
 ### Full stage
 
-Pushes to `main` run the full stage, including coverage outside the scoped regression families. Fix a failure in a follow-up pull request, or link it to the flaky-test ticket that owns it before re-running.
+Merge groups and pushes to `main` run the full stage, including coverage outside the scoped regression families. A failure in the queue removes the pull request from the queue. Fix a failure on `main` in a follow-up pull request, or link it to the flaky-test ticket that owns it before re-running.
 
 Before using **Re-run failed jobs** on a release or nightly, record the failure on a ticket or link it to the ticket that owns it. Keep the job link, failed step or test, and first-attempt evidence. A passing rerun does not close the bug.
 
