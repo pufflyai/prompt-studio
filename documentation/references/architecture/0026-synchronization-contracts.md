@@ -151,8 +151,8 @@ Each extension owner syncs its records through one relay document, named
 | Update | One local save: an encrypted frame with each changed record's Yjs update and the files those records use. A frame too large for one update is stored as a blob that the update names. |
 | Outbox | `storage_record_outbox` keeps a save's frame, written in the save's transaction. Only owners with a `storage_record_sync` row keep one. |
 | Download | A page of frames, the records they change, their query rows, the owner revision and the cursor in `storage_record_sync` commit in one transaction. |
-| Latest state | Encrypted chunks of record states, stored as blobs. The first one founds the stream. Later ones are built only by a device that has read every update and has an empty outbox, so they add nothing an update did not carry. |
-| Joining | The first device founds the stream with its records. A later device adopts each shared record's synced history and reapplies its own changes since it first saved the record. |
+| Latest state | Encrypted chunks of record states, stored as blobs. The first one founds the stream. Later ones are built only by a device that has read every update and has an empty outbox, so they add nothing an update did not carry, and only once the updates outgrow the latest state. |
+| Joining | The first device with records founds the stream. A later device adopts each record's synced history and reapplies its own changes since it first saved the record; a history the stream already shares merges normally. |
 
 A save inside a data migration uses deterministic Yjs authors per record document, so two devices
 that run the same migration write identical updates.

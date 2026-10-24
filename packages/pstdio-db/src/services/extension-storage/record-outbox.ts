@@ -1,8 +1,9 @@
-import { and, asc, eq, lte, sql } from "drizzle-orm";
+import { and, asc, eq, lte } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { decodeRecordFrame, encodeRecordFrame, type RecordBytes } from "pstdio-sync/relay";
+import type { Asset, StorageRecord } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_record_outbox } from "../../db/schemas.pg";
+import { storage_record_outbox, storage_record_sync } from "../../db/schemas.pg";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
@@ -12,38 +13,60 @@ const ownerWhere = (owner: StorageOwner) =>
     eq(storage_record_outbox.extension_id, owner.extensionId),
   );
 
+const recordAssets = (records: StorageRecord[]) =>
+  records.flatMap((record) => (record.asset && !record.deleted ? [record.asset] : []));
+
+const insert = (tx: Transaction, owner: StorageOwner, records: RecordBytes[], assets: Asset[]) =>
+  tx.insert(storage_record_outbox).values({
+    workbench_id: owner.workbenchId,
+    extension_id: owner.extensionId,
+    frame: encodeRecordFrame({ records, assets: [] }),
+    assets,
+  });
+
 /**
- * Keeps one local save's record updates for upload, in the save's transaction. Owners that do not
- * sync have no stream row, so nothing is kept for them.
+ * Keeps one local save's record updates and files for upload, in the save's transaction. Owners
+ * that do not sync have no stream row; their saves skip this before any encoding.
  */
 export const queueRecordUpload = async (
   tx: Transaction,
   owner: StorageOwner,
-  prepared: { id: string; record: { recordId: string }; update: Uint8Array | null }[],
+  prepared: { record: StorageRecord; update: Uint8Array | null }[],
 ) => {
-  const records = prepared.flatMap((change) =>
-    change.update ? [{ recordId: change.record.recordId, bytes: change.update }] : [],
-  );
-  if (!records.length) return;
-  const frame = Buffer.from(encodeRecordFrame({ records, assets: [] })).toString("hex");
-  await tx.execute(sql`
-    INSERT INTO storage_record_outbox (workbench_id, extension_id, frame)
-    SELECT workbench_id, extension_id, decode(${frame}, 'hex') FROM storage_record_sync
-    WHERE workbench_id = ${owner.workbenchId} AND extension_id = ${owner.extensionId}
-  `);
+  const changed = prepared.filter((change) => change.update);
+  if (!changed.length) return;
+  const [synced] = await tx
+    .select({ joined: storage_record_sync.joined })
+    .from(storage_record_sync)
+    .where(
+      and(
+        eq(storage_record_sync.workbench_id, owner.workbenchId),
+        eq(storage_record_sync.extension_id, owner.extensionId),
+      ),
+    );
+  if (!synced) return;
+  const records = changed.map((change) => ({ recordId: change.record.recordId, bytes: change.update! }));
+  await insert(tx, owner, records, recordAssets(changed.map((change) => change.record)));
 };
 
-/** Queues record bytes that are not tied to one save, split under the frame limit. */
-export const queueRecordBytes = async (tx: Transaction, owner: StorageOwner, records: RecordBytes[], limit: number) => {
+/** Queues record bytes that are not tied to one save, split under the frame limit, with their files. */
+export const queueRecordBytes = async (
+  tx: Transaction,
+  owner: StorageOwner,
+  records: RecordBytes[],
+  assets: Map<string, Asset>,
+  limit: number,
+) => {
   let batch: RecordBytes[] = [];
   let size = 0;
   const flush = async () => {
     if (!batch.length) return;
-    await tx.insert(storage_record_outbox).values({
-      workbench_id: owner.workbenchId,
-      extension_id: owner.extensionId,
-      frame: encodeRecordFrame({ records: batch, assets: [] }),
-    });
+    await insert(
+      tx,
+      owner,
+      batch,
+      batch.flatMap((record) => assets.get(record.recordId) ?? []),
+    );
     batch = [];
     size = 0;
   };
@@ -62,11 +85,11 @@ export const readRecordOutbox = async (db: Pick<DbClient, "select">, owner: Stor
     .where(ownerWhere(owner))
     .orderBy(asc(storage_record_outbox.sequence))
     .limit(64);
-  const entries: { sequence: number; records: RecordBytes[] }[] = [];
+  const entries: { sequence: number; records: RecordBytes[]; assets: Asset[] }[] = [];
   let size = 0;
   for (const row of rows) {
     if (entries.length && size + row.frame.length > limit) break;
-    entries.push({ sequence: row.sequence, records: decodeRecordFrame(row.frame).records });
+    entries.push({ sequence: row.sequence, records: decodeRecordFrame(row.frame).records, assets: row.assets });
     size += row.frame.length;
   }
   return entries;

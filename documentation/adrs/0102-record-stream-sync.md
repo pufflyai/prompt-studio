@@ -36,14 +36,21 @@ stays blind and unchanged: it stores ciphertext updates, latest states and blobs
   first latest state (no base) **founds** the stream. Every later one is a compaction: a device
   builds it only when it has read every update and its outbox is empty, so it holds nothing an
   update did not already carry. A device that follows the updates loads only the founding state, or
-  a latest state when the relay removed updates it still needed.
-- **Joining.** A device joins on its first sync. If the relay has no stream, it founds the stream
-  with all its records; the relay accepts only one founding state, so only one device founds it.
+  a latest state when the relay removed updates it still needed. A compaction is due when the
+  updates after the latest state outgrow it (its encrypted summary holds its size), so a large owner
+  is rewritten in proportion to its edits, not every 1 MiB.
+- **Joining.** A device joins on its first sync. If the relay has no stream and the device has
+  records, it founds the stream with them; the relay accepts only one founding state, so only one
+  device founds it. A device without records waits until a stream exists.
   Otherwise it downloads the stream and adopts it: each shared record takes the synced history, and
   this device's changes since it first saved the record are reapplied as an edit (a three-way merge
-  with local winning where both changed one value). Records only this device has are uploaded.
+  with local winning where both changed one value; without the first save, a deletion wins). A
+  record whose history the stream already shares merges normally. Records only this device has are
+  uploaded.
 - **Migrations.** A save inside a data migration uses deterministic Yjs authors per record
   document again, so two devices that run the same migration write identical updates (R44).
+- **Failures.** Network errors stop the pass, and the next pass retries it. Only data that cannot be
+  decrypted or decoded is set aside, and a frame with any unreadable record is set aside whole.
 - **Owner metadata** syncs under a new relay name. Relay copies from before ADR 0100 still hold
   records in the owner document; merging them back would let the record upgrade overwrite newer
   record documents.
@@ -57,8 +64,12 @@ directly, which the protocol allows up to 100,000 blob IDs.
   state in a few chunk reads.
 - Building or loading a latest state holds the owner's record states in memory once.
 - A device whose saves are still queued cannot compact; another device can.
-- A device without the synced history (a reset key generation, or a purged owner) joins again and
-  adopts the stream.
+- Key generations do not restart the stream: the relay document stays the same and devices keep
+  every key they need to read older updates.
+- A purged owner joins again and adopts the stream.
+- Two devices that hold their own copies of a record the founding device lacks, and adopt at the same
+  moment, both upload their copies. Multi-line text in that record can then appear twice. This needs
+  two separate upgrades of the same project joining within one sync pass of each other.
 - Devices on releases before this change cannot read the record stream.
 - ADR 0100's notes that records do not sync and that migration authors are no longer needed are
   replaced by this decision.

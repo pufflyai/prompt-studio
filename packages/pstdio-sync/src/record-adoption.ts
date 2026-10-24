@@ -83,6 +83,8 @@ export const adoptionEdit = (base: StorageRecord | undefined, local: StorageReco
   const target = mergeJson(base && recordJson(base), recordJson(local), recordJson(remote)) as ReturnType<
     typeof recordJson
   >;
+  // Without the shared starting point a deletion cannot be told from an old copy; deleting wins.
+  if (!base && (local.deleted || remote.deleted)) target.deleted = true;
   if (same(target, recordJson(remote))) return null;
   if (target.deleted)
     return remote.deleted ? null : ({ recordId: remote.recordId, deleted: true } satisfies RecordEdit);

@@ -1,4 +1,5 @@
-import { bigint, bigserial, boolean, foreignKey, index, integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { bigint, bigserial, boolean, foreignKey, index, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import type { Asset } from "pstdio-sync-contracts";
 import { projects } from "./projects";
 import { bytea } from "./types";
 
@@ -10,12 +11,13 @@ export const storage_record_sync = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     extension_id: text("extension_id").notNull(),
-    generation: integer("generation").notNull(),
     joined: boolean("joined").notNull().default(false),
     after: bigint("after", { mode: "number" }).notNull().default(0),
     state_id: text("state_id"),
     through: bigint("through", { mode: "number" }).notNull().default(0),
     pending_bytes: bigint("pending_bytes", { mode: "number" }).notNull().default(0),
+    // Encrypted size of that latest state, which sets when the update tail is large enough to replace.
+    state_bytes: bigint("state_bytes", { mode: "number" }).notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.workbench_id, table.extension_id] })],
 );
@@ -28,6 +30,8 @@ export const storage_record_outbox = pgTable(
     workbench_id: text("workbench_id").notNull(),
     extension_id: text("extension_id").notNull(),
     frame: bytea("frame").notNull(),
+    // The files this save's records point to, uploaded before the save (R21).
+    assets: jsonb("assets").$type<Asset[]>().notNull().default([]),
   },
   (table) => [
     index("storage_record_outbox_owner_idx").on(table.workbench_id, table.extension_id, table.sequence),

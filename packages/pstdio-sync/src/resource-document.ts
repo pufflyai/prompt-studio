@@ -92,6 +92,14 @@ const missingFrom = (document: Y.Doc, states: Uint8Array[]) => {
   }
 };
 
+const sharesHistory = (local: Uint8Array[], remote: Y.Doc) => {
+  const clients = Y.encodeStateVector(remote);
+  const known = Y.decodeStateVector(clients);
+  return local.some((state) =>
+    [...Y.decodeStateVector(Y.encodeStateVectorFromUpdate(state)).keys()].some((client) => known.has(client)),
+  );
+};
+
 /** The full state of one saved record document, for a latest-state chunk. */
 export const resourceDocumentState = (states: Uint8Array[]) =>
   states.length === 1 ? states[0]! : Y.mergeUpdates(states);
@@ -108,6 +116,19 @@ export const adoptResourceDocument = async (
   base: Uint8Array | undefined,
 ) => {
   const document = loadResourceDocument(remote);
+  if (sharesHistory(local, document)) {
+    // Histories already shared (for example after a reset cursor) merge as usual.
+    try {
+      for (const state of local) Y.applyUpdate(document, state);
+      return {
+        state: Y.encodeStateAsUpdate(document),
+        update: missingFrom(document, remote),
+        record: await readDocumentRecord(document, recordId),
+      };
+    } finally {
+      document.destroy();
+    }
+  }
   const read = async (states: Uint8Array[]) => {
     const source = loadResourceDocument(states);
     try {

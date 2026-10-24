@@ -7,7 +7,7 @@ import { storage_current_records, storage_record_outbox, storage_record_sync } f
 import type { createProjectionStatistics } from "./projection-statistics";
 import { lockRecordOwner, saveRecordChanges } from "./record-changes";
 import { dropRecordOutbox, queueRecordBytes, readRecordOutbox } from "./record-outbox";
-import { adoptRecords, localRecordIds, mergeRecords, recordStates } from "./record-stream-merge";
+import { acceptFrames, adoptRecords, localRecordIds, mergeRecords, recordStates } from "./record-stream-merge";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
@@ -17,6 +17,7 @@ const cursorOf = (row: typeof storage_record_sync.$inferSelect): RecordStreamCur
   stateId: row.state_id,
   through: row.through,
   pendingBytes: row.pending_bytes,
+  stateBytes: row.state_bytes,
 });
 
 /** One owner's records as its encrypted relay stream reads and writes them. */
@@ -45,6 +46,7 @@ export const createRecordStreamStore = (
         state_id: cursor.stateId,
         through: cursor.through,
         pending_bytes: cursor.pendingBytes,
+        state_bytes: cursor.stateBytes,
       })
       .where(syncWhere);
   /** Runs a record write under the owner lock and notifies watchers once it commits. */
@@ -59,6 +61,26 @@ export const createRecordStreamStore = (
   };
   const save = async (tx: Transaction, revision: number, changes: Parameters<typeof saveRecordChanges>[3]) =>
     changes.length ? saveRecordChanges(tx, owner, revision, changes) : 0;
+  /** The current file of each live record that has one. */
+  const currentAssets = async (connection: Pick<DbClient, "select">, recordIds: string[]) => {
+    const assets = new Map<string, Asset>();
+    for (let offset = 0; offset < recordIds.length; offset += 1_000) {
+      const rows = await connection
+        .select({ id: storage_current_records.record_id, asset: storage_current_records.asset })
+        .from(storage_current_records)
+        .where(
+          and(
+            eq(storage_current_records.workbench_id, owner.workbenchId),
+            eq(storage_current_records.extension_id, owner.extensionId),
+            inArray(storage_current_records.record_id, recordIds.slice(offset, offset + 1_000)),
+            eq(storage_current_records.deleted, false),
+            isNotNull(storage_current_records.asset),
+          ),
+        );
+      for (const row of rows) if (row.asset) assets.set(row.id, row.asset);
+    }
+    return assets;
+  };
   const references = {
     get: (sha256: string) =>
       deps.metadata(owner, async ({ document }) => {
@@ -72,30 +94,26 @@ export const createRecordStreamStore = (
   };
   return {
     references,
-    async open(generation: number) {
+    async open() {
       await deps.upgrade();
-      return db.transaction(async (tx) => {
-        const [row] = await tx.select().from(storage_record_sync).where(syncWhere).for("update");
-        if (row?.generation === generation) return cursorOf(row);
-        // A new key generation is a new stream: this device joins it again.
-        if (row) await tx.delete(storage_record_sync).where(syncWhere);
-        const [created] = await tx
-          .insert(storage_record_sync)
-          .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId, generation })
-          .returning();
-        return cursorOf(created!);
-      });
+      await db
+        .insert(storage_record_sync)
+        .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId })
+        .onConflictDoNothing();
+      const [row] = await db.select().from(storage_record_sync).where(syncWhere);
+      return cursorOf(row!);
     },
     async apply(frames: (RecordFrame | null)[], cursor: RecordStreamCursor) {
-      const incoming = new Map<string, Uint8Array[]>();
-      for (const record of frames.flatMap((frame) => frame?.records ?? []))
-        incoming.set(record.recordId, [...(incoming.get(record.recordId) ?? []), record.bytes]);
-      return write(async (tx, revision) => {
-        const { changes, rejected } = await mergeRecords(tx, owner, incoming, false);
+      let rejectedFrames: number[] = [];
+      await write(async (tx, revision) => {
+        const { accepted, rejected } = await acceptFrames(tx, owner, frames);
+        rejectedFrames = rejected;
+        const { changes } = await mergeRecords(tx, owner, accepted, false);
         const projected = await save(tx, revision, changes);
         await saveCursor(tx, cursor);
-        return { projected, changed: changes.length > 0, rejected };
+        return { projected, changed: changes.length > 0, rejected: [] };
       });
+      return rejectedFrames;
     },
     async merge(remote: Map<string, Uint8Array[]>, mode: "adopt" | "repair", cursor: RecordStreamCursor) {
       return write(async (tx, revision) => {
@@ -108,7 +126,11 @@ export const createRecordStreamStore = (
         const projected = await save(tx, revision, merged.changes);
         const localOnly = (await localRecordIds(tx, owner)).filter((id) => !remote.has(id));
         const uploads = [...merged.uploads, ...(await recordStates(tx, owner, localOnly))];
-        await queueRecordBytes(tx, owner, uploads, recordFrameLimit);
+        const assets = await currentAssets(
+          tx,
+          uploads.map((upload) => upload.recordId),
+        );
+        await queueRecordBytes(tx, owner, uploads, assets, recordFrameLimit);
         await saveCursor(tx, cursor);
         return { projected, changed: merged.changes.length > 0, rejected: merged.rejected };
       });
@@ -139,25 +161,7 @@ export const createRecordStreamStore = (
       });
     },
     hasRecords: async () => (await localRecordIds(db, owner, 1)).length > 0,
-    async assets(recordIds: string[]) {
-      const assets: Asset[] = [];
-      for (let offset = 0; offset < recordIds.length; offset += 1_000) {
-        const rows = await db
-          .select({ asset: storage_current_records.asset })
-          .from(storage_current_records)
-          .where(
-            and(
-              eq(storage_current_records.workbench_id, owner.workbenchId),
-              eq(storage_current_records.extension_id, owner.extensionId),
-              inArray(storage_current_records.record_id, recordIds.slice(offset, offset + 1_000)),
-              eq(storage_current_records.deleted, false),
-              isNotNull(storage_current_records.asset),
-            ),
-          );
-        for (const row of rows) if (row.asset) assets.push(row.asset);
-      }
-      return assets;
-    },
+    assets: async (recordIds: string[]) => [...(await currentAssets(db, recordIds)).values()],
     async pending() {
       const rows = await db
         .select({ sequence: storage_record_outbox.sequence })

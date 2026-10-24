@@ -1,5 +1,5 @@
 {
-  "id": "8e0ce692-cf48-498d-95be-6602901e614d",
+  "id": "231d9172-f820-4bf5-86b8-8ec1cd5d3403",
   "prevId": "53511e01-40c5-4d5a-b902-9479981ae121",
   "version": "7",
   "dialect": "postgresql",
@@ -4033,6 +4033,13 @@
           "type": "bytea",
           "primaryKey": false,
           "notNull": true
+        },
+        "assets": {
+          "name": "assets",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         }
       },
       "indexes": {
@@ -4103,12 +4110,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "generation": {
-          "name": "generation",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "joined": {
           "name": "joined",
           "type": "boolean",
@@ -4138,6 +4139,13 @@
         },
         "pending_bytes": {
           "name": "pending_bytes",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "state_bytes": {
+          "name": "state_bytes",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,

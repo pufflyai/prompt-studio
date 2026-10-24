@@ -1,6 +1,6 @@
 import { and, eq, like } from "drizzle-orm";
 import { adoptResourceDocument, mergeResourceDocument, resourceDocumentState, type StorageOwner } from "pstdio-sync";
-import type { RecordBytes } from "pstdio-sync/relay";
+import type { RecordBytes, RecordFrame } from "pstdio-sync/relay";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_documents } from "../../db/schemas.pg";
 import type { RecordChange } from "./record-changes";
@@ -75,6 +75,35 @@ export const mergeRecords = async (
     }
   }
   return { changes, missing, rejected };
+};
+
+/**
+ * Checks downloaded frames before they are applied. A frame with any record that cannot be merged is
+ * left out whole, so a save is applied completely or not at all (R4).
+ */
+export const acceptFrames = async (tx: Transaction, owner: StorageOwner, frames: (RecordFrame | null)[]) => {
+  const ids = [...new Set(frames.flatMap((frame) => frame?.records.map((record) => record.recordId) ?? []))];
+  const saved = new Map<string, Uint8Array[]>();
+  for (const batch of batches(ids)) {
+    const { sources } = await loadResourceDocuments(tx, owner, batch.map(resourceDocumentId));
+    for (const recordId of batch) saved.set(recordId, sources.get(resourceDocumentId(recordId))?.states ?? []);
+  }
+  const accepted = new Map<string, Uint8Array[]>();
+  const rejected: number[] = [];
+  for (const [index, frame] of frames.entries()) {
+    if (!frame) continue;
+    try {
+      for (const { recordId, bytes } of frame.records)
+        await mergeResourceDocument(recordId, [...saved.get(recordId)!, ...(accepted.get(recordId) ?? [])], [bytes], {
+          checkpoint: false,
+        });
+    } catch {
+      rejected.push(index);
+      continue;
+    }
+    for (const { recordId, bytes } of frame.records) accepted.set(recordId, [...(accepted.get(recordId) ?? []), bytes]);
+  }
+  return { accepted, rejected };
 };
 
 /**

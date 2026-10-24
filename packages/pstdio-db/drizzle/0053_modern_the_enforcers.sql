@@ -2,18 +2,19 @@ CREATE TABLE "storage_record_outbox" (
 	"sequence" bigserial PRIMARY KEY NOT NULL,
 	"workbench_id" text NOT NULL,
 	"extension_id" text NOT NULL,
-	"frame" "bytea" NOT NULL
+	"frame" "bytea" NOT NULL,
+	"assets" jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "storage_record_sync" (
 	"workbench_id" text NOT NULL,
 	"extension_id" text NOT NULL,
-	"generation" integer NOT NULL,
 	"joined" boolean DEFAULT false NOT NULL,
 	"after" bigint DEFAULT 0 NOT NULL,
 	"state_id" text,
 	"through" bigint DEFAULT 0 NOT NULL,
 	"pending_bytes" bigint DEFAULT 0 NOT NULL,
+	"state_bytes" bigint DEFAULT 0 NOT NULL,
 	CONSTRAINT "storage_record_sync_workbench_id_extension_id_pk" PRIMARY KEY("workbench_id","extension_id")
 );
 --> statement-breakpoint

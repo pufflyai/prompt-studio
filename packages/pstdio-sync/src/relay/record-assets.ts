@@ -53,11 +53,18 @@ export const createRecordAssets = (input: {
     return reference;
   };
   return {
-    /** Uploads each asset's ciphertext and returns where other devices find it. */
-    async upload(assets: Asset[]) {
+    /**
+     * Uploads each asset's ciphertext and returns where other devices find it. With `reuse`, a file
+     * already known to be on the relay is not read or uploaded again.
+     */
+    async upload(assets: Asset[], reuse = false) {
       const references: AssetReference[] = [];
       for (const asset of new Map(assets.map((asset) => [asset.sha256, asset])).values()) {
         const known = await input.references.get(asset.sha256);
+        if (known && reuse) {
+          references.push(known);
+          continue;
+        }
         const reference = known && (await complete(known.encrypted)) ? known : await encrypt(asset);
         await require().blobs.put(reference.blobId, await read(reference.encrypted));
         references.push(reference);

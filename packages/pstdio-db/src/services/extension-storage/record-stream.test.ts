@@ -1,9 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
-import { createSyncSpace } from "pstdio-sync";
-import { createRecordStreamSync } from "pstdio-sync/relay";
+import { createSyncSpace, editResourceDocument, sealUpdate } from "pstdio-sync";
+import { createRecordStreamSync, encodeRecordFrame } from "pstdio-sync/relay";
 import type { Asset, ReadResult, StateEnvelope, StateInfo, StoredUpdate, UpdateEnvelope } from "pstdio-sync-contracts";
 import { createDb } from "../../db/connection.pglite";
-import { projects } from "../../db/schemas.pg";
+import { projects, storage_record_sync } from "../../db/schemas.pg";
 import { dataMigrationContext } from "./data-migration-context";
 import { createDocumentStorageDBService } from "./document-storage";
 
@@ -65,6 +65,12 @@ const createRelay = () => {
     relay,
     requests,
     updates: () => updates,
+    /** The relay loses every stored copy of the stream. */
+    lose: () => {
+      latest = null;
+      sequence = 0;
+      updates = [];
+    },
     // The relay removes updates a latest state covers once their grace period ends.
     trim: () => {
       updates = updates.filter((update) => update.sequence > (latest?.through ?? 0));
@@ -117,7 +123,7 @@ const device = async (relay: ReturnType<typeof createRelay>["relay"], limits?: {
   });
   const records = service.open({ owner, assets: assets.store }).records;
   const value = async (recordId: string) => (await records.read(recordId)).value;
-  return { records, sync, assets, failures, value };
+  return { db, records, sync, assets, failures, value };
 };
 
 test("records saved offline on two devices reach both, and a multi-record save arrives whole", async () => {
@@ -183,6 +189,7 @@ test("two devices that run the same data migration offline end with the same rec
   const { relay } = createRelay();
   const first = await device(relay);
   const second = await device(relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
   for (const peer of [first, second]) await peer.sync.synchronize();
   const migrate = (peer: typeof first) =>
     dataMigrationContext.run(
@@ -245,6 +252,7 @@ test("a save larger than one relay update still arrives as one unit", async () =
   const fixture = createRelay();
   const first = await device(fixture.relay);
   const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
   for (const peer of [first, second]) await peer.sync.synchronize();
   const large = (seed: string) => `${seed}\n${"y".repeat(600_000)}`;
   await first.records.commit({
@@ -260,4 +268,92 @@ test("a save larger than one relay update still arrives as one unit", async () =
   await second.sync.synchronize();
   expect(await second.value("left")).toBe(large("left"));
   expect(await second.value("right")).toBe(large("right"));
+});
+
+test("a network error while joining is retried instead of skipping the founding records", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: { title: "Draft" } }] });
+  await first.sync.synchronize();
+  let failing = true;
+  const flaky = {
+    ...fixture.relay,
+    state: async () => {
+      if (failing) {
+        failing = false;
+        throw new Error("Network unavailable");
+      }
+      return fixture.relay.state();
+    },
+  };
+  const second = await device(flaky);
+  await expect(second.sync.synchronize()).rejects.toThrow("Network unavailable");
+  await second.sync.synchronize();
+  expect(await second.value("note")).toEqual({ title: "Draft" });
+  expect(second.failures).toEqual([]);
+});
+
+test("a device catches up without looping when another device founds a stream the relay lost", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  for (let index = 0; index < 3; index++) {
+    await first.records.commit({
+      operationId: `save-${index}`,
+      edits: [{ recordId: `note-${index}`, replace: index }],
+    });
+    await first.sync.synchronize();
+  }
+  await second.sync.synchronize();
+  fixture.lose();
+  await first.records.commit({ operationId: "after-loss", edits: [{ recordId: "late", replace: "written later" }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect(await second.value("late")).toBe("written later");
+  expect(await second.value("note-2")).toBe(2);
+});
+
+test("a frame with a record that cannot be merged is skipped whole", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  await first.sync.synchronize();
+  const valid = await editResourceDocument([], { recordId: "a", replace: "half of a save" }, true);
+  const frame = encodeRecordFrame({
+    records: [
+      { recordId: "a", bytes: valid.update! },
+      { recordId: "b", bytes: new Uint8Array([255, 1, 2, 3]) },
+    ],
+    assets: [],
+  });
+  const update = await sealUpdate(space, documentId, frame, []);
+  await fixture.relay.update(update);
+  const second = await device(fixture.relay);
+  await second.sync.synchronize();
+  expect((await second.records.read("a")).exists).toBe(false);
+  expect(second.failures).toContainEqual(expect.objectContaining({ id: update.updateId }));
+  expect((await second.sync.status()).needsAttention).toBe(true);
+});
+
+test("a device that joins again with history it already shares merges instead of overwriting", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: { title: "W", body: "" } }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  await first.records.commit({
+    operationId: "body",
+    edits: [{ recordId: "note", replace: { title: "W", body: "from first" } }],
+  });
+  await first.sync.synchronize();
+  await second.records.commit({
+    operationId: "title",
+    edits: [{ recordId: "note", replace: { title: "Y", body: "" } }],
+  });
+  // The second device lost its place in the stream, for example after its owner data was reset.
+  await second.db.delete(storage_record_sync);
+  await second.sync.synchronize();
+  await first.sync.synchronize();
+  for (const peer of [first, second]) expect(await peer.value("note")).toEqual({ title: "Y", body: "from first" });
 });

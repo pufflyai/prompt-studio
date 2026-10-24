@@ -16,6 +16,8 @@ export interface RecordStreamCursor {
   through: number;
   /** Update bytes after that state, for the latest-state upload trigger (R18). */
   pendingBytes: number;
+  /** That latest state's encrypted size, from its summary. */
+  stateBytes: number;
 }
 
 /** One record's Yjs bytes, as stored in an outbox entry or a snapshot. */
@@ -26,20 +28,20 @@ export interface RecordBytes {
 
 /** A device's durable record storage, as the record stream needs it. Every method is atomic. */
 export interface RecordStreamStore {
-  /** Starts keeping local saves for upload. A changed key generation starts the stream over. */
-  open(generation: number): Promise<RecordStreamCursor>;
+  /** Starts keeping local saves for upload and returns the saved cursor. */
+  open(): Promise<RecordStreamCursor>;
   /**
    * Applies downloaded frames and saves the cursor in one transaction. Null frames were unreadable.
-   * Returns the records whose bytes could not be merged; they are skipped.
+   * A frame with a record that cannot be merged is skipped whole (R4); returns those frames' indexes.
    */
-  apply(frames: (RecordFrame | null)[], cursor: RecordStreamCursor): Promise<string[]>;
+  apply(frames: (RecordFrame | null)[], cursor: RecordStreamCursor): Promise<number[]>;
   /**
    * Merges records from the relay. `adopt` replaces each record's own history with the synced one and
    * reapplies this device's changes; `repair` merges a latest state and queues what it lacks (R19).
    */
   merge(remote: Map<string, Uint8Array[]>, mode: "adopt" | "repair", cursor: RecordStreamCursor): Promise<string[]>;
   /** Saved local changes not on the relay yet, oldest first, within `limit` bytes but at least one entry. */
-  outbox(limit: number): Promise<{ sequence: number; records: RecordBytes[] }[]>;
+  outbox(limit: number): Promise<{ sequence: number; records: RecordBytes[]; assets: Asset[] }[]>;
   /** Drops outbox entries up to `sequence` once the relay holds them. */
   sent(sequence: number): Promise<void>;
   /** Every record's full state at one moment, and the newest outbox entry those states include. */
