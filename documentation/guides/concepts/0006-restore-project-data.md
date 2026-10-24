@@ -1,8 +1,9 @@
 # Restore project data
 
-Use a recovery point on your device to recover cloud project data after an accidental deletion or unwanted edit.
-Restoring is a support and agent task: the app has no restore screen, so use the CLI.
-The restored data is saved locally and syncs to your other devices through normal sync.
+Restore cloud project data from a recovery point on this device with the CLI. The app has no restore screen.
+
+A restore fixes an accidental deletion or unwanted edit. The restored data is saved locally and syncs to your
+other devices through normal sync.
 
 ## Recovery points
 

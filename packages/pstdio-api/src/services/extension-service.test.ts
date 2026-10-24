@@ -70,6 +70,7 @@ beforeEach(async () => {
     extensionInstancesService,
     installedExtensionSourcesService,
     extensionUserDataService,
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
     projectService,
   });
 });
@@ -433,6 +434,7 @@ describe("extensionService", () => {
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
       projectService,
       eventBus,
     });
@@ -475,6 +477,7 @@ describe("extensionService reload", () => {
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
       projectService,
       eventBus,
     });
@@ -525,6 +528,7 @@ describe("extensionService reload", () => {
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
       projectService,
     });
 
@@ -572,6 +576,7 @@ describe("extensionService reload", () => {
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
       projectService,
       eventBus,
     });

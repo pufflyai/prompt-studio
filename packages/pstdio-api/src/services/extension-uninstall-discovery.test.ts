@@ -45,6 +45,7 @@ test.each(["before registration", "during registration"])("uninstall wins over d
       installedExtensionSourcesService: sources,
       extensionInstancesService: instances,
       extensionUserDataService: createExtensionUserDataDBService(database.db),
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
     });
     const project = await projectService.create({ name: "Discovery race" });
     const snapshot = {

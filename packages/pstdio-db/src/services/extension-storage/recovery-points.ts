@@ -40,7 +40,8 @@ export const createRecoveryPoints = (
       return disk.bavail * disk.bsize;
     });
   const owners = createOwnerRestore(db, documents);
-  // Capture and restore of one project run one at a time, so a point never holds a half-done restore.
+  // Capture, restore and data deletion of one project run one at a time, so a point never holds a
+  // half-done restore and a restore never writes back data that was deleted while it ran.
   const running = new Map<string, Promise<unknown>>();
   const exclusive = <T>(projectId: string, run: () => Promise<T>) => {
     const next = (running.get(projectId) ?? Promise.resolve()).catch(() => {}).then(run);
@@ -181,6 +182,8 @@ export const createRecoveryPoints = (
 
   return {
     capture: (projectId: string, now = new Date()) => exclusive(projectId, () => capture(projectId, now)),
+    /** Runs work that must not interleave with a capture or restore of the project, such as deleting an extension's data. */
+    exclusive,
     /** Projects that already have recovery points keep rotating them, even offline. */
     async projects() {
       const rows = await db

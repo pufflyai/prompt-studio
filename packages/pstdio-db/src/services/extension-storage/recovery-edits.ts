@@ -26,7 +26,7 @@ const changedRange = <T>(current: T[], target: T[]) => {
   return { start, removed: current.length - start - end, inserted: target.slice(start, target.length - end) };
 };
 
-const sharedEdits = (current: StorageRecord["shared"], target: StorageRecord["shared"]): SharedEdit[] => {
+const sharedEdits = (current: StorageRecord["shared"], target: StorageRecord["shared"]) => {
   const kind = target?.kind ?? current?.kind;
   // A record keeps one shared primitive for its lifetime, so a different kind cannot be restored.
   if (!kind || (current && target && current.kind !== target.kind)) return [];

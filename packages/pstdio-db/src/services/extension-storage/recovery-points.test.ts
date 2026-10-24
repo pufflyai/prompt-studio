@@ -282,3 +282,36 @@ test("a restore that changes nothing keeps every recovery point", async () => {
 
   expect(await svc.recovery.list(projectId)).toEqual(before);
 });
+
+// Starts deleting the extension's data right after the restore's first batch commits.
+const deleteWhileRestoring = async () => {
+  let removing: Promise<unknown> | undefined;
+  let restoring = false;
+  let remove = () => Promise.resolve<unknown>(undefined);
+  const observer: StorageObserver = {
+    read: () => {},
+    group: (_owner, group) => group,
+    committed: () => {
+      if (!restoring || removing) return;
+      removing = remove();
+    },
+  };
+  const { db, svc, projectId, instances, records } = await setup({ observer });
+  const userData = createExtensionUserDataDBService(db);
+  const deleteData = () => userData.deleteForInstance(instances["ext.tickets"]!);
+  remove = () => svc.recovery.exclusive(projectId, deleteData);
+  const tickets = await records("ext.tickets");
+  const edits = Array.from({ length: 250 }, (_, index) => ({ recordId: `T-${index}`, replace: index }));
+  await tickets.commit({ operationId: "create", edits });
+  await svc.recovery.capture(projectId, start);
+  const [point] = await svc.recovery.list(projectId);
+  await tickets.commit({ operationId: "delete", edits: edits.map(({ recordId }) => ({ recordId, deleted: true })) });
+  restoring = true;
+  await svc.recovery.restore(projectId, { hours: point!.hours, capturedAt: point!.capturedAt });
+  await removing;
+  return (await tickets.list()).filter((record) => !record.deleted).length;
+};
+
+test("deleting an extension's data during a restore keeps it deleted", async () => {
+  expect(await deleteWhileRestoring()).toBe(0);
+});
