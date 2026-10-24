@@ -41,6 +41,10 @@ export const bunTestSelection = (
   };
 };
 
+// The stable lane keeps excluding registered cases while a caller selects a subset by name.
+export const narrowStablePattern = (stable: string | undefined, filter: string) =>
+  stable ? `(?=.*(?:${filter}))${stable}` : filter;
+
 export const verifyQuarantineReport = (xml: string, expected: number) => {
   const summary = xml.match(/<testsuites\b[^>]*>/)?.[0] ?? "";
   const tests = Number(summary.match(/\btests="(\d+)"/)?.[1]);
