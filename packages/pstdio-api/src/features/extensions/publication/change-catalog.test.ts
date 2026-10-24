@@ -150,3 +150,76 @@ test("a change that loses the shared save returns this device to the shared set"
   expect(current.installedSource.loaded_revision).toBe(second);
   expect(current.instance.enabled).toBe(false);
 });
+
+// Another device's choice lands after this device switched (`switched`) and, optionally, while it
+// returns to the shared set (`returning`), before that second activation runs.
+const racingDeps = (switched: () => Promise<unknown>, returning?: () => Promise<unknown>) => {
+  const { extensionService, extensionRuntimeCatalog } = app.deps;
+  let activations = 0;
+  let validations = 0;
+  return {
+    ...app.deps,
+    extensionService: {
+      ...extensionService,
+      activatePublishedExtensions: async (
+        plans: Parameters<typeof extensionService.activatePublishedExtensions>[0],
+      ) => {
+        const activated = await extensionService.activatePublishedExtensions(plans);
+        if (++activations === 1) await switched();
+        return activated;
+      },
+    },
+    extensionRuntimeCatalog: {
+      ...extensionRuntimeCatalog,
+      validateResourcePrefixSet: async (
+        sources: Parameters<typeof extensionRuntimeCatalog.validateResourcePrefixSet>[0],
+      ) => {
+        await extensionRuntimeCatalog.validateResourcePrefixSet(sources);
+        if (++validations === 2) await returning?.();
+      },
+    },
+  };
+};
+const share = async (projectId: string, value: { revision: string; enabled: boolean }) =>
+  (await catalogOf(projectId)).records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: extensionId, replace: value }],
+  });
+
+test("a change that loses the shared save still reports the conflict when returning to the shared set fails", async () => {
+  const { projectId } = await publishedProject("lost-recovery");
+  // The competing choice names a package this device does not have, so returning to it fails.
+  const deps = racingDeps(() => share(projectId, { revision: "f".repeat(64), enabled: true }));
+
+  await expect(
+    changePublishedCatalog(deps, projectId, {
+      kind: "enabled",
+      extensionId,
+      enabled: false,
+      expectedRevision: (await selection(projectId)).revision,
+    }),
+  ).rejects.toThrow(PublicationChangedError);
+});
+
+test("returning to the shared set does not undo a newer shared choice", async () => {
+  const { projectId, source, first } = await publishedProject("newer");
+  await writeFile(join(source, "new.txt"), "second revision");
+  const second = await select(projectId, source);
+  await catchUp(projectId);
+  const deps = racingDeps(
+    () => share(projectId, { revision: second, enabled: false }),
+    () => share(projectId, { revision: second, enabled: true }),
+  );
+
+  await expect(
+    changePublishedCatalog(deps, projectId, {
+      kind: "rollback",
+      extensionId,
+      revision: first,
+      expectedRevision: (await selection(projectId)).revision,
+    }),
+  ).rejects.toThrow(PublicationChangedError);
+  const current = await installed(projectId);
+  expect(current.installedSource.loaded_revision).toBe(second);
+  expect(current.instance.enabled).toBe(true);
+});

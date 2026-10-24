@@ -141,7 +141,13 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
       result = await deps.extensionService.uninstallProjectExtension(input);
     } catch (error) {
       // This device still runs the extension, so other devices keep it too.
-      await restoreSharedSelection?.();
+      // The caller needs the uninstall's own error, even when restoring the shared selection fails.
+      await restoreSharedSelection?.().catch((restore) =>
+        apiLogger.error(
+          { event: "extension.publication.restore_failed", projectId: input.projectId, extensionId, err: restore },
+          "The shared extension selection could not be restored after a failed uninstall",
+        ),
+      );
       throw error;
     }
     if (!result) return null;

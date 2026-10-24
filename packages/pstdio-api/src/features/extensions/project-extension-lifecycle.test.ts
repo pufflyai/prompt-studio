@@ -333,6 +333,20 @@ describe("published extension lifecycle", () => {
     expect(await selection(project.id, "test.busy")).toMatchObject({ deleted: false, value: published.value });
   });
 
+  test("a failed uninstall reports its own error when restoring the shared selection fails", async () => {
+    const project = await app.deps.projectService.create({ name: "Failed uninstall and restore" });
+    const instanceId = await install(project.id, "gone", "gone");
+    await publish(project.id, instanceId, "test.gone");
+    // The project disappears while the uninstall runs, so the shared selection cannot be written back.
+    const lifecycle = failingUninstall(async () => {
+      await app.deps.projectService.delete(project.id);
+    });
+
+    await expect(lifecycle.uninstall({ projectId: project.id, instanceId, deleteUserData: true })).rejects.toThrow(
+      "source folder is busy",
+    );
+  });
+
   test("a failed uninstall keeps a newer shared choice", async () => {
     const project = await app.deps.projectService.create({ name: "Failed uninstall newer choice" });
     const instanceId = await install(project.id, "raced", "raced");
