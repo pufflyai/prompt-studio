@@ -1,8 +1,8 @@
 name: Test and Build
 
 # Pull requests select fast package, browser and native checks from their affected inputs.
-# Merge groups run the same selection over every queued PR and also build every client.
-# Main, manual runs, and ci:full PRs and merge groups retain full validation.
+# Merge groups, main, manual runs and ci:full pull requests run the full stage, so main
+# receives only commits that passed every check main runs.
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
