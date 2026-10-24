@@ -92,8 +92,8 @@ export const BridgedWebviewSurface = (props: {
   return (
     <Box
       position="relative"
-      width={props.sizing ? "max-content" : "full"}
-      height="100%"
+      width={props.sizing === "content-width" ? "max-content" : "full"}
+      height={props.sizing === "content-height" ? "auto" : "full"}
       minH="0"
       bg={webviewSurfaceBackground}
       display="flex"

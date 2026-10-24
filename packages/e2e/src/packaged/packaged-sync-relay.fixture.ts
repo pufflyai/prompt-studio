@@ -1,10 +1,63 @@
 import { expect } from "bun:test";
 
+const validateLeafBegin = async (request: Request) => {
+  const input = (await request.json()) as { sha256: string; byteLength: number };
+  expect(Object.keys(input).sort()).toEqual(["byteLength", "sha256"]);
+  expect(input.sha256).toMatch(/^[a-f0-9]{64}$/);
+  expect(input.byteLength).toBeGreaterThan(0);
+};
+
+const privateSpaceOwner = (parts: string[]) => {
+  if (parts[4] !== "spaces") return null;
+  const owner = decodeURIComponent(parts[5]!.slice(1));
+  parts.splice(4, 2);
+  return owner;
+};
+
+// Blobs the compiled host uploads: latest-state chunks, large saves and files.
+const createBlobStore = () => {
+  const blobs = new Map<string, { parts: Map<number, Uint8Array>; complete: boolean }>();
+  const bytes = (blob: { parts: Map<number, Uint8Array> }) =>
+    Buffer.concat([...blob.parts].sort(([a], [b]) => a - b).map(([, part]) => part));
+  const json = (body: unknown) => Response.json(body);
+  const request = async (request: Request, path: string, parts: string[]) => {
+    const id = parts[5]!;
+    let blob = blobs.get(id);
+    if (path.endsWith("/begin")) {
+      await validateLeafBegin(request);
+      blob ??= { parts: new Map(), complete: false };
+      blobs.set(id, blob);
+      return json({ partSize: 1_048_576, completed: blob.complete, parts: [] });
+    }
+    if (path.endsWith("/finish")) {
+      blob!.complete = true;
+      return json({ ok: true });
+    }
+    if (parts[6] === "parts") {
+      blob!.parts.set(Number(parts[7]), new Uint8Array(await request.arrayBuffer()));
+      return json({ ok: true });
+    }
+    if (path.endsWith("/read")) {
+      if (!blob?.complete) return new Response(null, { status: 404 });
+      return new Response(bytes(blob));
+    }
+    return new Response(null, { status: 404 });
+  };
+  return {
+    request,
+    complete: (id: string) => !!blobs.get(id)?.complete,
+    contents: () => [...blobs.values()].map(bytes),
+  };
+};
+
 // A wire-level peer for the compiled host. Real PostgreSQL/object-store behavior is checked in
 // services/relay/src/transport/document-client.integration.ts.
-export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFile }) => {
+export const createPackagedSyncPeer = (
+  tls: { key: Bun.BunFile; cert: Bun.BunFile } | undefined,
+  hostname = "127.0.0.1",
+) => {
   const projects = new Set<string>();
-  const blobs = new Map<string, { parts: Set<number>; complete: boolean }>();
+  const blobs = createBlobStore();
   const documents = new Map<
     string,
     { state: Record<string, unknown> | null; payload?: string; updates: Record<string, unknown>[] }
@@ -16,6 +69,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
   // While set, document reads fail, so a device cannot finish its first download.
   let failReads = false;
   let failedReads = 0;
+  let completedReads = 0;
   const document = (id: string) => {
     let value = documents.get(id);
     if (!value) {
@@ -84,25 +138,6 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
 
     return null;
   };
-  const blobRequest = async (request: Request, path: string, parts: string[]) => {
-    const id = parts[5]!;
-    let blob = blobs.get(id);
-    if (path.endsWith("/begin")) {
-      blob ??= { parts: new Set(), complete: false };
-      blobs.set(id, blob);
-      return json({ partSize: 1_048_576, completed: blob.complete, parts: [] });
-    }
-    if (path.endsWith("/finish")) {
-      blob!.complete = true;
-      return json({ ok: true });
-    }
-    if (parts[6] === "parts") {
-      await request.arrayBuffer();
-      blob!.parts.add(Number(parts[7]));
-      return json({ ok: true });
-    }
-    return new Response(null, { status: 404 });
-  };
   const documentRequest = async (request: Request, path: string, parts: string[], spaceOwner: string | null) => {
     const id = parts[5]!;
     if (spaceOwner) personalDocumentIds.add(id);
@@ -114,6 +149,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
         return new Response(null, { status: 503 });
       }
       const { after } = await input();
+      completedReads++;
       return json({
         status: "updates",
         state: doc.state,
@@ -124,7 +160,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     }
     if (parts[6] === "states") return new Response(Buffer.from(String(doc.payload), "base64"));
     const body = await input();
-    for (const blobId of body.blobIds as string[]) expect(blobs.get(`~${blobId}`)?.complete).toBe(true);
+    for (const blobId of body.blobIds as string[]) expect(blobs.complete(`~${blobId}`)).toBe(true);
     expect(String(body.payload)).not.toContain("packaged-secret");
     if (path.endsWith("/updates")) {
       const sequence = doc.updates.length + 1;
@@ -154,20 +190,14 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
     return json({ state: doc.state });
   };
   // Private project data lives under /spaces/~<owner>; the rest of the path matches project documents.
-  const privateSpaceOwner = (parts: string[]) => {
-    if (parts[4] !== "spaces") return null;
-    const owner = decodeURIComponent(parts[5]!.slice(1));
-    parts.splice(4, 2);
-    return owner;
-  };
   const serve = (port: number) =>
     Bun.serve({
-      hostname: "127.0.0.1",
+      hostname,
       port,
       tls,
       async fetch(request, server) {
         const path = new URL(request.url).pathname;
-        const managed = await managerRequest(request, path, server.url.origin);
+        const managed = await managerRequest(request, path, new URL(request.url).origin);
         if (managed) return managed;
         if (!path.startsWith("/sync/")) return new Response(null, { status: 404 });
         expect(request.headers.get("pstdio-sync-protocol")).toBe("1");
@@ -179,7 +209,7 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
         const parts = path.split("/");
         const spaceOwner = privateSpaceOwner(parts);
         if (spaceOwner !== null && spaceOwner !== "owner") return new Response(null, { status: 403 });
-        if (parts[4] === "blobs") return blobRequest(request, path, parts);
+        if (parts[4] === "blobs") return blobs.request(request, path, parts);
         return documentRequest(request, path, parts, spaceOwner);
       },
       websocket: {
@@ -197,7 +227,12 @@ export const createPackagedSyncPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFil
       return server.url.origin;
     },
     documents,
+    blobContents: blobs.contents,
     states: () => storedStates,
+    reads: () => completedReads,
+    announceUnchanged() {
+      for (const id of documents.keys()) publishChange(id, personalDocumentIds.has(id) ? "owner" : null);
+    },
     failedReads: () => failedReads,
     personalDocuments: () => [...personalDocumentIds].map((id) => documents.get(id)!),
     failReads(value: boolean) {

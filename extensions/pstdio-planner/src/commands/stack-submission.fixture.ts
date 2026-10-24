@@ -10,15 +10,22 @@ import { seedDefaultStatuses } from "../data/seed";
 import { makeCommandContext } from "./command-context.fixture";
 import { sessionQuery } from "./session-query.fixture";
 
-export async function stackSubmissionFixture() {
+export async function stackSubmissionFixture(options: { trace?: boolean } = {}) {
+  const started = performance.now();
+  const phase = (name: string) => {
+    if (options.trace) console.info(`Planner stack fixture: ${name} +${Math.round(performance.now() - started)}ms`);
+  };
   const path = await mkdtemp(join(tmpdir(), "planner-stack-"));
   const run = async (command: string[], cwd = path) => {
+    const label = command.join(" ");
+    phase(`${label} started`);
     const child = Bun.spawn(command, { cwd, stdout: "pipe", stderr: "pipe" });
     const [stdout, stderr, exitCode] = await Promise.all([
       new Response(child.stdout).text(),
       new Response(child.stderr).text(),
       child.exited,
     ]);
+    phase(`${label} finished (${exitCode})`);
     return { stdout, stderr, exitCode };
   };
   const git = async (...args: string[]) => {
@@ -49,13 +56,12 @@ export async function stackSubmissionFixture() {
     });
   await ticket("Child");
   const attempt: AttemptRecord = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     workspaceId: "child",
     workspaceShorthand: "Child_A1",
     ticketId: "Child",
     ticketShorthand: "Child",
     implementationSessionId: "owner",
-    state: "implementing",
     base: { workspaceId: null, headSha: base },
     revisions: [],
     blocker: null,
@@ -126,7 +132,11 @@ export async function stackSubmissionFixture() {
     commit,
     ticket,
     params,
-    cleanup: () => rm(path, { recursive: true, force: true }),
+    cleanup: async () => {
+      phase("cleanup started");
+      await rm(path, { recursive: true, force: true });
+      phase("cleanup finished");
+    },
   };
 }
 

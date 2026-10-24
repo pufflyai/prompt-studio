@@ -7,6 +7,8 @@ export interface CollectionRowGroup<TRow extends KanbanRendererRow = KanbanRende
   key: string;
   label: string;
   rows: TRow[];
+  /** Complete provider count when rows are only the current page. */
+  count?: number;
 }
 
 export const emptyGroupKey = (field: AttributeDescriptor) => `No ${field.label.toLowerCase()}`;

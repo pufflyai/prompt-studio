@@ -60,7 +60,6 @@ const ViewControlsBoard = (props: ViewControlsBoardProps) => {
           )
         }
         onReorder={(rowId, beforeRowId) => setRows((current) => reorder(current, rowId, beforeRowId))}
-        getBoardColumnConfig={() => ({ canDragIn: true, canDragOut: true })}
       />
     </Box>
   );

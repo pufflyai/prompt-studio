@@ -104,6 +104,8 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
   };
   return {
+    accountService: { watch: () => () => {}, projectSyncStatus: async () => ({ state: "local" }) },
+    environmentService: { get: async () => ({ environmentId: "local" }) },
     extensionAutomationPreferencesService: {
       list: async () => automationPreferences,
       get: async (_projectId: string, instanceId: string, automationId: string) =>
@@ -254,4 +256,23 @@ test("a schedule never runs in the project folder when its explicit workspace is
   await waitFor(() => cron.size() === 1);
   await cron.fireAll();
   expect(state.calls).toEqual([]);
+});
+
+test("a cloud schedule without a device assignment stays idle", async () => {
+  const sourcePath = writeScheduledExtension();
+  const deps = {
+    ...(createDeps(sourcePath) as unknown as Record<string, unknown>),
+    accountService: { watch: () => () => {}, projectSyncStatus: async () => ({ state: "synced", offlineReady: true }) },
+  };
+  const cron = createTestCronDriver();
+  const scheduler = createExtensionScheduler({
+    deps: deps as never,
+    listProjectIds: async () => ["project-1"],
+    watermarkPath: join(createTempRoot(), "watermarks.json"),
+    now: () => new Date("2026-05-18T07:56:15.000Z"),
+    cron: cron.factory,
+  });
+  schedulers.push(scheduler);
+  await scheduler.refresh();
+  expect(cron.size()).toBe(0);
 });

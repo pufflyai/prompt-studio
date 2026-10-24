@@ -1,18 +1,34 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, like, not, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_document_operations, storage_document_updates, storage_documents } from "../../db/schemas.pg";
+import {
+  storage_current_records,
+  storage_document_operations,
+  storage_document_updates,
+  storage_documents,
+  storage_record_projections,
+  storage_record_sync,
+} from "../../db/schemas.pg";
+import { resourceDocumentId } from "./resource-document-persistence";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
 export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) => {
   const ownerWhere = (
-    table: typeof storage_documents | typeof storage_document_updates | typeof storage_document_operations,
+    table:
+      | typeof storage_documents
+      | typeof storage_document_updates
+      | typeof storage_document_operations
+      | typeof storage_current_records
+      | typeof storage_record_projections,
   ) => and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
+  // Record documents are removed outright; their update tails cascade with them.
+  const recordDocuments = like(storage_documents.document_id, `${resourceDocumentId("").slice(0, -2)}%`);
+  await tx.delete(storage_documents).where(and(ownerWhere(storage_documents), recordDocuments));
   const documents = await tx
     .select({ id: storage_documents.document_id, revision: storage_documents.revision })
     .from(storage_documents)
-    .where(ownerWhere(storage_documents))
+    .where(and(ownerWhere(storage_documents), not(recordDocuments)))
     .for("update");
   for (const document of documents) {
     const revision = document.revision + 1;
@@ -28,4 +44,19 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
   }
   await tx.delete(storage_document_updates).where(ownerWhere(storage_document_updates));
   await tx.delete(storage_document_operations).where(ownerWhere(storage_document_operations));
+  await tx.delete(storage_current_records).where(ownerWhere(storage_current_records));
+  // The device joins the record stream again, with its saves still waiting for upload dropped.
+  await tx
+    .delete(storage_record_sync)
+    .where(
+      and(
+        eq(storage_record_sync.workbench_id, owner.workbenchId),
+        eq(storage_record_sync.extension_id, owner.extensionId),
+      ),
+    );
+  // Advancing the owner revision rejects cursors issued before the purge.
+  await tx
+    .update(storage_record_projections)
+    .set({ revision: sql`${storage_record_projections.revision} + 1`, live_count: 0 })
+    .where(ownerWhere(storage_record_projections));
 };

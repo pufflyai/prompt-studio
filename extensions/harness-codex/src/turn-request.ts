@@ -13,6 +13,7 @@ export const codexTurnRequest = (input: StartSpawnInput, threadId: string, defau
     threadId,
     input: [{ type: "text", text: promptWithAttachmentManifest(input.prompt, input.attachments), text_elements: [] }],
     ...(input.model ? { model: input.model } : {}),
+    ...(input.params?.service_tier ? { serviceTier: input.params.service_tier } : {}),
     effort,
     ...(collaborationMode ? { collaborationMode } : {}),
   };

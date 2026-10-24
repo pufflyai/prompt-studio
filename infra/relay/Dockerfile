@@ -6,6 +6,7 @@ COPY services/relay/package.json ./services/relay/package.json
 COPY services/account-manager/package.json ./services/account-manager/package.json
 COPY packages/pstdio-sync/package.json ./packages/pstdio-sync/package.json
 COPY packages/pstdio-sync-contracts/package.json ./packages/pstdio-sync-contracts/package.json
+COPY packages/storage-scale-fixture/package.json ./packages/storage-scale-fixture/package.json
 RUN bun install --frozen-lockfile --production --filter pstdio-relay
 COPY services/relay/src ./services/relay/src
 COPY services/relay/scripts ./services/relay/scripts

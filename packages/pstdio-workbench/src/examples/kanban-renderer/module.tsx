@@ -22,12 +22,12 @@ const defaultSorts: ViewSort[] = [{ attributeId: "updated", direction: "desc" }]
 const resolveBoardColumnConfig = (groupKey: string) => {
   const status = storySchemaStore.getAttributes().find((attribute) => attribute.id === "status");
   if (!status || status.type.kind !== "enum") {
-    return { color: "gray", canDragIn: true, canDragOut: true, canCreate: true };
+    return { color: "gray", canCreate: true };
   }
   const options = Array.isArray(status.type.options) ? status.type.options : status.type.options.getSnapshot();
   const option = options.find((entry) => entry.value === groupKey);
-  if (!option) return { color: "gray", canDragIn: true, canDragOut: true, canCreate: true };
-  return { color: option.color, canDragIn: true, canDragOut: true, canCreate: true };
+  if (!option) return { color: "gray", canCreate: true };
+  return { color: option.color, canCreate: true };
 };
 const reorderRows = (items: StoryRow[], rowId: string, beforeRowId?: string) => {
   const moving = items.find((row) => row.id === rowId);

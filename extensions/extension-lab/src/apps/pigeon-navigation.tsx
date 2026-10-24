@@ -1,4 +1,4 @@
-import { Box, Button, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, IconButton, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
 import { useExampleStore } from "../example-store";
 import { ExampleIcon } from "../icon";
 import type { ExampleHost } from "../view-context";
@@ -17,18 +17,15 @@ export const PigeonNav = () => {
         </Box>
         <Text textStyle="heading/S/semibold">Pigeon</Text>
       </HStack>
-      <Box position="relative" flex="1" maxW="2xl">
-        <Box position="absolute" insetStart="md" top="50%" transform="translateY(-50%)">
-          <ExampleIcon name="Search" color="fg.muted" />
-        </Box>
+      <InputGroup flex="1" maxW="2xl" startElement={<ExampleIcon name="Search" color="fg.muted" />}>
         <Input
           aria-label="Search mail"
           value={state.query}
           onChange={(event) => pigeonStore.setState({ query: event.target.value })}
-          ps="2xl"
+          size="sm"
           placeholder="Search mail"
         />
-      </Box>
+      </InputGroup>
       <HStack ms="auto">
         <IconButton aria-label="Help" disabled size="xs" variant="ghost">
           <ExampleIcon name="CircleQuestionMark" />
@@ -56,12 +53,7 @@ export const Folders = (_props: { host: ExampleHost }) => {
   ];
   return (
     <Stack h="full" p="sm" gap="lg">
-      <Button
-        size="md"
-        alignSelf="flex-start"
-        borderRadius="xl"
-        onClick={() => pigeonStore.setState({ composing: true })}
-      >
+      <Button size="sm" alignSelf="flex-start" onClick={() => pigeonStore.setState({ composing: true })}>
         <ExampleIcon name="Pencil" />
         Compose
       </Button>

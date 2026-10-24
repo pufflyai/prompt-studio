@@ -12,8 +12,6 @@ const column: KanbanRendererBoardColumn = {
   id: "backlog",
   label: "Backlog",
   actions: [],
-  canDragIn: true,
-  canDragOut: true,
   canCreate: false,
   items: [
     {

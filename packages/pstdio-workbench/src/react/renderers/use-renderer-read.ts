@@ -68,6 +68,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     };
     const refresh = (reason?: "retry") => {
       if (owner.pending()) return Promise.resolve();
+      setState((previous) => ({ ...previous, loading: true, error: undefined }));
       const current = callbacks.current;
       const revision = owner.revision();
       const request = Symbol();

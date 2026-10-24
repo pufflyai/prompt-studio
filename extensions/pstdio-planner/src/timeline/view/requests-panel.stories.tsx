@@ -217,10 +217,3 @@ export const CompleteTicket: Story = {
 export const UnreadableRequest: Story = {
   args: { row: { ...row, requestErrors: ["Request broken: Request title is required."] } },
 };
-
-const staleRow: PlanRow = {
-  ...row,
-  tagIds: ["default-human-requested-true"],
-  instructions: "# Ticket body\n\nThis is not a review request.",
-};
-export const StaleDisplayTag: Story = { args: { row: staleRow } };

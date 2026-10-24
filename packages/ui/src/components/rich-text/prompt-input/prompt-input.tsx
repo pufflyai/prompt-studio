@@ -91,7 +91,7 @@ export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptE
             });
           }}
         />
-        <ImperativeAPIPlugin editorRef={ref} previousTextRef={previousTextRef} />
+        <ImperativeAPIPlugin editorRef={ref} />
         <ToggleEditablePlugin isEditable={isEditable} />
         <PreserveSelectionPlugin
           isEditable={isEditable}

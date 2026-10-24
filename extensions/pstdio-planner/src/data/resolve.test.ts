@@ -69,7 +69,7 @@ describe("resolveTicketId", () => {
 });
 
 describe("findTicket", () => {
-  test("reads an ID directly while preserving derived review state", async () => {
+  test("reads a ticket ID directly without scanning other tickets", async () => {
     const storage = createMemoryStorage();
     await ticketsCollection(storage).put("ticket-1", {
       id: "ticket-1",
@@ -97,7 +97,7 @@ describe("findTicket", () => {
 
     const ticket = await findTicket(observed.storage, "ticket-1");
 
-    expect(ticket?.tagIds).toEqual(["default-human-requested-true"]);
+    expect(ticket?.tagIds).toEqual([]);
     expect(observed.reads.filter((key) => key.startsWith("tickets/"))).toEqual(["tickets/ticket-1"]);
   });
 

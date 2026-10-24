@@ -70,7 +70,7 @@ try {
     ],
   });
   assert.equal(saved.status, "saved-locally");
-  const offlineBefore = await offline.exportUpdate();
+  const offlineBefore = await offline.records.list();
 
   assert.equal((await call<{ error: string }>(laptop, "/account/devices")).body.error, "Log in first with pst login");
   const laptopLogin = await login(laptop, process.env.OWNER_TEST_COOKIE_A!);
@@ -146,7 +146,7 @@ try {
   await laptop.close();
   laptop = await createAccountHostFixture(roots[0]);
   const reopened = await laptop.deps.extensionStorageService.open({ owner });
-  assert.deepEqual(await reopened.exportUpdate(), offlineBefore);
+  assert.deepEqual(await reopened.records.list(), offlineBefore);
   console.log(
     "Native devices: two-device login, device list, rename, removal, restart, cloud project on and off, logout and a second user passed",
   );

@@ -94,6 +94,7 @@ export interface InternalWorkbenchExtensionMetadata {
     extensionId: string;
     viewId: string;
     slotId: string;
+    parentPanelId?: string;
     scope: "global" | "project";
     title: MetadataView["title"];
     icon?: string;

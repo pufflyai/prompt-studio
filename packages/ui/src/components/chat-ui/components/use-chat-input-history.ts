@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { PromptEditorRef } from "../../rich-text";
-import { MAX_RECENT_USER_PROMPTS, movePromptHistory } from "./chat-input-history";
+import { movePromptHistory } from "./chat-input-history";
 
 interface ChatInputHistoryOptions {
   recentUserMessages: string[];
@@ -14,7 +14,7 @@ export const useChatInputHistory = (options: ChatInputHistoryOptions) => {
   const { recentUserMessages, text, blocked, resetKey, onChange } = options;
   const editorRef = useRef<PromptEditorRef>(null);
   const historyIndex = useRef<number | null>(null);
-  const prompts = recentUserMessages.slice(0, MAX_RECENT_USER_PROMPTS);
+  const prompts = recentUserMessages;
   const signature = JSON.stringify(prompts);
   const resetSignature = JSON.stringify([signature, resetKey, blocked]);
   const previousResetSignature = useRef(resetSignature);
@@ -38,7 +38,6 @@ export const useChatInputHistory = (options: ChatInputHistoryOptions) => {
     historyIndex.current = movement.index;
     const value = movement.index === null ? "" : prompts[movement.index];
     editorRef.current?.setEditorValue(value);
-    onChange(value);
     return true;
   };
   return { editorRef, reset, change, recallPrevious: () => recall("previous"), recallNext: () => recall("next") };

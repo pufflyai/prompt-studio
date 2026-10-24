@@ -82,6 +82,25 @@ const validExtensionSource = `export default {
   ],
 };`;
 describe("checkExtensions", () => {
+  test("loads extensions that declare public storage indexes", async () => {
+    const home = createTempHome();
+    writeExtension(
+      home,
+      "indexed-notes",
+      `export default {
+        storageIndexes: [{
+          name: "notes",
+          fields: { title: { path: ["title"], type: "string" } },
+          orderBy: [{ field: "title", direction: "asc" }],
+        }],
+      };`,
+    );
+    const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
+    expect(result.runtime.extensions[0].definition.storageIndexes?.[0].name).toBe("notes");
+    expect(result.runtime.diagnostics).toEqual([]);
+    expect(result.errorCount).toBe(0);
+  });
+
   test("returns empty success when extensions root is missing", async () => {
     const home = createTempHome();
     rmSync(join(home, "extensions"), { recursive: true });

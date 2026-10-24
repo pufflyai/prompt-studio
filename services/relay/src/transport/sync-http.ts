@@ -23,7 +23,7 @@ export const syncFailure = (
 
 const methodFor = (route: SyncRoute) => {
   if (route.kind === "part") return "PUT";
-  if (route.kind === "state" || route.kind === "live") return "GET";
+  if (route.kind === "state" || route.kind === "live" || route.kind === "capabilities") return "GET";
   return "POST";
 };
 
@@ -33,6 +33,7 @@ const failures: Record<SyncRoute["kind"], Parameters<ReportFailure>[0]> = {
   blob: "asset_operation_failed",
   part: "asset_operation_failed",
   live: "sync_subscription_failed",
+  capabilities: "sync_document_failed",
 };
 
 /** The blind sync protocol (PRD 0014). Every request names its protocol version and is checked from metadata alone. */
@@ -61,7 +62,12 @@ export const handleSyncRequest = async (
   const identity = await verifyBearer(owners, request, route.projectId);
   if (!identity) return syncFailure(401, "unauthorized", { "www-authenticate": 'Bearer realm="relay"' });
   // Phase 1 has one user per account. Team accounts (phase 3) add a user claim for personal spaces.
-  if (route.kind !== "live" && route.spaceOwner !== null && route.spaceOwner !== identity.accountId)
+  if (
+    route.kind !== "live" &&
+    route.kind !== "capabilities" &&
+    route.spaceOwner !== null &&
+    route.spaceOwner !== identity.accountId
+  )
     return syncFailure(403, "forbidden");
   if (!owners.allow(identity.environmentId)) return syncFailure(429, "rate-limited", { "retry-after": "1" });
   if (route.kind === "live") {

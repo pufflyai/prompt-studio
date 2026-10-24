@@ -9,7 +9,11 @@ interface LevelNavigationHost {
   modes: { getActiveModeId(): string | undefined };
   pages: {
     store: {
-      getState(): { location?: PageLocation; pages: Readonly<Record<string, WorkbenchPageContribution>> };
+      getState(): {
+        projectId?: string;
+        location?: PageLocation;
+        pages: Readonly<Record<string, WorkbenchPageContribution>>;
+      };
     };
   };
   navigationTrees: NavigationTreeRegistry;
@@ -49,8 +53,8 @@ export const createLevelNavigation = (host: LevelNavigationHost) => {
       extensionId: "pstdio",
     };
     return [
-      { owner: modeOwner, resource: host.getPrimaryResource() },
-      ...levels.map(({ owner, location }) => ({ owner, resource: location.resource })),
+      { owner: modeOwner, resource: host.getPrimaryResource(), projectId: state.projectId },
+      ...levels.map(({ owner, location }) => ({ owner, resource: location.resource, projectId: state.projectId })),
     ];
   };
 
@@ -60,8 +64,8 @@ export const createLevelNavigation = (host: LevelNavigationHost) => {
   const levelSections = (slot: NavigationTreeSlot, index: number, sections: TreeViewSection[]) =>
     slot === "content" && index > 0 ? pinnedOnly(sections) : sections;
   const structureOf = (slot: NavigationTreeSlot, levels: ReturnType<typeof queries>) =>
-    levels.map(({ owner, resource }, index) =>
-      levelSections(slot, index, host.navigationTrees.getStructure(owner, slot, { resource })),
+    levels.map(({ owner, resource, projectId }, index) =>
+      levelSections(slot, index, host.navigationTrees.getStructure(owner, slot, { resource, projectId })),
     );
 
   return {
@@ -79,13 +83,15 @@ export const createLevelNavigation = (host: LevelNavigationHost) => {
       // Each level shows its declared structure until its own read replaces it.
       const available = structureOf(slot, levels);
       await settleReadBatch(
-        levels.map(({ owner, resource }, index) => async (signal) => {
+        levels.map(({ owner, resource, projectId }, index) => async (signal) => {
           const publish = (sections: TreeViewSection[]) => {
             signal.throwIfAborted();
             available[index] = levelSections(slot, index, sections);
             onProgress?.(mergeSections(available.flat()));
           };
-          publish(await host.navigationTrees.getSections(owner, slot, { resource, signal, onProgress: publish }));
+          publish(
+            await host.navigationTrees.getSections(owner, slot, { resource, projectId, signal, onProgress: publish }),
+          );
         }),
         signal,
       );

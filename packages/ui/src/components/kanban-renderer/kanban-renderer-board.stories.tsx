@@ -21,8 +21,6 @@ const mockColumns: KanbanRendererBoardColumn[] = [
     id: "todo",
     label: "todo",
     color: "gray",
-    canDragIn: true,
-    canDragOut: true,
     canCreate: true,
     actions: [],
     items: [
@@ -59,8 +57,6 @@ const mockColumns: KanbanRendererBoardColumn[] = [
     id: "in_progress",
     label: "in progress",
     color: "blue",
-    canDragIn: true,
-    canDragOut: true,
     canCreate: false,
     actions: [],
     items: [
@@ -77,8 +73,6 @@ const mockColumns: KanbanRendererBoardColumn[] = [
     id: "done",
     label: "done",
     color: "green",
-    canDragIn: true,
-    canDragOut: false,
     canCreate: false,
     actions: [{ id: "archive_all", label: "Archive all", icon: Archive }],
     items: [

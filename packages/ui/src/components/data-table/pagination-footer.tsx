@@ -1,4 +1,4 @@
-import { Button, Icon as ChakraIcon, Flex, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react";
+import { Button, Icon as ChakraIcon, Flex, IconButton, Menu, Portal, Spinner, Stack, Text } from "@chakra-ui/react";
 import { Check, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 import { NumberInputField, NumberInputRoot } from "@/components/primitives/number-input";
@@ -6,6 +6,8 @@ import { ListRow } from "../list-row/list-row";
 
 interface PaginationFooterProps {
   pageCount: number;
+  navigationIndex?: number;
+  loading?: boolean;
   pageIndex: number;
   pageSize: number;
   pageSizeOptions: number[];
@@ -16,8 +18,9 @@ interface PaginationFooterProps {
 export function PaginationFooter(props: PaginationFooterProps) {
   const { pageCount, pageIndex, pageSize, pageSizeOptions, onPageChange, onPageSizeChange } = props;
   const totalPages = Math.max(pageCount, 1);
-  const canGoBack = pageIndex > 0;
-  const canGoForward = pageIndex < totalPages - 1;
+  const navigationIndex = props.navigationIndex ?? pageIndex;
+  const canGoBack = navigationIndex > 0;
+  const canGoForward = navigationIndex < totalPages - 1;
 
   return (
     <Flex
@@ -29,6 +32,12 @@ export function PaginationFooter(props: PaginationFooterProps) {
       paddingX="xs"
     >
       <Stack alignItems="center" direction="row" justifyContent="flex-end" paddingY="xs">
+        {props.loading ? (
+          <Stack role="status" aria-live="polite" direction="row" alignItems="center" gap="xs">
+            <Spinner size="xs" />
+            <Text textStyle="label/S/regular">Loading page {navigationIndex + 1}</Text>
+          </Stack>
+        ) : null}
         <Flex alignItems="center" gap="xs" marginRight="sm">
           <Text textStyle="label/S/regular">Rows per page</Text>
           <Menu.Root>
@@ -63,7 +72,7 @@ export function PaginationFooter(props: PaginationFooterProps) {
         <IconButton
           size="xs"
           aria-label="Go to previous page"
-          onClick={() => onPageChange(pageIndex - 1)}
+          onClick={() => onPageChange(navigationIndex - 1)}
           disabled={!canGoBack}
         >
           <ChakraIcon as={ChevronLeft} boxSize="14px" />
@@ -71,7 +80,7 @@ export function PaginationFooter(props: PaginationFooterProps) {
         <IconButton
           size="xs"
           aria-label="Go to next page"
-          onClick={() => onPageChange(pageIndex + 1)}
+          onClick={() => onPageChange(navigationIndex + 1)}
           disabled={!canGoForward}
         >
           <ChakraIcon as={ChevronRight} boxSize="14px" />

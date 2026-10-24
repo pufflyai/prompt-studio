@@ -37,6 +37,24 @@ const devicesSchema = z.object({
 export class AccountRequestError extends Error {}
 export const accountUnavailableMessage = "Account request unavailable. Check the login and the account service.";
 
+const createAccountWatch = () => {
+  const listeners = new Set<() => void>();
+  return {
+    watch(listener: () => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    notify() {
+      for (const listener of listeners) listener();
+    },
+    close() {
+      listeners.clear();
+    },
+  };
+};
+
 export const createNativeAccount = (input: {
   file: string;
   environment: RouteDeps["environmentService"];
@@ -49,6 +67,7 @@ export const createNativeAccount = (input: {
       await refresh();
     },
   });
+  const changes = createAccountWatch();
   const logins = new Map<string, ReturnType<typeof startNativeLogin>>();
   let cloudProjects: { credential: string; ids: string[]; features: { relay: boolean } } | undefined;
   const projectsFor = (login: DeviceLogin | null) =>
@@ -136,6 +155,7 @@ export const createNativeAccount = (input: {
       retry.unref?.();
     }
     await publish(login);
+    if (!closed) changes.notify();
   };
   // Refreshes run one at a time. Calls that arrive while one waits to start share it.
   const refresh = () => {
@@ -186,6 +206,7 @@ export const createNativeAccount = (input: {
       void refresh();
     },
     refresh,
+    watch: changes.watch,
     async login(managerOrigin: string) {
       const parsed = managerOriginSchema.safeParse(managerOrigin);
       if (!parsed.success)
@@ -264,6 +285,7 @@ export const createNativeAccount = (input: {
       update = async () => {};
       for (const login of logins.values()) login.close();
       logins.clear();
+      changes.close();
     },
   };
 };

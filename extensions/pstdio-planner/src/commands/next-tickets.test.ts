@@ -35,7 +35,6 @@ async function submitDependency(result: Awaited<ReturnType<typeof trackFixture>>
   const started = await runAttemptCommand.run(result.ctx, { ticket: parent.id });
   const attempt = await putAttempt(result.storage, {
     ...started.attempt,
-    state: "review_ready",
     revisions: [
       {
         revision: 1,
@@ -65,7 +64,7 @@ test.each([
   const old = await result.ticket("Historical work");
   const started = await runAttemptCommand.run(result.ctx, { ticket: old.id });
   const ready = await result.ticket("Available work");
-  const owner = { ...started.session, status: "completed" as const };
+  const owner = { ...started.session, status: "completed" as const } as never;
   result.ctx.sessions.get = async () => owner;
   result.ctx.sessions.query = sessionQuery(
     async () => [],
@@ -117,17 +116,17 @@ test("next tickets query selects a named track and explains its waiting dependen
   expect(result.capacity).toEqual({ running: 0, limit: 6 });
 });
 
-test("next tickets keeps submitted stacks available across track boundaries when review blocking is off", async () => {
+test("next tickets keeps submitted stacks available across track boundaries until merged dependencies are required", async () => {
   const result = await trackFixture();
   const { parent } = await submitDependency(result);
   await putTicket(result.storage, { ...parent, tagIds: ["planner"] });
   const child = await result.ticket("Panel controls", "workbench", [parent.id]);
-  await configureAutoBuildCommand.run(result.ctx, { enabled: false, blockOnReview: false });
+  await configureAutoBuildCommand.run(result.ctx, { enabled: false, requireMergedDependencies: false });
   expect(await nextTicketsCommand.run(result.ctx, { track: "Workbench" })).toMatchObject({
     enabled: false,
     tickets: [expect.objectContaining({ id: child.id, action: "start", baseHeadSha: "panel-rules-head" })],
   });
-  await configureAutoBuildCommand.run(result.ctx, { enabled: false, blockOnReview: true });
+  await configureAutoBuildCommand.run(result.ctx, { enabled: false, requireMergedDependencies: true });
   expect((await nextTicketsCommand.run(result.ctx, { track: "Workbench" })).tickets).toHaveLength(0);
 });
 
@@ -193,7 +192,7 @@ test("a changed dependency head prevents dispatching a stale combined base", asy
   expect((await listAttempts(result.storage)).filter(({ ticketId }) => ticketId === child.id)).toHaveLength(0);
 });
 
-test("next tickets respects saved ignore rules, draft state and live assignments", async () => {
+test("next tickets respects eligibility, draft state and live assignments", async () => {
   const { ctx, storage, ticket } = await trackFixture();
   const ignored = await ticket("Ignored");
   await putTicket(storage, { ...ignored, statusId: "backlog" });
@@ -245,7 +244,9 @@ test("next tickets explains capacity waits without launching work", async () => 
   const next = await nextTicketsCommand.run(ctx, { track: "Workbench" });
   expect(next.tickets).toHaveLength(0);
   expect(next.waiting).toContainEqual(expect.objectContaining({ id: ready.id, reason: "capacity-full" }));
-  expect(await storage.get("auto-build-supervisor")).toBeUndefined();
+  expect(await storage.get<{ sessionId: string }>("auto-build-supervisor")).toEqual({
+    sessionId: "fixture-supervisor",
+  });
 });
 
 test("next tickets can explain waits without resolving a Git base when nothing can launch", async () => {
@@ -265,6 +266,7 @@ test("wake checks, next queries and dispatch share the supervisor scope", async 
   const workbench = await ticket("Requested work");
   const planner = await ticket("Work outside the prompt", "planner");
   await storage.set("auto-build-supervisor", {
+    sessionId: "fixture-supervisor",
     scope: { revision: "test", queries: [{ track: "Workbench" }] },
   });
   expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toEqual([workbench.id]);
@@ -280,10 +282,12 @@ test("supervisor scopes combine tracks and expire when the prompt is reconfigure
   const workbench = await ticket("Workbench work");
   const planner = await ticket("Planner work", "planner");
   await storage.set("auto-build-supervisor", {
+    sessionId: "fixture-supervisor",
     scope: { revision: "test", queries: [{ track: "Workbench" }, { track: "Planner" }] },
   });
   expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toEqual([workbench.id, planner.id]);
   await storage.set("auto-build-supervisor", {
+    sessionId: "fixture-supervisor",
     scope: { revision: "old-prompt", queries: [{ track: "Workbench" }] },
   });
   expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toEqual([workbench.id, planner.id]);
@@ -294,6 +298,7 @@ test("a scope change during dispatch prevents launching work outside the new sco
   const task = await ticket("Requested work");
   await ticket("New scope", "planner");
   await storage.set("auto-build-supervisor", {
+    sessionId: "fixture-supervisor",
     scope: { revision: "test", queries: [{ track: "Workbench" }] },
   });
   const run = ctx.process.run;
@@ -301,6 +306,7 @@ test("a scope change during dispatch prevents launching work outside the new sco
   ctx.process.run = async (input) => {
     if (input.command.includes("--verify") && ++checks === 2)
       await storage.set("auto-build-supervisor", {
+        sessionId: "fixture-supervisor",
         scope: { revision: "test", queries: [{ track: "Planner" }] },
       });
     return run(input);

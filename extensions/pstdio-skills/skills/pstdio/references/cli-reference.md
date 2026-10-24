@@ -125,7 +125,7 @@ Archiving or deleting a ticket also deletes its linked workspaces, with their un
 
 ```sh
 pst statuses list
-pst statuses create --label <label> [--color <color>] [--icon <icon>] [--can-create] [--can-drag-in] [--can-drag-out] [--column-actions <json>]
+pst statuses create --label <label> [--color <color>] [--icon <icon>] [--can-create] [--column-actions <json>]
 pst statuses update --status-id <status-id> [options]
 pst statuses reorder --status-ids <json>
 pst statuses set-default --status <status>

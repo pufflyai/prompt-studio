@@ -36,3 +36,11 @@ export const toExtensionSession = (session: SessionRow, workspaceId: string | nu
       }
     : null,
 });
+
+export const toExtensionSessionDetails = (session: SessionRow, workspaceId: string | null = null) => ({
+  ...toExtensionSession(session, workspaceId),
+  projectId: session.project_id,
+  agentSessionId: session.agent_session_id,
+  sessionFileId: session.session_file_id,
+  params: session.params_json,
+});

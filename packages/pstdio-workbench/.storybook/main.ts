@@ -13,7 +13,7 @@ const sourceDir = resolve(rootDir, "../src");
 const config: StorybookConfig = {
   stories: ["../src/**/*.mdx", "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
   addons: ["@storybook/addon-docs"],
-  framework: getAbsolutePath("@storybook/react-vite"),
+  framework: { name: getAbsolutePath("@storybook/react-vite"), options: { strictMode: true } },
   // Chakra's package.json declares a public Storybook URL. Composing it makes startup depend on the network.
   refs: { "@chakra-ui/react": { disable: true } },
   viteFinal: async ({ plugins = [], ...config }) =>

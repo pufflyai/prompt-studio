@@ -27,6 +27,20 @@ afterEach(async () => {
 });
 
 describe("session queue entries service", () => {
+  test("creates steering evidence held from insertion so it cannot dispatch as a new turn", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "Active", agent: "fake" });
+    const delivery = { id: "delivery", runStartedAt: session.last_request_started! };
+    const entry = await queueService.createSteeringDelivery(
+      { session_id: session.id, prompt: "Correction", request_kind: "follow_up" },
+      delivery,
+    );
+    expect(entry.steering_delivery_json).toEqual(delivery);
+    expect(await queueService.listPending()).toEqual([]);
+    expect(await queueService.listPendingBySession(session.id)).toEqual([]);
+    expect(await queueService.markDispatchStarted(entry.queue_position)).toBeNull();
+    expect(await queueService.listSteeringDeliveries(session.id)).toEqual([entry]);
+  });
+
   test("pending deletion preserves a claimed follow-up until dispatch cleanup", async () => {
     const session = await sessionsService.create({ project_id: projectId, title: "follow-up", agent: "fake" });
     const pending = await queueService.create({ session_id: session.id, prompt: "pending", request_kind: "follow_up" });

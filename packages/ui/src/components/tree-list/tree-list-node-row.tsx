@@ -1,12 +1,20 @@
 import type { StackProps } from "@chakra-ui/react";
 import { Stack } from "@chakra-ui/react";
-import { type FocusEventHandler, type DragEvent as ReactDragEvent, useState } from "react";
+import {
+  type FocusEventHandler,
+  type KeyboardEvent,
+  type MouseEvent,
+  type DragEvent as ReactDragEvent,
+  useContext,
+  useState,
+} from "react";
 import { ListRow } from "../list-row/list-row";
 import { DropIndicator } from "../primitives/drop-indicator";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListNode } from "./tree-list.types";
 import { readDraggedTreeNodeId, writeDraggedTreeNodeId } from "./tree-list-drag";
 import { TreeListInlineInputRow } from "./tree-list-inline-input";
 import { hasExpandableChildren, isActiveNode, isInList, isNavigableNode } from "./tree-list-model";
+import { TreeListMoveContext, TreeListSelectionContext } from "./tree-list-selection-context";
 
 type TreeListRowVariant = "compact" | "tree";
 
@@ -43,6 +51,8 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     onMoveNode,
   } = props;
   const [dropPosition, setDropPosition] = useState<"before" | "after" | "inside" | null>(null);
+  const selection = useContext(TreeListSelectionContext);
+  const move = useContext(TreeListMoveContext);
 
   if (node.inlineInput) {
     return <TreeListInlineInputRow input={node.inlineInput} icon={node.icon} level={level} />;
@@ -74,8 +84,9 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
   };
 
   const positionAt = (event: ReactDragEvent<HTMLElement>) => {
-    if (hasChildren) return "inside";
     const bounds = event.currentTarget.getBoundingClientRect();
+    const fraction = (event.clientY - bounds.top) / bounds.height;
+    if (hasChildren && fraction > 0.3 && fraction < 0.7) return "inside";
     return event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
   };
 
@@ -116,12 +127,26 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     isSelected: isActive,
     isExpanded: expanded,
     showExpandToggle: hasChildren,
+    expandOnClick: !selection,
     tabIndex,
     "data-tree-list-focus-id": node.id,
     "aria-level": level + 1,
     "aria-expanded": hasChildren ? expanded : undefined,
     "data-tree-list-node-id": node.id,
     onFocus,
+    onClick: selection
+      ? (event: MouseEvent<HTMLElement>) => {
+          if (!isDisabled) selection.select(node.id, event);
+        }
+      : undefined,
+    onKeyDown:
+      selection || move
+        ? (event: KeyboardEvent<HTMLElement>) => {
+            if (isDisabled) return;
+            move?.(node.id, event);
+            if (!event.defaultPrevented) selection?.keyDown(node.id, event);
+          }
+        : undefined,
     onActivate: handleActivate,
     onToggleExpand: () => onToggleNode?.(node.id),
   };

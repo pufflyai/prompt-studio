@@ -13,6 +13,7 @@ import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createLinkIconRoutes } from "./features/link-icons/routes";
 import { createNotificationsRoutes } from "./features/notifications/routes";
+import { createPerformanceRoutes } from "./features/performance/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createResourceAnchorRoutes } from "./features/resource-anchors/routes";
 import { createEnvironmentRoutes } from "./features/runtime/environment-routes";
@@ -177,6 +178,7 @@ const registerApiMiddleware = (
 
 const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, terminalOrigins: string[]) => {
   app.route("/", createHealthRoutes(deps));
+  app.route("/", createPerformanceRoutes(deps));
   if (deps.runtime) app.route("/runtime", createRuntimeRoutes(deps.runtime));
   app.route("/v1", createProjectRoutes(deps));
   app.route("/v1", createAssetRoutes(deps));

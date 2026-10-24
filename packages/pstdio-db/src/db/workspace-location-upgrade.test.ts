@@ -2,8 +2,9 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PGlite } from "@electric-sql/pglite";
+import type { PGlite as CurrentPGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
+import { PGlite } from "pglite-previous";
 import { createWorkspacesDBService } from "../services/workspaces/workspaces";
 import { createDb } from "./connection.pglite";
 import { migrateThrough } from "./migrate-through";
@@ -21,7 +22,11 @@ test("upgrades linked folders and recorded aliases without losing workspace or s
   await old.waitReady;
   let image: Blob;
   try {
-    await migrateThrough(drizzle(old, { schema }), join(import.meta.dir, "../../drizzle"), 31);
+    await migrateThrough(
+      drizzle(old as unknown as CurrentPGlite, { schema }),
+      join(import.meta.dir, "../../drizzle"),
+      31,
+    );
     // Seed the old schema atomically instead of flushing every fixture row to disk.
     await old.transaction(async (seed) => {
       for (const id of ["zero", "one", "many", "recorded"])
