@@ -67,7 +67,11 @@ describe("pstdio planner extension contributions", () => {
       view: { id: "ticket-properties" },
       side: "right",
     });
-    expect(extension.placements).toBeUndefined();
+    expect(extension.placements).toContainEqual(expect.objectContaining({ id: "ticket-board" }));
+    expect(extension.pages?.find((page) => page.id === "tickets")).toMatchObject({
+      main: { kind: "view", presentation: "page" },
+      panelView: { kind: "placement", id: "ticket-board" },
+    });
   });
   test("uses a native tree body for ticket files", () => {
     expect(extension.views?.find((view) => view.id === "ticket-files")).toMatchObject({
