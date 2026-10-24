@@ -787,6 +787,11 @@ jobs:
           PSTDIO_DEFAULT_EXTENSIONS: "[]"
           PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0"
         run: bun --cwd packages/pstdio-api ../../scripts/ci/run-bun-tests.ts --conditions=source --timeout 30000 --silent
+      - name: Run quarantined extension cases with their existing limits
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        run: bun run --cwd extensions/harness-codex test --timeout=15000
+
       - name: Require every registered case to have executed
         run: bun scripts/ci/verify-quarantine-reports.ts bun
       - name: Preserve quarantine test reports

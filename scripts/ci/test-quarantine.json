@@ -237,5 +237,15 @@
     "name": "a persistent Windows reader reports publication failure and preserves the active home",
     "reason": "Shares the PowerShell reader fixture; in the same job its reader never confirmed the open handle within 15 seconds, against about 0.6 seconds normally. Preserve the real sharing violation and all publication assertions.",
     "removeWhen": "Replace or bound the PowerShell reader startup so a stalled reader fails fast without leaking into later cases, then pass ten independent Windows runs within the existing 15 second allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "extensions/harness-codex/src/question-confirmation.test.ts",
+    "name": "confirms an answer persisted during a transcript read before the turn ends",
+    "platforms": ["win32"],
+    "owner": "PS-907 / Codex question confirmation",
+    "reason": "On Windows this case took 19.5 seconds against its 15 second allowance in one merge group; it takes about 0.26 seconds on macOS. It writes a 32 MB transcript and appends while the first read is in flight, so the slow phase is the large file write or read on the Windows runner. Keep the in-flight append assertion.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40129468161/job/120978020762"],
+    "removeWhen": "Identify the slow phase of the 32 MB transcript fixture on Windows and fix it, then pass ten independent Windows runs within the existing 15 second allowance."
   }
 ]
