@@ -1,6 +1,7 @@
 // Show the plan as a dependency graph: the milestone timeline runs down the left, execution order runs down,
 // parallel work sits side by side, each milestone is a band, and collapsible tracks split every band into columns.
 import { Box } from "@chakra-ui/react";
+import { Canvas } from "@pstdio/ui";
 import type { RefObject } from "react";
 import { layoutGraph } from "../model/graph-layout";
 import { dropRegion } from "./drop-region";
@@ -9,12 +10,10 @@ import { geometry, newTrackWidth, trackHeaderHeight } from "./graph-geometry";
 import { TrackHeader } from "./graph-tracks";
 import type { PlanViewProps } from "./plan-view";
 import { useTimelinePresentation } from "./timeline-presentation";
-import { useCanvasPan } from "./use-canvas-pan";
-import { useCanvasZoom } from "./use-canvas-zoom";
 import { useCardHeights } from "./use-card-heights";
 import { useRevealCard } from "./use-reveal-card";
 import { useSize } from "./use-size";
-import { ZoomControls } from "./zoom-controls";
+import { useTimelineCamera } from "./use-timeline-camera";
 
 // Place the visible tickets, leaving out collapsed milestones and collapsed tracks.
 function useGraphBox(
@@ -51,8 +50,7 @@ function useGraphBox(
 export function PlanGraph(props: PlanViewProps) {
   const { sections, tracks, selectedId, ...actions } = props;
   const { ref, width, height } = useSize();
-  const { zoom, change } = useCanvasZoom(ref);
-  const { panning, handlers } = useCanvasPan(ref, zoom, change);
+  const { zoom, pan, changeZoom } = useTimelineCamera(ref);
   const presentation = useTimelinePresentation();
   const collapsed = new Set(presentation.value.collapsedTracks);
   const toggle = (id: string) => presentation.toggle("collapsedTracks", id);
@@ -70,52 +68,41 @@ export function PlanGraph(props: PlanViewProps) {
   const canvasHeight = Math.max(box.height, height / zoom - trackHeaderHeight);
 
   return (
-    <Box h="full" minH="0" minW="0" position="relative">
-      <Box
-        ref={ref}
-        data-timeline-viewport
-        h="full"
-        minH="0"
-        minW="0"
-        overflow="hidden"
-        position="relative"
-        isolation="isolate"
-        cursor={panning ? "grabbing" : "grab"}
-        userSelect={panning ? "none" : undefined}
-        touchAction="none"
-        role="region"
-        aria-label="Project Timeline canvas"
-        tabIndex={0}
-        {...handlers}
-      >
-        <Box style={{ zoom }} w={`${canvasWidth}px`}>
-          <TrackHeader
-            tracks={tracks.list}
-            boxes={box.tracks}
-            width={canvasWidth}
-            contentLeft={box.contentLeft}
-            collapsed={collapsed}
-            onToggle={toggle}
-            onRename={actions.onRenameTrack}
-            onNewTrack={actions.onNewTrack}
-          />
-          <GraphContent
-            props={props}
-            region={region}
-            graph={{ box, trackAt, rows }}
-            collapsed={collapsed}
-            viewport={{
-              ref,
-              width: width / zoom,
-              height: height / zoom,
-              canvasWidth,
-              canvasHeight,
-              zoom,
-            }}
-          />
-        </Box>
+    <Canvas
+      ref={ref}
+      data-timeline-viewport
+      aria-label="Project Timeline canvas"
+      variant="pan"
+      zoom={zoom}
+      onPan={pan}
+      onZoom={changeZoom}
+    >
+      <Box css={{ zoom }} w={`${canvasWidth}px`} data-timeline-content>
+        <TrackHeader
+          tracks={tracks.list}
+          boxes={box.tracks}
+          width={canvasWidth}
+          contentLeft={box.contentLeft}
+          collapsed={collapsed}
+          onToggle={toggle}
+          onRename={actions.onRenameTrack}
+          onNewTrack={actions.onNewTrack}
+        />
+        <GraphContent
+          props={props}
+          region={region}
+          graph={{ box, trackAt, rows }}
+          collapsed={collapsed}
+          viewport={{
+            ref,
+            width: width / zoom,
+            height: height / zoom,
+            canvasWidth,
+            canvasHeight,
+            zoom,
+          }}
+        />
       </Box>
-      <ZoomControls zoom={zoom} onChange={change} />
-    </Box>
+    </Canvas>
   );
 }

@@ -4,7 +4,7 @@ import type { HostStorage } from "@pstdio/ui";
 import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, waitFor } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { emptyWorkflowStatuses } from "../../data/workflow-statuses";
 import type { PlanTag } from "../contracts";
 import { buildPlan } from "../model/build-plan";
@@ -153,7 +153,7 @@ export const UnassignedOnly: Story = {
 export const TrackpadNavigation: Story = {
   play: async ({ canvasElement }) => {
     const viewport = canvasElement.querySelector<HTMLElement>("[data-timeline-viewport]")!;
-    const scale = () => Number.parseFloat(getComputedStyle(viewport.firstElementChild!).zoom);
+    const scale = () => Number.parseFloat(getComputedStyle(viewport.querySelector("[data-timeline-content]")!).zoom);
     const { left, top } = viewport.getBoundingClientRect();
     const point = { bubbles: true, cancelable: true, clientX: left + 200, clientY: top + 200 };
     viewport.dispatchEvent(new WheelEvent("wheel", { ...point, deltaX: 120, deltaY: 80 }));
@@ -200,7 +200,7 @@ export const MovingPinchAnchor: Story = {
       );
     }
     await waitFor(() => {
-      expect(Number.parseFloat(getComputedStyle(viewport.firstElementChild!).zoom)).toBe(1);
+      expect(Number.parseFloat(getComputedStyle(viewport.querySelector("[data-timeline-content]")!).zoom)).toBe(1);
       expect(viewport.scrollLeft).toBeGreaterThan(200);
     });
   },
@@ -223,6 +223,19 @@ export const KeyboardAfterPan: Story = {
     button.focus();
     await userEvent.keyboard("{Enter}");
     await waitFor(() => expect(canvasElement.querySelector('[aria-label="Expand API"]')).not.toBeNull());
+  },
+};
+
+export const InlineNamesRemainInteractive: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText("Edit API track name"));
+    const track = canvas.getByRole("textbox", { name: "API track name" });
+    await expect(track).toHaveFocus();
+    await userEvent.type(track, " draft{Escape}");
+    await expect(canvas.getByLabelText("Edit API track name")).toHaveTextContent("API");
+    await userEvent.click(canvas.getByLabelText("Edit Preview milestone name"));
+    await expect(canvas.getByRole("textbox", { name: "Preview milestone name" })).toHaveFocus();
   },
 };
 
