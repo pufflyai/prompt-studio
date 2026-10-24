@@ -1,6 +1,17 @@
 import { expect, test } from "bun:test";
-import { recordSmokeHostDiagnostic } from "./smoke-observations";
+import { recordSmokeHostDiagnostic, summarizeSmokeBrowserLog } from "./smoke-observations";
 import type { SmokeResult } from "./smoke-result";
+
+test("registration diagnostics keep warnings and failed requests when successful responses follow", () => {
+  const messages = [
+    "Registration warning",
+    "Request failed: http://localhost/v1/extensions: net::ERR_CONNECTION_RESET",
+    "HTTP 500: http://localhost/v1/extensions",
+    ...Array.from({ length: 25 }, (_, index) => `HTTP 200: http://localhost/assets/chunk-${index}.js`),
+  ];
+  const lines = messages.map((message) => JSON.stringify({ phase: "host-registration", message }));
+  expect(summarizeSmokeBrowserLog(`${lines.join("\n")}\n`)).toEqual(lines.slice(0, 3));
+});
 
 test("a registration-ready event cannot erase a registration failure", () => {
   const result: SmokeResult = {
