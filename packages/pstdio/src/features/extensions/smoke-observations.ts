@@ -4,6 +4,17 @@ import { EXTENSION_HOST_LOG_PREFIX, type ExtensionHostDiagnostic } from "pstdio-
 import type { SmokeResult } from "./smoke-result";
 
 const prefix = EXTENSION_HOST_LOG_PREFIX;
+export const summarizeSmokeBrowserLog = (log: string) =>
+  log
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .filter((line) => {
+      const entry = JSON.parse(line) as { message: string };
+      return !/^HTTP [123]\d{2}:/.test(entry.message);
+    })
+    .slice(-20);
+
 export const recordSmokeHostDiagnostic = (result: SmokeResult, event: ExtensionHostDiagnostic, phase: string) => {
   if (!event.event.endsWith("error") && event.event !== "webview-diagnostic") return;
   result.checks.push({
@@ -48,10 +59,11 @@ export const observeSmokePage = (page: Page, result: SmokeResult, logPath: strin
     });
     result.exitCode = Math.max(result.exitCode, extensionId ? 1 : 3);
   };
-  const record = (message: string) => appendFileSync(logPath, `${JSON.stringify({ phase, message })}\n`);
+  const record = (message: string, source?: string, pageUrl?: string) =>
+    appendFileSync(logPath, `${JSON.stringify({ phase, message, source, pageUrl })}\n`);
   page.on("console", (message) => {
     const text = message.text();
-    record(text);
+    record(text, message.location().url.split(/[?#]/)[0], page.url().split(/[?#]/)[0]);
     if (text.startsWith(prefix) && fromDashboard(message.location().url)) {
       const event = JSON.parse(text.slice(prefix.length)) as ExtensionHostDiagnostic;
       events.push(event);
@@ -77,9 +89,10 @@ export const observeSmokePage = (page: Page, result: SmokeResult, logPath: strin
   });
   page.on("response", (response) => {
     if (response.headers()["content-type"]?.includes("text/event-stream")) pending.delete(response.request());
-    if (response.status() < 400) return;
-    const message = `HTTP ${response.status()}: ${response.url()}`;
+    const url = new URL(response.url());
+    const message = `HTTP ${response.status()}: ${url.origin}${url.pathname}`;
     record(message);
+    if (response.status() < 400) return;
     const source = identity(response.url());
     fail(message, source.extensionId, source.contributionId);
   });
