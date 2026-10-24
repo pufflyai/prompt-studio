@@ -18,11 +18,13 @@ export const openPublishedCatalog = async (
   signal?: AbortSignal,
 ) => {
   const owner = publishedOwner(workbenchId);
-  return createPublicationCatalog({
+  const assets = createRecordAssets(deps.assetTransferService, owner, signal);
+  // The catalog verifies package bytes before it takes the owner lock, so commits skip a second hash.
+  const { records } = await deps.extensionStorageService.open({
     owner,
-    store: deps.extensionStorageService.documents.open("records"),
-    assets: createRecordAssets(deps.assetTransferService, owner, signal),
+    assets: { ...assets, verifyComplete: async () => {} },
   });
+  return createPublicationCatalog({ records, verifyComplete: assets.verifyComplete });
 };
 
 export const publishExtension = async (

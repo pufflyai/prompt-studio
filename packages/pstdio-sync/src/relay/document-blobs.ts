@@ -42,12 +42,8 @@ const requireAssets = (input: DocumentSyncInput) => {
 };
 const encryptedBytes = async (input: DocumentSyncInput, reference: BlobReference) => {
   const { assets, blobs } = requireAssets(input);
-  if (!(await complete(assets, reference.encrypted))) {
-    if (blobs.read) {
-      const receive = blobs.read;
-      await assets.receive(reference.encrypted, (offset) => receive(reference.blobId, offset));
-    } else await save(assets, reference.encrypted, await blobs.get(reference.blobId));
-  }
+  if (!(await complete(assets, reference.encrypted)))
+    await save(assets, reference.encrypted, await blobs.get(reference.blobId));
   return read(assets, reference.encrypted);
 };
 

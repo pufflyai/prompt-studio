@@ -314,11 +314,15 @@ Uploads omit `node_modules` and include confined source links as file content. `
 
 ## Extension versions in cloud projects
 
-A cloud project's extension set is normal project data. Its extension IDs, selected
-package revisions and enabled state sync in one encrypted CRDT document. Package
-metadata and bytes live in immutable records addressed by their SHA-256. The platform
-uploads each package as an encrypted blob before sending a document update that uses
-it. The relay cannot read extension names, versions or code.
+A cloud project's extension set is normal project data. It is stored as records of the
+platform owner `pstdio.published-extensions`. One record per extension holds the selected
+package revision and the enabled state. Package metadata and bytes live in immutable
+`package:<sha256>` records with the package as their file. Like other records, each one is
+its own document ([ADR 0100](../../adrs/0100-one-document-per-resource.md)), and they
+sync through the owner's encrypted record stream
+([ADR 0102](../../adrs/0102-record-stream-sync.md)). Each package travels as an encrypted
+blob before the save that uses it. The relay cannot read extension names, versions or
+code.
 
 Installing, editing and reloading a source stay local. Explicitly publish a portable
 source when other devices should use it:
@@ -336,9 +340,11 @@ metadata stays attached to its bytes; an enable edit can merge with a publicatio
 A new device discovers the set even before it has installed an extension. It downloads
 and verifies all selected packages, installs frozen runtime dependencies, and validates
 sources, resource prefixes and webviews before switching the whole set in one database
-transaction. Workspace setup runs afterward through the normal workspace setup queue;
-its failures belong to the workspace setup status. A failed transfer or activation keeps the previous usable set. Interrupted
-encrypted downloads resume from their durable byte offset.
+transaction. This work runs in the project's background sync connection; showing the
+enabled extensions reads only local rows. Workspace setup runs afterward through the
+normal workspace setup queue; its failures belong to the workspace setup status. A failed
+transfer or activation keeps the previous usable set. Interrupted encrypted downloads
+resume from their durable byte offset.
 
 Packages include portable source and assets. They omit dependency directories, checkout
 metadata, `.pstdio`, environment files and standard package-manager credentials. Source

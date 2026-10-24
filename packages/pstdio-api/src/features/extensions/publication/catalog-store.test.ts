@@ -6,9 +6,9 @@ import { createPublicationCatalog } from "./catalog-store";
 
 test("republishing restores a deleted selection and stale selections cannot overwrite newer choices", async () => {
   const owner = { workbenchId: "project", extensionId: "pstdio.published-extensions" };
-  const input = { owner, store: createMemoryDocumentStore(), assets: { verifyComplete: async () => {} } as never };
-  const storage = createDocumentStorage(input);
-  const catalog = createPublicationCatalog(input);
+  const assets = { verifyComplete: async () => {} } as never;
+  const storage = createDocumentStorage({ owner, store: createMemoryDocumentStore(), assets });
+  const catalog = createPublicationCatalog({ records: storage.records, verifyComplete: async () => {} });
   const asset = { sha256: "a".repeat(64), byteLength: 1, mediaType: "application/octet-stream" };
   const publication = {
     extensionId: "test.extension",
@@ -85,7 +85,7 @@ test("competing same-version and new-version publications keep package metadata 
     };
     const store = createMemoryDocumentStore();
     const storage = createDocumentStorage({ owner, store, assets });
-    const catalog = createPublicationCatalog({ owner, store, assets });
+    const catalog = createPublicationCatalog({ records: storage.records, verifyComplete: assets.verifyComplete });
     const sync = createDocumentSync({
       owner,
       space,

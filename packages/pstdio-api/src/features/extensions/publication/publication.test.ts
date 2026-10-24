@@ -196,6 +196,7 @@ test("three devices discover encrypted packages, preserve private overrides and 
       .flat()
       .map((update) => Buffer.from(update.payload, "base64").toString())
       .join("") +
+    [...peer.states.values()].map((state) => Buffer.from(state.payload, "base64").toString()).join("") +
     [...peer.blobs.values()]
       .flatMap((blob) => [...blob.parts.values()])
       .map((bytes) => Buffer.from(bytes).toString())

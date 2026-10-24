@@ -1,8 +1,10 @@
-import type { StoredUpdate } from "pstdio-sync-contracts";
+import type { StateInfo, StoredUpdate } from "pstdio-sync-contracts";
 
 /** Blind wire peer: production client encryption, document merging and asset transfers run unchanged. */
 export const documentPeer = (projects: string[] = []) => {
   const documents = new Map<string, StoredUpdate[]>();
+  // Latest states: the record stream founds itself with one and later compacts into new ones.
+  const states = new Map<string, { info: StateInfo; payload: string }>();
   const blobs = new Map<
     string,
     { parts: Map<number, Uint8Array>; complete: boolean; sha256: string; byteLength: number }
@@ -61,14 +63,48 @@ export const documentPeer = (projects: string[] = []) => {
     if (path.endsWith("/read")) return readBlob(request, blob);
     return new Response(null, { status: 404 });
   };
+  const publishChange = (id: string) =>
+    server.publish(
+      "changed",
+      JSON.stringify({
+        type: "changed",
+        documentId: id.slice(1),
+        spaceOwner: null,
+        lastSequence: documents.get(id)?.length ?? 0,
+        stateId: states.get(id)?.info.stateId ?? null,
+      }),
+    );
+  const stateRequest = async (request: Request, id: string) => {
+    const body = (await request.json()) as Omit<StateInfo, "byteLength" | "deviceId" | "createdAt"> & {
+      payload: string;
+    };
+    const current = states.get(id)?.info ?? null;
+    // Like the relay, accept one founding state and later states only on the current base.
+    if ((current?.stateId ?? null) !== body.baseStateId)
+      return Response.json({ error: "stale-state", state: current }, { status: 409 });
+    const info: StateInfo = {
+      stateId: body.stateId,
+      baseStateId: body.baseStateId,
+      through: body.through,
+      summary: body.summary,
+      byteLength: Buffer.from(body.payload, "base64").length,
+      deviceId: "wire-device",
+      createdAt: new Date().toISOString(),
+    };
+    states.set(id, { info, payload: body.payload });
+    publishChange(id);
+    return Response.json({ state: info });
+  };
   const documentRequest = async (request: Request, path: string, id: string) => {
     const updates = documents.get(id) ?? [];
     documents.set(id, updates);
+    if (path.includes("/states/")) return new Response(Buffer.from(states.get(id)!.payload, "base64"));
+    if (path.endsWith("/state")) return stateRequest(request, id);
     if (path.endsWith("/read")) {
       const { after } = (await request.json()) as { after: number };
       return Response.json({
         status: "updates",
-        state: null,
+        state: states.get(id)?.info ?? null,
         lastSequence: updates.length,
         updates: updates.filter((update) => update.sequence > after),
         more: false,
@@ -86,22 +122,13 @@ export const documentPeer = (projects: string[] = []) => {
         deviceId: "wire-device",
         createdAt: new Date().toISOString(),
       });
-      server.publish(
-        "changed",
-        JSON.stringify({
-          type: "changed",
-          documentId: id.slice(1),
-          spaceOwner: null,
-          lastSequence: sequence,
-          stateId: null,
-        }),
-      );
+      publishChange(id);
       return Response.json({ sequence, duplicate: false });
     }
     return new Response(null, { status: 404 });
   };
   const server = Bun.serve({
-    hostname: "0.0.0.0",
+    hostname: "127.0.0.1",
     port: 0,
     async fetch(request, server) {
       const path = new URL(request.url).pathname;
@@ -134,8 +161,9 @@ export const documentPeer = (projects: string[] = []) => {
     },
   });
   return {
-    origin: server.url.origin.replace("0.0.0.0", "127.0.0.1"),
+    origin: server.url.origin,
     documents,
+    states,
     blobs,
     offsets,
     interrupt: () => {

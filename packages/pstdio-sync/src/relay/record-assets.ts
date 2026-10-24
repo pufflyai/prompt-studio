@@ -76,8 +76,11 @@ export const createRecordAssets = (input: {
       for (const reference of references) {
         if (await complete(reference.asset)) continue;
         if (!(await complete(reference.encrypted))) {
-          const bytes = await require().blobs.get(reference.blobId);
-          await save(reference.encrypted, bytes);
+          const { assets, blobs } = require();
+          // A ranged read lets an interrupted download continue from the bytes already stored.
+          const read = blobs.read;
+          if (read) await assets.receive(reference.encrypted, (offset) => read(reference.blobId, offset));
+          else await save(reference.encrypted, await blobs.get(reference.blobId));
         }
         await save(reference.asset, await openBlob(input.space, reference.blobId, await read(reference.encrypted)));
         await input.references.set(reference);
