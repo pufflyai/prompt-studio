@@ -100,3 +100,41 @@ test("read commands show every ticket matched by a shared alias", async () => {
   const file = await createTicketFileCommand.run(ctx, { ticketId: first.id, name: "research.md" });
   expect(await documentLinkCommand.run(ctx, { id: "T-1", file: file.name })).toMatchObject([{ id: first.id }]);
 });
+
+test("saving a ticket keeps relationships whose old number became a shared alias", async () => {
+  const { pullTicketCommand } = await import("./pull-ticket");
+  const { saveTicketCommand } = await import("./save-ticket");
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {}, overrides: { projectFiles: createMemoryRepoFiles() } });
+  const parent = await createTicketCommand.run(ctx, { title: "Parent" });
+  const dependency = await createTicketCommand.run(ctx, { title: "Dependency" });
+  const other = await createTicketCommand.run(ctx, { title: "Other device ticket" });
+  const child = await createTicketCommand.run(ctx, {
+    title: "Child",
+    parentId: parent.id,
+    dependsOn: [dependency.shorthand],
+  });
+  await pullTicketCommand.run(ctx, { id: child.id });
+  // An offline merge renumbers the parent and dependency; their old numbers are now shared with another ticket.
+  const identities = [
+    { id: parent.id, kind: "ticket", shorthand: "T-5", aliases: [parent.shorthand] },
+    { id: dependency.id, kind: "ticket", shorthand: "T-6", aliases: [dependency.shorthand] },
+    { id: other.id, kind: "ticket", shorthand: "T-7", aliases: [parent.shorthand, dependency.shorthand] },
+    { id: child.id, kind: "ticket", shorthand: child.shorthand, aliases: [] },
+  ];
+  ctx.resources.identity = async ({ id }) => identities.find((entry) => entry.id === id) ?? null;
+  ctx.resources.identityMany = async ({ ids }) => ids.map((id) => identities.find((entry) => entry.id === id) ?? null);
+  ctx.resources.findByShorthand = async ({ shorthand }) =>
+    identities.filter((entry) => entry.shorthand === shorthand || entry.aliases.includes(shorthand));
+  await saveTicketCommand.run(ctx, { id: child.id });
+  expect(await storage.collection("tickets").get(child.id)).toMatchObject({
+    parentId: parent.id,
+    dependsOn: [dependency.id],
+  });
+  const { updateTicketCommand } = await import("./update-ticket");
+  await updateTicketCommand.run(ctx, { id: child.id, parent: parent.shorthand, dependsOn: [dependency.shorthand] });
+  expect(await storage.collection("tickets").get(child.id)).toMatchObject({
+    parentId: parent.id,
+    dependsOn: [dependency.id],
+  });
+});

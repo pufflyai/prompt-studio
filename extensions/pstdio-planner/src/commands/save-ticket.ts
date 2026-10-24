@@ -10,9 +10,9 @@ import { parseTicketFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import {
   findTicket,
   resolveDependencyIds,
+  resolveLinkedTicketId,
   resolveStatusId,
   resolveTagOptionIds,
-  resolveTicketId,
 } from "../data/resolve";
 import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { refreshTicketCheckout } from "../data/ticket-checkout";
@@ -45,8 +45,8 @@ const readTicketFiles = async (projectFiles: ArtifactMount, ticket: Ticket, path
 const resolveTags = async (storage: ExtensionStorageApi, tagNames: string[] | undefined, fallback: string[]) =>
   tagNames === undefined ? fallback : resolveTagOptionIds(storage, tagNames);
 
-const resolveDependencies = async (ctx: TicketContext, dependencyRefs: string[] | undefined, fallback: string[]) =>
-  dependencyRefs === undefined ? fallback : resolveDependencyIds(ctx, dependencyRefs);
+const resolveDependencies = async (ctx: TicketContext, dependencyRefs: string[] | undefined, stored: string[]) =>
+  dependencyRefs === undefined ? stored : resolveDependencyIds(ctx, dependencyRefs, stored);
 
 // `pst tickets save`: reconcile the edited local ticket.md (body + frontmatter +
 // files) back into extension storage and clear the draft flag.
@@ -86,7 +86,7 @@ export const saveTicketCommand = defineCommand({
     if (frontmatter.dependsOn !== undefined) await validateTicketDependencies(ctx, ticket, dependsOn);
     const parentId =
       frontmatter.parentShorthand !== undefined
-        ? await resolveTicketId(ctx, frontmatter.parentShorthand)
+        ? await resolveLinkedTicketId(ctx, frontmatter.parentShorthand, ticket.parentId ? [ticket.parentId] : [])
         : ticket.parentId;
     const paths = (await projectFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) => entry.path);
     const files = await readTicketFiles(

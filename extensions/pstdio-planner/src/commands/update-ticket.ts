@@ -3,12 +3,12 @@ import { statusesCollection, updateTicket } from "../data/collections";
 import {
   findTicket,
   resolveDependencyIds,
+  resolveLinkedTicketId,
   resolveStatusId,
   resolveTagOptionIds,
-  resolveTicketId,
 } from "../data/resolve";
 import { assertSingleSelectTagIds } from "../data/tag-cardinality";
-import { validateTicketDependencies } from "../data/ticket-dependencies";
+import { normalizeTicketDependencies, validateTicketDependencies } from "../data/ticket-dependencies";
 import type { TicketContext } from "../data/ticket-identity";
 import type { Ticket } from "../data/types";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
@@ -55,8 +55,13 @@ export const updateTicketCommand = defineCommand({
         ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
         : commandParams.tagIds;
     if (tagIds !== undefined) await assertSingleSelectTagIds(ctx.storage, tagIds, existing.tagIds);
-    const parentId = await resolveParentUpdate(ctx, commandParams.parent, commandParams.unlinkParent);
-    const dependsOn = await resolveDependencyUpdate(ctx, commandParams.dependsOn, commandParams.clearDependsOn);
+    const parentId = await resolveParentUpdate(ctx, existing, commandParams.parent, commandParams.unlinkParent);
+    const dependsOn = await resolveDependencyUpdate(
+      ctx,
+      existing,
+      commandParams.dependsOn,
+      commandParams.clearDependsOn,
+    );
     if (dependsOn !== undefined) await validateTicketDependencies(ctx, existing, dependsOn);
 
     const draft = {
@@ -129,9 +134,14 @@ const syncBlockedNotificationSafely = async (
 };
 
 // undefined → leave the parent untouched; null → unlink; string → resolve the shorthand.
-const resolveParentUpdate = async (ctx: TicketContext, parent: string | undefined, unlink: boolean | undefined) => {
+const resolveParentUpdate = async (
+  ctx: TicketContext,
+  existing: Ticket,
+  parent: string | undefined,
+  unlink: boolean | undefined,
+) => {
   if (unlink) return null;
-  if (parent !== undefined) return resolveTicketId(ctx, parent);
+  if (parent !== undefined) return resolveLinkedTicketId(ctx, parent, existing.parentId ? [existing.parentId] : []);
   return undefined;
 };
 
@@ -140,10 +150,12 @@ const resolveParentUpdate = async (ctx: TicketContext, parent: string | undefine
 // takes its own flag rather than an empty list a routine update could produce.
 const resolveDependencyUpdate = async (
   ctx: TicketContext,
+  existing: Ticket,
   dependsOn: string[] | undefined,
   clear: boolean | undefined,
 ) => {
   if (clear) return [];
-  if (dependsOn !== undefined) return resolveDependencyIds(ctx, dependsOn);
+  if (dependsOn !== undefined)
+    return resolveDependencyIds(ctx, dependsOn, normalizeTicketDependencies(existing.dependsOn));
   return undefined;
 };

@@ -363,7 +363,7 @@ describe("pstdio planner notification hooks", () => {
     );
     expect(notifications).toEqual([
       expect.objectContaining({
-        dedupeKey: "pstdio-planner:ticket:T-1:blocked",
+        dedupeKey: `pstdio-planner:ticket:${ticket.id}:blocked`,
         kind: "blocked",
       }),
     ]);
