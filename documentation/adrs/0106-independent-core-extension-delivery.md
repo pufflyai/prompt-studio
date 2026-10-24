@@ -1,4 +1,4 @@
-# ADR 0104: Deliver core extension releases independently through PSX
+# ADR 0106: Deliver core extension releases independently through PSX
 
 Proposed: 2026-10-22
 

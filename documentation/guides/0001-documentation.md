@@ -383,7 +383,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0088 — Temporary tooltip hover reset](../adrs/0088-temporary-tooltip-hover-reset.md)
 - [0099 — Durable record query projections](../adrs/0099-durable-record-query-projections.md)
 - [0100 — One document per resource](../adrs/0100-one-document-per-resource.md)
-- [0104 — Deliver core extension releases independently through PSX](../adrs/0104-independent-core-extension-delivery.md)
+- [0106 — Deliver core extension releases independently through PSX](../adrs/0106-independent-core-extension-delivery.md)
 
 ## Lessons learned
 
