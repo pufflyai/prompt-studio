@@ -9,7 +9,7 @@ import { verifySessionTools } from "../helpers/session-tools";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
-test("packaged Sessions creates sessions from the default tools and Add menu", async () => {
+test("packaged Sessions creates in Main and preserves independent Side session tools", async () => {
   const root = mkdtempSync(join(tmpdir(), "packaged-session-placeholder-"));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;

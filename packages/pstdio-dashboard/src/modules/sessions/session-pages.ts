@@ -1,4 +1,4 @@
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -12,7 +12,14 @@ export const registerSessionPages = (ctx: WorkbenchModuleContext) => {
     icon: dashboardViews.sessions.icon,
     path: "sessions",
     modeId: "project",
-    main: { kind: "panels" },
+    main: {
+      kind: "view",
+      view: { kind: "view", id: dashboardWidgetIds.newSession },
+      cardinality: "one",
+      presentation: "page",
+      tab: createSessionTabPresentation(ctx),
+    },
+    panelView: workbenchPanels.projectSession,
     slots: [],
   });
   ctx.pages.registerPage({
@@ -24,7 +31,14 @@ export const registerSessionPages = (ctx: WorkbenchModuleContext) => {
     modeId: "project",
     parentId: dashboardViews.sessions.id,
     resource: { kinds: [{ kind: "resource-kind", id: "session-draft" }] },
-    main: { kind: "view", view: { kind: "view", id: dashboardWidgetIds.newSession }, cardinality: "one" },
+    main: {
+      kind: "view",
+      view: { kind: "view", id: dashboardWidgetIds.newSession },
+      cardinality: "one",
+      presentation: "page",
+      tab: createSessionTabPresentation(ctx),
+    },
+    panelView: workbenchPanels.projectSession,
     slots: [],
   });
   return ctx.pages.registerPage({
@@ -45,8 +59,10 @@ export const registerSessionPages = (ctx: WorkbenchModuleContext) => {
       kind: "view",
       view: { kind: "view", id: dashboardWidgetIds.session },
       cardinality: "one",
+      presentation: "page",
       tab: createSessionTabPresentation(ctx),
     },
+    panelView: workbenchPanels.projectSession,
     slots: [],
   });
 };

@@ -122,8 +122,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
   const openCreatedSession = (createdSessionId: string, prompt: string) => {
-    if (projectId)
-      openCreatedSessionFromDraft({ input, draftKey: view.draftKey, sessionId: createdSessionId, prompt, projectId });
+    if (projectId) openCreatedSessionFromDraft({ input, sessionId: createdSessionId, prompt, projectId });
   };
   const commandDraft = projectId
     ? {

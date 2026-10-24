@@ -34,8 +34,10 @@ export const createStartModule = () =>
         modeId: "project",
         regionSettings: { main: { showHeader: false } },
         main: {
-          kind: "panels",
-          empty: {
+          kind: "view",
+          cardinality: "one",
+          presentation: "page",
+          view: {
             kind: "view",
             id: dashboardWidgetIds.start,
           },

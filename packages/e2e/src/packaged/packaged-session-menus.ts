@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
 import { verifyExtensionModeSessionRestore, verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";
@@ -44,6 +44,17 @@ const verifyFloatingLauncher = async (page: Page) => {
   await expect(floating).toBeVisible();
   await expect(launcher).toBeHidden();
   await floating.getByRole("button", { name: "Reattach Side Panel" }).click();
+};
+
+const revealThenCloseSessionViewer = async (page: Page, row: Locator, projectId: string) => {
+  await row.click();
+  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions$`));
+  const selected = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
+    name: /Packaged session actions/,
+  });
+  await expect(selected).toHaveAttribute("aria-selected", "true");
+  await selected.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
 };
 
 export const verifyPackagedSessionMenus = async (
@@ -215,6 +226,7 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
   await expect(page.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
+  await revealThenCloseSessionViewer(page, row, projectId);
   await row.click();
   await expect(page).toHaveURL(new RegExp(session.id));
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();

@@ -67,7 +67,7 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
               action: {
                 kind: "command",
                 commandId: dashboardCommandIds.createSession,
-                args: { workspace, replacePanel: instance.placementIdentity },
+                args: { workspace, replacePanel: instance.placementIdentity, from: instance.resource },
               },
             },
             {
@@ -77,7 +77,7 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
               action: {
                 kind: "command",
                 commandId: dashboardCommandIds.switchSession,
-                args: { placementIdentity: instance.placementIdentity },
+                args: { placementIdentity: instance.placementIdentity, from: instance.resource },
               },
             },
             {

@@ -73,6 +73,8 @@ const openDraftInSidePanel = () => {
     open: "pin",
   });
   const placement = workbench.layout.listPanelInstances("side")[0]!;
+  workbench.layout.activatePanel(placement.instanceId);
+  workbench.focus.setActiveRegion("side");
   const input: WorkbenchPanelRenderInput = {
     workbench,
     panel: workbench.layout.getPanel(placement.panelId)!,
@@ -86,7 +88,6 @@ describe("openCreatedSessionFromDraft", () => {
     const { input, placement, workbench } = openDraftInSidePanel();
     openCreatedSessionFromDraft({
       input,
-      draftKey: "new",
       sessionId: "session-created-from-draft",
       prompt: "Start the project plan",
       projectId: "project-1",
@@ -110,14 +111,13 @@ describe("openCreatedSessionFromDraft", () => {
     });
     openCreatedSessionFromDraft({
       input,
-      draftKey: "new",
       sessionId: "session-created-from-draft",
       prompt: "Start the project plan",
       projectId: "project-1",
     });
     expect(workbench.layout.getLayout().regions.side.widgets[0]?.resourceKey).toBe(resourceKey(other));
   });
-  test("opens the created session from an owned draft tab", () => {
+  test("opens the created session from its current Main page", () => {
     const workbench = createWorkbench();
     workbench.views.registerView({
       id: dashboardWidgetIds.session,
@@ -132,6 +132,7 @@ describe("openCreatedSessionFromDraft", () => {
       path: "sessions",
       main: {
         kind: "view",
+        presentation: "page",
         view: {
           kind: "view",
           id: dashboardWidgetIds.session,
@@ -160,6 +161,7 @@ describe("openCreatedSessionFromDraft", () => {
       },
       main: {
         kind: "view",
+        presentation: "page",
         view: {
           kind: "view",
           id: dashboardWidgetIds.session,
@@ -174,7 +176,8 @@ describe("openCreatedSessionFromDraft", () => {
       page: workbenchPages.session,
       resource: { type: "session-draft", id: "new", label: "New session" },
     });
-    const placement = workbench.layout.listPanelInstances("main")[0]!;
+    const content = workbench.pages.getContent()!;
+    const placement = { ...content, instanceId: content.widgetId, panelId: content.contributionId, closable: false };
     openCreatedSessionFromDraft({
       input: sessionPanelContext({
         workbench,
@@ -182,7 +185,6 @@ describe("openCreatedSessionFromDraft", () => {
         instance: placement,
         refresh: () => undefined,
       }),
-      draftKey: "new",
       sessionId: "session-created-from-page-draft",
       prompt: "Use the diagram",
       projectId: "project-1",
