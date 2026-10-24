@@ -216,3 +216,19 @@ test("a failed upgrade leaves the owner document in charge and a later start com
   expect((await restarted.records.read("second")).value).toEqual({ title: "Second" });
   expect((await restarted.records.list()).map((record) => record.recordId)).toEqual(["first", "second"]);
 });
+
+test("a group commit of multi-megabyte records saves without exhausting database memory", async () => {
+  const f = await fixture();
+  // Tickets with attached files reach several megabytes each.
+  const content = "x".repeat(8_000_000);
+  await f.storage.records.commit({
+    operationId: "large",
+    edits: Array.from({ length: 24 }, (_, index) => ({
+      recordId: `ticket-${index}`,
+      replace: { files: [{ name: "report.md", content }] },
+    })),
+  });
+  const records = await f.storage.records.list();
+  expect(records).toHaveLength(24);
+  expect((records[0].value as { files: { content: string }[] }).files[0].content).toHaveLength(8_000_000);
+});
