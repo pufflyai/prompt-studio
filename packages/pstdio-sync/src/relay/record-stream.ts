@@ -179,7 +179,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     return true;
   };
 
-  /** Collects every record the relay holds, for a device that has not joined yet. */
+  /** Collects every record the relay holds, for a device that has not joined yet. Null when its latest state is unreadable. */
   const download = async () => {
     let remote = new Map<string, Uint8Array[]>();
     let after = 0;
@@ -188,7 +188,10 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       const result = await relay.read(after);
       if (result.state && result.state.stateId !== state?.stateId) {
         state = result.state;
-        remote = await latest(state);
+        const frames = await reader.openLatest(state);
+        // Adopting without the stream's records would upload unrelated histories; wait instead.
+        if (!frames) return null;
+        remote = addFrames(new Map(), frames);
         after = state.through;
         continue;
       }
@@ -211,7 +214,9 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       const founded = await publish(cursor, true);
       if (founded) return founded;
     }
-    const { remote, after, state } = await download();
+    const downloaded = await download();
+    if (!downloaded) return null;
+    const { remote, after, state } = downloaded;
     const joined = { ...(await withState(cursor, state)), joined: true, after, pendingBytes: 0 };
     await skippedRecords(await store.merge(remote, "adopt", joined));
     return joined;

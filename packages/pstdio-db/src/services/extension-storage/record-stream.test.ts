@@ -65,6 +65,17 @@ const createRelay = () => {
     relay,
     requests,
     updates: () => updates,
+    /** Blob IDs in upload order, so a test can damage the ones a later save uploaded. */
+    blobIds: () => [...blobs.keys()],
+    damageBlob: (blobId: string) => {
+      blobs.set(
+        blobId,
+        blobs.get(blobId)!.map((byte) => byte ^ 1),
+      );
+    },
+    damageState: () => {
+      latest = { ...latest!, payload: Buffer.from("not a latest state").toString("base64") };
+    },
     /** The relay loses every stored copy of the stream. */
     lose: () => {
       latest = null;
@@ -356,4 +367,40 @@ test("a device that joins again with history it already shares merges instead of
   await second.sync.synchronize();
   await first.sync.synchronize();
   for (const peer of [first, second]) expect(await peer.value("note")).toEqual({ title: "Y", body: "from first" });
+});
+
+test("a record whose file cannot be decrypted is set aside instead of stopping the stream", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  for (const peer of [first, second]) await peer.sync.synchronize();
+  const known = new Set(fixture.blobIds());
+  const bytes = new TextEncoder().encode("image bytes");
+  const hash = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+  first.assets.files.set(hash, bytes);
+  const asset = { sha256: hash, byteLength: bytes.length, mediaType: "image/png" };
+  await first.records.commit({ operationId: "image", edits: [{ recordId: "image", replace: "cover", asset }] });
+  await first.sync.synchronize();
+  for (const blobId of fixture.blobIds()) if (!known.has(blobId)) fixture.damageBlob(blobId);
+  await first.records.commit({ operationId: "after", edits: [{ recordId: "after", replace: "still syncs" }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect((await second.records.read("image")).exists).toBe(false);
+  expect(await second.value("after")).toBe("still syncs");
+  expect((await second.sync.status()).needsAttention).toBe(true);
+});
+
+test("a device does not join while the stream's latest state cannot be read", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "line 1\nline 2" }] });
+  await first.sync.synchronize();
+  fixture.damageState();
+  const second = await device(fixture.relay);
+  await second.records.commit({ operationId: "own", edits: [{ recordId: "note", replace: "line 1\nline 2" }] });
+  await second.sync.synchronize();
+  // Uploading its own history of "note" now would duplicate the text once the state is readable.
+  expect(fixture.updates()).toEqual([]);
+  expect((await second.sync.status()).needsAttention).toBe(true);
 });
