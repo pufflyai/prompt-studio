@@ -78,7 +78,12 @@ const checkConsumer = (
       .map((entry, index) => `import * as entry${index} from ${JSON.stringify(entry)}; export { entry${index} };`)
       .join("\n") +
       `
-import { defineNavigationTree, defineView, workbenchModes } from "@pstdio/sdk/extensions";
+import { type CollectionBadgeItem, defineNavigationTree, defineView, workbenchModes } from "@pstdio/sdk/extensions";
+const attentionBadge: CollectionBadgeItem = {
+  id: "attention", label: "1",
+  action: { kind: "panel", panel: { kind: "page-slot", page: { kind: "page", id: "tickets" }, id: "attention" }, resource: { type: "ticket", id: "one" } },
+};
+void attentionBadge;
 const projectItems = defineView({ id: "project-items", title: "Items", body: { kind: "tree", body: async () => [] } });
 const projectNavigation = defineNavigationTree({ id: "project-items", owner: workbenchModes.project, view: projectItems.ref, resourceScope: "project" });
 if (projectNavigation.resourceScope !== "project") throw new Error("Navigation lost its resource scope");
