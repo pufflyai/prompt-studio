@@ -159,3 +159,16 @@ test("one failed branch is reported after the other pull requests start their re
     "Repair merge queue removal: #1371 at 2026-10-24T06:05:00Z",
   ]);
 });
+
+for (const onlyForks of [false, true]) {
+  test(`does not read session history when ${onlyForks ? "only forks" : "no pull requests"} need repairs`, async () => {
+    const { ctx, pulls, queries, sessions } = fixture([]);
+    pulls.splice(0, onlyForks ? 2 : pulls.length);
+
+    const result = await command?.run(ctx as never, {});
+
+    expect(result).toEqual({ sessionIds: [] });
+    expect(queries).toEqual([]);
+    expect(sessions).toEqual([]);
+  });
+}

@@ -66,6 +66,7 @@ export const repairRemovedCommand = defineCommand({
       data: { repository: { pullRequests: { nodes: RemovedPull[] } } };
     }>;
     const pulls = pages.flatMap((page) => page.data.repository.pullRequests.nodes);
+    if (!pulls.some((pull) => !pull.isCrossRepository)) return { sessionIds: [] };
     const started = new Set<string>();
     let cursor: string | undefined;
     do {
