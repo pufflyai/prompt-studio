@@ -60,9 +60,7 @@ export const registerExtensionSettingsSmokeTests = () => {
           ],
         }),
       );
-      console.log("Device settings smoke: fixture ready, starting runtime");
       let started = await startPackagedServe(root, { PSTDIO_EXTENSION_CATALOG: catalog });
-      console.log("Device settings smoke: first runtime ready");
       child = started.child;
       const request = (path: string, method = "GET", body?: unknown) =>
         fetch(`${started.baseUrl}${path}`, {
@@ -87,18 +85,15 @@ export const registerExtensionSettingsSmokeTests = () => {
           expect.objectContaining({ slot: expect.objectContaining({ id: "global.settings" }) }),
         );
         projects.push({ id: project.id, instanceId: extension!.extensionInstanceId });
-        console.log(`Device settings smoke: ${name} project ready`);
       }
       const settingsPath = (project: { id: string; instanceId: string }) =>
         `/v1/projects/${project.id}/extensions/${project.instanceId}/settings/capacity`;
       expect((await request(settingsPath(projects[0]!), "PUT", { value: 5 })).status).toBe(200);
       expect(await (await request(settingsPath(projects[1]!))).json()).toMatchObject({ value: 5, scope: "device" });
       await stopProcess(child);
-      console.log("Device settings smoke: first runtime stopped");
       child = undefined;
       started = await startPackagedServe(root, { PSTDIO_EXTENSION_CATALOG: catalog });
       child = started.child;
-      console.log("Device settings smoke: second runtime ready");
       const result = await request(
         `/v1/projects/${projects[1]!.id}/extensions/commands/test.device-settings.command.capacity/execute`,
         "POST",
