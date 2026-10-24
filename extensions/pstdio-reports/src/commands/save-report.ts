@@ -1,4 +1,4 @@
-import { type ArtifactMount, defineCommand, params } from "@pstdio/sdk/extensions";
+import { type ArtifactMount, defineCommand, type ExtensionBlobInput, params } from "@pstdio/sdk/extensions";
 import { reportsCollection } from "../data/collections";
 import {
   fileNameFromPath,
@@ -9,7 +9,7 @@ import {
   requireReportDraftFiles,
 } from "../data/draft-storage";
 import { parseReportFrontmatter, stripFrontmatter } from "../data/frontmatter";
-import { storeReportBody } from "../data/report-body";
+import { reportBodyFile } from "../data/report-body";
 import { findReport, resolveWorkspace } from "../data/resolve";
 import type { StoredReport, StoredReportFile } from "../data/types";
 import { assertSafeReportFileName, assertSafeReportName } from "../data/validation";
@@ -93,31 +93,35 @@ export const saveReportCommand = defineCommand({
     const body = stripFrontmatter(raw).replace(/^\n+/, "");
     const fileInputs = await readReportFiles(projectFiles, report);
     const blobs = reportsCollection(ctx.storage).attachments(report.id);
-    const uploadedFiles = await Promise.all(
-      fileInputs.map(async ({ bytes, file }) => {
-        const blob = await blobs.put({ name: file.name, data: bytes, mimeType: file.mimeType ?? undefined });
-        return { ...file, blobId: blob.id };
-      }),
-    );
-    const nextFiles = uploadedFiles;
-    const bodyBlobId = await storeReportBody(ctx.storage, report.id, body);
-    const newBlobIds = [bodyBlobId, ...nextFiles.map((file) => file.blobId)];
-
-    const next: StoredReport = {
-      ...report,
-      kind: frontmatter.kind ?? report.kind,
-      source: frontmatter.source ?? report.source,
-      bodyBlobId,
-      files: nextFiles,
-      draft: false,
-      updatedAt: new Date().toISOString(),
+    const uploaded: string[] = [];
+    const upload = async (input: ExtensionBlobInput) => {
+      const blob = await blobs.put(input);
+      uploaded.push(blob.id);
+      return blob.id;
     };
+    let next: StoredReport;
     try {
+      const nextFiles: StoredReportFile[] = [];
+      for (const { bytes, file } of fileInputs)
+        nextFiles.push({
+          ...file,
+          blobId: await upload({ name: file.name, data: bytes, mimeType: file.mimeType ?? undefined }),
+        });
+      next = {
+        ...report,
+        kind: frontmatter.kind ?? report.kind,
+        source: frontmatter.source ?? report.source,
+        bodyBlobId: await upload(reportBodyFile(body)),
+        files: nextFiles,
+        draft: false,
+        updatedAt: new Date().toISOString(),
+      };
       await reportsCollection(ctx.storage).put(report.id, next);
     } catch (error) {
-      await Promise.allSettled(newBlobIds.map((blobId) => blobs.delete(blobId)));
+      await Promise.allSettled(uploaded.map((blobId) => blobs.delete(blobId)));
       throw error;
     }
+    const nextFiles = next.files;
     const oldBlobIds = new Set([report.bodyBlobId, ...report.files.map((file) => file.blobId)]);
     await Promise.allSettled([...oldBlobIds].map((blobId) => blobs.delete(blobId)));
     await projectFiles.writeText(reportMarkdownPathFor(next), reportToMarkdown(next, body));
