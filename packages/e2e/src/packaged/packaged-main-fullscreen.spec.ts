@@ -1,31 +1,60 @@
 import type { ChildProcess } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium, expect, test } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 test("packaged Main fullscreen exits with Escape and resets on reload", async () => {
   const root = mkdtempSync(join(tmpdir(), "packaged-main-fullscreen-"));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
   try {
-    const started = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") });
+    const defaults = JSON.parse(e2eExtensions("workbench-fixture"));
+    defaults.defaultExtensions[0].force = true;
+    const started = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults) });
     child = started.child;
-    const response = await fetch(`${started.baseUrl}/v1/projects`, {
-      method: "POST",
-      headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "Packaged fullscreen" }, root)),
-    });
-    expect(response.status).toBe(201);
-    const project = (await response.json()) as { id: string };
     browser = await chromium.launch();
     const page = await browser.newPage();
-    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, started.descriptor);
-    await page.goto(`${started.baseUrl}/projects/${project.id}/`);
+    const picker = page.getByRole("dialog", { name: "Projects", exact: true });
+    await expect(picker.getByText("No projects yet", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Enter Main fullscreen", exact: true })).toBeHidden();
+    await expect(page.locator('[data-workbench-region="status"]')).toBeHidden();
+    for (const button of await page.locator("#root button").all()) {
+      await expect(button).toBeHidden();
+    }
+    await picker.getByRole("button", { name: "Settings", exact: true }).click();
+    await expect(page.getByRole("option", { name: "Appearance", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: /^Close/ }).click();
+    await expect(picker).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(picker).toBeVisible();
+    await picker.getByRole("button", { name: "Create project", exact: true }).click();
+    await page.getByRole("button", { name: "Close Create project", exact: true }).click();
+    await expect(picker).toBeVisible();
+    await page.screenshot({ path: test.info().outputPath("empty-project-selection.png") });
+
+    const installedRoot = join(root, "extensions", "workbench-fixture");
+    await expect.poll(() => existsSync(join(installedRoot, "package.json"))).toBe(true);
+    const installedNote = join(installedRoot, "local-note.txt");
+    writeFileSync(installedNote, "Keep the installed source");
+    await picker.getByRole("button", { name: "Create project", exact: true }).click();
+    const path = page.getByRole("textbox", { name: "Folder path", exact: true });
+    await path.fill(folderProjectInput({}).initial_workspace.params.path);
+    await path.press("Enter");
+    const created = page.waitForResponse(
+      (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/projects",
+    );
+    await page.getByRole("button", { name: "Open folder", exact: true }).click();
+    const response = await created;
+    expect(response.status()).toBe(201);
+    expect(readFileSync(installedNote, "utf8")).toBe("Keep the installed source");
+    const project = (await response.json()) as { id: string };
+    await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
+    await expect(page.getByTestId("start-page")).toBeVisible();
     const enter = page.getByRole("button", { name: "Enter Main fullscreen", exact: true });
     await enter.click();
     await expect(page.getByRole("button", { name: "Exit Main fullscreen", exact: true })).toBeVisible();

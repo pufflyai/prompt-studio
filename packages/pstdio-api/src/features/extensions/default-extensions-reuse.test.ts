@@ -2,7 +2,7 @@ import { expect, mock, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { installDefaultExtensions } from "./default-extensions";
+import { installDefaultExtensions, installMissingDefaultExtensions } from "./default-extensions";
 import { installed, writeExtension } from "./default-extensions-test-fixtures";
 
 test("keeps replacing development defaults from their local sources", async () => {
@@ -36,7 +36,7 @@ test.each(["named", "local"])("uses installed %s defaults after an earlier setup
   }));
   const input = {
     config: {
-      defaultExtensions: [kind === "named" ? "default-tool" : { source, installName: "default-tool" }],
+      defaultExtensions: [kind === "named" ? "default-tool" : { source, installName: "default-tool", force: true }],
     },
     env: { PSTDIO_HOME: home },
     prepareSharedCheckout,
@@ -51,7 +51,7 @@ test.each(["named", "local"])("uses installed %s defaults after an earlier setup
   try {
     const startup = installDefaultExtensions(input);
     await started.promise;
-    const project = installDefaultExtensions({
+    const project = installMissingDefaultExtensions({
       ...input,
       prepareSharedCheckout: async () => {
         throw new Error("Project setup must not fetch installed defaults again");

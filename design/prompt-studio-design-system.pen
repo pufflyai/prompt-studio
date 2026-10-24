@@ -217896,6 +217896,225 @@
           "content": "Restore"
         }
       }
+    },
+    {
+      "type": "frame",
+      "id": "RFHla",
+      "x": 64118,
+      "y": 0,
+      "name": "Project selection · No projects",
+      "context": "Before a project is selected, show the required Projects dialog on an empty background. Hide navigation, activity, status widgets, project tabs, panel controls and Main fullscreen. Native window controls remain available. Settings opens above the picker; closing Settings returns here. With a selected project, Main fullscreen stays beside the panel controls at the trailing end of the title bar.",
+      "clip": true,
+      "width": 1000,
+      "height": 700,
+      "fill": "#A3A3A3",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "flvuJ",
+          "type": "ref",
+          "ref": "SUg7j",
+          "name": "Native window controls only",
+          "width": "fill_container",
+          "height": 44,
+          "descendants": {
+            "lpqoa": {
+              "enabled": false,
+              "height": 44
+            },
+            "WqFHg": {
+              "enabled": false
+            },
+            "HWyol": {
+              "enabled": false,
+              "height": 44
+            },
+            "aLd9o": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "Y8b6m",
+          "name": "Empty background",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "ZhTgc",
+              "name": "Projects",
+              "clip": true,
+              "width": 672,
+              "fill": "$ds-bg",
+              "cornerRadius": 4,
+              "stroke": "$ds-border-subtle",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#00000040",
+                "offset": {
+                  "x": 0,
+                  "y": 8
+                },
+                "blur": 24
+              },
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "h7dG1",
+                  "name": "Header",
+                  "width": "fill_container",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    16,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "jtcmV",
+                      "name": "Text",
+                      "fill": "$ds-fg",
+                      "content": "Projects",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 16,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "K6QqYe",
+                  "name": "List",
+                  "width": "fill_container",
+                  "height": 148,
+                  "layout": "vertical",
+                  "padding": [
+                    4,
+                    8
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "OqCJk",
+                      "name": "Empty",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "bjJP1",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "content": "No projects yet",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ofWnJ",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "content": "Create your first project to get started.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iTCgV",
+                  "name": "Footer",
+                  "width": "fill_container",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    16,
+                    12,
+                    16
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "E3bA8K",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Settings",
+                      "height": 32,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": true,
+                          "icon": "settings",
+                          "width": 16,
+                          "height": 16
+                        },
+                        "Hf4GT": {
+                          "content": "Settings"
+                        }
+                      }
+                    },
+                    {
+                      "id": "sLSze",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Create project",
+                      "height": 32,
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": true,
+                          "icon": "plus",
+                          "width": 12,
+                          "height": 12
+                        },
+                        "Hf4GT": {
+                          "content": "Create project"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

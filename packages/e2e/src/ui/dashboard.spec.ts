@@ -55,12 +55,19 @@ test("dashboard keeps project selection open when no project is selected", { tag
   const projectPicker = page.getByRole("dialog").filter({ hasText: "No projects yet" });
   await expect(projectPicker).toBeVisible();
   await expect(projectPicker.getByRole("button", { name: "Close Projects" })).toHaveCount(0);
-  await expect(page.locator('button[aria-label="Switch project"]')).toBeVisible();
+  for (const control of await page.locator("#root button").all()) {
+    await expect(control).toBeHidden();
+  }
   await expect(page.getByRole("option", { name: "Search", exact: true })).toHaveCount(0);
   await expect(page.getByRole("option", { name: "Notifications", exact: true })).toHaveCount(0);
   await expect(page.locator('[data-workbench-region="sidenav"]')).toBeHidden();
   await expect(page.locator('[data-workbench-region="activity"]')).toBeHidden();
   await expect(page.locator('[data-workbench-region="status"]')).toBeHidden();
+
+  await projectPicker.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("option", { name: "Appearance", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /^Close/ }).click();
+  await expect(projectPicker).toBeVisible();
 
   await page.keyboard.press("Escape");
   await expect(projectPicker).toBeVisible();
@@ -85,6 +92,15 @@ test("dashboard keeps project selection open when no project is selected", { tag
 
   await page.reload();
   await expect(projectPicker).toBeVisible();
+
+  const folder = folderProjectInput({}).initial_workspace.params.path;
+  await projectPicker.getByRole("button", { name: "Create project", exact: true }).click();
+  const path = page.getByRole("textbox", { name: "Folder path", exact: true });
+  await path.fill(folder);
+  await path.press("Enter");
+  await page.getByRole("button", { name: "Open folder", exact: true }).click();
+  await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
+  await expect(page.getByTestId("start-page")).toBeVisible();
 });
 
 test("dashboard keeps the project mode and blocks controls behind the project switcher", async ({ page, request }) => {
