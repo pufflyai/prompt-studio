@@ -1,5 +1,6 @@
 import { lstat, mkdir, open, readdir, readFile, rename, rm, rmdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { renamePgliteHome } from "./rename-pglite-home";
 
 // The baseline names the schema generation. A home written by any other release is
 // retired instead of upgraded, so no code has to understand older databases.
@@ -118,7 +119,7 @@ export const preparePgliteHome = async (options: Preparation) => {
   const publish = async () => {
     options.signal?.throwIfAborted();
     if (await exists(active)) await rmdir(active);
-    await rename(target, active);
+    await renamePgliteHome(target, active, options.signal);
     await flushDirectory(work);
     await flushDirectory(dirname(active));
     onPhase("candidate-published");
