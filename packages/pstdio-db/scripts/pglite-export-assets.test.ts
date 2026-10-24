@@ -35,7 +35,7 @@ test("the vendored export worker reads homes from both engines outside the repos
         [previous, { id: "previous", payload: "\\x00ff" }],
         [nightly, { id: "nightly", payload: "\\x1180" }],
       ] as const) {
-        const output = join(root, `${home}-export`);
+        const output = `${home}-export`;
         const child = Bun.spawn([process.execPath, worker.entry, home, output, worker.assets!], {
           cwd: root,
           env: { ...process.env, BUN_BE_BUN: "1" },
