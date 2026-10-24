@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import { standardResourceIcons } from "@pstdio/workbench";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
@@ -27,9 +28,9 @@ const meta = {
   component: ProjectPickerRows,
   decorators: [
     (Story) => (
-      <div style={{ width: "28rem" }}>
+      <Box w="md">
         <Story />
-      </div>
+      </Box>
     ),
   ],
   args: {
@@ -50,6 +51,16 @@ export const NewDeviceDownloading: Story = {
       id === "scratchpad"
         ? { signedIn: true, cloud: false }
         : { signedIn: true, cloud: true, sync: { state: "first-download-incomplete", offlineReady: false } },
+  },
+};
+
+/** The first download is done, and newer changes are still on their way. */
+export const WaitingToDownload: Story = {
+  args: {
+    cloudState: (id) =>
+      id === "scratchpad"
+        ? { signedIn: true, cloud: false }
+        : { signedIn: true, cloud: true, sync: { state: "waiting-to-sync", offlineReady: false } },
   },
 };
 

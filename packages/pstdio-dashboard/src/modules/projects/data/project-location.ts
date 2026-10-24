@@ -1,12 +1,18 @@
 import type { ProjectCloudState } from "./cloud-project-states";
 
+// The sync state has no byte progress, so the first download shows as "not on this device yet" until it is done.
+const cloudLocationKey = (state: ProjectCloudState) => {
+  if (!state.sync || state.sync.state === "first-download-incomplete") return "list.cloudNotOnDevice";
+  if (state.sync.offlineReady) return "list.cloudReady";
+  if (state.sync.state === "needs-attention") return "list.cloudNoFolder";
+  return "list.cloudWaiting";
+};
+
 /** The picker's second line: where the project is on this device. */
 export const projectLocationKey = (folderPath: string | null, state: ProjectCloudState) => {
   if (state.cloud) {
     if (folderPath) return { key: "path", path: folderPath } as const;
-    if (!state.sync || state.sync.state === "first-download-incomplete")
-      return { key: "list.cloudDownloading" } as const;
-    return { key: state.sync.offlineReady ? "list.cloudReady" : "list.cloudNoFolder" } as const;
+    return { key: cloudLocationKey(state) } as const;
   }
   if (!folderPath) return { key: "list.noFolder" } as const;
   return state.signedIn

@@ -176,7 +176,8 @@
     "noProjectsDescription": "Create your first project to get started.",
     "noSearchResults": "No projects match your search.",
     "noFolder": "No folder on this device",
-    "cloudDownloading": "Cloud · downloading",
+    "cloudNotOnDevice": "Cloud · not on this device yet",
+    "cloudWaiting": "Cloud · waiting to download",
     "cloudReady": "Cloud · ready offline · no folder yet",
     "cloudNoFolder": "Cloud · no folder yet",
     "localPath": "{{path}} · local"
