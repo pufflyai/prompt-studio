@@ -555,3 +555,22 @@ test("devices that ran the same data migration on unrelated histories adopt inst
   for (const peer of [first, second])
     expect(await peer.value("note")).toEqual({ body: "line 1\nline 2", track: "now" });
 });
+
+test("a device that skipped an update while joining does not replace the latest state after a restart", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  await first.sync.synchronize();
+  const frame = encodeRecordFrame({ records: [], assets: [] });
+  const unreadable = await sealUpdate(space, documentId, frame, []);
+  await fixture.relay.update({ ...unreadable, payload: Buffer.from("not a frame").toString("base64") });
+  const second = await device(fixture.relay);
+  await second.sync.synchronize();
+  const latest = fixture.latest();
+  const restarted = second.restart(compactEveryPass);
+  await second.records.commit({ operationId: "later", edits: [{ recordId: "later", replace: 2 }] });
+  await restarted.synchronize();
+  // A latest state from this device would claim to cover the update it could not read.
+  expect(fixture.latest()).toBe(latest);
+  expect((await restarted.status()).needsAttention).toBe(true);
+});
