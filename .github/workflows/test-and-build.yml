@@ -581,7 +581,7 @@ jobs:
         run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
       - name: Test dependency installs, workspace links, watchers, and attachments
         if: contains(fromJSON(needs.scope.outputs.native_checks), 'filesystem')
-        run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-extensions/src/authoring/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts
+        run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-extensions/src/authoring/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts packages/pstdio-db/src/db/rename-pglite-home.test.ts
       - name: Test native process discovery and command shims
         if: contains(fromJSON(needs.scope.outputs.native_checks), 'process')
         run: bun --conditions=source test --timeout 15000 packages/pstdio-api/src/features/extensions/process-command.test.ts packages/pstdio-api/src/features/extensions/process-command.windows.test.ts packages/pstdio-api/src/features/extensions/process-discovery.test.ts packages/pstdio-extensions/src/runtime/process-environment.test.ts packages/pstdio-api-runtime-host/src/harness-registry.test.ts
@@ -774,7 +774,6 @@ jobs:
       - name: Build database test dependencies
         run: bun run build -- --scope pstdio-db --include-dependencies
       - name: Build quarantined API dependencies
-        if: runner.os == 'Windows'
         run: bun run build -- --scope pstdio-api --include-dependencies
       - name: Run quarantined database cases with their existing limits
         continue-on-error: true
@@ -783,7 +782,6 @@ jobs:
         continue-on-error: true
         run: bun run --cwd scripts test
       - name: Run quarantined API cases with their existing limits
-        if: runner.os == 'Windows'
         continue-on-error: true
         env:
           PSTDIO_DEFAULT_EXTENSIONS: "[]"
@@ -921,16 +919,33 @@ jobs:
       - name: Test native DMG attachment cleanup
         id: dmg_cleanup
         if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
+        working-directory: clients/desktop
+        # A machine whose only case is quarantined selects no stable case here.
         run: |
           set -o pipefail
-          bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts 2>&1 | tee native-dmg-cleanup.log
+          bun ../../scripts/ci/run-bun-tests.ts src/packaging/dmg-device-cleanup.test.ts --pass-with-no-tests 2>&1 | tee ../../native-dmg-cleanup.log
+
+      - name: Run quarantined native DMG cleanup cases
+        id: dmg_cleanup_quarantine
+        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
+        continue-on-error: true
+        env:
+          E2E_TEST_LANE: quarantine
+        working-directory: clients/desktop
+        run: |
+          set -o pipefail
+          bun ../../scripts/ci/run-bun-tests.ts 2>&1 | tee ../../native-dmg-cleanup-quarantine.log
+
+      - name: Require every quarantined native DMG case to have executed
+        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
+        run: bun scripts/ci/verify-quarantine-reports.ts bun
 
       - name: Preserve failed native DMG cleanup log
-        if: failure() && steps.dmg_cleanup.outcome == 'failure'
+        if: ${{ !cancelled() && (steps.dmg_cleanup.outcome == 'failure' || steps.dmg_cleanup_quarantine.outcome == 'failure') }}
         uses: actions/upload-artifact@v4
         with:
           name: native-dmg-cleanup-${{ matrix.target }}-attempt-${{ github.run_attempt }}
-          path: native-dmg-cleanup.log
+          path: native-dmg-cleanup*.log
           if-no-files-found: error
 
       - name: Build monorepo
@@ -989,16 +1004,17 @@ jobs:
         working-directory: clients/desktop
         run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged
 
-      - name: Run quarantined Apple Silicon packaged cases
-        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin' && matrix.arch == 'arm64' && !cancelled() && steps.desktop.outcome == 'success'
+      # Machines without registered cases select nothing here.
+      - name: Run quarantined packaged desktop cases
+        if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
         continue-on-error: true
         env:
           E2E_TEST_LANE: quarantine
         working-directory: clients/desktop
-        run: bun run test:packaged
+        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged --pass-with-no-tests
 
-      - name: Require first-attempt Apple Silicon quarantine execution
-        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin' && matrix.arch == 'arm64' && !cancelled() && steps.desktop.outcome == 'success'
+      - name: Require first-attempt packaged desktop quarantine execution
+        if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop
 
       - name: Preserve desktop test reports and traces

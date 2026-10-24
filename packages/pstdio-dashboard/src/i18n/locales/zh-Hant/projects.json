@@ -160,6 +160,7 @@
     }
   },
   "list": {
+    "settings": "設定",
     "createProject": "建立專案",
     "noProjectsYet": "尚無專案",
     "noProjectsDescription": "建立您的第一個專案以開始使用。"

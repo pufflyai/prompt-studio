@@ -14,10 +14,11 @@ beforeAll(async () => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 }, 180_000);
 
+// The runtime is still writing this log, so only newline-terminated lines are complete.
 const startupPhases = async (path: string) =>
   (await Bun.file(path).text())
-    .trim()
     .split("\n")
+    .slice(0, -1)
     .map((line) => JSON.parse(line) as { event?: string; phase?: string })
     .filter((entry) => entry.event === "runtime.startup.phase" && entry.phase?.startsWith("database_retir"))
     .map((entry) => entry.phase);
