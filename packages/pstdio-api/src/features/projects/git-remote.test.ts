@@ -31,6 +31,10 @@ test("the recorded remote never carries credentials", async () => {
     ["config", "url.https://x-access-token:secret@example.test/.insteadOf", "https://example.test/"],
   );
   expect(await readGitRemote(rewritten)).toBe("https://example.test/acme/notes.git");
+
+  // An ssh address keeps its user, which names the account to sign in as, but never a password.
+  const sshPassword = await repository(["remote", "add", "origin", "ssh://git:secret@example.test/acme/notes.git"]);
+  expect(await readGitRemote(sshPassword)).toBe("ssh://git@example.test/acme/notes.git");
 });
 
 test("a folder without a git origin has no recorded remote", async () => {

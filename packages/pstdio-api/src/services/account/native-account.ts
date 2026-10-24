@@ -131,9 +131,9 @@ export const createNativeAccount = (input: {
     const local: string[] = [];
     const absent: string[] = [];
     for (const id of login ? (projectsFor(login) ?? []) : [])
-      ((await input.projects.get(id)) ? local : absent).push(id);
+      (!missing.recovering(id) && (await input.projects.get(id)) ? local : absent).push(id);
     await update(login ? local.map((id) => connectionFor(login, id)) : []);
-    if (login && absent.length) missing.recover(absent.map((id) => connectionFor(login, id)));
+    missing.recover(login ? absent.map((id) => connectionFor(login, id)) : []);
   };
   const load = async () => {
     clearTimeout(retry);

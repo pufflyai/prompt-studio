@@ -2,9 +2,10 @@ import type { ProjectCloudState } from "./cloud-project-states";
 
 // The sync state has no byte progress, so the first download shows as "not on this device yet" until it is done.
 const cloudLocationKey = (state: ProjectCloudState) => {
-  if (!state.sync || state.sync.state === "first-download-incomplete") return "list.cloudNotOnDevice";
+  if (!state.sync) return "list.cloud";
+  if (state.sync.state === "first-download-incomplete") return "list.cloudNotOnDevice";
+  if (state.sync.state === "needs-attention") return "list.cloudNeedsAttention";
   if (state.sync.offlineReady) return "list.cloudReady";
-  if (state.sync.state === "needs-attention") return "list.cloudNoFolder";
   return "list.cloudWaiting";
 };
 

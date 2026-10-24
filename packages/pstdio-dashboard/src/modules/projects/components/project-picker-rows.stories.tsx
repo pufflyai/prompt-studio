@@ -74,4 +74,14 @@ export const ReadyWithoutFolder: Story = {
   },
 };
 
+/** A download that cannot finish without help says so instead of claiming to be ready. */
+export const NeedsAttention: Story = {
+  args: {
+    cloudState: (id) =>
+      id === "scratchpad"
+        ? { signedIn: true, cloud: false }
+        : { signedIn: true, cloud: true, sync: { state: "needs-attention", offlineReady: false } },
+  },
+};
+
 export const SignedOut: Story = {};

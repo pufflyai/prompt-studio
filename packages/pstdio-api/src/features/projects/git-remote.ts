@@ -31,9 +31,12 @@ const runGit = async (
 const withoutCredentials = (remote: string) => {
   try {
     const url = new URL(remote);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return remote;
-    url.username = "";
-    url.password = "";
+    // An ssh user names the account to sign in as, so only its password is dropped.
+    if (url.protocol === "ssh:") url.password = "";
+    else if (url.protocol === "http:" || url.protocol === "https:") {
+      url.username = "";
+      url.password = "";
+    } else return remote;
     return url.toString();
   } catch {
     return remote;

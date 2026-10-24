@@ -91,6 +91,23 @@ test("projects on this device sync while a missing cloud project is still being 
   }
 });
 
+test("a project does not sync while its recovery is still setting it up", async () => {
+  const device = await fixture();
+  try {
+    await device.account.refresh();
+    await waitFor(() => device.recoveries.length === 1);
+    // The project row exists, but its extensions are still being set up.
+    device.local.add("elsewhere");
+    await device.account.refresh();
+    expect(device.synced()).toEqual(["here"]);
+
+    device.recoveries[0]!.done.resolve();
+    await waitFor(() => device.synced().includes("elsewhere"));
+  } finally {
+    await device.close();
+  }
+});
+
 test("a failed recovery is tried again on the next account refresh", async () => {
   const device = await fixture();
   try {

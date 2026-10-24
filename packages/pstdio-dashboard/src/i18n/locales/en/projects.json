@@ -179,7 +179,8 @@
     "cloudNotOnDevice": "Cloud · not on this device yet",
     "cloudWaiting": "Cloud · waiting to download",
     "cloudReady": "Cloud · ready offline · no folder yet",
-    "cloudNoFolder": "Cloud · no folder yet",
+    "cloud": "Cloud",
+    "cloudNeedsAttention": "Cloud · needs attention",
     "localPath": "{{path}} · local"
   },
   "folder": {

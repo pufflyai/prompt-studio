@@ -29,6 +29,18 @@ To stop syncing a project, run `pst projects local PROJECT_ID`. Every device kee
 
 After you log in on a new or reset computer, every cloud project of your account appears in the project picker with its name. Its data, such as tickets, notes and artifacts, downloads without a folder. Until the first download finishes, the project reports `first-download-incomplete`.
 
+The second line of each cloud project in the picker says where it is on this computer:
+
+| Line | Meaning |
+| --- | --- |
+| Cloud · not on this device yet | The first download has not finished. |
+| Cloud · waiting to download | Newer changes from other devices are still on their way. |
+| Cloud · ready offline · no folder yet | All data is here. The project's files are not. |
+| Cloud · needs attention | Some synced data could not be read. |
+| The folder path | The project has a folder on this computer. |
+
+A project opens before its download finishes. After the first download, opening it reads the downloaded data directly.
+
 The project's files come later. The first time something needs them, such as opening Files, creating a workspace or starting a session with an agent that works on files, Prompt Studio asks for a folder. It offers to clone the project's recorded git remote, or to use a folder that already holds the same repository. Work that needs files on a computer without the project's folder fails with the error "This project's files are not on this device."
 
 To use a folder you already have from the command line, bind the project ID to it:
