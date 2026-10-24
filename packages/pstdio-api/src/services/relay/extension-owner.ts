@@ -3,6 +3,7 @@ import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import { watchArtifactMount } from "../../features/extensions/artifact-mount-watch/mount-watcher";
 import { resolveWorkspaceFilesPath } from "../../features/extensions/command-environment/workspace-files";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
+import { createPublicationStorageAccess } from "../../features/extensions/publication/storage-access";
 import { apiLogger } from "../../lib/logger";
 import { createSharedArtifactMount } from "../shared-files/artifact-mount";
 import { createExtensionDocumentSync } from "./documents";
@@ -34,6 +35,12 @@ export const startRelayExtension = async (input: {
         .map((mount) => ({
           root: resolveArtifactMountRoot({ repoRoot, name: mount.name, mountPath: mount.relativePath }),
           mount: createSharedArtifactMount(deps, {
+            assertWritable: createPublicationStorageAccess(deps, {
+              projectId: owner.workbenchId,
+              extensionId,
+              extensionInstanceId: input.source.instance.id,
+              source: input.source.installedSource,
+            }).write,
             projectId: owner.workbenchId,
             extensionId,
             repoRoot,

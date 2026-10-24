@@ -13,6 +13,9 @@ import { setDeviceAutomationEnabled } from "./device-automations";
 import { extensionChangesWorkspaceProvisioning } from "./extension-skill-cleanup";
 import { toExtensionEnableInput } from "./install-extension-source";
 import { toProjectExtensionInstance } from "./project-extension-instance";
+import { openPublishedCatalog } from "./publication/catalog";
+import { shareEnabledChoice } from "./publication/change-catalog";
+import { selectPublicationSource } from "./publication/prepare-activation";
 
 type LifecycleDeps = ExtensionsRouteDeps & {
   installedExtensionSourcesService: RouteDeps["installedExtensionSourcesService"];
@@ -68,6 +71,8 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
 
     const updated = await deps.extensionService.setProjectExtensionEnabled(instanceId, enabled);
     if (!updated) return null;
+    // Shared only after this device accepted the change, so other devices never get a state it refused.
+    await shareEnabledChoice(deps, projectId, existing.installedSource.extension_id, enabled);
 
     await provisionWhenRequired(projectId, requiresProvisioning);
     return projectExtension(updated, existing.installedSource);
@@ -115,11 +120,26 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
         `Extension still owns ${providerWorkspaces.length} provider-backed workspace(s). Delete them before uninstalling.`,
       );
     }
+    const extensionId = existing.installedSource.extension_id;
+    const catalog = await openPublishedCatalog(deps, input.projectId);
+    const selection = await catalog.records.read(extensionId);
+    if (selection.exists && !selection.deleted) {
+      const copies = (await deps.extensionService.listProjectExtensionInstances(input.projectId)).filter(
+        ({ installedSource }) => installedSource.extension_id === extensionId,
+      );
+      // Removing a leftover copy that this device does not run keeps the extension on every device.
+      // The shared removal comes first, so a sync cannot reinstall the extension in between.
+      if (selectPublicationSource(copies)?.instance.id === input.instanceId)
+        await catalog.records.commit({
+          operationId: crypto.randomUUID(),
+          edits: [{ recordId: extensionId, deleted: true }],
+        });
+    }
     const result = await deps.extensionService.uninstallProjectExtension(input);
     if (!result) return null;
     if (input.deleteUserData) {
       try {
-        await deps.extensionConnectionService.removeExtension(input.projectId, existing.installedSource.extension_id);
+        await deps.extensionConnectionService.removeExtension(input.projectId, extensionId);
       } catch (error) {
         apiLogger.error(
           { err: error, event: "extension.connection_cleanup.deferred", projectId: input.projectId },

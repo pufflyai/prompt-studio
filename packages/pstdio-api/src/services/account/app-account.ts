@@ -29,7 +29,7 @@ export const createAppAccount = (
         ...app,
         close: async () => {
           stopEvents();
-          syncEvents.close();
+          await syncEvents.close();
           await accountService.close();
           await app.close();
         },

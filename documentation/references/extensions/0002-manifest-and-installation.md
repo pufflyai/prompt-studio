@@ -311,3 +311,81 @@ Consumers import `plannerCommands.publish`. They do not repeat the provider iden
 Installing never writes extensions or agent skills into the CLI machine's home. The host provisions local workspace skills. Install global agent skills separately with `pst agents install-skills` on the agent's machine.
 
 Uploads omit `node_modules` and include confined source links as file content. `--skip-install` skips host dependency installation and can reuse matching dependencies already installed on the host. For a local API, CLI sources inside the host's local project use the project-folder input, preserving existing host dependencies and sibling packages. Uploads cannot reuse dependencies that exist only on another machine. `pst extensions test --project-path <context>` preserves dependency context in its private host.
+
+## Extension versions in cloud projects
+
+A cloud project's extension set is normal project data. It is stored as records of the
+platform owner `pstdio.published-extensions`. One record per extension holds the selected
+package revision and the enabled state. Package metadata and bytes live in immutable
+`package:<sha256>` records with the package as their file. Like other records, each one is
+its own document ([ADR 0100](../../adrs/0100-one-document-per-resource.md)), and they
+sync through the owner's encrypted record stream
+([ADR 0102](../../adrs/0102-record-stream-sync.md)). Each package travels as an encrypted
+blob before the save that uses it. The relay cannot read extension names, versions or
+code.
+
+Installing, editing and reloading a source stay local. Explicitly publish a portable
+source when other devices should use it:
+
+```sh
+pst extensions publication list --project-id <project-id>
+pst extensions publication publish <install-name> --project-id <project-id>
+```
+
+The result first reports `saved-locally`. Offline edits merge when the device
+reconnects. Concurrent publications choose the same package on every device. Package
+metadata stays attached to its bytes; an enable edit can merge with a publication.
+`--expected-revision` checks the catalog value that the caller inspected.
+
+A new device discovers the set even before it has installed an extension. It downloads
+and verifies all selected packages, installs frozen runtime dependencies, and validates
+sources, resource prefixes and webviews before switching the whole set in one database
+transaction. This work runs in the project's background sync connection; showing the
+enabled extensions reads only local rows. Workspace setup runs afterward through the
+normal workspace setup queue; its failures belong to the workspace setup status. A failed
+transfer or activation keeps the previous usable set. A set that fails to activate is
+tried again at once when it changes, and otherwise after a delay that grows from 30
+seconds to one hour.
+Interrupted encrypted downloads resume from their durable byte offset.
+
+Packages include portable source and assets. They omit dependency directories, checkout
+metadata, `.pstdio`, environment files and standard package-manager credentials. Source
+links are rejected. Runtime dependencies require a frozen `bun.lock`. Publish packages
+whose dependencies can be installed independently; machine paths and credentials stay
+local.
+
+Repo-local sources and unpublished edits of a published extension are private
+overrides. Catch-up preserves their code. Their record and artifact edits still sync,
+but their data migration callbacks do not run. Only the selected, unmodified synced
+package can run data migrations. A skipped migration is not recorded, so the synced
+version still runs it. An older package can read shared data but cannot change it until
+updated. This also applies to file uploads and artifact writes. A selection whose package
+cannot be read blocks writes and migrations the same way until it is repaired. Extensions
+that are not published keep normal migration behavior. So do published extensions in
+projects that the device knows are not cloud projects; while its cloud project list has not
+loaded, the override rules apply. See [data migrations](0018-data-migrations.md).
+
+To replace a private override with the selected package, or select a retained package:
+
+```sh
+pst extensions publication adopt <extension-id> --project-id <project-id>
+pst extensions publication rollback <extension-id> --revision <package-sha256> --project-id <project-id>
+pst extensions publication disable <extension-id> --project-id <project-id>
+pst extensions publication enable <extension-id> --project-id <project-id>
+```
+
+Adoption preserves the instance, storage owner and settings. The previous source folder
+stays available. Rollback changes the selected code; it does not undo data migrations.
+Rollback, enable and disable first apply the changed set on this device. A change this
+device cannot apply is not shared. Rollback also repairs a selection whose package cannot
+be read. All published extensions share their enabled state; a local enable is shared only
+after this device accepts it. Uninstalling a published extension removes it from the set
+on every device. Uninstalling an older copy that this device does not run keeps it in the
+set. When several copies share an extension ID, `publish` uses the enabled copy. Automation scheduling still follows its device
+assignment; publication does not move execution to another device.
+
+Agents and clients use the same API: `GET` and `POST
+/v1/projects/{projectId}/extension-publications`. POST accepts `kind: "publish"` with
+`instanceId` and `expectedRevision`; `kind: "adopt"` with `extensionId`;
+`kind: "rollback"` with `extensionId`, package `revision` and `expectedRevision`;
+or `kind: "enabled"` with `extensionId`, `enabled` and `expectedRevision`.
