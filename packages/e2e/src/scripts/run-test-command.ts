@@ -26,7 +26,7 @@ export const runTestCommand = async (
   const onError = (error: Error) => done.reject(error);
   const onExit = (status: number | null, signal: NodeJS.Signals | null) => {
     if (status !== expectedStatus || signal) {
-      done.reject(new Error(`Test command exited with code ${status}, signal ${signal}\n${stderr}`));
+      done.reject(new Error(`Test command exited with code ${status}, signal ${signal}\n${stdout}\n${stderr}`));
     }
   };
   const onClose = (status: number | null, signal: NodeJS.Signals | null) => done.resolve({ status, signal });

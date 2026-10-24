@@ -46,7 +46,13 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
   };
   if (event !== "pull_request" || labels.includes(FULL_RUN_LABEL)) {
     // Full UI and Windows suites already include these targeted checks.
-    return { stage: "full", ...everyCheck, browserChecks: [] as string[], nativeChecks: [] as string[] };
+    return {
+      stage: "full",
+      ...everyCheck,
+      browserSmoke: false,
+      browserChecks: [] as string[],
+      nativeChecks: [] as string[],
+    };
   }
   const stage = "pull_request";
 

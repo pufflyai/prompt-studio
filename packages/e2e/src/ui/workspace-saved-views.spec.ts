@@ -63,7 +63,8 @@ test("native Workspaces saves shared views and isolates each project's selection
     }
 
     await page.getByRole("button", { name: "Switch project", exact: true }).click();
-    await page.getByRole("option", { name: /^Other workspace views / }).click();
+    const projectPicker = page.getByRole("dialog", { name: "Projects", exact: true });
+    await projectPicker.getByText("Other workspace views", { exact: true }).click();
     await page.goto(`/projects/${second!.id}/workspaces`);
     await expect(page.getByRole("tab", { name: "All", exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(releaseTab).toHaveCount(0);
@@ -73,7 +74,7 @@ test("native Workspaces saves shared views and isolates each project's selection
     ).json();
     expect(otherViews.views).toHaveLength(1);
     await page.getByRole("button", { name: "Switch project", exact: true }).click();
-    await page.getByRole("option", { name: /^Saved workspace views / }).click();
+    await projectPicker.getByText("Saved workspace views", { exact: true }).click();
     await page.goto(`/projects/${first!.id}/workspaces`);
     await expect(releaseTab).toHaveAttribute("aria-selected", "true");
   } finally {

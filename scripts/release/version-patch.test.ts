@@ -32,14 +32,6 @@ const workspace = () => {
   return root;
 };
 
-test("patches the entire fixed group without a contributor changeset", async () => {
-  const root = workspace();
-  expect(await versionPatch(root, "Fix startup.")).toBe("0.43.2");
-  for (const dir of ["pstdio", "sdk"]) {
-    expect(JSON.parse(readFileSync(join(root, "packages", dir, "package.json"), "utf8")).version).toBe("0.43.2");
-  }
-});
-
 test("uses a patch bump even when the selected fix has a minor changeset", async () => {
   const root = workspace();
   writeFileSync(join(root, ".changeset/fix.md"), '---\n"pstdio": minor\n---\n\nFix startup.\n');

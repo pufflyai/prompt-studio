@@ -41,6 +41,7 @@ describe("stage selection", () => {
   test("pushes and manual runs retain the full stage", () => {
     expect(select([], [], "push").stage).toBe("full");
     expect(select([], [], "workflow_dispatch").stage).toBe("full");
+    expect(select([], [], "push").browserSmoke).toBe(false);
   });
 });
 

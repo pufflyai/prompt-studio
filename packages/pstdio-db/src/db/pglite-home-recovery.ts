@@ -32,14 +32,18 @@ const flushDirectory = async (path: string) => {
     await directory.close();
   }
 };
+// A marker is either complete or absent. Recovery reads markers to decide what it owns,
+// so an interrupted write must never leave a truncated one.
 const writeIdentity = async (path: string, value: unknown) => {
-  const file = await open(path, "wx");
+  const partial = `${path}.partial`;
+  const file = await open(partial, "w");
   try {
     await file.writeFile(JSON.stringify(value));
     await file.sync();
   } finally {
     await file.close();
   }
+  await rename(partial, path);
   await flushDirectory(dirname(path));
 };
 const homeState = async (path: string) => {
@@ -88,7 +92,7 @@ const readOwner = async (work: string, active: string) => {
 interface Preparation {
   activePath: string;
   signal?: AbortSignal;
-  // Resolves only after the private target is verified and its engine is closed.
+  // Resolves after the private image is complete and any preparation engine is closed.
   // The source remains authoritative; preparation must read an owned copy of it.
   prepare: (paths: { source?: string; target: string; work: string }) => Promise<void>;
   onPhase?: (phase: Phase) => void;
@@ -149,8 +153,10 @@ export const preparePgliteHome = async (options: Preparation) => {
   };
   const recover = async () => {
     if (!(await exists(work))) return false;
-    if (!(await readdir(work)).length) {
-      await rmdir(work);
+    const entries = await readdir(work);
+    // Nothing is staged until ownership is written, so a start stopped before then left no data.
+    if (!entries.length || (entries.length === 1 && entries[0] === "owner.json.partial")) {
+      await rm(work, { recursive: true });
       return false;
     }
     const owner = await readOwner(work, active);

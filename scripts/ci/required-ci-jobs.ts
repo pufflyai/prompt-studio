@@ -3,6 +3,7 @@ import type { resolveCiScope } from "./pull-request-ci-scope";
 export const requiredCiJobs = (scope: ReturnType<typeof resolveCiScope>) => {
   const jobs = ["scope", "static_checks"];
   if (scope.packageChecks) jobs.push("lint", "unit_tests");
+  if (scope.stage === "full" || scope.packageChecks) jobs.push("quarantined_bun_tests");
   const selected = {
     build_docker: scope.dockerBuild,
     relay_smoke: scope.relaySmoke,
@@ -25,6 +26,7 @@ export const requiredCiJobs = (scope: ReturnType<typeof resolveCiScope>) => {
       "e2e_cli",
       "packaged_and_vite_e2e",
       "packaged_toolchain",
+      "quarantined_browser_tests",
     );
   }
   return jobs;

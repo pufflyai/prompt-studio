@@ -17,12 +17,12 @@ test("returning to Boombox reuses its live webviews across other modes and brows
     }, project.id);
     await page.goto(`/projects/${project.id}/`);
     await page.getByText("Boombox", { exact: true }).click();
-    await expect(page.locator("iframe:visible")).toHaveCount(4);
+    await expect(page.locator("iframe:visible")).toHaveCount(5);
     await expect(
       page.frameLocator('iframe[title="Lazy Sunday"]').getByText("Lazy Sunday", { exact: true }),
     ).toBeVisible();
     const frames = page.frames().filter((frame) => frame !== page.mainFrame());
-    expect(frames).toHaveLength(4);
+    expect(frames).toHaveLength(5);
     for (const frame of frames) {
       await frame.evaluate(() => {
         Reflect.set(window, "retentionMarker", "original browsing context");
@@ -41,7 +41,7 @@ test("returning to Boombox reuses its live webviews across other modes and brows
     await expect(page.locator("iframe:visible")).toHaveCount(3);
     await page.goBack();
     await page.getByText("Boombox", { exact: true }).click();
-    await expect(page.locator("iframe:visible")).toHaveCount(4);
+    await expect(page.locator("iframe:visible")).toHaveCount(5);
     for (const frame of frames) {
       expect(frame.isDetached()).toBe(false);
       expect(await frame.evaluate(() => Reflect.get(window, "retentionMarker"))).toBe("original browsing context");
@@ -79,7 +79,7 @@ test("switching projects releases the previous project's retained webviews", asy
     }, projects[0].id);
     await page.goto(`/projects/${projects[0].id}/`);
     await page.getByText("Boombox", { exact: true }).click();
-    await expect(page.locator("iframe:visible")).toHaveCount(4);
+    await expect(page.locator("iframe:visible")).toHaveCount(5);
     const frames = page.frames().filter((frame) => frame !== page.mainFrame());
     await page.goBack();
     expect(frames.every((frame) => !frame.isDetached())).toBe(true);

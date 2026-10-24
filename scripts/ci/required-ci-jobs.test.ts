@@ -57,3 +57,25 @@ test("the merge queue requires every job main requires", () => {
   expect(requiredCiJobs(scope("merge_group"))).toEqual(requiredCiJobs(scope("push")));
   expect(requiredCiJobs(scope("merge_group"))).toContain("packaged_toolchain");
 });
+
+test("quarantine setup failures remain blocking", () => {
+  const results = {
+    scope: { result: "success" },
+    static_checks: { result: "success" },
+    quarantined_bun_tests: { result: "failure" },
+    quarantined_browser_tests: { result: "failure" },
+  };
+  expect(() => requireCiJobs(["scope", "static_checks"], results)).toThrow();
+  expect(() => requireCiJobs(["scope", "static_checks", "quarantined_bun_tests"], results)).toThrow();
+});
+
+test("the merge queue requires native client builds", () => {
+  const scope = resolveCiScope({
+    event: "merge_group",
+    changedFiles: ["README.md"],
+    labels: [],
+    packageDirs: [],
+    affectedPackages: [],
+  });
+  expect(requiredCiJobs(scope)).toContain("build_clients");
+});

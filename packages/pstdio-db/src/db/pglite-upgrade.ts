@@ -1,7 +1,7 @@
 import { cp, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { PGliteOptions } from "@electric-sql/pglite";
-import { initializePglite } from "./open-pglite";
+import { restoreInitialDatabase } from "./open-pglite";
 import { preparePgliteHome } from "./pglite-home-recovery";
 import { type EmbeddedEngineFile, resolveUpgradeWorker } from "./pglite-upgrade-assets";
 
@@ -21,7 +21,11 @@ export const prepareCurrentPgliteHome = async (options: {
       options.signal?.throwIfAborted();
       if (!source) {
         await mkdir(target);
-        await initializePglite(target, options.runtime, options.onImageRestored);
+        // The matching engine already initialized and verified this immutable image at build time.
+        // Publish the complete snapshot before starting the one active runtime engine.
+        if (!options.runtime.loadDataDir) throw new Error("First creation requires the built database image");
+        await restoreInitialDatabase(target, options.runtime.loadDataDir);
+        options.onImageRestored();
         options.signal?.throwIfAborted();
         return;
       }
