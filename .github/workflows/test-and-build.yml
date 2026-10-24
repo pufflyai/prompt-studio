@@ -923,7 +923,10 @@ jobs:
         if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
         run: |
           set -o pipefail
-          bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts 2>&1 | tee native-dmg-cleanup.log
+          for attempt in {1..20}; do
+            echo "Native DMG cleanup diagnostic repetition ${attempt}/20"
+            bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts 2>&1 || exit $?
+          done | tee native-dmg-cleanup.log
 
       - name: Preserve failed native DMG cleanup log
         if: failure() && steps.dmg_cleanup.outcome == 'failure'
