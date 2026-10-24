@@ -586,7 +586,7 @@ jobs:
         run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
       - name: Test dependency installs, workspace links, watchers, and attachments
         if: contains(fromJSON(needs.scope.outputs.native_checks), 'filesystem')
-        run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-extensions/src/authoring/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts
+        run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-extensions/src/authoring/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts packages/pstdio-db/src/db/rename-pglite-home.test.ts
       - name: Test native process discovery and command shims
         if: contains(fromJSON(needs.scope.outputs.native_checks), 'process')
         run: bun --conditions=source test --timeout 15000 packages/pstdio-api/src/features/extensions/process-command.test.ts packages/pstdio-api/src/features/extensions/process-command.windows.test.ts packages/pstdio-api/src/features/extensions/process-discovery.test.ts packages/pstdio-extensions/src/runtime/process-environment.test.ts packages/pstdio-api-runtime-host/src/harness-registry.test.ts

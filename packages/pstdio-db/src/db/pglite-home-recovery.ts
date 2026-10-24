@@ -1,5 +1,6 @@
 import { lstat, mkdir, open, readdir, readFile, rename, rm, rmdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { renamePgliteHome } from "./rename-pglite-home";
 
 const engineIdentity = { format: 1, engine: "pglite-0.4" };
 const engineFile = ".pstdio-engine.json";
@@ -125,7 +126,7 @@ export const preparePgliteHome = async (options: Preparation) => {
   const publish = async (moveOriginal: boolean) => {
     options.signal?.throwIfAborted();
     if (moveOriginal) {
-      await rename(active, original);
+      await renamePgliteHome(active, original, options.signal);
       await flushDirectory(work);
       await flushDirectory(dirname(active));
       onPhase("original-moved");
@@ -133,7 +134,7 @@ export const preparePgliteHome = async (options: Preparation) => {
       await removeEmptyHome(active);
     }
     options.signal?.throwIfAborted();
-    await rename(target, active);
+    await renamePgliteHome(target, active, options.signal);
     await flushDirectory(work);
     await flushDirectory(dirname(active));
     onPhase("candidate-published");
@@ -146,7 +147,7 @@ export const preparePgliteHome = async (options: Preparation) => {
       return true;
     }
     await removeEmptyHome(active);
-    await rename(original, active);
+    await renamePgliteHome(original, active, options.signal);
     await flushDirectory(work);
     await flushDirectory(dirname(active));
     throw new Error("Incomplete engine publication; restored the original database");
