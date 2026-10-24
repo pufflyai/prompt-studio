@@ -86,7 +86,15 @@ if (projectNavigation.resourceScope !== "project") throw new Error("Navigation l
       (react && imports.includes("@pstdio/ui")
         ? `
 import { createElement } from "react";
-import { BubblePanel, ListRow, TreeList } from "@pstdio/ui";
+import { BubblePanel, Canvas, ListRow, TreeList, zoomCanvas, type CanvasCamera } from "@pstdio/ui";
+let camera: CanvasCamera = { x: 0, y: 0, zoom: 1 };
+const canvas = createElement(Canvas, {
+  "aria-label": "Design canvas", variant: "pan", zoom: camera.zoom, minZoom: 0.1, maxZoom: 4,
+  onPan: (delta) => { camera = { ...camera, x: camera.x + delta.x, y: camera.y + delta.y }; },
+  onZoom: (change) => { camera = zoomCanvas(camera, change, { minZoom: 0.1, maxZoom: 4 }); },
+});
+canvas.props.onZoom({ factor: 2, anchor: { x: 100, y: 50 } });
+if (camera.zoom !== 2 || camera.x !== -100 || camera.y !== -50) throw new Error("Canvas zoom lost its anchor");
 const outliner = createElement(TreeList, {
   sections: [{ id: "layers", nodes: [{ id: "image", label: "Image", startContent: createElement("span"),
     actionsVisibility: "always", actions: [{ id: "visibility", label: "Visibility", pressed: true, disabled: false }] }] }],
@@ -95,7 +103,7 @@ const outliner = createElement(TreeList, {
 });
 const groupRow = createElement(ListRow, { label: "Group", isContainer: true, showExpandToggle: true,
   expandOnClick: false, onToggleExpand: () => {}, startContent: createElement("span") });
-void [outliner, groupRow];
+void [canvas, outliner, groupRow];
 import { CollectionViewBar, EMPTY_VIEW_FILTER, filterRowsByView, withTitleField } from "@pstdio/ui/collection-view";
 const panelOverlay = createElement(BubblePanel, { isOpen: true, overlay: createElement("div", { "data-drop-feedback": true }) });
 void panelOverlay;
