@@ -6,7 +6,27 @@ import { renamePgliteHome } from "./rename-pglite-home";
 
 const windowsTest = process.platform === "win32" ? test : test.skip;
 
-windowsTest("database publication waits for a temporary Windows reader to release its handle", async () => {
+test("cancelled database publication preserves the active home", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pglite-publication-cancelled-"));
+  const active = join(root, "active");
+  const original = join(root, "original");
+  await mkdir(active);
+  await writeFile(join(active, "record"), "retained database bytes");
+  const controller = new AbortController();
+  const reason = new Error("Database opening was cancelled");
+  controller.abort(reason);
+  try {
+    const failure = await renamePgliteHome(active, original, controller.signal).catch((error: unknown) => error);
+    expect(failure).toBe(reason);
+    expect(await readFile(join(active, "record"), "utf8")).toBe("retained database bytes");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+const withWindowsReader = async (
+  run: (paths: { active: string; original: string; releaseReader: () => void }) => Promise<void>,
+) => {
   const root = await mkdtemp(join(tmpdir(), "pglite-publication-reader-"));
   const active = join(root, "active");
   const original = join(root, "original");
@@ -41,7 +61,6 @@ try {
     child.stdin.write("\n");
     child.stdin.end();
   };
-  let release: ReturnType<typeof setTimeout> | undefined;
   try {
     const reader = child.stdout.getReader();
     const ready = await reader.read();
@@ -49,15 +68,48 @@ try {
     expect(new TextDecoder().decode(ready.value)).toContain("reader ready");
     const blocked = await rename(active, original).catch((error: unknown) => error);
     expect(blocked).toMatchObject({ code: "EPERM" });
-    release = setTimeout(releaseReader, 30);
-    const failure = await renamePgliteHome(active, original).catch((error: unknown) => error);
-    expect(failure).toBeUndefined();
-    expect(await readFile(join(original, "record"), "utf8")).toBe("retained database bytes");
-    expect(await child.exited, await stderr).toBe(0);
+    await run({ active, original, releaseReader });
   } finally {
-    clearTimeout(release);
     if (child.exitCode === null) releaseReader();
-    await child.exited;
+    const code = await child.exited;
+    const error = await stderr;
     await rm(root, { recursive: true, force: true });
+    expect(code, error).toBe(0);
   }
+};
+
+windowsTest("database publication waits for a temporary Windows reader to release its handle", async () => {
+  await withWindowsReader(async ({ active, original, releaseReader }) => {
+    const release = setTimeout(releaseReader, 30);
+    try {
+      const failure = await renamePgliteHome(active, original).catch((error: unknown) => error);
+      expect(failure).toBeUndefined();
+      expect(await readFile(join(original, "record"), "utf8")).toBe("retained database bytes");
+    } finally {
+      clearTimeout(release);
+    }
+  });
+});
+
+windowsTest("cancelling Windows publication while a reader is open preserves the active home", async () => {
+  await withWindowsReader(async ({ active, original }) => {
+    const controller = new AbortController();
+    const reason = new Error("Database opening was cancelled");
+    const cancel = setTimeout(() => controller.abort(reason), 30);
+    try {
+      const failure = await renamePgliteHome(active, original, controller.signal).catch((error: unknown) => error);
+      expect(failure).toBe(reason);
+      expect(await readFile(join(active, "record"), "utf8")).toBe("retained database bytes");
+    } finally {
+      clearTimeout(cancel);
+    }
+  });
+});
+
+windowsTest("a persistent Windows reader reports publication failure and preserves the active home", async () => {
+  await withWindowsReader(async ({ active, original }) => {
+    const failure = await renamePgliteHome(active, original).catch((error: unknown) => error);
+    expect(failure).toMatchObject({ code: "EPERM" });
+    expect(await readFile(join(active, "record"), "utf8")).toBe("retained database bytes");
+  });
 });

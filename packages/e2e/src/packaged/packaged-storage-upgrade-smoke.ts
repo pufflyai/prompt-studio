@@ -121,6 +121,7 @@ export const registerStorageUpgradeSmokeTests = (releasedBinary: () => string) =
           }),
         );
         env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+        // Publication must coexist with these temporary filesystem readers on Windows.
         disk = observeUpgradeDisk(root);
         await disk.sample();
         const upgradeStarted = performance.now();
