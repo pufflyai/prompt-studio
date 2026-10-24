@@ -774,7 +774,6 @@ jobs:
       - name: Build database test dependencies
         run: bun run build -- --scope pstdio-db --include-dependencies
       - name: Build quarantined API dependencies
-        if: runner.os == 'Windows'
         run: bun run build -- --scope pstdio-api --include-dependencies
       - name: Run quarantined database cases with their existing limits
         continue-on-error: true
@@ -783,7 +782,6 @@ jobs:
         continue-on-error: true
         run: bun run --cwd scripts test
       - name: Run quarantined API cases with their existing limits
-        if: runner.os == 'Windows'
         continue-on-error: true
         env:
           PSTDIO_DEFAULT_EXTENSIONS: "[]"

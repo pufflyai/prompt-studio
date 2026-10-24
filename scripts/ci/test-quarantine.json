@@ -152,6 +152,16 @@
   },
   {
     "runner": "bun",
+    "file": "packages/pstdio-api/src/features/extensions/extension-terminal-runtime.test.ts",
+    "name": "counts a program that replaces the interactive shell",
+    "platforms": ["linux"],
+    "owner": "PS-907 / terminal activity",
+    "reason": "In one Linux merge group the supervisor still reported the shell as idle 100 ms after `exec sleep 5` was written: the prompt marker had been read but the DEBUG-trap busy marker had not. It did not reproduce on macOS or on Linux with 0.3 CPUs. Keep the replaced-shell assertion.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40126362257/job/120968672727"],
+    "removeWhen": "Make the test wait for the busy marker instead of a fixed 100 ms, or fix the reader lag it exposes, then pass ten independent Linux runs."
+  },
+  {
+    "runner": "bun",
     "file": "clients/desktop/src/packaging/dmg-device-cleanup.test.ts",
     "name": "detaches its image after the volume is unmounted",
     "platforms": ["darwin"],
