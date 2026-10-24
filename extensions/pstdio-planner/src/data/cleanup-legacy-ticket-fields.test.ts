@@ -12,7 +12,7 @@ const storedTicket: Ticket = {
   title: "Ticket",
   content: "# Ticket",
   statusId: "ready",
-  tagIds: [],
+  tags: {},
   attachments: [],
   parentId: null,
   dependsOn: [],

@@ -77,7 +77,7 @@ describe("findTicket", () => {
       title: "Selected ticket",
       content: "",
       statusId: null,
-      tagIds: [],
+      tags: {},
       archived: false,
       sortOrder: 0,
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -97,7 +97,7 @@ describe("findTicket", () => {
 
     const ticket = await findTicket({ ...ticketContext(storage), storage: observed.storage }, "ticket-1");
 
-    expect(ticket?.tagIds).toEqual([]);
+    expect(ticket?.tags).toEqual({});
     expect(observed.reads.filter((key) => key.startsWith("tickets/"))).toEqual(["tickets/ticket-1"]);
   });
 
@@ -110,7 +110,7 @@ describe("findTicket", () => {
       title: "Padded shorthand",
       content: "",
       statusId: null,
-      tagIds: [],
+      tags: {},
       archived: false,
       sortOrder: 0,
       createdAt: "2026-01-01T00:00:00.000Z",

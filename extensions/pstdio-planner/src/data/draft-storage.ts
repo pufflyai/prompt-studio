@@ -5,6 +5,7 @@ import { tagsCollection, ticketsCollection } from "./collections";
 import { applyFrontmatter, buildTicketFrontmatter, withTicketCheckoutIdentity } from "./frontmatter";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
 import type { TicketContext } from "./ticket-identity";
+import { ticketTagIds } from "./ticket-tags";
 import type { Ticket } from "./types";
 
 export const TICKETS_DIR = ".pstdio/extension-storage/pstdio.pstdio-planner/tickets";
@@ -46,7 +47,7 @@ const dependencyShorthandsForIds = async (ctx: TicketContext, dependencyIds: str
 // applied over the ticket body.
 export const ticketToMarkdown = async (ctx: TicketContext, ticket: Ticket) => {
   const [tagNames, parentShorthand, dependencyShorthands] = await Promise.all([
-    tagNamesForIds(ctx.storage, ticket.tagIds ?? []),
+    tagNamesForIds(ctx.storage, ticketTagIds(ticket)),
     parentShorthandForId(ctx, ticket.parentId),
     dependencyShorthandsForIds(ctx, normalizeTicketDependencies(ticket.dependsOn)),
   ]);

@@ -1,6 +1,7 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { readTicketsWithReviewState, statusesCollection, tagsCollection } from "../data/collections";
 import { requireTickets, resolveStatusId, resolveTagOptionIds } from "../data/resolve";
+import { ticketTagIds } from "../data/ticket-tags";
 import { sortedBySortOrder } from "../utils/sort";
 
 // Backs `pst tickets list`. Status/tag/parent filters accept human names
@@ -44,7 +45,7 @@ export const listTicketsCommand = defineCommand({
     return sortedBySortOrder(
       tickets.filter((ticket) => {
         if (statusId !== undefined && ticket.statusId !== statusId) return false;
-        if (tagIds && !tagIds.every((id) => (ticket.tagIds ?? []).includes(id))) return false;
+        if (tagIds && !tagIds.every((id) => ticketTagIds(ticket).includes(id))) return false;
         if (parentIds !== undefined && !parentIds.has(ticket.parentId ?? "")) return false;
         if (Boolean(ticket.archived) !== archivedFilter) return false;
         if (Boolean(ticket.draft) !== draftFilter) return false;
@@ -54,7 +55,7 @@ export const listTicketsCommand = defineCommand({
       shorthand: ticket.shorthand,
       title: ticket.title,
       status: ticket.statusId ? (statusNameById.get(ticket.statusId) ?? "") : "",
-      tags: (ticket.tagIds ?? []).map((id) => optionNameById.get(id) ?? id),
+      tags: ticketTagIds(ticket).map((id) => optionNameById.get(id) ?? id),
     }));
   },
 });

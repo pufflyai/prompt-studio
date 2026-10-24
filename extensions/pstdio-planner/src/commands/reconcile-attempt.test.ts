@@ -36,7 +36,7 @@ const setup = async (attempt: AttemptRecord, statuses: Record<string, string>) =
     title: "Ticket",
     content: "# Ticket",
     statusId: "in-progress",
-    tagIds: [],
+    tags: {},
     archived: false,
     sortOrder: 0,
     createdAt: "2026-08-18T09:00:00.000Z",

@@ -38,14 +38,19 @@ export interface StoredTicketReviewLink {
   updatedAt: string;
 }
 
+export type StoredTicketTags = Record<string, string | string[]>;
+
 export interface StoredTicket {
   id: string;
   title: string;
   content: string;
   statusId: string | null;
+  // Keyed by tag ID, so edits to different tags merge across devices. A single-select tag
+  // holds one option ID and merges as one value; a multi-select tag holds a list that merges
+  // item by item.
+  tags?: StoredTicketTags;
   // Optional so tickets created before these fields existed still read cleanly;
   // the data layer defaults them on read.
-  tagIds?: string[];
   attachments?: StoredTicketAttachment[];
   files?: StoredTicketFile[];
   reviewLinks?: StoredTicketReviewLink[];

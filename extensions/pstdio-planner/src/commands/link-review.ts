@@ -2,6 +2,7 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { inferReviewLinkTarget } from "../data/review-links";
+import { withTicketTagIds } from "../data/ticket-tags";
 import type { StoredTicketReviewLink } from "../data/types";
 
 export const linkReviewCommand = defineCommand({
@@ -19,7 +20,7 @@ export const linkReviewCommand = defineCommand({
   async run(ctx, commandParams) {
     const ticket = await findTicket(ctx, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
-    if (ticket.reviewLinks?.some((link) => link.url === commandParams.url)) return ticket;
+    if (ticket.reviewLinks?.some((link) => link.url === commandParams.url)) return withTicketTagIds(ticket);
 
     const now = new Date().toISOString();
     const reviewLink: StoredTicketReviewLink = {
@@ -37,6 +38,6 @@ export const linkReviewCommand = defineCommand({
     };
 
     await ticketsCollection(ctx).put(ticket.id, next);
-    return next;
+    return withTicketTagIds(next);
   },
 });

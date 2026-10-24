@@ -7,9 +7,10 @@ import {
   resolveStatusId,
   resolveTagOptionIds,
 } from "../data/resolve";
-import { assertSingleSelectTagIds } from "../data/tag-cardinality";
+import { ticketTagsForIds } from "../data/tag-cardinality";
 import { normalizeTicketDependencies, validateTicketDependencies } from "../data/ticket-dependencies";
 import type { TicketContext } from "../data/ticket-identity";
+import { withTicketTagIds } from "../data/ticket-tags";
 import type { Ticket } from "../data/types";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { plannerTicketsChanged } from "../events";
@@ -54,7 +55,7 @@ export const updateTicketCommand = defineCommand({
       commandParams.tags !== undefined
         ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
         : commandParams.tagIds;
-    if (tagIds !== undefined) await assertSingleSelectTagIds(ctx.storage, tagIds, existing.tagIds);
+    const tags = tagIds === undefined ? undefined : await ticketTagsForIds(ctx.storage, tagIds, existing.tags);
     const parentId = await resolveParentUpdate(ctx, existing, commandParams.parent, commandParams.unlinkParent);
     const dependsOn = await resolveDependencyUpdate(
       ctx,
@@ -70,7 +71,7 @@ export const updateTicketCommand = defineCommand({
         ? { content: commandParams.content, title: deriveTitle(commandParams.content) }
         : {}),
       ...(statusId !== undefined ? { statusId: statusId || null } : {}),
-      ...(tagIds !== undefined ? { tagIds } : {}),
+      ...(tags !== undefined ? { tags } : {}),
       ...(parentId !== undefined ? { parentId } : {}),
       ...(dependsOn !== undefined ? { dependsOn } : {}),
       ...(commandParams.blockedReason !== undefined ? { blockedReason: commandParams.blockedReason || null } : {}),
@@ -79,7 +80,7 @@ export const updateTicketCommand = defineCommand({
     const next = await updateTicket(ctx, draft);
     await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     await syncBlockedNotificationSafely(ctx, existing, next);
-    return next;
+    return withTicketTagIds(next);
   },
 });
 

@@ -3,10 +3,11 @@ import { putTicket, ticketsCollection } from "../data/collections";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON } from "../data/mappers";
 import { resolveDependencyIds, resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
-import { assertSingleSelectTagIds } from "../data/tag-cardinality";
+import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
 import { withTicketOrder } from "../data/ticket-order";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import { withTicketTagIds } from "../data/ticket-tags";
 import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
@@ -61,7 +62,7 @@ export const createTicketCommand = defineCommand({
       commandParams.tags !== undefined
         ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
         : (commandParams.tagIds ?? attributeTagIds(attributes));
-    await assertSingleSelectTagIds(ctx.storage, tagIds);
+    const tags = await ticketTagsForIds(ctx.storage, tagIds);
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
     const { id } = await allocateTicketIdentity(ctx);
@@ -85,7 +86,7 @@ export const createTicketCommand = defineCommand({
         title: ticketTitle(commandParams),
         content: commandParams.content ?? "",
         statusId,
-        tagIds,
+        tags,
         attachments: commandParams.attachments ?? [],
         parentId,
         dependsOn,
@@ -101,7 +102,7 @@ export const createTicketCommand = defineCommand({
     });
     await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
     return {
-      ...ticket,
+      ...withTicketTagIds(ticket),
       resource: {
         ...ticketResourceReference(ticket, createTicketParentLookup([...existing, ticket])),
         projectId: ctx.projectId,
