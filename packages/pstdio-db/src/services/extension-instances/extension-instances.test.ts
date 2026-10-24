@@ -151,17 +151,19 @@ test("activating a published source keeps the project instance and leaves other 
     source_kind: "registry",
     source_path: "/published/revision",
   });
-  const activated = await svc.activateProjectSource({
-    projectId,
-    extensionId: source.extension_id,
-    instanceId: first.id,
-    installedSourceId: source.id,
-    enabled: false,
-  });
-  expect(activated.instance.id).toBe(first.id);
-  expect(activated.instance.config_json).toEqual({ keep: true });
-  expect(activated.instance.installed_extension_id).toBe(source.id);
-  expect(activated.instance.enabled).toBe(false);
+  const [activated] = await svc.activateProjectSources([
+    {
+      projectId,
+      extensionId: source.extension_id,
+      instanceId: first.id,
+      installedSourceId: source.id,
+      enabled: false,
+    },
+  ]);
+  expect(activated!.instance.id).toBe(first.id);
+  expect(activated!.instance.config_json).toEqual({ keep: true });
+  expect(activated!.instance.installed_extension_id).toBe(source.id);
+  expect(activated!.instance.enabled).toBe(false);
   expect((await svc.get(other.id))?.installed_extension_id).toBe(installedId);
 });
 

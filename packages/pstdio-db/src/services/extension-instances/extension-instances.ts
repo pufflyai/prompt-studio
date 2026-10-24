@@ -114,8 +114,6 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
 
   const activateProjectSources = (inputs: ActivationInput[]) => activateProjectSourcesImpl(db, inputs);
 
-  const activateProjectSource = async (input: ActivationInput) => (await activateProjectSources([input]))[0]!;
-
   const remove = async (id: string) => {
     const [deleted] = await db.delete(extension_instances).where(eq(extension_instances.id, id)).returning();
     return deleted ?? null;
@@ -128,7 +126,6 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
     create,
     update,
     claimProjectExtensionProvider,
-    activateProjectSource,
     activateProjectSources,
     remove,
   };

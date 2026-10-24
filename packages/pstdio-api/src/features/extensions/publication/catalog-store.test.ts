@@ -14,7 +14,6 @@ test("republishing restores a deleted selection and stale selections cannot over
     extensionId: "test.extension",
     revision: asset.sha256,
     version: "1.0.0",
-    automation: false,
     enabled: true,
   };
   await catalog.select(publication, asset);
@@ -109,10 +108,7 @@ test("competing same-version and new-version publications keep package metadata 
           mediaType: "application/octet-stream",
         };
         files.set(asset.sha256, data);
-        await catalog.select(
-          { extensionId: "test.extension", revision: asset.sha256, version, automation: false, enabled: true },
-          asset,
-        );
+        await catalog.select({ extensionId: "test.extension", revision: asset.sha256, version, enabled: true }, asset);
         return asset;
       },
     };

@@ -1,7 +1,3 @@
-import { type Publication, publicationSchema, publishedExtensionsId } from "./types";
-
-export { type Publication, publicationSchema, publishedExtensionsId } from "./types";
-
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,6 +6,9 @@ import type { ExtensionsRouteDeps } from "../deps";
 import { createPublicationCatalog } from "./catalog-store";
 import { packExtension } from "./package";
 import { preparePublishedExtension } from "./prepare";
+import { type Publication, PublicationChangedError, publicationSchema, publishedExtensionsId } from "./types";
+
+export { type Publication, publicationSchema, publishedExtensionsId } from "./types";
 
 export const publishedOwner = (workbenchId: string) => ({ workbenchId, extensionId: publishedExtensionsId });
 export const openPublishedCatalog = async (
@@ -37,26 +36,21 @@ export const publishExtension = async (
   if (installedSource.extension_id === publishedExtensionsId) throw new Error("Reserved platform extension identity");
   const catalog = await openPublishedCatalog(deps, input.projectId);
   const record = await catalog.read(installedSource.extension_id);
-  if (record.revision !== input.expectedRevision)
-    throw new Error("Published extension changed; read its revision again");
+  if (record.revision !== input.expectedRevision) throw new PublicationChangedError();
   const bytes = await packExtension(installedSource.source_path);
-  const asset = await deps.assetTransferService.stage(publishedOwner(input.projectId), crypto.randomUUID(), bytes);
+  // Validate the package before its bytes are stored, so a rejected source leaves nothing behind.
   const prepared = await preparePublishedExtension({
     bytes,
     root: join(tmpdir(), "pstdio-publication"),
     extensionId: installedSource.extension_id,
   });
-  const automation = ["hooks", "schedules", "middlewares"].some((key) => {
-    const entries = prepared.loaded.definition[key];
-    return entries && typeof entries === "object" && Object.keys(entries).length > 0;
-  });
   await rm(prepared.path, { recursive: true, force: true });
+  const asset = await deps.assetTransferService.stage(publishedOwner(input.projectId), crypto.randomUUID(), bytes);
   const previous = publicationSchema.safeParse(record.value);
   const value: Publication = {
     extensionId: installedSource.extension_id,
     revision: asset.sha256,
     version: prepared.loaded.metadata.version,
-    automation,
     enabled: previous.success ? previous.data.enabled : source.instance.enabled,
   };
   return catalog.select(value, asset, input.expectedRevision);

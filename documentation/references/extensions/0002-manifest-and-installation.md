@@ -343,8 +343,9 @@ sources, resource prefixes and webviews before switching the whole set in one da
 transaction. This work runs in the project's background sync connection; showing the
 enabled extensions reads only local rows. Workspace setup runs afterward through the
 normal workspace setup queue; its failures belong to the workspace setup status. A failed
-transfer or activation keeps the previous usable set. Interrupted encrypted downloads
-resume from their durable byte offset.
+transfer or activation keeps the previous usable set. A set that fails to activate is
+not tried again until it changes, the app restarts, or someone adopts the extension.
+Interrupted encrypted downloads resume from their durable byte offset.
 
 Packages include portable source and assets. They omit dependency directories, checkout
 metadata, `.pstdio`, environment files and standard package-manager credentials. Source
@@ -352,12 +353,14 @@ links are rejected. Runtime dependencies require a frozen `bun.lock`. Publish pa
 whose dependencies can be installed independently; machine paths and credentials stay
 local.
 
-Repo-local sources and unpublished edits are private overrides. Catch-up preserves
-their code. Their record and artifact edits still sync, but their data migration
-callbacks do not run. Only the selected, unmodified synced package can run data
-migrations. An older package can read shared data but cannot change it until updated.
-This also applies to file uploads and artifact writes. Local projects keep normal
-migration behavior. See [data migrations](0018-data-migrations.md).
+Repo-local sources and unpublished edits of a published extension are private
+overrides. Catch-up preserves their code. Their record and artifact edits still sync,
+but their data migration callbacks do not run. Only the selected, unmodified synced
+package can run data migrations. A skipped migration is not recorded, so the synced
+version still runs it. An older package can read shared data but cannot change it until
+updated. This also applies to file uploads and artifact writes. Extensions that are not
+published, and all extensions in local projects, keep normal migration behavior. See
+[data migrations](0018-data-migrations.md).
 
 To replace a private override with the selected package, or select a retained package:
 
@@ -370,8 +373,9 @@ pst extensions publication enable <extension-id> --project-id <project-id>
 
 Adoption preserves the instance, storage owner and settings. The previous source folder
 stays available. Rollback changes the selected code; it does not undo data migrations.
-All published extensions share their enabled state. Automation scheduling still follows
-its device assignment; publication does not move execution to another device.
+All published extensions share their enabled state. Uninstalling a published extension
+removes it from the set on every device. Automation scheduling still follows its device
+assignment; publication does not move execution to another device.
 
 Agents and clients use the same API: `GET` and `POST
 /v1/projects/{projectId}/extension-publications`. POST accepts `kind: "publish"` with

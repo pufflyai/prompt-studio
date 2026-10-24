@@ -1,6 +1,6 @@
 import type { GroupCommit, LockedRecords } from "pstdio-sync";
 import type { Asset, StorageRecord } from "pstdio-sync-contracts";
-import { type Publication, packageMetadataSchema, selectionSchema } from "./types";
+import { type Publication, PublicationChangedError, packageMetadataSchema, selectionSchema } from "./types";
 
 /** The records API of one storage owner. Each record is its own document (ADR 0100). */
 export interface CatalogRecords {
@@ -16,15 +16,21 @@ export const createPublicationCatalog = (input: {
   verifyComplete: (assets: Asset[]) => Promise<void>;
 }) => {
   const { records } = input;
+  // A selection without its matching package reads as unpublished, so one bad entry cannot break callers.
+  // Activation still refuses it and keeps the current set.
   const resolve = async (selected: StorageRecord, reader: Pick<CatalogRecords, "read">) => {
-    const id = selected.recordId;
-    if (selected.deleted || selected.value === null) return { ...selected, value: null, asset: null };
-    const selection = selectionSchema.parse(selected.value);
-    const pkg = await reader.read(`package:${selection.revision}`);
-    const metadata = packageMetadataSchema.parse(pkg.value);
-    if (metadata.extensionId !== id || !pkg.asset || pkg.asset.sha256 !== selection.revision)
-      throw new Error("Published package identity mismatch");
-    return { ...selected, value: { ...metadata, ...selection }, asset: pkg.asset };
+    const unpublished = { ...selected, value: null, asset: null };
+    const selection = selectionSchema.safeParse(selected.value);
+    if (selected.deleted || !selection.success) return unpublished;
+    const pkg = await reader.read(`package:${selection.data.revision}`);
+    const metadata = packageMetadataSchema.safeParse(pkg.value);
+    if (
+      !metadata.success ||
+      metadata.data.extensionId !== selected.recordId ||
+      pkg.asset?.sha256 !== selection.data.revision
+    )
+      return unpublished;
+    return { ...selected, value: { ...metadata.data, ...selection.data }, asset: pkg.asset };
   };
   const view = (reader: Pick<CatalogRecords, "read">) => ({
     records: reader,
@@ -38,8 +44,7 @@ export const createPublicationCatalog = (input: {
   ) =>
     records.transaction(async (locked) => {
       const record = await locked.read(id);
-      if (expectedRevision !== undefined && record.revision !== expectedRevision)
-        throw new Error("Published extension changed; read its revision again");
+      if (expectedRevision !== undefined && record.revision !== expectedRevision) throw new PublicationChangedError();
       return action({ ...view(locked), records: locked });
     });
   return {
@@ -65,7 +70,6 @@ export const createPublicationCatalog = (input: {
               replace: {
                 extensionId: publication.extensionId,
                 version: publication.version,
-                automation: publication.automation,
               },
               asset,
             },

@@ -57,8 +57,39 @@ test("publishing in a local project preserves its source's data migrations", asy
     new Blob(["local"]),
   );
   await catalog.select(
-    { extensionId: "test.local-access", revision: asset.sha256, version: "1.0.0", enabled: true, automation: false },
+    { extensionId: "test.local-access", revision: asset.sha256, version: "1.0.0", enabled: true },
     asset,
+  );
+  await storage.migrate(1, async () => {
+    await storage.set("migration", "ran");
+  });
+  expect(await storage.get<string>("migration")).toBe("ran");
+});
+
+test("an unpublished extension in a cloud project runs its own data migrations", async () => {
+  const project = await app.deps.projectService.create({ name: "Unpublished migrations" });
+  const source = createTestExtensionSource({
+    root,
+    name: "unpublished-access",
+    installName: "unpublished-access",
+    displayName: "Unpublished access",
+    version: "1.0.0",
+  });
+  const { instance } = await app.deps.extensionService.enableInstalledSourceForProject({
+    projectId: project.id,
+    sourcePath: source,
+    name: "unpublished-access",
+    installName: "unpublished-access",
+    displayName: "Unpublished access",
+    extensionId: "test.unpublished-access",
+    version: "1.0.0",
+    manifest: {},
+  });
+  const login = { managerOrigin: peer.origin, relayOrigin: peer.origin, accountId: "owner", deviceId: "device" };
+  const status = async () => ({ login, cloudProjects: [project.id], cloudProjectsLoaded: true, features: null });
+  const storage = createStorageApi(
+    { ...app.deps, accountService: { ...app.deps.accountService, status } },
+    { projectId: project.id, extensionId: "test.unpublished-access", extensionInstanceId: instance.id },
   );
   await storage.migrate(1, async () => {
     await storage.set("migration", "ran");
@@ -92,7 +123,7 @@ test("a private override cannot migrate while cloud membership is still unknown"
     new Blob(["offline"]),
   );
   await catalog.select(
-    { extensionId: "test.offline-access", revision: asset.sha256, version: "1.0.0", enabled: true, automation: false },
+    { extensionId: "test.offline-access", revision: asset.sha256, version: "1.0.0", enabled: true },
     asset,
   );
   const file = join(root, "undiscovered-account.json");
@@ -162,10 +193,7 @@ test("local overrides sync their edits but never run data migrations; older vers
         crypto.randomUUID(),
         new Blob([version]),
       );
-      await catalog.select(
-        { extensionId: "test.access", revision: asset.sha256, version, enabled: true, automation: false },
-        asset,
-      );
+      await catalog.select({ extensionId: "test.access", revision: asset.sha256, version, enabled: true }, asset);
     };
     cloudProjects.push(project.id);
     await createNativeStore(join(root, "storage", "native-account.json")).save({
@@ -177,10 +205,6 @@ test("local overrides sync their edits but never run data migrations; older vers
     });
     await app.deps.accountService.refresh();
     let migrations = 0;
-    await storage.migrate(1, async () => {
-      migrations++;
-    });
-    expect(migrations).toBe(0);
     await select("1.0.0");
     await storage.migrate(1, async () => {
       migrations++;

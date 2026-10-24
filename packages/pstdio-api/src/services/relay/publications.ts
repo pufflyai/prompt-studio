@@ -31,7 +31,9 @@ export const startPublishedExtensions = (input: {
     }
   };
   const documents = createExtensionDocumentSync({ config, owner, deps, access });
-  let activationFailed = false;
+  // A set that failed to activate waits until it changes. Retrying it on every reconnect would
+  // repeat the package checks, dependency installs and webview builds without a different result.
+  let failedSet: string | undefined;
   const connection = createDocumentRelayConnection({
     origin: config.relayOrigin,
     projectId: config.workbenchId,
@@ -40,23 +42,28 @@ export const startPublishedExtensions = (input: {
     synchronize: async (attemptSignal) => {
       await documents.synchronize(attemptSignal);
       const catalog = await openPublishedCatalog(deps, config.workbenchId, attemptSignal);
+      const selected = await catalog.list();
+      const key = canonicalJson(selected.map(({ recordId, value, asset }) => ({ recordId, value, asset })));
+      if (key === failedSet) return;
       try {
-        const entries = (await catalog.list())
-          .filter((record) => !record.deleted && !record.recordId.startsWith("package:"))
-          .map((record) => {
-            const publication = publicationSchema.parse(record.value);
-            if (publication.extensionId !== record.recordId || !record.asset) throw new Error("Invalid extension set");
-            return { publication, asset: record.asset };
-          });
+        const entries = selected.map((record) => {
+          const publication = publicationSchema.parse(record.value);
+          if (publication.extensionId !== record.recordId || !record.asset) throw new Error("Invalid extension set");
+          return { publication, asset: record.asset };
+        });
         await activatePublishedSet(deps, config.workbenchId, entries, attemptSignal, false, async () => {
           const current = (await catalog.list()).map((record) => ({ publication: record.value, asset: record.asset }));
           if (canonicalJson(current) !== canonicalJson(entries))
             throw new Error("Extension set changed during activation; retry");
         });
-        activationFailed = false;
+        failedSet = undefined;
       } catch (error) {
-        activationFailed = true;
-        throw error;
+        if (attemptSignal.aborted) throw error;
+        failedSet = key;
+        apiLogger.warn(
+          { event: "relay.publication.activation_failed", workbenchId: config.workbenchId, err: error },
+          "The synced extension set could not be activated; the current set stays active",
+        );
       } finally {
         input.statusChanged?.();
       }
@@ -74,7 +81,7 @@ export const startPublishedExtensions = (input: {
     done: connection.done.finally(documents.close),
     status: async () => {
       const status = await documents.status();
-      return { ...status, ...connection.status(), needsAttention: status.needsAttention || activationFailed };
+      return { ...status, ...connection.status(), needsAttention: status.needsAttention || failedSet !== undefined };
     },
     close: () => controller.abort(),
   };

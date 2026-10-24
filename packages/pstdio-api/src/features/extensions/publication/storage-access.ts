@@ -41,10 +41,13 @@ export const createPublicationStorageAccess = (
           throw new PublicationUpdateRequiredError();
       }
     },
+    /** False while a local override must leave this migration to the synced version (R43). */
     async migrate() {
-      if ((await deps.accountService.projectSyncStatus(input.projectId)).state === "local") return true;
+      // Without a published version every device runs its own copy, as in a local project.
       const selected = await selection();
-      if (!selected) return false;
+      if (!selected) return true;
+      const { cloudProjects, cloudProjectsLoaded } = await deps.accountService.status();
+      if (cloudProjectsLoaded && !(cloudProjects as string[]).includes(input.projectId)) return true;
       const invoking = await getSource();
       if (
         !invoking ||
@@ -57,6 +60,9 @@ export const createPublicationStorageAccess = (
     },
   };
 };
+
+// Thrown inside a pending migration so its version is not recorded; the synced version still runs it.
+const deferred = new Error("Migration deferred to the synced version");
 
 export const guardPublicationStorage = (
   storage: CommandRunnerEnvironment["storage"],
@@ -76,8 +82,16 @@ export const guardPublicationStorage = (
     });
   return {
     ...guard(storage, ["set", "delete"]),
-    migrate: async (...args: Parameters<typeof storage.migrate>) => {
-      if (await access.migrate()) await storage.migrate(...args);
+    // The access check runs only when a migration is due, after the stored version was read.
+    migrate: async (version, run) => {
+      try {
+        await storage.migrate(version, async (...args) => {
+          if (!(await access.migrate())) throw deferred;
+          await run(...args);
+        });
+      } catch (error) {
+        if (error !== deferred) throw error;
+      }
     },
     records: guard(storage.records, ["commit", "resolve"]),
     files: guard(storage.files, ["put", "delete"]),

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
-import { activatePublication } from "./activate";
+import { activatePublishedSet } from "./activate";
 import { publishedOwner } from "./catalog";
 import { packExtension } from "./package";
 
@@ -27,12 +27,12 @@ test("published webview activation emits the completed build state and retains t
         emitted.push(event.data as (typeof emitted)[number]);
     });
     try {
-      await activatePublication(
-        app.deps,
-        project.id,
-        { extensionId: "test.webview", revision: asset.sha256, version: "0.0.0", automation: false, enabled: true },
-        asset,
-      );
+      await activatePublishedSet(app.deps, project.id, [
+        {
+          publication: { extensionId: "test.webview", revision: asset.sha256, version: "0.0.0", enabled: true },
+          asset,
+        },
+      ]);
       const current = (await app.deps.extensionService.listProjectExtensionInstances(project.id))[0]!.installedSource;
       expect(current.source_ref).toBe(`pstdio-published:${asset.sha256}`);
       expect(emitted.filter((row) => row.id === current.id).at(-1)?.loaded_revision).toBe(current.loaded_revision);

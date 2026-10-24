@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
-import { activatePublication } from "./activate";
+import { activatePublishedSet } from "./activate";
 import { openPublishedCatalog, publishedOwner } from "./catalog";
 import { packExtension } from "./package";
 
@@ -27,7 +28,7 @@ const stage = async (projectId: string, source: string) => {
   );
   const catalog = await openPublishedCatalog(app.deps, projectId);
   await catalog.select(
-    { extensionId: "test.unrelated", revision: asset.sha256, version: "0.0.0", automation: false, enabled: true },
+    { extensionId: "test.unrelated", revision: asset.sha256, version: "0.0.0", enabled: true },
     asset,
   );
   return {
@@ -36,11 +37,19 @@ const stage = async (projectId: string, source: string) => {
       extensionId: "test.unrelated",
       revision: asset.sha256,
       version: "0.0.0",
-      automation: false,
       enabled: true,
     },
   };
 };
+type Entry = Parameters<typeof activatePublishedSet>[2][number];
+const activatePublication = async (
+  deps: typeof app.deps,
+  projectId: string,
+  publication: Entry["publication"],
+  asset: Entry["asset"],
+  signal?: AbortSignal,
+  adopt = false,
+) => (await activatePublishedSet(deps, projectId, [{ publication, asset }], signal, adopt))[0];
 const installed = async (projectId: string) =>
   (await app.deps.extensionService.listProjectExtensionInstances(projectId))[0];
 
@@ -63,7 +72,7 @@ test("verified revisions retain instance data and share enable choices; failed a
   await writeFile(join(source, "extension.ts"), "throw new Error('invalid publication'); export default {};");
   const broken = await stage(project.id, source);
   await expect(
-    activatePublication(app.deps, project.id, { ...broken.publication, automation: true, enabled: true }, broken.asset),
+    activatePublication(app.deps, project.id, { ...broken.publication, enabled: true }, broken.asset),
   ).rejects.toThrow();
   expect((await installed(project.id)).instance.enabled).toBe(false);
   expect((await installed(project.id)).installedSource.source_path).toBe(previous.installedSource.source_path);
@@ -80,6 +89,8 @@ test("verified revisions retain instance data and share enable choices; failed a
   await activatePublication(app.deps, project.id, next.publication, next.asset);
   const updated = await installed(project.id);
   expect(updated.instance.id).toBe(previous.instance.id);
+  // The replaced revision's folder is removed with its source row.
+  expect(existsSync(previous.installedSource.source_path)).toBe(false);
   expect(updated.instance.enabled).toBe(true);
   expect(updated.installedSource.loaded_revision).toBe(next.asset.sha256);
   expect((await app.deps.extensionStorageService.getKv(scope, "saved"))?.value_json).toEqual({ keep: true });
@@ -110,7 +121,7 @@ test("unpublished edits remain private overrides until explicit adoption", async
   expect(await readFile(join(previous.installedSource.source_path, "local.txt"), "utf8")).toBe("private draft");
 });
 
-test("automation extension enable state follows the accepted workbench switch", async () => {
+test("the enabled state follows the published selection", async () => {
   const project = await app.deps.projectService.create({ name: "Automation" });
   const source = createTestExtensionSource({
     root,
@@ -119,20 +130,10 @@ test("automation extension enable state follows the accepted workbench switch", 
     displayName: "Unrelated",
   });
   const first = await stage(project.id, source);
-  await activatePublication(
-    app.deps,
-    project.id,
-    { ...first.publication, automation: true, enabled: false },
-    first.asset,
-  );
+  await activatePublication(app.deps, project.id, { ...first.publication, enabled: false }, first.asset);
   const previous = await installed(project.id);
   expect(previous.instance.enabled).toBe(false);
-  await activatePublication(
-    app.deps,
-    project.id,
-    { ...first.publication, automation: true, enabled: true },
-    first.asset,
-  );
+  await activatePublication(app.deps, project.id, { ...first.publication, enabled: true }, first.asset);
   expect((await installed(project.id)).instance.enabled).toBe(true);
 });
 
@@ -181,7 +182,7 @@ test("a shared disable reaches a private override without executing an incompati
     displayName: "Unrelated",
   });
   const first = await stage(project.id, source);
-  await activatePublication(app.deps, project.id, { ...first.publication, automation: true }, first.asset);
+  await activatePublication(app.deps, project.id, { ...first.publication }, first.asset);
   const previous = await installed(project.id);
   await writeFile(join(previous.installedSource.source_path, "draft.txt"), "private override");
   await writeFile(
@@ -189,14 +190,9 @@ test("a shared disable reaches a private override without executing an incompati
     'throw new Error("must not evaluate remote implementation"); export default {};',
   );
   const next = await stage(project.id, source);
-  expect(
-    await activatePublication(
-      app.deps,
-      project.id,
-      { ...next.publication, automation: true, enabled: false },
-      next.asset,
-    ),
-  ).toBe("local-override");
+  expect(await activatePublication(app.deps, project.id, { ...next.publication, enabled: false }, next.asset)).toBe(
+    "local-override",
+  );
   expect((await installed(project.id)).instance.enabled).toBe(false);
   expect((await installed(project.id)).installedSource.source_path).toBe(previous.installedSource.source_path);
 });
@@ -276,7 +272,6 @@ test("a complete set rejects conflicting resource prefixes before switching any 
         extensionId: `test.${name}`,
         revision: asset.sha256,
         version: "0.0.0",
-        automation: false,
         enabled: true,
       },
       asset,

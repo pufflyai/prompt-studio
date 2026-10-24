@@ -205,7 +205,7 @@ test("three devices discover encrypted packages, preserve private overrides and 
   expect(dump).not.toContain("shared record from private code");
   // Failed set activation retains the previous installed source.
   await writeFile(join(source, "extension.ts"), 'throw new Error("cannot activate"); export default {};');
-  const bad = await a.deps.assetTransferService.stage(
+  const bad = await apps[1]!.deps.assetTransferService.stage(
     publishedOwner(projectId),
     crypto.randomUUID(),
     await packExtension(source),
@@ -215,6 +215,61 @@ test("three devices discover encrypted packages, preserve private overrides and 
     activatePublishedSet(apps[1]!.deps, projectId, [
       { publication: { ...publicationSchema.parse((await read(1)).value), revision: bad.sha256 }, asset: bad },
     ]),
-  ).rejects.toThrow();
+  ).rejects.toThrow("cannot activate");
   expect((await sourceFor(1)).installedSource.id).toBe(current.installedSource.id);
+});
+
+test("a synced set that fails to activate keeps the current set and waits until the set changes", async () => {
+  const c = apps[2]!;
+  const before = await sourceFor(2);
+  const broken = createTestExtensionSource({
+    root,
+    installName: "broken-unrelated",
+    name: "unrelated",
+    displayName: "Unrelated",
+    version: "1.0.0",
+  });
+  await writeFile(join(broken, "extension.ts"), 'throw new Error("cannot activate"); export default {};');
+  const bad = await c.deps.assetTransferService.stage(
+    publishedOwner(projectId),
+    crypto.randomUUID(),
+    await packExtension(broken),
+  );
+  // Catch up first, so this selection is newer than every other device's and wins the merge.
+  await sync(2);
+  const catalog = await catalogFor(2);
+  await catalog.select(
+    { extensionId: "test.unrelated", revision: bad.sha256, version: "1.0.0", enabled: true },
+    bad,
+    (await catalog.read("test.unrelated")).revision,
+  );
+  let attempts = 0;
+  const extensionService = {
+    ...c.deps.extensionService,
+    listProjectExtensionInstances: (id: string) => {
+      attempts++;
+      return c.deps.extensionService.listProjectExtensionInstances(id);
+    },
+  };
+  let passes = 0;
+  const connection = startPublishedExtensions({
+    config,
+    deps: { ...c.deps, extensionService },
+    access,
+    signal: controller.signal,
+    statusChanged: () => passes++,
+  });
+  publications.push(connection);
+  const waitFor = async (condition: () => Promise<boolean>) => {
+    while (!(await condition())) await Bun.sleep(10);
+  };
+  await waitFor(async () => (await connection.status()).needsAttention);
+  const failedAttempts = attempts;
+  for (const _ of [1, 2]) {
+    const seen = passes;
+    connection.wake();
+    await waitFor(async () => passes > seen && !(await connection.status()).busy);
+  }
+  expect(attempts).toBe(failedAttempts);
+  expect((await sourceFor(2)).installedSource.id).toBe(before.installedSource.id);
 });

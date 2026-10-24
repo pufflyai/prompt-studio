@@ -5,8 +5,6 @@ import type { ExtensionsRouteDeps } from "../deps";
 import { openPublishedCatalog, type Publication } from "./catalog";
 import { preparePublicationActivation } from "./prepare-activation";
 
-export { selectPublicationSource } from "./prepare-activation";
-
 interface Entry {
   publication: Publication;
   asset: Asset;
@@ -107,11 +105,3 @@ export const activatePublishedSet = (...args: Parameters<typeof applySet>) => {
     if (queues.get(projectId) === result) queues.delete(projectId);
   });
 };
-export const activatePublication = async (
-  deps: ExtensionsRouteDeps,
-  projectId: string,
-  publication: Publication,
-  asset: Asset,
-  signal?: AbortSignal,
-  adopt = false,
-) => (await activatePublishedSet(deps, projectId, [{ publication, asset }], signal, adopt))[0];

@@ -15,7 +15,6 @@ import { toExtensionEnableInput } from "./install-extension-source";
 import { toProjectExtensionInstance } from "./project-extension-instance";
 import { openPublishedCatalog } from "./publication/catalog";
 import { changePublishedCatalog } from "./publication/change-catalog";
-import { SharedExtensionEnablementError, sharedAutomationIds } from "./publication/enablement";
 
 type LifecycleDeps = ExtensionsRouteDeps & {
   installedExtensionSourcesService: RouteDeps["installedExtensionSourcesService"];
@@ -93,8 +92,6 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return null;
 
-    if ((await sharedAutomationIds(deps, projectId)).has(existing.installedSource.extension_id))
-      throw new SharedExtensionEnablementError();
     const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
     const schedule = snapshot.runtime.schedules.find(
       (candidate) => candidate.id === automationId && candidate.extensionId === existing.installedSource.extension_id,

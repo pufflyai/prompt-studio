@@ -1,3 +1,4 @@
+import { rm } from "node:fs/promises";
 import type { createExtensionInstancesDBService, createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { hashExtensionSource, type LoadedExtension } from "../features/extensions/extension-runtime";
 
@@ -5,6 +6,8 @@ interface Activation {
   projectId: string;
   instanceId?: string;
   enabled: boolean;
+  /** Adoption replaces a private override, whose folder may hold the only copy of local edits. */
+  keepReplacedFolder?: boolean;
   beforeActivate: () => Promise<void>;
   source:
     | { kind: "prepared"; path: string; revision: string; loaded: LoadedExtension }
@@ -88,6 +91,9 @@ export const activatePublishedExtensions = async (deps: ActivationDeps, inputs: 
         !(await deps.instances.list({ installed_extension_id: entry.previousSource.id })).length
       ) {
         await deps.sources.remove(entry.previousSource.id);
+        // Each revision is unpacked into its own folder, which nothing uses once its row is gone.
+        if (!entry.input.keepReplacedFolder)
+          await rm(entry.previousSource.source_path, { recursive: true, force: true });
         deps.emitRemoved(entry.previousSource);
       }
     }

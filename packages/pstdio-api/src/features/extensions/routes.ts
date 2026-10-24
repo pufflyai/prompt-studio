@@ -101,7 +101,7 @@ import {
   type ProjectExtensionLifecycleRouteDeps,
 } from "./project-extension-lifecycle";
 import { publicationRoutes } from "./publication/routes";
-import { PublicationUpdateRequiredError } from "./publication/types";
+import { PublicationChangedError, PublicationUpdateRequiredError } from "./publication/types";
 
 type ExtensionRoutes = OpenAPIHono<AppBindings>;
 
@@ -177,7 +177,8 @@ export const createExtensionRoutes = (
 ) => {
   const routes = new OpenAPIHono<AppBindings>();
   routes.onError((error, c) => {
-    if (error instanceof PublicationUpdateRequiredError) return c.json({ error: error.message }, 409);
+    if (error instanceof PublicationUpdateRequiredError || error instanceof PublicationChangedError)
+      return c.json({ error: error.message }, 409);
     throw error;
   });
 

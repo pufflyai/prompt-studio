@@ -94,7 +94,11 @@ export const preparePublicationActivation = async (
   stages.push(prepared.path);
   if (prepared.loaded.metadata.version !== publication.version) throw new Error("Published package version mismatch");
   return {
-    plan: { ...plan, source: { kind: "prepared" as const, ...prepared, revision: publication.revision } },
+    plan: {
+      ...plan,
+      keepReplacedFolder: adopting,
+      source: { kind: "prepared" as const, ...prepared, revision: publication.revision },
+    },
     status: "active",
   };
 };
