@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createBootstrapModule } from "../bootstrap";
 import { createExtensionsModule } from "../extensions/module";
@@ -9,6 +10,41 @@ import { createSessionsModule } from "../sessions/module";
 import { createStartModule } from "../start/module";
 import { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
 import { createProjectsModule } from "./module";
+
+test("opens the first created project without losing its active mode when the creation dialog closes", async () => {
+  const workbench = createWorkbench();
+  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+  getWriter("projects")?.truncateAndWrite([]);
+  markInitialCollectionsSyncComplete();
+  const modules = [
+    createExtensionsModule({
+      loadAppearance: async () => emptyAppearance,
+      loadMetadata: async () => metadataWithResourceExtension,
+    }),
+    createProjectsModule(),
+    createStartModule(),
+    createBootstrapModule(),
+  ].map((module) => workbench.registerModule(module));
+  try {
+    await workbench.commands.executeCommand(dashboardCommandIds.createProject);
+    getWriter("projects")?.truncateAndWrite([{ id: "created-project", name: "Created project" }]);
+    await workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
+      project: { id: "created-project", name: "Created project" },
+    });
+    await flushMicrotasks();
+    await flushMicrotasks();
+
+    expect(workbench.context.get("dashboard.project.id")).toBe("created-project");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.pages.store.getState().projectId).toBe("created-project");
+    expect(workbench.pages.store.getState().location?.page.id).toBe("start");
+  } finally {
+    workbench.pageLocations.clearProject();
+    for (const module of modules.reverse()) module.dispose();
+    getWriter("projects")?.truncateAndWrite([]);
+    clearCachedDashboardExtensionMetadata("created-project");
+  }
+});
 
 test.each([
   false,

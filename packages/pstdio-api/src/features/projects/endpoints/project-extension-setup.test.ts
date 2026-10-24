@@ -53,6 +53,29 @@ const open = (initial_workspace: { provider_id: string; params: Record<string, u
     body: JSON.stringify({ initial_workspace }),
   });
 
+test.each([
+  "skipped",
+  "required",
+])("first project creation reuses defaults when dependency installation is %s", async (installation) => {
+  const fixture = { ...(await extension("installed-fixture")), force: true, skipInstall: installation === "skipped" };
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([fixture]);
+  await installDefaultExtensions();
+  const installedNote = join(root, "home/extensions/installed-fixture/local-note.txt");
+  await writeFile(installedNote, "Keep the installed source");
+  await rm(join(root, "home/extensions/installed-fixture/node_modules"), { recursive: true, force: true });
+  const folder = join(root, "first-project");
+  await mkdir(folder);
+
+  const response = await open({ provider_id: "pstdio.root", params: { path: folder } });
+
+  expect(response.status).toBe(201);
+  expect(await readFile(installedNote, "utf8")).toBe("Keep the installed source");
+  const project = await response.json();
+  const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
+  expect(instances).toHaveLength(1);
+  expect(instances[0].instance.enabled).toBe(true);
+});
+
 test("initial project setup enables defaults discovered before workspace initialization", async () => {
   process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([await extension("healthy-fixture")]);
   await installDefaultExtensions();

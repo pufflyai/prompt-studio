@@ -44,6 +44,23 @@ type InstallDefaultExtensionsDeps = {
   signal?: AbortSignal;
 };
 
+type DefaultExtensionInstallMode = "refresh" | "ensure";
+
+const needsDefaultExtensionInstall = (
+  entry: DefaultExtensionEntry,
+  extensionsRoot: string,
+  mode: DefaultExtensionInstallMode,
+) => {
+  if (mode === "refresh" && typeof entry !== "string" && entry.force) return true;
+  if (!isInstalledUserExtension(entry, extensionsRoot)) return true;
+  const installName = typeof entry === "string" ? entry : (entry.installName ?? basename(entry.source));
+  const targetPath = join(extensionsRoot, installName);
+  const { manifest } = readPackageManifestMetadata(targetPath);
+  if (!manifest || manifest.pstdio?.scope === "repo") return true;
+  if (typeof entry !== "string" && entry.skipInstall) return false;
+  return shouldInstallDependencies(targetPath);
+};
+
 const runDefaultExtensionInstall = async (
   deps: InstallDefaultExtensionsDeps,
   context: {
@@ -127,7 +144,7 @@ const runDefaultExtensionInstall = async (
   return installed;
 };
 
-export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}) => {
+const prepareDefaultExtensions = (deps: InstallDefaultExtensionsDeps, mode: DefaultExtensionInstallMode) => {
   const env = { ...(deps.env ?? process.env) };
   return traceSetupPhase("default_extensions.request", {}, () =>
     enqueueDefaultExtensionInstall(async () => {
@@ -144,17 +161,11 @@ export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}
               ),
             );
         const extensionsRoot = join(resolvePstdioHome({ env }), "extensions");
-        // Startup and first-project setup share this queue. Check after the previous install
-        // finishes so project creation does not install or validate the same defaults again. Project sync
-        // discovers installed sources and keeps their recorded Git origin.
-        const defaultExtensions = entries.filter((entry) => {
-          if (typeof entry !== "string" && entry.force) return true;
-          if (!isInstalledUserExtension(entry, extensionsRoot)) return true;
-          const installName = typeof entry === "string" ? entry : (entry.installName ?? basename(entry.source));
-          const targetPath = join(extensionsRoot, installName);
-          const { manifest } = readPackageManifestMetadata(targetPath);
-          return !manifest || manifest.pstdio?.scope === "repo" || shouldInstallDependencies(targetPath);
-        });
+        // Missing-only requests inspect disk after startup's queued source refresh finishes.
+        // Project sync discovers installed sources and keeps their recorded Git origin.
+        const defaultExtensions = entries
+          .filter((entry) => needsDefaultExtensionInstall(entry, extensionsRoot, mode))
+          .map((entry) => (mode === "ensure" && typeof entry !== "string" ? { ...entry, force: false } : entry));
         const context = {
           config: { defaultExtensions },
           env,
@@ -164,6 +175,13 @@ export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}
     }, deps.signal),
   );
 };
+
+export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}) =>
+  prepareDefaultExtensions(deps, "refresh");
+
+// Project creation adopts the installed tools. Runtime startup owns forced source updates.
+export const installMissingDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}) =>
+  prepareDefaultExtensions(deps, "ensure");
 
 export { registerInstalledExtensionSources } from "./register-installed-extension-sources";
 
