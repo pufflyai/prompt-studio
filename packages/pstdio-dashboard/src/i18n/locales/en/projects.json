@@ -170,6 +170,7 @@
     }
   },
   "list": {
+    "settings": "Settings",
     "createProject": "Create project",
     "searchPlaceholder": "Search projects...",
     "noProjectsYet": "No projects yet",
