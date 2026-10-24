@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { folderWorkspaceCapabilities } from "pstdio-db";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { blobFilesFixture } from "../../../services/shared-files/blob-files.fixture";
+import { createTestDocumentStorage } from "../../../test-utils/create-test-document-storage";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createFilesApi } from "./files";
 import { createCommandEnvironment } from "./index";
@@ -53,6 +54,7 @@ const makeEnabledSources = () => [
 const projectContext = { id: "project-1", name: "Project One", shorthand: "PO" };
 
 const makeStorageService = () => ({
+  ...createTestDocumentStorage(),
   getKv: async () => null,
   setKv: async () => {},
   deleteKv: async () => {},
@@ -154,10 +156,7 @@ describe("createCommandEnvironment host primitives", () => {
     expect("writeText" in env.packageFiles).toBe(false);
     await env.extensionFiles?.writeText("cache/index.json", "{}");
     expect(
-      readFileSync(
-        join(repoPath, ".pstdio/extension-storage/extension-lab/.publishers/pstdio/cache/index.json"),
-        "utf8",
-      ),
+      readFileSync(join(repoPath, ".pstdio/extension-storage/pstdio.extension-lab/cache/index.json"), "utf8"),
     ).toBe("{}");
     expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain(
       "/extension-storage/pstdio.extension-lab/",
@@ -481,13 +480,13 @@ describe("createCommandEnvironment", () => {
       {
         artifactMounts: [
           {
-            id: "extension-lab.reports",
+            id: "pstdio.extension-lab.reports",
             localId: "reports",
             extensionId: "pstdio.extension-lab",
             name: "extension-lab",
             sourcePath: "/tmp/extension-lab/extension.ts",
             relativePath: "reports",
-            fullPath: ".pstdio/extension-storage/extension-lab/reports",
+            fullPath: ".pstdio/extension-storage/pstdio.extension-lab/reports",
             label: "Reports",
             watch: false,
             changedEventId: "artifact.changed:pstdio.extension-lab.artifact.reports",
@@ -504,7 +503,10 @@ describe("createCommandEnvironment", () => {
     await reports.writeText("latest.md", "hello");
 
     expect(
-      readFileSync(join(repoPath, ".pstdio", "extension-storage", "extension-lab", "reports", "latest.md"), "utf8"),
+      readFileSync(
+        join(repoPath, ".pstdio", "extension-storage", "pstdio.extension-lab", "reports", "latest.md"),
+        "utf8",
+      ),
     ).toBe("hello");
     expect(() => env.artifacts.mount("missing")).toThrow("Artifact mount not found: missing");
   });
@@ -885,58 +887,5 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
       branch: "workspace/T-1_A1",
       root_path: "/repo/.worktrees/T-1_A1",
     });
-  });
-});
-
-describe("createCommandEnvironment storage conflicts", () => {
-  const conflictEnv = (root: string, extensionId: string) =>
-    createCommandEnvironment(
-      {
-        extensionStorageService: makeStorageService(),
-        workspaceService: {
-          setInitializing: async () => null,
-          getDefault: async () => ({
-            id: "home",
-            project_id: "project-1",
-            root_path: root,
-            execution_kind: "local",
-            provider_id: "pstdio.root",
-            provider_state: "ready",
-            provider_capabilities_json: folderWorkspaceCapabilities,
-          }),
-          list: async () => [],
-        },
-      } as never,
-      [
-        ...makeEnabledSources(),
-        {
-          instance: { id: "instance-2", namespace: "other" },
-          installedSource: { id: "source-2", extension_id: "pstdio.other", source_path: "/tmp/other" },
-        },
-      ] as never,
-      { extensionId, name: extensionId.split(".")[1]!, project: projectContext, projectId: "project-1" },
-    );
-  const conflictedRoot = () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-storage-conflict-"));
-    tempRoots.push(root);
-    mkdirSync(join(root, ".pstdio/extension-storage/other"), { recursive: true });
-    mkdirSync(join(root, ".pstdio/extension-storage/pstdio.other"), { recursive: true });
-    return root;
-  };
-
-  test("another extension's storage conflict does not block this extension's writes", async () => {
-    const root = conflictedRoot();
-    const env = conflictEnv(root, "pstdio.extension-lab");
-    await env.projectFiles!.writeText("notes.md", "project");
-    await env.extensionFiles!.writeText("cache.json", "{}");
-    expect(readFileSync(join(root, "notes.md"), "utf8")).toBe("project");
-    expect(readFileSync(join(root, ".pstdio/extension-storage/pstdio.extension-lab/cache.json"), "utf8")).toBe("{}");
-  });
-
-  test("an extension's own storage conflict fails only its storage writes", async () => {
-    const root = conflictedRoot();
-    const env = conflictEnv(root, "pstdio.other");
-    await env.projectFiles!.writeText("notes.md", "project");
-    await expect(env.extensionFiles!.writeText("cache.json", "{}")).rejects.toThrow(/legacy and full-ID/);
   });
 });

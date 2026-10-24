@@ -54,7 +54,6 @@ export const createArtifactMountWatchService = (input: {
         if (!mount.watch) continue;
         const root = resolveArtifactMountRoot({
           repoRoot,
-          name: mount.name,
           extensionId: mount.extensionId,
           mountPath: mount.relativePath,
         });

@@ -46,3 +46,27 @@ test("signals that arrive during a status read are coalesced into one more read"
   await events.changed("other");
   expect(reads).toBe(3);
 });
+
+test("closing waits for a status read that is still running, so storage can close after it", async () => {
+  const release = Promise.withResolvers<void>();
+  let finished = false;
+  const events = createProjectSyncEvents({
+    status: async () => {
+      await release.promise;
+      finished = true;
+      return { state: "synced", offlineReady: true };
+    },
+    publish: () => {},
+  });
+
+  void events.changed("cloud");
+  let closed = false;
+  const closing = Promise.resolve(events.close()).then(() => {
+    closed = true;
+  });
+  await Bun.sleep(5);
+  expect(closed).toBe(false);
+  release.resolve();
+  await closing;
+  expect(finished).toBe(true);
+});

@@ -67,6 +67,9 @@ bundled catalog entry is host-managed. Its next Upgrade installs the newest
 compatible PSX release and keeps its files and settings. Git installs from any
 other repository or folder, and local folder installs, keep their own source.
 
+Project files do not move. 0.46 starts every device with an empty database, and
+each extension starts fresh under `.pstdio/extension-storage/<publisher>.<name>/`.
+
 ## Withdraw a release
 
 Send an authenticated POST to /api/<publisher>/<name>/<version>/withdraw.

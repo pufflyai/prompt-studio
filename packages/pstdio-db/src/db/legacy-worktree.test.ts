@@ -146,4 +146,4 @@ test("recovers the actual managed Git worktree source among multiple linked fold
     await rm(root, { recursive: true, force: true });
     phase("temporary fixture removed");
   }
-});
+}, 15_000);

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { resolvePgliteOptions } from "./connection.pglite";
 import { openPglite } from "./open-pglite";
 import { prepareCurrentPgliteHome } from "./pglite-upgrade";
@@ -35,10 +35,17 @@ test("source memory creation loads full ICU only for the active engine", async (
   }
 });
 
-test("source creation loads full ICU once for the active engine and supports query-local collations", async () => {
+test("first creation loads runtime assets once for the active engine and supports query-local collations", async () => {
   const root = await mkdtemp(join(tmpdir(), "pglite-source-initialization-"));
   const path = join(root, "database");
   const runtime = await resolvePgliteOptions([]);
+  let runtimeDataReads = 0;
+  class CountedRuntimeData extends Blob {
+    async arrayBuffer() {
+      runtimeDataReads++;
+      return super.arrayBuffer();
+    }
+  }
   let fullDataReads = 0;
   class CountedLocaleData extends Blob {
     async arrayBuffer() {
@@ -46,14 +53,21 @@ test("source creation loads full ICU once for the active engine and supports que
       return super.arrayBuffer();
     }
   }
-  const options = { ...runtime, icuDataDir: new CountedLocaleData([runtime.icuDataDir]) };
+  const packageRoot = dirname(Bun.resolveSync("@electric-sql/pglite/package.json", import.meta.dir));
+  const options = {
+    ...runtime,
+    fsBundle: new CountedRuntimeData([Bun.file(join(packageRoot, "dist/pglite.data"))]),
+    icuDataDir: new CountedLocaleData([runtime.icuDataDir]),
+  };
   try {
     await prepareCurrentPgliteHome({ activePath: path, runtime: options, embedded: [], onImageRestored: () => {} });
     expect(fullDataReads).toBe(0);
+    expect(runtimeDataReads).toBe(0);
     const db = await openPglite(path, options);
     try {
       await db.waitReady;
       expect(fullDataReads).toBe(1);
+      expect(runtimeDataReads).toBe(1);
       expect(
         (
           await db.query(

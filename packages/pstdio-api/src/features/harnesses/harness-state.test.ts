@@ -37,20 +37,6 @@ test("stores accepted Windows device publishers in portable state files", async 
   expect(await state.get<string>("value")).toBe("kept");
 });
 
-test.skipIf(process.platform === "win32")(
-  "preserves earlier device-publisher state when its filename moves",
-  async () => {
-    const home = mkdtempSync(join(tmpdir(), "pstdio-harness-device-migration-"));
-    roots.push(home);
-    mkdirSync(join(home, "state"));
-    writeFileSync(join(home, "state/con.notes.json"), JSON.stringify({ value: "previous" }));
-    const state = createHarnessStateApi("con.notes", { env: { PSTDIO_HOME: home } });
-    expect(await state.get<string>("value")).toBe("previous");
-    await state.set("next", true);
-    expect(await state.get<string>("value")).toBe("previous");
-  },
-);
-
 test("does not replace malformed harness state", async () => {
   const home = mkdtempSync(join(tmpdir(), "pstdio-harness-state-"));
   roots.push(home);

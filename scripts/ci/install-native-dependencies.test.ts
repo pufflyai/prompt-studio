@@ -1,13 +1,21 @@
 import { expect, test } from "bun:test";
 import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 test("native dependency scripts use the workspace node-gyp and the install does not replace it later", async () => {
   const manifest = await Bun.file(new URL("../../package.json", import.meta.url)).json();
   // Expand Windows short names before Bun records workspace paths in the lockfile.
   const cwd = realpathSync.native(mkdtempSync(join(tmpdir(), "pstdio-native-install-")));
+  const env = { ...process.env, BUN_INSTALL: join(cwd, "bun"), BUN_CONFIG_REGISTRY: "http://127.0.0.1:1" };
+  const nodeGyp = realpathSync.native(dirname(Bun.resolveSync("node-gyp/package.json", import.meta.dir)));
   try {
+    // Keep Bun's link registry inside the fixture and use the real workspace tool.
+    const linked = Bun.spawnSync([process.execPath, "link"], { cwd: nodeGyp, env });
+    expect({ exitCode: linked.exitCode, output: linked.exitCode === 0 ? "" : linked.stderr.toString() }).toEqual({
+      exitCode: 0,
+      output: "",
+    });
     await Bun.write(
       join(cwd, "package.json"),
       JSON.stringify({
@@ -15,7 +23,7 @@ test("native dependency scripts use the workspace node-gyp and the install does 
         private: true,
         workspaces: ["clients/*"],
         devDependencies: {
-          "node-gyp": manifest.devDependencies["node-gyp"],
+          "node-gyp": "link:node-gyp",
           "root-build-step": "file:./root-build-step",
         },
         trustedDependencies: ["native-fixture", "root-build-step"],
@@ -53,14 +61,16 @@ try {
 }
 `,
     );
-    // Reuse metadata on repeated runs; the early CI smoke can start with an empty metadata cache.
-    const lock = Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--prefer-offline"], { cwd });
+    // Exercise the workspace's real installed tool and its existing dependencies.
+    // Registry resolution is not part of the root-bin ownership contract.
+    const lock = Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--offline"], { cwd, env });
     expect({ exitCode: lock.exitCode, output: lock.exitCode === 0 ? "" : lock.stderr.toString() }).toEqual({
       exitCode: 0,
       output: "",
     });
     const install = Bun.spawn(["node", join(import.meta.dirname, "install-native-dependencies.ts")], {
       cwd,
+      env,
       stdout: "pipe",
       stderr: "pipe",
     });

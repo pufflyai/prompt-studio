@@ -1,9 +1,4 @@
-import {
-  type ExtensionRuntime,
-  type loadExtensionSources,
-  migrateExtensionStorage,
-  normalizeExtensionSources,
-} from "pstdio-extensions";
+import { type loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
@@ -24,6 +19,17 @@ import {
   type LoadableExtensionSource,
 } from "./project-extension-runtime-sources";
 import { createProjectRuntimeActivation } from "./project-runtime-activation";
+
+const assertResourcePrefixes = (
+  loaded: Awaited<ReturnType<ReturnType<typeof createExtensionSourceCache>["collect"]>>,
+) => {
+  const runtime = normalizeExtensionSources(loaded.map((record) => record.source));
+  const errors = runtime.diagnostics.filter(
+    (diagnostic) => diagnostic.code.startsWith("extension_resource_prefix_") && diagnostic.severity === "error",
+  );
+  if (errors.length)
+    throw Object.assign(new Error(errors.map((error) => error.message).join("\n")), { diagnostics: errors });
+};
 
 type ProjectState = {
   /** Bumped on every invalidation; a load may publish only if it still matches. */
@@ -51,34 +57,6 @@ export type ProjectExtensionRuntimeCatalogObserver = {
 export type ProjectExtensionRuntimeCatalog = ReturnType<typeof createProjectExtensionRuntimeCatalog>;
 
 type CandidateExtensionSource = LoadableExtensionSource & { extension_id: string };
-// A storage conflict needs the user to resolve files, so it must not block every extension
-// in the project. Reads use the full-ID folder until then, and the next write reports the
-// conflict to the extension. Merging the folders here would have to pick one copy.
-const migrateRuntimeStorage = async (root: string | null | undefined, runtime: ExtensionRuntime) => {
-  if (!root || !runtime.extensions.length) return;
-  const owners = runtime.extensions.map((extension) => ({ name: extension.name, extensionId: extension.id }));
-  await migrateExtensionStorage(root, owners).catch((error) => {
-    apiLogger.warn(
-      { err: error, event: "extensions.storage_migration.failed", root },
-      "Extension storage migration needs attention",
-    );
-  });
-};
-
-type LoadContext = { projectId: string; reason: string; startedAt: number; startRevision: number };
-
-const logLoadFailure = (context: LoadContext, error: unknown) => {
-  apiLogger.error(
-    {
-      duration_ms: Math.round(performance.now() - context.startedAt),
-      err: error,
-      event: "extensions.runtime_catalog.load_failed",
-      project_id: context.projectId,
-      reason: context.reason,
-    },
-    "Project extension runtime load failed",
-  );
-};
 
 export const createProjectExtensionRuntimeCatalog = (deps: {
   extensionService: ReturnType<typeof createExtensionService>;
@@ -126,13 +104,13 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       cachedSources.flatMap((cached) => cached.diagnostics),
       { projectFolder: workspace?.root_path ?? undefined },
     );
-    const fileAccess = workspace?.provider_capabilities_json?.files;
-    if (!fileAccess || fileAccess === "write") await migrateRuntimeStorage(workspace?.root_path, runtime);
 
     await installExtensionStorageIndexes(deps.extensionStorageService, projectId, runtime, validate);
 
     return { enabledSources, project, runtime };
   };
+
+  type LoadContext = { projectId: string; reason: string; startedAt: number; startRevision: number };
 
   const discardStaleLoad = (context: LoadContext) => {
     deps.observer?.onDiscard?.({ projectId: context.projectId, code: "extension_runtime_generation_stale" });
@@ -180,6 +158,19 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       "Published project extension runtime snapshot",
     );
     return snapshot;
+  };
+
+  const logLoadFailure = (context: LoadContext, error: unknown) => {
+    apiLogger.error(
+      {
+        duration_ms: Math.round(performance.now() - context.startedAt),
+        err: error,
+        event: "extensions.runtime_catalog.load_failed",
+        project_id: context.projectId,
+        reason: context.reason,
+      },
+      "Project extension runtime load failed",
+    );
   };
 
   const runLoad = async (projectId: string, state: ProjectState) => {
@@ -260,6 +251,12 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
   // Runs before an enable is persisted, so the candidate is described by its manifest
   // and source path rather than by a row.
+  const validateResourcePrefixSet = async (candidates: CandidateExtensionSource[]) => {
+    const loaded = (await Promise.all(candidates.map((candidate) => sources.load(candidate)))).filter(
+      (record) => record !== null,
+    );
+    assertResourcePrefixes(loaded);
+  };
   const validateResourcePrefixes = async (projectId: string, installedSource: CandidateExtensionSource) => {
     const enabled = (await deps.extensionService.listEnabledSourcesForProject(projectId)).filter(
       (record) => record.installedSource.extension_id !== installedSource.extension_id,
@@ -267,12 +264,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     const loaded = await sources.collect(enabled);
     const candidate = await sources.load(installedSource);
     if (candidate) loaded.push(candidate);
-    const runtime = normalizeExtensionSources(loaded.map((record) => record.source));
-    const errors = runtime.diagnostics.filter(
-      (diagnostic) => diagnostic.code.startsWith("extension_resource_prefix_") && diagnostic.severity === "error",
-    );
-    if (errors.length)
-      throw Object.assign(new Error(errors.map((error) => error.message).join("\n")), { diagnostics: errors });
+    assertResourcePrefixes(loaded);
   };
 
   const markDirty = (state: ProjectState, reason: RuntimeInvalidationReason) => {
@@ -326,6 +318,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     ...createProjectRuntimeActivation(get),
     invalidate,
     validateResourcePrefixes,
+    validateResourcePrefixSet,
     subscribeInvalidation: (listener: (input: RuntimeInvalidationInput) => void) => {
       invalidationListeners.add(listener);
       return () => {

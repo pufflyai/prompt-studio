@@ -6,12 +6,9 @@ import {
   type CommandRunnerEnvironment,
   createReadBoundary,
   createWorkspaceFilesMount,
-  ExtensionStorageConflictError,
   type InvocationScope,
-  migrateExtensionStorage,
   type RuntimeArtifactMount,
   type RuntimeExtensionSettingRecord,
-  resolveReadExtensionStoragePath,
   type ScopedHostApis,
 } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
@@ -21,6 +18,7 @@ import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createExtensionConnectionsApi } from "../extension-connection-service";
 import { findFreePort } from "../extension-process-api";
+import { createPublicationStorageAccess } from "../publication/storage-access";
 import { createAccountApi } from "./account";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
@@ -82,40 +80,19 @@ export const createCommandEnvironment = (
   const manifest = (enabledSource.installedSource.manifest_json ?? {}) as {
     pstdio?: { projectFiles?: { tracked?: boolean } };
   };
-  const storageOwners = enabledSources.map(({ installedSource }) => ({
-    extensionId: installedSource.extension_id,
-    name: installedSource.extension_id.split(".")[1]!,
-  }));
-  // A storage conflict fails only writes into the conflicted extension's own storage. Other
-  // writes, such as project files or harness skill syncs, must not depend on it.
-  const prepareStorageRoot = async (root: string, access: FileAccess, ownStorage = false) => {
-    if (access !== "write") return root;
-    await migrateExtensionStorage(root, storageOwners).catch((error) => {
-      const conflicted = error instanceof ExtensionStorageConflictError;
-      if (!conflicted || (ownStorage && error.extensionIds.includes(input.extensionId))) throw error;
-      apiLogger.warn(
-        { err: error, event: "extensions.storage_migration.failed", extension_id: input.extensionId },
-        "Extension storage migration needs attention",
-      );
-    });
-    return root;
-  };
 
   const scopedHostApis = (scope?: InvocationScope) => {
     const signal = scope?.signal;
     const provisioningWorkspaceId = input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined;
-    const resolveWorkingPath = async (access: FileAccess) =>
-      prepareStorageRoot(
-        await resolveWorkspaceFilesPath(
-          deps,
-          {
-            projectId: input.projectId,
-            workspaceId: input.workspaceId,
-            provisioningWorkspaceId,
-            eventId: input.eventId,
-          },
-          access,
-        ),
+    const resolveWorkingPath = (access: FileAccess) =>
+      resolveWorkspaceFilesPath(
+        deps,
+        {
+          projectId: input.projectId,
+          workspaceId: input.workspaceId,
+          provisioningWorkspaceId,
+          eventId: input.eventId,
+        },
         access,
       );
     const workingFiles = input.workspaceDir
@@ -126,16 +103,12 @@ export const createCommandEnvironment = (
         })
       : undefined;
 
-    const resolveProjectPath = async (access: FileAccess, ownStorage = false) =>
-      prepareStorageRoot(
-        await resolveWorkspaceFilesPath(deps, { projectId: input.projectId, provisioningWorkspaceId }, access),
-        access,
-        ownStorage,
-      );
-    const resolveOwnStoragePath = (access: FileAccess) => resolveProjectPath(access, true);
+    const resolveProjectPath = (access: FileAccess) =>
+      resolveWorkspaceFilesPath(deps, { projectId: input.projectId, provisioningWorkspaceId }, access);
     const storage = createStorageApi(deps, {
       extensionId: input.extensionId,
       extensionInstanceId: enabledSource.instance.id,
+      source: enabledSource.installedSource,
       projectId: input.projectId,
       signal,
     });
@@ -150,23 +123,25 @@ export const createCommandEnvironment = (
     return {
       storage,
       artifacts: createArtifactsApi(
-        resolveOwnStoragePath,
+        resolveProjectPath,
         {
           ...input,
+          assertWritable: createPublicationStorageAccess(deps, {
+            projectId: input.projectId,
+            extensionId: input.extensionId,
+            extensionInstanceId: enabledSource.instance.id,
+            source: enabledSource.installedSource,
+          }).write,
           onWrite: (path) => deps.artifactMountWrites.record(path),
           signal,
         },
         deps,
       ),
-      projectFiles: createWorkspaceFileMount(resolveProjectPath, signal, async (path) =>
-        resolveReadExtensionStoragePath(await resolveProjectPath("read"), path, storageOwners),
-      ),
+      projectFiles: createWorkspaceFileMount(resolveProjectPath, signal),
       workspaceFiles:
         input.workspaceId && workingFiles
           ? {
-              ...createWorkspaceFileMount(resolveWorkingPath, signal, async (path) =>
-                resolveReadExtensionStoragePath(await resolveWorkingPath("read"), path, storageOwners),
-              ),
+              ...createWorkspaceFileMount(resolveWorkingPath, signal),
               syncDir: async (dir, files) => {
                 const workspaceDir = await resolveWorkingPath("write");
                 return createWorkspaceFilesMount(workspaceDir, {
@@ -181,7 +156,7 @@ export const createCommandEnvironment = (
         name: input.name,
         extensionId: input.extensionId,
         signal,
-        resolveRepoPath: resolveOwnStoragePath,
+        resolveRepoPath: resolveProjectPath,
         tracked: manifest.pstdio?.projectFiles?.tracked === true,
       }),
       files: createFilesApi(deps, input.projectId, signal),

@@ -7,9 +7,9 @@ project deliberately tracks a specific extension's files.
 
 Use `ctx.extensionFiles` for allocated extension files. Use declared artifact mounts
 for view access and change events. Both stay inside the full-ID directory, so
-publishers with the same package name keep separate data. From 0.46 the earlier
-`<package-name>/` and `.publishers/<publisher>/` paths are deprecated aliases to the
-same data. Read the
+publishers with the same package name keep separate data. Prompt Studio 0.46 does
+not move or read the earlier `<package-name>/` and `.publishers/<publisher>/` folders.
+Read the
 [API 0.2 migration guide](0009-allocated-extension-files.md) before upgrading.
 Use `ctx.storage.records` for shared structured project data. Keep the revision a
 caller read and save related records with one grouped commit. Use
@@ -41,8 +41,7 @@ This page describes `main`, which ships in the release after 0.43.x. Release 0.4
 
 A prototype is a working draft, often an HTML page with TypeScript build sources and
 screenshots. It has no separate storage system. Keep artifact drafts and prototypes in
-`.pstdio/extension-storage/pstdio.pstdio-artifacts/drafts/<name>/`. From 0.46 the
-earlier `pstdio-artifacts/` path is a deprecated alias to the same folder.
+`.pstdio/extension-storage/pstdio.pstdio-artifacts/drafts/<name>/`.
 
 Publishing through `pst pstdio-artifacts publish` saves a snapshot under the Artifacts
 extension's storage. The source draft can stay beside it for later edits. Keep the
@@ -67,8 +66,9 @@ overwriting either copy.
 | `.pstdio/ticket-identity-migration/` | `.pstdio/extension-storage/pstdio.pstdio-planner/ticket-identity-migration/` |
 | `.pstdio/artifacts/` | `.pstdio/extension-storage/pstdio.pstdio-artifacts/drafts/` |
 | `.pstdio/prototypes/` | `.pstdio/extension-storage/pstdio.pstdio-artifacts/prototypes/` |
+| `.pstdio/extension-storage/<name>/` | `.pstdio/extension-storage/<publisher>.<name>/` |
 
-The updated extensions no longer read the old project paths. From 0.46 the host moves
-name-only folders such as `pstdio-planner/` to their full-ID folder automatically. Update local scripts and saved file
+The updated extensions no longer read the old project paths. Prompt Studio 0.46 does not
+move them for you; each extension starts fresh in its full-ID folder. Update local scripts and saved file
 links that use an old path. Refresh installed agent skills from their updated sources.
 Published artifact URLs and saved ticket and report identities stay valid.

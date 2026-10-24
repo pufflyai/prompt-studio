@@ -11,9 +11,11 @@ test("reads real process metrics over the private pipe and closes it on disable"
     args: ["--eval", `import {runProcessObserver} from ${JSON.stringify(source)}; await runProcessObserver();`],
   });
   try {
-    const reading = await observer.read(process.pid, new AbortController().signal);
-    expect(reading?.residentBytes).toBeGreaterThan(0);
-    expect(reading?.processStartId).toBeTruthy();
+    for (let sample = 0; sample < 3; sample++) {
+      const reading = await observer.read(process.pid, new AbortController().signal);
+      expect(reading?.residentBytes).toBeGreaterThan(0);
+      expect(reading?.processStartId).toBeTruthy();
+    }
   } finally {
     await observer.close();
   }

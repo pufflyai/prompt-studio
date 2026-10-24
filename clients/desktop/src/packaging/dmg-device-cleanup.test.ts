@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { execFile, execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { closeSync, existsSync, mkdtempSync, openSync, realpathSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -37,7 +37,14 @@ nativeTest(
           });
         });
         phase("attached");
-        await execute("diskutil", ["unmount", mountPath]);
+        const file = openSync(join(mountPath, "open-fixture-file"), "w");
+        try {
+          // Establish the missing-mount precondition even while a process uses this owned test volume.
+          // The production detach adapter must still release the attached device afterwards.
+          await execute("diskutil", ["unmount", "force", mountPath]);
+        } finally {
+          closeSync(file);
+        }
         phase("unmounted");
         expect(existsSync(mountPath)).toBe(false);
         const result = await new Promise<Error | null>((resolve) => hdiutil.detach(mountPath, resolve));
