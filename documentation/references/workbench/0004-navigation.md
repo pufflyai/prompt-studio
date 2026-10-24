@@ -38,6 +38,8 @@ The routed page owns its breadcrumb and page actions. A collection page uses Mai
 
 Before a project is selected, the required Projects dialog appears on an empty background. Project selection hides navigation, activity, status widgets, floating panels, project tabs, and panel controls. Native window controls remain available. The dialog footer opens global Settings; closing Settings returns to the picker. System errors still use the status bar when they need attention.
 
+Creating the first project opens its Start page and tools without reloading. Project selection commits the project scope and dialog changes together, so automatic selection cannot interrupt that transition.
+
 ### Main fullscreen
 
 The fullscreen control expands Main over the workbench. It appears when Main has content. In the browser it sits at the end of the navigation header. Desktop places it beside the panel controls in the top bar. It stays reachable when panel headers or mode navigation chrome are hidden. Fullscreen hides the title bar, activity bar, Sidenav, Bottom, Main's tab header, and status bar as presentation. It does not replace or save the global layout, change the page URL, or create page panels.

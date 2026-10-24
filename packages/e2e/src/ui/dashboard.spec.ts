@@ -92,6 +92,15 @@ test("dashboard keeps project selection open when no project is selected", { tag
 
   await page.reload();
   await expect(projectPicker).toBeVisible();
+
+  const folder = folderProjectInput({}).initial_workspace.params.path;
+  await projectPicker.getByRole("button", { name: "Create project", exact: true }).click();
+  const path = page.getByRole("textbox", { name: "Folder path", exact: true });
+  await path.fill(folder);
+  await path.press("Enter");
+  await page.getByRole("button", { name: "Open folder", exact: true }).click();
+  await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
+  await expect(page.getByTestId("start-page")).toBeVisible();
 });
 
 test("dashboard keeps the project mode and blocks controls behind the project switcher", async ({ page, request }) => {

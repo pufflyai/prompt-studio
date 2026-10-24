@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { type Browser, chromium, expect, test } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 test("packaged Main fullscreen exits with Escape and resets on reload", async () => {
   const root = mkdtempSync(join(tmpdir(), "packaged-main-fullscreen-"));
@@ -35,14 +35,19 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await expect(picker).toBeVisible();
     await page.screenshot({ path: test.info().outputPath("empty-project-selection.png") });
 
-    const response = await fetch(`${started.baseUrl}/v1/projects`, {
-      method: "POST",
-      headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "Packaged fullscreen" }, root)),
-    });
-    expect(response.status).toBe(201);
+    await picker.getByRole("button", { name: "Create project", exact: true }).click();
+    const path = page.getByRole("textbox", { name: "Folder path", exact: true });
+    await path.fill(folderProjectInput({}).initial_workspace.params.path);
+    await path.press("Enter");
+    const created = page.waitForResponse(
+      (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/projects",
+    );
+    await page.getByRole("button", { name: "Open folder", exact: true }).click();
+    const response = await created;
+    expect(response.status()).toBe(201);
     const project = (await response.json()) as { id: string };
-    await page.goto(`${started.baseUrl}/projects/${project.id}/`);
+    await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
+    await expect(page.getByTestId("start-page")).toBeVisible();
     const enter = page.getByRole("button", { name: "Enter Main fullscreen", exact: true });
     await enter.click();
     await expect(page.getByRole("button", { name: "Exit Main fullscreen", exact: true })).toBeVisible();

@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContext } from "@pstdio/workbench";
+import { batchWorkbenchChanges, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import type { SelectProjectInput } from "@/shared/app/commands";
 import {
@@ -57,17 +57,20 @@ export const selectProject = (
   input: SelectProjectInput,
 ) => {
   const project = validateProjectSelection(input);
-  const previousProjectId = getDashboardSelectedProjectId(ctx);
+  // Closing creation can trigger automatic selection; observers need the completed project transition.
+  batchWorkbenchChanges(() => {
+    const previousProjectId = getDashboardSelectedProjectId(ctx);
 
-  closeProjectSelectionOverlays(ctx);
-  if (previousProjectId === project.id) return;
+    closeProjectSelectionOverlays(ctx);
+    if (previousProjectId === project.id) return;
 
-  // Detach the outgoing page before extension teardown can save a Start fallback over it.
-  ctx.pageLocations.clearProject();
-  resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
-  selectDashboardProject(selectedProjectContext, project, persistence);
-  if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
-    ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
+    // Detach the outgoing page before extension teardown can save a Start fallback over it.
+    ctx.pageLocations.clearProject();
+    resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
+    selectDashboardProject(selectedProjectContext, project, persistence);
+    if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
+      ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
+  });
 };
 
 export const clearSelectedProject = (
