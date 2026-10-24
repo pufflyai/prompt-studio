@@ -102,12 +102,11 @@ export const saveTicketCommand = defineCommand({
         ? await resolveLinkedTicketId(ctx, frontmatter.parentShorthand, ticket.parentId ? [ticket.parentId] : [])
         : ticket.parentId;
     const paths = (await projectFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) => entry.path);
-    let checkout: Record<string, string> = {};
-
     // Files and images compare against the stored ticket, so a change made during this save is not undone.
     const saved = await changeTicketFiles(ctx, ticket.id, async (stored) => {
       const images = await saveTicketImages(ctx.storage, projectFiles, stored, paths.filter(isImagePath));
-      checkout = images.checkout;
+      // The next save reads this mapping, so it is written in the ticket's queue with the images it names.
+      await writeTicketImageCheckout(projectFiles, ticket.shorthand, images.checkout);
       return {
         ...stored,
         content,
@@ -129,7 +128,6 @@ export const saveTicketCommand = defineCommand({
         updatedAt: new Date().toISOString(),
       };
     });
-    await writeTicketImageCheckout(projectFiles, ticket.shorthand, checkout);
 
     return { shorthand: ticket.shorthand, files: saved.files?.length ?? 0 };
   },
