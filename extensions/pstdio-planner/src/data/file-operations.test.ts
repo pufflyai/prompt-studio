@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket, ticketsCollection } from "./collections";
+import { putTicket, ticketsCollection, updateTicket } from "./collections";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "./file-operations";
 import { readTicketFileContent } from "./ticket-file-content";
 import type { StoredTicket } from "./types";
@@ -103,5 +103,36 @@ describe("ticket file operations", () => {
 
     const stored = await ticketsCollection(storage).get("ticket-1");
     expect(stored?.files?.map((entry) => entry.id)).toEqual([second.id]);
+  });
+
+  test.each([
+    ["content first", true],
+    ["rename first", false],
+  ])("a rename racing a content save keeps both changes and a readable body (%s)", async (_order, contentFirst) => {
+    const storage = createMemoryStorage();
+    await putTicket(storage, ticket());
+    const file = await createTicketFile({ storage, ticketId: "ticket-1", name: "a.md" });
+    const save = () => updateTicketFile({ storage, ticketId: "ticket-1", fileId: file.id, content: "new body" });
+    const rename = () => updateTicketFile({ storage, ticketId: "ticket-1", fileId: file.id, name: "b.md" });
+
+    await Promise.all(contentFirst ? [save(), rename()] : [rename(), save()]);
+
+    const [stored] = (await ticketsCollection(storage).get("ticket-1"))?.files ?? [];
+    expect(stored.name).toBe("b.md");
+    expect(await readTicketFileContent(storage, "ticket-1", stored)).toBe("new body");
+  });
+
+  test("a ticket write that read the ticket before a file save keeps the saved body", async () => {
+    const storage = createMemoryStorage();
+    await putTicket(storage, ticket());
+    const file = await createTicketFile({ storage, ticketId: "ticket-1", name: "a.md" });
+    const stale = (await ticketsCollection(storage).get("ticket-1"))!;
+
+    await updateTicketFile({ storage, ticketId: "ticket-1", fileId: file.id, content: "new body" });
+    await updateTicket(storage, { ...stale, title: "Renamed" });
+
+    const stored = (await ticketsCollection(storage).get("ticket-1"))!;
+    expect(stored.title).toBe("Renamed");
+    expect(await readTicketFileContent(storage, "ticket-1", stored.files![0])).toBe("new body");
   });
 });
