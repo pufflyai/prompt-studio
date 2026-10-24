@@ -19,17 +19,18 @@ export const expectPackagedTicketImages = async (input: {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.outcome.status, JSON.stringify(body)).toBe("success");
-    return body.outcome.value;
+    return body;
   };
-  const draft = await execute("write-ticket", { title: "Screenshot proof" });
+  const draft = (await execute("write-ticket", { title: "Screenshot proof" })).outcome.value;
   const path = join(dirname(draft.path), "files", "proof.png");
   const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0xff, 0x00, 0xfe]);
   await Bun.write(path, bytes);
-  await execute("save-ticket", { id: draft.shorthand });
-  const saved = await execute("get-ticket", { id: draft.shorthand });
+  const save = await execute("save-ticket", { id: draft.shorthand });
+  expect(save.eventIds).toContain("pstdio.pstdio-planner.event.tickets.changed");
+  const saved = (await execute("get-ticket", { id: draft.shorthand })).outcome.value;
   expect(saved.files).toEqual([]);
   expect(saved.attachments).toEqual([expect.objectContaining({ name: "proof.png", mimeType: "image/png" })]);
-  expect(await execute("list-ticket-files", { id: draft.shorthand })).toContainEqual(
+  expect((await execute("list-ticket-files", { id: draft.shorthand })).outcome.value).toContainEqual(
     expect.objectContaining({ file: "proof.png", storage: "yes", local: "yes" }),
   );
   await rm(path);
