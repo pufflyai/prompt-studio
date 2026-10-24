@@ -741,6 +741,18 @@ jobs:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
         run: bun run --cwd packages/e2e test:packaged:${{ matrix.suite }}
 
+      - name: Run quarantined packaged CLI cases
+        if: matrix.suite == 'cli' && !cancelled() && steps.packaged_cli.outcome == 'success'
+        continue-on-error: true
+        env:
+          E2E_TEST_LANE: quarantine
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+        run: bun run --cwd packages/e2e test:packaged:cli
+
+      - name: Require every packaged CLI quarantine case to have executed
+        if: matrix.suite == 'cli' && !cancelled() && steps.packaged_cli.outcome == 'success'
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun
+
       - name: Preserve packaged and Vite test reports
         if: always()
         uses: actions/upload-artifact@v4

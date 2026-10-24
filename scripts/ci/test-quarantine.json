@@ -247,5 +247,25 @@
     "reason": "On Windows this case took 19.5 seconds against its 15 second allowance in one merge group; it takes about 0.26 seconds on macOS. It writes a 32 MB transcript and appends while the first read is in flight, so the slow phase is the large file write or read on the Windows runner. Keep the in-flight append assertion.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40129468161/job/120978020762"],
     "removeWhen": "Identify the slow phase of the 32 MB transcript fixture on Windows and fix it, then pass ten independent Windows runs within the existing 15 second allowance."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-serve-smoke.test.ts",
+    "name": "packaged Planner recovers missing workspaces without losing submitted work",
+    "platforms": ["linux"],
+    "owner": "PS-907 / packaged runtime shutdown",
+    "reason": "All Planner checks finished at 8.75 seconds, then the packaged runtime did not exit within 21 seconds of SIGTERM during fixture cleanup and logged nothing, so the case exhausted 30 seconds. The last check had just dispatched auto-build work. This may be a real shutdown hang. Keep the recovery assertions and the cleanup.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40134309747/job/120992622654"],
+    "removeWhen": "Find why the packaged runtime ignores or stalls on SIGTERM after auto-build dispatch and fix it, then pass ten independent Linux runs within the existing 30 second allowance."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-attached-recovery.spec.ts",
+    "name": "automatically recovers a CLI-started backend and restores the open project",
+    "platforms": ["win32"],
+    "owner": "PS-907 / desktop attached recovery",
+    "reason": "On Windows the app still reported `starting` when the 5 second recovery poll ended after the CLI-started backend restarted. The case normally takes 18 to 24 seconds of its 60 second allowance. Keep Linux and macOS coverage blocking and preserve the restored-project assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40134309747/job/120992622681"],
+    "removeWhen": "Identify the slow restart phase on Windows and fix it, then pass ten independent Windows runs within the existing poll and test allowances."
   }
 ]
