@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import { listAttempts, putAttempt } from "../data/attempt-storage";
 import { readAutoBuildMode } from "../data/auto-build-mode";
-import { putTicket } from "../data/collections";
+import { putTicket } from "../data/ticket-context.fixture";
+
 import { readImplementationCapacity } from "./attempt-readiness";
 import { fixture } from "./auto-build.fixture";
 import { readAutoBuildCandidates } from "./auto-build-candidates";

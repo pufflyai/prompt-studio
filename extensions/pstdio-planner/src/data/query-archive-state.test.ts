@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket } from "./collections";
 import { runTicketsQuery } from "./query";
 import { seedDefaultStatuses } from "./seed";
-import type { StoredTicket } from "./types";
+import { putTicket, ticketContext } from "./ticket-context.fixture";
+import type { Ticket } from "./types";
 
-const makeTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+const makeTicket = (overrides: Partial<Ticket>): Ticket => ({
   id: crypto.randomUUID(),
   shorthand: "T-1",
   title: "Ticket",
@@ -34,7 +34,7 @@ describe("runTicketsQuery archive filtering", () => {
     await putTicket(storage, makeTicket({ shorthand: "T-2", title: "Archived", archived: true, sortOrder: 1 }));
 
     const result = await runTicketsQuery({
-      storage,
+      ...ticketContext(storage),
       projectId: "proj-1",
       filter: {
         conjunction: "and",

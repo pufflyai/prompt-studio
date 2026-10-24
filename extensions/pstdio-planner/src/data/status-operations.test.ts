@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./collections";
+import { putStatus, statusesCollection } from "./collections";
 import { DEFAULT_STATUSES } from "./seed";
 import {
   createTicketStatus,
@@ -10,9 +10,10 @@ import {
   setDefaultStatus,
   updateTicketStatus,
 } from "./status-operations";
-import type { StoredTicket } from "./types";
+import { putTicket, ticketContext, ticketsCollection } from "./ticket-context.fixture";
+import type { Ticket } from "./types";
 
-const ticket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+const ticket = (overrides: Partial<Ticket>): Ticket => ({
   id: "ticket-1",
   shorthand: "PS-1",
   title: "Ticket",
@@ -37,7 +38,7 @@ describe("ticket status operations", () => {
   test("createTicketStatus appends a new column after the defaults", async () => {
     const storage = createMemoryStorage();
 
-    const created = await createTicketStatus({ storage, name: "Blocked", color: "red" });
+    const created = await createTicketStatus({ ...ticketContext(storage), name: "Blocked", color: "red" });
 
     expect(created).toMatchObject({ name: "Blocked", color: "red", isDefault: false, canCreate: false });
     const { statuses } = await readTicketStatuses(storage);
@@ -48,7 +49,12 @@ describe("ticket status operations", () => {
     const storage = createMemoryStorage();
     const [first] = (await readTicketStatuses(storage)).statuses;
 
-    const updated = await updateTicketStatus({ storage, statusId: first.id, name: "Renamed", color: "pink" });
+    const updated = await updateTicketStatus({
+      ...ticketContext(storage),
+      statusId: first.id,
+      name: "Renamed",
+      color: "pink",
+    });
 
     expect(updated).toMatchObject({ name: "Renamed", color: "pink", canCreate: first.canCreate });
   });
@@ -57,7 +63,7 @@ describe("ticket status operations", () => {
     const storage = createMemoryStorage();
     const [first] = (await readTicketStatuses(storage)).statuses;
 
-    const updated = await updateTicketStatus({ storage, statusId: first.id, sortOrder: 99 });
+    const updated = await updateTicketStatus({ ...ticketContext(storage), statusId: first.id, sortOrder: 99 });
 
     expect(updated.sortOrder).toBe(99);
     expect((await statusesCollection(storage).get(first.id))?.sortOrder).toBe(99);
@@ -68,7 +74,7 @@ describe("ticket status operations", () => {
     const [first] = (await readTicketStatuses(storage)).statuses;
 
     const updated = await updateTicketStatus({
-      storage,
+      ...ticketContext(storage),
       statusId: first.id,
       canCreate: false,
       columnActions: ["archive_all"],
@@ -85,7 +91,7 @@ describe("ticket status operations", () => {
     const storage = createMemoryStorage();
 
     const created = await createTicketStatus({
-      storage,
+      ...ticketContext(storage),
       name: "Done",
       canCreate: true,
       columnActions: ["archive_all"],
@@ -104,7 +110,7 @@ describe("ticket status operations", () => {
     const fallback = statuses.find((status) => status.isDefault)!;
     await putTicket(storage, ticket({ id: "ticket-1", statusId: removed.id }));
 
-    await deleteTicketStatus({ storage, statusId: removed.id });
+    await deleteTicketStatus({ ...ticketContext(storage), statusId: removed.id });
 
     expect(await statusesCollection(storage).get(removed.id)).toBeUndefined();
     const stored = await ticketsCollection(storage).get("ticket-1");
@@ -114,7 +120,7 @@ describe("ticket status operations", () => {
   test("setDefaultStatus moves the default flag to the target column", async () => {
     const storage = createMemoryStorage();
 
-    const { statuses } = await setDefaultStatus({ storage, statusId: "ready" });
+    const { statuses } = await setDefaultStatus({ ...ticketContext(storage), statusId: "ready" });
 
     const defaults = statuses.filter((status) => status.isDefault);
     expect(defaults).toHaveLength(1);
@@ -123,7 +129,9 @@ describe("ticket status operations", () => {
 
   test("setDefaultStatus throws for an unknown status", async () => {
     const storage = createMemoryStorage();
-    await expect(setDefaultStatus({ storage, statusId: "ghost" })).rejects.toThrow(/Unknown ticket status/);
+    await expect(setDefaultStatus({ ...ticketContext(storage), statusId: "ghost" })).rejects.toThrow(
+      /Unknown ticket status/,
+    );
   });
 
   test("reorderTicketStatuses persists the requested order", async () => {
@@ -131,7 +139,7 @@ describe("ticket status operations", () => {
     const { statuses } = await readTicketStatuses(storage);
     const reversed = statuses.map((status) => status.id).reverse();
 
-    const result = await reorderTicketStatuses({ storage, statusIds: reversed });
+    const result = await reorderTicketStatuses({ ...ticketContext(storage), statusIds: reversed });
 
     expect(result.statuses.map((status) => status.id)).toEqual(reversed);
   });
@@ -147,7 +155,7 @@ describe("ticket status operations", () => {
     });
     const requested = statuses.map((status) => status.id).reverse();
 
-    const result = await reorderTicketStatuses({ storage, statusIds: requested });
+    const result = await reorderTicketStatuses({ ...ticketContext(storage), statusIds: requested });
 
     expect(result.statuses.map((status) => status.id)).toEqual([...requested, omitted.id]);
     expect(new Set(result.statuses.map((status) => status.sortOrder)).size).toBe(result.statuses.length);

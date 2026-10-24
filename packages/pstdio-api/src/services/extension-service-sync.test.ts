@@ -50,6 +50,7 @@ beforeEach(async () => {
     extensionInstancesService,
     installedExtensionSourcesService,
     extensionUserDataService,
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
     projectService,
   });
 });
@@ -135,6 +136,7 @@ describe("extensionService installed source sync", () => {
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
       onInstalledSourcesChanged: () => {
         notifyCount += 1;
       },
@@ -157,6 +159,7 @@ describe("extensionService installed source sync", () => {
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
       onInstalledSourcesChanged: (sourcePath) => {
         changedSourcePaths.push(sourcePath);
       },
@@ -176,6 +179,7 @@ describe("extensionService installed source sync", () => {
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
       onInstalledSourcesChanged: () => {
         notifyCount += 1;
       },

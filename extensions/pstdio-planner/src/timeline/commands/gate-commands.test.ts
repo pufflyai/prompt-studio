@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "../../commands/command-context.fixture";
 import { sessionRecord } from "../../commands/session-record.fixture";
-import { ticketsCollection } from "../../data/collections";
+import { ticketsCollection } from "../../data/ticket-context.fixture";
+
 import { createGateCommand } from "./gate-commands";
 import { gates } from "./gate-store";
 import { launchGateCommand } from "./launch-gate";

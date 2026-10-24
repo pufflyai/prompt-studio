@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
-import { putTicket } from "../data/collections";
 import { seedDefaultStatuses } from "../data/seed";
+import { putTicket } from "../data/ticket-context.fixture";
 import { makeCommandContext } from "./command-context.fixture";
 import { sessionQuery } from "./session-query.fixture";
 

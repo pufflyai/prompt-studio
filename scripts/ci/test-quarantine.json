@@ -1,34 +1,6 @@
 [
   {
     "runner": "bun",
-    "file": "packages/pstdio-db/src/db/pglite-engine-upgrade.test.ts",
-    "name": "createDb upgrades a closed legacy home and preserves records, retry receipts and later writes",
-    "platforms": ["win32"],
-    "owner": "PS-907 / pstdio-db",
-    "reason": "Cold old-engine creation, transfer, restart and cleanup intermittently exceed Windows's 15 seconds. Linux returned to the stable lane after the user approved a 15 second limit on 2026-10-23 for its measured 4.5-4.9 second workload. The same Windows commit passed at 6.573 seconds and timed out at 15.011 seconds after its final reopen.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40002393505",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40004464723",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40009587515/job/120606412298",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913/job/120606436837"
-    ],
-    "removeWhen": "Fix the slow phase and pass ten independent runs on both Linux and Windows at their existing limits, or obtain explicit approval for measured new allowances."
-  },
-  {
-    "runner": "bun",
-    "file": "packages/pstdio-db/src/db/board-view-rules-migration.test.ts",
-    "name": "saved board views keep their filters and ordering as rules and sorts",
-    "platforms": ["win32"],
-    "owner": "PS-907 / pstdio-db",
-    "reason": "Cold upgrade and reopen exceeded 15 seconds, then passed at 9.768 seconds with added phase diagnostics.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40002393505",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40004464723"
-    ],
-    "removeWhen": "Identify and fix the slow phase and pass ten independent Windows runs within 15 seconds."
-  },
-  {
-    "runner": "bun",
     "file": "scripts/release/version-patch.test.ts",
     "name": "uses a patch bump even when the selected fix has a minor changeset",
     "platforms": ["linux"],
@@ -133,6 +105,19 @@
     "removeWhen": "Identify and fix the slow phase, then pass ten independent Windows runs within the existing 30 second allowance, without retries."
   },
   {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/extension-browser-install.test.ts",
+    "name": "the installed Playwright cache runs a packaged extension page outside the checkout",
+    "platforms": ["win32"],
+    "owner": "PS-907 / packaged browser installation",
+    "reason": "Shares the Windows packaged browser validation path with the quarantined smoke-browser case and exhausted its 30 seconds in the same way. Preserve the outside-checkout cache and real page checks.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40087386182/job/120853065624",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40092787790/job/120868824340"
+    ],
+    "removeWhen": "Identify and fix the slow phase, then pass ten independent Windows runs within the existing 30 second allowance, without retries."
+  },
+  {
     "runner": "bun",
     "file": "packages/pstdio-api/src/features/sessions/endpoints/get-session-conversation.test.ts",
     "name": "preserves conversation history before the persisted queued follow-up prompt",
@@ -144,19 +129,6 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913"
     ],
     "removeWhen": "Fix completion synchronization and pass ten independent Windows runs at the existing limits."
-  },
-  {
-    "runner": "bun",
-    "file": "packages/pstdio-db/src/db/shared-workspace-folders.test.ts",
-    "name": "upgrading frees the folders of deleted projects so they can be opened again",
-    "platforms": ["win32"],
-    "owner": "PS-907 / workspace folder upgrades",
-    "reason": "The same revision passed this legacy-home upgrade and deleted-folder reuse contract in 4.945 seconds and timed out at 15.454 seconds in another Windows shard. Keep every ownership and folder-reuse assertion and add phase logs to identify the slow part.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40025877536/job/120662025536",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40025883928/job/120662039027"
-    ],
-    "removeWhen": "Identify and fix the slow phase, then pass ten independent Windows runs within the existing 15 second allowance."
   },
   {
     "runner": "bun",
@@ -177,5 +149,93 @@
     "reason": "On Windows the fixture's temp folder could not be removed after the test app closed (EPERM), even with five delete retries; a rerun of the same job passed. A file inside the folder stays open after shutdown. Keep the cleanup and find which handle survives `close()`.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40091382710/job/120865030664"],
     "removeWhen": "Find and close the handle that outlives app shutdown, then pass ten independent Windows runs."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/features/extensions/extension-terminal-runtime.test.ts",
+    "name": "counts a program that replaces the interactive shell",
+    "platforms": ["linux"],
+    "owner": "PS-907 / terminal activity",
+    "reason": "In one Linux merge group the supervisor still reported the shell as idle 100 ms after `exec sleep 5` was written: the prompt marker had been read but the DEBUG-trap busy marker had not. It did not reproduce on macOS or on Linux with 0.3 CPUs. Keep the replaced-shell assertion.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40126362257/job/120968672727"],
+    "removeWhen": "Make the test wait for the busy marker instead of a fixed 100 ms, or fix the reader lag it exposes, then pass ten independent Linux runs."
+  },
+  {
+    "runner": "bun",
+    "file": "clients/desktop/src/packaging/dmg-device-cleanup.test.ts",
+    "name": "detaches its image after the volume is unmounted",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-907 / desktop DMG packaging",
+    "reason": "On Intel macOS runners, `diskutil unmount force` on the owned fixture volume intermittently does not return after the image attaches, so the case exhausts 10 seconds. It failed five merge groups whose changes do not touch the desktop client; Apple Silicon remains blocking. Preserve the forced-unmount precondition and the detach assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40119910199/job/120949105912",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40112568503/job/120927275779",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40100504665/job/120891616261",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40075166878/job/120816930961"
+    ],
+    "removeWhen": "Find why the forced unmount stalls on Intel runners, fix it, then pass ten independent darwin-x64 runs within the existing 10 second allowance."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-navigation-customization.spec.ts",
+    "name": "restores each project's navigation order, placement, and visibility after relaunch",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-907 / desktop navigation customization",
+    "reason": "Apple Silicon exhausted 30 seconds across two app launches while reopening the second project after relaunch; no runtime error was logged. The merge group changed only extension manifests and report bodies. Keep Linux, Windows and Intel coverage blocking.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40113373674/job/120929910888"],
+    "removeWhen": "Identify and fix the slow phase and pass ten independent Apple Silicon runs within 30 seconds, preserving both launches and all navigation assertions."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-navigation-customization.spec.ts",
+    "name": "keeps a navigation reset after relaunch without changing another project",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-907 / desktop navigation customization",
+    "reason": "Failed in the same Apple Silicon job with the same 30 second relaunch pattern as the order and visibility case. Keep Linux, Windows and Intel coverage blocking.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40113373674/job/120929910888"],
+    "removeWhen": "Identify and fix the slow phase and pass ten independent Apple Silicon runs within 30 seconds, preserving both launches and the reset assertions."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-startup-recovery.spec.ts",
+    "name": "keeps an uncertain runtime owner intact until its descriptor is repaired",
+    "platforms": ["win32"],
+    "owner": "PS-907 / desktop startup recovery",
+    "reason": "On Windows this case exhausted its 60 second allowance in a merge group whose change only touches ticket numbering. The next recovery case in the same job passed. Keep Linux and macOS coverage blocking and preserve the owner-repair assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40123218595"],
+    "removeWhen": "Identify and fix the slow phase, then pass ten independent Windows runs within the existing 60 second allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/db/rename-pglite-home.test.ts",
+    "platforms": ["win32"],
+    "owner": "PS-907 / Windows database publication",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40128973926/job/120976509591"],
+    "name": "database publication waits for a temporary Windows reader to release its handle",
+    "reason": "The PowerShell reader fixture never confirmed its open handle within 15 seconds; this case normally takes 2.5 to 4 seconds, mostly PowerShell startup. Later cases in the same file then received its cleanup errors. Preserve the real sharing violation and all publication assertions.",
+    "removeWhen": "Replace or bound the PowerShell reader startup so a stalled reader fails fast without leaking into later cases, then pass ten independent Windows runs within the existing 15 second allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/db/rename-pglite-home.test.ts",
+    "platforms": ["win32"],
+    "owner": "PS-907 / Windows database publication",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40128973926/job/120976509591"],
+    "name": "cancelling Windows publication while a reader is open preserves the active home",
+    "reason": "Shares the PowerShell reader fixture; in the same job its reader also never confirmed the open handle, and it received the previous case's cleanup errors. Preserve the real sharing violation and all publication assertions.",
+    "removeWhen": "Replace or bound the PowerShell reader startup so a stalled reader fails fast without leaking into later cases, then pass ten independent Windows runs within the existing 15 second allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/db/rename-pglite-home.test.ts",
+    "platforms": ["win32"],
+    "owner": "PS-907 / Windows database publication",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40128973926/job/120976509591"],
+    "name": "a persistent Windows reader reports publication failure and preserves the active home",
+    "reason": "Shares the PowerShell reader fixture; in the same job its reader never confirmed the open handle within 15 seconds, against about 0.6 seconds normally. Preserve the real sharing violation and all publication assertions.",
+    "removeWhen": "Replace or bound the PowerShell reader startup so a stalled reader fails fast without leaking into later cases, then pass ten independent Windows runs within the existing 15 second allowance."
   }
 ]

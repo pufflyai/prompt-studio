@@ -1,11 +1,11 @@
 import type { NavigationTargetPage } from "@pstdio/sdk/extensions";
 import { ticketPageTarget } from "../data/ticket-page-target";
-import type { StoredStatus, StoredTicket } from "../data/types";
+import type { StoredStatus, Ticket } from "../data/types";
 
 export { plannerTicketsChanged } from "../events";
 export const plannerExtensionId = "pstdio.pstdio-planner";
 export type PlannerTicket = Pick<
-  StoredTicket,
+  Ticket,
   "id" | "shorthand" | "title" | "content" | "statusId" | "tagIds" | "parentId" | "dependsOn" | "blockedReason"
 >;
 export type PlannerStatus = StoredStatus;

@@ -1,7 +1,7 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
-import type { StoredTicket } from "./types";
+import type { Ticket } from "./types";
 
-export const githubReviewLinks = (tickets: StoredTicket[]) => {
+export const githubReviewLinks = (tickets: Ticket[]) => {
   const links = new Map<string, string[]>();
   for (const ticket of tickets) {
     for (const link of ticket.reviewLinks ?? []) {

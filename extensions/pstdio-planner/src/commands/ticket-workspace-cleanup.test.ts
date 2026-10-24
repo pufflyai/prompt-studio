@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
+import { ticketsCollection } from "../data/ticket-context.fixture";
+
 import { archiveTicketCommand } from "./archive-ticket";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";

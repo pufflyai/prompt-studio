@@ -53,13 +53,7 @@ export const createStorageApi = (
       }),
     ids: { create: createStorageId },
     positions: deps.storagePositions,
-    readLegacy: (source) =>
-      read(() =>
-        deps.extensionStorageService.readLegacy(source, {
-          projectId: input.projectId,
-          extensionInstanceId: input.extensionInstanceId,
-        }),
-      ),
+    readLegacy: async () => undefined,
     records: createExtensionRecordsApi(deps, { ...input, scopeType: scope.scope_type, scopeId: scope.scope_id }),
     assets: createExtensionAssetsApi(deps, input),
     files: createExtensionBlobsApi(deps, {

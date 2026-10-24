@@ -2,16 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-// The core database must not own extension data. Only migrations of released formats
-// and the deprecated anchor bridge may name their old owners. Removal rules live in
-// documentation/references/architecture/0025-database-upgrades.md.
-const LEGACY_FILES = new Set([
-  "drizzle/0020_harness_id_namespacing.sql",
-  "drizzle/0029_contribution_id_grammar.sql",
-  "src/db/contribution-id-renames.ts",
-  "drizzle/0037_nebulous_galactus.sql",
-  "src/services/legacy-resource-links.ts",
-]);
+// The core database must not own extension data. Only the deprecated anchor bridge may name its old owners.
+const LEGACY_FILES = new Set(["src/services/legacy-resource-links.ts"]);
 
 // First-party extension ids: `pstdio.pstdio-<name>` and `pstdio.harness-<name>`.
 const extensionId = /\bpstdio\.(?:pstdio|harness)-[a-z0-9-]+/;
@@ -26,7 +18,7 @@ const filesUnder = (dir: string): string[] =>
   });
 
 describe("pstdio-db extension ownership", () => {
-  test("new migrations and database code name no extension ids", () => {
+  test("migrations and database code name no extension ids", () => {
     const offenders = [...filesUnder("src"), ...filesUnder("drizzle")].filter(
       (file) => !LEGACY_FILES.has(file) && extensionId.test(readFileSync(path.join(packageRoot, file), "utf8")),
     );

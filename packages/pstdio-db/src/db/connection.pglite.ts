@@ -5,19 +5,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
 import { normalizeEmbeddedFileName } from "pstdio-paths";
-import { removeArchivedWorkspaces } from "./archived-workspaces-migration";
-import { finishBoardViewRules, prepareBoardViewRules } from "./board-view-rules-migration";
-import { migrateThrough } from "./migrate-through";
 import { openPglite } from "./open-pglite";
 import { canonicalDbPath, resolveDbPath } from "./paths";
+import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
+import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
-import { type PgliteUpgradePhase, prepareCurrentPgliteHome } from "./pglite-upgrade";
-import { snapshotLegacyQueuedRequests } from "./queued-request-migration";
 import * as schema from "./schemas.pg";
-import { removeSharedWorkspaceFolders } from "./shared-workspace-folders";
-import { migrateWorkspaceCapabilities } from "./workspace-capabilities-migration";
-import { prepareWorkspaceLocations } from "./workspace-location-migration";
 
 type EmbeddedFile = Blob & { name: string };
 // Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
@@ -104,12 +99,11 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
     normalizeEmbeddedFileName(file.name).endsWith(PGLITE_INITIAL_DATABASE_SUFFIX),
   );
   const icu = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_ICU_SUFFIX));
-  const identity = { database: "template1", username: "postgres" };
   if (!wasmFile && !dataFile && !initialDatabase && !icu) {
     const require = createRequire(import.meta.url);
     const icuPath = path.join(path.dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
     return {
-      ...identity,
+      ...pgliteIdentity,
       icuDataDir: Bun.file(icuPath),
       loadDataDir: Bun.file(path.join(import.meta.dirname, "../../vendor/pglite/empty-database.tar.gz")),
     };
@@ -124,7 +118,7 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
   const wasmModule = await WebAssembly.compile(wasmBytes);
 
   return {
-    ...identity,
+    ...pgliteIdentity,
     fsBundle: dataFile,
     pgliteWasmModule: wasmModule,
     loadDataDir: initialDatabase,
@@ -134,7 +128,7 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
 
 // Startup steps in order. The runtime publishes itself once the database is locked and logs every step.
 export type DbOpenPhase =
-  | PgliteUpgradePhase
+  | PgliteRetirementPhase
   | "database_locked"
   | "database_engine_loaded"
   | "database_image_restored"
@@ -176,19 +170,7 @@ export const createDb = async (options?: {
 
     const db = drizzle(openedPglite, { schema });
     await withMigrationsFolder(async (migrationsFolder) => {
-      if (!fs.existsSync(migrationsFolder)) return;
-      const legacy = await openedPglite.query<{ legacy: boolean }>(
-        "SELECT to_regclass('public.projects') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'workspaces' AND column_name = 'root_path') AS legacy",
-      );
-      if (legacy.rows[0]?.legacy) await migrateThrough(db, migrationsFolder, 31);
-      await prepareWorkspaceLocations(openedPglite);
-      await removeSharedWorkspaceFolders(openedPglite, db, migrationsFolder);
-      await prepareBoardViewRules(openedPglite);
-      await removeArchivedWorkspaces(openedPglite);
-      await migrateThrough(db, migrationsFolder);
-      await finishBoardViewRules(openedPglite);
-      await migrateWorkspaceCapabilities(openedPglite);
-      await snapshotLegacyQueuedRequests(db);
+      if (fs.existsSync(migrationsFolder)) await migrate(db, { migrationsFolder });
     });
     onPhase("database_migrated");
 

@@ -6,13 +6,13 @@ import { readWorkflowStatuses, usableWorkflowStatuses } from "./workflow-statuse
 import { withWriteGuard } from "./write-guard";
 
 export const reconcileDependencyBlockers = async (
-  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId" | "settings">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId" | "settings" | "resources">,
 ) =>
   withWriteGuard(
     ctx,
     "dependency-blockers",
     async () => {
-      const collection = ticketsCollection(ctx.storage);
+      const collection = ticketsCollection(ctx);
       const [tickets, workflow] = await Promise.all([collection.list(), readWorkflowStatuses(ctx)]);
       const doneIds = new Set(usableWorkflowStatuses(workflow).completedStatusIds);
       const byRef = dependencyTicketIndex(tickets);

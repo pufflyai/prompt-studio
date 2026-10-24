@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import type { NavigationTarget } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
+import { ticketsCollection } from "../data/ticket-context.fixture";
+
 import { makeCommandArgs } from "./command-context.fixture";
 import { newTicketCommand } from "./new-ticket";
 

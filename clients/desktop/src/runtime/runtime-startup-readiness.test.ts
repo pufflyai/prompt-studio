@@ -6,8 +6,8 @@ import { join } from "node:path";
 import { discoverRuntime, type RuntimeDescriptor, writeRuntimeDescriptor } from "pstdio/runtime";
 import { DesktopRuntimeManager } from "./runtime-manager";
 
-test("keeps its live upgrade process through connection failures and retries without duplicating it", async () => {
-  const root = mkdtempSync(join(tmpdir(), "desktop-upgrade-readiness-"));
+test("keeps its live process through a long startup step and retries without duplicating it", async () => {
+  const root = mkdtempSync(join(tmpdir(), "desktop-startup-readiness-"));
   const descriptorPath = join(root, "runtime.json");
   const descriptor: RuntimeDescriptor = {
     schemaVersion: 1,
@@ -26,7 +26,7 @@ test("keeps its live upgrade process through connection failures and retries wit
   let spawns = 0;
   const child = Object.assign(new EventEmitter(), {
     pid: process.pid,
-    readOutput: () => JSON.stringify({ event: "runtime.startup.phase", phase: "database_upgrade_exporting" }),
+    readOutput: () => JSON.stringify({ event: "runtime.startup.phase", phase: "database_retiring" }),
     kill: (signal?: NodeJS.Signals | number) => {
       signals.push(signal);
       queueMicrotask(() => child.emit("exit", null, signal));
@@ -52,7 +52,7 @@ test("keeps its live upgrade process through connection failures and retries wit
           fetch: async () => {
             if (++probes <= 2 || failNextProbe) {
               failNextProbe = false;
-              throw new TypeError("Readiness socket closed during upgrade");
+              throw new TypeError("Readiness socket closed during startup");
             }
             return Response.json({ ok: true, protocolVersion: 1, instanceId: "upgrading", ownerType: "desktop" });
           },

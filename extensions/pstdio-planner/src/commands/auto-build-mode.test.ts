@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import type { StorageGroup } from "@pstdio/sdk/extensions";
 import { putAttempt } from "../data/attempt-storage";
 import { type AutoBuildMode, autoBuildChanged } from "../data/auto-build-mode";
-import { putTicket } from "../data/collections";
+import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
+
 import { fixture } from "./auto-build.fixture";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { autoBuildScopeCommand } from "./auto-build-scope";
@@ -140,9 +141,9 @@ test("started work that leaves the eligible status keeps Auto Build unfinished",
   await scope(ctx);
   await runAttemptCommand.run(ctx, { ticket: started.id });
   await putTicket(storage, {
-    ...(await storage.collection("tickets").get(started.id))!,
+    ...(await ticketsCollection(storage).get(started.id))!,
     statusId: "in-progress",
-  } as never);
+  });
   await putTicket(storage, { ...finished, statusId: "done" });
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: false });
 });

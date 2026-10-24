@@ -142,7 +142,7 @@ resource owner fields in references. Existing IDs remain unchanged; core extensi
 adopt compact IDs separately after their case-sensitive lookup paths are ready.
 The format alone does not add a search index or speed up record listing.
 
-When importing data, pass a stable source key to the migration callback's ID helper:
+When importing data, pass a stable source key to the migration callback's ID helper. The example reads `readLegacy`, which resolves to `undefined` since 0.46. The same pattern applies to any import source:
 
 ```ts
 await ctx.storage.migrate(1, async (_previousVersion, migration) => {

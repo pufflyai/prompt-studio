@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { ticketsCollection } from "../data/collections";
+import { ticketsCollection } from "../data/ticket-context.fixture";
+
 import { withWriteGuard } from "../data/write-guard";
 import { readStoredPlan } from "../timeline/commands/plan-store";
 import { makeCommandContext } from "./command-context.fixture";

@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import { listAttempts, putAttempt } from "../data/attempt-storage";
-import { putTicket, tagsCollection } from "../data/collections";
+import { tagsCollection } from "../data/collections";
 import { seedDefaultTags } from "../data/seed";
+import { putTicket } from "../data/ticket-context.fixture";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand } from "./auto-build-mode";
