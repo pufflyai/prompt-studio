@@ -35,13 +35,17 @@ describe("tag operations", () => {
     expect(tags.map((tag) => tag.type)).toEqual(["single_select", "single_select", "single_select"]);
   });
 
-  test("setTicketTags replaces the ticket's tag option ids", async () => {
+  test("setTicketTags stores the flat tag option ids by tag", async () => {
     const storage = createMemoryStorage();
-    const created = await putTicket(storage, ticket({ tagIds: ["old"] }));
+    const created = await putTicket(storage, ticket({ tags: { "default-priority": "default-priority-low" } }));
 
-    const updated = await setTicketTags({ ...ticketContext(storage), ticketId: created.id, tagIds: ["a", "b"] });
+    const updated = await setTicketTags({
+      ...ticketContext(storage),
+      ticketId: created.id,
+      tagIds: ["default-type-bug", "default-priority-high", "unknown"],
+    });
 
-    expect(updated?.tagIds).toEqual(["a", "b"]);
+    expect(updated?.tags).toEqual({ "default-priority": "default-priority-high", "default-type": "default-type-bug" });
   });
 
   test("create and update a tag option with icon and description", async () => {
@@ -110,12 +114,12 @@ describe("tag operations", () => {
       name: "Blocker",
       color: "red",
     });
-    const created = await putTicket(storage, ticket({ tagIds: [option.id] }));
+    const created = await putTicket(storage, ticket({ tags: { [priority.id]: option.id } }));
 
     await deleteTagOption({ ...ticketContext(storage), tagId: priority.id, optionId: option.id });
 
     const { ticketsCollection } = await import("./ticket-context.fixture");
-    expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual([]);
+    expect((await ticketsCollection(storage).get(created.id))?.tags).toEqual({});
   });
 
   test("applyTagDraft commits type, creates, updates, and deletes in one tag write", async () => {
@@ -124,7 +128,8 @@ describe("tag operations", () => {
     const priority = tags[0]!;
     const renameTarget = priority.options[0]!;
     const removeTarget = priority.options[1]!;
-    const ticketRecord = await putTicket(storage, ticket({ tagIds: [removeTarget.id] }));
+    const ticketRecord = await putTicket(storage, ticket({ tags: { [priority.id]: removeTarget.id } }));
+    const kept = await putTicket(storage, ticket({ tags: { [priority.id]: renameTarget.id } }));
 
     await applyTagDraft({
       ...ticketContext(storage),
@@ -143,7 +148,9 @@ describe("tag operations", () => {
     expect(updated.options.find((option) => option.name === "Critical")).toMatchObject({ color: "red", icon: "flame" });
 
     const { ticketsCollection } = await import("./ticket-context.fixture");
-    expect((await ticketsCollection(storage).get(ticketRecord.id))?.tagIds).toEqual([]);
+    expect((await ticketsCollection(storage).get(ticketRecord.id))?.tags).toEqual({});
+    // The value moves to the multi-select shape with the tag.
+    expect((await ticketsCollection(storage).get(kept.id))?.tags).toEqual({ [priority.id]: [renameTarget.id] });
   });
 
   test("applyTagDraft rejects without writing when the tag does not exist", async () => {
@@ -164,16 +171,19 @@ describe("tag operations", () => {
     expect(tags.some((tag) => tag.id === "missing-tag")).toBe(false);
   });
 
-  test("deleting a tag strips all its option ids from tickets", async () => {
+  test("deleting a tag removes its value from tickets", async () => {
     const storage = createMemoryStorage();
     const { tags } = await readTicketTags(storage);
     const priority = tags[0]!;
     const optionId = priority.options[0]!.id;
-    const created = await putTicket(storage, ticket({ tagIds: [optionId] }));
+    const created = await putTicket(
+      storage,
+      ticket({ tags: { [priority.id]: optionId, "default-type": "default-type-bug" } }),
+    );
 
     await deleteTicketTag({ ...ticketContext(storage), tagId: priority.id });
 
     const { ticketsCollection } = await import("./ticket-context.fixture");
-    expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual([]);
+    expect((await ticketsCollection(storage).get(created.id))?.tags).toEqual({ "default-type": "default-type-bug" });
   });
 });

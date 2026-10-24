@@ -1,6 +1,7 @@
 import { defineCommand, type ExtensionContextBase, params } from "@pstdio/sdk/extensions";
 import { putTicket, ticketsCollection } from "../data/collections";
 import { ticketWithAttributes } from "../data/ticket-attributes";
+import { withTicketTagIds } from "../data/ticket-tags";
 import { plannerTicketsChanged } from "../events";
 import { moveTicketInPlan } from "../timeline/commands/move-ticket";
 
@@ -33,5 +34,8 @@ export const setTicketAttributeCommand = defineCommand({
     attributeId: params.text({ required: true }),
     value: params.json<string | string[]>(),
   },
-  run: setTicketAttribute,
+  async run(ctx, commandParams) {
+    const ticket = await setTicketAttribute(ctx, commandParams);
+    return ticket && withTicketTagIds(ticket);
+  },
 });

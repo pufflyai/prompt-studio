@@ -1,16 +1,18 @@
-// A single-select property holds at most one value per ticket. Planner reports conflicts and lets
-// people choose; it never picks a value for them.
+// A single-select property holds one value per ticket. Planner reports conflicts and lets
+// people choose. Only the storage upgrade picks a value, by option order.
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "./collections";
-import { isSingleSelectTicketTag } from "./mappers";
+import { putTicket, ticketsCollection } from "./collections";
 import { seedDefaultTags } from "./seed";
 import type { TicketContext } from "./ticket-identity";
-import type { StoredTag } from "./types";
-
-const selectedOptions = (tag: Pick<StoredTag, "options">, tagIds: readonly string[] = []) => {
-  const optionIds = new Set(tag.options.map(({ id }) => id));
-  return tagIds.filter((id) => optionIds.has(id));
-};
+import {
+  assertOneTagValue,
+  sameTicketTags,
+  tagValue,
+  tagValueIds,
+  ticketTagsFromIds,
+  withTagValue,
+} from "./ticket-tags";
+import type { StoredTag, StoredTicketTags } from "./types";
 
 // Checks every stored ticket, including archived ones and drafts, before the type changes.
 export const assertSingleSelectConversion = async (
@@ -19,8 +21,9 @@ export const assertSingleSelectConversion = async (
   nextType: StoredTag["type"] | undefined,
 ) => {
   if (nextType !== "single_select" || tag.type === "single_select") return;
+  const optionIds = new Set(tag.options.map(({ id }) => id));
   const conflicts = (await ticketsCollection(ctx).list()).filter(
-    (ticket) => selectedOptions(tag, ticket.tagIds).length > 1,
+    (ticket) => tagValueIds(ticket.tags?.[tag.id]).filter((id) => optionIds.has(id)).length > 1,
   );
   if (conflicts.length === 0) return;
   throw new Error(
@@ -29,19 +32,23 @@ export const assertSingleSelectConversion = async (
   );
 };
 
-// A write may keep or shrink a conflict stored before the property became single-select, so the
-// ticket stays editable, but it cannot add a value to it.
-export const assertSingleSelectTagIds = async (
-  storage: ExtensionStorageApi,
-  nextTagIds: readonly string[],
-  previousTagIds: readonly string[] = [],
-) => {
-  for (const tag of await seedDefaultTags(storage)) {
-    if (!isSingleSelectTicketTag(tag)) continue;
-    const next = selectedOptions(tag, nextTagIds);
-    const previous = selectedOptions(tag, previousTagIds);
-    if (next.length < 2 || next.every((id) => previous.includes(id))) continue;
-    const names = tag.options.filter(({ id }) => next.includes(id)).map(({ name }) => name);
-    throw new Error(`${tag.name} allows one value. Choose one of: ${names.join(", ")}.`);
+// Stores each ticket's value in the shape of the tag's current type.
+export const convertTicketTagValues = async (ctx: TicketContext, tag: StoredTag) => {
+  for (const ticket of await ticketsCollection(ctx).list()) {
+    const value = ticket.tags?.[tag.id];
+    if (value === undefined) continue;
+    const tags = withTagValue(ticket.tags, tag.id, tagValue(tag, tagValueIds(value), value));
+    if (!sameTicketTags(tags, ticket.tags)) await putTicket(ctx, { ...ticket, tags });
   }
+};
+
+/** Validate the flat `tagIds` a command received and translate them to the stored object. */
+export const ticketTagsForIds = async (
+  storage: ExtensionStorageApi,
+  tagIds: readonly string[],
+  previous?: StoredTicketTags,
+) => {
+  const tags = await seedDefaultTags(storage);
+  for (const tag of tags) assertOneTagValue(tag, tagIds);
+  return ticketTagsFromIds(tags, tagIds, previous);
 };

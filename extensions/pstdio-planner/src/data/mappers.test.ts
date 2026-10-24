@@ -110,7 +110,11 @@ describe("ticketToRow", () => {
       ],
     };
 
-    const row = ticketToRow({ ...ticket, tagIds: ["default-type-bug", "default-type-feature"] }, "proj-1", [typeTag]);
+    const row = ticketToRow(
+      { ...ticket, tags: { "default-type": ["default-type-bug", "default-type-feature"] } },
+      "proj-1",
+      [typeTag],
+    );
 
     expect((row.attributes as Record<string, unknown>).type).toBe("default-type-bug");
   });

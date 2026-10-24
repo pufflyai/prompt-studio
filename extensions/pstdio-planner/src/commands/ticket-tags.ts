@@ -1,5 +1,4 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { migratePlannerStorage } from "../data/migrate-storage";
 import { resolveTagId } from "../data/resolve";
 import {
   applyTagDraft,
@@ -14,6 +13,7 @@ import {
   updateTagOption,
   updateTicketTag,
 } from "../data/tag-operations";
+import { withTicketTagIds } from "../data/ticket-tags";
 import { plannerSchemaChanged, plannerTicketsChanged } from "../events";
 
 export const readTicketTagsCommand = defineCommand({
@@ -21,7 +21,6 @@ export const readTicketTagsCommand = defineCommand({
   title: "Read ticket tags",
   cli: { globalAliases: [["tags", "list"]], examples: ["pstdio tags list"] },
   async run(ctx, _commandParams) {
-    await migratePlannerStorage(ctx);
     return readTicketTags(ctx.storage);
   },
 });
@@ -242,6 +241,6 @@ export const setTicketTagsCommand = defineCommand({
       tagIds: commandParams.tagIds ?? [],
     });
     await ctx.events.emit(plannerTicketsChanged, {});
-    return result;
+    return result && withTicketTagIds(result);
   },
 });

@@ -25,7 +25,7 @@ test("creates timeline tickets through Planner with body, properties, prerequisi
   expect(result.ticket.title).toBe("Shared ticket form");
   expect(result.ticket.content).toBe("# Shared ticket form\n\nDetails from the markdown body.");
   expect(result.ticket.statusId).toBe("ready");
-  expect(result.ticket.tagIds).toEqual([track.id, "default-priority-high"]);
+  expect(new Set(result.ticket.tagIds)).toEqual(new Set([track.id, "default-priority-high"]));
   expect(result.ticket.dependsOn).toEqual([prerequisite.id]);
   expect(result.placementError).toBeNull();
   expect((await loadPlan(ctx)).plan.order.find((entry) => entry.ticketId === result.ticket.id)?.deadlineId).toBe(

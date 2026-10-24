@@ -1,14 +1,19 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import extension from "../../extension";
 import { makeCommandContext } from "../commands/command-context.fixture";
 import { queryTicketProperties } from "../commands/ticket-properties/query";
-import { readTicketTagsCommand } from "../commands/ticket-tags";
-import { readPlanCommand } from "../timeline/commands/read-plan";
 import { timelineViewSchema } from "../timeline/commands/view-schema";
 import { tagsCollection } from "./collections";
 import { migratePlannerStorage } from "./migrate-storage";
 import { putTicket, ticketsCollection } from "./ticket-context.fixture";
 import type { Ticket } from "./types";
+
+const registered = (id: string) => {
+  const contribution = [...(extension.commands ?? []), ...(extension.hooks ?? [])].find((entry) => entry.id === id);
+  if (!contribution) throw new Error(`Missing ${id}`);
+  return contribution as unknown as { run: (ctx: unknown, input: unknown) => Promise<unknown> };
+};
 
 const ticket = {
   id: "ticket-1",
@@ -44,10 +49,13 @@ test("a project that already imported its templates gets the remaining cleanups 
   expect(await storage.collection("templates").list()).toEqual([]);
 });
 
+// Commands and hooks can run from the CLI or an event before any Planner view opens.
 test.each([
   "migration",
-  "timeline",
-  "tags",
+  "get-ticket",
+  "timeline.plan.read",
+  "ticket-tag.read",
+  "review-request-cleanup",
   "schema",
   "properties",
 ])("%s upgrades preserve custom flags, ticket edits, and requests", async (entry) => {
@@ -68,11 +76,10 @@ test.each([
   await requests.put(request.id, request);
   const ctx = makeCommandContext({ storage, params: {} });
 
-  if (entry === "timeline") await readPlanCommand.run(ctx, {});
-  else if (entry === "tags") await readTicketTagsCommand.run(ctx, {});
-  else if (entry === "schema") await timelineViewSchema(ctx);
+  if (entry === "schema") await timelineViewSchema(ctx);
   else if (entry === "properties") await queryTicketProperties(ctx, { type: "ticket", id: ticket.id });
-  else await migratePlannerStorage(ctx);
+  else if (entry === "migration") await migratePlannerStorage(ctx);
+  else await registered(entry).run(ctx, entry === "get-ticket" ? { id: ticket.id } : { ticketId: "other" });
 
   expect(await tagsCollection(storage).get("default-human-requested")).toMatchObject({
     name: "Workflow",
@@ -80,7 +87,7 @@ test.each([
   });
   expect(await ticketsCollection(storage).get(ticket.id)).toMatchObject({
     content: "Keep this body",
-    tagIds: [option.id],
+    tags: { "default-human-requested": [option.id] },
   });
   expect(await requests.get(request.id)).toEqual(request);
   await migratePlannerStorage(ctx);

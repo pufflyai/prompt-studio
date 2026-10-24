@@ -1,8 +1,9 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { tagsCollection } from "./collections";
-import { ticketRecords } from "./ticket-records";
 
 // Requests own pending input. Retire its old tag projection while keeping custom flags.
+// The ticket tag upgrade that follows drops the retired option from tickets, because it
+// no longer belongs to any tag.
 export const cleanupAttentionTag = async (storage: ExtensionStorageApi) => {
   const optionId = "default-human-requested-true";
   const tags = tagsCollection(storage);
@@ -13,12 +14,5 @@ export const cleanupAttentionTag = async (storage: ExtensionStorageApi) => {
     } else if (options.length !== tag.options.length) {
       await tags.put(tag.id, { ...tag, options });
     }
-  }
-  const tickets = ticketRecords(storage);
-  for (const listed of await tickets.list()) {
-    if (!listed.tagIds?.includes(optionId)) continue;
-    const ticket = await tickets.get(listed.id);
-    if (!ticket) continue;
-    await tickets.put(ticket.id, { ...ticket, tagIds: ticket.tagIds?.filter((id) => id !== optionId) });
   }
 };

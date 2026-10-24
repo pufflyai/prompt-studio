@@ -45,7 +45,17 @@ A new project starts with these tags:
 
 Open **Settings → Project Planner → Ticket tags** to add, rename, reorder, or delete tags and their options. From a terminal, use [`pst tags`](0004-cli.md#tags). When you delete a tag, Planner removes its options from every ticket.
 
-A single-select tag holds at most one option on every ticket. Planner rejects a ticket change that would give it a second option. To change a multi-select tag to single-select, every ticket must hold at most one of its options first, including archived tickets and drafts. If some tickets hold several, the change fails, changes nothing, and lists those tickets. Choose one option on each of them, for example in the ticket's Properties panel or with `pst pstdio-planner set-ticket-attribute`, then change the type again. Planner never picks an option for you.
+A single-select tag holds at most one option on every ticket. Planner rejects a ticket change that would give it a second option. To change a multi-select tag to single-select, every ticket must hold at most one of its options first, including archived tickets and drafts. If some tickets hold several, the change fails, changes nothing, and lists those tickets. Choose one option on each of them, for example in the ticket's Properties panel or with `pst pstdio-planner set-ticket-attribute`, then change the type again. Planner never picks an option for you, with one exception: tickets saved before Planner 0.46 could hold several options of a single-select tag. When a project upgrades, each such ticket keeps the option that comes first in the tag's option order.
+
+### Tag edits from several devices
+
+Planner stores each ticket's tags by tag, so edits from different devices merge when the devices sync:
+
+- Edits to different tags all stay. If one device sets Priority and another sets Track on the same ticket, the ticket keeps both.
+- A single-select tag keeps one option. If two devices choose different options, every device ends with the same one of them.
+- A multi-select tag merges option by option. Options that each device adds or removes stay added or removed.
+
+Commands and the CLI still take and return a flat `tagIds` list. Planner converts it to the stored tags.
 
 Pending requests appear in the numbered Needs attention bubble. Tags describe ticket properties and do not control pending input. See [Review requests](0006-review-requests.md).
 

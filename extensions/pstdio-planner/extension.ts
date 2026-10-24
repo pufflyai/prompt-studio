@@ -17,6 +17,7 @@ import { newTicketCommand } from "./src/commands/new-ticket";
 import { openTicketsCommand } from "./src/commands/open-tickets";
 import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
+import { onCurrentStorage } from "./src/data/migrate-storage";
 import { findTicket } from "./src/data/resolve";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
 import { autoBuildHooks, autoBuildSchedule } from "./src/hooks/auto-build";
@@ -137,7 +138,9 @@ export default defineExtension({
     "zh-Hant": packageAsset("./l10n/zh-Hant.json", import.meta.url),
   },
 
-  commands: [...plannerCommands, ...Object.values(timelineCommands), readStatusSettings, saveStatusSettings],
+  commands: [...plannerCommands, ...Object.values(timelineCommands), readStatusSettings, saveStatusSettings].map(
+    onCurrentStorage,
+  ),
   views: [...plannerUi.views, timelineView],
   pages: [...plannerUi.pages, timelinePage],
   viewMenus: plannerUi.viewMenus,
@@ -177,7 +180,7 @@ export default defineExtension({
         if (ticket) await notifyBlocked(ctx, ticket, payload.sessionId);
       },
     }),
-  ],
+  ].map(onCurrentStorage),
 
   commandPaletteResources: [
     defineCommandPaletteResource({
