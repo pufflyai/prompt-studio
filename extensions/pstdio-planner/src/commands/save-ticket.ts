@@ -24,6 +24,7 @@ import { writeTicketImageCheckout } from "../data/ticket-image-checkout";
 import { isImagePath, saveTicketImages } from "../data/ticket-images";
 import { ticketTagIds, withChangedTags } from "../data/ticket-tags";
 import type { StoredTicketFile, Ticket } from "../data/types";
+import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
 
 // Reads the local text files back into stored ticket files, preserving a file's id across
@@ -128,6 +129,8 @@ export const saveTicketCommand = defineCommand({
         updatedAt: new Date().toISOString(),
       };
     });
+
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
 
     return { shorthand: ticket.shorthand, files: saved.files?.length ?? 0 };
   },
