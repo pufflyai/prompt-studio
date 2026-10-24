@@ -14,6 +14,42 @@ const privateSpaceOwner = (parts: string[]) => {
   return owner;
 };
 
+// Blobs the compiled host uploads: latest-state chunks, large saves and files.
+const createBlobStore = () => {
+  const blobs = new Map<string, { parts: Map<number, Uint8Array>; complete: boolean }>();
+  const bytes = (blob: { parts: Map<number, Uint8Array> }) =>
+    Buffer.concat([...blob.parts].sort(([a], [b]) => a - b).map(([, part]) => part));
+  const json = (body: unknown) => Response.json(body);
+  const request = async (request: Request, path: string, parts: string[]) => {
+    const id = parts[5]!;
+    let blob = blobs.get(id);
+    if (path.endsWith("/begin")) {
+      await validateLeafBegin(request);
+      blob ??= { parts: new Map(), complete: false };
+      blobs.set(id, blob);
+      return json({ partSize: 1_048_576, completed: blob.complete, parts: [] });
+    }
+    if (path.endsWith("/finish")) {
+      blob!.complete = true;
+      return json({ ok: true });
+    }
+    if (parts[6] === "parts") {
+      blob!.parts.set(Number(parts[7]), new Uint8Array(await request.arrayBuffer()));
+      return json({ ok: true });
+    }
+    if (path.endsWith("/read")) {
+      if (!blob?.complete) return new Response(null, { status: 404 });
+      return new Response(bytes(blob));
+    }
+    return new Response(null, { status: 404 });
+  };
+  return {
+    request,
+    complete: (id: string) => !!blobs.get(id)?.complete,
+    contents: () => [...blobs.values()].map(bytes),
+  };
+};
+
 // A wire-level peer for the compiled host. Real PostgreSQL/object-store behavior is checked in
 // services/relay/src/transport/document-client.integration.ts.
 export const createPackagedSyncPeer = (
@@ -21,7 +57,7 @@ export const createPackagedSyncPeer = (
   hostname = "127.0.0.1",
 ) => {
   const projects = new Set<string>();
-  const blobs = new Map<string, { parts: Set<number>; complete: boolean }>();
+  const blobs = createBlobStore();
   const documents = new Map<
     string,
     { state: Record<string, unknown> | null; payload?: string; updates: Record<string, unknown>[] }
@@ -102,26 +138,6 @@ export const createPackagedSyncPeer = (
 
     return null;
   };
-  const blobRequest = async (request: Request, path: string, parts: string[]) => {
-    const id = parts[5]!;
-    let blob = blobs.get(id);
-    if (path.endsWith("/begin")) {
-      await validateLeafBegin(request);
-      blob ??= { parts: new Set(), complete: false };
-      blobs.set(id, blob);
-      return json({ partSize: 1_048_576, completed: blob.complete, parts: [] });
-    }
-    if (path.endsWith("/finish")) {
-      blob!.complete = true;
-      return json({ ok: true });
-    }
-    if (parts[6] === "parts") {
-      await request.arrayBuffer();
-      blob!.parts.add(Number(parts[7]));
-      return json({ ok: true });
-    }
-    return new Response(null, { status: 404 });
-  };
   const documentRequest = async (request: Request, path: string, parts: string[], spaceOwner: string | null) => {
     const id = parts[5]!;
     if (spaceOwner) personalDocumentIds.add(id);
@@ -144,7 +160,7 @@ export const createPackagedSyncPeer = (
     }
     if (parts[6] === "states") return new Response(Buffer.from(String(doc.payload), "base64"));
     const body = await input();
-    for (const blobId of body.blobIds as string[]) expect(blobs.get(`~${blobId}`)?.complete).toBe(true);
+    for (const blobId of body.blobIds as string[]) expect(blobs.complete(`~${blobId}`)).toBe(true);
     expect(String(body.payload)).not.toContain("packaged-secret");
     if (path.endsWith("/updates")) {
       const sequence = doc.updates.length + 1;
@@ -193,7 +209,7 @@ export const createPackagedSyncPeer = (
         const parts = path.split("/");
         const spaceOwner = privateSpaceOwner(parts);
         if (spaceOwner !== null && spaceOwner !== "owner") return new Response(null, { status: 403 });
-        if (parts[4] === "blobs") return blobRequest(request, path, parts);
+        if (parts[4] === "blobs") return blobs.request(request, path, parts);
         return documentRequest(request, path, parts, spaceOwner);
       },
       websocket: {
@@ -211,6 +227,7 @@ export const createPackagedSyncPeer = (
       return server.url.origin;
     },
     documents,
+    blobContents: blobs.contents,
     states: () => storedStates,
     reads: () => completedReads,
     announceUnchanged() {
