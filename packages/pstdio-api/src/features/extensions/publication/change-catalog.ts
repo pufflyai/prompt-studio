@@ -38,18 +38,25 @@ export const changePublishedCatalog = async (
     if ((await catalog.records.read(input.extensionId)).revision !== input.expectedRevision)
       throw new PublicationChangedError();
   });
-  return catalog.change(input.extensionId, input.expectedRevision, ({ records }) =>
-    records.commit({
-      operationId: crypto.randomUUID(),
-      edits: [
-        {
-          recordId: input.extensionId,
-          expectedRevision: input.expectedRevision,
-          replace: { revision: proposed.publication.revision, enabled: proposed.publication.enabled },
-        },
-      ],
-    }),
-  );
+  try {
+    return await catalog.change(input.extensionId, input.expectedRevision, ({ records }) =>
+      records.commit({
+        operationId: crypto.randomUUID(),
+        edits: [
+          {
+            recordId: input.extensionId,
+            expectedRevision: input.expectedRevision,
+            replace: { revision: proposed.publication.revision, enabled: proposed.publication.enabled },
+          },
+        ],
+      }),
+    );
+  } catch (error) {
+    // Activation needs the database, so it cannot run inside the catalog lock. When the shared save loses,
+    // this device returns to the shared set itself, because a local project has no sync to repair it.
+    await activatePublishedSet(deps, projectId, publishedEntries(await catalog.list()));
+    throw error;
+  }
 };
 
 /** Shares an enabled state that this device already applied to its own copy. */
@@ -75,6 +82,31 @@ export const shareEnabledChoice = async (
       ],
     });
   });
+};
+
+/** Deletes the shared selection and returns an undo that never overwrites a newer shared choice. */
+export const removeSharedSelection = async (catalog: Catalog, extensionId: string) => {
+  const removed = await catalog.change(extensionId, undefined, async ({ records }) => {
+    const current = await records.read(extensionId);
+    if (!current.exists || current.deleted) return undefined;
+    await records.commit({ operationId: crypto.randomUUID(), edits: [{ recordId: extensionId, deleted: true }] });
+    return { value: current.value, revision: (await records.read(extensionId)).revision };
+  });
+  return async () => {
+    if (!removed) return;
+    await catalog
+      .change(extensionId, removed.revision, ({ records }) =>
+        records.commit({
+          operationId: crypto.randomUUID(),
+          edits: [
+            { recordId: extensionId, expectedRevision: removed.revision, replace: removed.value, deleted: false },
+          ],
+        }),
+      )
+      .catch((error) => {
+        if (!(error instanceof PublicationChangedError)) throw error;
+      });
+  };
 };
 
 export const adoptPublishedExtension = async (
