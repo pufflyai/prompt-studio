@@ -67,8 +67,8 @@ test("snapshot paths open the artifact that owns the revision", async () => {
   expect(await resolve(`${artifact.revisionId}.html`)).toMatchObject({
     resource: { type: "artifact", id: artifact.artifactId, label: "Updated report", projectId: ctx.projectId },
     target: {
-      kind: "compound",
-      targets: [{ kind: "page" }, { kind: "panel", resource: { type: "artifact", id: artifact.artifactId } }],
+      kind: "page",
+      resource: { type: "artifact", id: artifact.artifactId },
     },
   });
   expect(await resolve("missing.html")).toBeNull();
