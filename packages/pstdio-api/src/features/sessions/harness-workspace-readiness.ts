@@ -38,7 +38,7 @@ export const resolveHarnessWorkspace = async (
   harness: { cwdRequirement: "required" | "optional" },
 ) => {
   const workspace = await ensureWorkspaceReady(deps, input.sessionId);
-  const context = toHarnessWorkspaceContext(workspace, input.cwd);
+  const context = toHarnessWorkspaceContext(workspace, harness.cwdRequirement);
   if (workspace?.execution_kind === "remote" && harness.cwdRequirement === "required") {
     throw new Error(`Harness requires a local cwd and cannot run remote workspace ${workspace.id}.`);
   }

@@ -31,7 +31,7 @@ test("ticket file listing and pulling reject unsafe stored names before exposing
     sortOrder: 0,
     createdAt: now,
     updatedAt: now,
-    files: [{ id: "unsafe", name: "../../outside.txt", content: "", createdAt: now, updatedAt: now }],
+    files: [{ id: "unsafe", name: "../../outside.txt", blobId: "unused", createdAt: now, updatedAt: now }],
   });
   await expect(
     listTicketFilesCommand.run(...makeCommandArgs({ storage, params: { id: "T-1" }, overrides: { projectFiles } })),

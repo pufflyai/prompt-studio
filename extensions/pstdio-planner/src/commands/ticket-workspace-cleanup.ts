@@ -1,7 +1,7 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import type { Ticket } from "../data/types";
-import { isWorkspaceLinkedToTicket, resolveWorkspaceTicketAnchors } from "../data/workspace-ticket-link";
+import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 
 export type TicketCleanupContext = Pick<
   ExtensionContextBase,
@@ -14,7 +14,7 @@ export const deleteUnusedLinkedWorkspaces = async (ctx: TicketCleanupContext, ti
     const activeIds = new Set(
       (await ticketsCollection(ctx).list()).filter((ticket) => !ticket.archived).map((ticket) => ticket.id),
     );
-    const unused = (await resolveWorkspaceTicketAnchors(ctx, await ctx.workspaces.list())).filter(
+    const unused = (await ctx.workspaces.list()).filter(
       (workspace) =>
         !workspace.is_default &&
         workspace.provider_capabilities_json?.delete !== false &&

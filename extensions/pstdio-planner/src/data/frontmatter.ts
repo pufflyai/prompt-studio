@@ -50,7 +50,6 @@ export const extractTicketTitle = (content: string) => {
 
 export interface ParsedTicketFrontmatter {
   resourceId?: string;
-  createdAt?: string;
   userPrompt?: string;
   draft?: boolean;
   parentShorthand?: string;
@@ -69,7 +68,6 @@ const parseList = (raw: string) => {
 
 const FRONTMATTER_KEYS: Record<string, keyof ParsedTicketFrontmatter> = {
   resource_id: "resourceId",
-  created: "createdAt",
   user_prompt: "userPrompt",
   parent_id: "parentShorthand",
   blocked_reason: "blockedReason",

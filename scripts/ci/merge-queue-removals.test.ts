@@ -149,3 +149,83 @@ test("a failed run lookup still reports the removal before starting a repair", a
   expect(comments[0]!.body).toContain("a required check failed");
   expect(state.get(1363)!.labels).toEqual([REMOVED_LABEL]);
 });
+
+test("queue removal reports retain the real failure after remaining jobs were cancelled", async () => {
+  const { createApi } = await import("./merge-queue-removals");
+  const runs = [
+    {
+      id: 3,
+      conclusion: "cancelled" as string | null,
+      status: "completed",
+      created_at: "2026-10-24T08:02:00Z",
+      head_branch: "gh-readonly-queue/main/pr-1394-a",
+      html_url: "https://github.com/owner/repo/actions/runs/3",
+    },
+    {
+      id: 2,
+      conclusion: "cancelled" as string | null,
+      status: "completed",
+      created_at: "2026-10-24T08:01:00Z",
+      head_branch: "gh-readonly-queue/main/pr-1394-a",
+      html_url: "https://github.com/owner/repo/actions/runs/2",
+    },
+    {
+      id: 1,
+      conclusion: "failure",
+      status: "completed",
+      created_at: "2026-10-24T08:00:00Z",
+      head_branch: "gh-readonly-queue/main/pr-1394-a",
+      html_url: "https://github.com/owner/repo/actions/runs/1",
+    },
+  ];
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const url = new URL(request.url);
+      if (url.pathname.endsWith("/runs")) {
+        return Response.json({
+          workflow_runs: runs.filter(
+            (run) =>
+              !url.searchParams.has("status") ||
+              (url.searchParams.get("status") === "completed"
+                ? run.status === "completed"
+                : run.conclusion === url.searchParams.get("status")),
+          ),
+        });
+      }
+      if (url.pathname.includes("/runs/3/"))
+        return Response.json({ jobs: [{ name: "manually stopped", conclusion: "cancelled" }] });
+      if (url.pathname.includes("/runs/1/"))
+        return Response.json({ jobs: [{ name: "older failure", conclusion: "failure" }] });
+      const jobs = [
+        ...Array.from({ length: 100 }, (_, index) => ({ name: `passed ${index}`, conclusion: "success" })),
+        { name: "Bun setup", conclusion: "failure" },
+        { name: "e2e", conclusion: "cancelled" },
+      ];
+      const page = Number(url.searchParams.get("page") ?? 1);
+      return Response.json({ jobs: jobs.slice((page - 1) * 100, page * 100) });
+    },
+  });
+  try {
+    const api = createApi({
+      apiUrl: server.url.origin,
+      graphqlUrl: server.url.origin,
+      repository: "owner/repo",
+      token: "fixture-token",
+    });
+    expect(await api.readFailedRun(1394, "2026-10-24T08:03:00Z")).toEqual({
+      url: runs[1]!.html_url,
+      jobs: ["Bun setup"],
+    });
+    runs[1]!.conclusion = null;
+    runs[1]!.status = "in_progress";
+    expect(await api.readFailedRun(1394, "2026-10-24T08:03:00Z")).toEqual({
+      url: runs[1]!.html_url,
+      jobs: ["Bun setup"],
+    });
+    runs.splice(1);
+    expect(await api.readFailedRun(1394, "2026-10-24T08:03:00Z")).toBeNull();
+  } finally {
+    await server.stop(true);
+  }
+});

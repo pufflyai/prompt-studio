@@ -15,7 +15,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-db": [
     "pstdio-api-contracts",
     "pstdio-paths",
-    "pstdio-storage",
     "pstdio-sync",
     "pstdio-sync-contracts",
     "pstdio-relay",
@@ -86,6 +85,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio",
     "pstdio-api-contracts",
     "pstdio-extensions",
+    "pstdio-sync",
     "pstdio-wt",
     "extension-lab",
     "harness-claude-code",

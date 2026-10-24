@@ -27,7 +27,6 @@ import type { TicketContext } from "./ticket-identity";
 import { ticketActivationTarget } from "./ticket-page-target";
 import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "./workflow-statuses";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
-import { resolveWorkspaceTicketAnchors } from "./workspace-ticket-link";
 
 interface TicketsQueryInput {
   storage: ExtensionStorageApi;
@@ -73,10 +72,7 @@ export const runTicketsQuery = async ({
   const toTicketRow = createTicketRowMapper(
     projectId,
     tags,
-    createTicketWorkspaceLookup(
-      await resolveWorkspaceTicketAnchors({ storage, resources }, workspaces),
-      workspaceSessions,
-    ),
+    createTicketWorkspaceLookup(workspaces, workspaceSessions),
     createTicketParentLookup(tickets),
   );
   const archiveRule =

@@ -29,21 +29,3 @@ test("workspace badges follow stable ticket IDs even when an anchor has a shared
   expect(result.rows.find(({ id }) => id === first.id)?.attributes.workspace).toBe("");
   expect(result.rows.find(({ id }) => id === second.id)?.attributes.workspace).toBe("workspace");
 });
-
-test("a workspace branch number resolves through core aliases when no ticket is anchored", async () => {
-  const { workspaceTicketIds } = await import("./workspace-ticket-link");
-  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {} });
-  const ticket = await createTicketCommand.run(ctx, { title: "Renumbered" });
-  ctx.resources.findByShorthand = async ({ shorthand }) =>
-    shorthand === "T-1" ? [{ id: ticket.id, kind: "ticket", shorthand: "T-2", aliases: ["T-1"] }] : [];
-  expect(await workspaceTicketIds(ctx, { id: "workspace", branch: "workspace/T-1_A1" })).toEqual([ticket.id]);
-});
-
-test("a workspace number is read from its shorthand when the branch has none", async () => {
-  const { workspaceTicketIds } = await import("./workspace-ticket-link");
-  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {} });
-  const ticket = await createTicketCommand.run(ctx, { title: "Renamed branch" });
-  expect(
-    await workspaceTicketIds(ctx, { id: "workspace", branch: "feature/updated", workspace_shorthand: "T-1_A1" }),
-  ).toEqual([ticket.id]);
-});

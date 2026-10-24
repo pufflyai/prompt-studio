@@ -196,10 +196,7 @@ describe("proposal notifications", () => {
       }),
     );
 
-    expect(resolutions).toContainEqual({
-      dedupeKey: `pstdio-planner:ticket:${ticket.id}:proposal-refined`,
-      status: "done",
-    });
+    expect(resolutions).toEqual([{ dedupeKey: `pstdio-planner:ticket:${ticket.id}:proposal-refined`, status: "done" }]);
   });
 });
 

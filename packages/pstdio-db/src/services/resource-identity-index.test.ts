@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { rememberResourceNumber, resourceNumbers, resourceNumbersOwnerId } from "pstdio-sync";
+import { coreOwnerId, rememberResourceNumber, resourceNumbers } from "pstdio-sync";
 import { createDb } from "../db/connection.pglite";
 import {
   storage_resource_aliases as aliases,
@@ -21,7 +21,7 @@ const staleIdentityFixture = async (db: Awaited<ReturnType<typeof createDb>>["db
   const oldAliases = await db.select().from(aliases);
   const oldProjection = await db.select().from(projections);
   await service.documentStore.transaction(
-    { workbenchId: project.id, extensionId: resourceNumbersOwnerId },
+    { workbenchId: project.id, extensionId: coreOwnerId },
     async ({ document }) => {
       const resources = resourceNumbers(document);
       const updated = { ...resources.get(changed.id)!, value: 10 };

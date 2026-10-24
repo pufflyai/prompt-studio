@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { type AssetStore, editResourceDocument, type StorageObserver, type StorageOwner } from "pstdio-sync";
 import {
   fingerprint,
@@ -8,16 +8,13 @@ import {
   type StorageSaveOutcome,
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import {
-  storage_current_records,
-  storage_document_operations,
-  storage_documents,
-  storage_record_projections,
-} from "../../db/schemas.pg";
+import { storage_document_operations } from "../../db/schemas.pg";
+import { dataMigrationContext } from "./data-migration-context";
 import type { createProjectionStatistics } from "./projection-statistics";
-import { publishProjectedRecords } from "./record-projection-rows";
+import { lockRecordOwner, saveRecordChanges } from "./record-changes";
+import { queueRecordUpload } from "./record-outbox";
 import { createRecordQueries, listProjectedRecords, readProjectedRecords } from "./record-queries";
-import { loadResourceDocuments, persistResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
+import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -36,7 +33,6 @@ export const createResourceRecords = (
   owner: StorageOwner,
   deps: {
     /** Resolves once the owner's records no longer live in its owner document. */
-    upgrade: () => Promise<void>;
     statistics: ReturnType<typeof createProjectionStatistics>;
     /** Notifies owner watchers after a commit. */
     changed: () => void;
@@ -46,7 +42,7 @@ export const createResourceRecords = (
   },
 ) => {
   const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: "records" };
-  const queries = createRecordQueries(db, owner, deps.upgrade, deps.diagnostics);
+  const queries = createRecordQueries(db, owner, deps.diagnostics);
   const receipt = (tx: Pick<DbClient, "select">, operationId: string) =>
     tx
       .select({ fingerprint: storage_document_operations.fingerprint })
@@ -59,30 +55,8 @@ export const createResourceRecords = (
           eq(storage_document_operations.operation_id, operationId),
         ),
       );
-  // The projection row is the owner's revision. Locking it serializes this owner's commits.
-  const lockOwner = async (tx: Transaction) => {
-    await tx
-      .insert(storage_documents)
-      .values({ ...address, state: new Uint8Array([0, 0]) })
-      .onConflictDoNothing();
-    await tx
-      .insert(storage_record_projections)
-      .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId, revision: 0 })
-      .onConflictDoNothing();
-    const [row] = await tx
-      .select({ revision: storage_record_projections.revision })
-      .from(storage_record_projections)
-      .where(
-        and(
-          eq(storage_record_projections.workbench_id, owner.workbenchId),
-          eq(storage_record_projections.extension_id, owner.extensionId),
-        ),
-      )
-      .for("update");
-    return row.revision;
-  };
   const commitIn = async (tx: Transaction, group: StorageGroup, identity: string) => {
-    const revision = await lockOwner(tx);
+    const revision = await lockRecordOwner(tx, owner);
     const ids = group.edits.map(({ recordId }) => recordId);
     const [previous] = await receipt(tx, group.operationId);
     if (previous) {
@@ -90,6 +64,7 @@ export const createResourceRecords = (
       return { records: await readProjectedRecords(tx, owner, ids), projected: 0 };
     }
     const { sources } = await loadResourceDocuments(tx, owner, ids.map(resourceDocumentId));
+    const migration = dataMigrationContext.getStore();
     // Every edit is validated and prepared before anything is written; a failure aborts the whole group.
     const prepared = await Promise.all(
       group.edits.map(async (edit) => {
@@ -98,39 +73,18 @@ export const createResourceRecords = (
         const next = (saved?.revision ?? 0) + 1;
         const foldedRevision = saved?.folded_revision ?? 0;
         const checkpoint = !saved || next - foldedRevision >= resourceFoldEvery;
-        const result = await editResourceDocument(saved?.states ?? [], edit, checkpoint);
+        const result = await editResourceDocument(
+          saved?.states ?? [],
+          edit,
+          checkpoint,
+          migration && { ...migration, document: JSON.stringify([owner.workbenchId, owner.extensionId, id]) },
+        );
         return { id, revision: next, foldedRevision, ...result };
       }),
     );
-    // Only the previous live state matters for the count; values stay unread.
-    const before = new Map(
-      (
-        await tx
-          .select({ id: storage_current_records.record_id, deleted: storage_current_records.deleted })
-          .from(storage_current_records)
-          .where(
-            and(
-              eq(storage_current_records.workbench_id, owner.workbenchId),
-              eq(storage_current_records.extension_id, owner.extensionId),
-              inArray(storage_current_records.record_id, ids),
-            ),
-          )
-      ).map((row) => [row.id, !row.deleted]),
-    );
-    await persistResourceDocuments(tx, owner, prepared);
     const records = prepared.map((value) => value.record);
-    const projected = await publishProjectedRecords(tx, owner, records);
-    const live = (record: { exists: boolean; deleted: boolean }) => Number(record.exists && !record.deleted);
-    const delta = records.reduce((sum, record) => sum + live(record) - Number(before.get(record.recordId) ?? false), 0);
-    await tx
-      .update(storage_record_projections)
-      .set({ revision: revision + 1, live_count: sql`${storage_record_projections.live_count} + ${delta}` })
-      .where(
-        and(
-          eq(storage_record_projections.workbench_id, owner.workbenchId),
-          eq(storage_record_projections.extension_id, owner.extensionId),
-        ),
-      );
+    const projected = await saveRecordChanges(tx, owner, revision, prepared);
+    await queueRecordUpload(tx, owner, prepared);
     await tx
       .insert(storage_document_operations)
       .values({ ...address, operation_id: group.operationId, fingerprint: identity });
@@ -146,7 +100,6 @@ export const createResourceRecords = (
       if (!deps.assets) throw new Error("Asset verification is unavailable");
       await deps.assets.verifyComplete(assets);
     }
-    await deps.upgrade();
     return fingerprint(group.edits.map(({ expectedRevision: _revision, ...edit }) => edit));
   };
   const published = (
@@ -167,21 +120,17 @@ export const createResourceRecords = (
   return {
     ...queries,
     readMany: async (ids: string[]) => {
-      await deps.upgrade();
       return queries.readMany(ids);
     },
     read: async (id: string, _branch?: { operationId: string }) => {
-      await deps.upgrade();
       return read(db, id);
     },
     list: async (prefix = "") => {
-      await deps.upgrade();
       const records = await listProjectedRecords(db, owner, prefix);
       for (const record of records) deps.observer?.read(owner, record);
       return records;
     },
     outcome: async (id: string) => {
-      await deps.upgrade();
       const [row] = await receipt(db, id);
       return row ? outcome(id) : undefined;
     },
@@ -196,10 +145,9 @@ export const createResourceRecords = (
         commit: (group: StorageGroup) => Promise<ReturnType<typeof outcome>>;
       }) => Promise<T>,
     ) => {
-      await deps.upgrade();
       const committed: { result: Awaited<ReturnType<typeof commitIn>>; operationId: string }[] = [];
       const value = await db.transaction(async (tx) => {
-        await lockOwner(tx);
+        await lockRecordOwner(tx, owner);
         return run({
           read: (id) => read(tx, id),
           commit: async (group) => {

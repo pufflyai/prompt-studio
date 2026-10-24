@@ -8,6 +8,12 @@ export const workspaceMetadataString = (resource: ResourceRef | undefined, key: 
 export const workspaceIdOf = (resource: ResourceRef | undefined) =>
   workspaceMetadataString(resource, "workspaceId") ?? resource?.id;
 
+// A cloud project from another device has its data here but no folder yet.
+export const projectFolderMissingState = {
+  title: "Files are not on this device",
+  description: "Choose a folder for this project to work on its files.",
+};
+
 export const workspaceFilesUnavailableState = (resource: ResourceRef | undefined) => {
   const error = workspaceMetadataString(resource, "workspaceError");
   if (error) throw new Error(error);
@@ -16,6 +22,7 @@ export const workspaceFilesUnavailableState = (resource: ResourceRef | undefined
   }
   const state = workspaceMetadataString(resource, "workspaceProviderState");
   if (state === "ready") return undefined;
+  if (state === "unattached") return projectFolderMissingState;
   if (!state || state === "provisioning") {
     return { title: "Preparing workspace", description: "Files will appear when the workspace is ready." };
   }

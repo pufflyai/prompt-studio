@@ -113,7 +113,7 @@ test("a renumbered ticket no longer answers to its old shorthand", async () => {
 test("ticket draft paths open the ticket and saved file paths select the document", async () => {
   const storage = createMemoryStorage();
   const ticket = storedTicket("ticket-1", "T-1", {
-    files: [{ id: "notes", name: "notes.md", content: "", createdAt: "2026-10-16", updatedAt: "2026-10-16" }],
+    files: [{ id: "notes", name: "notes.md", blobId: "unused", createdAt: "2026-10-16", updatedAt: "2026-10-16" }],
   });
   await ticketsCollection(storage).put(ticket.id, ticket);
   const resolve = resolver(storage, "draft-project");

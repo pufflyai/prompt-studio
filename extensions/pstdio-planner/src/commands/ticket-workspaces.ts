@@ -1,7 +1,7 @@
 import { defineCommand, type ExtensionWorkspace, params } from "@pstdio/sdk/extensions";
 import { findTicket, requireTickets } from "../data/resolve";
 import { readSessionHistory } from "../data/session-history";
-import { isWorkspaceLinkedToTicket, resolveWorkspaceTicketAnchors } from "../data/workspace-ticket-link";
+import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isLiveSessionStatus } from "../session-status";
 
 const workspacesForTickets = async (
@@ -9,7 +9,7 @@ const workspacesForTickets = async (
   id: string,
 ) => {
   const tickets = await requireTickets(ctx, id);
-  const workspaces = (await resolveWorkspaceTicketAnchors(ctx, await ctx.workspaces.list())).filter((ws) =>
+  const workspaces = (await ctx.workspaces.list()).filter((ws) =>
     tickets.some((ticket) => isWorkspaceLinkedToTicket(ws, ticket)),
   );
   return { tickets, workspaces };

@@ -4,6 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createAssetTransfersDBService, createDb, createProjectsDBService } from "pstdio-db";
 import { createAssetBytesStorage } from "pstdio-storage";
+import { UnreadableSyncData } from "pstdio-sync";
 import { createAssetTransferService } from "../../../services/asset-transfer-service";
 import { createRecordAssets } from "./record-assets";
 
@@ -53,6 +54,33 @@ test("record downloads resume long media types and reuse complete retained bytes
       { status: "fulfilled", value: undefined },
     ]);
     expect(await new Response(await port.read(simultaneous)).text()).toBe("other");
+  } finally {
+    await database.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("a complete download with the wrong bytes is unreadable", async () => {
+  const root = await mkdtemp(`${tmpdir()}/record-assets-`);
+  const database = await createDb({ path: ":memory:" });
+  const owner = { workbenchId: crypto.randomUUID(), extensionId: "example.records" };
+  const reference = {
+    sha256: createHash("sha256").update("hello").digest("hex"),
+    byteLength: 5,
+    mediaType: "application/octet-stream",
+  };
+  try {
+    await createProjectsDBService(database.db).create({ id: owner.workbenchId, name: "Download" });
+    const port = createRecordAssets(
+      createAssetTransferService({
+        transfers: createAssetTransfersDBService(database.db),
+        bytes: createAssetBytesStorage(root),
+      }),
+      owner,
+    );
+    // Sync sets unreadable data aside instead of retrying it on every pass.
+    const damaged = await port.receive(reference, async () => new Blob(["jello"]).stream()).catch((error) => error);
+    expect(damaged).toBeInstanceOf(UnreadableSyncData);
   } finally {
     await database.close();
     await rm(root, { recursive: true, force: true });

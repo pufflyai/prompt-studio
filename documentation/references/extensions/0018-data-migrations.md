@@ -43,11 +43,13 @@ These additions ship in the release after 0.44.0. See the
 
 ## Read retained source records
 
-`readLegacy(source)` returns `{ version, records }` or `undefined`. The version names the schema immediately before the table was removed. Records keep their original column names and JSON values. Your extension validates and interprets them.
+Since 0.46 the host starts with a new database and keeps no retained tables, so it always resolves to `undefined` ([ADR 0102](../../adrs/0102-database-baseline-replaces-in-place-upgrades.md)). Older data is in the JSON export under `~/.pstdio/backups/`.
 
-The host reads only retained tables and filters records to the invoking project. A record with an existing extension instance owner is visible only to that instance. This API cannot read active tables, global records, or another project's data.
+Before 0.46, `readLegacy(source)` returned `{ version, records }` or `undefined`. The version named the schema immediately before the table was removed. Records keep their original column names and JSON values. Your extension validates and interprets them.
 
-The host retains the source after import and failure. Reading it does not acknowledge, delete, or transfer it. Existing project file IDs can be read with `ctx.files.readText`; imported content uses the ordinary extension attachment API.
+The host read only retained tables and filtered records to the invoking project. A record with an existing extension instance owner is visible only to that instance. This API cannot read active tables, global records, or another project's data.
+
+The host retained the source after import and failure. Reading it does not acknowledge, delete, or transfer it. Existing project file IDs can be read with `ctx.files.readText`; imported content uses the ordinary extension attachment API.
 
 ## Test migration code
 

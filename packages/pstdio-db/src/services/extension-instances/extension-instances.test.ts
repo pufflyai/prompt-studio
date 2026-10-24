@@ -131,3 +131,72 @@ describe("extensionInstancesService", () => {
     });
   });
 });
+
+test("activating a published source keeps the project instance and leaves other projects on their local source", async () => {
+  const first = await svc.create({
+    installed_extension_id: installedId,
+    scope_type: "project",
+    scope_id: projectId,
+    config_json: { keep: true },
+  });
+  const other = await svc.create({
+    installed_extension_id: installedId,
+    scope_type: "project",
+    scope_id: "other-workbench",
+  });
+  const source = await sourcesSvc.register({
+    install_name: "published",
+    extension_id: "pstdio.core-templates",
+    display_name: "Published",
+    source_kind: "registry",
+    source_path: "/published/revision",
+  });
+  const [activated] = await svc.activateProjectSources([
+    {
+      projectId,
+      extensionId: source.extension_id,
+      instanceId: first.id,
+      installedSourceId: source.id,
+      enabled: false,
+    },
+  ]);
+  expect(activated!.instance.id).toBe(first.id);
+  expect(activated!.instance.config_json).toEqual({ keep: true });
+  expect(activated!.instance.installed_extension_id).toBe(source.id);
+  expect(activated!.instance.enabled).toBe(false);
+  expect((await svc.get(other.id))?.installed_extension_id).toBe(installedId);
+});
+
+test("a new local provider aborts the complete published set transaction", async () => {
+  const first = await svc.create({ installed_extension_id: installedId, scope_type: "project", scope_id: projectId });
+  const next = await sourcesSvc.register({
+    install_name: "next",
+    extension_id: "pstdio.core-templates",
+    display_name: "Next",
+    source_kind: "registry",
+    source_path: "/published/next",
+  });
+  const local = await sourcesSvc.register({
+    install_name: "private",
+    extension_id: "test.other",
+    display_name: "Private",
+    source_kind: "local_path",
+    source_path: "/private/other",
+  });
+  const override = await svc.create({ installed_extension_id: local.id, scope_type: "project", scope_id: projectId });
+  const remote = await sourcesSvc.register({
+    install_name: "remote",
+    extension_id: "test.other",
+    display_name: "Remote",
+    source_kind: "registry",
+    source_path: "/published/other",
+  });
+  await expect(
+    svc.activateProjectSources([
+      { projectId, extensionId: "pstdio.core-templates", instanceId: first.id, installedSourceId: next.id },
+      { projectId, extensionId: "test.other", installedSourceId: remote.id },
+    ]),
+  ).rejects.toThrow("changed during activation");
+  expect((await svc.get(first.id))?.installed_extension_id).toBe(installedId);
+  expect((await svc.get(override.id))?.enabled).toBe(true);
+});
