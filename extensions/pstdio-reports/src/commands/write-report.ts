@@ -9,7 +9,7 @@ import {
   reportToMarkdown,
   requireReportDraftFiles,
 } from "../data/draft-storage";
-import { storeReportBody } from "../data/report-body";
+import { reportBodyFile } from "../data/report-body";
 import { resolveReportName, resolveWorkspace } from "../data/resolve";
 import { readReportTemplate } from "../data/template-store";
 
@@ -71,6 +71,8 @@ export const writeReportCommand = defineCommand({
 
     const now = new Date().toISOString();
     const identity = await ctx.resources.allocate({ kind: "report" });
+    const blobs = reportsCollection(ctx.storage).attachments(identity.id);
+    const body = await blobs.put(reportBodyFile(templateBody));
     const report = await putReport(ctx.storage, {
       ...identity,
       workspaceShorthand,
@@ -79,11 +81,14 @@ export const writeReportCommand = defineCommand({
       directoryName,
       kind,
       source: commandParams.source ?? null,
-      bodyBlobId: await storeReportBody(ctx.storage, identity.id, templateBody),
+      bodyBlobId: body.id,
       files: [],
       draft: true,
       createdAt: now,
       updatedAt: now,
+    }).catch(async (error: unknown) => {
+      await Promise.allSettled([blobs.delete(body.id)]);
+      throw error;
     });
 
     await projectFiles.writeText(path, reportToMarkdown(report, templateBody));
