@@ -2,6 +2,7 @@ import { type ArtifactMount, defineCommand, type ExtensionStorageApi, params } f
 import { ticketsCollection } from "../data/collections";
 import { requireTicketDraftFiles, ticketFilesDir, ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
 import { findTicket } from "../data/resolve";
+import { readTicketFileContent } from "../data/ticket-file-content";
 import { validateTicketFileName } from "../data/ticket-file-name";
 import { pullTicketImages } from "../data/ticket-images";
 import type { StoredTicket } from "../data/types";
@@ -21,7 +22,10 @@ const pullTicket = async (input: {
   for (const file of ticket.files ?? []) validateTicketFileName(file.name);
   await projectFiles.writeText(markdownPath, await ticketToMarkdown(input.storage, ticket));
   for (const file of ticket.files ?? []) {
-    await projectFiles.writeText(`${ticketFilesDir(ticket.shorthand)}/${file.name}`, file.content);
+    await projectFiles.writeText(
+      `${ticketFilesDir(ticket.shorthand)}/${file.name}`,
+      await readTicketFileContent(input.storage, ticket.id, file),
+    );
   }
   await pullTicketImages(input.storage, projectFiles, ticket);
 
