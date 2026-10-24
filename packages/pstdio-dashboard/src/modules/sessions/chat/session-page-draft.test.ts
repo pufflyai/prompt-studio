@@ -56,6 +56,7 @@ const createPageDraft = () => {
 
 test("the New session tab opens the created session", () => {
   const { workbench, input } = createPageDraft();
+  workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.sessions });
   expect(workbench.layout.listPanelInstances("main")).toHaveLength(1);
   openCreatedSessionFromDraft({
     input,
@@ -66,6 +67,29 @@ test("the New session tab opens the created session", () => {
   });
   expect(workbench.pages.store.getState().location?.resource).toMatchObject({ type: "session", id: "created" });
   expect(workbench.layout.listPanelInstances("main")).toHaveLength(1);
+  expect(workbench.layout.getActivePanel("main")?.resource?.id).toBe("created");
+});
+
+test("starting a draft replaces only that draft and keeps other open sessions", () => {
+  const { workbench, input } = createPageDraft();
+  workbench.pageLocations.navigate({
+    kind: "page",
+    page: workbenchPages.session,
+    resource: { type: "session", id: "other" },
+  });
+  workbench.pageLocations.navigate({
+    kind: "page",
+    page: workbenchPages.newSession,
+    resource: input.instance.resource,
+  });
+  openCreatedSessionFromDraft({
+    input,
+    draftKey: "draft",
+    sessionId: "created",
+    prompt: "Build it",
+    projectId: "project-1",
+  });
+  expect(workbench.layout.listPanelInstances("main").map((tab) => tab.resource?.id)).toEqual(["other", "created"]);
   expect(workbench.layout.getActivePanel("main")?.resource?.id).toBe("created");
 });
 
@@ -84,6 +108,7 @@ test("creating a session does not leave a page the user opened while creation wa
     projectId: "project-1",
   });
   expect(workbench.pages.store.getState().location?.resource?.id).toBe("other");
+  expect(workbench.layout.getActivePanel("main")?.resource?.id).toBe("other");
 });
 
 test.each([

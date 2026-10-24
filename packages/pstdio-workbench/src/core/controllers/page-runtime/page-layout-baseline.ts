@@ -51,8 +51,8 @@ const matchesDefault = (
   placementIdentityKey(actual.placementIdentity) === placementIdentityKey(expected.identity) &&
   actual.viewId === expected.viewId &&
   pageResourceContextKey(page, actual.resource) === pageResourceContextKey(page, expected.resource) &&
-  Boolean(actual.pinned) === (expected.open === "pin") &&
-  actual.tabRetention === (expected.open === "pin" ? "persistent" : expected.open) &&
+  Boolean(actual.pinned) === (expected.open !== "preview") &&
+  actual.tabRetention === (expected.open === "preview" ? "preview" : "persistent") &&
   JSON.stringify(actual.section) === JSON.stringify(expected.section);
 
 export const isDefaultPageMain = (

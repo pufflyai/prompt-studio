@@ -1,5 +1,5 @@
 import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
-import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import { batchWorkbenchChanges } from "@pstdio/workbench";
@@ -67,11 +67,9 @@ export const openCreatedSessionFromDraft = (args: {
   if (identity?.kind === "page") {
     const placement = sessionViewPlacement(args.input)!;
     const workbench = args.input.workbench;
-    const state = workbench.pages.store.getState();
     const routed =
       placement.region === "main" &&
-      state.activePageId === identity.pageId &&
-      resourceKey(state.location?.resource) === resourceKey(placement.instance.resource);
+      workbench.layout.getActivePanel("main")?.instanceId === placement.instance.instanceId;
     if (!routed) {
       return batchWorkbenchChanges(() => {
         const session = workbench.modePlacements.openPlacement({
@@ -84,13 +82,16 @@ export const openCreatedSessionFromDraft = (args: {
         return session;
       });
     }
-    const result = args.input.workbench.pageLocations.navigate({
-      kind: "page",
-      page: workbenchPages.session,
-      resource,
+    return batchWorkbenchChanges(() => {
+      const result = workbench.pageLocations.navigate({
+        kind: "page",
+        page: workbenchPages.session,
+        resource,
+      });
+      if (!result.ok) throw new Error(result.diagnostic.message);
+      if (sessionViewPlacement(args.input)) workbench.closePlacement(identity);
+      return identity;
     });
-    if (!result.ok) throw new Error(result.diagnostic.message);
-    return identity;
   }
   throw new Error("A session draft must be opened through an owned placement.");
 };

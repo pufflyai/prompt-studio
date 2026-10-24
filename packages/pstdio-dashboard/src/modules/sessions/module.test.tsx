@@ -96,7 +96,7 @@ describe("createSessionsModule", () => {
     });
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions", "My session"]);
   });
-  test("reuses the main tab when another session is selected", () => {
+  test("keeps existing session tabs when another session is selected", () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
     const first = createDashboardSessionResource("session-1", "First session", "project-1");
@@ -106,8 +106,8 @@ describe("createSessionsModule", () => {
     openSessionsPage(workbench, first);
     openSessionsPage(workbench, second);
     const mainTabs = workbench.layout.getLayout().regions.main.widgets;
-    expect(mainTabs).toHaveLength(1);
-    expect(mainTabs[0]?.resourceKey).toBe(resourceKey(second));
+    expect(mainTabs.map((tab) => tab.resourceKey)).toEqual([resourceKey(first), resourceKey(second)]);
+    expect(workbench.layout.getActivePanel("main")?.resourceKey).toBe(resourceKey(second));
   });
   test("updates the breadcrumb when starting a new session from sessions", async () => {
     const workbench = createWorkbench();
@@ -122,7 +122,7 @@ describe("createSessionsModule", () => {
     await workbench.commands.executeCommand(dashboardCommandIds.createSession);
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions", "New session"]);
     expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.newSession);
-    expect(workbench.layout.listPanelInstances("main")).toHaveLength(1);
+    expect(workbench.layout.listPanelInstances("main")).toHaveLength(2);
   });
   test("navigates back from a session to the sessions root", async () => {
     const workbench = createWorkbench();
@@ -163,9 +163,9 @@ describe("createSessionsModule", () => {
     workbench.pageLocations.goBack();
     await Promise.resolve();
     expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.sessions);
-    expect(workbench.layout.getActivePanel("main")).toBeUndefined();
-    expect(workbench.layout.getLayout().activeResourceKey).toBeUndefined();
-    expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(0);
+    expect(workbench.layout.getActivePanel("main")?.resourceKey).toBe(resourceKey(session));
+    expect(workbench.layout.getLayout().activeResourceKey).toBe(resourceKey(session));
+    expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(1);
     expect(workbench.breadcrumbs.getItems()?.at(-1)?.title).toBe("Sessions");
     workbench.pageLocations.goForward();
     await Promise.resolve();

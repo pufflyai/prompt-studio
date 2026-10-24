@@ -12,6 +12,8 @@ import type { WorkbenchPageContribution } from "../../registries/pages/page-regi
 import { pageResourceContextKey } from "../../registries/pages/page-resource-context";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createWorkbenchInput, WorkbenchPagePersistenceScopeInput } from "../../workbench-core-types";
+import { migrateCollectionMain } from "./collection-main-migration";
+import { collectionMainOwner } from "./collection-main-owner";
 import { createOpenPlacementInventory } from "./open-placement-inventory";
 import { createPageHeaderCache, restorePageHeaders } from "./page-header-layout";
 import { isDefaultPageMain } from "./page-layout-baseline";
@@ -36,8 +38,12 @@ const selectPlacements = (
 };
 const modeScope = (projectId: string | undefined, modeId: string) =>
   `workbench-mode:${JSON.stringify([projectId ?? null, modeId])}`;
-const mainScope = (context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution | undefined) =>
-  `workbench-main:${JSON.stringify([context.projectId, context.modeId, context.pageId, pageResourceContextKey(page, context.resource)])}`;
+const mainScope = (
+  context: WorkbenchPagePersistenceScopeInput,
+  page: WorkbenchPageContribution | undefined,
+  collection = false,
+) =>
+  `${collection ? "workbench-collection-main" : "workbench-main"}:${JSON.stringify([context.projectId, context.modeId, context.pageId, pageResourceContextKey(page, context.resource)])}`;
 
 const isModePlacement = (placement: WorkbenchWidgetPlacement, region: (typeof workbenchRegions)[number]) =>
   region !== "main" &&
@@ -88,6 +94,17 @@ export const createWorkbenchLayoutCache = (
   getTab: (contributionId: string) => WorkbenchWidgetPlacement["tab"] = () => undefined,
   getPages: () => readonly WorkbenchPageContribution[] = () => [],
 ) => {
+  const pageMainOwner = (context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution | undefined) => {
+    const owner = collectionMainOwner(page, getPages());
+    return {
+      page: owner,
+      context: owner && owner !== page ? { ...context, pageId: owner.id, resource: undefined } : context,
+    };
+  };
+  const pageMainScope = (context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution | undefined) => {
+    const owner = pageMainOwner(context, page);
+    return mainScope(owner.context, owner.page, owner.page?.main.kind === "panels" && !owner.page.resource);
+  };
   const memory = new Map<string | undefined, WorkbenchLayout>();
   const inventory = createOpenPlacementInventory();
   let restored = false;
@@ -146,7 +163,7 @@ export const createWorkbenchLayoutCache = (
       resolveScope: input.resolvePagePersistenceScope,
     });
     if (!owner) return;
-    const ownerScope = mainScope(owner.context, owner.page);
+    const ownerScope = pageMainScope(owner.context, owner.page);
     // The captured route owns the whole tray, including tabs created elsewhere.
     // Consume the old scope once; an existing empty owner entry remains authoritative.
     if (
@@ -183,14 +200,27 @@ export const createWorkbenchLayoutCache = (
       return inventory.getResources();
     },
     hasPageMain(context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution) {
-      return Boolean(read(mainScope(context, page)));
+      return Boolean(read(pageMainScope(context, page)));
     },
     loadPageLayout(context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution | undefined) {
       const scope = input.resolvePagePersistenceScope?.(context)?.scope;
       const layout = read(scope);
       if (!context.pageId || !context.modeId) return layout;
       if (layout?.regions.main.widgets.length) migratePageMain(layout, context, page, scope);
-      const main = read(mainScope(context, page));
+      const owner = pageMainOwner(context, page);
+      if (owner.page?.main.kind === "panels" && !owner.page.resource)
+        migrateCollectionMain({
+          context: owner.context,
+          page: owner.page,
+          pages: getPages(),
+          scope: pageMainScope(context, page),
+          preferredScope: mainScope(context, page),
+          layouts: adapter.listLayouts?.() ?? [],
+          read,
+          write,
+          clear,
+        });
+      const main = read(pageMainScope(context, page));
       const pageHeaders = headers.load(context);
       if (!layout && !main && !pageHeaders) return undefined;
       const base = layout ?? createDefaultWorkbenchLayout();
@@ -218,13 +248,13 @@ export const createWorkbenchLayoutCache = (
     ) {
       if (!context.pageId || !context.modeId) return;
       headers.save(context, layout);
-      const scope = mainScope(context, page);
+      const scope = pageMainScope(context, page);
       const snapshot = selectPlacements(layout, (_widget, region) => region === "main");
-      if (
-        isDefaultPageMain(page, context.resource, layout, input.pageResources) ||
-        (beforePreviewRemoval !== layout &&
-          isDefaultPageMain(page, context.resource, beforePreviewRemoval, input.pageResources))
-      ) {
+      const owner = pageMainOwner(context, page);
+      const isBaseline = (candidate: WorkbenchLayout) =>
+        isDefaultPageMain(owner.page, owner.context.resource, candidate, input.pageResources) &&
+        isDefaultPageMain(page, context.resource, candidate, input.pageResources);
+      if (isBaseline(layout) || (beforePreviewRemoval !== layout && isBaseline(beforePreviewRemoval))) {
         // The live layout owns its default tabs. Saving a baseline must not
         // turn a visited page into another owner after that tray is replaced.
         clear(scope, snapshot);

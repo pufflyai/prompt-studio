@@ -19,7 +19,7 @@ A placement can show a static view or bind a resource kind to a view. A static i
 
 Use `definePage` for routed content. Do not model a page as a mode placement, and do not switch a mode as a separate navigation step. A page target activates the page and its declared mode as one transaction.
 
-Mode and page placements are additive. If both use `side`, both appear. Main tabs belong to their page location. Page tabs moved into Side or Secondary stay across pages in the same mode and hide when switching modes. Moving a preview pins it first. User open state is stored against the complete owner identity and cannot leak into another page or mode.
+Mode and page placements are additive. If both use `side`, both appear. Main tabs belong to their page context; a resource-free panel collection shares that context with its detail routes. Page tabs moved into Side or Secondary stay across pages in the same mode and hide when switching modes. Moving a preview pins it first. User open state is stored against the complete owner identity and cannot leak into another page or mode.
 
 ## Themes and custom chrome
 
@@ -86,6 +86,8 @@ Tool cards use the compact action-card style: small body padding, the standard r
 
 Start uses its home content as `main.empty`, with no initial tabs or landing slot. Its Main header defaults to hidden. A saved user header choice still wins, and dropping a tool tab into Main reveals the header through the shared move behavior.
 
+A resource-free panel collection and its detail pages share one Main tab tray. The page hierarchy defines the collection through `parentId`; resource-bearing parents and different modes keep separate trays. Returning to the collection restores its open tabs, tools, order and selection. Header choices remain scoped to each page.
+
 Sessions uses the default card placeholder. Its **New session** tool opens a real tab through an explicit creation action. `workbenchPages.newSession` is the routed draft page at `sessions/new`; it accepts a `session-draft` resource and displays that tab. Creating from a routed Main draft navigates to `workbenchPages.session`. A draft moved into a shared panel becomes one session tab there and preserves the current page. A completed creation does not change navigation after its draft has left the current layout. Closing the final tab restores the default card placeholder.
 
 Right-click, Shift+F10, the Context Menu key, and touch long-press open the same grouped tab menu. Normal clicks select. Preview and pinned tabs can appear in any order. Pin and Unpin change retention without changing position. Alt+Left and Alt+Right reorder the focused tab.
@@ -95,6 +97,8 @@ Resource tabs begin with the same resource-owned action group as navigation and 
 Placement identity and ownership stay the same when a tab moves. Mode arrangements persist within the project and mode; page arrangements persist within the page location. Reset layout restores the active page and shared mode defaults without deleting session or terminal data or clearing other page locations.
 
 Every view in Main, Side, and Secondary has a tab, including single-resource pages and lone views. The header setting alone decides whether the tray shows. Page-owned Locations and their Sub Panels keep their owner lifecycle when they share a region with other scoped content. Primary changes reconcile each placement separately.
+
+Static tools and single-resource tabs support the same Pin tab and Unpin tab actions as resource previews. Static tabs start pinned. Unpinning makes a normal preview that can be replaced or closed on page leave. Retention is stored in the existing layout, independently of the declaration that creates the content.
 
 Live views stay mounted during tab selection and page navigation. Iframe state also survives explicit moves in browsers with the DOM `moveBefore` API. See [ADR 0053](../../adrs/0053-temporary-webview-move-fallback.md) for the temporary WebKit limit.
 

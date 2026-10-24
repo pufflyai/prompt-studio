@@ -5,4 +5,4 @@
 "@pstdio/ui": minor
 ---
 
-Show closable tabs, page-scoped headers, compact tab cards with explicit creation actions, and freely movable tabs independent of Add choices.
+Show closable tabs, page-scoped headers, compact tab cards with explicit creation actions, freely movable and pinnable tabs, and collection tab restoration across navigation.

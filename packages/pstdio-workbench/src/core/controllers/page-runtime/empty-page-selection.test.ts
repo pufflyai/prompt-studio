@@ -6,6 +6,7 @@ test("navigating to an empty page clears the departed tab's active resource", ()
   workbench.modes.registerMode({ id: "project", activate() {} });
   workbench.views.registerView({ id: "editor", title: "Editor", body: { kind: "react", render: () => null } });
   const home = { kind: "page" as const, extensionId: "example", id: "home" };
+  const empty = { kind: "page" as const, extensionId: "example", id: "empty" };
   const document = { kind: "page" as const, extensionId: "example", id: "document" };
   workbench.pages.registerPage({
     id: "home",
@@ -25,11 +26,19 @@ test("navigating to an empty page clears the departed tab's active resource", ()
     main: { kind: "view", view: { kind: "view", id: "editor" }, cardinality: "one" },
     slots: [],
   });
+  workbench.pages.registerPage({
+    id: "empty",
+    ref: empty,
+    path: "empty",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [],
+  });
   workbench.pageLocations.setProject("project");
   workbench.pageLocations.navigate({ kind: "page", page: home });
   workbench.pageLocations.navigate({ kind: "page", page: document, resource: { type: "document", id: "first" } });
   expect(workbench.layout.getActivePanel("main")?.resource?.id).toBe("first");
-  expect(workbench.pageLocations.navigate({ kind: "page", page: home }).ok).toBe(true);
+  expect(workbench.pageLocations.navigate({ kind: "page", page: empty }).ok).toBe(true);
   expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(0);
   expect(workbench.layout.getLayout().activeResourceKey).toBeUndefined();
   expect(workbench.layout.getLayout().activeWidgetId).toBeUndefined();
