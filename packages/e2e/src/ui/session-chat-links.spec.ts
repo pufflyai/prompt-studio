@@ -13,9 +13,11 @@ test("opens chat workspace files and restores selected documents through history
 }) => {
   const root = createGitRepo("pstdio-chat-links-", "Workspace README\n");
   mkdirSync(join(root, "src", "nested"), { recursive: true });
-  mkdirSync(join(root, ".pstdio", "extension-storage", "pstdio-planner", "tickets", "PS-105"), { recursive: true });
+  mkdirSync(join(root, ".pstdio", "extension-storage", "pstdio.pstdio-planner", "tickets", "PS-105"), {
+    recursive: true,
+  });
   writeFileSync(
-    join(root, ".pstdio", "extension-storage", "pstdio-planner", "tickets", "PS-105", "ticket.md"),
+    join(root, ".pstdio", "extension-storage", "pstdio.pstdio-planner", "tickets", "PS-105", "ticket.md"),
     "Exact workspace draft bytes\n",
   );
   writeFileSync(
@@ -35,7 +37,7 @@ test("opens chat workspace files and restores selected documents through history
         workspace_id: workspaces[0].id,
         title: "Chat link review",
         prompt:
-          "Inspect [Source](src/nested/app.ts:2) and [README](README.md). Also `src/nested/app.ts`, not `origin/main` or github.com, and [Draft](.pstdio/extension-storage/pstdio-planner/tickets/PS-105/ticket.md).\n\n| Ref |\n| --- |\n| `origin/main` |",
+          "Inspect [Source](src/nested/app.ts:2) and [README](README.md). Also `src/nested/app.ts`, not `origin/main` or github.com, and [Draft](.pstdio/extension-storage/pstdio.pstdio-planner/tickets/PS-105/ticket.md).\n\n| Ref |\n| --- |\n| `origin/main` |",
         agent: "pstdio.workbench-fixture.harness.fake",
       },
     });

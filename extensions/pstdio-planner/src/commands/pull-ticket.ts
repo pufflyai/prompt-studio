@@ -29,7 +29,7 @@ const pullTicket = async (input: {
 };
 
 // `pst tickets pull`: materialize a ticket (or every non-archived ticket) from
-// extension storage into the local `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/` tree.
+// extension storage into the local `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/` tree.
 export const pullTicketCommand = defineCommand({
   id: "pull-ticket",
   mutating: true,

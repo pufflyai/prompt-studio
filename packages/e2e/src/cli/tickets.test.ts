@@ -7,7 +7,7 @@ import { type ApiInstance, startApi } from "./start-api";
 import { FLOW_TIMEOUT, SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
 const findTicketDir = (repo: string, shorthand: string) => {
-  const ticketsBase = join(repo, ".pstdio", "extension-storage", "pstdio-planner", "tickets");
+  const ticketsBase = join(repo, ".pstdio", "extension-storage", "pstdio.pstdio-planner", "tickets");
   const exactDir = join(ticketsBase, shorthand);
   if (!existsSync(exactDir)) throw new Error(`Ticket dir not found for ${shorthand}`);
   return exactDir;
@@ -131,10 +131,10 @@ describe("pstdio tickets write", () => {
       expect(result.shorthand).toBe("TW-1");
       expect(isAbsolute(result.path)).toBe(true);
       expect(realpathSync(result.path)).toBe(
-        join(realpathSync(repo), ".pstdio/extension-storage/pstdio-planner/tickets/TW-1/ticket.md"),
+        join(realpathSync(repo), ".pstdio/extension-storage/pstdio.pstdio-planner/tickets/TW-1/ticket.md"),
       );
 
-      const ticketDir = join(repo, ".pstdio", "extension-storage", "pstdio-planner", "tickets");
+      const ticketDir = join(repo, ".pstdio", "extension-storage", "pstdio.pstdio-planner", "tickets");
       expect(existsSync(ticketDir)).toBe(true);
 
       const { readdirSync } = require("node:fs");

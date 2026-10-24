@@ -21,7 +21,7 @@ See [Resource identities](../sdk/0002-resources.md#resource-identities).
 
 Existing projects must run `pst pstdio-planner migrate-ticket-identities` from their repository before creating tickets with the updated Planner. Stop ticket writers and automation first, and run one migration command at a time. This maintenance operation renumbers saved tickets in stable order, beginning at 1 in a project with no previous host allocations. UUIDs remain unchanged.
 
-The command backs up all local ticket files under `.pstdio/extension-storage/pstdio-planner/ticket-identity-migration`, including unsaved edits and orphan files. It replaces `.pstdio/extension-storage/pstdio-planner/tickets` with files rebuilt from saved tickets, and refreshes session anchor labels and shorthands. Restore any wanted unsaved edits from the backup into the corresponding new ticket. Do not save old files by their old shorthand.
+The command backs up all local ticket files under `.pstdio/extension-storage/pstdio.pstdio-planner/ticket-identity-migration`, including unsaved edits and orphan files. It replaces `.pstdio/extension-storage/pstdio.pstdio-planner/tickets` with files rebuilt from saved tickets, and refreshes session anchor labels and shorthands. Restore any wanted unsaved edits from the backup into the corresponding new ticket. Do not save old files by their old shorthand.
 
 A persisted migration journal and per-ticket allocation map allow an interrupted command to resume without allocating a second shorthand for tickets already mapped. A completed rerun does nothing. Keep writers stopped until it completes. Other clients must discard or back up their old local ticket files and pull fresh copies before saving.
 
