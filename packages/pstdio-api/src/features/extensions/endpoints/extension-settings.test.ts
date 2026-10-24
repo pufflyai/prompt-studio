@@ -18,6 +18,7 @@ let projectId: string;
 let instanceId: string;
 let previousPstdioHome: string | undefined;
 let previousDefaultExtensions: string | undefined;
+let deps: Awaited<ReturnType<typeof createTestApp>>["deps"];
 
 const installName = "settings-lab";
 
@@ -38,9 +39,16 @@ const writeSettingsExtension = (root: string) => {
   writeFileSync(
     join(extensionRoot, "extension.ts"),
     `export default {
-      commands: [{ id: "branches", title: "Branches", ref: { kind: "command", id: "branches" }, run: async () => [] }],
+      commands: [
+        { id: "branches", title: "Branches", ref: { kind: "command", id: "branches" }, run: async () => [] },
+        { id: "capacity", title: "Capacity", ref: { kind: "command", id: "capacity" }, run: async (ctx) => {
+          await ctx.settings.set("capacity", 7);
+          return ctx.settings.get("capacity");
+        } },
+      ],
       settings: {
         properties: {
+          "capacity": { type: "number", scope: "device", default: 2 },
           "target.branch": {
             type: "string",
             scope: "project",
@@ -90,6 +98,7 @@ beforeEach(async () => {
     storageRoot: join(tempRoot, "storage"),
   });
   app = created.app;
+  deps = created.deps;
   closeApp = created.close;
 
   const project = await postJson(
@@ -135,6 +144,35 @@ afterEach(async () => {
 });
 
 describe("extension settings endpoints", () => {
+  test("shares device values across projects and commands without syncing them", async () => {
+    const other = await postJson("/v1/projects", folderProjectInput({ name: "Other settings project" }));
+    const source = await deps.extensionService.getInstalledSource(installName);
+    if (!source) throw new Error("Settings source missing");
+    const enabled = await deps.extensionService.enableInstalledSourceForProject({
+      projectId: other.id,
+      installName,
+      extensionId: source.extension_id,
+      name: installName,
+      displayName: source.display_name,
+      manifest: {},
+      sourcePath: source.source_path,
+    });
+    const path = `/v1/projects/${projectId}/extensions/${instanceId}/settings/capacity`;
+    const otherPath = `/v1/projects/${other.id}/extensions/${enabled.instance.id}/settings/capacity`;
+    expect((await putJson(path, { value: 4 })).status).toBe(200);
+    expect(await (await app.request(otherPath)).json()).toMatchObject({ value: 4, scope: "device" });
+    const executed = await postJson(
+      `/v1/projects/${other.id}/extensions/commands/pstdio.settings-lab.command.capacity/execute`,
+      { source: "api" },
+    );
+    expect(executed.outcome).toMatchObject({ ok: true, value: 7 });
+    expect(await (await app.request(path)).json()).toMatchObject({ value: 7 });
+    const sync = await deps.syncService.getFullState();
+    expect(JSON.stringify(sync)).not.toContain('"value_json":7');
+    expect(sync).not.toHaveProperty("extension_settings");
+    expect((await app.request(path, { method: "DELETE" })).status).toBe(204);
+    expect(await (await app.request(otherPath)).json()).toMatchObject({ value: 2, source: "default" });
+  });
   test("typed webview deletion restores the project fallback without a stored null", async () => {
     const api = createClient({
       baseUrl: "http://localhost",

@@ -45,6 +45,7 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 // Includes linked dependency loading and missing dependency diagnostics.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
+import { registerExtensionSettingsSmokeTests } from "./packaged-extension-settings-smoke";
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 // CRDT storage checks atomic saves, ignored revisions, local retry outcomes and durable restart.
@@ -308,6 +309,7 @@ test("packaged CLI includes automation and machine authentication", () => {
 });
 
 registerExtensionAutomationSmokeTests();
+registerExtensionSettingsSmokeTests();
 registerHarnessCleanupSmokeTests();
 registerLiveQuestionSmokeTests();
 

@@ -1,13 +1,13 @@
 import { expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { workbenchSlots } from "@pstdio/sdk/extensions";
 import { createWorkbench, getWorkbenchRenderers } from "../../core";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
 
-test("extension detail settings stay out of project settings navigation", () => {
+const metadataForSlot = (slot: { id: string }): WorkbenchExtensionMetadata => {
   const extensionId = "pstdio.lab";
   const viewId = `${extensionId}.view.workflow`;
-  const workbench = createWorkbench();
-  const metadata: WorkbenchExtensionMetadata = {
+  return {
     extensions: [{ id: extensionId, name: "lab", displayName: "Lab", sourcePath: "/lab" }],
     views: [
       {
@@ -30,7 +30,7 @@ test("extension detail settings stay out of project settings navigation", () => 
         id: `${extensionId}.settings-panel.workflow`,
         extensionId,
         view: { extensionId, kind: "view", id: "workflow" },
-        slot: { id: "extension.settings" },
+        slot,
       },
     ],
     commands: [],
@@ -46,12 +46,33 @@ test("extension detail settings stay out of project settings navigation", () => 
     viewMenus: [],
     diagnostics: [],
   };
+};
+
+test("extension detail settings stay out of project settings navigation", () => {
+  const workbench = createWorkbench();
+  const metadata = metadataForSlot(workbenchSlots.extensionSettings);
   registerWorkbenchExtensionContributions({
     metadata,
     workbench,
     projectId: "project-1",
     executeCommand: () => undefined,
   });
-  expect(workbench.settings.getPanel(`${extensionId}.settings-panel.workflow`)).toBeUndefined();
-  expect(getWorkbenchRenderers(workbench).getRenderer(viewId)).toBeDefined();
+  expect(workbench.settings.getPanel("pstdio.lab.settings-panel.workflow")).toBeUndefined();
+  expect(getWorkbenchRenderers(workbench).getRenderer("pstdio.lab.view.workflow")).toBeDefined();
 });
+
+for (const projectId of ["project-1", "project-2"]) {
+  test(`app-wide settings are global in ${projectId}`, () => {
+    const workbench = createWorkbench();
+    registerWorkbenchExtensionContributions({
+      metadata: metadataForSlot(workbenchSlots.globalSettings),
+      workbench,
+      projectId,
+      executeCommand: () => undefined,
+    });
+    expect(workbench.settings.getPanel("pstdio.lab.settings-panel.workflow")).toMatchObject({
+      scope: "global",
+      kind: "view",
+    });
+  });
+}
