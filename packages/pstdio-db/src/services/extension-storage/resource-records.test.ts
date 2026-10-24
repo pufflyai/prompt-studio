@@ -118,18 +118,19 @@ test("unfiltered totals follow live records without reading them", async () => {
   expect(await total()).toBe(0);
 });
 
-test("a group commit of multi-megabyte records saves without exhausting database memory", async () => {
+test("a full-size commit of non-ASCII records saves without exhausting database memory", async () => {
   const f = await fixture();
-  // Tickets with attached files reach several megabytes each.
-  const content = "x".repeat(8_000_000);
+  // The query projection stores non-ASCII text several times larger than its JSON, so a
+  // commit within the storage limits still needs several write statements.
+  const content = "界".repeat(87_000);
   await f.storage.records.commit({
     operationId: "large",
-    edits: Array.from({ length: 24 }, (_, index) => ({
+    edits: Array.from({ length: 16 }, (_, index) => ({
       recordId: `ticket-${index}`,
-      replace: { files: [{ name: "report.md", content }] },
+      replace: { body: content },
     })),
   });
   const records = await f.storage.records.list();
-  expect(records).toHaveLength(24);
-  expect((records[0].value as { files: { content: string }[] }).files[0].content).toHaveLength(8_000_000);
+  expect(records).toHaveLength(16);
+  expect((records[0].value as { body: string }).body).toHaveLength(87_000);
 });

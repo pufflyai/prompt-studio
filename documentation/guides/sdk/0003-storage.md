@@ -88,6 +88,39 @@ revision that no longer matches keeps the group aside and reports `needs-attenti
 when the edit replaces a value that changed, deletes or restores the record, changes
 an asset that changed, or sets a map key that changed. Text and list edits still merge.
 
+## Keep records small
+
+A record is for small structured data, such as names, states, settings, links,
+positions and IDs. Never put large files or large values in a record. That includes
+file bodies, images, base64 data, long logs, transcripts and generated HTML.
+
+From extension API 0.3, planned for 0.46, the host refuses a save when one record is
+over 256 KiB of JSON or one commit is over 4 MiB. The numbers are exported as
+`storageLimits` from `@pstdio/sdk/extensions`:
+
+```ts
+import { isStorageLimitError, storageLimits } from "@pstdio/sdk/extensions";
+
+const files = ctx.storage.scope({ type: "resource", resource: { type: "report", id } }).files;
+const body = await files.put({ name: "report.md", data: new TextEncoder().encode(markdown) });
+await ctx.storage.records.commit({
+  operationId: ctx.storage.ids.create(),
+  edits: [{ recordId: ctx.storage.records.id(id), replace: { title, bodyFileId: body.id } }],
+});
+
+try {
+  await ctx.storage.records.commit(group);
+} catch (error) {
+  if (!isStorageLimitError(error)) throw error;
+  // error.data names the limit, the record, its size and storageLimits.recordBytes or commitBytes.
+}
+```
+
+Use `ctx.storage.files` for attachments of an item, `ctx.extensionFiles` or an
+artifact mount for files people and agents open, and keep only the file's ID or path
+in the record. Do not split one large value across many records. Import many records
+in several smaller commits. See [Size limits](../../references/sdk/0004-storage.md#size-limits).
+
 ## Wait for sync
 
 `outcome.state` is the save's sync state: `saved-locally`, `waiting-to-sync`,

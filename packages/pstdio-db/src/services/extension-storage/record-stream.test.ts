@@ -177,20 +177,18 @@ test("a save larger than one relay update still arrives as one unit", async () =
   const second = await device(fixture.relay);
   await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
   for (const peer of [first, second]) await peer.sync.synchronize();
-  const large = (seed: string) => `${seed}\n${"y".repeat(600_000)}`;
+  // Together the records are larger than one relay frame; each stays under the record limit.
+  const large = (seed: string) => `${seed}\n${"y".repeat(250_000)}`;
+  const ids = ["left", "right", "top", "bottom"];
   await first.records.commit({
     operationId: "large",
-    edits: [
-      { recordId: "left", replace: large("left") },
-      { recordId: "right", replace: large("right") },
-    ],
+    edits: ids.map((id) => ({ recordId: id, replace: large(id) })),
   });
   const before = fixture.updates().length;
   await first.sync.synchronize();
   expect(fixture.updates().length).toBe(before + 1);
   await second.sync.synchronize();
-  expect(await second.value("left")).toBe(large("left"));
-  expect(await second.value("right")).toBe(large("right"));
+  for (const id of ids) expect(await second.value(id)).toBe(large(id));
 });
 
 test("a network error while joining is retried instead of skipping the founding records", async () => {

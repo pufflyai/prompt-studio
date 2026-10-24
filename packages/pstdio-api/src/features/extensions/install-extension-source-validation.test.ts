@@ -22,11 +22,11 @@ describe("installExtensionSource API version gate", () => {
   test("refuses an extension built for another API version and leaves the root untouched", async () => {
     const source = join(root, "source-extension");
     makeExtension(source);
-    writeManifest(source, { engines: { pstdio: "^0.3.0" }, packageManager: "bun@1.3.13" });
+    writeManifest(source, { engines: { pstdio: "^0.4.0" }, packageManager: "bun@1.3.13" });
     const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));
 
     await expect(installExtensionSource({ source, env: { PSTDIO_HOME: pstdioHome }, runCommand })).rejects.toThrow(
-      "^0.3.0",
+      "^0.4.0",
     );
 
     expect(existsSync(join(pstdioHome, "extensions", "source-extension"))).toBe(false);

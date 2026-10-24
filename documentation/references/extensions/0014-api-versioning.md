@@ -25,7 +25,7 @@ The host decides what loads. It compares its own extension API version with `eng
 | 0.43.1 | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
 | 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
 | 0.45.0 | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
-| `main` | 0.2.2 | Adds account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, project recovery methods on `/client`, and always allows Kanban dragging. Existing `^0.2.0` ranges still load. |
+| `main`, planned for 0.46.0 | 0.3.0 | A breaking step. See [Storage size limits in API 0.3](#storage-size-limits-in-api-03). Manifests need `^0.3.0`. It also has the additions listed for API 0.2.2, which no release shipped: account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, project recovery methods on `/client`, and Kanban dragging in every column. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
@@ -216,6 +216,29 @@ The optional `HarnessSession.steer` capability and host-provided `ctx.sessions` 
 API 0.2 is on `main` and in nightly builds. It ships in the release after 0.43.x. Release 0.43.x still provides API 0.1.6 and the old layout.
 
 API 0.2 moves `ctx.extensionFiles` from `.pstdio/ext/<publisher>.<name>/` to `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. Publishers with the same package name keep separate files. Artifact mount paths cannot start with the reserved `.publishers` segment, including case variants. This is a breaking filesystem layout change; relative file operations stay the same. Move existing allocated files using the [storage migration guide](../../guides/extensions/0009-allocated-extension-files.md). Extensions that work with both layouts can declare `^0.1.0 || ^0.2.0`.
+
+## Storage size limits in API 0.3
+
+API 0.3 is on `main` and is planned for 0.46. Earlier releases have no limits.
+
+Records hold small structured data. The host now refuses a storage save over either limit:
+
+| Limit | Size | What counts |
+| --- | --- | --- |
+| One record | 256 KiB | UTF-8 bytes of the JSON of the saved record's `value` and `shared` content. Asset references do not count. |
+| One commit | 4 MiB | The sum for every record in one `records.commit` group, one collection write, or one `set`. |
+
+The whole save fails and nothing in it is written. The error has `code: "storage_limit_exceeded"` and names the record, its size, the limit, and what to use instead. Deleting a record is never refused. `createMemoryStorage` from `@pstdio/sdk/testing` applies the same limits, so tests fail the same way.
+
+This is a breaking change, because writes that saved before are now refused. The additive part is `storageLimits` and `isStorageLimitError` in `@pstdio/sdk/extensions`.
+
+Move large content out of records before you declare `^0.3.0`:
+
+- Attachments of an item, such as file bodies and images: `ctx.storage.files`, or the files of a resource scope. Keep the returned ID in the record.
+- Files that people or agents open, such as drafts, logs and generated pages: `ctx.extensionFiles` or an artifact mount.
+- Large imports: several smaller commits.
+
+An extension whose records already stay small can declare `^0.2.0 || ^0.3.0`. See [Size limits](../sdk/0004-storage.md#size-limits).
 
 ## Independent panel permissions in API 0.2.1
 
