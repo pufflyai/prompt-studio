@@ -1,5 +1,13 @@
 # pstdio-notes
 
+## 0.46.0-nightly.20261024083308
+
+_2026-10-24_
+
+### Patch Changes
+
+- b86f345: Add Home above Sessions, keep project navigation stable when entering and leaving tickets, place the mode return first in subnavigation content, and remove the desktop project breadcrumb button.
+
 ## 0.45.0
 
 _2026-10-22_

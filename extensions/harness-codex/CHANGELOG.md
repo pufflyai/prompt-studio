@@ -1,5 +1,14 @@
 # harness-codex
 
+## 0.46.0-nightly.20261024083308
+
+_2026-10-24_
+
+### Patch Changes
+
+- 6a422dd: Release idle Codex threads and their MCP processes while preserving active work and saved conversations.
+- bf6b2d1: Add Codex live steering, speed selection, and an Ultra reasoning icon.
+
 ## 0.45.0
 
 _2026-10-22_

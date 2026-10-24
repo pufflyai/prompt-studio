@@ -7,7 +7,7 @@
       }
     }
   },
-  "version": "0.45.0",
+  "version": "0.46.0-nightly.20261024083308",
   "repository": {
     "type": "git",
     "url": "https://github.com/pufflyai/prompt-studio"

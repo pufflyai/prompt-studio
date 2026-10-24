@@ -1,5 +1,23 @@
 # @pstdio/ui
 
+## 0.46.0-nightly.20261024083308
+
+_2026-10-24_
+
+### Minor Changes
+
+- dd5f406: Add optional bounded table and board queries with indexed page navigation and aggregate counts.
+- add1413: Add reusable outliner previews, persistent controls, multiselection, and keyboard reordering.
+
+### Patch Changes
+
+- b86f345: Add Home above Sessions, keep project navigation stable when entering and leaving tickets, place the mode return first in subnavigation content, and remove the desktop project breadcrumb button.
+- 4a7e459: Allow cards to move between every board column and remove drag permission settings.
+- 34f8998: Expose device-owned performance captures, recording exports, and Developer settings controls.
+- bf6b2d1: Use a 380 ms first-hover tooltip delay, show harness setting labels, reveal clipped tab titles, and keep full prompt history navigable while drafts are saved.
+- 216b519: Bound ticket descriptions and use shared scrollbars in create dialogs.
+- f5c5c4b: Keep variable alerts bounded with full-message copying and matching scrollbars, and prevent offline icon lookups from crashing the runtime.
+
 ## 0.45.0
 
 _2026-10-22_

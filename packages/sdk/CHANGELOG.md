@@ -1,5 +1,23 @@
 # @pstdio/sdk
 
+## 0.46.0-nightly.20261024083308
+
+_2026-10-24_
+
+### Minor Changes
+
+- 4f3928b: Store each extension record in its own document so saves stay fast and memory stays bounded in large projects; existing records move automatically, and record sync between devices is paused until per-record sync ships.
+- 65d36f4: Control Cloud early access per account and expose relay feature grants in account status.
+- 34f8998: Expose device-owned performance captures, recording exports, and Developer settings controls.
+- dd5f406: Add optional bounded table and board queries with indexed page navigation and aggregate counts.
+- def084b: Add indexed record pages, aggregates and batch reads without hydrating owner documents, with safe runtime index activation and recovery of stale record and resource projections.
+- 9f0140e: Add explicit CLI live steering with guarded delivery and no automatic queue fallback.
+
+### Patch Changes
+
+- 4a7e459: Allow cards to move between every board column and remove drag permission settings.
+- a5aaf39: Expose full project session controls, conversation streaming, approvals, attachments, and native commands to extensions.
+
 ## 0.45.0
 
 _2026-10-22_

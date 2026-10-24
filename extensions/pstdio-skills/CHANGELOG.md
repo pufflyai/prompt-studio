@@ -1,5 +1,13 @@
 # Prompt Studio Skills
 
+## 0.46.0-nightly.20261024083308
+
+_2026-10-24_
+
+### Patch Changes
+
+- 4cc9445: Remove obsolete board drag settings from Planner and Extension Lab.
+
 ## 0.45.0
 
 _2026-10-22_

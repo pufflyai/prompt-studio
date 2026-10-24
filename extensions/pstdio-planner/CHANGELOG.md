@@ -1,5 +1,24 @@
 # pstdio-planner
 
+## 0.46.0-nightly.20261024083308
+
+_2026-10-24_
+
+### Minor Changes
+
+- 389553b: Remember Timeline milestone visibility and collapsed tracks and milestones per project.
+- 53a2847: Pause and resume the same Auto Build run and keep review requests and activity controls accessible in a scrolling popover.
+- d2d73b8: Let agents maintain Planner progress and configure Auto Build with explicit statuses, safe revisions, and execution recovery.
+
+### Patch Changes
+
+- 3d7f576: Save Auto Build settings and supervisor resets atomically with published storage APIs.
+- 9894f51: Resolve ticket links with summary-only ancestor state and one read per ancestor.
+- d2d73b8: Configure Auto Build with ticket filters, show colored status indicators and completion, use native workflow settings, and reuse owned workspaces for corrections.
+- d2d73b8: Configure Auto Build in one modal, show activity and waiting reasons in a popover, and share editable ticket cards with saved Timeline display options, and use request bubbles instead of a duplicate attention flag.
+- b86f345: Declare ticket navigation structure and board page targets before content requests, and scope ticket history reads to related sessions.
+- 4cc9445: Remove obsolete board drag settings from Planner and Extension Lab.
+
 ## 0.45.0
 
 _2026-10-22_

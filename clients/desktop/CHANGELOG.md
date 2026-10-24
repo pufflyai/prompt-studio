@@ -1,5 +1,14 @@
 # @pstdio/desktop
 
+## 0.46.0-nightly.20261024083308
+
+_2026-10-24_
+
+### Patch Changes
+
+- 22f6142: Update Electron to 43.8.1 to fix all open desktop security alerts.
+- f5c5c4b: Keep desktop recovery actions visible while long startup diagnostics scroll.
+
 ## 0.45.0
 
 _2026-10-22_
