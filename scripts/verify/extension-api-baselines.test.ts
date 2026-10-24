@@ -15,3 +15,14 @@ test("checks each declared API minimum with its first released SDK", () => {
   expect(() => selectApiBaselines("^0.2.2", releases)).toThrow("0.2.2");
   expect(selectApiBaselines("^0.1.8 || ^0.2.0", releases)).toEqual([{ sdk: "0.44.0", api: "0.2.0" }]);
 });
+
+test("checks an API minimum that only nightly builds ship with its first nightly SDK", () => {
+  const releases = [
+    { sdk: "0.44.0-nightly.20261001", api: "0.2.0" },
+    { sdk: "0.44.0", api: "0.2.0" },
+    { sdk: "0.46.0-nightly.20261024", api: "0.2.2" },
+    { sdk: "0.46.0-nightly.20261023", api: "0.2.2" },
+  ];
+  expect(selectApiBaselines("^0.2.2", releases)).toEqual([{ sdk: "0.46.0-nightly.20261023", api: "0.2.2" }]);
+  expect(selectApiBaselines("^0.2.0", releases)).toEqual([{ sdk: "0.44.0", api: "0.2.0" }]);
+});

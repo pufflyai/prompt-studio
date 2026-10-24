@@ -269,7 +269,7 @@ extension id     pstdio.planner
 local command id tickets.create
 runtime id       pstdio.planner.command.tickets.create
 CLI path         pst planner tickets create
-artifact root    <repo>/.pstdio/extension-storage/planner/
+artifact root    <repo>/.pstdio/extension-storage/pstdio.planner/
 theme id         pstdio.planner.theme.<local-id>
 ```
 

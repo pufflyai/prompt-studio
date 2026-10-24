@@ -18,7 +18,8 @@ permissions:
 
 jobs:
   psx_delivery:
-    runs-on: ubuntu-latest
+    # Temporary: Playwright's Chromium does not install on Ubuntu 26.04 yet (ADR 0105).
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:
