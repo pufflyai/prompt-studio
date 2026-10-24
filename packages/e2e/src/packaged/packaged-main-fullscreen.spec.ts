@@ -14,6 +14,27 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
   try {
     const started = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") });
     child = started.child;
+    browser = await chromium.launch();
+    const page = await browser.newPage();
+    await signInBrowser(page, started.descriptor);
+    const picker = page.getByRole("dialog", { name: "Projects", exact: true });
+    await expect(picker.getByText("No projects yet", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Enter Main fullscreen", exact: true })).toBeHidden();
+    await expect(page.locator('[data-workbench-region="status"]')).toBeHidden();
+    for (const button of await page.locator("#root button").all()) {
+      await expect(button).toBeHidden();
+    }
+    await picker.getByRole("button", { name: "Settings", exact: true }).click();
+    await expect(page.getByRole("option", { name: "Appearance", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: /^Close/ }).click();
+    await expect(picker).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(picker).toBeVisible();
+    await picker.getByRole("button", { name: "Create project", exact: true }).click();
+    await page.getByRole("button", { name: "Close Create project", exact: true }).click();
+    await expect(picker).toBeVisible();
+    await page.screenshot({ path: test.info().outputPath("empty-project-selection.png") });
+
     const response = await fetch(`${started.baseUrl}/v1/projects`, {
       method: "POST",
       headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
@@ -21,10 +42,6 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
-    browser = await chromium.launch();
-    const page = await browser.newPage();
-    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
     const enter = page.getByRole("button", { name: "Enter Main fullscreen", exact: true });
     await enter.click();
