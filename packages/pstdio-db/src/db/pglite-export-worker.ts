@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { PGlite as CurrentPGlite } from "@electric-sql/pglite";
 import { PGlite } from "pglite-previous";
 import { exportDatabaseAsJson } from "./database-json-export";
+import { pgliteIdentity } from "./pglite-identity";
 
 // This worker only reads a home that startup is about to move aside. A home without an engine
 // marker was written by the previous engine; a marked one by an earlier current-engine build.
@@ -17,11 +18,12 @@ const options = engine
   : {};
 const db = marked
   ? await CurrentPGlite.create(database, {
+      ...pgliteIdentity,
       pgliteWasmModule: options.wasmModule,
       fsBundle: options.fsBundle,
       ...(engine && { icuDataDir: Bun.file(join(engine, "icu.76.tgz")) }),
     })
-  : await PGlite.create(database, options);
+  : await PGlite.create(database, { ...pgliteIdentity, ...options });
 try {
   await exportDatabaseAsJson(db, directory);
 } finally {
