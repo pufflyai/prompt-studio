@@ -18,7 +18,8 @@ export interface StoredTicketAttachment {
 export interface StoredTicketFile {
   id: string;
   name: string;
-  content: string;
+  /** The ticket-scoped blob that holds the file body; see ticket-file-content.ts. */
+  blobId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,15 +38,19 @@ export interface StoredTicketReviewLink {
   updatedAt: string;
 }
 
+export type StoredTicketTags = Record<string, string | string[]>;
+
 export interface StoredTicket {
   id: string;
-  shorthand: string;
   title: string;
   content: string;
   statusId: string | null;
+  // Keyed by tag ID, so edits to different tags merge across devices. A single-select tag
+  // holds one option ID and merges as one value; a multi-select tag holds a list that merges
+  // item by item.
+  tags?: StoredTicketTags;
   // Optional so tickets created before these fields existed still read cleanly;
   // the data layer defaults them on read.
-  tagIds?: string[];
   attachments?: StoredTicketAttachment[];
   files?: StoredTicketFile[];
   reviewLinks?: StoredTicketReviewLink[];
@@ -60,6 +65,11 @@ export interface StoredTicket {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Ticket extends StoredTicket {
+  shorthand: string;
+  aliases?: string[];
 }
 
 export interface StoredStatus {

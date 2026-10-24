@@ -78,6 +78,7 @@
         "src/cli/run-pstdio.ts",
         "src/**/*.spec.ts",
         "src/**/*.perf.ts",
+        "src/**/*.bench.ts",
         "src/perf/planner-moves.stress.ts",
         "src/perf/planner-moves.validation.ts",
         // These diagnostics compile or launch fixture modules by path.
@@ -145,7 +146,7 @@
         "scripts/**/*.ts",
         "src/index.ts",
         // The database asset build bundles this isolated child entrypoint by path.
-        "src/db/pglite-upgrade-worker.ts",
+        "src/db/pglite-export-worker.ts",
         "src/services/sessions/session-query.bench.ts",
         "src/services/extension-storage/document-storage.bench.ts",
         "src/services/extension-storage/document-scale.bench.ts",

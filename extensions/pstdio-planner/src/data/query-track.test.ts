@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTag, putTicket } from "./collections";
+import { putTag } from "./collections";
 import { runTicketsQuery } from "./query";
-import type { StoredTag, StoredTicket } from "./types";
+import { putTicket, ticketContext } from "./ticket-context.fixture";
+import type { StoredTag, Ticket } from "./types";
 
-const ticket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+const ticket = (overrides: Partial<Ticket>): Ticket => ({
   id: crypto.randomUUID(),
   shorthand: "T-1",
   title: "Ticket",
@@ -36,13 +37,18 @@ describe("runTicketsQuery with a timeline Track that the timeline cannot use", (
   ])("returns active and archived tickets when Track is %s", async (_case, tags) => {
     const storage = createMemoryStorage();
     for (const tag of tags) await putTag(storage, tag);
-    await putTicket(storage, ticket({ shorthand: "T-1", tagIds: ["track-product", "track-platform"] }));
+    await putTicket(storage, ticket({ shorthand: "T-1", tags: { [tags[0].id]: ["track-product", "track-platform"] } }));
     await putTicket(
       storage,
-      ticket({ shorthand: "T-2", sortOrder: 1, archived: true, tagIds: ["track-product", "track-platform"] }),
+      ticket({
+        shorthand: "T-2",
+        sortOrder: 1,
+        archived: true,
+        tags: { [tags[0].id]: ["track-product", "track-platform"] },
+      }),
     );
 
-    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
+    const result = await runTicketsQuery({ ...ticketContext(storage), projectId: "proj-1" });
 
     expect(result.rows.map((row) => row.resource?.shorthand)).toEqual(["T-1", "T-2"]);
     expect(result.rows[0]?.attributes).toMatchObject({ milestone: "", milestoneState: "unscheduled" });

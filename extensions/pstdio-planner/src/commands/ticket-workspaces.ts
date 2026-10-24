@@ -1,17 +1,18 @@
 import { defineCommand, type ExtensionWorkspace, params } from "@pstdio/sdk/extensions";
-import { findTicket } from "../data/resolve";
+import { findTicket, requireTickets } from "../data/resolve";
 import { readSessionHistory } from "../data/session-history";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isLiveSessionStatus } from "../session-status";
 
-const workspacesForTicket = async (
-  ctx: { workspaces: { list(): Promise<ExtensionWorkspace[]> }; storage: Parameters<typeof findTicket>[0] },
+const workspacesForTickets = async (
+  ctx: Parameters<typeof findTicket>[0] & { workspaces: { list(): Promise<ExtensionWorkspace[]> } },
   id: string,
 ) => {
-  const ticket = await findTicket(ctx.storage, id);
-  if (!ticket) throw new Error(`Unknown ticket "${id}"`);
-  const workspaces = (await ctx.workspaces.list()).filter((ws) => isWorkspaceLinkedToTicket(ws, ticket.shorthand));
-  return { ticket, workspaces };
+  const tickets = await requireTickets(ctx, id);
+  const workspaces = (await ctx.workspaces.list()).filter((ws) =>
+    tickets.some((ticket) => isWorkspaceLinkedToTicket(ws, ticket)),
+  );
+  return { tickets, workspaces };
 };
 
 // `pst tickets workspaces`: list the workspaces linked to a ticket with their live
@@ -22,7 +23,7 @@ export const ticketWorkspacesCommand = defineCommand({
   cli: { globalAliases: [["tickets", "workspaces"]], examples: ["pstdio tickets workspaces --id PS-1"] },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
-    const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
+    const { workspaces } = await workspacesForTickets(ctx, commandParams.id);
     const rows = [];
     for (const ws of workspaces) {
       const sessions = await readSessionHistory(ctx.sessions, { workspaceId: ws.id });
@@ -48,7 +49,7 @@ export const ticketWorktreesListCommand = defineCommand({
   cli: { globalAliases: [["tickets", "worktrees", "list"]], examples: ["pstdio tickets worktrees list --id PS-1"] },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
-    const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
+    const { workspaces } = await workspacesForTickets(ctx, commandParams.id);
     return workspaces.filter(isGitWorktree).map((ws) => ({
       workspace: ws.workspace_shorthand ?? ws.id,
       branch: ws.branch ?? "",
@@ -69,7 +70,9 @@ export const ticketWorktreesRemoveAllCommand = defineCommand({
   },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
-    const { ticket, workspaces } = await workspacesForTicket(ctx, commandParams.id);
+    const ticket = await findTicket(ctx, commandParams.id);
+    if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
+    const { workspaces } = await workspacesForTickets(ctx, ticket.id);
     const worktrees = workspaces.filter(isGitWorktree);
     const shared = worktrees.find((ws) =>
       ws.anchors_json?.some((anchor) => anchor.type === "ticket" && anchor.id !== ticket.id),

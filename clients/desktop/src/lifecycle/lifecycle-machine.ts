@@ -36,6 +36,7 @@ export type DesktopStartupPhase =
   | "environment"
   | "spawning"
   | "database"
+  | "retiring"
   | "migrations"
   | "extensions"
   | "readiness";

@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { ticketsCollection } from "../data/ticket-context.fixture";
+import { withTicketTagIds } from "../data/ticket-tags";
 import { plannerTicketsChanged } from "../events";
 import { archiveTicketCommand } from "./archive-ticket";
 import { makeCommandArgs } from "./command-context.fixture";
@@ -47,9 +48,10 @@ describe("unarchive ticket", () => {
       ...makeCommandArgs({ storage, params: {}, overrides: { resource: ticketResource(ticket.id) } }),
     );
 
-    expect(result).toEqual({ ...archived, archived: false, updatedAt: expect.any(String) });
-    expect(result?.updatedAt).not.toBe(archivedAt);
-    expect(await ticketsCollection(storage).get(ticket.id)).toEqual(result!);
+    const stored = (await ticketsCollection(storage).get(ticket.id))!;
+    expect(stored).toEqual({ ...archived, archived: false, updatedAt: expect.any(String) });
+    expect(stored.updatedAt).not.toBe(archivedAt);
+    expect(result).toEqual(withTicketTagIds(stored));
   });
 
   test("emits the tickets changed event", async () => {
@@ -86,7 +88,7 @@ describe("unarchive ticket", () => {
       ...makeCommandArgs({ storage, params: {}, overrides: { resource: ticketResource(ticket.id) } }),
     );
 
-    expect(result).toEqual(stored!);
+    expect(result).toEqual(withTicketTagIds(stored!));
     expect(await ticketsCollection(storage).get(ticket.id)).toEqual(stored!);
   });
 });

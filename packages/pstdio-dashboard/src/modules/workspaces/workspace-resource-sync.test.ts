@@ -4,6 +4,7 @@ import { createWorkbench } from "@pstdio/workbench";
 import { createWorkbenchResourceActions } from "@pstdio/workbench/react";
 import { getCollection, getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createWorkspacesModule } from "./module";
 
 test("workspace links resolve current capabilities and retain their navigation metadata", () => {
@@ -70,5 +71,44 @@ test("a workspace opened without an icon shows its kind's icon in the breadcrumb
 
   expect(workbench.getPrimaryResource()?.icon).toBe("Folder");
   expect(workbench.breadcrumbs.getItems()?.at(-1)?.icon).toBe("Folder");
+  getWriter("workspaces")!.remove(row.id);
+});
+
+test("an open file tree reloads when its project gets a folder on this device", () => {
+  getCollection("workspaces");
+  // A cloud project from another device has a default workspace without a folder.
+  const row = {
+    id: "cloud-project-folder",
+    project_id: "workspace-folder-project",
+    name: "Project folder",
+    workspace_shorthand: "WS-3",
+    provider_id: "pstdio.root",
+    provider_state: "ready",
+    execution_kind: "local",
+    is_default: true,
+    root_path: null,
+    provider_capabilities_json: { files: "write", diff: false },
+  };
+  getWriter("workspaces")!.upsert(row);
+  const workbench = createWorkbench();
+  // Modules copy the view registry when they start, so record refreshes before the module starts.
+  const refreshed: string[] = [];
+  const refreshView = workbench.views.refreshView;
+  workbench.views.refreshView = (viewId, input) => {
+    refreshed.push(viewId);
+    refreshView(viewId, input);
+  };
+  workbench.registerModule(createWorkspacesModule());
+  selectDashboardProject(workbench, { id: row.project_id, name: "Cloud project" });
+  workbench.pageLocations.setProject(row.project_id);
+  workbench.pageLocations.navigate({
+    kind: "page",
+    page: workbenchPages.workspace,
+    resource: { type: "workspace", id: row.id, label: row.name, metadata: { workspaceView: "files" } },
+  });
+  getWriter("workspaces")!.upsert({ ...row, root_path: "/projects/cloud-project" });
+
+  expect(workbench.getPrimaryResource()?.metadata?.workspaceProviderState).toBe("ready");
+  expect(refreshed).toContain(dashboardWidgetIds.workspaceFileTree);
   getWriter("workspaces")!.remove(row.id);
 });

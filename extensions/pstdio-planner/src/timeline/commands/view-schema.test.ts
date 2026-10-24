@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "../../commands/command-context.fixture";
 import { createTicketCommand } from "../../commands/create-ticket";
+import { migratePlannerStorage } from "../../data/migrate-storage";
 import { createDeadlineCommand } from "./deadline-commands";
 import { readPlanCommand } from "./read-plan";
 import { timelineViewSchema } from "./view-schema";
@@ -19,6 +20,7 @@ test("saved-view fields match Timeline without querying ticket rows", async () =
   await createTicketCommand.run(ctx, { content: "# Planned work" });
   await createDeadlineCommand.run(ctx, { date: "2030-01-01", name: "Release" });
   const plan = await readPlanCommand.run(ctx, {});
+  await migratePlannerStorage(ctx);
   let ticketReads = 0;
   const collection = storage.collection.bind(storage);
   storage.collection = <T>(name: string) => {

@@ -50,6 +50,10 @@ export const StartingRuntime: Story = {
   args: { state: { kind: "starting", phase: "spawning" } },
 };
 
+export const BackingUpPreviousData: Story = {
+  args: { state: { kind: "starting", phase: "retiring" } },
+};
+
 export const WaitingForWorkbench: Story = {
   args: { state: { kind: "starting", phase: "readiness" } },
 };

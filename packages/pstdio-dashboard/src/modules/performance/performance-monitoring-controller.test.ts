@@ -164,3 +164,32 @@ test("shares enabled snapshot reads and drops in-flight delivery after disabling
   second();
   controller.dispose();
 });
+
+test("reads snapshots only while at least one subscriber needs them", async () => {
+  let reads = 0;
+  const controller = createPerformanceMonitoringController({
+    kind: "desktop",
+    isEnabled: async () => false,
+    setEnabled: async () => {},
+    snapshot: async () => {
+      reads++;
+      return null;
+    },
+    reportFrames: () => {},
+    reportState: () => {},
+  });
+  try {
+    await controller.setEnabled(true);
+    expect(reads).toBe(0);
+    const first = controller.subscribeSnapshots(() => {});
+    const second = controller.subscribeSnapshots(() => {});
+    expect(reads).toBe(1);
+    first();
+    second();
+    const reopened = controller.subscribeSnapshots(() => {});
+    expect(reads).toBe(2);
+    reopened();
+  } finally {
+    controller.dispose();
+  }
+});

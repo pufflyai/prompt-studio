@@ -34,7 +34,7 @@ export const reportFilesPattern = (report: StoredReport) => `${reportFilesDirFor
 export const fileNameFromPath = (report: StoredReport, path: string) =>
   path.slice(`${reportFilesDirFor(report)}/`.length);
 
-export const reportToMarkdown = (report: StoredReport) =>
+export const reportToMarkdown = (report: StoredReport, body: string) =>
   applyFrontmatter(
     buildReportFrontmatter({
       reportName: report.name,
@@ -43,7 +43,7 @@ export const reportToMarkdown = (report: StoredReport) =>
       createdAt: report.createdAt,
       draft: report.draft,
     }),
-    report.body,
+    body,
   );
 
 export const readReportMarkdown = async (projectFiles: ArtifactMount, report: StoredReport) => {

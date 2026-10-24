@@ -1,5 +1,6 @@
 // Launch a gate review that checks project dependencies and updates the saved plan.
 import { defineCommand, params, workbenchPanels } from "@pstdio/sdk/extensions";
+import { resolveTicketId } from "../../data/resolve";
 import type { PlanRow } from "../contracts";
 import { plannerExtensionId } from "../planner";
 import { registerGate } from "./gate-store";
@@ -25,10 +26,9 @@ export const launchGateCommand = defineCommand({
   mutating: true,
   params: { ticket: params.text({ required: true }) },
   async run(ctx, { ticket }) {
+    const ticketId = await resolveTicketId(ctx, ticket);
     const plan = await readPlanCommand.run(ctx, {});
-    const row = plan.sections
-      .flatMap(({ rows }) => rows)
-      .find(({ id, shorthand }) => id === ticket || shorthand.toLowerCase() === ticket.toLowerCase());
+    const row = plan.sections.flatMap(({ rows }) => rows).find(({ id }) => id === ticketId);
     if (!row) {
       throw new Error("Unknown ticket.");
     }

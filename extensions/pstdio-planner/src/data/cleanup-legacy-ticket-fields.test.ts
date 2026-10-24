@@ -1,16 +1,18 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { cleanupLegacyTicketFields } from "./cleanup-legacy-ticket-fields";
-import { putTicket, ticketsCollection } from "./collections";
-import type { StoredTicket } from "./types";
+import { putTicket, ticketsCollection } from "./ticket-context.fixture";
+import { ticketRecords } from "./ticket-records";
 
-const storedTicket: StoredTicket = {
+import type { Ticket } from "./types";
+
+const storedTicket: Ticket = {
   id: "ticket-1",
   shorthand: "PS-1",
   title: "Ticket",
   content: "# Ticket",
   statusId: "ready",
-  tagIds: [],
+  tags: {},
   attachments: [],
   parentId: null,
   dependsOn: [],
@@ -25,7 +27,7 @@ const storedTicket: StoredTicket = {
 
 test("removes the old parallelizable field from stored tickets", async () => {
   const storage = createMemoryStorage();
-  await putTicket(storage, { ...storedTicket, parallelizable: "no" } as StoredTicket);
+  await putTicket(storage, { ...storedTicket, parallelizable: "no" } as Ticket);
 
   await cleanupLegacyTicketFields(storage);
 
@@ -34,12 +36,12 @@ test("removes the old parallelizable field from stored tickets", async () => {
 
 test("keeps an edit made after the tickets were listed", async () => {
   const storage = createMemoryStorage();
-  await putTicket(storage, { ...storedTicket, parallelizable: "no" } as StoredTicket);
-  const tickets = ticketsCollection(storage);
+  await putTicket(storage, { ...storedTicket, parallelizable: "no" } as Ticket);
+  const tickets = ticketRecords(storage);
   const list = tickets.list.bind(tickets);
   tickets.list = async () => {
     const listed = await list();
-    await putTicket(storage, { ...storedTicket, title: "Edited", parallelizable: "no" } as StoredTicket);
+    await putTicket(storage, { ...storedTicket, title: "Edited", parallelizable: "no" } as Ticket);
     return listed;
   };
 

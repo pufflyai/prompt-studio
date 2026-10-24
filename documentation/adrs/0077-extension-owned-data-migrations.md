@@ -26,4 +26,6 @@ First-party and external extensions use the same public contract. Domain mapping
 
 SDK preparation ships first. Extension adoption then removes the old template migration and installation repair. The existing 90-day upgrade window governs later removal of retained sources; this change does not delete them.
 
-The temporary Drizzle selection adapter is isolated under [ADR 0078](0078-temporary-drizzle-migration-selection.md).
+The temporary Drizzle selection adapter is isolated under [ADR 0078](0078-superseded-temporary-drizzle-migration-selection.md).
+
+Since 0.46 ([ADR 0103](0103-database-baseline-replaces-in-place-upgrades.md)) the host starts with a new database. There is no `pstdio_legacy.snapshots` archive, so `readLegacy` resolves to `undefined`. The `extension_data_versions` table is gone too: successful migration versions live in each owner's metadata document. `migrate` behaves as before.

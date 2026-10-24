@@ -21,5 +21,5 @@ test("ticket search lists active tickets", async () => {
     renderer: { rendererId: "tickets" },
   });
 
-  expect(result.items.map((item) => item.label)).toEqual(["Active"]);
+  expect(result.items.map((item) => item.label)).toEqual(["T-1 Active"]);
 });

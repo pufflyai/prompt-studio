@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import { readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
-import { putTicket } from "../data/collections";
+import { putTicket } from "../data/ticket-context.fixture";
+
 import { fixture } from "./auto-build.fixture";
 import { autoBuildScopeCommand } from "./auto-build-scope";
 import { readNextTickets } from "./next-tickets";

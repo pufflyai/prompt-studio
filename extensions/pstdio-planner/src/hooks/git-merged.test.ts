@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs, makeCommandContext } from "../commands/command-context.fixture";
 import { createTicketCommand } from "../commands/create-ticket";
-import { statusesCollection, ticketsCollection } from "../data/collections";
+import { statusesCollection } from "../data/collections";
+import { ticketsCollection } from "../data/ticket-context.fixture";
 import { gitMergedHook } from "./git-merged";
 
 for (const scenario of ["merged", "disabled", "archived", "done"]) {

@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import { listAttempts, putAttempt } from "../data/attempt-storage";
-import { putTicket, tagsCollection } from "../data/collections";
+import { tagsCollection } from "../data/collections";
 import { seedDefaultTags } from "../data/seed";
+import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand } from "./auto-build-mode";
@@ -25,7 +26,8 @@ async function trackFixture() {
   });
   const ticket = async (title: string, track = "workbench", dependsOn: string[] = []) => {
     const created = await result.ticket(title, dependsOn);
-    return putTicket(result.storage, { ...created, tagIds: [track] });
+    const stored = (await ticketsCollection(result.storage).get(created.id))!;
+    return putTicket(result.storage, { ...stored, tags: { track } });
   };
   return { ...result, ticket };
 }
@@ -119,7 +121,7 @@ test("next tickets query selects a named track and explains its waiting dependen
 test("next tickets keeps submitted stacks available across track boundaries until merged dependencies are required", async () => {
   const result = await trackFixture();
   const { parent } = await submitDependency(result);
-  await putTicket(result.storage, { ...parent, tagIds: ["planner"] });
+  await putTicket(result.storage, { ...parent, tags: { track: "planner" } });
   const child = await result.ticket("Panel controls", "workbench", [parent.id]);
   await configureAutoBuildCommand.run(result.ctx, { enabled: false, requireMergedDependencies: false });
   expect(await nextTicketsCommand.run(result.ctx, { track: "Workbench" })).toMatchObject({
@@ -223,7 +225,11 @@ test("next tickets combines status, tag and direct parent filters", async () => 
   const { ctx, storage, ticket } = await trackFixture();
   const parent = await ticket("Parent");
   const child = await ticket("Child");
-  await putTicket(storage, { ...child, parentId: parent.id, tagIds: ["workbench", "default-priority-high"] });
+  await putTicket(storage, {
+    ...child,
+    parentId: parent.id,
+    tags: { track: "workbench", "default-priority": "default-priority-high" },
+  });
   await ticket("Other child");
   expect(
     (

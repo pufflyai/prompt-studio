@@ -2,11 +2,16 @@ import { createWorkbench } from "@pstdio/workbench";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { selectDashboardProject } from "@/shared/app/project-context";
 import { DesktopProjectTabsController } from "../desktop-project-tabs-controller";
 import { DesktopProjectTabs } from "./desktop-project-tabs";
 
 const ProjectTabsStory = () => {
-  const [workbench] = useState(() => createWorkbench());
+  const [workbench] = useState(() => {
+    const workbench = createWorkbench();
+    selectDashboardProject(workbench, { id: "project", name: "Project" });
+    return workbench;
+  });
   const [controller] = useState(() => new DesktopProjectTabsController([], async () => {}));
   return <DesktopProjectTabs workbench={workbench} controller={controller} platform="darwin" />;
 };

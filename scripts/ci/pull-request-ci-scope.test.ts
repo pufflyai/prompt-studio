@@ -29,29 +29,19 @@ const select = (
   labels: string[] = [],
 ) => resolveCiScope({ event, labels, changedFiles, packageDirs, affectedPackages });
 
-describe("shared PR and queue selection", () => {
-  for (const files of [
-    ["packages/sdk/src/index.ts"],
-    ["packages/pstdio-api/src/app.ts"],
-    ["clients/landing-page/src/index.astro"],
-    ["bun.lock"],
-    ["README.md"],
-  ]) {
-    test(`queue coverage equals PR coverage for ${files[0]}`, () => {
-      expect(select(files, ["pstdio-api", "e2e"], "merge_group")).toEqual({
-        ...select(files, ["pstdio-api", "e2e"]),
-        stage: "merge_queue",
-      });
+describe("stage selection", () => {
+  for (const files of [["packages/sdk/src/index.ts"], ["clients/landing-page/src/index.astro"], ["README.md"]]) {
+    test(`the merge queue runs every check main runs for ${files[0]}`, () => {
+      expect(select(files, ["pstdio-api", "e2e"], "merge_group")).toEqual(select([], [], "push"));
     });
   }
-  for (const event of ["pull_request", "merge_group"]) {
-    test(`ci:full preserves all checks on ${event}`, () => {
-      expect(select(["README.md"], [], event, ["ci:full"])).toEqual(select([], [], "push"));
-    });
-  }
+  test("ci:full preserves all checks on a pull request", () => {
+    expect(select(["README.md"], [], "pull_request", ["ci:full"])).toEqual(select([], [], "push"));
+  });
   test("pushes and manual runs retain the full stage", () => {
     expect(select([], [], "push").stage).toBe("full");
     expect(select([], [], "workflow_dispatch").stage).toBe("full");
+    expect(select([], [], "push").browserSmoke).toBe(false);
   });
 });
 
@@ -64,12 +54,10 @@ test("package checks explicitly name all affected consumers", () => {
 });
 
 test("browser-test-only changes select browser checks without an empty unit-test scope", () => {
-  for (const event of ["pull_request", "merge_group"]) {
-    const scope = select(["packages/e2e/src/ui/main-fullscreen.spec.ts"], ["e2e"], event);
-    expect(scope.packageChecks).toBe(false);
-    expect(scope.browserSmoke).toBe(true);
-    expect(scope.browserChecks.length).toBeGreaterThan(0);
-  }
+  const scope = select(["packages/e2e/src/ui/main-fullscreen.spec.ts"], ["e2e"]);
+  expect(scope.packageChecks).toBe(false);
+  expect(scope.browserSmoke).toBe(true);
+  expect(scope.browserChecks.length).toBeGreaterThan(0);
 });
 
 test("documentation outside packages selects only static checks", () => {

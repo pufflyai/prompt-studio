@@ -5,9 +5,10 @@ import { queryTicketProperties } from "../commands/ticket-properties/query";
 import { readTicketTagsCommand } from "../commands/ticket-tags";
 import { readPlanCommand } from "../timeline/commands/read-plan";
 import { timelineViewSchema } from "../timeline/commands/view-schema";
-import { putTicket, tagsCollection, ticketsCollection } from "./collections";
+import { tagsCollection } from "./collections";
 import { migratePlannerStorage } from "./migrate-storage";
-import type { StoredTicket } from "./types";
+import { putTicket, ticketsCollection } from "./ticket-context.fixture";
+import type { Ticket } from "./types";
 
 const ticket = {
   id: "ticket-1",
@@ -20,7 +21,7 @@ const ticket = {
   createdAt: "2026-10-02T09:00:00.000Z",
   updatedAt: "2026-10-02T09:00:00.000Z",
   parallelizable: "no",
-} as StoredTicket;
+} as Ticket;
 
 test("a project that already imported its templates gets the remaining cleanups once", async () => {
   const storage = createMemoryStorage({
@@ -60,7 +61,7 @@ test.each([
     sortOrder: 3,
     options: [{ ...option, id: "default-human-requested-true", name: "Needs attention" }, option],
   });
-  const original = { ...ticket, tagIds: ["default-human-requested-true", option.id], content: "Keep this body" };
+  const original = { ...ticket, tags: { "default-human-requested": [option.id] }, content: "Keep this body" };
   await ticketsCollection(storage).put(ticket.id, original);
   const requests = storage.collection("planner-review-requests");
   const request = { id: "request", ticketId: ticket.id, title: "Choose the scope" };
@@ -79,7 +80,7 @@ test.each([
   });
   expect(await ticketsCollection(storage).get(ticket.id)).toMatchObject({
     content: "Keep this body",
-    tagIds: [option.id],
+    tags: { "default-human-requested": [option.id] },
   });
   expect(await requests.get(request.id)).toEqual(request);
   await migratePlannerStorage(ctx);

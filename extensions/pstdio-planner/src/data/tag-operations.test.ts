@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket } from "./collections";
+import { createTicketFile, deleteTicketFile } from "./file-operations";
 import {
   applyTagDraft,
   createTagOption,
@@ -11,9 +11,11 @@ import {
   updateTagOption,
   updateTicketTag,
 } from "./tag-operations";
-import type { StoredTicket } from "./types";
+import { putTicket, ticketContext } from "./ticket-context.fixture";
+import { TICKETS_COLLECTION } from "./ticket-records";
+import type { Ticket } from "./types";
 
-const ticket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+const ticket = (overrides: Partial<Ticket>): Ticket => ({
   id: crypto.randomUUID(),
   shorthand: "T-1",
   title: "T",
@@ -35,13 +37,17 @@ describe("tag operations", () => {
     expect(tags.map((tag) => tag.type)).toEqual(["single_select", "single_select", "single_select"]);
   });
 
-  test("setTicketTags replaces the ticket's tag option ids", async () => {
+  test("setTicketTags stores the flat tag option ids by tag", async () => {
     const storage = createMemoryStorage();
-    const created = await putTicket(storage, ticket({ tagIds: ["old"] }));
+    const created = await putTicket(storage, ticket({ tags: { "default-priority": "default-priority-low" } }));
 
-    const updated = await setTicketTags({ storage, ticketId: created.id, tagIds: ["a", "b"] });
+    const updated = await setTicketTags({
+      ...ticketContext(storage),
+      ticketId: created.id,
+      tagIds: ["default-type-bug", "default-priority-high", "unknown"],
+    });
 
-    expect(updated?.tagIds).toEqual(["a", "b"]);
+    expect(updated?.tags).toEqual({ "default-priority": "default-priority-high", "default-type": "default-type-bug" });
   });
 
   test("create and update a tag option with icon and description", async () => {
@@ -50,7 +56,7 @@ describe("tag operations", () => {
     const priority = tags[0]!;
 
     const created = await createTagOption({
-      storage,
+      ...ticketContext(storage),
       tagId: priority.id,
       name: "Blocker",
       color: "red",
@@ -59,7 +65,13 @@ describe("tag operations", () => {
     });
     expect(created).toMatchObject({ icon: "flame", description: "Hard blocker" });
 
-    await updateTagOption({ storage, tagId: priority.id, optionId: created.id, icon: "bug", description: "A bug" });
+    await updateTagOption({
+      ...ticketContext(storage),
+      tagId: priority.id,
+      optionId: created.id,
+      icon: "bug",
+      description: "A bug",
+    });
 
     const { tags: after } = await readTicketTags(storage);
     const stored = after[0]!.options.find((option) => option.id === created.id);
@@ -71,7 +83,7 @@ describe("tag operations", () => {
     const { tags } = await readTicketTags(storage);
     const flags = tags.at(-1)!;
 
-    await updateTicketTag({ storage, tagId: flags.id, sortOrder: 1 });
+    await updateTicketTag({ ...ticketContext(storage), tagId: flags.id, sortOrder: 1 });
 
     const { tags: after } = await readTicketTags(storage);
     expect(after.find((tag) => tag.id === flags.id)?.sortOrder).toBe(1);
@@ -81,9 +93,14 @@ describe("tag operations", () => {
     const storage = createMemoryStorage();
     const { tags } = await readTicketTags(storage);
     const priority = tags[0]!;
-    const created = await createTagOption({ storage, tagId: priority.id, name: "Blocker", color: "red" });
+    const created = await createTagOption({
+      ...ticketContext(storage),
+      tagId: priority.id,
+      name: "Blocker",
+      color: "red",
+    });
 
-    await updateTagOption({ storage, tagId: priority.id, optionId: created.id, sortOrder: 99 });
+    await updateTagOption({ ...ticketContext(storage), tagId: priority.id, optionId: created.id, sortOrder: 99 });
 
     const { tags: after } = await readTicketTags(storage);
     expect(after[0]!.options.find((option) => option.id === created.id)?.sortOrder).toBe(99);
@@ -93,13 +110,18 @@ describe("tag operations", () => {
     const storage = createMemoryStorage();
     const { tags } = await readTicketTags(storage);
     const priority = tags[0]!;
-    const option = await createTagOption({ storage, tagId: priority.id, name: "Blocker", color: "red" });
-    const created = await putTicket(storage, ticket({ tagIds: [option.id] }));
+    const option = await createTagOption({
+      ...ticketContext(storage),
+      tagId: priority.id,
+      name: "Blocker",
+      color: "red",
+    });
+    const created = await putTicket(storage, ticket({ tags: { [priority.id]: option.id } }));
 
-    await deleteTagOption({ storage, tagId: priority.id, optionId: option.id });
+    await deleteTagOption({ ...ticketContext(storage), tagId: priority.id, optionId: option.id });
 
-    const { ticketsCollection } = await import("./collections");
-    expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual([]);
+    const { ticketsCollection } = await import("./ticket-context.fixture");
+    expect((await ticketsCollection(storage).get(created.id))?.tags).toEqual({});
   });
 
   test("applyTagDraft commits type, creates, updates, and deletes in one tag write", async () => {
@@ -108,10 +130,11 @@ describe("tag operations", () => {
     const priority = tags[0]!;
     const renameTarget = priority.options[0]!;
     const removeTarget = priority.options[1]!;
-    const ticketRecord = await putTicket(storage, ticket({ tagIds: [removeTarget.id] }));
+    const ticketRecord = await putTicket(storage, ticket({ tags: { [priority.id]: removeTarget.id } }));
+    const kept = await putTicket(storage, ticket({ tags: { [priority.id]: renameTarget.id } }));
 
     await applyTagDraft({
-      storage,
+      ...ticketContext(storage),
       tagId: priority.id,
       type: "multi_select",
       optionsToCreate: [{ name: "Critical", color: "red", icon: "flame" }],
@@ -126,8 +149,11 @@ describe("tag operations", () => {
     expect(updated.options.find((option) => option.id === removeTarget.id)).toBeUndefined();
     expect(updated.options.find((option) => option.name === "Critical")).toMatchObject({ color: "red", icon: "flame" });
 
-    const { ticketsCollection } = await import("./collections");
-    expect((await ticketsCollection(storage).get(ticketRecord.id))?.tagIds).toEqual([]);
+    const { ticketsCollection } = await import("./ticket-context.fixture");
+    // Priority is now multi-select, so the emptied list stays and can merge later additions.
+    expect((await ticketsCollection(storage).get(ticketRecord.id))?.tags).toEqual({ [priority.id]: [] });
+    // The value moves to the multi-select shape with the tag.
+    expect((await ticketsCollection(storage).get(kept.id))?.tags).toEqual({ [priority.id]: [renameTarget.id] });
   });
 
   test("applyTagDraft rejects without writing when the tag does not exist", async () => {
@@ -135,7 +161,7 @@ describe("tag operations", () => {
 
     await expect(
       applyTagDraft({
-        storage,
+        ...ticketContext(storage),
         tagId: "missing-tag",
         type: "multi_select",
         optionsToCreate: [{ name: "Critical", color: "red", icon: "flame" }],
@@ -148,16 +174,93 @@ describe("tag operations", () => {
     expect(tags.some((tag) => tag.id === "missing-tag")).toBe(false);
   });
 
-  test("deleting a tag strips all its option ids from tickets", async () => {
+  test("deleting a tag removes its value from tickets", async () => {
     const storage = createMemoryStorage();
     const { tags } = await readTicketTags(storage);
     const priority = tags[0]!;
     const optionId = priority.options[0]!.id;
-    const created = await putTicket(storage, ticket({ tagIds: [optionId] }));
+    const created = await putTicket(
+      storage,
+      ticket({ tags: { [priority.id]: optionId, "default-type": "default-type-bug" } }),
+    );
 
-    await deleteTicketTag({ storage, tagId: priority.id });
+    await deleteTicketTag({ ...ticketContext(storage), tagId: priority.id });
 
-    const { ticketsCollection } = await import("./collections");
-    expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual([]);
+    const { ticketsCollection } = await import("./ticket-context.fixture");
+    expect((await ticketsCollection(storage).get(created.id))?.tags).toEqual({ "default-type": "default-type-bug" });
+  });
+
+  // A bulk tag change writes many tickets. An edit or sync that lands after it listed them must stay.
+  test.each([
+    ["changing the tag type", { "default-priority": ["default-priority-high"] }],
+    ["deleting a tag option", {}],
+    ["deleting the tag", {}],
+  ] as const)("%s keeps a ticket edit made during the change", async (change, expectedTags) => {
+    const storage = createMemoryStorage();
+    await readTicketTags(storage);
+    const created = await putTicket(storage, ticket({ tags: { "default-priority": "default-priority-high" } }));
+    const records = storage.collection<Ticket>(TICKETS_COLLECTION);
+    const list = records.list.bind(records);
+    records.list = async () => {
+      const listed = await list();
+      await records.put(created.id, { ...(await records.get(created.id))!, content: "Edited elsewhere" });
+      return listed;
+    };
+    const ctx = {
+      ...ticketContext(storage),
+      storage: {
+        ...storage,
+        collection: (name: string) => (name === TICKETS_COLLECTION ? records : storage.collection(name)),
+      },
+    } as ReturnType<typeof ticketContext>;
+
+    if (change === "changing the tag type") {
+      await updateTicketTag({ ...ctx, tagId: "default-priority", type: "multi_select" });
+    } else if (change === "deleting a tag option") {
+      await deleteTagOption({ ...ctx, tagId: "default-priority", optionId: "default-priority-high" });
+    } else await deleteTicketTag({ ...ctx, tagId: "default-priority" });
+
+    const { ticketsCollection } = await import("./ticket-context.fixture");
+    expect(await ticketsCollection(storage).get(created.id)).toMatchObject({
+      content: "Edited elsewhere",
+      tags: expectedTags,
+    });
+  });
+
+  // Only changeTicketFiles changes a ticket's file list, so a bulk tag change must not write back
+  // a file list it read before a file change.
+  test("changing a tag type keeps a file deleted while the change runs", async () => {
+    const storage = createMemoryStorage();
+    await readTicketTags(storage);
+    const created = await putTicket(storage, ticket({ tags: { "default-priority": "default-priority-high" } }));
+    const ctx = ticketContext(storage);
+    const file = await createTicketFile({ ...ctx, ticketId: created.id, name: "plan.md" });
+    const records = storage.collection<Ticket>(TICKETS_COLLECTION);
+    const get = records.get.bind(records);
+    let deletion: Promise<unknown> | undefined;
+    records.get = async (id) => {
+      const record = await get(id);
+      if (!deletion) {
+        deletion = deleteTicketFile({ ...ctx, ticketId: created.id, fileId: file.id });
+        await Promise.race([deletion, Bun.sleep(20)]);
+      }
+      return record;
+    };
+    const observed = {
+      ...ctx,
+      storage: {
+        ...storage,
+        collection: (name: string) => (name === TICKETS_COLLECTION ? records : storage.collection(name)),
+      },
+    } as ReturnType<typeof ticketContext>;
+
+    await updateTicketTag({ ...observed, tagId: "default-priority", type: "multi_select" });
+    await deletion;
+
+    const { ticketsCollection } = await import("./ticket-context.fixture");
+    expect(await ticketsCollection(storage).get(created.id)).toMatchObject({
+      files: [],
+      tags: { "default-priority": ["default-priority-high"] },
+    });
   });
 });

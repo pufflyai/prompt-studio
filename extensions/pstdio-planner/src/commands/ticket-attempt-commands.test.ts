@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket, ticketsCollection } from "../data/collections";
 import { seedDefaultStatuses } from "../data/seed";
-import type { StoredTicket } from "../data/types";
+import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
+import type { Ticket } from "../data/types";
 import { commandParamsFor, makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { implementTicketCommand } from "./implement-ticket";
 import { sessionQuery } from "./session-query.fixture";
@@ -17,7 +17,7 @@ const createSessionResource = () =>
     status: "in_progress" as const,
   });
 
-const seedTicket = async (storage: ReturnType<typeof createMemoryStorage>, overrides: Partial<StoredTicket> = {}) => {
+const seedTicket = async (storage: ReturnType<typeof createMemoryStorage>, overrides: Partial<Ticket> = {}) => {
   const now = new Date().toISOString();
   const sortOrder = (await ticketsCollection(storage).list()).length;
   const shorthand = `T-${sortOrder + 1}`;
@@ -27,7 +27,7 @@ const seedTicket = async (storage: ReturnType<typeof createMemoryStorage>, overr
     title: "Ticket",
     content: "# Ticket",
     statusId: "backlog",
-    tagIds: [],
+    tags: {},
     attachments: [],
     parentId: null,
     dependsOn: null,
@@ -85,16 +85,16 @@ describe("ticket workspace listing", () => {
     w2: [{ id: "s2", title: "Implement", status: "completed" }],
   };
 
-  const listContext = (storage: ReturnType<typeof createMemoryStorage>, id: string) =>
+  const listContext = (storage: ReturnType<typeof createMemoryStorage>, ticket: Ticket) =>
     makeCommandArgs({
       storage,
-      params: { id },
+      params: { id: ticket.shorthand },
       overrides: {
         workspaces: {
           list: async () => [
             {
               id: "w1",
-              anchors_json: [{ type: "ticket", id: "ticket-1", shorthand: "T-1" }],
+              anchors_json: [{ type: "ticket", id: ticket.id, shorthand: "T-1" }],
               workspace_shorthand: "T-1_A1",
               branch: "b1",
               root_path: "/wt/1",
@@ -103,7 +103,7 @@ describe("ticket workspace listing", () => {
             },
             {
               id: "w2",
-              anchors_json: [{ type: "ticket", id: "ticket-1", shorthand: "T-1" }],
+              anchors_json: [{ type: "ticket", id: ticket.id, shorthand: "T-1" }],
               workspace_shorthand: "T-1_A2",
               branch: "b2",
               root_path: null,
@@ -134,7 +134,7 @@ describe("ticket workspace listing", () => {
     const storage = createMemoryStorage();
     const ticket = await seedTicket(storage);
 
-    const rows = await ticketWorkspacesCommand.run(...listContext(storage, ticket.shorthand));
+    const rows = await ticketWorkspacesCommand.run(...listContext(storage, ticket));
     expect(rows).toEqual([
       { id: "w1", workspace: "T-1_A1", branch: "b1", path: "/wt/1", active: true },
       { id: "w2", workspace: "T-1_A2", branch: "b2", path: "", active: false },
@@ -145,7 +145,7 @@ describe("ticket workspace listing", () => {
     const storage = createMemoryStorage();
     const ticket = await seedTicket(storage);
 
-    const rows = await ticketWorktreesListCommand.run(...listContext(storage, ticket.shorthand));
+    const rows = await ticketWorktreesListCommand.run(...listContext(storage, ticket));
     expect(rows.map((row) => row.workspace)).toEqual(["T-1_A1"]);
   });
 });

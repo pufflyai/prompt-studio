@@ -193,6 +193,7 @@ const setupServiceWithExtension = async () => {
   const extensionService = createExtensionService({
     extensionInstancesService: createExtensionInstancesDBService(db),
     extensionUserDataService: createExtensionUserDataDBService(db),
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
     installedExtensionSourcesService: createInstalledExtensionSourcesDBService(db),
     projectService,
   });

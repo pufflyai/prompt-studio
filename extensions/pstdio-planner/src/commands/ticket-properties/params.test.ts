@@ -3,10 +3,10 @@ import { l10n } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
-import type { StoredTicket } from "../../data/types";
+import type { Ticket } from "../../data/types";
 import { buildTicketPropertiesControls, type WireParam } from "./params";
 
-const baseTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+const baseTicket = (overrides: Partial<Ticket>): Ticket => ({
   id: "t1",
   shorthand: "PS-1",
   title: "Title",
@@ -81,7 +81,7 @@ describe("buildTicketPropertiesControls", () => {
     const { statuses, tags } = await seed();
     const priority = tags.find((tag) => tag.id === "default-priority")!;
     const high = priority.options.find((option) => option.id === "default-priority-high")!;
-    const ticket = baseTicket({ tagIds: [high.id] });
+    const ticket = baseTicket({ tags: { [priority.id]: high.id } });
 
     const { params } = buildTicketPropertiesControls({ ticket, statuses, tags, dependencies: [], parent: null });
 

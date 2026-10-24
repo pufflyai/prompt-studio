@@ -2,7 +2,7 @@ import type { CommandContext } from "@pstdio/sdk/extensions";
 import { readAutoBuildEligibility } from "../data/auto-build-filter";
 import type { AutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
-import type { StoredTicket } from "../data/types";
+import type { Ticket } from "../data/types";
 import type { readPlanCommand } from "../timeline/commands/read-plan";
 import type { PlanRow } from "../timeline/contracts";
 import { timelineQueryData } from "../timeline/model/query-data";
@@ -10,7 +10,7 @@ import { type NextTicketQuery, selectNextTicketRows, selectNextTicketScopeRows }
 
 interface ScopedWorkInput {
   plan: Awaited<ReturnType<typeof readPlanCommand.run>>;
-  tickets: StoredTicket[];
+  tickets: Ticket[];
   mode: AutoBuildMode;
   query: NextTicketQuery;
   scope?: NextTicketQuery[];

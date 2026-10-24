@@ -19,6 +19,8 @@ import { registerPackagedChatMotionSmokeTests } from "./packaged-chat-motion-smo
 import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
 // Explicit live follow-ups capture their active run and never fall back to ordinary queued work.
 import { registerCliSteeringSmokeTests } from "./packaged-cli-steering-smoke";
+// Three compiled hosts install the published extension set; local overrides keep their code.
+import { registerCloudExtensionSetSmokeTests } from "./packaged-cloud-extension-set-smoke";
 // Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
 // scripts/verify/public-package-consumer.ts checks packaged authoring row previews, persistent actions and controlled TreeList selection.
 import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
@@ -33,10 +35,12 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // Core extension checks cover extension-owned draft storage, versioned template edits, and allocated file roots.
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // packaged-command-palette.spec.ts checks theme selection from the palette and persistence after reload.
-// packaged-main-fullscreen.spec.ts checks Main fullscreen, its minimized Side bubble, keyboard exit and reload state.
+// packaged-main-fullscreen.spec.ts checks the empty picker, Settings, creation without reinstalling defaults or a reload, hidden chrome,
+// Main fullscreen, its minimized Side bubble, keyboard exit and reload state.
 // Desktop packaged-project-tabs.spec.ts checks the title-bar maximize control and focus after fullscreen exit.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
-// grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
+// grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, ticket-save refresh events,
+// saved document links with file ancestry, core ticket number/path lookup, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 // Document sync checks local, synced and needs-attention states plus strict leaf uploads to an older relay.
 import { registerDeviceAutomationSmokeTests } from "./packaged-device-automations-smoke";
@@ -45,6 +49,7 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 // Includes linked dependency loading and missing dependency diagnostics.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
+import { registerExtensionPublicationSmokeTests } from "./packaged-extension-publication-smoke";
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 // CRDT storage checks atomic saves, ignored revisions, local retry outcomes and durable restart.
@@ -53,8 +58,8 @@ import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smo
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
 // scripts/verify/storage-package-consumer.ts checks the packaged SDK's two-device merge and replacement report.
 // Selected storage queries preserve case-insensitive text equality and negation through restart.
-// packaged-storage-upgrade.test.ts checks the released 0.45 engine transition, nested records, assets,
-// operation retries and tombstones through index installation and restart.
+// packaged-database-retirement.test.ts checks that a released 0.45 home is exported as JSON, moved aside and
+// replaced by an empty current database, once.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -148,7 +153,8 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Adding Terminal in Side or Session in Bottom keeps the other empty panel open.
 // The packaged empty-panel browser flow also checks nearby tab targets, mirrored Navigation, panel handles and reload.
 
-// Two hosts check an interrupted first download, offline and back, and local edits that merge when sync restarts.
+// Two hosts check that a new device gets the cloud project after login, an interrupted first download, cloning its
+// folder later, offline and back, and local edits that merge when sync restarts.
 import { registerTwoDeviceSyncSmokeTests } from "./packaged-two-device-sync-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";
@@ -167,6 +173,8 @@ registerCliHelpSmokeTests();
 registerLinkIconsSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
+registerExtensionPublicationSmokeTests();
+registerCloudExtensionSetSmokeTests();
 registerExtensionStartupSmokeTests();
 registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();

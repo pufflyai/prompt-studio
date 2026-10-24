@@ -3,26 +3,30 @@ import { attachmentDataUrl } from "../data/attachment-data-url";
 import { ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { findStoredTicket } from "../data/resolve";
+import { readTicketFileContent } from "../data/ticket-file-content";
 
 const BODY_PLACEHOLDER = "Write the ticket description…";
 const FILE_PLACEHOLDER = "Write…";
 
 export const getTicketContent = async (
-  ctx: Pick<ExtensionContextBase, "storage">,
+  ctx: Pick<ExtensionContextBase, "storage" | "resources">,
   input: { id?: string; resource?: ResourceRef },
 ) => {
   const ticketId = input.id ?? (input.resource?.type === "ticket" ? input.resource.id : undefined);
   if (!ticketId) return { content: "", placeholder: BODY_PLACEHOLDER };
-  const ticket = input.id
-    ? await findStoredTicket(ctx.storage, input.id)
-    : await ticketsCollection(ctx.storage).get(ticketId);
+  const ticket = input.id ? await findStoredTicket(ctx, input.id) : await ticketsCollection(ctx).get(ticketId);
   if (!ticket) return { content: "", placeholder: BODY_PLACEHOLDER };
 
   const documentId = selectedDocumentFromResource(input.resource);
   if (documentId !== TICKET_BODY_DOCUMENT) {
     const file = ticket.files?.find((entry) => entry.id === documentId);
     if (file) {
-      return { fileName: file.name, content: file.content, placeholder: FILE_PLACEHOLDER, revision: file.updatedAt };
+      return {
+        fileName: file.name,
+        content: await readTicketFileContent(ctx.storage, ticket.id, file),
+        placeholder: FILE_PLACEHOLDER,
+        revision: file.updatedAt,
+      };
     }
 
     const attachment = ticket.attachments?.find((entry) => entry.id === documentId);

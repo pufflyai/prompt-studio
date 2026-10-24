@@ -18,6 +18,7 @@ test("ticket properties expose milestone, date, progress, and attention from the
   await moveTicketCommand.run(ctx, { ticket: completed.id, deadline: milestone.id });
   const query = await runTicketsQuery({
     storage,
+    resources: ctx.resources,
     projectId: ctx.projectId,
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
   });
@@ -38,6 +39,7 @@ test("ticket properties expose milestone, date, progress, and attention from the
   await moveTicketCommand.run(ctx, { ticket: open.id, deadline: milestone.id });
   const next = await runTicketsQuery({
     storage,
+    resources: ctx.resources,
     projectId: ctx.projectId,
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
   });
@@ -50,6 +52,7 @@ test("ticket properties expose milestone, date, progress, and attention from the
     (
       await runTicketsQuery({
         storage,
+        resources: ctx.resources,
         projectId: ctx.projectId,
         workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
       })
@@ -77,6 +80,7 @@ test("ticket inline milestone edits update the plan without adding tag ids", asy
     (
       await runTicketsQuery({
         storage,
+        resources: ctx.resources,
         projectId: ctx.projectId,
         workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
       })
@@ -87,6 +91,7 @@ test("ticket inline milestone edits update the plan without adding tag ids", asy
     (
       await runTicketsQuery({
         storage,
+        resources: ctx.resources,
         projectId: ctx.projectId,
         workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
       })
@@ -105,6 +110,7 @@ test("archived work does not change the active milestone progress", async () => 
   await storage.collection("tickets").update(archived.id, { ...archived, archived: true });
   const query = await runTicketsQuery({
     storage,
+    resources: ctx.resources,
     projectId: ctx.projectId,
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
   });

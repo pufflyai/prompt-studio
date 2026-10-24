@@ -10,7 +10,7 @@ import {
 } from "pstdio-api-runtime-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { apiLogger } from "../../lib/logger";
-import { installDefaultExtensions } from "../extensions/default-extensions";
+import { installMissingDefaultExtensions } from "../extensions/default-extensions";
 import { createProcessApi, findFreePort } from "../extensions/extension-process-api";
 import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
@@ -77,7 +77,7 @@ export const createHarnessRegistryService = (input: {
   extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "get" | "getSourcesRuntime" | "subscribeInvalidation">;
   /** Override the expensive host-scope load+normalize+build. Tests inject a counting fake. */
   buildRegistry?: (input: BuildRegistryInput) => Promise<HarnessRegistry>;
-  installDefaultExtensions?: typeof installDefaultExtensions;
+  installDefaultExtensions?: typeof installMissingDefaultExtensions;
   /** Clock for the detect() TTL memo; defaults to Date.now. */
   now?: () => number;
   detectCacheTtlMs?: number;
@@ -153,7 +153,7 @@ export const createHarnessRegistryService = (input: {
   };
 
   const buildRegistry = input.buildRegistry ?? defaultBuildRegistry;
-  const installDefaults = input.installDefaultExtensions ?? installDefaultExtensions;
+  const installDefaults = input.installDefaultExtensions ?? installMissingDefaultExtensions;
   const now = input.now ?? Date.now;
   const detectCacheTtlMs = input.detectCacheTtlMs ?? DETECT_CACHE_TTL_MS;
   let defaultExtensionsInstall: Promise<void> | null = null;

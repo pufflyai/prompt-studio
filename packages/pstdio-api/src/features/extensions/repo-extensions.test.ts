@@ -54,6 +54,7 @@ beforeEach(async () => {
     extensionInstancesService,
     installedExtensionSourcesService,
     extensionUserDataService: createExtensionUserDataDBService(result.db),
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
     projectService,
   });
 });

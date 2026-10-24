@@ -159,6 +159,8 @@ const expectConflictsPreserved = async (execute: Execute, trackId: string, track
 const expectAutoBuildFilter = async (timeline: FrameLocator) => {
   await timeline.getByRole("button", { name: "Auto Build", exact: true }).click();
   const autoBuild = timeline.getByRole("dialog", { name: "Auto Build", exact: true });
+  // The lazy editor's initial autofocus must finish before opening another control.
+  await expect(autoBuild.getByRole("textbox")).toBeFocused();
   await autoBuild.getByRole("button", { name: "Filter", exact: true }).click();
   const filterMenu = timeline.getByTestId("filter-menu");
   await filterMenu.getByRole("button", { name: "Title", exact: true }).click();

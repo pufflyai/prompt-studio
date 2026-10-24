@@ -17,10 +17,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         include:
-          - os: ubuntu-latest
+          # Temporary: Playwright's Chromium does not install on Ubuntu 26.04 yet (ADR 0105).
+          - os: ubuntu-24.04
             platform_pkg: cli-linux-x64
           - os: macos-15-intel
             platform_pkg: cli-darwin-x64
@@ -51,6 +52,7 @@ jobs:
         run: bunx playwright@1.60.0 install chromium --with-deps
 
       - name: Verify packaged Bun toolchain
+        id: toolchain
         shell: bash
         env:
           PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
@@ -59,12 +61,25 @@ jobs:
           mkdir -p packages/e2e/test-results/packaged-toolchain
           bun run --cwd scripts verify:packages 2>&1 | tee packages/e2e/test-results/packaged-toolchain/verification.log
 
-      - name: Preserve failed packaged toolchain evidence
-        if: failure()
+      - name: Run quarantined Windows compiled CLI cases
+        if: runner.os == 'Windows' && !cancelled() && steps.toolchain.outcome == 'success'
+        continue-on-error: true
+        env:
+          E2E_TEST_LANE: quarantine
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe
+        run: bun --cwd packages/e2e ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts --timeout 30000 --silent
+
+      - name: Require every compiled CLI quarantine case to have executed
+        if: runner.os == 'Windows' && !cancelled() && steps.toolchain.outcome == 'success'
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun
+
+      - name: Preserve packaged toolchain evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: packaged-toolchain-${{ matrix.platform_pkg }}-attempt-${{ github.run_attempt }}
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
+            test-results/quarantine/packages/e2e
           if-no-files-found: warn

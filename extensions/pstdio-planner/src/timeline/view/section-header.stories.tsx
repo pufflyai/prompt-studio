@@ -40,7 +40,7 @@ function MilestoneHeaderStory(props: {
         title: "Simple work",
         content: "",
         statusId: state === "learning" ? "ready" : "done",
-        tagIds: ["default-complexity-simple"],
+        tags: { "default-complexity": "default-complexity-simple" },
       },
       {
         id: "open",
@@ -48,7 +48,7 @@ function MilestoneHeaderStory(props: {
         title: "Complex work",
         content: "",
         statusId: state === "complete" ? "done" : "ready",
-        tagIds: ["default-complexity-complex"],
+        tags: { "default-complexity": "default-complexity-complex" },
       },
       {
         id: "hidden",
@@ -56,7 +56,7 @@ function MilestoneHeaderStory(props: {
         title: "Other work",
         content: "",
         statusId: state === "complete" ? "done" : "ready",
-        tagIds: ["default-complexity-simple"],
+        tags: { "default-complexity": "default-complexity-simple" },
       },
     ],
     plan: {

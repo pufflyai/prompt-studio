@@ -4,6 +4,7 @@ import type { AttemptRecord } from "../../data/attempt-types";
 import { withIndependentBlockers } from "../../data/dependency-blockers";
 import { hasPendingInput } from "../../data/review-request-storage";
 import type { TicketReviewRequests } from "../../data/review-request-types";
+import { ticketTagIds } from "../../data/ticket-tags";
 import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "../../data/workflow-statuses";
 import type { Deadline, PlanFlag, PlanLink, PlanTag, StoredPlan } from "../contracts";
 import { dependencyIds, type PlannerStatus, type PlannerTicket, ticketTarget } from "../planner";
@@ -168,7 +169,7 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
       },
       index.workflow,
     ),
-    trackId: ticket.tagIds?.find((id) => index.trackOptionIds.has(id)) ?? null,
+    trackId: ticketTagIds(ticket).find((id) => index.trackOptionIds.has(id)) ?? null,
     requests,
     requestErrors: errors,
     instructions: ticket.content ?? "",
@@ -184,7 +185,7 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
       .map((ticket) => link(ticket, index)),
     laterDependencies: late.map((ticket) => link(ticket, index)),
     ...(blockedReason ? { blockedReason } : {}),
-    tagIds: ticket.tagIds ?? [],
+    tagIds: ticketTagIds(ticket),
     flags,
     target: ticketTarget(ticket),
   };

@@ -4,11 +4,12 @@ import { makeCommandArgs } from "../commands/command-context.fixture";
 import { createTicketCommand } from "../commands/create-ticket";
 import { runTicketsQuery } from "./query";
 import { reviewRequestsCollection } from "./review-request-storage";
+import { ticketContext } from "./ticket-context.fixture";
 
 test("ticket rows include their destination using the already-loaded review state", async () => {
   const storage = createMemoryStorage();
   const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Navigation" } }));
-  const query = () => runTicketsQuery({ storage, projectId: "project-1" });
+  const query = () => runTicketsQuery({ ...ticketContext(storage), projectId: "project-1" });
   expect((await query()).rows[0]?.target).toMatchObject({
     kind: "page",
     page: { id: "ticket" },

@@ -3,8 +3,8 @@ import { fixture } from "../commands/auto-build.fixture";
 import { nextTicketsCommand } from "../commands/next-tickets";
 import { updateTicketCommand } from "../commands/update-ticket";
 import { plannerTicketsChanged } from "../events";
-import { ticketsCollection } from "./collections";
 import { reconcileDependencyBlockers } from "./reconcile-dependency-blockers";
+import { ticketsCollection } from "./ticket-context.fixture";
 
 test("reconciles an existing dependency-only blocker after its prerequisite was already completed", async () => {
   const { ctx, ticket, storage } = await fixture();

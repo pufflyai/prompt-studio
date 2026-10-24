@@ -3,6 +3,7 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { boardDefaultSyncRow } from "pstdio-api-contracts";
 import type {
   createExtensionInstancesDBService,
+  createExtensionStorageDBService,
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
@@ -13,6 +14,7 @@ type UninstallProjectExtensionDeps = {
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
+  recovery: Pick<ReturnType<typeof createExtensionStorageDBService>["recovery"], "exclusive">;
   eventBus?: EventBus;
   notifyInstalledSourcesChanged: (sourcePath?: string) => Promise<void>;
 };
@@ -45,8 +47,11 @@ const removeInstalledSourceFiles = (sourcePath: string) => {
   rmSync(sourcePath, { recursive: true, force: true });
 };
 
-const deleteInstanceData = async (deps: UninstallProjectExtensionDeps, instanceId: string) => {
-  const deleted = await deps.extensionUserDataService.deleteForInstance(instanceId);
+const deleteInstanceData = async (deps: UninstallProjectExtensionDeps, instance: { id: string; scope_id: string }) => {
+  // A restore running at the same time would write the deleted records back.
+  const deleted = await deps.recovery.exclusive(instance.scope_id, () =>
+    deps.extensionUserDataService.deleteForInstance(instance.id),
+  );
   for (const row of deleted.boardViews) deps.eventBus?.emit("board_views", "delete", row);
   for (const row of deleted.boardDefaults)
     deps.eventBus?.emit("board_default_views", "delete", boardDefaultSyncRow(row));
@@ -69,7 +74,7 @@ export const uninstallProjectExtension = async (
   let retainedData = false;
   for (const extensionInstance of instances) {
     if (input.deleteUserData) {
-      await deleteInstanceData(deps, extensionInstance.id);
+      await deleteInstanceData(deps, extensionInstance);
     } else if (await deps.extensionUserDataService.hasUserData(extensionInstance.id)) {
       // Preserve user data: keep a disabled instance so a reinstall to the same path restores it.
       const disabled = await deps.extensionInstancesService.update(extensionInstance.id, { enabled: false });

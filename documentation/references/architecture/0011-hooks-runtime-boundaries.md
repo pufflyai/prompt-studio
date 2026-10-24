@@ -1,7 +1,7 @@
 ---
 status: "accepted"
 created: "2026-04-05T00:00:00Z"
-updated: "2026-05-20T00:00:00Z"
+updated: "2026-10-24T00:00:00Z"
 ---
 
 # Extension Runtime Boundaries
@@ -77,6 +77,8 @@ Owns Git worktree plumbing only. Product lifecycle behavior is injected by calle
 ## Default extensions
 
 The [packaged catalog](../../../packages/pstdio-api/files/extension-catalog.json) marks the default installs: the three coding-agent harnesses, base themes, and Prompt Studio skills. Planner owns ticket automation when installed and enabled, but catalog membership does not make it a default.
+
+Runtime startup prepares default sources and applies forced local source updates in development. Project creation and host harness discovery reuse those installed sources and install only missing defaults or dependencies. These operations share an installation queue, so creation waits for any startup preparation already in progress before checking the installed files.
 
 ## Dependency Direction
 

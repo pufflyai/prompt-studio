@@ -28,7 +28,7 @@ const toDashboardProject = (row: SyncedRow, folderPathByProjectId: ReadonlyMap<s
     name,
     createdAt: (row.created_at as string) ?? "",
     updatedAt: (row.updated_at as string) ?? "",
-    folderPath: folderPathByProjectId.get(row.id) ?? null,
+    folderPath: folderPathByProjectId.get(row.id) || null,
     resource: createDashboardResource("project", row.id, name, standardResourceIcons.project, row.id),
   };
 };

@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket, statusesCollection, ticketsCollection } from "./data/collections";
-import type { StoredTicket } from "./data/types";
+import { statusesCollection } from "./data/collections";
+import { putTicket, ticketContext, ticketsCollection } from "./data/ticket-context.fixture";
+import type { Ticket } from "./data/types";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { readStatusSettings, saveStatusSettings } from "./ticket-status-settings";
 
-const makeTicket = (statusId: string): StoredTicket => ({
+const makeTicket = (statusId: string): Ticket => ({
   id: "ticket-1",
   shorthand: "T-1",
   title: "Ticket",
@@ -19,7 +20,7 @@ const makeTicket = (statusId: string): StoredTicket => ({
 
 const context = (storage: ReturnType<typeof createMemoryStorage>) =>
   ({
-    storage,
+    ...ticketContext(storage),
     events: { emit: async () => undefined },
   }) as never;
 

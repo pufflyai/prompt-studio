@@ -2,7 +2,7 @@
 name: create-pstdio-extension
 description: "Create or edit a Prompt Studio extension. Use for extension commands, hooks, schedules, templates, skills, pages, native editors, file trees, settings, themes, artifact storage, workspaces, agent harnesses, and validation."
 metadata:
-  version: 0.0.5
+  version: 0.0.6
 ---
 
 # Create a Prompt Studio extension
@@ -24,6 +24,9 @@ For a new extension, follow the public walkthrough first: [Write an extension](h
    - Add harnesses and workspace types only for a new agent or workspace provider.
    - Start from a typechecked example in [Examples](references/examples.md).
 4. **Store data in the right place.** Structured data goes in `ctx.storage`; extension-owned files go under `.pstdio/extension-storage/<package-name>/`. Read [Storage results and writes](references/extension-api.md#storage-results-and-writes) and [Storage and workspace APIs](references/host-storage-and-workspaces.md). Save first, then emit the change event, then return the saved value.
+   - **Records are for small structured data only**: names, states, settings, links, positions, and IDs. Never put large files or large values in a record. This includes file bodies, images, base64 data, long logs, transcripts, and generated HTML.
+   - From extension API 0.3 (Prompt Studio 0.46), the host refuses a save over a limit. One record may hold at most **256 KiB** of JSON, counting its value and shared text, list, or map. One commit may write at most **4 MiB** of JSON, counting every record in the group.
+   - Store large content as a file instead: `ctx.storage.files` (blobs), `ctx.extensionFiles`, or a declared artifact mount. Keep only the file's ID or path in the record. Do not split one large value across many records to fit under the limits. See [Keep records small](references/host-storage-and-workspaces.md#keep-records-small).
 5. **Wire native actions and navigation.** Toolbar, row, and selection actions call commands. Row and selection actions pass `rowId` or `rowIds`; `onRowActivate` receives the `row`. See [Native actions](references/native-actions.md) and [Table and board actions](references/extension-api.md#table-and-board-actions-receive-ids-activation-receives-the-row). Request navigation with `ctx.navigation.open(target)` and give every target an explicit page or panel.
 6. **Use a webview only when native views cannot express the content.** Read [Webviews](references/webviews.md).
    For typed clients, host props, structured errors, query refresh, outcomes, and resource pages, read [Client contracts](references/client-contracts.md). These are SDK 0.44 APIs on `main`; check the installed SDK before you use them.

@@ -1,5 +1,14 @@
 import { Box } from "@chakra-ui/react";
-import { createContext, type ReactNode, type Ref, useContext, useEffect, useLayoutEffect, useState } from "react";
+import {
+  Activity,
+  createContext,
+  type ReactNode,
+  type Ref,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
 import { workbenchPanelRegions } from "../../core";
@@ -59,6 +68,8 @@ const PanelViewPortal = (props: {
   active: boolean;
 }) => {
   const { workbench, placement, slot, region, active } = props;
+  const view = placement.viewId ? workbench.views.getView(placement.viewId) : undefined;
+  const collection = view?.body.kind === "dataTable" || view?.body.kind === "kanban";
   // The portal target is stable for the life of a view. Only its DOM parent moves.
   const [host] = useState(() => {
     const node = document.createElement("div");
@@ -100,7 +111,10 @@ const PanelViewPortal = (props: {
     >
       {/* The retained view owns its viewport, so another tab cannot reset its scroll position. */}
       <RegionScrollArea>
-        <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} />
+        {/* Preserve collection state while deferring updates and reads for hidden pages. */}
+        <Activity mode={active || !collection ? "visible" : "hidden"}>
+          <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} />
+        </Activity>
       </RegionScrollArea>
     </Box>,
     host,

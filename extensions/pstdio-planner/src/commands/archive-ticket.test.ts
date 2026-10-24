@@ -1,20 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket, ticketsCollection } from "../data/collections";
-import type { StoredTicket } from "../data/types";
+import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
+
+import type { Ticket } from "../data/types";
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
 import { makeCommandArgs } from "./command-context.fixture";
 
 const now = "2026-06-08T10:00:00.000Z";
 
-const makeTicket = (overrides: Partial<StoredTicket> = {}) =>
+const makeTicket = (overrides: Partial<Ticket> = {}) =>
   ({
     id: "ticket-1",
     shorthand: "T-1",
     title: "Ticket",
     content: "# Ticket",
     statusId: "backlog",
-    tagIds: [],
+    tags: {},
     attachments: [],
     files: [],
     parentId: null,
@@ -27,7 +28,7 @@ const makeTicket = (overrides: Partial<StoredTicket> = {}) =>
     createdAt: now,
     updatedAt: now,
     ...overrides,
-  }) satisfies StoredTicket;
+  }) satisfies Ticket;
 
 const seedTicket = (storage: ReturnType<typeof createMemoryStorage>) => putTicket(storage, makeTicket());
 
@@ -73,7 +74,7 @@ describe("archive ticket", () => {
           },
         },
       }),
-    )) as StoredTicket | null;
+    )) as Ticket | null;
 
     expect(result?.archived).toBe(true);
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
@@ -110,7 +111,7 @@ describe("archive ticket", () => {
       ),
     ).then((result) => {
       commandResolved = true;
-      return result as StoredTicket | null;
+      return result as Ticket | null;
     });
 
     await archiveStarted.promise;
@@ -152,7 +153,7 @@ describe("archive ticket", () => {
           },
         },
       }),
-    )) as { archived: StoredTicket[] };
+    )) as { archived: Ticket[] };
 
     expect(result.archived.map((ticket) => ticket.id).sort()).toEqual(["ticket-1", "ticket-2"]);
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
@@ -188,7 +189,7 @@ describe("archive ticket", () => {
       ),
     ).then((result) => {
       commandResolved = true;
-      return result as { archived: StoredTicket[] };
+      return result as { archived: Ticket[] };
     });
 
     await archiveStarted.promise;
@@ -231,7 +232,7 @@ describe("archive ticket", () => {
           } as never,
         },
       }),
-    )) as { archived: StoredTicket[] };
+    )) as { archived: Ticket[] };
 
     await notificationPosted.promise;
 
@@ -274,7 +275,7 @@ describe("archive ticket", () => {
           } as never,
         },
       }),
-    )) as StoredTicket | null;
+    )) as Ticket | null;
 
     expect(result?.archived).toBe(true);
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
