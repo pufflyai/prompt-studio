@@ -20,7 +20,6 @@ import type { TicketSummary } from "./ticket-summary";
 import type { StoredStatus, StoredTag } from "./types";
 import { workspacePresentation } from "./workspace-presentation";
 import type { TicketWorkspaceSession, TicketWorkspaceSessionLookup } from "./workspace-sessions";
-import { ticketShorthandsFromWorkspace } from "./workspace-ticket-link";
 
 export { ticketDisplayTitle } from "./ticket-resource-hierarchy";
 
@@ -123,10 +122,10 @@ export const createTicketWorkspaceLookup = (
   const lookup: TicketWorkspaceLookup = new Map();
 
   for (const workspace of workspaces) {
-    for (const ticketShorthand of ticketShorthandsFromWorkspace(workspace)) {
-      const items = lookup.get(ticketShorthand) ?? [];
+    for (const { id: ticketId } of (workspace.anchors_json ?? []).filter(({ type }) => type === "ticket")) {
+      const items = lookup.get(ticketId) ?? [];
       items.push(workspaceToBadgeItem(workspace, sessions.get(workspace.id)));
-      lookup.set(ticketShorthand, items);
+      lookup.set(ticketId, items);
     }
   }
 
@@ -140,7 +139,7 @@ const ticketWorkspaceValues = (
   resourceReference: TicketResourceReference,
 ) => {
   const parentMetadata = { resourceParent: resourceReference };
-  const items = (workspaceLookup.get(ticket.shorthand) ?? []).map((item) => ({
+  const items = (workspaceLookup.get(ticket.id) ?? []).map((item) => ({
     ...item,
     ...parentMetadata,
     ...(item.resource

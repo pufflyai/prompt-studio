@@ -3,10 +3,10 @@ import { l10n } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
-import type { StoredTicket } from "../../data/types";
+import type { Ticket } from "../../data/types";
 import { buildTicketPropertiesControls, type WireParam } from "./params";
 
-const baseTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+const baseTicket = (overrides: Partial<Ticket>): Ticket => ({
   id: "t1",
   shorthand: "PS-1",
   title: "Title",

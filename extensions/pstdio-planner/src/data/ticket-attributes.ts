@@ -2,7 +2,7 @@ import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { tagsCollection } from "./collections";
 import { ticketTagAttributeId } from "./mappers";
 import { assertSingleSelectTagIds } from "./tag-cardinality";
-import type { StoredTicket } from "./types";
+import type { Ticket } from "./types";
 
 const selectedTagOptions = (value: unknown, options: Set<string>) => {
   if (Array.isArray(value)) return value.filter((id): id is string => typeof id === "string" && options.has(id));
@@ -13,7 +13,7 @@ const selectedTagOptions = (value: unknown, options: Set<string>) => {
 /** Validate the complete edit before storing any of its values. */
 export const ticketWithAttributes = async (
   storage: ExtensionStorageApi,
-  ticket: StoredTicket,
+  ticket: Ticket,
   attributes: Record<string, unknown>,
 ) => {
   let statusId = ticket.statusId;

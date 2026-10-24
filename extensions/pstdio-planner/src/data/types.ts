@@ -40,7 +40,6 @@ export interface StoredTicketReviewLink {
 
 export interface StoredTicket {
   id: string;
-  shorthand: string;
   title: string;
   content: string;
   statusId: string | null;
@@ -61,6 +60,11 @@ export interface StoredTicket {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Ticket extends StoredTicket {
+  shorthand: string;
+  aliases?: string[];
 }
 
 export interface StoredStatus {

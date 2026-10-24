@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection, updateTicket } from "../data/collections";
+import { updateTicket } from "../data/collections";
 import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
 import { updateTicketFile } from "../data/file-operations";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import { readTicketFileContent } from "../data/ticket-file-content";
 import { readTicketImageCheckout } from "../data/ticket-image-checkout";
 import { plannerTicketsChanged } from "../events";
@@ -37,7 +38,12 @@ test("save racing a file edit from the editor leaves every file readable", async
   const readText = projectFiles.readText.bind(projectFiles);
   projectFiles.readText = async (path) => {
     if (path === notes && !edit) {
-      edit = updateTicketFile({ storage, ticketId: ticket.id, fileId: ticket.files![0].id, content: "editor notes" });
+      edit = updateTicketFile({
+        ...ticketContext(storage),
+        ticketId: ticket.id,
+        fileId: ticket.files![0].id,
+        content: "editor notes",
+      });
       await Promise.race([edit, Bun.sleep(50)]);
     }
     return readText(path);
@@ -104,7 +110,7 @@ test("a ticket write that read the ticket before a save keeps the saved image", 
   const { storage, ticket, save, imageBytes } = await ticketWithChangedImage();
 
   await save();
-  await updateTicket(storage, { ...ticket, title: "Renamed" });
+  await updateTicket(ticketContext(storage), { ...ticket, title: "Renamed" });
 
   expect((await ticketsCollection(storage).get(ticket.id))?.title).toBe("Renamed");
   expect(await imageBytes()).toEqual([[2]]);

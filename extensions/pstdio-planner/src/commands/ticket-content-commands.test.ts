@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
 import { updateTicketFile } from "../data/file-operations";
 import { observeStorageReads } from "../data/storage-reads.fixture";
+import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import { readTicketFileContent } from "../data/ticket-file-content";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -28,7 +28,7 @@ describe("ticket body file-renderer commands", () => {
       ...makeCommandArgs({
         storage: observed.storage,
         params: {},
-        overrides: { resource: { type: "ticket", id: ticket.id } },
+        overrides: { resource: { type: "ticket", id: ticket.id }, resources: ticketContext(storage).resources },
       }),
     );
 
@@ -92,7 +92,12 @@ describe("ticket body file-renderer commands", () => {
     const file = await createTicketFileCommand.run(
       ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
     );
-    await updateTicketFile({ storage, ticketId: ticket.id, fileId: file.id, content: "file content" });
+    await updateTicketFile({
+      ...ticketContext(storage),
+      ticketId: ticket.id,
+      fileId: file.id,
+      content: "file content",
+    });
 
     const result = await getTicketContentCommand.run(
       ...makeCommandArgs({

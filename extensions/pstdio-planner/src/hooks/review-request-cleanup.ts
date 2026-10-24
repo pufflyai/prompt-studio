@@ -8,7 +8,7 @@ export const reviewRequestCleanupHook = defineHook({
   id: "review-request-cleanup",
   event: plannerTicketsChanged,
   async run(ctx, { ticketId }) {
-    if (!ticketId || (await findTicket(ctx.storage, ticketId))) return;
+    if (!ticketId || (await findTicket(ctx, ticketId))) return;
     await deleteTicketReviewRequests(ctx.storage, ticketId);
   },
 });

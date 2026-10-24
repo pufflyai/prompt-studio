@@ -2,9 +2,10 @@ import { resolve } from "node:path";
 import { createDraftLayout, requireRepoFiles } from "@pstdio/sdk/data";
 import type { ArtifactMount, ExtensionContextBase, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { tagsCollection, ticketsCollection } from "./collections";
-import { applyFrontmatter, buildTicketFrontmatter } from "./frontmatter";
+import { applyFrontmatter, buildTicketFrontmatter, withTicketCheckoutIdentity } from "./frontmatter";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
-import type { StoredTicket } from "./types";
+import type { TicketContext } from "./ticket-identity";
+import type { Ticket } from "./types";
 
 export const TICKETS_DIR = ".pstdio/extension-storage/pstdio-planner/tickets";
 
@@ -32,25 +33,26 @@ const tagNamesForIds = async (storage: ExtensionStorageApi, tagIds: string[]) =>
   return tagIds.map((id) => options.find((option) => option.id === id)?.name).filter((name): name is string => !!name);
 };
 
-const parentShorthandForId = async (storage: ExtensionStorageApi, parentId: string | null | undefined) => {
+const parentShorthandForId = async (ctx: TicketContext, parentId: string | null | undefined) => {
   if (!parentId) return null;
-  return (await ticketsCollection(storage).get(parentId))?.shorthand ?? parentId;
+  return (await ticketsCollection(ctx).get(parentId))?.shorthand ?? parentId;
 };
 
-const dependencyShorthandsForIds = async (storage: ExtensionStorageApi, dependencyIds: string[]) =>
-  Promise.all(dependencyIds.map(async (id) => (await ticketsCollection(storage).get(id))?.shorthand ?? id));
+const dependencyShorthandsForIds = async (ctx: TicketContext, dependencyIds: string[]) =>
+  Promise.all(dependencyIds.map(async (id) => (await ticketsCollection(ctx).get(id))?.shorthand ?? id));
 
 // Renders a stored ticket to its `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/ticket.md` content:
 // the YAML frontmatter (with tag ids resolved to names, parent id to shorthand)
 // applied over the ticket body.
-export const ticketToMarkdown = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
+export const ticketToMarkdown = async (ctx: TicketContext, ticket: Ticket) => {
   const [tagNames, parentShorthand, dependencyShorthands] = await Promise.all([
-    tagNamesForIds(storage, ticket.tagIds ?? []),
-    parentShorthandForId(storage, ticket.parentId),
-    dependencyShorthandsForIds(storage, normalizeTicketDependencies(ticket.dependsOn)),
+    tagNamesForIds(ctx.storage, ticket.tagIds ?? []),
+    parentShorthandForId(ctx, ticket.parentId),
+    dependencyShorthandsForIds(ctx, normalizeTicketDependencies(ticket.dependsOn)),
   ]);
 
   const frontmatter = buildTicketFrontmatter({
+    resourceId: ticket.id,
     shorthand: ticket.shorthand,
     createdAt: ticket.createdAt,
     draft: ticket.draft ?? null,
@@ -69,8 +71,8 @@ export const writeTicketText = async (projectFiles: ArtifactMount, shorthand: st
   await projectFiles.writeText(ticketMarkdownPath(shorthand), content);
 };
 
-export const writeTicketMarkdown = (projectFiles: ArtifactMount, ticket: StoredTicket, content: string) =>
-  writeTicketText(projectFiles, ticket.shorthand, content);
+export const writeTicketMarkdown = (projectFiles: ArtifactMount, ticket: Ticket, content: string) =>
+  writeTicketText(projectFiles, ticket.shorthand, withTicketCheckoutIdentity(content, ticket));
 
 export const readTicketMarkdown = async (projectFiles: ArtifactMount, shorthand: string) => {
   const path = ticketMarkdownPath(shorthand);

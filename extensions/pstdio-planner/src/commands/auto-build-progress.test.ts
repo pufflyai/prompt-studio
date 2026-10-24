@@ -3,7 +3,8 @@ import { putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { autoBuildDispatches } from "../data/auto-build-dispatches";
 import { saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
-import { ticketsCollection } from "../data/collections";
+import { ticketsCollection } from "../data/ticket-context.fixture";
+
 import { withWriteGuard } from "../data/write-guard";
 import { checkAutoBuildCommand } from "../hooks/auto-build";
 import { fixture } from "./auto-build.fixture";

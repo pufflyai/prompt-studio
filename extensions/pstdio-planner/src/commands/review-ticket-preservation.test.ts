@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { TICKETS_COLLECTION, ticketsCollection } from "../data/collections";
+import { TICKETS_COLLECTION } from "../data/collections";
+import { ticketsCollection } from "../data/ticket-context.fixture";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { requestHumanCommand, reviewCommand } from "./review-requests";

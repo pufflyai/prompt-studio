@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { changeTicketFiles } from "../data/collections";
+import { ticketContext } from "../data/ticket-context.fixture";
 import type { StoredTicketAttachment } from "../data/types";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -13,7 +14,10 @@ const attachUpload = async (
 ) => {
   const ref = await storage.files.put(input);
   const attachment: StoredTicketAttachment = { ...ref, hash: ref.hash ?? "" };
-  await changeTicketFiles(storage, ticketId, async (ticket) => ({ ...ticket, attachments: [attachment] }));
+  await changeTicketFiles(ticketContext(storage), ticketId, async (ticket) => ({
+    ...ticket,
+    attachments: [attachment],
+  }));
   return ref;
 };
 

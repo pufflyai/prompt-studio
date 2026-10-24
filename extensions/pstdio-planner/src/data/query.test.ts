@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket } from "./collections";
 import { runTicketsQuery } from "./query";
 import { seedDefaultStatuses } from "./seed";
-import type { StoredTicket } from "./types";
+import { putTicket, ticketContext } from "./ticket-context.fixture";
+import type { Ticket } from "./types";
 
-const makeTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+const makeTicket = (overrides: Partial<Ticket>): Ticket => ({
   id: crypto.randomUUID(),
   shorthand: "T-1",
   title: "Ticket",
@@ -53,7 +53,7 @@ describe("runTicketsQuery", () => {
     await putTicket(storage, makeTicket({ shorthand: "T-1", title: "First", statusId: todo.id, sortOrder: 0 }));
     await putTicket(storage, makeTicket({ shorthand: "T-2", title: "Second", statusId: todo.id, sortOrder: 1 }));
 
-    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
+    const result = await runTicketsQuery({ ...ticketContext(storage), projectId: "proj-1" });
 
     expect(result.rows.map((row) => row.title)).toEqual(["First", "Second"]);
     expect(result.attributes?.some((attribute) => attribute.id === "status")).toBe(true);
@@ -72,7 +72,7 @@ describe("runTicketsQuery", () => {
     // No explicit seed — the board must still get status columns.
     await putTicket(storage, makeTicket({ shorthand: "T-1" }));
 
-    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
+    const result = await runTicketsQuery({ ...ticketContext(storage), projectId: "proj-1" });
 
     expect(result.attributes?.find((attribute) => attribute.id === "status")?.type).toMatchObject({
       kind: "enum",
@@ -84,7 +84,7 @@ describe("runTicketsQuery", () => {
   test("returns stored workflow behavior as board column configs", async () => {
     const storage = createMemoryStorage();
 
-    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
+    const result = await runTicketsQuery({ ...ticketContext(storage), projectId: "proj-1" });
     expect(result.boardColumnConfigs?.done).toMatchObject({
       canCreate: false,
       actions: [{ id: "archive_all" }],
@@ -101,7 +101,7 @@ describe("runTicketsQuery", () => {
       }),
     );
 
-    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
+    const result = await runTicketsQuery({ ...ticketContext(storage), projectId: "proj-1" });
 
     expect(result.attributes?.map((attribute) => attribute.id)).toEqual([
       "status",
@@ -146,7 +146,7 @@ describe("runTicketsQuery workspace badges", () => {
     await putTicket(storage, makeTicket({ id: "ticket-1", shorthand: "T-1", title: "Has workspaces" }));
 
     const result = await runTicketsQuery({
-      storage,
+      ...ticketContext(storage),
       projectId: "proj-1",
       workspaces: [
         makeWorkspace({
@@ -250,7 +250,7 @@ describe("runTicketsQuery workspace badges", () => {
     await putTicket(storage, child);
 
     const result = await runTicketsQuery({
-      storage,
+      ...ticketContext(storage),
       projectId: "proj-1",
       workspaces: [
         makeWorkspace({
@@ -294,7 +294,7 @@ describe("runTicketsQuery workspace badges", () => {
     await putTicket(storage, makeTicket({ id: "ticket-1", shorthand: "T-1" }));
 
     const result = await runTicketsQuery({
-      storage,
+      ...ticketContext(storage),
       projectId: "proj-1",
       workspaces: [
         makeWorkspace({ id: "workspace-1", name: undefined, workspace_shorthand: "T-1_A1" }),
@@ -325,7 +325,7 @@ describe("runTicketsQuery ordering and hierarchy", () => {
     await putTicket(storage, makeTicket({ shorthand: "T-late", sortOrder: 5 }));
     await putTicket(storage, makeTicket({ shorthand: "T-early", sortOrder: 1 }));
 
-    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
+    const result = await runTicketsQuery({ ...ticketContext(storage), projectId: "proj-1" });
 
     expect(result.rows.map((row) => row.attributes.id)).toEqual(["T-early", "T-late"]);
   });
@@ -339,7 +339,7 @@ describe("runTicketsQuery ordering and hierarchy", () => {
     await putTicket(storage, child);
     await putTicket(storage, grandchild);
 
-    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
+    const result = await runTicketsQuery({ ...ticketContext(storage), projectId: "proj-1" });
 
     expect(result.rows.map((row) => row.attributes)).toEqual([
       expect.objectContaining({ id: "T-1", parent: "" }),

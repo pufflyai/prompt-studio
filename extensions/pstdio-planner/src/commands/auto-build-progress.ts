@@ -36,7 +36,7 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
           const attempt = await readAttempt(ctx.storage, workspaceId);
           if (!attempt) return;
           const [ticket, worker] = await Promise.all([
-            ticketsCollection(ctx.storage).get(attempt.ticketId),
+            ticketsCollection(ctx).get(attempt.ticketId),
             ctx.sessions.get(attempt.implementationSessionId),
           ]);
           if (!ticket || ticket.archived) return;

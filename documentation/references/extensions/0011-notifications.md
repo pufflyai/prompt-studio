@@ -29,7 +29,7 @@ await ctx.notify.action({
   kind: "needs_review",
   priority: "high",
   target: { type: "ticket", id: "ticket-42", label: "PS-42" },
-  dedupeKey: "pstdio-planner:ticket:PS-42:prd-refined",
+  dedupeKey: "pstdio-planner:ticket:ticket-42:prd-refined",
   actions: [
     {
       id: "review",
@@ -44,7 +44,8 @@ await ctx.notify.action({
 ```
 
 Dedupe keys identify the producer's source condition. Planner uses keys such as
-`pstdio-planner:ticket:PS-42:blocked`. Re-emitting the same live key updates the
+`pstdio-planner:ticket:<ticket ID>:blocked`. Use a stable resource ID, not a display number such as `PS-42`,
+because a number can change after an offline merge. Re-emitting the same live key updates the
 existing row instead of creating duplicates. A dedupe key is not a command ID.
 
 ## Actions
@@ -63,7 +64,7 @@ Mark a completed condition as `done`. Use `dismissed` to remove an item without 
 
 ```ts
 const notification = await ctx.notify.setStatus("notification-id", "done");
-const group = await ctx.notify.setStatusByKey("pstdio-planner:ticket:PS-42:blocked", "dismissed");
+const group = await ctx.notify.setStatusByKey("pstdio-planner:ticket:ticket-42:blocked", "dismissed");
 ```
 
 The ID call returns `Notification | null`; the key call returns `Notification[]`. Both stay inside

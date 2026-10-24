@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket } from "../data/collections";
-import type { StoredTicket } from "../data/types";
+import { putTicket } from "../data/ticket-context.fixture";
+
+import type { Ticket } from "../data/types";
 import { makeCommandArgs } from "./command-context.fixture";
 import { readTicketsCommand } from "./read-tickets";
 
-const makeTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+const makeTicket = (overrides: Partial<Ticket>): Ticket => ({
   id: crypto.randomUUID(),
   shorthand: "T-1",
   title: "Ticket",

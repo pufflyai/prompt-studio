@@ -2,8 +2,9 @@ import { expect, test } from "bun:test";
 import type { ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandContext } from "../commands/command-context.fixture";
-import { putTicket } from "../data/collections";
-import type { StoredTicket } from "../data/types";
+import { putTicket, ticketContext } from "../data/ticket-context.fixture";
+
+import type { Ticket } from "../data/types";
 import { copyOrWriteTicketFile, worktreeCreatedHook } from "./worktree-created";
 
 const memoryMount = (initial: Record<string, string> = {}) => {
@@ -18,7 +19,7 @@ const memoryMount = (initial: Record<string, string> = {}) => {
 
 test.each(["local", "remote"])("ticket-linked %s provisioning without file mounts", async (executionKind) => {
   const storage = createMemoryStorage();
-  await putTicket(storage, { id: "ticket-1", shorthand: "PS-1" } as StoredTicket);
+  await putTicket(storage, { id: "ticket-1", shorthand: "PS-1" } as Ticket);
   const ctx = makeCommandContext({
     storage,
     params: {},
@@ -33,12 +34,12 @@ test.each(["local", "remote"])("ticket-linked %s provisioning without file mount
 test("workspace provisioning ignores Planner ticket drafts before copying one", async () => {
   const repo = memoryMount({ ".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md": "# Ticket" });
   const workspace = memoryMount({ ".pstdio/.gitignore": "config.json\n" });
-  const ticket = { shorthand: "PS-1", createdAt: "2026-10-15T00:00:00.000Z", content: "# Ticket" } as StoredTicket;
+  const ticket = { shorthand: "PS-1", createdAt: "2026-10-15T00:00:00.000Z", content: "# Ticket" } as Ticket;
 
   await copyOrWriteTicketFile({
     projectFiles: repo.mount,
     workspaceFiles: workspace.mount as WorkspaceFilesMount,
-    storage: createMemoryStorage(),
+    ...ticketContext(createMemoryStorage()),
     ticket,
   });
 

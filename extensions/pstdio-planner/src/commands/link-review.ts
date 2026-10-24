@@ -17,7 +17,7 @@ export const linkReviewCommand = defineCommand({
     title: params.text(),
   },
   async run(ctx, commandParams) {
-    const ticket = await findTicket(ctx.storage, commandParams.id);
+    const ticket = await findTicket(ctx, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
     if (ticket.reviewLinks?.some((link) => link.url === commandParams.url)) return ticket;
 
@@ -36,7 +36,7 @@ export const linkReviewCommand = defineCommand({
       updatedAt: now,
     };
 
-    await ticketsCollection(ctx.storage).put(ticket.id, next);
+    await ticketsCollection(ctx).put(ticket.id, next);
     return next;
   },
 });
